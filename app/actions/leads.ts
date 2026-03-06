@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { sendLeadConfirmationEmail } from "@/lib/email/resend"
 
 export type LeadFormData = {
   first_name: string
@@ -12,7 +13,9 @@ export type LeadFormData = {
   message: string | null
 }
 
-export async function submitLead(data: LeadFormData): Promise<{ error: string | null }> {
+export async function submitLead(
+  data: LeadFormData,
+): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) {
     return {
@@ -33,5 +36,18 @@ export async function submitLead(data: LeadFormData): Promise<{ error: string | 
   if (error) {
     return { error: error.message }
   }
+
+  try {
+    await sendLeadConfirmationEmail({
+      to: data.email.trim(),
+      firstName: data.first_name.trim(),
+      company: data.company.trim(),
+      lookingFor: data.looking_for,
+    })
+  } catch {
+    // Ignore email failures so lead capture still succeeds
+  }
+
   return { error: null }
 }
+
