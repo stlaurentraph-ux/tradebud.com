@@ -1,11 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { useState, useEffect, useCallback } from "react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { Sidebar } from "@/components/dashboard/sidebar";
+import { Header } from "@/components/dashboard/header";
+import { MetricsCards } from "@/components/dashboard/metrics-cards";
+import { PackagesTable, type DdsPackage } from "@/components/dashboard/packages-table";
+import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { Charts } from "@/components/dashboard/charts";
+import { LoginForm } from "@/components/auth/login-form";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api';
-
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001/api";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -13,7 +20,9 @@ let supabase: SupabaseClient | null = null;
 
 function getSupabase() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured for exporter console.');
+    throw new Error(
+      "Supabase URL or ANON key not configured for exporter console."
+    );
   }
   if (!supabase) {
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -21,287 +30,189 @@ function getSupabase() {
   return supabase;
 }
 
-export default function ConsoleHome() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
+export default function DashboardPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [farmerId, setFarmerId] = useState('');
-  const [packages, setPackages] = useState<any[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [packages, setPackages] = useState<DdsPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(false);
-  const [packagesError, setPackagesError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalPackages: 0,
+    pendingPackages: 0,
+    totalPlots: 0,
+    totalFarmers: 0,
+  });
 
+  // Check for existing session on mount
+  useEffect(() => {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+
+    const checkSession = async () => {
+      try {
+        const client = getSupabase();
+        const { data } = await client.auth.getSession();
+        if (data.session) {
+          setAccessToken(data.session.access_token);
+          setUserEmail(data.session.user.email ?? null);
+        }
+      } catch (error) {
+        console.log("[v0] No existing session found");
+      }
+    };
+    checkSession();
+  }, []);
+
+  // Load packages when authenticated
+  const loadPackages = useCallback(async () => {
+    if (!accessToken) return;
+
+    setLoadingPackages(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/harvest/packages`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          accept: "application/json",
+        },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.log("[v0] Failed to load packages:", body.message);
+        setPackages([]);
+        return;
+      }
+      const rows = await res.json();
+      setPackages(rows ?? []);
+
+      // Update metrics based on packages
+      const pending = rows?.filter(
+        (p: DdsPackage) => p.status === "pending"
+      ).length;
+      setMetrics((prev) => ({
+        ...prev,
+        totalPackages: rows?.length ?? 0,
+        pendingPackages: pending ?? 0,
+      }));
+    } catch (error) {
+      console.log("[v0] Error loading packages:", error);
+      setPackages([]);
+    } finally {
+      setLoadingPackages(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (accessToken) {
+      loadPackages();
+    }
+  }, [accessToken, loadPackages]);
+
+  const handleLogin = async (email: string, password: string) => {
+    setAuthError(null);
+    try {
+      const client = getSupabase();
+      const { data, error } = await client.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error || !data.session) {
+        setAuthError(error?.message ?? "Login failed.");
+        setAccessToken(null);
+        return;
+      }
+      setAccessToken(data.session.access_token);
+      setUserEmail(data.session.user.email ?? null);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Could not contact Supabase.";
+      setAuthError(message);
+      setAccessToken(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const client = getSupabase();
+      await client.auth.signOut();
+    } catch (error) {
+      console.log("[v0] Error signing out:", error);
+    }
+    setAccessToken(null);
+    setUserEmail(null);
+    setPackages([]);
+  };
+
+  // Show configuration notice if Supabase is not set up
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="max-w-md rounded-xl border border-border bg-card p-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
+            <span className="text-xl font-bold text-primary-foreground">T</span>
+          </div>
+          <h1 className="mb-2 text-xl font-semibold">Configuration Required</h1>
+          <p className="text-sm text-muted-foreground">
+            Set <code className="rounded bg-muted px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+            <code className="rounded bg-muted px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in
+            your environment to enable the exporter dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!accessToken) {
+    return <LoginForm onLogin={handleLogin} error={authError} />;
+  }
+
+  // Show dashboard
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px',
-        gap: '24px',
-        backgroundColor: '#020617',
-        color: 'white',
-      }}
-    >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              backgroundColor: '#22c55e',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-            }}
-          >
-            T
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>Tracebud Exporter Console</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>Early preview – wired to your existing backend.</div>
-          </div>
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.8 }}>Backed by the same NestJS API as the offline app.</div>
-      </header>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <Sidebar userEmail={userEmail} onLogout={handleLogout} />
 
-      <section
-        style={{
-          display: 'grid',
-          gap: 16,
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-        }}
-      >
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>DDS packages</h2>
-          {!SUPABASE_URL || !SUPABASE_ANON_KEY ? (
-            <p style={{ fontSize: 13, color: '#fecaca' }}>
-              Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment to enable exporter
-              login.
-            </p>
-          ) : (
-            <>
-              <p style={{ fontSize: 13, opacity: 0.85, marginBottom: 12 }}>
-                Log in with an <strong>exporter</strong> Supabase account, then load DDS packages for a farmer.
-              </p>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 12, marginBottom: 4 }}>Exporter email</div>
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="exporter@example.com"
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      border: '1px solid #374151',
-                      backgroundColor: '#020617',
-                      color: 'white',
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, marginBottom: 4 }}>Password</div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      border: '1px solid #374151',
-                      backgroundColor: '#020617',
-                      color: 'white',
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  setAuthError(null);
-                  setPackagesError(null);
-                  try {
-                    const client = getSupabase();
-                    const { data, error } = await client.auth.signInWithPassword({
-                      email: email.trim(),
-                      password,
-                    });
-                    if (error || !data.session) {
-                      setAuthError(error?.message ?? 'Login failed.');
-                      setAccessToken(null);
-                      return;
-                    }
-                    setAccessToken(data.session.access_token);
-                  } catch (e: any) {
-                    setAuthError(e?.message ?? 'Could not contact Supabase.');
-                    setAccessToken(null);
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header
+          title="Overview"
+          subtitle={`Welcome back${userEmail ? ", " + userEmail.split("@")[0] : ""}`}
+        />
+
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-7xl space-y-6">
+            {/* Metrics Cards */}
+            <MetricsCards metrics={metrics} />
+
+            {/* Charts */}
+            <Charts />
+
+            {/* Main Content Grid */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Packages Table - takes 2 columns */}
+              <div className="lg:col-span-2">
+                <PackagesTable
+                  packages={packages}
+                  loading={loadingPackages}
+                  onViewPackage={(id) =>
+                    console.log("[v0] View package:", id)
                   }
-                }}
-                style={{
-                  marginTop: 4,
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: 'none',
-                  backgroundColor: '#22c55e',
-                  color: '#022c22',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {accessToken ? 'Exporter logged in' : 'Log in as exporter'}
-              </button>
-              {authError && (
-                <p style={{ fontSize: 12, color: '#fecaca', marginTop: 4 }}>{authError}</p>
-              )}
-
-              <hr style={{ borderColor: '#1f2937', margin: '12px 0' }} />
-
-              <div style={{ marginBottom: 8, fontSize: 13 }}>
-                <div style={{ fontSize: 12, marginBottom: 4 }}>Farmer ID to view packages for</div>
-                <input
-                  value={farmerId}
-                  onChange={(e) => setFarmerId(e.target.value)}
-                  placeholder="UUID of farmer_profile"
-                  style={{
-                    width: '100%',
-                    padding: '6px 8px',
-                    borderRadius: 6,
-                    border: '1px solid #374151',
-                    backgroundColor: '#020617',
-                    color: 'white',
-                    fontSize: 13,
-                  }}
+                  onSubmitToTraces={(id) =>
+                    console.log("[v0] Submit to TRACES:", id)
+                  }
                 />
-                <button
-                  type="button"
-                  disabled={!accessToken || !farmerId.trim() || loadingPackages}
-                  onClick={async () => {
-                    if (!accessToken || !farmerId.trim()) return;
-                    setLoadingPackages(true);
-                    setPackagesError(null);
-                    try {
-                      const res = await fetch(
-                        `${API_BASE_URL}/v1/harvest/packages?farmerId=${encodeURIComponent(
-                          farmerId.trim(),
-                        )}`,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                            accept: 'application/json',
-                          },
-                        },
-                      );
-                      if (!res.ok) {
-                        const body = await res.json().catch(() => ({}));
-                        setPackages([]);
-                        setPackagesError(body.message ?? `Backend responded with ${res.status}`);
-                        return;
-                      }
-                      const rows = await res.json();
-                      setPackages(rows ?? []);
-                    } catch (e: any) {
-                      setPackages([]);
-                      setPackagesError(e?.message ?? 'Could not reach backend.');
-                    } finally {
-                      setLoadingPackages(false);
-                    }
-                  }}
-                  style={{
-                    marginTop: 8,
-                    padding: '6px 10px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundColor: !accessToken || !farmerId.trim() ? '#4b5563' : '#38bdf8',
-                    color: 'white',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: !accessToken || !farmerId.trim() ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loadingPackages ? 'Loading packages…' : 'Load DDS packages'}
-                </button>
               </div>
 
-              {packagesError && (
-                <p style={{ fontSize: 12, color: '#fecaca', marginBottom: 8 }}>
-                  {packagesError}
-                </p>
-              )}
-
-              {packages.length === 0 && !packagesError ? (
-                <p style={{ fontSize: 13, opacity: 0.8 }}>
-                  No DDS packages yet. Record harvests in the offline app and bundle vouchers there to see them appear
-                  here.
-                </p>
-              ) : null}
-
-              {packages.length > 0 && (
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: 13,
-                    marginTop: 8,
-                  }}
-                >
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid '#1f2937' }}>
-                      <th style={{ padding: '6px 4px' }}>ID</th>
-                      <th style={{ padding: '6px 4px' }}>Status</th>
-                      <th style={{ padding: '6px 4px' }}>TRACES ref</th>
-                      <th style={{ padding: '6px 4px' }}>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {packages.map((p: any) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #111827' }}>
-                        <td style={{ padding: '6px 4px' }}>{String(p.id).slice(0, 8)}…</td>
-                        <td style={{ padding: '6px 4px' }}>{p.status}</td>
-                        <td style={{ padding: '6px 4px' }}>{p.traces_reference ?? '—'}</td>
-                        <td style={{ padding: '6px 4px' }}>
-                          {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </>
-          )}
-        </div>
-
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#020617' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>What this console will do</h2>
-          <p style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
-            This app is designed as the desktop companion to the offline farmer app:
-          </p>
-          <ul style={{ fontSize: 13, opacity: 0.9, paddingLeft: 18 }}>
-            <li>Exporters: track incoming DDS packages and trigger TRACES submissions.</li>
-            <li>Importers / roasters: verify origin plots, FPIC & labor flags, and overlaps.</li>
-            <li>All views are powered by the same NestJS/PostGIS backend already running locally.</li>
-          </ul>
-          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 12 }}>
-            Next step: wire Supabase Auth here so exporters can log in with the same accounts you use in the mobile
-            app, then replace the placeholder call above with authenticated requests.
-          </p>
-        </div>
-      </section>
-    </main>
+              {/* Sidebar widgets */}
+              <div className="space-y-6">
+                <QuickActions
+                  onNewPackage={() => console.log("[v0] New package")}
+                  onImportData={() => console.log("[v0] Import data")}
+                  onVerifyPlots={() => console.log("[v0] Verify plots")}
+                  onExportReport={() => console.log("[v0] Export report")}
+                />
+                <ActivityFeed />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
-
