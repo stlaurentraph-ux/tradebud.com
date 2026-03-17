@@ -1,45 +1,59 @@
 import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Card, CardContent } from '@/components/ui/card';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { Brand, Spacing, Radius } from '@/constants/theme';
 
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
+export function Collapsible({ 
+  children, 
+  title 
+}: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const theme = useColorScheme() ?? 'light';
+  const borderColor = useThemeColor({}, 'border');
+  const iconColor = useThemeColor({}, 'icon');
 
   return (
-    <ThemedView>
-      <TouchableOpacity
-        style={styles.heading}
+    <Card variant="outlined" style={styles.container}>
+      <Pressable
+        style={[styles.heading, { borderBottomColor: isOpen ? borderColor : 'transparent' }]}
         onPress={() => setIsOpen((value) => !value)}
-        activeOpacity={0.8}>
-        <IconSymbol
-          name="chevron.right"
-          size={18}
-          weight="medium"
-          color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-          style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
+      >
+        <View style={styles.headingContent}>
+          <Ionicons name="help-circle-outline" size={20} color={Brand.primary} />
+          <ThemedText type="defaultSemiBold">{title}</ThemedText>
+        </View>
+        <Ionicons
+          name={isOpen ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={iconColor}
         />
-
-        <ThemedText type="defaultSemiBold">{title}</ThemedText>
-      </TouchableOpacity>
-      {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
-    </ThemedView>
+      </Pressable>
+      {isOpen && (
+        <CardContent>
+          {children}
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    overflow: 'hidden',
+  },
   heading: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
   },
-  content: {
-    marginTop: 6,
-    marginLeft: 24,
+  headingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
 });
