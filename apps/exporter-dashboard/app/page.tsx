@@ -260,7 +260,7 @@ export default function ConsoleHome() {
                   }}
                 >
                   <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid '#1f2937' }}>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #1f2937' }}>
                       <th style={{ padding: '6px 4px' }}>ID</th>
                       <th style={{ padding: '6px 4px' }}>Status</th>
                       <th style={{ padding: '6px 4px' }}>TRACES ref</th>
