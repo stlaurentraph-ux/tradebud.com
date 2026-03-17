@@ -3,14 +3,24 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
+import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
+import { UpdatePlotDto } from './dto/update-plot.dto';
 
 @Injectable()
 export class PlotsService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async create(createDto: CreatePlotDto, userId: string | undefined) {
-    const { geometry, declaredAreaHa, precisionMeters, hdop, farmerId, clientPlotId } =
-      createDto;
+    const {
+      geometry,
+      declaredAreaHa,
+      precisionMeters,
+      hdop,
+      farmerId,
+      clientPlotId,
+      cadastralKey,
+      landTitlePhotos,
+    } = createDto;
 
     // Simple validation: ensure 6 decimal places for coords
     const ensureSixDecimals = (value: number) => Number(value.toFixed(6));
@@ -111,11 +121,54 @@ export class PlotsService {
           plotId: row.id,
           farmerId,
           clientPlotId,
+          cadastralKey: cadastralKey ?? null,
+          landTitlePhotos:
+            Array.isArray(landTitlePhotos) && landTitlePhotos.length > 0
+              ? landTitlePhotos
+              : null,
         }),
       ],
     );
 
     return row;
+  }
+
+  async syncPhotos(plotId: string, dto: SyncPlotPhotosDto, userId: string | undefined) {
+    // Ensure plot exists (lightweight guard so we do not accept orphaned photos)
+    const existing = await this.pool.query(
+      `
+        SELECT id
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    if (existing.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    const photosArray = Array.isArray(dto.photos) ? dto.photos : [];
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'plot_photos_synced',
+        JSON.stringify({
+          plotId,
+          kind: dto.kind,
+          count: photosArray.length,
+          photos: photosArray,
+          note: dto.note ?? null,
+        }),
+      ],
+    );
+
+    return { ok: true };
   }
 
   async listByFarmer(farmerId: string) {
@@ -228,6 +281,62 @@ export class PlotsService {
     );
 
     return updated;
+  }
+
+  async updateMetadata(plotId: string, dto: UpdatePlotDto, userId: string | undefined) {
+    const existingRes = await this.pool.query(
+      `
+        SELECT id, name
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    if (existingRes.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    const existing = existingRes.rows[0] as { id: string; name: string };
+
+    let updatedName = existing.name;
+
+    if (dto.name && dto.name !== existing.name) {
+      const updateRes = await this.pool.query(
+        `
+          UPDATE plot
+          SET name = $2
+          WHERE id = $1
+          RETURNING name
+        `,
+        [plotId, dto.name],
+      );
+
+      updatedName = updateRes.rows[0]?.name ?? existing.name;
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'plot_edited',
+        JSON.stringify({
+          plotId,
+          oldName: existing.name,
+          newName: updatedName,
+          reason: dto.reason,
+          deviceId: dto.deviceId ?? null,
+        }),
+      ],
+    );
+
+    return {
+      id: plotId,
+      name: updatedName,
+    };
   }
 }
 

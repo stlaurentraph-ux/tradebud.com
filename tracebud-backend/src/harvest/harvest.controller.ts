@@ -1,5 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
@@ -47,6 +47,16 @@ export class HarvestController {
   @Get('packages/:id')
   async getPackage(@Param('id') id: string) {
     return this.harvestService.getDdsPackageDetail(id);
+  }
+
+  @Get('packages/:id/traces-json')
+  @ApiOperation({
+    summary: 'Export DDS package as TRACES-style JSON',
+    description:
+      'Returns a compact JSON object with lots, kg, plot areas and a TRACES-like reference field suitable for uploading or mapping into TRACES NT.',
+  })
+  async getPackageTracesJson(@Param('id') id: string) {
+    return this.harvestService.getDdsPackageTracesJson(id);
   }
 
   @Patch('packages/:id/submit')

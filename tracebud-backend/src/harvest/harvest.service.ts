@@ -230,6 +230,42 @@ export class HarvestService {
     };
   }
 
+  async getDdsPackageTracesJson(id: string) {
+    const detail = await this.getDdsPackageDetail(id);
+    const pkg = detail.package as any;
+    const vouchers = detail.vouchers as any[];
+
+    const exporterId = pkg.farmer_id;
+
+    const lots = vouchers.map((v) => ({
+      voucherId: v.id,
+      plotId: v.plot_id,
+      plotName: v.plot_name,
+      plotKind: v.plot_kind,
+      plotAreaHa: Number(v.area_ha),
+      declaredAreaHa: v.declared_area_ha != null ? Number(v.declared_area_ha) : null,
+      kg: Number(v.kg),
+      harvestDate: v.harvest_date
+        ? new Date(v.harvest_date).toISOString().slice(0, 10)
+        : null,
+    }));
+
+    const totalKg = lots.reduce((sum, lot) => sum + (Number.isFinite(lot.kg) ? lot.kg : 0), 0);
+
+    return {
+      tracesReference: pkg.traces_reference ?? null,
+      exporterId,
+      ddsPackageId: pkg.id,
+      label: pkg.label ?? null,
+      createdAt: pkg.created_at,
+      status: pkg.status,
+      commodity: 'coffee',
+      hsCode: '0901',
+      totalKg,
+      lots,
+    };
+  }
+
   async submitDdsPackage(id: string) {
     const tracesRef = `TRACES-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 

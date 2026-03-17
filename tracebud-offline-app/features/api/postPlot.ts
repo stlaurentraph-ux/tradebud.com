@@ -77,6 +77,7 @@ export async function postPlotToBackend(params: {
   geometry: GeoJSONPoint | GeoJSONPolygon;
   declaredAreaHa: number | null;
   precisionMeters: number | null;
+  cadastralKey?: string | null;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -95,10 +96,81 @@ export async function postPlotToBackend(params: {
       geometry: params.geometry,
       declaredAreaHa: params.declaredAreaHa,
       precisionMeters: params.precisionMeters,
+      cadastralKey: params.cadastralKey ?? null,
     }),
   }).catch(() => {
     // best-effort sync; ignore network errors for now
   });
+}
+
+export async function syncPlotPhotosToBackend(params: {
+  plotId: string;
+  kind: 'ground_truth' | 'land_title';
+  photos: any[];
+  note?: string;
+}) {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    throw new Error('No access token available for photo sync');
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        kind: params.kind,
+        photos: params.photos,
+        note: params.note ?? null,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Photo sync error: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function updatePlotMetadataOnBackend(params: {
+  plotId: string;
+  name?: string;
+  reason: string;
+  deviceId?: string;
+}) {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    throw new Error('No access token available for plot edits');
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: params.name,
+        reason: params.reason,
+        deviceId: params.deviceId ?? null,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Plot edit error: ${res.status}`);
+  }
+
+  return res.json();
 }
 
 export async function fetchPlotsForFarmer(farmerId: string) {
@@ -198,6 +270,31 @@ export async function fetchDdsPackagesForFarmer(farmerId: string) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `DDS package fetch error: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function fetchDdsPackageTracesJson(packageId: string) {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    throw new Error('No access token available for DDS packages');
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(
+      packageId,
+    )}/traces-json`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `DDS TRACES JSON error: ${res.status}`);
   }
 
   return res.json();

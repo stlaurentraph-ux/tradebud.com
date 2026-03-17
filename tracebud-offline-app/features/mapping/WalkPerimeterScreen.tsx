@@ -72,6 +72,14 @@ export function WalkPerimeterScreen() {
   const [farmerNameInput, setFarmerNameInput] = useState(farmer?.name ?? '');
   const [acceptedDeclaration, setAcceptedDeclaration] = useState(farmer?.selfDeclared ?? false);
   const [declaredAreaHaInput, setDeclaredAreaHaInput] = useState('');
+  const [lowDataMap, setLowDataMap] = useState(false);
+  const [fpicConsent, setFpicConsent] = useState(farmer?.fpicConsent ?? false);
+  const [laborNoChildLabor, setLaborNoChildLabor] = useState(
+    farmer?.laborNoChildLabor ?? false,
+  );
+  const [laborNoForcedLabor, setLaborNoForcedLabor] = useState(
+    farmer?.laborNoForcedLabor ?? false,
+  );
 
   const initialRegion: Region | undefined =
     points.length > 0
@@ -86,7 +94,11 @@ export function WalkPerimeterScreen() {
   const hasFarmerAccess = farmer?.selfDeclared === true;
 
   const canSaveFarmerProfile =
-    farmerIdInput.trim().length > 0 && acceptedDeclaration;
+    farmerIdInput.trim().length > 0 &&
+    acceptedDeclaration &&
+    fpicConsent &&
+    laborNoChildLabor &&
+    laborNoForcedLabor;
 
   const handleSaveFarmer = () => {
     if (!canSaveFarmerProfile) {
@@ -100,6 +112,9 @@ export function WalkPerimeterScreen() {
       role: 'farmer',
       selfDeclared: true,
       selfDeclaredAt: now,
+      fpicConsent,
+      laborNoChildLabor,
+      laborNoForcedLabor,
     });
   };
 
@@ -234,6 +249,28 @@ export function WalkPerimeterScreen() {
             {t('declaration_text')}
           </ThemedText>
         </View>
+        <ThemedText type="subtitle">{t('fpic_title')}</ThemedText>
+        <View style={styles.checkboxRow}>
+          <Button
+            title={fpicConsent ? '✔ FPIC confirmed' : 'Mark FPIC consent'}
+            onPress={() => setFpicConsent((prev) => !prev)}
+          />
+          <ThemedText>{t('fpic_label')}</ThemedText>
+        </View>
+        <View style={styles.checkboxRow}>
+          <Button
+            title={laborNoChildLabor ? '✔ No child labor' : 'Confirm no child labor'}
+            onPress={() => setLaborNoChildLabor((prev) => !prev)}
+          />
+          <ThemedText>{t('labor_no_child')}</ThemedText>
+        </View>
+        <View style={styles.checkboxRow}>
+          <Button
+            title={laborNoForcedLabor ? '✔ No forced labor' : 'Confirm no forced labor'}
+            onPress={() => setLaborNoForcedLabor((prev) => !prev)}
+          />
+          <ThemedText>{t('labor_no_forced')}</ThemedText>
+        </View>
         <Button
           title={hasFarmerAccess ? t('farmer_set') : t('save_farmer')}
           onPress={handleSaveFarmer}
@@ -261,6 +298,13 @@ export function WalkPerimeterScreen() {
           disabled={(!points.length && !isRecording) || !hasFarmerAccess}
         />
         <Button title={t('save_plot')} onPress={handleSavePlot} disabled={!canSavePlot} />
+      </View>
+
+      <View style={styles.buttonRow}>
+        <Button
+          title={lowDataMap ? 'Show base map' : 'Low-data map mode'}
+          onPress={() => setLowDataMap((prev) => !prev)}
+        />
       </View>
 
       <ThemedText>
@@ -297,7 +341,11 @@ export function WalkPerimeterScreen() {
 
       {initialRegion && (
         <View style={styles.mapContainer}>
-          <MapView style={styles.map} initialRegion={initialRegion}>
+          <MapView
+            style={styles.map}
+            initialRegion={initialRegion}
+            mapType={lowDataMap ? 'none' : 'standard'}
+          >
             {points.length > 0 && (
               <>
                 <Polyline
@@ -380,6 +428,10 @@ const styles = StyleSheet.create({
   },
   declarationText: {
     marginTop: 4,
+  },
+  checkboxRow: {
+    marginTop: 8,
+    gap: 4,
   },
   buttonRow: {
     flexDirection: 'row',

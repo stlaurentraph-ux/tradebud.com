@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreatePlotDto {
   @ApiProperty()
@@ -30,5 +30,23 @@ export class CreatePlotDto {
   @IsOptional()
   @IsNumber()
   hdop?: number;
+
+  @ApiProperty({
+    required: false,
+    description: 'Local-only cadastral reference, e.g. Clave Catastral',
+  })
+  @IsOptional()
+  @IsString()
+  cadastralKey?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Optional land title photo metadata array from the device',
+    type: 'array',
+    items: { type: 'object' },
+  })
+  @IsOptional()
+  @IsArray()
+  landTitlePhotos?: any[];
 }
 

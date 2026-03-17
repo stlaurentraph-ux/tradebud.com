@@ -9,6 +9,9 @@ export type FarmerProfile = {
   role: Role;
   selfDeclared: boolean;
   selfDeclaredAt?: number;
+  fpicConsent?: boolean;
+  laborNoChildLabor?: boolean;
+  laborNoForcedLabor?: boolean;
 };
 
 export type PlotPoint = {
@@ -35,6 +38,7 @@ type AppStateContextValue = {
   plots: Plot[];
   setFarmer: (farmer: FarmerProfile) => void;
   addPlot: (input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>) => void;
+  renamePlot: (plotId: string, newName: string) => void;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -65,6 +69,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         role: nextFarmer.role,
         selfDeclared: nextFarmer.selfDeclared,
         selfDeclaredAt: nextFarmer.selfDeclaredAt ?? null,
+        fpicConsent: nextFarmer.fpicConsent ?? null,
+        laborNoChildLabor: nextFarmer.laborNoChildLabor ?? null,
+        laborNoForcedLabor: nextFarmer.laborNoForcedLabor ?? null,
       },
     });
   };
@@ -104,7 +111,28 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AppStateContext.Provider value={{ farmer, plots, setFarmer, addPlot }}>
+    <AppStateContext.Provider
+      value={{
+        farmer,
+        plots,
+        setFarmer,
+        addPlot,
+        renamePlot: (plotId: string, newName: string) => {
+          setPlots((prev) => {
+            const next = prev.map((p) =>
+              p.id === plotId
+                ? {
+                    ...p,
+                    name: newName,
+                  }
+                : p,
+            );
+            persistPlots(next);
+            return next;
+          });
+        },
+      }}
+    >
       {children}
     </AppStateContext.Provider>
   );

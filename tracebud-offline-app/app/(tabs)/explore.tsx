@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Button, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Button,
+  Image,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import MapView, { Marker, Polyline, Region } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -9,6 +17,17 @@ import { Collapsible } from '@/components/ui/collapsible';
 import { useAppState, Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
+  loadPhotosForPlot,
+  loadPlotCadastralKey,
+  loadTitlePhotosForPlot,
+  persistPlotPhoto,
+  persistPlotTitlePhoto,
+  savePlotCadastralKey,
+  type PlotPhoto,
+  type PlotTitlePhoto,
+} from '@/features/state/persistence';
+import * as ImagePicker from 'expo-image-picker';
+import {
   createDdsPackageForFarmer,
   fetchDdsPackagesForFarmer,
   fetchPlotsForFarmer,
@@ -17,6 +36,9 @@ import {
   postHarvestToBackend,
   runComplianceCheckForPlot,
   submitDdsPackage,
+  syncPlotPhotosToBackend,
+  updatePlotMetadataOnBackend,
+  fetchDdsPackageTracesJson,
 } from '@/features/api/postPlot';
 
 function computeRegionFromPlot(plot: Plot): Region | undefined {
@@ -38,7 +60,7 @@ function computeRegionFromPlot(plot: Plot): Region | undefined {
 }
 
 export default function PlotsScreen() {
-  const { plots, farmer } = useAppState();
+  const { plots, farmer, renamePlot } = useAppState();
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [loadingBackend, setLoadingBackend] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
@@ -54,6 +76,13 @@ export default function PlotsScreen() {
   );
   const [submittingPackage, setSubmittingPackage] = useState(false);
   const { t } = useLanguage();
+  const [photos, setPhotos] = useState<PlotPhoto[]>([]);
+  const [titlePhotos, setTitlePhotos] = useState<PlotTitlePhoto[]>([]);
+  const [cadastralKey, setCadastralKey] = useState('');
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editReason, setEditReason] = useState('');
+  const [lowDataMap, setLowDataMap] = useState(false);
 
   const selectedPlot = useMemo(
     () => plots.find((p) => p.id === selectedPlotId),
@@ -99,6 +128,29 @@ export default function PlotsScreen() {
   }, [farmer?.id]);
 
   const region = selectedPlot ? computeRegionFromPlot(selectedPlot) : undefined;
+
+  useEffect(() => {
+    if (!selectedPlotId) {
+      setPhotos([]);
+      setTitlePhotos([]);
+      setCadastralKey('');
+      return;
+    }
+    loadPhotosForPlot(selectedPlotId).then(setPhotos);
+    loadTitlePhotosForPlot(selectedPlotId).then(setTitlePhotos);
+    loadPlotCadastralKey(selectedPlotId).then((key) => {
+      setCadastralKey(key ?? '');
+    });
+  }, [selectedPlotId]);
+
+  useEffect(() => {
+    if (selectedPlot) {
+      setEditName(selectedPlot.name);
+    } else {
+      setEditName('');
+    }
+    setEditReason('');
+  }, [selectedPlot?.id]);
 
   return (
     <ThemedView style={styles.container}>
@@ -167,24 +219,243 @@ export default function PlotsScreen() {
           </View>
 
           {selectedPlot && region && (
-            <View style={styles.mapContainer}>
-              <MapView style={styles.map} initialRegion={region}>
-                {selectedPlot.kind === 'polygon' && selectedPlot.points.length > 2 && (
-                  <Polyline
-                    coordinates={[
-                      ...selectedPlot.points,
-                      selectedPlot.points[0],
-                    ]}
-                    strokeColor="#007AFF"
-                    strokeWidth={3}
+            <>
+              <View style={styles.mapContainer}>
+                <MapView
+                  style={styles.map}
+                  initialRegion={region}
+                  mapType={lowDataMap ? 'none' : 'standard'}
+                >
+                  {selectedPlot.kind === 'polygon' && selectedPlot.points.length > 2 && (
+                    <Polyline
+                      coordinates={[
+                        ...selectedPlot.points,
+                        selectedPlot.points[0],
+                      ]}
+                      strokeColor="#007AFF"
+                      strokeWidth={3}
+                    />
+                  )}
+                  <Marker
+                    coordinate={selectedPlot.points[0]}
+                    title={selectedPlot.name}
                   />
-                )}
-                <Marker
-                  coordinate={selectedPlot.points[0]}
-                  title={selectedPlot.name}
+                </MapView>
+              </View>
+              <View style={styles.backendSection}>
+                <Button
+                  title={lowDataMap ? 'Show base map' : 'Low-data map mode'}
+                  onPress={() => setLowDataMap((prev) => !prev)}
                 />
-              </MapView>
-            </View>
+              </View>
+              <View style={styles.backendSection}>
+                <ThemedText type="subtitle">Edit plot (local + audit)</ThemedText>
+                <ThemedText>New name</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder={selectedPlot.name}
+                />
+                <ThemedText>Reason for edit (required)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  value={editReason}
+                  onChangeText={setEditReason}
+                  placeholder="e.g. corrected spelling, merged duplicate, etc."
+                />
+                <Button
+                  title="Save name & log edit"
+                  onPress={async () => {
+                    if (!selectedPlot || !editName.trim() || !editReason.trim()) {
+                      return;
+                    }
+                    // Update local offline state
+                    renamePlot(selectedPlot.id, editName.trim());
+
+                    // Best-effort backend edit with immutable audit log
+                    try {
+                      const matchingBackend = backendPlots.find(
+                        (p) => p.name === selectedPlot.name,
+                      );
+                      if (matchingBackend) {
+                        await updatePlotMetadataOnBackend({
+                          plotId: matchingBackend.id,
+                          name: editName.trim(),
+                          reason: editReason.trim(),
+                          deviceId: undefined,
+                        });
+                        const rows = await fetchPlotsForFarmer(farmer!.id);
+                        setBackendPlots(rows ?? []);
+                      }
+                      setSyncMessage('Plot name updated locally; edit logged when online.');
+                    } catch (e) {
+                      setSyncMessage(
+                        e instanceof Error
+                          ? e.message
+                          : 'Plot renamed locally. Could not reach backend to log edit.',
+                      );
+                    }
+                  }}
+                />
+              </View>
+              <View style={styles.backendSection}>
+                <ThemedText type="subtitle">Ground-truth photos</ThemedText>
+                <Button
+                  title="Add ground-truth photo"
+                  onPress={async () => {
+                    if (!selectedPlot) return;
+
+                    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                    if (status !== 'granted') {
+                      return;
+                    }
+
+                    const result = await ImagePicker.launchCameraAsync({
+                      quality: 0.6,
+                    });
+
+                    if (result.canceled || !result.assets?.[0]?.uri) {
+                      return;
+                    }
+
+                    const uri = result.assets[0].uri;
+                    const firstPoint = selectedPlot.points[0];
+                    const takenAt = Date.now();
+
+                    persistPlotPhoto({
+                      plotId: selectedPlot.id,
+                      uri,
+                      takenAt,
+                      latitude: firstPoint?.latitude ?? null,
+                      longitude: firstPoint?.longitude ?? null,
+                    });
+
+                    const updated = await loadPhotosForPlot(selectedPlot.id);
+                    setPhotos(updated);
+                  }}
+                />
+                {photos.length > 0 && (
+                  <View style={styles.photoRow}>
+                    {photos.slice(0, 4).map((p) => (
+                      <Image
+                        key={p.id}
+                        source={{ uri: p.uri }}
+                        style={styles.photoThumb}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={styles.backendSection}>
+                <ThemedText type="subtitle">Legality / land title</ThemedText>
+                <ThemedText>Clave Catastral (local only)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. 012-345-678-9"
+                  value={cadastralKey}
+                  onChangeText={setCadastralKey}
+                  onBlur={() => {
+                    if (!selectedPlot) return;
+                    const value = cadastralKey.trim();
+                    savePlotCadastralKey(selectedPlot.id, value || null);
+                  }}
+                />
+                <View style={{ marginTop: 8 }}>
+                  <Button
+                    title="Add land title photo"
+                    onPress={async () => {
+                      if (!selectedPlot) return;
+
+                      const { status } =
+                        await ImagePicker.requestCameraPermissionsAsync();
+                      if (status !== 'granted') {
+                        return;
+                      }
+
+                      const result = await ImagePicker.launchCameraAsync({
+                        quality: 0.6,
+                      });
+
+                      if (result.canceled || !result.assets?.[0]?.uri) {
+                        return;
+                      }
+
+                      const uri = result.assets[0].uri;
+                      const takenAt = Date.now();
+
+                      persistPlotTitlePhoto({
+                        plotId: selectedPlot.id,
+                        uri,
+                        takenAt,
+                      });
+
+                      const updated = await loadTitlePhotosForPlot(
+                        selectedPlot.id,
+                      );
+                      setTitlePhotos(updated);
+                    }}
+                  />
+                </View>
+                {titlePhotos.length > 0 && (
+                  <View style={styles.photoRow}>
+                    {titlePhotos.slice(0, 4).map((p) => (
+                      <Image
+                        key={p.id}
+                        source={{ uri: p.uri }}
+                        style={styles.photoThumb}
+                      />
+                    ))}
+                  </View>
+                )}
+                <View style={{ marginTop: 8 }}>
+                  <Button
+                    title="Sync legality & photo metadata"
+                    onPress={async () => {
+                      if (!selectedPlot) return;
+                      setSyncMessage(null);
+                      try {
+                        const baseMeta = {
+                          cadastralKey: cadastralKey.trim() || null,
+                        };
+                        await syncPlotPhotosToBackend({
+                          plotId: selectedPlot.id,
+                          kind: 'ground_truth',
+                          photos: photos.map((p) => ({
+                            ...baseMeta,
+                            uri: p.uri,
+                            takenAt: p.takenAt,
+                            latitude: p.latitude ?? null,
+                            longitude: p.longitude ?? null,
+                          })),
+                          note: 'Ground-truth photos sync from device',
+                        });
+                        await syncPlotPhotosToBackend({
+                          plotId: selectedPlot.id,
+                          kind: 'land_title',
+                          photos: titlePhotos.map((p) => ({
+                            ...baseMeta,
+                            uri: p.uri,
+                            takenAt: p.takenAt,
+                          })),
+                          note: 'Land title photos sync from device',
+                        });
+                        setSyncMessage('Legality data synced to backend.');
+                      } catch (e) {
+                        setSyncMessage(
+                          e instanceof Error
+                            ? e.message
+                            : 'Could not sync legality data.',
+                        );
+                      }
+                    }}
+                  />
+                  {syncMessage ? (
+                    <ThemedText>{syncMessage}</ThemedText>
+                  ) : null}
+                </View>
+              </View>
+            </>
           )}
         </>
       )}
@@ -236,13 +507,47 @@ export default function PlotsScreen() {
       ) : backendPlots.length > 0 ? (
         <View style={styles.backendSection}>
           <ThemedText type="subtitle">{t('synced_plots')}</ThemedText>
+          {(() => {
+            const green = backendPlots.filter((p) => p.status === 'compliant').length;
+            const amber = backendPlots.filter(
+              (p) => p.status === 'degradation_risk',
+            ).length;
+            const red = backendPlots.filter(
+              (p) => p.status === 'deforestation_detected',
+            ).length;
+            return (
+              <ThemedText>
+                Compliance summary – Green: {green}, Amber: {amber}, Red: {red}
+              </ThemedText>
+            );
+          })()}
           {backendPlots.map((p) => (
             <View key={p.id} style={{ marginBottom: 8 }}>
-              <ThemedText>
-                {p.name}: {Number(p.area_ha).toFixed(4)} ha ({p.kind}) – {p.status}
-                {p.sinaph_overlap ? ' – Protected area overlap' : ''}
-                {p.indigenous_overlap ? ' – Indigenous territory overlap' : ''}
-              </ThemedText>
+              <View style={styles.syncedRow}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText>
+                    {p.name}: {Number(p.area_ha).toFixed(4)} ha ({p.kind})
+                  </ThemedText>
+                  <ThemedText>
+                    {p.sinaph_overlap ? 'Protected area overlap. ' : ''}
+                    {p.indigenous_overlap ? 'Indigenous territory overlap. ' : ''}
+                  </ThemedText>
+                </View>
+                <View style={styles.statusBadgeContainer}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      p.status === 'compliant' && styles.statusGreen,
+                      p.status === 'degradation_risk' && styles.statusAmber,
+                      p.status === 'deforestation_detected' && styles.statusRed,
+                    ]}
+                  >
+                    <ThemedText type="defaultSemiBold" style={styles.statusBadgeText}>
+                      {p.status}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
               <Button
                 title={
                   complianceBusyId === p.id
@@ -315,10 +620,12 @@ export default function PlotsScreen() {
         <View style={styles.backendSection}>
           <ThemedText type="subtitle">{t('dds_title')}</ThemedText>
           {ddsPackages.map((p) => (
-            <ThemedText key={p.id}>
-              {p.id.slice(0, 8)}… – {p.status}{' '}
-              {p.traces_reference ? `– ${p.traces_reference}` : ''}
-            </ThemedText>
+            <View key={p.id} style={{ marginBottom: 4 }}>
+              <ThemedText>
+                {p.id.slice(0, 8)}… – {p.status}{' '}
+                {p.traces_reference ? `– ${p.traces_reference}` : ''}
+              </ThemedText>
+            </View>
           ))}
           {farmer && vouchers.length > 0 && (
             <Button
@@ -389,6 +696,33 @@ export default function PlotsScreen() {
               }}
             />
           )}
+          {farmer && ddsPackages.length > 0 && (
+            <Button
+              title="Download latest DDS JSON (TRACES-style)"
+              onPress={async () => {
+                if (!farmer) return;
+                const latest =
+                  ddsPackages
+                    .slice()
+                    .sort((a, b) => {
+                      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+                      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+                      return db - da;
+                    })[0] ?? ddsPackages[ddsPackages.length - 1];
+                try {
+                  const json = await fetchDdsPackageTracesJson(latest.id);
+                  console.log('DDS TRACES JSON', json);
+                  setBackendError(null);
+                } catch (e) {
+                  setBackendError(
+                    e instanceof Error
+                      ? e.message
+                      : 'Could not load TRACES JSON. Please try again.',
+                  );
+                }
+              }}
+            />
+          )}
         </View>
       )}
     </ThemedView>
@@ -443,5 +777,45 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  photoRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  photoThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: 6,
+    backgroundColor: '#eee',
+  },
+  syncedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  statusBadgeContainer: {
+    marginLeft: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  statusBadgeText: {
+    color: '#000',
+  },
+  statusGreen: {
+    backgroundColor: '#C6F6D5',
+  },
+  statusAmber: {
+    backgroundColor: '#FEEBC8',
+  },
+  statusRed: {
+    backgroundColor: '#FED7D7',
   },
 });

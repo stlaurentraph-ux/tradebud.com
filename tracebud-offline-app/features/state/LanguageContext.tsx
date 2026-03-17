@@ -40,6 +40,10 @@ const strings: Record<SupportedLanguage, Record<string, string>> = {
     dds_title: 'DDS packages',
     recent_activity: 'Recent activity',
     backend_issue_title: 'Backend sync issue',
+    fpic_title: 'FPIC & labor',
+    fpic_label: 'Land is not in use without Free, Prior and Informed Consent (FPIC).',
+    labor_no_child: 'No child labor on this plot.',
+    labor_no_forced: 'No forced labor or trafficking on this plot.',
   },
   es: {
     home_title: 'Tracebud sin conexión',
@@ -72,6 +76,11 @@ const strings: Record<SupportedLanguage, Record<string, string>> = {
     dds_title: 'Paquetes DDS',
     recent_activity: 'Actividad reciente',
     backend_issue_title: 'Problema al sincronizar con el servidor',
+    fpic_title: 'Consentimiento y trabajo',
+    fpic_label:
+      'La tierra no se usa sin Consentimiento Libre, Previo e Informado (CLPI/FPIC).',
+    labor_no_child: 'No hay trabajo infantil en esta parcela.',
+    labor_no_forced: 'No hay trabajo forzoso ni trata de personas en esta parcela.',
   },
 };
 
