@@ -1,218 +1,235 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { Sidebar } from "@/components/dashboard/sidebar";
-import { Header } from "@/components/dashboard/header";
-import { MetricsCards } from "@/components/dashboard/metrics-cards";
-import { PackagesTable, type DdsPackage } from "@/components/dashboard/packages-table";
-import { ActivityFeed } from "@/components/dashboard/activity-feed";
-import { QuickActions } from "@/components/dashboard/quick-actions";
-import { Charts } from "@/components/dashboard/charts";
-import { LoginForm } from "@/components/auth/login-form";
+import { ArrowUpRight, ArrowDownRight, Package, Clock, MapPin, Users, Plus, Upload, CheckCircle, BarChart3, Settings, LogOut, Bell, Search, TrendingUp } from 'lucide-react';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001/api";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-let supabase: SupabaseClient | null = null;
-
-function getSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error(
-      "Supabase URL or ANON key not configured for exporter console."
-    );
-  }
-  if (!supabase) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-  return supabase;
-}
-
-export default function DashboardPage() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [packages, setPackages] = useState<DdsPackage[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(false);
-  const [metrics, setMetrics] = useState({
-    totalPackages: 0,
-    pendingPackages: 0,
-    totalPlots: 0,
-    totalFarmers: 0,
-  });
-
-  // Check for existing session on mount
-  useEffect(() => {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-
-    const checkSession = async () => {
-      try {
-        const client = getSupabase();
-        const { data } = await client.auth.getSession();
-        if (data.session) {
-          setAccessToken(data.session.access_token);
-          setUserEmail(data.session.user.email ?? null);
-        }
-      } catch (error) {
-        console.log("[v0] No existing session found");
-      }
-    };
-    checkSession();
-  }, []);
-
-  // Load packages when authenticated
-  const loadPackages = useCallback(async () => {
-    if (!accessToken) return;
-
-    setLoadingPackages(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/v1/harvest/packages`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          accept: "application/json",
-        },
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        console.log("[v0] Failed to load packages:", body.message);
-        setPackages([]);
-        return;
-      }
-      const rows = await res.json();
-      setPackages(rows ?? []);
-
-      // Update metrics based on packages
-      const pending = rows?.filter(
-        (p: DdsPackage) => p.status === "pending"
-      ).length;
-      setMetrics((prev) => ({
-        ...prev,
-        totalPackages: rows?.length ?? 0,
-        pendingPackages: pending ?? 0,
-      }));
-    } catch (error) {
-      console.log("[v0] Error loading packages:", error);
-      setPackages([]);
-    } finally {
-      setLoadingPackages(false);
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (accessToken) {
-      loadPackages();
-    }
-  }, [accessToken, loadPackages]);
-
-  const handleLogin = async (email: string, password: string) => {
-    setAuthError(null);
-    try {
-      const client = getSupabase();
-      const { data, error } = await client.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error || !data.session) {
-        setAuthError(error?.message ?? "Login failed.");
-        setAccessToken(null);
-        return;
-      }
-      setAccessToken(data.session.access_token);
-      setUserEmail(data.session.user.email ?? null);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Could not contact Supabase.";
-      setAuthError(message);
-      setAccessToken(null);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const client = getSupabase();
-      await client.auth.signOut();
-    } catch (error) {
-      console.log("[v0] Error signing out:", error);
-    }
-    setAccessToken(null);
-    setUserEmail(null);
-    setPackages([]);
-  };
-
-  // Show configuration notice if Supabase is not set up
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="max-w-md rounded-xl border border-border bg-card p-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <span className="text-xl font-bold text-primary-foreground">T</span>
-          </div>
-          <h1 className="mb-2 text-xl font-semibold">Configuration Required</h1>
-          <p className="text-sm text-muted-foreground">
-            Set <code className="rounded bg-muted px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-            <code className="rounded bg-muted px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in
-            your environment to enable the exporter dashboard.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login form if not authenticated
-  if (!accessToken) {
-    return <LoginForm onLogin={handleLogin} error={authError} />;
-  }
-
-  // Show dashboard
+export default function ExporterDashboard() {
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar userEmail={userEmail} onLogout={handleLogout} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 h-screen w-64 border-r border-slate-800 bg-slate-950/50 backdrop-blur p-6 flex flex-col">
+        <div className="mb-8">
+          <div className="text-2xl font-bold text-white">TradeBud</div>
+          <p className="text-xs text-slate-500 mt-1">Exporter Portal</p>
+        </div>
+        
+        <nav className="flex-1 space-y-2">
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 font-medium">
+            <BarChart3 size={20} />
+            <span>Overview</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Package size={20} />
+            <span>DDS Packages</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <MapPin size={20} />
+            <span>Plots</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Users size={20} />
+            <span>Farmers</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <BarChart3 size={20} />
+            <span>Reports</span>
+          </a>
+        </nav>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header
-          title="Overview"
-          subtitle={`Welcome back${userEmail ? ", " + userEmail.split("@")[0] : ""}`}
-        />
+        <div className="space-y-2 pt-6 border-t border-slate-800">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Settings size={20} />
+            <span>Settings</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-7xl space-y-6">
-            {/* Metrics Cards */}
-            <MetricsCards metrics={metrics} />
-
-            {/* Charts */}
-            <Charts />
-
-            {/* Main Content Grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Packages Table - takes 2 columns */}
-              <div className="lg:col-span-2">
-                <PackagesTable
-                  packages={packages}
-                  loading={loadingPackages}
-                  onViewPackage={(id) =>
-                    console.log("[v0] View package:", id)
-                  }
-                  onSubmitToTraces={(id) =>
-                    console.log("[v0] Submit to TRACES:", id)
-                  }
-                />
+      {/* Main Content */}
+      <main className="ml-64">
+        {/* Header */}
+        <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-10">
+          <div className="flex items-center justify-between p-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+              <p className="text-slate-400 text-sm mt-1">Welcome back, Green Valley Exports</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50" />
               </div>
+              <button className="p-2 hover:bg-slate-800 rounded-lg transition">
+                <Bell size={20} className="text-slate-400" />
+              </button>
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold">GV</div>
+            </div>
+          </div>
+        </header>
 
-              {/* Sidebar widgets */}
-              <div className="space-y-6">
-                <QuickActions
-                  onNewPackage={() => console.log("[v0] New package")}
-                  onImportData={() => console.log("[v0] Import data")}
-                  onVerifyPlots={() => console.log("[v0] Verify plots")}
-                  onExportReport={() => console.log("[v0] Export report")}
-                />
-                <ActivityFeed />
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Packages', value: '248', change: '+12%', positive: true, icon: Package },
+              { label: 'Pending', value: '24', change: '+5%', positive: false, icon: Clock },
+              { label: 'Plots', value: '156', change: '+8%', positive: true, icon: MapPin },
+              { label: 'Active Farmers', value: '89', change: '+3%', positive: true, icon: Users },
+            ].map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div key={metric.label} className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-slate-400 text-sm font-medium">{metric.label}</p>
+                      <p className="text-3xl font-bold text-white mt-2">{metric.value}</p>
+                      <p className={`text-xs mt-2 flex items-center gap-1 ${metric.positive ? 'text-emerald-400' : 'text-orange-400'}`}>
+                        {metric.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        {metric.change} vs last month
+                      </p>
+                    </div>
+                    <div className="p-3 bg-emerald-500/10 rounded-lg">
+                      <Icon className="text-emerald-400" size={24} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Line Chart */}
+            <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-6">Package Submissions</h2>
+              <div className="h-64 flex items-end justify-between gap-2">
+                {[40, 60, 35, 75, 55, 85, 70, 45, 90, 65, 80, 95].map((height, i) => (
+                  <div key={i} className="flex-1 bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t opacity-70 hover:opacity-100 transition" style={{ height: `${(height / 100) * 100}%` }} />
+                ))}
+              </div>
+              <div className="mt-4 text-xs text-slate-500 text-center">Last 12 months</div>
+            </div>
+
+            {/* Donut Chart */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-6">Compliance Status</h2>
+              <div className="flex flex-col items-center justify-center">
+                <div className="relative w-32 h-32 mb-4">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="8" strokeDasharray="75 100" strokeDashoffset="0" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="8" strokeDasharray="20 100" strokeDashoffset="-75" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" strokeWidth="8" strokeDasharray="5 100" strokeDashoffset="-95" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-white">75%</span>
+                  </div>
+                </div>
+                <div className="space-y-2 w-full text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Compliant</span>
+                    <span className="text-emerald-400 font-semibold">75%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Pending</span>
+                    <span className="text-orange-400 font-semibold">20%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Issues</span>
+                    <span className="text-red-400 font-semibold">5%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </main>
-      </div>
+
+          {/* Quick Actions */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { icon: Plus, label: 'New Package', color: 'emerald' },
+                { icon: Upload, label: 'Import Data', color: 'blue' },
+                { icon: CheckCircle, label: 'Verify Plots', color: 'amber' },
+                { icon: BarChart3, label: 'Export Report', color: 'violet' },
+              ].map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button key={action.label} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition text-slate-300 hover:text-white">
+                    <Icon size={20} />
+                    <span className="font-medium">{action.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Recent Packages Table */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Packages</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Package ID</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Farmer</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Crop</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Weight</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {[
+                    { id: 'PKG-2024-001', farmer: 'John Kiprotich', crop: 'Maize', weight: '500kg', status: 'Verified', color: 'emerald' },
+                    { id: 'PKG-2024-002', farmer: 'Mary Kipchoge', crop: 'Wheat', weight: '450kg', status: 'Pending', color: 'amber' },
+                    { id: 'PKG-2024-003', farmer: 'James Kiplagat', crop: 'Rice', weight: '600kg', status: 'Verified', color: 'emerald' },
+                    { id: 'PKG-2024-004', farmer: 'Sarah Koech', crop: 'Beans', weight: '350kg', status: 'Issue', color: 'red' },
+                    { id: 'PKG-2024-005', farmer: 'David Rotich', crop: 'Maize', weight: '480kg', status: 'Verified', color: 'emerald' },
+                  ].map((pkg) => (
+                    <tr key={pkg.id} className="hover:bg-slate-800/30 transition">
+                      <td className="py-3 px-4 text-white font-medium">{pkg.id}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.farmer}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.crop}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.weight}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-${pkg.color}-500/20 text-${pkg.color}-400`}>
+                          {pkg.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Activity Feed */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
+            <div className="space-y-4">
+              {[
+                { action: 'Package Verified', desc: 'PKG-2024-001 by John Kiprotich', time: '2 hours ago', icon: '✓', color: 'emerald' },
+                { action: 'New Submission', desc: 'PKG-2024-005 submitted by David Rotich', time: '4 hours ago', icon: '↑', color: 'blue' },
+                { action: 'Compliance Check', desc: 'Plot verification completed', time: '1 day ago', icon: '✓', color: 'emerald' },
+                { action: 'Data Import', desc: '156 plot records imported', time: '2 days ago', icon: '↓', color: 'violet' },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-4 pb-4 border-b border-slate-800 last:border-b-0">
+                  <div className={`p-2 rounded-lg bg-${item.color}-500/20 text-${item.color}-400 text-sm font-bold flex-shrink-0`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-slate-200 font-medium">{item.action}</p>
+                    <p className="text-slate-500 text-sm">{item.desc}</p>
+                    <p className="text-slate-600 text-xs mt-1">{item.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
