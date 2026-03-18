@@ -327,7 +327,7 @@ function RecordScreen({
             </div>
           )}
           <div className="absolute bottom-2 right-2 bg-white/90 px-2 py-1 rounded-lg text-xs font-medium text-stone-700">
-            GPS: 5.6037° N, 0.1870° W
+            {`GPS: 5.6037\u00B0 N, 0.1870\u00B0 W`}
           </div>
         </div>
 
