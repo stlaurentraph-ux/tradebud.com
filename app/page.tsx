@@ -1033,7 +1033,15 @@ function RegisterWalkScreen({ navigateTo, isRecording, setIsRecording, recording
   )
 }
 
-function RegisterCentroidScreen({ navigateTo, isRecording, setIsRecording, recordingTime, gpsAccuracy, showGpsWarning, formatTime }: {
+function RegisterCentroidScreen({
+  navigateTo,
+  isRecording,
+  setIsRecording,
+  recordingTime,
+  gpsAccuracy,
+  showGpsWarning,
+  formatTime,
+}: {
   navigateTo: (s: Screen) => void
   isRecording: boolean
   setIsRecording: (v: boolean) => void
