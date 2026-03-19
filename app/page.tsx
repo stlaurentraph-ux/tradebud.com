@@ -1074,87 +1074,93 @@ function RegisterCentroidScreen({ navigateTo, isRecording, setIsRecording, recor
         </div>
       </div>
 
-      {/* Warning Message */}
+      {/* Amber Warning */}
       {showGpsWarning && (
-        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
-          <div className="flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-amber-900">GPS Averaging in Progress</p>
-              <p className="text-xs text-amber-700 mt-1">Hold phone steady for accurate center point reading.</p>
-            </div>
+        <div className="bg-amber-100 rounded-xl p-3 border border-amber-300 animate-pulse">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-700" />
+            <p className="text-xs font-semibold text-amber-800">Hold steady - averaging in progress</p>
           </div>
         </div>
       )}
 
-      {/* Recording Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-        <div className="flex flex-col items-center gap-6">
-          {/* Status Circle */}
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${
-            isRecording 
-              ? "bg-emerald-100 animate-pulse" 
-              : "bg-stone-100"
-          }`}>
-            <MapPin className={`w-12 h-12 ${
-              isRecording ? "text-emerald-600" : "text-stone-400"
-            }`} />
-          </div>
-
-          {/* Instructions */}
+      {/* Map Preview */}
+      <div className="relative bg-stone-200 rounded-2xl h-48 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 to-emerald-800/30" />
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm font-semibold text-stone-900">
-              {isRecording ? "Recording Center Point" : "Ready to Record"}
-            </p>
-            <p className="text-xs text-stone-500 mt-1">
-              {isRecording 
-                ? "Keep phone steady at plot center for stable GPS reading." 
-                : "Stand at the center of your plot and press record."}
+            <MapPin className={`w-12 h-12 mx-auto mb-2 ${isRecording ? "text-emerald-500 animate-pulse" : "text-stone-400"}`} />
+            <p className="text-xs text-stone-600 font-medium">
+              {isRecording ? "Recording center point..." : "Start to begin capture"}
             </p>
           </div>
-
-          {/* Timer */}
-          {isRecording && (
-            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-lg">
-              <Clock className="w-4 h-4 text-emerald-600" />
-              <span className="font-mono font-semibold text-emerald-700">{formatTime(recordingTime)}</span>
-            </div>
-          )}
-
-          {/* Record Button */}
-          <button
-            onClick={() => setIsRecording(!isRecording)}
-            className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-              isRecording
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-emerald-600 hover:bg-emerald-700 text-white"
-            }`}
-          >
-            {isRecording ? (
-              <>
-                <Square className="w-5 h-5" />
-                Stop Recording
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5" />
-                Start Recording
-              </>
-            )}
-          </button>
-
-          {/* Recommended Duration */}
-          <p className="text-xs text-stone-500">Recommended: 60-120 seconds for best accuracy</p>
+        </div>
+        {/* Coordinates */}
+        <div className="absolute bottom-3 right-3 bg-white/90 px-2 py-1 rounded-lg text-xs font-mono text-stone-700">
+          {`14.8234\u00B0N, 87.1892\u00B0W`}
         </div>
       </div>
 
-      {/* Continue Button */}
-      <button
-        onClick={() => navigateTo("register-declarations")}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-all"
-      >
-        Continue to Declarations
-      </button>
+      {/* Averaging Progress */}
+      {isRecording && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-stone-700">Center Point Averaging</span>
+            <span className="text-xs text-emerald-600 font-semibold">75%</span>
+          </div>
+          <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-emerald-500 rounded-full transition-all duration-1000"
+              style={{ width: "75%" }}
+            />
+          </div>
+          <p className="text-xs text-stone-500 mt-2">Averaging 60-120 seconds for stable center coordinates</p>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-stone-200">
+          <Clock className="w-5 h-5 text-stone-400 mx-auto mb-1" />
+          <p className="text-lg font-bold text-stone-900">{formatTime(recordingTime)}</p>
+          <p className="text-xs text-stone-500">Duration</p>
+        </div>
+        <div className="bg-white rounded-xl p-3 text-center shadow-sm border border-stone-200">
+          <Navigation className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+          <p className="text-lg font-bold text-stone-900">1.2</p>
+          <p className="text-xs text-stone-500">Est. Ha</p>
+        </div>
+      </div>
+
+      {/* Recording Controls */}
+      <div className="flex gap-3">
+        {!isRecording ? (
+          <button
+            onClick={() => setIsRecording(true)}
+            className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+          >
+            <Play className="w-5 h-5" />
+            Start Recording
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={() => setIsRecording(false)}
+              className="flex-1 bg-red-500 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
+            >
+              <Square className="w-5 h-5" />
+              Stop Recording
+            </button>
+            <button
+              onClick={() => navigateTo("register-declarations")}
+              className="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+            >
+              <CheckCircle className="w-5 h-5" />
+              Continue
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
