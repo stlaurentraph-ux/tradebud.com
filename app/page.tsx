@@ -1155,6 +1155,14 @@ function RegisterCentroidScreen({ navigateTo, isRecording, setIsRecording, recor
             Start Recording
           </button>
         ) : (
+          <>
+            <button
+              onClick={() => navigateTo("register-declarations")}
+              className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+            >
+              <CheckCircle className="w-5 h-5" />
+              Complete & Continue
+            </button>
             <button
               onClick={() => setIsRecording(false)}
               className="w-full border-2 border-stone-300 text-stone-600 py-3 rounded-xl font-medium flex items-center justify-center gap-2"
