@@ -1101,6 +1101,19 @@ function RegisterCentroidScreen({ navigateTo, isRecording, setIsRecording, recor
         </div>
       </div>
 
+      {/* Instruction Card */}
+      {!isRecording && (
+        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
+          <div className="flex gap-3">
+            <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Position yourself at the center of your field</p>
+              <p className="text-xs text-emerald-700 mt-1">Make sure you are on the center of your field and then press Start Recording for 60-120 seconds.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Averaging Progress */}
       {isRecording && (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-200">
