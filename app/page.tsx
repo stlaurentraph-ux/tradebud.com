@@ -57,6 +57,7 @@ type Screen =
   | "register" 
   | "register-method"
   | "register-walk"
+  | "register-centroid"
   | "register-draw"
   | "register-declarations"
   | "register-photos"
@@ -199,6 +200,7 @@ export default function PrototypePage() {
       "register": "Register Plot",
       "register-method": "Capture Method",
       "register-walk": "Walk Perimeter",
+      "register-centroid": "Capture Plot Center",
       "register-draw": "Draw on Map",
       "register-declarations": "Declarations",
       "register-photos": "Ground-Truth Photos",
@@ -323,6 +325,17 @@ export default function PrototypePage() {
                         recordingTime={recordingTime}
                         waypoints={waypoints}
                         waypointAveraging={waypointAveraging}
+                        gpsAccuracy={gpsAccuracy}
+                        showGpsWarning={showGpsWarning}
+                        formatTime={formatTime}
+                      />
+                    )}
+                    {activeScreen === "register-centroid" && (
+                      <RegisterCentroidScreen
+                        navigateTo={navigateTo}
+                        isRecording={isRecording}
+                        setIsRecording={setIsRecording}
+                        recordingTime={recordingTime}
                         gpsAccuracy={gpsAccuracy}
                         showGpsWarning={showGpsWarning}
                         formatTime={formatTime}
@@ -827,7 +840,7 @@ function RegisterMethodScreen({ navigateTo, plotSize }: {
 
       {plotSize === "small" && (
         <button
-          onClick={() => navigateTo("register-walk")}
+          onClick={() => navigateTo("register-centroid")}
           className="w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-200 hover:border-emerald-300 transition-all text-left"
         >
           <div className="flex items-start gap-4">
@@ -1007,6 +1020,141 @@ function RegisterWalkScreen({ navigateTo, isRecording, setIsRecording, recording
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+function RegisterCentroidScreen({ navigateTo, isRecording, setIsRecording, recordingTime, gpsAccuracy, showGpsWarning, formatTime }: {
+  navigateTo: (s: Screen) => void
+  isRecording: boolean
+  setIsRecording: (v: boolean) => void
+  recordingTime: number
+  gpsAccuracy: "good" | "amber" | "poor"
+  showGpsWarning: boolean
+  formatTime: (s: number) => string
+}) {
+  return (
+    <div className="p-4 space-y-4">
+      {/* GPS Status Card */}
+      <div className={`rounded-2xl p-4 border ${
+        gpsAccuracy === "good" ? "bg-emerald-50 border-emerald-200" :
+        gpsAccuracy === "amber" ? "bg-amber-50 border-amber-200" :
+        "bg-red-50 border-red-200"
+      }`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Satellite className={`w-5 h-5 ${
+              gpsAccuracy === "good" ? "text-emerald-600" :
+              gpsAccuracy === "amber" ? "text-amber-600" :
+              "text-red-600"
+            }`} />
+            <span className="text-sm font-semibold text-stone-900">GPS Signal</span>
+          </div>
+          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+            gpsAccuracy === "good" ? "bg-emerald-200 text-emerald-800" :
+            gpsAccuracy === "amber" ? "bg-amber-200 text-amber-800" :
+            "bg-red-200 text-red-800"
+          }`}>
+            {gpsAccuracy === "good" ? "Strong" : gpsAccuracy === "amber" ? "Moderate" : "Weak"}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div>
+            <span className="text-stone-500">HDOP</span>
+            <p className="font-semibold text-stone-900">{gpsAccuracy === "good" ? "1.2" : gpsAccuracy === "amber" ? "2.8" : "4.5"}</p>
+          </div>
+          <div>
+            <span className="text-stone-500">Satellites</span>
+            <p className="font-semibold text-stone-900">{gpsAccuracy === "good" ? "12" : gpsAccuracy === "amber" ? "8" : "5"}</p>
+          </div>
+          <div>
+            <span className="text-stone-500">Mode</span>
+            <p className="font-semibold text-stone-900">L1/L5</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Warning Message */}
+      {showGpsWarning && (
+        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">GPS Averaging in Progress</p>
+              <p className="text-xs text-amber-700 mt-1">Hold phone steady for accurate center point reading.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recording Card */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+        <div className="flex flex-col items-center gap-6">
+          {/* Status Circle */}
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${
+            isRecording 
+              ? "bg-emerald-100 animate-pulse" 
+              : "bg-stone-100"
+          }`}>
+            <MapPin className={`w-12 h-12 ${
+              isRecording ? "text-emerald-600" : "text-stone-400"
+            }`} />
+          </div>
+
+          {/* Instructions */}
+          <div className="text-center">
+            <p className="text-sm font-semibold text-stone-900">
+              {isRecording ? "Recording Center Point" : "Ready to Record"}
+            </p>
+            <p className="text-xs text-stone-500 mt-1">
+              {isRecording 
+                ? "Keep phone steady at plot center for stable GPS reading." 
+                : "Stand at the center of your plot and press record."}
+            </p>
+          </div>
+
+          {/* Timer */}
+          {isRecording && (
+            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-lg">
+              <Clock className="w-4 h-4 text-emerald-600" />
+              <span className="font-mono font-semibold text-emerald-700">{formatTime(recordingTime)}</span>
+            </div>
+          )}
+
+          {/* Record Button */}
+          <button
+            onClick={() => setIsRecording(!isRecording)}
+            className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+              isRecording
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <Square className="w-5 h-5" />
+                Stop Recording
+              </>
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                Start Recording
+              </>
+            )}
+          </button>
+
+          {/* Recommended Duration */}
+          <p className="text-xs text-stone-500">Recommended: 60-120 seconds for best accuracy</p>
+        </div>
+      </div>
+
+      {/* Continue Button */}
+      <button
+        onClick={() => navigateTo("register-declarations")}
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-all"
+      >
+        Continue to Declarations
+      </button>
     </div>
   )
 }
