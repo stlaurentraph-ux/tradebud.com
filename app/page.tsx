@@ -826,7 +826,10 @@ function RegisterMethodScreen({ navigateTo, plotSize }: {
       </button>
 
       {plotSize === "small" && (
-        <button className="w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-200 hover:border-emerald-300 transition-all text-left">
+        <button
+          onClick={() => navigateTo("register-walk")}
+          className="w-full bg-white rounded-2xl p-4 shadow-sm border border-stone-200 hover:border-emerald-300 transition-all text-left"
+        >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Target className="w-6 h-6 text-purple-700" />
