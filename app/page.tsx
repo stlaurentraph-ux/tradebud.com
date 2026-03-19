@@ -269,7 +269,7 @@ export default function PrototypePage() {
                   {/* App Header */}
                   <div className="bg-emerald-700 px-4 py-3">
                     <div className="flex items-center justify-between">
-                      {/* Left: back button or user info */}
+                      {/* Left: logo+title on home, back button elsewhere */}
                       {activeScreen !== "home" ? (
                         <button
                           onClick={() => navigateTo(getBackScreen())}
@@ -280,24 +280,20 @@ export default function PrototypePage() {
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <User className="w-4 h-4 text-white" />
-                          </div>
+                          <img
+                            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tracebud%20Logo-ivLakhDiiFurpyNv9zgWCmrQ0GXFTN.png"
+                            alt="Tracebud"
+                            className="w-8 h-8"
+                          />
                           <div>
-                            <p className="text-white text-sm font-semibold leading-tight">Maria Santos</p>
-                            <p className="text-emerald-200 text-xs leading-tight">Farmer · Honduras</p>
+                            <p className="text-white text-sm font-bold leading-tight">Tracebud</p>
+                            <p className="text-emerald-200 text-xs leading-tight">Farmer Field App</p>
                           </div>
                         </div>
                       )}
 
-                      {/* Center: screen title or logo */}
-                      {activeScreen === "home" ? (
-                        <img
-                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tracebud%20Logo-ivLakhDiiFurpyNv9zgWCmrQ0GXFTN.png"
-                          alt="Tracebud"
-                          className="w-7 h-7 opacity-90"
-                        />
-                      ) : (
+                      {/* Center: screen title on inner screens */}
+                      {activeScreen !== "home" && (
                         <span className="text-white font-medium text-sm">{getScreenTitle()}</span>
                       )}
 
