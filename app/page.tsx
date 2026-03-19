@@ -304,7 +304,7 @@ export default function PrototypePage() {
                       {/* Right: language indicator */}
                       <div className="bg-emerald-600/50 px-2.5 py-1 rounded-full flex items-center gap-1">
                         <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-                        <span className="text-white text-xs font-medium">ES</span>
+                        <span className="text-white text-xs font-medium">EN</span>
                       </div>
                     </div>
                   </div>
