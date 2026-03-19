@@ -267,30 +267,44 @@ export default function PrototypePage() {
                   </div>
 
                   {/* App Header */}
-                  <div className="bg-emerald-700 px-4 pb-4">
-                    <div className="flex items-center justify-between">
-                      {activeScreen !== "home" ? (
-                        <button 
-                          onClick={() => navigateTo(getBackScreen())}
-                          className="flex items-center gap-1 text-white/90 hover:text-white transition-colors"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                          <span className="text-sm">Back</span>
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
+                  <div className="bg-emerald-700 px-4 pb-4 pt-3">
+                    <div className="flex items-center justify-between mb-3">
+                      {/* Logo */}
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tracebud%20Logo-ivLakhDiiFurpyNv9zgWCmrQ0GXFTN.png"
+                          alt="Tracebud"
+                          className="w-8 h-8"
+                        />
+                        {activeScreen === "home" && (
+                          <span className="text-white font-bold text-sm">Tracebud</span>
+                        )}
+                      </div>
+                      {/* Navigation */}
+                      <div className="flex items-center justify-between flex-1 px-3">
+                        {activeScreen !== "home" ? (
+                          <button 
+                            onClick={() => navigateTo(getBackScreen())}
+                            className="flex items-center gap-1 text-white/90 hover:text-white transition-colors"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                            <span className="text-sm">Back</span>
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-white text-sm font-semibold">Maria Santos</p>
+                              <p className="text-emerald-200 text-xs">Farmer - Honduras</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-white text-sm font-semibold">Maria Santos</p>
-                            <p className="text-emerald-200 text-xs">Farmer - Honduras</p>
-                          </div>
-                        </div>
-                      )}
-                      {activeScreen !== "home" && (
-                        <span className="text-white font-medium text-sm">{getScreenTitle()}</span>
-                      )}
+                        )}
+                        {activeScreen !== "home" && (
+                          <span className="text-white font-medium text-sm">{getScreenTitle()}</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <div className="bg-emerald-600/50 px-2.5 py-1 rounded-full flex items-center gap-1">
                           <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
@@ -585,22 +599,36 @@ function Checkbox({ checked, onChange, label, description }: {
 function HomeScreen({ navigateTo }: { navigateTo: (s: Screen) => void }) {
   return (
     <div className="p-4 space-y-4">
+      {/* Tracebud Branding */}
+      <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-6 text-white shadow-lg flex items-center gap-4">
+        <img 
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tracebud%20Logo-ivLakhDiiFurpyNv9zgWCmrQ0GXFTN.png"
+          alt="Tracebud"
+          className="w-16 h-16 flex-shrink-0"
+        />
+        <div>
+          <p className="text-emerald-100 text-xs uppercase tracking-wide mb-1">Tracebud</p>
+          <h1 className="text-lg font-bold">Field Data Collection</h1>
+          <p className="text-emerald-100 text-xs mt-1">EUDR Compliant Verification</p>
+        </div>
+      </div>
+
       {/* Welcome Card */}
-      <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl p-4 text-white shadow-lg">
-        <p className="text-emerald-100 text-sm mb-1">Welcome back,</p>
+      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-2xl p-4 text-emerald-900 border border-emerald-200">
+        <p className="text-emerald-700 text-sm mb-1">Welcome back,</p>
         <h2 className="text-xl font-bold mb-3">Maria Santos</h2>
         <div className="flex gap-2">
-          <div className="bg-white/20 rounded-lg px-3 py-1.5">
-            <p className="text-xs text-emerald-100">Plots</p>
-            <p className="text-lg font-bold">3</p>
+          <div className="bg-white/60 rounded-lg px-3 py-1.5">
+            <p className="text-xs text-emerald-700">Plots</p>
+            <p className="text-lg font-bold text-emerald-900">3</p>
           </div>
-          <div className="bg-white/20 rounded-lg px-3 py-1.5">
-            <p className="text-xs text-emerald-100">Compliant</p>
-            <p className="text-lg font-bold">2</p>
+          <div className="bg-white/60 rounded-lg px-3 py-1.5">
+            <p className="text-xs text-emerald-700">Compliant</p>
+            <p className="text-lg font-bold text-emerald-900">2</p>
           </div>
-          <div className="bg-white/20 rounded-lg px-3 py-1.5">
-            <p className="text-xs text-emerald-100">Pending</p>
-            <p className="text-lg font-bold text-amber-300">1</p>
+          <div className="bg-white/60 rounded-lg px-3 py-1.5">
+            <p className="text-xs text-emerald-700">Pending</p>
+            <p className="text-lg font-bold text-amber-600">1</p>
           </div>
         </div>
       </div>
