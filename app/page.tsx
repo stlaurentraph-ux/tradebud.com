@@ -255,19 +255,17 @@ export default function PrototypePage() {
 
                 {/* Screen Content */}
                 <div className="relative w-full h-full bg-stone-50 overflow-hidden flex flex-col">
-                  {/* Status Bar */}
-                  <div className="bg-emerald-700 pt-10 pb-2 px-5 flex items-center justify-between">
-                    <span className="text-white text-xs font-semibold">9:41</span>
-                    <div className="flex items-center gap-2">
+                  {/* Combined Status + Nav Bar */}
+                  <div className="bg-emerald-700 pt-8 pb-2.5 px-4">
+                    {/* Status row */}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white/70 text-xs font-medium">9:41</span>
                       <div className="flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded-full">
                         <WifiOff className="w-3 h-3 text-amber-300" />
                         <span className="text-amber-300 text-xs font-semibold">Offline</span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* App Header */}
-                  <div className="bg-emerald-700 px-4 py-3">
+                    {/* Nav row */}
                     <div className="flex items-center justify-between">
                       {/* Left: logo+title on home, back button elsewhere */}
                       {activeScreen !== "home" ? (
@@ -283,7 +281,7 @@ export default function PrototypePage() {
                           <img
                             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Tracebud%20Logo-ivLakhDiiFurpyNv9zgWCmrQ0GXFTN.png"
                             alt="Tracebud"
-                            className="w-8 h-8"
+                            className="w-7 h-7"
                           />
                           <div>
                             <p className="text-white text-sm font-bold leading-tight">Tracebud</p>
@@ -298,8 +296,8 @@ export default function PrototypePage() {
                       )}
 
                       {/* Right: language indicator */}
-                      <div className="bg-emerald-600/50 px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                      <div className="bg-emerald-600/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
                         <span className="text-white text-xs font-medium">EN</span>
                       </div>
                     </div>
