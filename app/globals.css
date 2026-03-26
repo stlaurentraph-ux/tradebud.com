@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@theme inline {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* Tracebud brand tokens */
+  --color-background:        #fafaf9; /* stone-50  */
+  --color-surface:           #ffffff;
+  --color-surface-secondary: #f5f5f4; /* stone-100 */
+  --color-border:            #e7e5e4; /* stone-200 */
+  --color-border-strong:     #d6d3d1; /* stone-300 */
+
+  --color-foreground:        #1c1917; /* stone-900 */
+  --color-foreground-muted:  #78716c; /* stone-500 */
+  --color-foreground-faint:  #a8a29e; /* stone-400 */
+
+  --color-primary:           #14532d; /* emerald-900 */
+  --color-primary-mid:       #166534; /* emerald-800 */
+  --color-primary-light:     #d1fae5; /* emerald-100 */
+  --color-primary-faint:     #f0fdf4; /* emerald-50  */
+
+  --color-accent:            #ea580c; /* orange-600  */
+  --color-accent-hover:      #c2410c; /* orange-700  */
+  --color-accent-light:      #fff7ed; /* orange-50   */
+  --color-accent-border:     #fed7aa; /* orange-200  */
+
+  --color-success:           #16a34a; /* green-600   */
+  --color-warning:           #d97706; /* amber-600   */
+  --color-destructive:       #dc2626; /* red-600     */
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+}

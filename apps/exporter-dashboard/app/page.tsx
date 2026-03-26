@@ -1,307 +1,235 @@
 'use client';
 
-import { useState } from 'react';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { ArrowUpRight, ArrowDownRight, Package, Clock, MapPin, Users, Plus, Upload, CheckCircle, BarChart3, Settings, LogOut, Bell, Search, TrendingUp } from 'lucide-react';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api';
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-let supabase: SupabaseClient | null = null;
-
-function getSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured for exporter console.');
-  }
-  if (!supabase) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-  return supabase;
-}
-
-export default function ConsoleHome() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [farmerId, setFarmerId] = useState('');
-  const [packages, setPackages] = useState<any[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(false);
-  const [packagesError, setPackagesError] = useState<string | null>(null);
-
+export default function ExporterDashboard() {
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px',
-        gap: '24px',
-        backgroundColor: '#020617',
-        color: 'white',
-      }}
-    >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              backgroundColor: '#22c55e',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-            }}
-          >
-            T
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 600 }}>Tracebud Exporter Console</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>Early preview – wired to your existing backend.</div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 h-screen w-64 border-r border-slate-800 bg-slate-950/50 backdrop-blur p-6 flex flex-col">
+        <div className="mb-8">
+          <div className="text-2xl font-bold text-white">TradeBud</div>
+          <p className="text-xs text-slate-500 mt-1">Exporter Portal</p>
         </div>
-        <div style={{ fontSize: 12, opacity: 0.8 }}>Backed by the same NestJS API as the offline app.</div>
-      </header>
+        
+        <nav className="flex-1 space-y-2">
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-500/10 text-emerald-400 font-medium">
+            <BarChart3 size={20} />
+            <span>Overview</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Package size={20} />
+            <span>DDS Packages</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <MapPin size={20} />
+            <span>Plots</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Users size={20} />
+            <span>Farmers</span>
+          </a>
+          <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <BarChart3 size={20} />
+            <span>Reports</span>
+          </a>
+        </nav>
 
-      <section
-        style={{
-          display: 'grid',
-          gap: 16,
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-        }}
-      >
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>DDS packages</h2>
-          {!SUPABASE_URL || !SUPABASE_ANON_KEY ? (
-            <p style={{ fontSize: 13, color: '#fecaca' }}>
-              Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment to enable exporter
-              login.
-            </p>
-          ) : (
-            <>
-              <p style={{ fontSize: 13, opacity: 0.85, marginBottom: 12 }}>
-                Log in with an <strong>exporter</strong> Supabase account, then load DDS packages for a farmer.
-              </p>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 12,
-                  marginBottom: 12,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 12, marginBottom: 4 }}>Exporter email</div>
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="exporter@example.com"
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      border: '1px solid #374151',
-                      backgroundColor: '#020617',
-                      color: 'white',
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, marginBottom: 4 }}>Password</div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      borderRadius: 6,
-                      border: '1px solid #374151',
-                      backgroundColor: '#020617',
-                      color: 'white',
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
+        <div className="space-y-2 pt-6 border-t border-slate-800">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <Settings size={20} />
+            <span>Settings</span>
+          </button>
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800/50 transition">
+            <LogOut size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="ml-64">
+        {/* Header */}
+        <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-10">
+          <div className="flex items-center justify-between p-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+              <p className="text-slate-400 text-sm mt-1">Welcome back, Green Valley Exports</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <input type="text" placeholder="Search..." className="pl-10 pr-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50" />
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  setAuthError(null);
-                  setPackagesError(null);
-                  try {
-                    const client = getSupabase();
-                    const { data, error } = await client.auth.signInWithPassword({
-                      email: email.trim(),
-                      password,
-                    });
-                    if (error || !data.session) {
-                      setAuthError(error?.message ?? 'Login failed.');
-                      setAccessToken(null);
-                      return;
-                    }
-                    setAccessToken(data.session.access_token);
-                  } catch (e: any) {
-                    setAuthError(e?.message ?? 'Could not contact Supabase.');
-                    setAccessToken(null);
-                  }
-                }}
-                style={{
-                  marginTop: 4,
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: 'none',
-                  backgroundColor: '#22c55e',
-                  color: '#022c22',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {accessToken ? 'Exporter logged in' : 'Log in as exporter'}
+              <button className="p-2 hover:bg-slate-800 rounded-lg transition">
+                <Bell size={20} className="text-slate-400" />
               </button>
-              {authError && (
-                <p style={{ fontSize: 12, color: '#fecaca', marginTop: 4 }}>{authError}</p>
-              )}
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 font-bold">GV</div>
+            </div>
+          </div>
+        </header>
 
-              <hr style={{ borderColor: '#1f2937', margin: '12px 0' }} />
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Packages', value: '248', change: '+12%', positive: true, icon: Package },
+              { label: 'Pending', value: '24', change: '+5%', positive: false, icon: Clock },
+              { label: 'Plots', value: '156', change: '+8%', positive: true, icon: MapPin },
+              { label: 'Active Farmers', value: '89', change: '+3%', positive: true, icon: Users },
+            ].map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div key={metric.label} className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-slate-400 text-sm font-medium">{metric.label}</p>
+                      <p className="text-3xl font-bold text-white mt-2">{metric.value}</p>
+                      <p className={`text-xs mt-2 flex items-center gap-1 ${metric.positive ? 'text-emerald-400' : 'text-orange-400'}`}>
+                        {metric.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                        {metric.change} vs last month
+                      </p>
+                    </div>
+                    <div className="p-3 bg-emerald-500/10 rounded-lg">
+                      <Icon className="text-emerald-400" size={24} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-              <div style={{ marginBottom: 8, fontSize: 13 }}>
-                <div style={{ fontSize: 12, marginBottom: 4 }}>Farmer ID to view packages for</div>
-                <input
-                  value={farmerId}
-                  onChange={(e) => setFarmerId(e.target.value)}
-                  placeholder="UUID of farmer_profile"
-                  style={{
-                    width: '100%',
-                    padding: '6px 8px',
-                    borderRadius: 6,
-                    border: '1px solid #374151',
-                    backgroundColor: '#020617',
-                    color: 'white',
-                    fontSize: 13,
-                  }}
-                />
-                <button
-                  type="button"
-                  disabled={!accessToken || !farmerId.trim() || loadingPackages}
-                  onClick={async () => {
-                    if (!accessToken || !farmerId.trim()) return;
-                    setLoadingPackages(true);
-                    setPackagesError(null);
-                    try {
-                      const res = await fetch(
-                        `${API_BASE_URL}/v1/harvest/packages?farmerId=${encodeURIComponent(
-                          farmerId.trim(),
-                        )}`,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                            accept: 'application/json',
-                          },
-                        },
-                      );
-                      if (!res.ok) {
-                        const body = await res.json().catch(() => ({}));
-                        setPackages([]);
-                        setPackagesError(body.message ?? `Backend responded with ${res.status}`);
-                        return;
-                      }
-                      const rows = await res.json();
-                      setPackages(rows ?? []);
-                    } catch (e: any) {
-                      setPackages([]);
-                      setPackagesError(e?.message ?? 'Could not reach backend.');
-                    } finally {
-                      setLoadingPackages(false);
-                    }
-                  }}
-                  style={{
-                    marginTop: 8,
-                    padding: '6px 10px',
-                    borderRadius: 999,
-                    border: 'none',
-                    backgroundColor: !accessToken || !farmerId.trim() ? '#4b5563' : '#38bdf8',
-                    color: 'white',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: !accessToken || !farmerId.trim() ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loadingPackages ? 'Loading packages…' : 'Load DDS packages'}
-                </button>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Line Chart */}
+            <div className="lg:col-span-2 bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-6">Package Submissions</h2>
+              <div className="h-64 flex items-end justify-between gap-2">
+                {[40, 60, 35, 75, 55, 85, 70, 45, 90, 65, 80, 95].map((height, i) => (
+                  <div key={i} className="flex-1 bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t opacity-70 hover:opacity-100 transition" style={{ height: `${(height / 100) * 100}%` }} />
+                ))}
               </div>
+              <div className="mt-4 text-xs text-slate-500 text-center">Last 12 months</div>
+            </div>
 
-              {packagesError && (
-                <p style={{ fontSize: 12, color: '#fecaca', marginBottom: 8 }}>
-                  {packagesError}
-                </p>
-              )}
+            {/* Donut Chart */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-white mb-6">Compliance Status</h2>
+              <div className="flex flex-col items-center justify-center">
+                <div className="relative w-32 h-32 mb-4">
+                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="8" strokeDasharray="75 100" strokeDashoffset="0" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" strokeWidth="8" strokeDasharray="20 100" strokeDashoffset="-75" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#ef4444" strokeWidth="8" strokeDasharray="5 100" strokeDashoffset="-95" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-white">75%</span>
+                  </div>
+                </div>
+                <div className="space-y-2 w-full text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Compliant</span>
+                    <span className="text-emerald-400 font-semibold">75%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Pending</span>
+                    <span className="text-orange-400 font-semibold">20%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Issues</span>
+                    <span className="text-red-400 font-semibold">5%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-              {packages.length === 0 && !packagesError ? (
-                <p style={{ fontSize: 13, opacity: 0.8 }}>
-                  No DDS packages yet. Record harvests in the offline app and bundle vouchers there to see them appear
-                  here.
-                </p>
-              ) : null}
+          {/* Quick Actions */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { icon: Plus, label: 'New Package', color: 'emerald' },
+                { icon: Upload, label: 'Import Data', color: 'blue' },
+                { icon: CheckCircle, label: 'Verify Plots', color: 'amber' },
+                { icon: BarChart3, label: 'Export Report', color: 'violet' },
+              ].map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button key={action.label} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:border-slate-600 hover:bg-slate-800 transition text-slate-300 hover:text-white">
+                    <Icon size={20} />
+                    <span className="font-medium">{action.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-              {packages.length > 0 && (
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: 13,
-                    marginTop: 8,
-                  }}
-                >
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #1f2937' }}>
-                      <th style={{ padding: '6px 4px' }}>ID</th>
-                      <th style={{ padding: '6px 4px' }}>Status</th>
-                      <th style={{ padding: '6px 4px' }}>TRACES ref</th>
-                      <th style={{ padding: '6px 4px' }}>Created</th>
+          {/* Recent Packages Table */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Packages</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Package ID</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Farmer</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Crop</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Weight</th>
+                    <th className="text-left py-3 px-4 text-slate-400 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {[
+                    { id: 'PKG-2024-001', farmer: 'John Kiprotich', crop: 'Maize', weight: '500kg', status: 'Verified', color: 'emerald' },
+                    { id: 'PKG-2024-002', farmer: 'Mary Kipchoge', crop: 'Wheat', weight: '450kg', status: 'Pending', color: 'amber' },
+                    { id: 'PKG-2024-003', farmer: 'James Kiplagat', crop: 'Rice', weight: '600kg', status: 'Verified', color: 'emerald' },
+                    { id: 'PKG-2024-004', farmer: 'Sarah Koech', crop: 'Beans', weight: '350kg', status: 'Issue', color: 'red' },
+                    { id: 'PKG-2024-005', farmer: 'David Rotich', crop: 'Maize', weight: '480kg', status: 'Verified', color: 'emerald' },
+                  ].map((pkg) => (
+                    <tr key={pkg.id} className="hover:bg-slate-800/30 transition">
+                      <td className="py-3 px-4 text-white font-medium">{pkg.id}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.farmer}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.crop}</td>
+                      <td className="py-3 px-4 text-slate-300">{pkg.weight}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-${pkg.color}-500/20 text-${pkg.color}-400`}>
+                          {pkg.status}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {packages.map((p: any) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #111827' }}>
-                        <td style={{ padding: '6px 4px' }}>{String(p.id).slice(0, 8)}…</td>
-                        <td style={{ padding: '6px 4px' }}>{p.status}</td>
-                        <td style={{ padding: '6px 4px' }}>{p.traces_reference ?? '—'}</td>
-                        <td style={{ padding: '6px 4px' }}>
-                          {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </>
-          )}
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#020617' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>What this console will do</h2>
-          <p style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
-            This app is designed as the desktop companion to the offline farmer app:
-          </p>
-          <ul style={{ fontSize: 13, opacity: 0.9, paddingLeft: 18 }}>
-            <li>Exporters: track incoming DDS packages and trigger TRACES submissions.</li>
-            <li>Importers / roasters: verify origin plots, FPIC & labor flags, and overlaps.</li>
-            <li>All views are powered by the same NestJS/PostGIS backend already running locally.</li>
-          </ul>
-          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 12 }}>
-            Next step: wire Supabase Auth here so exporters can log in with the same accounts you use in the mobile
-            app, then replace the placeholder call above with authenticated requests.
-          </p>
+          {/* Activity Feed */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
+            <div className="space-y-4">
+              {[
+                { action: 'Package Verified', desc: 'PKG-2024-001 by John Kiprotich', time: '2 hours ago', icon: '✓', color: 'emerald' },
+                { action: 'New Submission', desc: 'PKG-2024-005 submitted by David Rotich', time: '4 hours ago', icon: '↑', color: 'blue' },
+                { action: 'Compliance Check', desc: 'Plot verification completed', time: '1 day ago', icon: '✓', color: 'emerald' },
+                { action: 'Data Import', desc: '156 plot records imported', time: '2 days ago', icon: '↓', color: 'violet' },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-4 pb-4 border-b border-slate-800 last:border-b-0">
+                  <div className={`p-2 rounded-lg bg-${item.color}-500/20 text-${item.color}-400 text-sm font-bold flex-shrink-0`}>
+                    {item.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-slate-200 font-medium">{item.action}</p>
+                    <p className="text-slate-500 text-sm">{item.desc}</p>
+                    <p className="text-slate-600 text-xs mt-1">{item.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
-
