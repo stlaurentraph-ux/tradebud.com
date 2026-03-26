@@ -1,11 +1,11 @@
 import { StyleSheet, Text, type TextProps } from 'react-native';
-
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Typography } from '@/constants/theme';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link' | 'caption' | 'label';
 };
 
 export function ThemedText({
@@ -16,16 +16,31 @@ export function ThemedText({
   ...rest
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const secondaryColor = useThemeColor({}, 'textSecondary');
+  const linkColor = useThemeColor({}, 'tint');
+
+  const getTypeColor = () => {
+    switch (type) {
+      case 'link':
+        return linkColor;
+      case 'caption':
+        return secondaryColor;
+      default:
+        return color;
+    }
+  };
 
   return (
     <Text
       style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
+        { color: getTypeColor() },
+        type === 'default' && styles.default,
+        type === 'title' && styles.title,
+        type === 'defaultSemiBold' && styles.defaultSemiBold,
+        type === 'subtitle' && styles.subtitle,
+        type === 'link' && styles.link,
+        type === 'caption' && styles.caption,
+        type === 'label' && styles.label,
         style,
       ]}
       {...rest}
@@ -35,26 +50,34 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
-    fontSize: 16,
-    lineHeight: 24,
+    ...Typography.sizes.base,
+    fontWeight: Typography.weights.normal,
   },
   defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+    ...Typography.sizes.base,
+    fontWeight: Typography.weights.semibold,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
+    ...Typography.sizes['3xl'],
+    fontWeight: Typography.weights.bold,
   },
   subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    ...Typography.sizes.lg,
+    fontWeight: Typography.weights.semibold,
   },
   link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
+    ...Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
+    textDecorationLine: 'underline',
+  },
+  caption: {
+    ...Typography.sizes.sm,
+    fontWeight: Typography.weights.normal,
+  },
+  label: {
+    ...Typography.sizes.sm,
+    fontWeight: Typography.weights.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

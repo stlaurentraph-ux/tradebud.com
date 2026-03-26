@@ -1,12 +1,22 @@
 import { useState } from 'react';
-import { Alert, Button, FlatList, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, Region } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
+
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedScrollView } from '@/components/themed-view';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { SectionHeader } from '@/components/ui/section-header';
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { useAppState } from '@/features/state/AppStateContext';
 import { postPlotToBackend } from '@/features/api/postPlot';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { Brand, Spacing, Radius, Shadows } from '@/constants/theme';
 
 type LatLng = {
   latitude: number;
@@ -22,9 +32,7 @@ function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): bool
   const d2y = p4.longitude - p3.longitude;
 
   const denominator = cross(d1x, d1y, d2x, d2y);
-  if (denominator === 0) {
-    return false;
-  }
+  if (denominator === 0) return false;
 
   const dx = p3.latitude - p1.latitude;
   const dy = p3.longitude - p1.longitude;
@@ -36,10 +44,7 @@ function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): bool
 }
 
 function hasSelfIntersection(points: LatLng[]): boolean {
-  if (points.length < 4) {
-    return false;
-  }
-
+  if (points.length < 4) return false;
   const n = points.length;
 
   for (let i = 0; i < n; i++) {
@@ -50,13 +55,8 @@ function hasSelfIntersection(points: LatLng[]): boolean {
       const b1 = points[j];
       const b2 = points[(j + 1) % n];
 
-      if (a1 === b1 || a1 === b2 || a2 === b1 || a2 === b2) {
-        continue;
-      }
-
-      if (segmentsIntersect(a1, a2, b1, b2)) {
-        return true;
-      }
+      if (a1 === b1 || a1 === b2 || a2 === b1 || a2 === b2) continue;
+      if (segmentsIntersect(a1, a2, b1, b2)) return true;
     }
   }
 
@@ -64,22 +64,28 @@ function hasSelfIntersection(points: LatLng[]): boolean {
 }
 
 export function WalkPerimeterScreen() {
-  const { points, area, precisionMeters, isRecording, lastError, startRecording, stopRecording, reset } =
-    useWalkPerimeter();
+  const { 
+    points, area, precisionMeters, isRecording, lastError, 
+    startRecording, stopRecording, reset 
+  } = useWalkPerimeter();
   const { farmer, setFarmer, plots, addPlot } = useAppState();
   const { t } = useLanguage();
+  
   const [farmerIdInput, setFarmerIdInput] = useState(farmer?.id ?? '');
   const [farmerNameInput, setFarmerNameInput] = useState(farmer?.name ?? '');
   const [acceptedDeclaration, setAcceptedDeclaration] = useState(farmer?.selfDeclared ?? false);
   const [declaredAreaHaInput, setDeclaredAreaHaInput] = useState('');
   const [lowDataMap, setLowDataMap] = useState(false);
   const [fpicConsent, setFpicConsent] = useState(farmer?.fpicConsent ?? false);
-  const [laborNoChildLabor, setLaborNoChildLabor] = useState(
-    farmer?.laborNoChildLabor ?? false,
-  );
-  const [laborNoForcedLabor, setLaborNoForcedLabor] = useState(
-    farmer?.laborNoForcedLabor ?? false,
-  );
+  const [laborNoChildLabor, setLaborNoChildLabor] = useState(farmer?.laborNoChildLabor ?? false);
+  const [laborNoForcedLabor, setLaborNoForcedLabor] = useState(farmer?.laborNoForcedLabor ?? false);
+  const [showPointsList, setShowPointsList] = useState(false);
+
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackground = useThemeColor({}, 'backgroundCard');
+  const borderColor = useThemeColor({}, 'border');
+  const successColor = useThemeColor({}, 'success');
+  const warningColor = useThemeColor({}, 'warning');
 
   const initialRegion: Region | undefined =
     points.length > 0
@@ -101,9 +107,7 @@ export function WalkPerimeterScreen() {
     laborNoForcedLabor;
 
   const handleSaveFarmer = () => {
-    if (!canSaveFarmerProfile) {
-      return;
-    }
+    if (!canSaveFarmerProfile) return;
 
     const now = Date.now();
     setFarmer({
@@ -125,9 +129,7 @@ export function WalkPerimeterScreen() {
     (precisionMeters == null ? false : precisionMeters <= 3);
 
   const handleSavePlot = () => {
-    if (!canSavePlot) {
-      return;
-    }
+    if (!canSavePlot) return;
 
     if (hasSelfIntersection(points)) {
       Alert.alert(
@@ -217,238 +219,448 @@ export function WalkPerimeterScreen() {
     }
   };
 
+  const getPrecisionColor = () => {
+    if (precisionMeters == null) return borderColor;
+    if (precisionMeters <= 3) return successColor;
+    if (precisionMeters <= 5) return warningColor;
+    return Brand.error;
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">{t('farmer_identity')}</ThemedText>
+    <ThemedScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {/* Farmer Identity Section */}
+      <Card variant="elevated" style={styles.card}>
+        <CardHeader>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="person-circle-outline" size={24} color={Brand.primary} />
+            <ThemedText type="subtitle">{t('farmer_identity')}</ThemedText>
+            {hasFarmerAccess && (
+              <Badge variant="success" size="sm">Verified</Badge>
+            )}
+          </View>
+        </CardHeader>
 
-      <View style={styles.identitySection}>
-        <ThemedText>{t('farmer_id_label')}</ThemedText>
-        <TextInput
-          style={styles.input}
-          placeholder={t('farmer_id_placeholder')}
-          value={farmerIdInput}
-          onChangeText={setFarmerIdInput}
-        />
-        <ThemedText>{t('farmer_name_label')}</ThemedText>
-        <TextInput
-          style={styles.input}
-          placeholder={t('farmer_name_placeholder')}
-          value={farmerNameInput}
-          onChangeText={setFarmerNameInput}
-        />
-        <View style={styles.declarationRow}>
-          <Button
-            title={
-              acceptedDeclaration
-                ? t('declaration_button_accepted')
-                : t('declaration_button_accept')
-            }
-            onPress={() => setAcceptedDeclaration(true)}
+        <CardContent>
+          <Input
+            label={t('farmer_id_label')}
+            placeholder={t('farmer_id_placeholder')}
+            value={farmerIdInput}
+            onChangeText={setFarmerIdInput}
           />
-          <ThemedText style={styles.declarationText}>
-            {t('declaration_text')}
-          </ThemedText>
-        </View>
-        <ThemedText type="subtitle">{t('fpic_title')}</ThemedText>
-        <View style={styles.checkboxRow}>
-          <Button
-            title={fpicConsent ? '✔ FPIC confirmed' : 'Mark FPIC consent'}
-            onPress={() => setFpicConsent((prev) => !prev)}
+
+          <Input
+            label={t('farmer_name_label')}
+            placeholder={t('farmer_name_placeholder')}
+            value={farmerNameInput}
+            onChangeText={setFarmerNameInput}
+            containerStyle={styles.inputSpacing}
           />
-          <ThemedText>{t('fpic_label')}</ThemedText>
-        </View>
-        <View style={styles.checkboxRow}>
+
+          <View style={styles.declarationsSection}>
+            <ThemedText type="label" style={styles.declarationsLabel}>
+              Required Declarations
+            </ThemedText>
+
+            <Checkbox
+              checked={acceptedDeclaration}
+              onChange={setAcceptedDeclaration}
+              label="Self Declaration"
+              description={t('declaration_text')}
+            />
+
+            <Checkbox
+              checked={fpicConsent}
+              onChange={setFpicConsent}
+              label={t('fpic_title')}
+              description={t('fpic_label')}
+            />
+
+            <Checkbox
+              checked={laborNoChildLabor}
+              onChange={setLaborNoChildLabor}
+              label="No Child Labor"
+              description={t('labor_no_child')}
+            />
+
+            <Checkbox
+              checked={laborNoForcedLabor}
+              onChange={setLaborNoForcedLabor}
+              label="No Forced Labor"
+              description={t('labor_no_forced')}
+            />
+          </View>
+        </CardContent>
+
+        <CardFooter>
           <Button
-            title={laborNoChildLabor ? '✔ No child labor' : 'Confirm no child labor'}
-            onPress={() => setLaborNoChildLabor((prev) => !prev)}
-          />
-          <ThemedText>{t('labor_no_child')}</ThemedText>
-        </View>
-        <View style={styles.checkboxRow}>
-          <Button
-            title={laborNoForcedLabor ? '✔ No forced labor' : 'Confirm no forced labor'}
-            onPress={() => setLaborNoForcedLabor((prev) => !prev)}
-          />
-          <ThemedText>{t('labor_no_forced')}</ThemedText>
-        </View>
-        <Button
-          title={hasFarmerAccess ? t('farmer_set') : t('save_farmer')}
-          onPress={handleSaveFarmer}
-          disabled={!canSaveFarmerProfile}
-        />
-      </View>
-
-      <ThemedText type="title">{t('walk_title')}</ThemedText>
-      <ThemedText>{t('walk_help')}</ThemedText>
-
-      <View style={styles.buttonRow}>
-        <Button
-          title={isRecording ? 'Recording…' : t('start_walking')}
-          onPress={startRecording}
-          disabled={isRecording || !hasFarmerAccess}
-        />
-        <Button
-          title={t('stop')}
-          onPress={stopRecording}
-          disabled={!isRecording || !hasFarmerAccess}
-        />
-        <Button
-          title={t('reset')}
-          onPress={reset}
-          disabled={(!points.length && !isRecording) || !hasFarmerAccess}
-        />
-        <Button title={t('save_plot')} onPress={handleSavePlot} disabled={!canSavePlot} />
-      </View>
-
-      <View style={styles.buttonRow}>
-        <Button
-          title={lowDataMap ? 'Show base map' : 'Low-data map mode'}
-          onPress={() => setLowDataMap((prev) => !prev)}
-        />
-      </View>
-
-      <ThemedText>
-        Points recorded: {points.length}{' '}
-        {points.length > 0
-          ? `(last: ${points[points.length - 1].latitude.toFixed(6)}, ${points[
-              points.length - 1
-            ].longitude.toFixed(6)})`
-          : ''}
-      </ThemedText>
-
-      <ThemedText>
-        Precision:{' '}
-        {precisionMeters != null ? `${precisionMeters.toFixed(1)} m` : 'n/a'} (needs ≤ 3 m to save)
-      </ThemedText>
-
-      <ThemedText>
-        Area:{' '}
-        {area.squareMeters > 0
-          ? `${area.squareMeters.toFixed(1)} m² (~${area.hectares.toFixed(4)} ha)`
-          : 'n/a'}
-      </ThemedText>
-
-      <ThemedText>Declared area (hectares, optional, max 5% difference)</ThemedText>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. 1.50"
-        keyboardType="decimal-pad"
-        value={declaredAreaHaInput}
-        onChangeText={setDeclaredAreaHaInput}
-      />
-
-      {lastError ? <ThemedText type="subtitle">{lastError}</ThemedText> : null}
-
-      {initialRegion && (
-        <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            initialRegion={initialRegion}
-            mapType={lowDataMap ? 'none' : 'standard'}
+            variant={hasFarmerAccess ? 'secondary' : 'primary'}
+            onPress={handleSaveFarmer}
+            disabled={!canSaveFarmerProfile}
+            fullWidth
+            size="lg"
           >
-            {points.length > 0 && (
-              <>
-                <Polyline
-                  coordinates={[
-                    ...points.map((p) => ({
-                      latitude: p.latitude,
-                      longitude: p.longitude,
-                    })),
-                    ...(points.length > 2
-                      ? [
-                          {
+            {hasFarmerAccess ? t('farmer_set') : t('save_farmer')}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* GPS Recording Section */}
+      <Card variant="elevated" style={styles.card}>
+        <CardHeader>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="walk-outline" size={24} color={Brand.primary} />
+            <ThemedText type="subtitle">{t('walk_title')}</ThemedText>
+          </View>
+          <ThemedText type="caption">{t('walk_help')}</ThemedText>
+        </CardHeader>
+
+        <CardContent>
+          {/* Recording Controls */}
+          <View style={styles.recordingControls}>
+            <Button
+              variant={isRecording ? 'secondary' : 'primary'}
+              onPress={startRecording}
+              disabled={isRecording || !hasFarmerAccess}
+              size="lg"
+              style={styles.recordButton}
+              icon={
+                <View style={[styles.recordDot, isRecording && styles.recordDotActive]} />
+              }
+            >
+              {isRecording ? 'Recording...' : t('start_walking')}
+            </Button>
+
+            <View style={styles.controlButtonRow}>
+              <Button
+                variant="outline"
+                onPress={stopRecording}
+                disabled={!isRecording || !hasFarmerAccess}
+                style={styles.halfButton}
+              >
+                {t('stop')}
+              </Button>
+              <Button
+                variant="ghost"
+                onPress={reset}
+                disabled={(!points.length && !isRecording) || !hasFarmerAccess}
+                style={styles.halfButton}
+              >
+                {t('reset')}
+              </Button>
+            </View>
+          </View>
+
+          {/* Stats Display */}
+          <View style={styles.statsGrid}>
+            <View style={[styles.statCard, { backgroundColor }]}>
+              <ThemedText type="caption">Points</ThemedText>
+              <ThemedText type="subtitle">{points.length}</ThemedText>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor }]}>
+              <ThemedText type="caption">Precision</ThemedText>
+              <ThemedText 
+                type="subtitle" 
+                style={{ color: getPrecisionColor() }}
+              >
+                {precisionMeters != null ? `${precisionMeters.toFixed(1)}m` : '--'}
+              </ThemedText>
+              {precisionMeters != null && precisionMeters > 3 && (
+                <ThemedText type="caption" style={{ color: Brand.warning }}>
+                  Needs 3m or less
+                </ThemedText>
+              )}
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor }]}>
+              <ThemedText type="caption">Area</ThemedText>
+              <ThemedText type="subtitle">
+                {area.squareMeters > 0 ? `${area.hectares.toFixed(4)} ha` : '--'}
+              </ThemedText>
+              {area.squareMeters > 0 && (
+                <ThemedText type="caption">
+                  {area.squareMeters.toFixed(0)} m²
+                </ThemedText>
+              )}
+            </View>
+          </View>
+
+          {lastError && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="warning-outline" size={20} color={Brand.error} />
+              <ThemedText style={{ color: Brand.error, flex: 1 }}>{lastError}</ThemedText>
+            </View>
+          )}
+
+          {/* Map */}
+          {initialRegion && (
+            <View style={styles.mapSection}>
+              <View style={styles.mapHeader}>
+                <ThemedText type="defaultSemiBold">Plot Preview</ThemedText>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => setLowDataMap((prev) => !prev)}
+                >
+                  {lowDataMap ? 'Show Map' : 'Low Data'}
+                </Button>
+              </View>
+              <View style={styles.mapContainer}>
+                <MapView
+                  style={styles.map}
+                  initialRegion={initialRegion}
+                  mapType={lowDataMap ? 'none' : 'standard'}
+                >
+                  {points.length > 0 && (
+                    <>
+                      <Polyline
+                        coordinates={[
+                          ...points.map((p) => ({
+                            latitude: p.latitude,
+                            longitude: p.longitude,
+                          })),
+                          ...(points.length > 2
+                            ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
+                            : []),
+                        ]}
+                        strokeColor={Brand.primary}
+                        strokeWidth={4}
+                      />
+                      <Marker
+                        coordinate={{
+                          latitude: points[points.length - 1].latitude,
+                          longitude: points[points.length - 1].longitude,
+                        }}
+                        title="Current position"
+                        pinColor={Brand.accent}
+                      />
+                      {points.length > 0 && (
+                        <Marker
+                          coordinate={{
                             latitude: points[0].latitude,
                             longitude: points[0].longitude,
-                          },
-                        ]
-                      : []),
-                  ]}
-                  strokeColor="#007AFF"
-                  strokeWidth={3}
-                />
-                <Marker
-                  coordinate={{
-                    latitude: points[points.length - 1].latitude,
-                    longitude: points[points.length - 1].longitude,
-                  }}
-                  title="Last point"
-                />
-              </>
-            )}
-          </MapView>
-        </View>
-      )}
+                          }}
+                          title="Start point"
+                          pinColor={Brand.primary}
+                        />
+                      )}
+                    </>
+                  )}
+                </MapView>
+              </View>
+            </View>
+          )}
 
+          {/* Declared Area Input */}
+          <Input
+            label="Declared Area (optional)"
+            placeholder="e.g. 1.50"
+            keyboardType="decimal-pad"
+            value={declaredAreaHaInput}
+            onChangeText={setDeclaredAreaHaInput}
+            hint="Hectares - max 5% difference allowed from GPS measurement"
+            containerStyle={styles.inputSpacing}
+          />
+        </CardContent>
+
+        <CardFooter>
+          <Button
+            variant="primary"
+            onPress={handleSavePlot}
+            disabled={!canSavePlot}
+            fullWidth
+            size="lg"
+            icon={<Ionicons name="save-outline" size={20} color="#fff" />}
+          >
+            {t('save_plot')}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Saved Plots Summary */}
       {plots.length > 0 && (
-        <>
-          <ThemedText type="subtitle">Saved plots (this session)</ThemedText>
-          {plots.map((plot) => (
-            <ThemedText key={plot.id}>
-              {plot.name}: {plot.areaSquareMeters.toFixed(1)} m² (~
-              {plot.areaHectares.toFixed(4)} ha), {plot.kind}
-            </ThemedText>
-          ))}
-        </>
+        <Card variant="outlined" style={styles.card}>
+          <CardHeader>
+            <SectionHeader
+              title="Saved Plots"
+              subtitle={`${plots.length} plot${plots.length > 1 ? 's' : ''} this session`}
+            />
+          </CardHeader>
+          <CardContent>
+            {plots.map((plot) => (
+              <View key={plot.id} style={styles.savedPlotRow}>
+                <View style={styles.savedPlotInfo}>
+                  <ThemedText type="defaultSemiBold">{plot.name}</ThemedText>
+                  <ThemedText type="caption">
+                    {plot.areaHectares.toFixed(4)} ha ({plot.kind})
+                  </ThemedText>
+                </View>
+                <Badge variant="success" size="sm">Saved</Badge>
+              </View>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
-      <FlatList
-        data={points}
-        keyExtractor={(item) => `${item.timestamp}-${item.latitude}-${item.longitude}`}
-        style={styles.list}
-        renderItem={({ item, index }) => (
-          <ThemedText>
-            {index + 1}. {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}
-          </ThemedText>
-        )}
-      />
-    </ThemedView>
+      {/* GPS Points List (collapsible) */}
+      {points.length > 0 && (
+        <Card variant="outlined" style={styles.card}>
+          <CardHeader>
+            <Button
+              variant="ghost"
+              onPress={() => setShowPointsList(!showPointsList)}
+              style={styles.collapsibleHeader}
+              iconRight={
+                <Ionicons 
+                  name={showPointsList ? 'chevron-up' : 'chevron-down'} 
+                  size={20} 
+                  color={Brand.primary} 
+                />
+              }
+            >
+              GPS Coordinates ({points.length})
+            </Button>
+          </CardHeader>
+          
+          {showPointsList && (
+            <CardContent>
+              <FlatList
+                data={points}
+                keyExtractor={(item) => `${item.timestamp}-${item.latitude}-${item.longitude}`}
+                scrollEnabled={false}
+                renderItem={({ item, index }) => (
+                  <View style={styles.pointRow}>
+                    <ThemedText type="caption" style={styles.pointIndex}>
+                      {index + 1}
+                    </ThemedText>
+                    <ThemedText type="caption">
+                      {item.latitude.toFixed(6)}, {item.longitude.toFixed(6)}
+                    </ThemedText>
+                  </View>
+                )}
+              />
+            </CardContent>
+          )}
+        </Card>
+      )}
+    </ThemedScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    gap: 12,
   },
-  identitySection: {
-    gap: 8,
-    marginBottom: 16,
+  contentContainer: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing['5xl'],
+    gap: Spacing.lg,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+  card: {
+    marginBottom: 0,
   },
-  declarationRow: {
-    marginTop: 4,
-    gap: 6,
-  },
-  declarationText: {
-    marginTop: 4,
-  },
-  checkboxRow: {
-    marginTop: 8,
-    gap: 4,
-  },
-  buttonRow: {
+  sectionTitleRow: {
     flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  list: {
-    marginTop: 12,
+  inputSpacing: {
+    marginTop: Spacing.md,
+  },
+  declarationsSection: {
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
+  },
+  declarationsLabel: {
+    marginBottom: Spacing.sm,
+  },
+  recordingControls: {
+    gap: Spacing.md,
+  },
+  recordButton: {
+    width: '100%',
+  },
+  recordDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  recordDotActive: {
+    backgroundColor: Brand.error,
+  },
+  controlButtonRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  halfButton: {
+    flex: 1,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+  },
+  statCard: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: '#FEE2E2',
+    borderRadius: Radius.md,
+    marginTop: Spacing.md,
+  },
+  mapSection: {
+    marginTop: Spacing.lg,
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   mapContainer: {
-    marginTop: 12,
-    height: 250,
-    borderRadius: 12,
+    height: 280,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
+    ...Shadows.md,
   },
   map: {
     flex: 1,
   },
+  savedPlotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8DFD4',
+  },
+  savedPlotInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  collapsibleHeader: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 0,
+  },
+  pointRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  pointIndex: {
+    width: 24,
+    textAlign: 'center',
+  },
 });
-
