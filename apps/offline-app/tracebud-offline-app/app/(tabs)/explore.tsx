@@ -164,21 +164,6 @@ export default function PlotsScreen() {
         <ThemedText>{t('no_farmer')}</ThemedText>
       )}
 
-      <ThemedView style={styles.syncRow}>
-        <ThemedText type="defaultSemiBold">Sync status</ThemedText>
-        {loadingBackend ? (
-          <ThemedText>Checking backend…</ThemedText>
-        ) : backendError ? (
-          <ThemedText>
-            Offline – working from local data only.
-          </ThemedText>
-        ) : (
-          <ThemedText>
-            Online – data synced with backend.
-          </ThemedText>
-        )}
-      </ThemedView>
-
       <Collapsible title="How this works">
         <ThemedText>
           1. On the Home tab, walk the plot perimeter with GPS and save the plot with a
@@ -832,14 +817,5 @@ const styles = StyleSheet.create({
   },
   statusRed: {
     backgroundColor: '#FED7D7',
-  },
-  syncRow: {
-    marginTop: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    paddingHorizontal: 8,
-    gap: 4,
   },
 });
