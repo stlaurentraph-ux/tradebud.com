@@ -1,41 +1,45 @@
 # Apps Structure (Long-Term)
 
-This repository keeps **product apps** and **public demos** as separate apps so demos stay visible long-term and do not get overwritten by product releases.
+Tracebud now follows a two-product + multi-demo model:
+
+- Product 1: offline app
+- Product 2: unified multi-tenant SaaS dashboard (all segments in one app)
+- Multiple permanent public demos that remain visible for visitors
 
 ## Canonical app layout
 
 - `apps/marketing`
 - `apps/offline-product`
-- `apps/offline-demo`
-- `apps/exporter-product`
-- `apps/exporter-demo`
-- `apps/importer-product`
-- `apps/importer-demo`
+- `apps/dashboard-product`
+- `apps/demos/offline`
+- `apps/demos/exporter`
+- `apps/demos/importer`
+- `apps/demos/cooperative`
+- `apps/demos/country`
 
 ## Domain mapping
 
 - `tracebud.com` -> `apps/marketing`
 - `offline.tracebud.com` -> `apps/offline-product`
-- `offline-demo.tracebud.com` -> `apps/offline-demo`
-- `exporter.tracebud.com` -> `apps/exporter-product`
-- `exporter-demo.tracebud.com` -> `apps/exporter-demo`
-- `importer.tracebud.com` -> `apps/importer-product`
-- `importer-demo.tracebud.com` -> `apps/importer-demo`
+- `app.tracebud.com` (or `dashboard.tracebud.com`) -> `apps/dashboard-product`
+- `offline-demo.tracebud.com` -> `apps/demos/offline`
+- `exporter-demo.tracebud.com` -> `apps/demos/exporter`
+- `importer-demo.tracebud.com` -> `apps/demos/importer`
+- `cooperative-demo.tracebud.com` -> `apps/demos/cooperative`
+- `country-demo.tracebud.com` -> `apps/demos/country`
 
 ## Deployment guardrails
 
 1. One Vercel project per app folder.
 2. Set each project's Root Directory to its exact app folder (never ambiguous `.`).
-3. Keep production and demo domains attached to different projects.
+3. Keep product and demo domains attached to different projects.
 4. Keep demo-specific environment variables isolated from product variables.
+5. Enforce tenant-scoped RBAC in `apps/dashboard-product` for all dashboard APIs.
 
 ## Migration notes (completed in repo)
 
-- `apps/offline-product` copied from `apps/offline-app/tracebud-offline-app`
-- `apps/offline-demo` copied from `design/v0-prototype-updated/apps/offline-app/tracebud-offline-app`
-- `apps/exporter-product` copied from `apps/exporter-dashboard`
-- `apps/exporter-demo` copied from `design/v0-prototype-updated/apps/exporter-dashboard`
-- `apps/importer-product` and `apps/importer-demo` created as scaffolds
-
-Legacy folders are intentionally still present for compatibility during Vercel root-directory remapping.
+- Exporter product renamed to unified dashboard product: `apps/dashboard-product`
+- Demo apps grouped under `apps/demos/*`
+- Importer product folder removed (importer is now a role/segment inside dashboard product)
+- Cooperative and country demo folders scaffolded for future implementation
 

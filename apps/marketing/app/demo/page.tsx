@@ -23,6 +23,20 @@ const demos = [
       "Preview of buyer/importer-side verification, risk checks, and sourcing transparency views.",
     href: DEMO_LINKS.importerDashboard,
   },
+  {
+    slug: "cooperative-dashboard",
+    title: "Cooperative Dashboard Demo",
+    description:
+      "Operational demo for cooperative workflows including member operations and field coordination.",
+    href: DEMO_LINKS.cooperativeDashboard,
+  },
+  {
+    slug: "country-dashboard",
+    title: "Country Dashboard Demo",
+    description:
+      "Regulator-facing demo for oversight reporting, compliance review, and national traceability visibility.",
+    href: DEMO_LINKS.countryDashboard,
+  },
 ];
 
 export default function DemoHubPage() {
