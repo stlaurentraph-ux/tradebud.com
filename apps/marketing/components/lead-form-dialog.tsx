@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react"
 import { ArrowRight, Loader2 } from "lucide-react"
-import { submitLead } from "@/apps/marketing/app/actions/leads"
+import { submitLead } from "@/app/actions/leads"
 import {
   Dialog,
   DialogContent,

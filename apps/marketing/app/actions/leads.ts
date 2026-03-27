@@ -1,7 +1,7 @@
 "use server"
 
-import { createClient } from "@/apps/marketing/lib/supabase/server"
-import { sendLeadConfirmationEmail } from "@/apps/marketing/lib/email/resend"
+import { createClient } from "@/lib/supabase/server"
+import { sendLeadConfirmationEmail } from "@/lib/email/resend"
 
 export type LeadFormData = {
   first_name: string
