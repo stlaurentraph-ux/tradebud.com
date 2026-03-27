@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { WifiOff, Camera, FileCheck, Shield, Smartphone, MapPin, CheckCircle } from "lucide-react";
+import { WifiOff, Camera, FileCheck, Shield, Smartphone, MapPin, CheckCircle, Users, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
@@ -43,6 +47,91 @@ const steps = [
 ];
 
 export default function FarmersPage() {
+  const [accountType, setAccountType] = useState<"farmer" | "cooperative">("farmer");
+  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    primaryGoal: "",
+    biggestChallenge: "",
+    country: "",
+    commodity: "",
+    farmSize: "",
+    // cooperative-only
+    cooperativeName: "",
+    cooperativeSize: "",
+  });
+
+  useEffect(() => {
+    document.title = "Farmers | Tracebud - Map Your Farm, Access Every Market";
+  }, []);
+
+  useEffect(() => {
+    const selected = new URLSearchParams(window.location.search).get("account");
+    if (selected === "cooperative" || selected === "farmer") {
+      setAccountType(selected);
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.primaryGoal) {
+      setSubmitError("Please select your primary goal.");
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          formType: accountType,
+          sourcePage: "/farmers",
+          name: formData.fullName,
+          email: formData.email,
+          company: accountType === "cooperative" ? formData.cooperativeName || null : null,
+          phone: formData.phone || null,
+          country: formData.country || null,
+          message: formData.biggestChallenge || null,
+          payload: formData,
+        }),
+      });
+
+      const json = await response.json();
+      if (!response.ok || !json?.ok) {
+        throw new Error(json?.error || "Unable to submit form.");
+      }
+
+      setSubmitted(true);
+      setFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        primaryGoal: "",
+        biggestChallenge: "",
+        country: "",
+        commodity: "",
+        farmSize: "",
+        cooperativeName: "",
+        cooperativeSize: "",
+      });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Unexpected error while submitting.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const update = (field: string, value: string) =>
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
   return (
     <main className="min-h-screen bg-background">
       <Header />
@@ -84,13 +173,19 @@ export default function FarmersPage() {
               >
                 Download App
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-10 py-7 text-xl rounded-full"
+              <a
+                href="https://v0-offline-app-design-jcs49s2t1-stlaurentraph-4260s-projects.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                Watch Demo
-              </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-10 py-7 text-xl rounded-full"
+                >
+                  Try the Demo App
+                </Button>
+              </a>
             </div>
           </motion.div>
         </div>
@@ -277,38 +372,276 @@ export default function FarmersPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 px-6 bg-white">
-        <div className="max-w-4xl mx-auto text-center">
+      {/* Sign-Up Form */}
+      <section id="signup" className="py-16 md:py-24 px-4 md:px-6 bg-white">
+        <div className="max-w-4xl mx-auto">
           <motion.div
+            className="text-center mb-10 md:mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Ready to secure your market access?
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Get Started for Free
             </h2>
-            <p className="text-xl text-foreground/70 mb-10">
-              EUDR Deadline: December 30, 2026. Start mapping today.
+            <p className="text-base md:text-xl text-foreground/70 max-w-2xl mx-auto">
+              Whether you farm independently or belong to a cooperative, Tracebud gets you EUDR-ready before the December 2026 deadline.
             </p>
-            <div className="flex flex-wrap gap-4 justify-center">
+          </motion.div>
+
+          {/* Account type toggle */}
+          <motion.div
+            className="flex gap-3 mb-8 justify-center"
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <button
+              onClick={() => setAccountType("farmer")}
+              className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 ${
+                accountType === "farmer"
+                  ? "bg-[var(--forest-canopy)] text-white shadow-lg scale-105"
+                  : "bg-muted text-foreground/70 hover:bg-muted/80"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              Individual Farmer
+            </button>
+            <button
+              onClick={() => setAccountType("cooperative")}
+              className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 ${
+                accountType === "cooperative"
+                  ? "bg-[var(--forest-canopy)] text-white shadow-lg scale-105"
+                  : "bg-muted text-foreground/70 hover:bg-muted/80"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Farmer Cooperative
+            </button>
+          </motion.div>
+
+          {submitted ? (
+            <motion.div
+              className="bg-[var(--data-emerald)]/10 border border-[var(--data-emerald)]/30 rounded-2xl p-10 text-center"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <CheckCircle className="w-14 h-14 text-[var(--data-emerald)] mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-foreground mb-2">You&apos;re on the list!</h3>
+              <p className="text-foreground/70 text-lg mb-6">
+                Our team will reach out within 24 hours to set up your account and get you started.
+              </p>
               <Button
-                size="lg"
-                className="bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-bold px-12 py-7 text-xl rounded-full"
+                onClick={() => setSubmitted(false)}
+                variant="outline"
+                className="border-[var(--forest-canopy)] text-[var(--forest-canopy)] rounded-full"
               >
-                Download Free App
+                Submit another
               </Button>
-              <Link href="/exporters">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-[var(--forest-canopy)] text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/5 px-12 py-7 text-xl rounded-full"
+            </motion.div>
+          ) : (
+            <motion.form
+              onSubmit={handleSubmit}
+              className="bg-muted/30 rounded-2xl md:rounded-3xl p-6 md:p-10"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              {/* Shared fields */}
+              <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    {accountType === "cooperative" ? "Contact Person Name *" : "Full Name *"}
+                  </label>
+                  <Input
+                    required
+                    placeholder="Your full name"
+                    value={formData.fullName}
+                    onChange={(e) => update("fullName", e.target.value)}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Work Email *</label>
+                  <Input
+                    required
+                    type="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={(e) => update("email", e.target.value)}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Phone Number (optional)</label>
+                  <Input
+                    type="tel"
+                    placeholder="+1 234 567 8900"
+                    value={formData.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    className="bg-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Primary Goal *</label>
+                  <Select onValueChange={(v) => update("primaryGoal", v)}>
+                    <SelectTrigger className="bg-white text-sm">
+                      <SelectValue placeholder="Select your top priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="map-plots-offline">Map plots offline</SelectItem>
+                      <SelectItem value="prepare-eudr-compliance">Prepare EUDR compliance</SelectItem>
+                      <SelectItem value="access-premium-buyers">Access premium buyers</SelectItem>
+                      <SelectItem value="organize-cooperative-data">Organize cooperative data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Country</label>
+                  <Select onValueChange={(v) => update("country", v)}>
+                    <SelectTrigger className="bg-white text-sm">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Honduras", "Guatemala", "Colombia", "Brazil", "Ivory Coast", "Ghana", "Uganda", "Kenya", "Indonesia", "Vietnam", "Malaysia", "Other"].map((c) => (
+                        <SelectItem key={c} value={c.toLowerCase().replace(" ", "-")}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Primary Commodity</label>
+                  <Select onValueChange={(v) => update("commodity", v)}>
+                    <SelectTrigger className="bg-white text-sm">
+                      <SelectValue placeholder="Select commodity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Coffee", "Cocoa", "Rubber", "Palm Oil", "Soy", "Cattle", "Wood", "Other"].map((c) => (
+                        <SelectItem key={c} value={c.toLowerCase().replace(" ", "-")}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    {accountType === "cooperative" ? "Cooperative Size" : "Farm Size"}
+                  </label>
+                  <Select onValueChange={(v) => update("farmSize", v)}>
+                    <SelectTrigger className="bg-white text-sm">
+                      <SelectValue placeholder="Select size range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accountType === "farmer" ? (
+                        <>
+                          <SelectItem value="under-1">Under 1 ha</SelectItem>
+                          <SelectItem value="1-5">1 – 5 ha</SelectItem>
+                          <SelectItem value="5-20">5 – 20 ha</SelectItem>
+                          <SelectItem value="over-20">Over 20 ha</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="under-100">Under 100 ha</SelectItem>
+                          <SelectItem value="100-500">100 – 500 ha</SelectItem>
+                          <SelectItem value="500-2000">500 – 2,000 ha</SelectItem>
+                          <SelectItem value="over-2000">Over 2,000 ha</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Cooperative-only fields */}
+              {accountType === "cooperative" && (
+                <motion.div
+                  className="grid md:grid-cols-2 gap-4 md:gap-6 mb-6"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.3 }}
                 >
-                  I'm an Exporter
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Cooperative Name *</label>
+                    <Input
+                      required={accountType === "cooperative"}
+                      placeholder="Your cooperative's name"
+                      value={formData.cooperativeName}
+                      onChange={(e) => update("cooperativeName", e.target.value)}
+                      className="bg-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Number of Member Farmers</label>
+                    <Select onValueChange={(v) => update("cooperativeSize", v)}>
+                      <SelectTrigger className="bg-white text-sm">
+                        <SelectValue placeholder="Select range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="under-50">Under 50</SelectItem>
+                        <SelectItem value="50-200">50 – 200</SelectItem>
+                        <SelectItem value="200-500">200 – 500</SelectItem>
+                        <SelectItem value="500-2000">500 – 2,000</SelectItem>
+                        <SelectItem value="over-2000">Over 2,000</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Biggest challenge */}
+              <div className="mb-8">
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  What do you need most right now? *
+                </label>
+                <Textarea
+                  required
+                  placeholder="In 1-2 sentences, tell us the main result you want from Tracebud."
+                  rows={3}
+                  value={formData.biggestChallenge}
+                  onChange={(e) => update("biggestChallenge", e.target.value)}
+                  className="bg-white text-sm"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-bold px-8 md:px-12 py-4 md:py-6 text-base md:text-lg rounded-full w-full sm:w-auto gap-2"
+                >
+                  {isSubmitting
+                    ? "Submitting..."
+                    : accountType === "cooperative"
+                      ? "Register My Cooperative"
+                      : "Get My Compliance Passport"}
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+                <p className="text-xs text-foreground/50 text-center sm:text-left">
+                  Free to start. No credit card required.
+                </p>
+              </div>
+              {submitError ? (
+                <p className="text-red-600 text-sm text-center mt-4">{submitError}</p>
+              ) : null}
+            </motion.form>
+          )}
+
+          {/* Secondary CTA */}
+          <div className="text-center mt-10">
+            <p className="text-foreground/60 text-sm mb-3">Are you an exporter or importer?</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/exporters">
+                <Button variant="outline" className="border-[var(--forest-canopy)] text-[var(--forest-canopy)] rounded-full text-sm px-6">
+                  Exporter Dashboard
+                </Button>
+              </Link>
+              <Link href="/importers">
+                <Button variant="outline" className="border-[var(--forest-canopy)] text-[var(--forest-canopy)] rounded-full text-sm px-6">
+                  Importer Dashboard
                 </Button>
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 

@@ -26,8 +26,10 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Supabase Lead Forms Setup
 
-The forms on `/exporters`, `/importers`, and `/countries` post to `POST /api/leads`, which inserts into dedicated Supabase tables:
+The forms on `/farmers`, `/exporters`, `/importers`, and `/countries` post to `POST /api/leads`, which inserts into dedicated Supabase tables:
 
+- `farmer_leads`
+- `cooperative_leads`
 - `exporter_leads`
 - `importer_leads`
 - `country_leads`
@@ -43,6 +45,37 @@ Create the tables in Supabase SQL editor:
 
 ```sql
 create extension if not exists pgcrypto;
+
+create table if not exists public.farmer_leads (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  full_name text not null,
+  email text not null,
+  phone text,
+  country text,
+  primary_commodity text,
+  farm_size text,
+  primary_goal text,
+  biggest_challenge text,
+  source_page text not null,
+  raw_payload jsonb not null default '{}'::jsonb
+);
+
+create table if not exists public.cooperative_leads (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  contact_name text not null,
+  cooperative_name text not null,
+  email text not null,
+  phone text,
+  country text,
+  primary_commodity text,
+  cooperative_size text,
+  primary_goal text,
+  biggest_challenge text,
+  source_page text not null,
+  raw_payload jsonb not null default '{}'::jsonb
+);
 
 create table if not exists public.exporter_leads (
   id uuid primary key default gen_random_uuid(),

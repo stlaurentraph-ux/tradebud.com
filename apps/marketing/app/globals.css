@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -123,10 +124,24 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  section[id] {
+    scroll-margin-top: 100px; /* account for fixed header height */
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

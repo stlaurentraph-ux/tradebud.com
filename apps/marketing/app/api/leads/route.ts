@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const leadSchema = z.object({
-  formType: z.enum(["exporter", "importer", "country"]),
+  formType: z.enum(["exporter", "importer", "country", "farmer", "cooperative"]),
   sourcePage: z.string().min(1),
   name: z.string().min(1),
   email: z.string().email(),
@@ -113,6 +113,43 @@ export async function POST(request: Request) {
         data_standards: asStringList(payload.dataStandards),
         pilot_interest: Boolean(payload.pilotInterest),
         additional_info: asString(payload.additionalInfo),
+        source_page: parsed.data.sourcePage,
+        raw_payload: payload,
+      });
+      error = result.error;
+    }
+
+    if (parsed.data.formType === "farmer") {
+      const result = await supabase.from("farmer_leads").insert({
+        full_name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone ?? asString(payload.phone),
+        country: parsed.data.country ?? asString(payload.country),
+        primary_commodity: asString(payload.commodity),
+        farm_size: asString(payload.farmSize),
+        primary_goal: asString(payload.primaryGoal),
+        biggest_challenge:
+          parsed.data.message ??
+          asString(payload.biggestChallenge),
+        source_page: parsed.data.sourcePage,
+        raw_payload: payload,
+      });
+      error = result.error;
+    }
+
+    if (parsed.data.formType === "cooperative") {
+      const result = await supabase.from("cooperative_leads").insert({
+        contact_name: parsed.data.name,
+        cooperative_name: parsed.data.company ?? asString(payload.cooperativeName) ?? "",
+        email: parsed.data.email,
+        phone: parsed.data.phone ?? asString(payload.phone),
+        country: parsed.data.country ?? asString(payload.country),
+        primary_commodity: asString(payload.commodity),
+        cooperative_size: asString(payload.cooperativeSize) ?? asString(payload.farmSize),
+        primary_goal: asString(payload.primaryGoal),
+        biggest_challenge:
+          parsed.data.message ??
+          asString(payload.biggestChallenge),
         source_page: parsed.data.sourcePage,
         raw_payload: payload,
       });

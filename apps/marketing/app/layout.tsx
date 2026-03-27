@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Tracebud | One Map. One Passport. Every Market.',
+  title: 'Tracebud | Trade freely. Trace Easily.',
   description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets. De-risk the global supply chain with Tracebud.',
   generator: 'Tracebud',
   icons: {

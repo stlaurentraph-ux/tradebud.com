@@ -2,30 +2,37 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
-const navLinks = [
-  {
-    label: "Solutions",
-    children: [
-      { label: "For Farmers", href: "/farmers", description: "Offline-first mapping & data ownership" },
-      { label: "For Exporters", href: "/exporters", description: "Batch management & DDS automation" },
-      { label: "For Importers", href: "/importers", description: "Full supply chain visibility" },
-      { label: "For Countries", href: "/countries", description: "DPI-native infrastructure" },
-    ],
-  },
-  { label: "Technology", href: "/#technology" },
-  { label: "Compliance", href: "/#compliance" },
-  { label: "Partners", href: "/#partners" },
+const personaLinks = [
+  { label: "Farmers", href: "/farmers" },
+  { label: "Exporters", href: "/exporters" },
+  { label: "Importers", href: "/importers" },
+  { label: "Countries", href: "/countries" },
+];
+
+const secondaryLinks = [
+  { label: "How It Works", href: "/#how-it-works" },
 ];
 
 export function Header() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const resolvedHref = (href: string | undefined) => {
+    if (!href) return "/";
+    if (!href.includes("#")) return href;
+    const [base, hash] = href.split("#");
+    if (pathname === "/" && (base === "/" || base === "")) {
+      return `#${hash}`;
+    }
+    return href;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,52 +69,30 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <div
+          <nav className="hidden lg:flex items-center gap-6">
+            <span
+              className={`font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)]/75" : "text-white/75"}`}
+            >
+              For:
+            </span>
+            {personaLinks.map((link) => (
+              <Link
                 key={link.label}
-                className="relative"
-                onMouseEnter={() => link.children && setOpenDropdown(link.label)}
-                onMouseLeave={() => setOpenDropdown(null)}
+                href={resolvedHref(link.href)}
+                className={`transition-colors font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}
               >
-                {link.children ? (
-                  <button className={`flex items-center gap-1 transition-colors font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}>
-                    {link.label}
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <Link
-                    href={link.href || "/"}
-                    className={`transition-colors font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}
-                  >
-                    {link.label}
-                  </Link>
-                )}
-
-                {/* Dropdown */}
-                <AnimatePresence>
-                  {link.children && openDropdown === link.label && (
-                    <motion.div
-                      className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl overflow-hidden"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.label}
-                          href={child.href}
-                          className="block px-6 py-4 hover:bg-[var(--data-emerald)]/10 transition-colors border-b border-gray-100 last:border-0"
-                        >
-                          <div className="font-bold text-[var(--forest-canopy)]">{child.label}</div>
-                          <div className="text-sm text-gray-600">{child.description}</div>
-                        </Link>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                {link.label}
+              </Link>
+            ))}
+            <div className={`h-5 w-px ${isScrolled ? "bg-[var(--forest-canopy)]/20" : "bg-white/30"}`} />
+            {secondaryLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={resolvedHref(link.href)}
+                className={`transition-colors font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}
+              >
+                {link.label}
+              </Link>
             ))}
           </nav>
 
@@ -117,13 +102,16 @@ export function Header() {
               variant="ghost"
               className={`font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:text-white hover:bg-white/10"}`}
             >
-              Log In
+              <span className="inline-flex items-baseline gap-1">
+                <span>Log In</span>
+                <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
+              </span>
             </Button>
-            <a href="https://v0-offline-app-design-jcs49s2t1-stlaurentraph-4260s-projects.vercel.app" target="_blank" rel="noopener noreferrer">
+            <Link href="/get-started">
               <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                Try the App
+                Get Started
               </Button>
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -147,27 +135,28 @@ export function Header() {
             transition={{ duration: 0.3 }}
           >
             <nav className="flex flex-col gap-6">
-              <div>
-                <p className="text-white/50 text-sm font-semibold mb-4 uppercase tracking-wider">Solutions</p>
-                <div className="flex flex-col gap-4">
-                  {navLinks[0].children?.map((child) => (
+              <div className="border-t border-white/20 pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-white/70 font-semibold text-sm">For:</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  {personaLinks.map((link) => (
                     <Link
-                      key={child.label}
-                      href={child.href}
-                      className="text-2xl font-bold text-white hover:text-[var(--data-emerald)] transition-colors"
+                      key={link.label}
+                      href={resolvedHref(link.href)}
+                      className="text-base font-semibold text-white hover:text-[var(--data-emerald)] transition-colors"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      {child.label}
+                      {link.label}
                     </Link>
                   ))}
                 </div>
-              </div>
-              <div className="border-t border-white/20 pt-6">
-                {navLinks.slice(1).map((link) => (
+                <div className="h-px bg-white/20 mb-5" />
+                {secondaryLinks.map((link) => (
                   <Link
                     key={link.label}
-                    href={link.href || "/"}
-                    className="block text-2xl font-bold text-white hover:text-[var(--data-emerald)] transition-colors mb-4"
+                    href={resolvedHref(link.href)}
+                    className="block text-base font-semibold text-white hover:text-[var(--data-emerald)] transition-colors mb-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {link.label}
@@ -180,14 +169,17 @@ export function Header() {
                   size="lg"
                   className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-xl py-6 rounded-full"
                 >
-                  Log In
+                  <span className="inline-flex items-baseline gap-1">
+                    <span>Log In</span>
+                    <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
+                  </span>
                 </Button>
-                <Link href="/farmers" className="w-full">
+                <Link href="/get-started" className="w-full">
                   <Button
                     size="lg"
                     className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
                   >
-                    Start Mapping
+                    Get Started
                   </Button>
                 </Link>
               </div>
