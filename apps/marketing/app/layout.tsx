@@ -1,24 +1,43 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { DM_Sans, Playfair_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-dm-sans',
+})
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+})
 
 export const metadata: Metadata = {
-  title: 'Tracebud | One Map. One Passport. Every Market.',
-  description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets. De-risk the global supply chain with Tracebud.',
-  generator: 'Tracebud',
+  title: 'Tracebud - The Nature Passport for Global Supply Chains',
+  description:
+    'Tracebud turns smallholder agricultural networks into verified, nature-positive supply chains. Free mapping for cooperatives. Pay-per-shipment compliance data for European brands.',
   icons: {
     icon: [
-      { url: '/favicon-16x16-v6.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
-      { url: '/tracebud-logo-v6.png', type: 'image/png' },
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
     ],
-    apple: '/favicon-32x32-v6.png',
-    shortcut: '/favicon-32x32-v6.png',
+    apple: '/apple-icon.png',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#064E3B',
 }
 
 export default function RootLayout({
@@ -27,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
       <body className="font-sans antialiased">
         {children}
         <Analytics />
