@@ -161,19 +161,26 @@ export default function ExportersPage() {
               Automated Due Diligence Statements, transaction linking, and yield cap validation to prevent illicit blending.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="bg-white hover:bg-white/90 text-[var(--mountain-clay)] font-bold px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full shadow-2xl"
+              <a
+                href="https://exporter-demo.tracebud.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto"
               >
-                Access Dashboard
-              </Button>
+                <Button
+                  size="lg"
+                  className="bg-white hover:bg-white/90 text-[var(--mountain-clay)] font-bold px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full"
+                >
+                  Try demo dashboard
+                </Button>
+              </a>
               <a href="#signup" className="w-full sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"
                   className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full w-full"
                 >
-                  Request Demo
+                  Request quote
                 </Button>
               </a>
             </div>
