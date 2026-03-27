@@ -76,6 +76,10 @@ npm run ts-node scripts/get-supabase-token.ts
 
 …then copy the printed `access_token` into `curl` or Swagger’s “Authorize” button.
 
+### 4b. Offline app plot upload (`plot_farmer_id_fkey`)
+
+The mobile app stores a **local** farmer UUID. On the first `POST /api/v1/plots` for that ID, the API **creates** matching rows in `user_account` (for the Supabase user) and `farmer_profile` (`id` = device farmer id, `user_id` = Supabase user id) so the plot insert satisfies the foreign key. If `farmer_profile` already exists with a different `user_id`, the request returns **403**.
+
 ### 5. Key endpoints (high level)
 
 - **Plots**

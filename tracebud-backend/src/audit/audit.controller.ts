@@ -15,29 +15,46 @@ export class AuditController {
   @Get()
   @ApiQuery({ name: 'farmerId', required: false })
   async list(@Query('farmerId') farmerId?: string) {
-    if (farmerId) {
-      const res = await this.pool.query(
+    const query = (params?: string[]) => {
+      if (params) {
+        return this.pool.query(
+          `
+            SELECT id, timestamp, user_id, device_id, event_type, payload
+            FROM audit_log
+            WHERE payload ->> 'farmerId' = $1
+            ORDER BY timestamp DESC
+            LIMIT 100
+          `,
+          params,
+        );
+      }
+
+      return this.pool.query(
         `
           SELECT id, timestamp, user_id, device_id, event_type, payload
           FROM audit_log
-          WHERE payload ->> 'farmerId' = $1
           ORDER BY timestamp DESC
           LIMIT 100
         `,
-        [farmerId],
       );
-      return res.rows;
-    }
+    };
 
-    const res = await this.pool.query(
-      `
-        SELECT id, timestamp, user_id, device_id, event_type, payload
-        FROM audit_log
-        ORDER BY timestamp DESC
-        LIMIT 100
-      `,
-    );
-    return res.rows;
+    try {
+      if (farmerId) {
+        const res = await query([farmerId]);
+        return res.rows;
+      }
+
+      const res = await query();
+      return res.rows;
+    } catch (e) {
+      const err = e as { code?: string; message?: string };
+      // Early in development the DB may not have the audit table yet.
+      if (err?.code === '42P01') {
+        return [];
+      }
+      throw e;
+    }
   }
 }
 

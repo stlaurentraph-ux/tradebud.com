@@ -29,6 +29,17 @@ export class HarvestController {
     return this.harvestService.listVouchersForFarmer(farmerId);
   }
 
+  @Get('vouchers/by-qr')
+  @ApiOperation({
+    summary: 'Lookup voucher by QR reference',
+    description:
+      'Used by the offline app to validate a voucher QR code and see whether it is active/used and which DDS package (if any) it belongs to.',
+  })
+  @ApiQuery({ name: 'qrRef', required: true, description: 'Voucher qr_code_ref (e.g. V-ABC12345)' })
+  async getVoucherByQr(@Query('qrRef') qrRef: string) {
+    return this.harvestService.getVoucherByQrRef(qrRef);
+  }
+
   @Post('packages')
   async createPackage(@Body() dto: CreateDdsPackageDto, @Req() req: any) {
     const role = deriveRoleFromSupabaseUser(req.user);

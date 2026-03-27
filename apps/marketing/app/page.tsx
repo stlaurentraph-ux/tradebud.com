@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { LeadFormProvider } from "@/components/lead-form-provider"
+import { DEMO_LINKS } from "@/lib/demo-links"
 
 export default function Home() {
   const router = useRouter()
@@ -26,6 +27,11 @@ export default function Home() {
   const goToLeads = useCallback(() => {
     router.push("/leads")
   }, [router])
+
+  const openExporterDemo = useCallback(() => {
+    if (typeof window === "undefined") return
+    window.open(DEMO_LINKS.exporterDashboard, "_blank", "noopener,noreferrer")
+  }, [])
 
   return (
     <LeadFormProvider>
@@ -124,6 +130,14 @@ export default function Home() {
                   onClick={() => scrollToId("pricing-model")}
                 >
                   How our pricing works
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full sm:w-auto rounded-full border-emerald-700 bg-transparent px-6 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-50"
+                  onClick={openExporterDemo}
+                >
+                  Try the demo dashboard for exporters
                 </Button>
               </div>
 

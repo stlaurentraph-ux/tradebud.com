@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "files": [
+    "./placeholder.ts"
+  ],
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

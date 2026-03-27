@@ -1,14 +1,60 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
+import { SyncPlotLegalDto } from './dto/sync-plot-legal.dto';
+import { SyncPlotEvidenceDto } from './dto/sync-plot-evidence.dto';
 import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
 import { UpdatePlotDto } from './dto/update-plot.dto';
+import { GfwService } from '../compliance/gfw.service';
 
 @Injectable()
 export class PlotsService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly gfw: GfwService,
+  ) {}
+
+  /**
+   * The offline app generates a local farmer UUID. Plot rows reference farmer_profile.id;
+   * ensure a row exists and is owned by the authenticated Supabase user (fixes FK plot_farmer_id_fkey).
+   */
+  private async ensureFarmerProfileForPlot(farmerId: string, authUserId: string | undefined): Promise<void> {
+    if (!authUserId) {
+      throw new BadRequestException('Missing authenticated user for plot creation');
+    }
+
+    const existing = await this.pool.query(`SELECT user_id FROM farmer_profile WHERE id = $1::uuid`, [
+      farmerId,
+    ]);
+    if (existing.rows.length > 0) {
+      const owner = String(existing.rows[0].user_id);
+      if (owner !== authUserId) {
+        throw new ForbiddenException(
+          'This farmer ID is already linked to another account. Use the profile from your device.',
+        );
+      }
+      return;
+    }
+
+    await this.pool.query(
+      `
+      INSERT INTO user_account (id, role, name)
+      VALUES ($1::uuid, 'farmer', NULL)
+      ON CONFLICT (id) DO NOTHING
+    `,
+      [authUserId],
+    );
+
+    await this.pool.query(
+      `
+      INSERT INTO farmer_profile (id, user_id, country_code, self_declared, status)
+      VALUES ($1::uuid, $2::uuid, 'HN', true, 'active')
+    `,
+      [farmerId, authUserId],
+    );
+  }
 
   async create(createDto: CreatePlotDto, userId: string | undefined) {
     const {
@@ -21,6 +67,8 @@ export class PlotsService {
       cadastralKey,
       landTitlePhotos,
     } = createDto;
+
+    await this.ensureFarmerProfileForPlot(farmerId, userId);
 
     // Simple validation: ensure 6 decimal places for coords
     const ensureSixDecimals = (value: number) => Number(value.toFixed(6));
@@ -169,6 +217,186 @@ export class PlotsService {
     );
 
     return { ok: true };
+  }
+
+  async syncLegal(plotId: string, dto: SyncPlotLegalDto, userId: string | undefined) {
+    const existing = await this.pool.query(
+      `
+        SELECT id
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    if (existing.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, device_id, event_type, payload)
+        VALUES ($1, $2, $3, $4::jsonb)
+      `,
+      [
+        userId ?? null,
+        dto.deviceId ?? null,
+        'plot_legal_synced',
+        JSON.stringify({
+          plotId,
+          cadastralKey: dto.cadastralKey ?? null,
+          informalTenure: dto.informalTenure ?? null,
+          informalTenureNote: dto.informalTenureNote ?? null,
+          reason: dto.reason,
+        }),
+      ],
+    );
+
+    return { ok: true };
+  }
+
+  async syncEvidence(plotId: string, dto: SyncPlotEvidenceDto, userId: string | undefined) {
+    const existing = await this.pool.query(
+      `
+        SELECT id
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    if (existing.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    const itemsArray = Array.isArray(dto.items) ? dto.items : [];
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'plot_evidence_synced',
+        JSON.stringify({
+          plotId,
+          kind: dto.kind,
+          reason: dto.reason,
+          note: dto.note ?? null,
+          count: itemsArray.length,
+          items: itemsArray,
+        }),
+      ],
+    );
+
+    return { ok: true };
+  }
+
+  async runGfwCheck(plotId: string, userId: string | undefined) {
+    const geoRes = await this.pool.query(
+      `
+        SELECT
+          id,
+          kind,
+          -- Buffer point plots into a small polygon for queries that require polygons.
+          CASE
+            WHEN kind = 'point' THEN ST_AsGeoJSON(ST_Buffer(geometry::geography, 200)::geometry)
+            ELSE ST_AsGeoJSON(geometry)
+          END AS geojson
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    if (geoRes.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    let geometry: any = null;
+    try {
+      geometry = JSON.parse(geoRes.rows[0].geojson);
+    } catch {
+      throw new BadRequestException('Could not parse plot geometry');
+    }
+
+    const normalize = (result: any): { alertCount: number | null; alertAreaHa: number | null } => {
+      // We expect SQL like: SELECT COUNT(*) AS count, SUM(area__ha) AS area_ha FROM data
+      if (!result) return { alertCount: null, alertAreaHa: null };
+      const r = result?.data ?? result;
+      // Common shapes: { data: [{count: 0, area_ha: 0.1}] } OR just [{...}]
+      const first = Array.isArray(r) ? r[0] : Array.isArray(r?.data) ? r.data[0] : r?.[0];
+      const countVal = first?.count ?? first?.COUNT ?? first?.['count'] ?? null;
+      const areaVal = first?.area_ha ?? first?.areaHa ?? first?.['area__ha'] ?? null;
+      const alertCount =
+        typeof countVal === 'number' ? countVal : typeof countVal === 'string' ? Number(countVal) : null;
+      const alertAreaHa =
+        typeof areaVal === 'number' ? areaVal : typeof areaVal === 'string' ? Number(areaVal) : null;
+      return {
+        alertCount: Number.isFinite(alertCount as any) ? (alertCount as number) : null,
+        alertAreaHa: Number.isFinite(alertAreaHa as any) ? (alertAreaHa as number) : null,
+      };
+    };
+
+    let gfwResult = await this.gfw.runGeometryQuery({ geometry });
+    let summary = normalize(gfwResult.result);
+    let usedFallback = false;
+    if (summary.alertCount == null) {
+      // Fallback to radar-based alerts (better in cloudy tropics).
+      gfwResult = await this.gfw.runRaddFallback({ geometry });
+      summary = normalize(gfwResult.result);
+      usedFallback = true;
+    }
+
+    const status =
+      summary.alertCount == null
+        ? 'unknown'
+        : summary.alertCount === 0
+          ? 'green'
+          : summary.alertAreaHa != null && summary.alertAreaHa < 0.05
+            ? 'amber'
+            : 'red';
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'gfw_check_run',
+        JSON.stringify({
+          plotId,
+          provider: 'gfw',
+          providerMode: usedFallback ? 'radd_fallback' : 'glad_s2_primary',
+          summary: {
+            status,
+            alertCount: summary.alertCount,
+            alertAreaHa: summary.alertAreaHa,
+          },
+          ...gfwResult,
+          runAt: new Date().toISOString(),
+        }),
+      ],
+    );
+
+    return { ok: true, usedFallback, summary: { status, ...summary }, ...gfwResult };
+  }
+
+  async getComplianceHistory(plotId: string) {
+    const res = await this.pool.query(
+      `
+        SELECT id, timestamp, user_id, device_id, event_type, payload
+        FROM audit_log
+        WHERE payload ->> 'plotId' = $1
+          AND event_type IN ('gfw_check_run', 'plot_compliance_checked', 'plot_photos_synced', 'plot_legal_synced', 'plot_edited')
+        ORDER BY timestamp DESC
+        LIMIT 50
+      `,
+      [plotId],
+    );
+    return res.rows;
   }
 
   async listByFarmer(farmerId: string) {

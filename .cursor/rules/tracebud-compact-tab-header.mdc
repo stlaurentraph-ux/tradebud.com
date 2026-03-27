@@ -1,0 +1,13 @@
+---
+description: Green tab headers (Home, Settings, My Plots) must use shared CompactTabHeader
+globs: apps/offline-app/tracebud-offline-app/**/*.tsx
+alwaysApply: false
+---
+
+# Tracebud compact tab headers
+
+- **Do not** duplicate `headerRowCompact`, `langPillCompact`, `headerTopRow`, or gradient header markup in screen files.
+- Use **`CompactTabHeader`** from `apps/offline-app/tracebud-offline-app/components/layout/CompactTabHeader.tsx`.
+- Shared metrics live in **`apps/offline-app/tracebud-offline-app/constants/compactTabHeader.ts`** (`HOME_HEADER_LOGO_PX`, `compactTabHeaderStyles`). Change layout in **one place** only.
+- **Home**: pass **`left={<HomeHeaderBrandLeft subtitle={...} />}`** — logo + “Tracebud” + subtitle stay **left-aligned**; do **not** center the brand in an absolute overlay.
+- **Settings / My Plots**: pass **`centerTitle={...}`** plus back button in **`left`** (see existing usages).

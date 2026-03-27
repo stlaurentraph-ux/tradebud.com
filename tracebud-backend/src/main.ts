@@ -54,8 +54,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 4000;
+  const port = Number(process.env.PORT) || 4000;
   await app.listen(port);
+  // eslint-disable-next-line no-console
+  console.log(`Tracebud API listening on http://localhost:${port}/api (docs: /api/docs)`);
 }
 
 bootstrap().catch((err) => {

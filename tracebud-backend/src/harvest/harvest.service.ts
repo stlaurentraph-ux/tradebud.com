@@ -18,7 +18,7 @@ export class HarvestService {
     }
 
     const plotRes = await this.pool.query(
-      'SELECT id, area_ha FROM plot WHERE id = $1 AND farmer_id = $2',
+      'SELECT id, area_ha, sinaph_overlap, indigenous_overlap FROM plot WHERE id = $1 AND farmer_id = $2',
       [plotId, farmerId],
     );
     if (plotRes.rowCount === 0) {
@@ -26,6 +26,41 @@ export class HarvestService {
     }
 
     const areaHa = Number(plotRes.rows[0].area_ha);
+    const sinaphOverlap = plotRes.rows[0].sinaph_overlap === true;
+    const indigenousOverlap = plotRes.rows[0].indigenous_overlap === true;
+
+    // If overlap-flagged, require an explicit override reason and the required evidence synced.
+    if (sinaphOverlap || indigenousOverlap) {
+      const trimmedNote = (note ?? '').trim();
+      if (!trimmedNote || !trimmedNote.toUpperCase().includes('AMBER_OVERRIDE')) {
+        throw new BadRequestException(
+          'Overlap-flagged plot: note with AMBER_OVERRIDE reason is required to record harvest',
+        );
+      }
+
+      const requiredKinds: string[] = [];
+      if (indigenousOverlap) requiredKinds.push('fpic_repository');
+      if (sinaphOverlap) requiredKinds.push('protected_area_permit');
+
+      for (const kind of requiredKinds) {
+        const evRes = await this.pool.query(
+          `
+            SELECT 1
+            FROM audit_log
+            WHERE event_type = 'plot_evidence_synced'
+              AND payload ->> 'plotId' = $1
+              AND payload ->> 'kind' = $2
+            LIMIT 1
+          `,
+          [plotId, kind],
+        );
+        if (evRes.rowCount === 0) {
+          throw new BadRequestException(
+            `Overlap-flagged plot: required evidence not synced (${kind}). Sync evidence metadata before recording harvest.`,
+          );
+        }
+      }
+    }
     if (areaHa > 0) {
       const capKg = areaHa * YIELD_CAP_KG_PER_HA;
       if (kg > capKg) {
@@ -89,6 +124,7 @@ export class HarvestService {
           kg,
           harvestId: tx.id,
           voucherId: voucherRes.rows[0].id,
+          note: note ?? null,
         }),
       ],
     );
@@ -100,20 +136,75 @@ export class HarvestService {
     const res = await this.pool.query(
       `
         SELECT
-          id,
-          farmer_id,
-          transaction_id,
-          qr_code_ref,
-          status,
-          created_at
-        FROM voucher
-        WHERE farmer_id = $1
-        ORDER BY created_at DESC
+          v.id,
+          v.farmer_id,
+          v.transaction_id,
+          v.qr_code_ref,
+          v.status,
+          v.created_at,
+          tx.plot_id,
+          tx.kg
+        FROM voucher v
+        LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        WHERE v.farmer_id = $1
+        ORDER BY v.created_at DESC
       `,
       [farmerId],
     );
 
     return res.rows;
+  }
+
+  async getVoucherByQrRef(qrRef: string) {
+    const trimmed = (qrRef ?? '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('qrRef is required');
+    }
+
+    const res = await this.pool.query(
+      `
+        SELECT
+          v.id,
+          v.farmer_id,
+          v.transaction_id,
+          v.qr_code_ref,
+          v.status,
+          v.created_at,
+          dpv.dds_package_id,
+          dp.status as dds_status,
+          dp.traces_reference
+        FROM voucher v
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        LEFT JOIN dds_package dp ON dp.id = dpv.dds_package_id
+        WHERE v.qr_code_ref = $1
+        LIMIT 1
+      `,
+      [trimmed],
+    );
+
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Voucher not found for given qrRef');
+    }
+
+    const row = res.rows[0] as any;
+
+    return {
+      voucher: {
+        id: row.id,
+        farmerId: row.farmer_id,
+        transactionId: row.transaction_id,
+        qrRef: row.qr_code_ref,
+        status: row.status,
+        createdAt: row.created_at,
+      },
+      ddsPackage: row.dds_package_id
+        ? {
+            id: row.dds_package_id,
+            status: row.dds_status,
+            tracesReference: row.traces_reference ?? null,
+          }
+        : null,
+    };
   }
 
   async createDdsPackage(dto: CreateDdsPackageDto) {

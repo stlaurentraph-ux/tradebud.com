@@ -2,25 +2,25 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react"
 import { ArrowRight, Loader2 } from "lucide-react"
-import { submitLead } from "@/app/actions/leads"
+import { submitLead } from "@/apps/marketing/app/actions/leads"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
+} from "./ui/dialog"
+import { Input } from "./ui/input"
+import { Label } from "./ui/label"
+import { Textarea } from "./ui/textarea"
+import { Button } from "./ui/button"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "./ui/select"
 
 function AnimatedCheckmark() {
   const circleRef = useRef<SVGCircleElement>(null)
