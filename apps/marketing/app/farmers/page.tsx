@@ -166,26 +166,53 @@ export default function FarmersPage() {
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
               Map your plot offline, capture verification photos, and receive your EUDR compliance passport in minutes.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Button
-                size="lg"
-                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-2xl"
-              >
-                Download App
-              </Button>
-              <a
-                href="https://v0-offline-app-design-jcs49s2t1-stlaurentraph-4260s-projects.vercel.app"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <Button
+                  asChild
+                  size="lg"
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
+                >
+                  <a
+                    href="https://cooperative-demo.tracebud.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Try demo dashboard
+                  </a>
+                </Button>
+                <Button
+                  asChild
                   size="lg"
                   variant="outline"
-                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-10 py-7 text-xl rounded-full"
+                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
                 >
-                  Try the Demo App
+                  <a href="#signup">Request quote</a>
                 </Button>
-              </a>
+              </div>
+              <p className="text-sm font-medium text-white/70">Mobile app for members</p>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4">
+                <Button
+                  size="lg"
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
+                >
+                  Download App
+                </Button>
+                <a
+                  href="https://v0-offline-app-design-jcs49s2t1-stlaurentraph-4260s-projects.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
+                  >
+                    Try the Demo App
+                  </Button>
+                </a>
+              </div>
             </div>
           </motion.div>
         </div>
