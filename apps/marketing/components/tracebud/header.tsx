@@ -19,8 +19,12 @@ const secondaryLinks = [
   { label: "How It Works", href: "/#how-it-works" },
 ];
 
+const FIELD_APP_DEMO = "https://offline-demo.tracebud.com";
+const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
+
 export function Header() {
   const pathname = usePathname();
+  const isFarmersPage = pathname === "/farmers";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -97,21 +101,65 @@ export function Header() {
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden lg:flex items-center gap-4">
-            <Button
-              variant="ghost"
-              className={`font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:text-white hover:bg-white/10"}`}
-            >
-              <span className="inline-flex items-baseline gap-1">
-                <span>Log In</span>
-                <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
-              </span>
-            </Button>
-            <Link href="/get-started">
-              <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                Get Started
+          <div className="hidden lg:flex items-center gap-2 xl:gap-3">
+            {isFarmersPage ? (
+              <>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className={`font-bold text-sm xl:text-base rounded-full border-2 px-3 xl:px-5 shrink-0 ${
+                    isScrolled
+                      ? "border-[var(--forest-canopy)] text-[var(--forest-canopy)] bg-transparent hover:bg-[var(--forest-canopy)]/10"
+                      : "border-white/70 text-white bg-transparent hover:bg-white/10"
+                  }`}
+                >
+                  <a href={FIELD_APP_DEMO} target="_blank" rel="noopener noreferrer">
+                    Try the field app
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  size="sm"
+                  className={`font-bold text-sm xl:text-base rounded-full px-3 xl:px-5 shrink-0 ${
+                    isScrolled
+                      ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white"
+                      : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"
+                  }`}
+                >
+                  <a href={COOP_DASHBOARD_DEMO} target="_blank" rel="noopener noreferrer">
+                    Try the cooperative dashboard
+                  </a>
+                </Button>
+              </>
+            ) : null}
+            {!isFarmersPage ? (
+              <Button
+                variant="ghost"
+                className={`font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:text-white hover:bg-white/10"}`}
+              >
+                <span className="inline-flex items-baseline gap-1">
+                  <span>Log In</span>
+                  <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
+                </span>
               </Button>
-            </Link>
+            ) : null}
+            {!isFarmersPage ? (
+              <Link href="/get-started">
+                <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
+                  Get Started
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/farmers#signup">
+                <Button
+                  variant="ghost"
+                  className={`font-semibold text-sm lg:text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
+                >
+                  Request access
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -164,6 +212,36 @@ export function Header() {
                 ))}
               </div>
               <div className="flex flex-col gap-4 mt-8 pb-8">
+                {isFarmersPage ? (
+                  <>
+                    <a href={FIELD_APP_DEMO} target="_blank" rel="noopener noreferrer" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
+                      >
+                        Try the field app
+                      </Button>
+                    </a>
+                    <a href={COOP_DASHBOARD_DEMO} target="_blank" rel="noopener noreferrer" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button
+                        size="lg"
+                        className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-lg py-6 rounded-full"
+                      >
+                        Try the cooperative dashboard
+                      </Button>
+                    </a>
+                    <Link href="/farmers#signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
+                      >
+                        Request access
+                      </Button>
+                    </Link>
+                  </>
+                ) : null}
                 <Button
                   variant="outline"
                   size="lg"
@@ -174,14 +252,16 @@ export function Header() {
                     <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
                   </span>
                 </Button>
-                <Link href="/get-started" className="w-full">
-                  <Button
-                    size="lg"
-                    className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
-                  >
-                    Get Started
-                  </Button>
-                </Link>
+                {!isFarmersPage ? (
+                  <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      size="lg"
+                      className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
+                    >
+                      Get Started
+                    </Button>
+                  </Link>
+                ) : null}
               </div>
             </nav>
           </motion.div>

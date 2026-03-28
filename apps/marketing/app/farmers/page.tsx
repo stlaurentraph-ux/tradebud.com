@@ -12,6 +12,9 @@ import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
+const FIELD_APP_DEMO = "https://offline-demo.tracebud.com";
+const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
+
 const features = [
   {
     icon: WifiOff,
@@ -66,7 +69,7 @@ export default function FarmersPage() {
   });
 
   useEffect(() => {
-    document.title = "Farmers | Tracebud - Map Your Farm, Access Every Market";
+    document.title = "Farmers & cooperatives | Tracebud - Field to market compliance";
   }, []);
 
   useEffect(() => {
@@ -157,64 +160,115 @@ export default function FarmersPage() {
             className="max-w-2xl"
           >
             <div className="inline-flex items-center gap-2 bg-[var(--data-emerald)] text-[var(--forest-canopy)] px-5 py-2.5 rounded-full text-sm font-bold mb-8">
-              <Smartphone className="w-4 h-4" />
-              <span>Offline-First Mobile App</span>
+              <User className="w-4 h-4" />
+              <Users className="w-4 h-4" />
+              <span>Farmers &amp; cooperatives</span>
             </div>
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-tight">
-              Your Farm.<br />Your Data.<br />Any Market.
+              From the field<br />to every market.
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
-              Map your plot offline, capture verification photos, and receive your EUDR compliance passport in minutes.
+            <p className="text-xl md:text-2xl text-white/90 mb-6 leading-relaxed">
+              Members map plots offline on the phone; cooperatives roll up evidence and batches for exporters and EUDR—one Tracebud stack, whether you farm alone or together.
             </p>
-            <div className="flex flex-col gap-5">
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
-                >
-                  <a
-                    href="https://cooperative-demo.tracebud.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Try demo dashboard
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
-                >
-                  <a href="#signup">Request quote</a>
-                </Button>
-              </div>
-              <p className="text-sm font-medium text-white/70">Mobile app for members</p>
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4">
-                <Button
-                  size="lg"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
-                >
-                  Download App
-                </Button>
-                <a
-                  href="https://offline-demo.tracebud.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto"
-                >
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
-                  >
-                    Try the Demo App
-                  </Button>
+            <p className="text-sm md:text-base text-white/75 mb-10">
+              Try the live demos from the header, or request access below—we&apos;ll help you choose the right entry path.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+              <Button
+                asChild
+                size="lg"
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
+              >
+                <a href="#signup">Request access</a>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
+              >
+                <a href={FIELD_APP_DEMO} target="_blank" rel="noopener noreferrer">
+                  Field app demo
                 </a>
-              </div>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
+              >
+                <a href={COOP_DASHBOARD_DEMO} target="_blank" rel="noopener noreferrer">
+                  Co-op dashboard demo
+                </a>
+              </Button>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Two paths: farmers + cooperatives */}
+      <section className="py-16 md:py-20 px-6 bg-[var(--forest-canopy)] text-white">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            className="text-center mb-12 md:mb-14"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">One platform, two ways in</h2>
+            <p className="text-lg text-white/80 max-w-2xl mx-auto">
+              Individual growers and cooperative teams use the same compliance graph—different screens for different jobs.
+            </p>
+          </motion.div>
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+            <motion.div
+              className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 md:p-10 flex flex-col"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="w-12 h-12 rounded-xl bg-[var(--data-emerald)] flex items-center justify-center mb-5">
+                <Smartphone className="w-6 h-6 text-[var(--forest-canopy)]" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Individual farmers</h3>
+              <p className="text-white/80 leading-relaxed mb-6 flex-1">
+                Walk your plot with GPS, store data offline, add photos for audits, and keep a portable compliance passport you can show any buyer.
+              </p>
+              <a
+                href={FIELD_APP_DEMO}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 font-bold text-[var(--data-emerald)] hover:underline"
+              >
+                Try the field app
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </motion.div>
+            <motion.div
+              className="rounded-2xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 md:p-10 flex flex-col"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.08 }}
+            >
+              <div className="w-12 h-12 rounded-xl bg-[var(--data-emerald)] flex items-center justify-center mb-5">
+                <Users className="w-6 h-6 text-[var(--forest-canopy)]" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Cooperatives</h3>
+              <p className="text-white/80 leading-relaxed mb-6 flex-1">
+                See every member plot, review submissions, seal cooperative batches, and hand traceable coffee or cocoa to exporters with DDS-ready evidence.
+              </p>
+              <a
+                href={COOP_DASHBOARD_DEMO}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 font-bold text-[var(--data-emerald)] hover:underline"
+              >
+                Try the cooperative dashboard
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -229,10 +283,10 @@ export default function FarmersPage() {
               transition={{ duration: 0.6 }}
             >
               <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-                Designed for every farmer
+                The app your members already carry
               </h2>
               <p className="text-xl text-foreground/70 mb-8 leading-relaxed">
-                Our mobile app works without internet, speaks your language, and guides you step-by-step through the mapping process.
+                The same offline-first experience works for a single smallholder or hundreds of cooperative members—simple enough for the field, rigorous enough for EU due diligence.
               </p>
               <ul className="space-y-4">
                 {["Works 100% offline", "Available in 12+ languages", "No technical training required", "Instant polygon verification"].map((item) => (
@@ -272,10 +326,10 @@ export default function FarmersPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Built for the Field
+              Built for the field—and the back office
             </h2>
             <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-              Every feature designed for the realities of smallholder agriculture.
+              Features that hold up under canopy, low bandwidth, and cooperative-scale rollouts.
             </p>
           </motion.div>
 
@@ -326,8 +380,11 @@ export default function FarmersPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Get Compliant in 4 Steps
+              Get compliant in four steps
             </h2>
+            <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
+              Typical path for a member farmer; your cooperative can monitor progress for every plot from the dashboard.
+            </p>
           </motion.div>
 
           <div className="grid md:grid-cols-4 gap-6">
@@ -409,10 +466,10 @@ export default function FarmersPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Get Started for Free
+              Get started—farmer or cooperative
             </h2>
             <p className="text-base md:text-xl text-foreground/70 max-w-2xl mx-auto">
-              Whether you farm independently or belong to a cooperative, Tracebud gets you EUDR-ready before the December 2026 deadline.
+              One form: pick your role, tell us your goal, and we&apos;ll route you to the right onboarding. EUDR-ready workflows for independents and organizations alike.
             </p>
           </motion.div>
 
