@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
-import Image from 'next/image';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -1891,12 +1890,10 @@ export default function ExporterDashboard() {
       <aside className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-stone-200 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-16'}`}>
         {/* Brand */}
         <div className={`flex items-center gap-2.5 h-16 border-b border-stone-100 flex-shrink-0 ${sidebarOpen ? 'px-4' : 'justify-center px-2'}`}>
-          <Image
+          <img
             src="/images/tracebud-logo.png"
             alt="Tracebud"
-            width={sidebarOpen ? 36 : 32}
-            height={sidebarOpen ? 36 : 32}
-            className="object-contain rounded-lg flex-shrink-0"
+            className={`object-contain rounded-lg flex-shrink-0 ${sidebarOpen ? 'h-9 w-9' : 'h-8 w-8'}`}
           />
           {sidebarOpen && (
             <div className="leading-none overflow-hidden min-w-0">
