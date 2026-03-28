@@ -168,21 +168,28 @@ export default function ImportersPage() {
                 Full upstream visibility with RBAC-controlled access. Audit-ready for EUDR and CSRD compliance.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                <a href="#signup">
+                <a
+                  href="https://importer-demo.tracebud.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
                   <Button
                     size="lg"
                     className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
                   >
-                    Request Access
+                    Try demo dashboard
                   </Button>
                 </a>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
-                >
-                  Schedule Demo
-                </Button>
+                <a href="#signup" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
+                  >
+                    Request quote
+                  </Button>
+                </a>
               </div>
             </motion.div>
 
