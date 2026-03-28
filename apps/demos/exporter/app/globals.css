@@ -1,86 +1,53 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
-
-:root {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #141414;
-  --card-foreground: #fafafa;
-  --popover: #141414;
-  --popover-foreground: #fafafa;
-  --primary: #22c55e;
-  --primary-foreground: #022c22;
-  --secondary: #1f1f1f;
-  --secondary-foreground: #fafafa;
-  --muted: #1f1f1f;
-  --muted-foreground: #a1a1aa;
-  --accent: #22c55e;
-  --accent-foreground: #022c22;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #22c55e;
-  --chart-1: #22c55e;
-  --chart-2: #3b82f6;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
-  --radius: 0.75rem;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #fafafa;
-  --sidebar-border: #27272a;
-  --sidebar-accent: #1f1f1f;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-ring: #22c55e;
-}
-
 @theme inline {
-  --font-sans: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), 'Geist Mono', monospace;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* Tracebud brand tokens */
+  --color-background:        #fafaf9; /* stone-50  */
+  --color-surface:           #ffffff;
+  --color-surface-secondary: #f5f5f4; /* stone-100 */
+  --color-border:            #e7e5e4; /* stone-200 */
+  --color-border-strong:     #d6d3d1; /* stone-300 */
+
+  --color-foreground:        #1c1917; /* stone-900 */
+  --color-foreground-muted:  #78716c; /* stone-500 */
+  --color-foreground-faint:  #a8a29e; /* stone-400 */
+
+  --color-primary:           #14532d; /* emerald-900 */
+  --color-primary-mid:       #166534; /* emerald-800 */
+  --color-primary-light:     #d1fae5; /* emerald-100 */
+  --color-primary-faint:     #f0fdf4; /* emerald-50  */
+
+  --color-accent:            #ea580c; /* orange-600  */
+  --color-accent-hover:      #c2410c; /* orange-700  */
+  --color-accent-light:      #fff7ed; /* orange-50   */
+  --color-accent-border:     #fed7aa; /* orange-200  */
+
+  --color-success:           #16a34a; /* green-600   */
+  --color-warning:           #d97706; /* amber-600   */
+  --color-destructive:       #dc2626; /* red-600     */
+
+  --radius: 0.75rem;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    line-height: 1.5;
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type MouseEventHandler } from 'react';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -97,9 +97,15 @@ function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'sm' | 'l
   );
 }
 
-function Card({ children, className = '', hover = false }: { children: React.ReactNode; className?: string; hover?: boolean }) {
+function Card({ children, className = '', hover = false, onClick }: { children: React.ReactNode; className?: string; hover?: boolean; onClick?: MouseEventHandler<HTMLDivElement> }) {
   return (
-    <div className={`bg-white border border-stone-200 rounded-xl ${hover ? 'hover:shadow-md hover:shadow-stone-100 hover:border-stone-300 transition-all cursor-pointer' : ''} ${className}`}>
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e as unknown as React.MouseEvent<HTMLDivElement>); } } : undefined}
+      className={`bg-white border border-stone-200 rounded-xl ${hover ? 'hover:shadow-md hover:shadow-stone-100 hover:border-stone-300 transition-all cursor-pointer' : ''} ${className}`}
+    >
       {children}
     </div>
   );
