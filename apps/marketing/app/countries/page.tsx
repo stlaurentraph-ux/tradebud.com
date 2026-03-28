@@ -152,21 +152,27 @@ export default function CountriesPage() {
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
               Strengthen national registries and public interest data while maintaining full sovereignty. We power infrastructure, we don't replace it.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <a href="#signup">
-                <Button
-                  size="lg"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-2xl"
-                >
-                  Partner With Us
-                </Button>
-              </a>
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <Button
+                asChild
+                size="lg"
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
+              >
+                <a
+                  href="https://country-demo.tracebud.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Try demo dashboard
+                </a>
+              </Button>
+              <Button
+                asChild
                 size="lg"
                 variant="outline"
-                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-10 py-7 text-xl rounded-full"
+                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
               >
-                View Documentation
+                <a href="#signup">Request quote</a>
               </Button>
             </div>
           </motion.div>
