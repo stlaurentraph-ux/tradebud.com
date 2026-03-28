@@ -199,7 +199,7 @@ export default function FarmersPage() {
                   Download App
                 </Button>
                 <a
-                  href="https://v0-offline-app-design-jcs49s2t1-stlaurentraph-4260s-projects.vercel.app"
+                  href="https://offline-demo.tracebud.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto"
