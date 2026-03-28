@@ -5,7 +5,7 @@ Public demo-track **web build** of the Expo offline farmer app (same UX as mobil
 - Audience: visitors and sales demos
 - Domain target: `https://offline-demo.tracebud.com`
 - Vercel root directory: `apps/demos/offline`
-- Vercel: use **Other** (static) or leave framework unset — **not** Next.js. `vercel.json` sets `buildCommand` to `npm run build` (`expo export --platform web`) and `outputDirectory` to `dist`. Leave **Output Directory** empty in the UI if `vercel.json` supplies it (or set `dist` to match).
+- Vercel: **not** Next.js. `vercel.json` sets `"framework": null` (same as dashboard preset **Other**) so Vercel does not look for `next` in `package.json`. It also sets `buildCommand` (`expo export --platform web`) and `outputDirectory` `dist`. If the UI still shows Next.js, clear the Framework preset or redeploy after pulling this `vercel.json`.
 
 Native iOS/Android still use `expo start` / EAS; this deploy path is **web export only**.
 
