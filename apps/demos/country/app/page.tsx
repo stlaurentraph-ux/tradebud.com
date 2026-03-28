@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
+import Image from 'next/image';
 import {
   BarChart3,
   Building2,
@@ -208,7 +209,16 @@ export default function CountryDashboard() {
     <div className="min-h-screen flex bg-stone-50">
       <aside className="hidden lg:flex w-64 flex-col border-r border-stone-200 bg-white">
         <div className="p-6 border-b border-stone-100">
-          <div className="font-serif text-lg font-semibold text-emerald-950">Tracebud</div>
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/images/tracebud-logo.png"
+              alt="Tracebud"
+              width={36}
+              height={36}
+              className="object-contain rounded-lg shrink-0"
+            />
+            <div className="font-serif text-lg font-semibold text-emerald-950">Tracebud</div>
+          </div>
           <p className="text-xs text-stone-500 mt-1">National registry console</p>
           <p className="text-sm font-medium text-stone-800 mt-3 flex items-center gap-2">
             <Landmark size={16} className="text-emerald-800 shrink-0" />
@@ -251,6 +261,13 @@ export default function CountryDashboard() {
         <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-stone-200">
           <div className="flex items-center justify-between gap-4 px-4 md:px-8 py-4">
             <div className="lg:hidden flex items-center gap-2">
+              <Image
+                src="/images/tracebud-logo.png"
+                alt="Tracebud"
+                width={28}
+                height={28}
+                className="object-contain rounded-md shrink-0"
+              />
               <span className="font-serif font-semibold text-emerald-950">Tracebud</span>
               <select
                 className="text-sm border border-stone-200 rounded-lg px-2 py-1 bg-white"

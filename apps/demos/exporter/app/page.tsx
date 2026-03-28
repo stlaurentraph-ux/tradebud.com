@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
+import Image from 'next/image';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -1889,12 +1890,16 @@ export default function ExporterDashboard() {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-stone-200 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-16'}`}>
         {/* Brand */}
-        <div className="flex items-center gap-2.5 px-4 h-16 border-b border-stone-100">
-          <span className="inline-flex w-9 h-9 items-center justify-center rounded-lg bg-emerald-900 text-stone-50 text-sm font-bold shadow-sm flex-shrink-0">
-            T
-          </span>
+        <div className={`flex items-center gap-2.5 h-16 border-b border-stone-100 flex-shrink-0 ${sidebarOpen ? 'px-4' : 'justify-center px-2'}`}>
+          <Image
+            src="/images/tracebud-logo.png"
+            alt="Tracebud"
+            width={sidebarOpen ? 36 : 32}
+            height={sidebarOpen ? 36 : 32}
+            className="object-contain rounded-lg flex-shrink-0"
+          />
           {sidebarOpen && (
-            <div className="leading-none overflow-hidden">
+            <div className="leading-none overflow-hidden min-w-0">
               <span className="text-base font-bold tracking-tight text-stone-900">Tracebud</span>
               <span className="ml-1.5 text-[9px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-full">
                 Exporter
