@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
-import { DemoBrandLogo } from '../../DemoBrandLogo';
+import Image from 'next/image';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -1891,7 +1891,14 @@ export default function ExporterDashboard() {
       <aside className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-stone-200 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-16'}`}>
         {/* Brand */}
         <div className={`flex items-center gap-2.5 h-16 border-b border-stone-100 flex-shrink-0 ${sidebarOpen ? 'px-4' : 'justify-center px-2'}`}>
-          <DemoBrandLogo size={sidebarOpen ? 'md' : 'sm'} className="flex-shrink-0" />
+          <Image
+            src="/images/tracebud-logo.png"
+            alt="Tracebud"
+            width={sidebarOpen ? 36 : 28}
+            height={sidebarOpen ? 36 : 28}
+            className={`object-contain rounded-lg flex-shrink-0 ${sidebarOpen ? 'h-9 w-9' : 'h-7 w-7'}`}
+            priority
+          />
           {sidebarOpen && (
             <div className="leading-none overflow-hidden min-w-0">
               <span className="text-base font-bold tracking-tight text-stone-900">Tracebud</span>
@@ -1957,7 +1964,14 @@ export default function ExporterDashboard() {
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors shrink-0">
               <ChevronRight size={18} className={`text-stone-500 transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
             </button>
-            <DemoBrandLogo size="sm" className="shrink-0 hidden sm:flex" />
+            <Image
+              src="/images/tracebud-logo.png"
+              alt="Tracebud"
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0 rounded-md object-contain hidden sm:block"
+              priority
+            />
             <div className="min-w-0">
               <h1 className="text-lg font-semibold text-stone-900 truncate">{pageTitle}</h1>
               <p className="text-xs text-stone-400">Green Valley Exports</p>
