@@ -35,7 +35,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="record"
         options={{
           title: 'Record',
           tabBarIcon: ({ color, focused }) => (

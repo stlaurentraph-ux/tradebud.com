@@ -1,50 +1,64 @@
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WalkPerimeterScreen } from '@/features/mapping/WalkPerimeterScreen';
-import { useLanguage } from '@/features/state/LanguageContext';
-import { useAppState } from '@/features/state/AppStateContext';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { Brand, Spacing } from '@/constants/theme';
+import { Brand, Radius, Spacing } from '@/constants/theme';
 
 export default function HomeScreen() {
-  const { t } = useLanguage();
-  const { farmer } = useAppState();
-  const insets = useSafeAreaInsets();
-  const backgroundColor = useThemeColor({}, 'backgroundSecondary');
-  const cardBg = useThemeColor({}, 'backgroundCard');
-
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: cardBg }]}>
-        <View style={styles.headerContent}>
-          <View style={styles.logoRow}>
-            <Ionicons name="leaf" size={28} color={Brand.primary} />
-            <ThemedText type="title" style={styles.logoText}>
+    <ThemedView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.brandRow}>
+          <Ionicons name="leaf" size={26} color={Brand.primary} />
+          <View>
+            <ThemedText type="title" style={styles.brandTitle}>
               Tracebud
             </ThemedText>
+            <ThemedText type="caption">Farmer Field App</ThemedText>
           </View>
-          <ThemedText type="caption">{t('home_intro')}</ThemedText>
         </View>
-        
-        {farmer && (
-          <View style={styles.farmerBadge}>
-            <Ionicons name="person-circle" size={20} color={Brand.primary} />
-            <ThemedText type="defaultSemiBold" style={styles.farmerName}>
-              {farmer.name || farmer.id}
-            </ThemedText>
-          </View>
-        )}
-      </View>
 
-      {/* Main Content */}
-      <View style={[styles.mainContent, { backgroundColor }]}>
-        <WalkPerimeterScreen />
-      </View>
+        <ThemedText style={styles.subtitle}>
+          Interactive prototype for offline-first EUDR workflows.
+        </ThemedText>
+
+        <View style={styles.heroGrid}>
+          <View style={styles.phoneMock}>
+            <Image
+              source={{
+                uri: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=900&auto=format&fit=crop',
+              }}
+              style={styles.phoneImage}
+            />
+          </View>
+
+          <View style={styles.featuresCard}>
+            {[
+              'Adaptive GPS mapping',
+              'Ground-truth photo vault',
+              'FPIC and labor attestations',
+              'Yield-cap validation',
+              'Digital compliance receipts',
+              'Works offline in the field',
+            ].map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <Ionicons name="checkmark-circle" size={18} color={Brand.primary} />
+                <ThemedText>{feature}</ThemedText>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.ctaRow}>
+          <Link href="/record" asChild>
+            <Pressable style={styles.primaryCta}>
+              <ThemedText style={styles.primaryCtaText}>Open Interactive Demo</ThemedText>
+            </Pressable>
+          </Link>
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -52,39 +66,64 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F4FBF8',
   },
-  header: {
+  content: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8DFD4',
+    paddingVertical: Spacing['2xl'],
+    gap: Spacing.lg,
   },
-  headerContent: {
-    gap: Spacing.xs,
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
-  logoRow: {
+  brandTitle: {
+    color: Brand.primary,
+  },
+  subtitle: {
+    marginTop: Spacing.sm,
+    color: '#3F4A5A',
+  },
+  heroGrid: {
+    gap: Spacing.lg,
+  },
+  phoneMock: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#D6EEE5',
+    backgroundColor: '#fff',
+  },
+  phoneImage: {
+    width: '100%',
+    height: 360,
+  },
+  featuresCard: {
+    backgroundColor: '#fff',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#D6EEE5',
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  logoText: {
-    color: Brand.primary,
+  ctaRow: {
+    marginTop: Spacing.md,
   },
-  farmerBadge: {
-    flexDirection: 'row',
+  primaryCta: {
+    backgroundColor: Brand.primary,
+    borderRadius: Radius.full,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    backgroundColor: '#E6F7EF',
-    borderRadius: 20,
-    alignSelf: 'flex-start',
   },
-  farmerName: {
-    fontSize: 14,
-  },
-  mainContent: {
-    flex: 1,
+  primaryCtaText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });
