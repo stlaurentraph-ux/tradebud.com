@@ -21,26 +21,8 @@ import {
   loadTitlePhotosForPlot,
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
-
-function findBackendPlotForLocal(
-  localPlot: { name?: string; areaHectares: number; kind: 'point' | 'polygon' },
-  backendRows: unknown[],
-) {
-  const byName = (backendRows as { name?: string }[]).find(
-    (p) => String(p?.name ?? '') === String(localPlot.name ?? ''),
-  );
-  if (byName) return byName as any;
-  const targetArea = Number(localPlot.areaHectares);
-  const byAreaKind = (backendRows as any[])
-    .map((p) => ({
-      p,
-      area: Number(p?.area_ha ?? NaN),
-      kind: String(p?.kind ?? ''),
-    }))
-    .filter((x) => Number.isFinite(x.area) && x.kind === localPlot.kind)
-    .sort((a, b) => Math.abs(a.area - targetArea) - Math.abs(b.area - targetArea))[0]?.p;
-  return byAreaKind ?? null;
-}
+import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
+import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -92,23 +74,16 @@ export default function HomeScreen() {
             loadTitlePhotosForPlot(p.id).catch(() => []),
             loadEvidenceForPlot(p.id).catch(() => []),
           ]);
-          const groundOk = photos.length >= 4;
-          const landOk =
-            titleRows.length > 0 ||
-            evidenceRows.some((e: { kind?: string }) => e.kind === 'tenure_evidence');
-          const needsFpic = backendMatch?.indigenous_overlap === true;
-          const needsPermit = backendMatch?.sinaph_overlap === true;
-          const fpicOk = evidenceRows.some((e: { kind?: string }) => e.kind === 'fpic_repository');
-          const permitOk = evidenceRows.some(
-            (e: { kind?: string }) => e.kind === 'protected_area_permit',
-          );
-          const syncOk = Boolean(backendMatch);
-          const done =
-            groundOk &&
-            landOk &&
-            (!needsFpic || fpicOk) &&
-            (!needsPermit || permitOk) &&
-            syncOk;
+          const evidenceKinds = evidenceRows
+            .map((e: { kind?: string }) => e.kind)
+            .filter((k): k is string => typeof k === 'string' && k.length > 0);
+          const { done } = computePlotReadinessChecklist({
+            groundTruthPhotoCount: photos.length,
+            titlePhotoCount: titleRows.length,
+            evidenceKinds,
+            isSyncedToServer: Boolean(backendMatch),
+            backendFlags: backendMatch,
+          });
           return [p.id, done] as const;
         }),
       );

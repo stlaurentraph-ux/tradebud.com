@@ -1,5 +1,7 @@
 # Apps Structure (Long-Term)
 
+**Ecosystem requirements:** [REQUIREMENTS.md](../REQUIREMENTS.md) (repository root) — full Tracebud technical & strategic specification for all products and integrations.
+
 Tracebud now follows a two-product + multi-demo model:
 
 - Product 1: offline app

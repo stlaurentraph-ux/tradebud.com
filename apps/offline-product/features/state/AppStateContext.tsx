@@ -23,6 +23,17 @@ export type FarmerProfile = {
   fpicConsent?: boolean;
   laborNoChildLabor?: boolean;
   laborNoForcedLabor?: boolean;
+  /** One-time simplified declaration: postal or mailing address (EUDR micro/small operator path). */
+  postalAddress?: string;
+  /** Primary commodity for this producer (HS-style codes later; values: coffee, cocoa, rubber, soy, timber). */
+  commodityCode?: string;
+  /**
+   * Optional WGS84 point for micro/small simplified declaration path (postal OR basic geolocation).
+   * Six-decimal precision when captured from the device.
+   */
+  declarationLatitude?: number;
+  declarationLongitude?: number;
+  declarationGeoCapturedAt?: number;
 };
 
 export type PlotPoint = {
@@ -48,7 +59,8 @@ type AppStateContextValue = {
   farmer?: FarmerProfile;
   plots: Plot[];
   setFarmer: (farmer: FarmerProfile) => void;
-  addPlot: (input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>) => void;
+  /** Returns the new plot id when created; undefined if no farmer or not called. */
+  addPlot: (input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>) => string | undefined;
   renamePlot: (plotId: string, newName: string) => void;
   /** Merge fields into an existing plot (local persistence + audit). */
   updatePlot: (plotId: string, patch: Partial<Plot>) => void;
@@ -96,6 +108,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         fpicConsent: nextFarmer.fpicConsent ?? null,
         laborNoChildLabor: nextFarmer.laborNoChildLabor ?? null,
         laborNoForcedLabor: nextFarmer.laborNoForcedLabor ?? null,
+        postalAddress: nextFarmer.postalAddress ?? null,
+        commodityCode: nextFarmer.commodityCode ?? null,
+        declarationLatitude: nextFarmer.declarationLatitude ?? null,
+        declarationLongitude: nextFarmer.declarationLongitude ?? null,
+        declarationGeoCapturedAt: nextFarmer.declarationGeoCapturedAt ?? null,
       },
     }).catch(() => undefined);
   };
@@ -111,7 +128,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addPlot: AppStateContextValue['addPlot'] = (input) => {
     if (!farmer) {
-      return;
+      return undefined;
     }
 
     const now = Date.now();
@@ -141,6 +158,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }).catch(() => undefined);
       return next;
     });
+    return id;
   };
 
   return (

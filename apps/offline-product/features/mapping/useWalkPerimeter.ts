@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 
+import { roundWgs84Coordinate } from '@/features/geo/coordinates';
+
 export type Point = {
   latitude: number;
   longitude: number;
@@ -21,10 +23,6 @@ type AreaInfo = {
 };
 
 type CaptureMode = 'walk' | 'vertex_avg' | 'manual_trace';
-
-function roundTo6(value: number): number {
-  return Number(value.toFixed(6));
-}
 
 function computeAreaFromPoints(points: Point[]): AreaInfo {
   if (points.length < 3) {
@@ -100,7 +98,8 @@ export function useWalkPerimeter() {
       setIsRecording(true);
       watchRef.current = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
+          // Prefer best available GNSS (dual-frequency when OS supports it).
+          accuracy: Location.Accuracy.Highest,
           timeInterval: 2000,
           distanceInterval: 2,
         },
@@ -130,8 +129,8 @@ export function useWalkPerimeter() {
           }
 
           const p: Point = {
-            latitude: roundTo6(latitude),
-            longitude: roundTo6(longitude),
+            latitude: roundWgs84Coordinate(latitude),
+            longitude: roundWgs84Coordinate(longitude),
             timestamp: loc.timestamp ?? Date.now(),
           };
 
@@ -185,8 +184,8 @@ export function useWalkPerimeter() {
   const replacePointsFromPlot = useCallback((latLngs: { latitude: number; longitude: number }[]) => {
     const now = Date.now();
     const pts: Point[] = latLngs.map((p, i) => ({
-      latitude: roundTo6(p.latitude),
-      longitude: roundTo6(p.longitude),
+      latitude: roundWgs84Coordinate(p.latitude),
+      longitude: roundWgs84Coordinate(p.longitude),
       timestamp: now + i,
     }));
     setPoints(pts);
@@ -216,7 +215,7 @@ export function useWalkPerimeter() {
       const avgLon = window.reduce((sum, p) => sum + p.longitude, 0) / window.length;
       const nextPoints = [
         ...prev,
-        { latitude: roundTo6(avgLat), longitude: roundTo6(avgLon), timestamp: now },
+        { latitude: roundWgs84Coordinate(avgLat), longitude: roundWgs84Coordinate(avgLon), timestamp: now },
       ];
       setArea(computeAreaFromPoints(nextPoints));
       return nextPoints;
@@ -228,7 +227,7 @@ export function useWalkPerimeter() {
     setPoints((prev) => {
       const nextPoints = [
         ...prev,
-        { latitude: roundTo6(latitude), longitude: roundTo6(longitude), timestamp: now },
+        { latitude: roundWgs84Coordinate(latitude), longitude: roundWgs84Coordinate(longitude), timestamp: now },
       ];
       setArea(computeAreaFromPoints(nextPoints));
       return nextPoints;

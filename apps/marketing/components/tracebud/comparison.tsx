@@ -15,8 +15,11 @@ const complianceChecks = [
     features: [
       "Polygon mapping with 6 decimal precision",
       "Deforestation baseline verification (Dec 31, 2020)",
-      "TRACES NT SOAP/XML integration",
-      "5-year data retention",
+      "Degradation-oriented forest-structure signals",
+      "Identity-preserving batches (no mass-balance obscuring)",
+      "TRACES NT SOAP/XML + integrity hooks (WS-Security, digests)",
+      "5-year retention from market placement",
+      "Secondary checks before highest-liability submissions",
     ],
   },
   {
@@ -25,7 +28,8 @@ const complianceChecks = [
     deadline: "2024-2026 (phased)",
     status: "ready",
     features: [
-      "DPP-style architecture (GS1 EPCIS)",
+      "Voluntary DPP-style rails (ESPR exempts mandatory DPP for many foods/feeds—we still align for ESG)",
+      "GS1 EPCIS-friendly event sharing",
       "Full supply chain visibility",
       "Audit-ready documentation",
       "ESG metrics tracking",
@@ -46,7 +50,7 @@ const complianceChecks = [
 ];
 
 const integrations = [
-  { name: "TRACES NT", description: "SOAP/XML middleware with WS-Security", status: "live" },
+  { name: "TRACES NT", description: "SOAP/XML + WS-Security & payload digests", status: "live" },
   { name: "IHCAFE", description: "Honduran Coffee Institute sync", status: "live" },
   { name: "ICF", description: "Honduran Forest Institute registry", status: "live" },
   { name: "Sentinel-2", description: "ESA satellite imagery", status: "live" },

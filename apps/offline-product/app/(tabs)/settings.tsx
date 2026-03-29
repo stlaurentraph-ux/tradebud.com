@@ -5,12 +5,16 @@ import {
   Linking,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -25,16 +29,27 @@ import {
   getAuthCredentials,
   getTracebudApiBaseUrl,
   hydrateSyncAuthFromSettings,
+  postAuditEventToBackend,
   saveAndApplySyncAuth,
   testBackendLogin,
 } from '@/features/api/postPlot';
+import {
+  buildDeclarationBundle,
+  declarationBundleToJson,
+} from '@/features/compliance/declarationBundle';
 import { useCallback, useEffect, useState } from 'react';
-import { loadPendingSyncActions } from '@/features/state/persistence';
+import {
+  getSetting,
+  loadPendingSyncActions,
+  setSetting,
+} from '@/features/state/persistence';
+import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
 import {
   listUnsyncedLocalPlots,
   subscribeServerPlotSyncChanged,
   uploadUnsyncedPlotsForFarmer,
 } from '@/features/sync/plotServerSync';
+import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +67,8 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [syncNowBusy, setSyncNowBusy] = useState(false);
+  const [declarationBusy, setDeclarationBusy] = useState(false);
   /** SQLite queue: harvests, photo sync, evidence sync (not plot geometry upload). */
   const [queuePendingCount, setQueuePendingCount] = useState(0);
   /** Local plots with no matching server row (by name). */
@@ -62,6 +79,7 @@ export default function SettingsScreen() {
   const [syncAuthHint, setSyncAuthHint] = useState<string | null>(null);
   const [syncSignedIn, setSyncSignedIn] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
+  const [vertexAvgSeconds, setVertexAvgSeconds] = useState<60 | 120>(120);
 
   const refreshSavedSyncEmail = useCallback(async () => {
     await hydrateSyncAuthFromSettings();
@@ -93,6 +111,8 @@ export default function SettingsScreen() {
       void (async () => {
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
+        const v = await getSetting('vertexAveragingSeconds').catch(() => null);
+        setVertexAvgSeconds(v === '60' ? 60 : 120);
       })();
     }, [refreshSavedSyncEmail, refreshSyncMetrics]),
   );
@@ -170,6 +190,43 @@ export default function SettingsScreen() {
     setFarmer({ ...farmer, name: trimmed || undefined });
   };
 
+  const captureDeclarationGeo = async () => {
+    if (!farmer) {
+      Alert.alert(t('profile_title'), t('finish_home_first'));
+      return;
+    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('warning'), t('simplified_declaration_location_denied'));
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const declarationLatitude = roundWgs84Coordinate(pos.coords.latitude);
+      const declarationLongitude = roundWgs84Coordinate(pos.coords.longitude);
+      setFarmer({
+        ...farmer,
+        declarationLatitude,
+        declarationLongitude,
+        declarationGeoCapturedAt: Date.now(),
+      });
+    } catch (e) {
+      Alert.alert(t('warning'), e instanceof Error ? e.message : t('simplified_declaration_location_failed'));
+    }
+  };
+
+  const clearDeclarationGeo = () => {
+    if (!farmer) return;
+    setFarmer({
+      ...farmer,
+      declarationLatitude: undefined,
+      declarationLongitude: undefined,
+      declarationGeoCapturedAt: undefined,
+    });
+  };
+
   const displayProfileEmail = syncSignedIn
     ? syncEmail.trim() || getAuthCredentials().email || '—'
     : t('profile_email_none');
@@ -225,8 +282,24 @@ export default function SettingsScreen() {
         setSyncSignedIn(true);
         setSyncAuthHint(null);
         setSyncPassword('');
+        setSyncMessage(null);
         if (farmer?.id && plots.length > 0) {
           await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
+        }
+        if (farmer?.id) {
+          const qr = await processPendingSyncQueue({ farmerId: farmer.id, localPlots: plots });
+          if (qr.fetchFailed) {
+            setSyncMessage(t('sync_queue_fetch_failed'));
+          } else if (qr.completed > 0 || qr.failedActions > 0 || qr.droppedInvalid > 0) {
+            const bits: string[] = [];
+            if (qr.completed > 0) bits.push(t('sync_queue_sent', { n: qr.completed }));
+            if (qr.droppedInvalid > 0) bits.push(t('sync_queue_dropped_invalid', { n: qr.droppedInvalid }));
+            if (qr.failedActions > 0) {
+              bits.push(t('sync_queue_failed_remain', { n: qr.failedActions }));
+              if (qr.firstError) bits.push(qr.firstError);
+            }
+            setSyncMessage(bits.join('\n\n'));
+          }
         }
         void refreshSyncMetrics();
       } else {
@@ -252,33 +325,146 @@ export default function SettingsScreen() {
   };
 
   const runSyncNow = async () => {
-    const res = await testBackendLogin();
-    if (!res.ok) {
-      setSyncMessage(res.message);
+    setSyncNowBusy(true);
+    setSyncMessage(null);
+    try {
+      const res = await testBackendLogin();
+      if (!res.ok) {
+        setSyncMessage(res.message);
+        return;
+      }
+      if (!farmer?.id) {
+        setSyncMessage(t('sync_no_farmer_profile'));
+        return;
+      }
+
+      const parts: string[] = [];
+
+      if (plots.length === 0) {
+        parts.push(t('sync_plots_none'));
+      } else {
+        const syncRes = await uploadUnsyncedPlotsForFarmer({
+          farmerId: farmer.id,
+          localPlots: plots,
+        });
+        if (syncRes.stoppedForAuth) {
+          parts.push(t('sync_session_expired_short'));
+        } else if (syncRes.fetchFailed) {
+          parts.push(t('sync_plots_fetch_failed'));
+        } else if (syncRes.unsyncedBefore === 0) {
+          parts.push(t('sync_plots_already_synced'));
+        } else if (syncRes.uploaded === syncRes.unsyncedBefore) {
+          parts.push(
+            t('sync_plots_uploaded_all', {
+              uploaded: syncRes.uploaded,
+              total: syncRes.unsyncedBefore,
+            }),
+          );
+        } else {
+          parts.push(
+            t('sync_plots_partial', {
+              uploaded: syncRes.uploaded,
+              total: syncRes.unsyncedBefore,
+              failed: syncRes.failed,
+            }) + (syncRes.firstError ? `\n${syncRes.firstError}` : ''),
+          );
+        }
+      }
+
+      const queueRes = await processPendingSyncQueue({
+        farmerId: farmer.id,
+        localPlots: plots,
+      });
+      if (queueRes.fetchFailed) {
+        parts.push(t('sync_queue_fetch_failed'));
+      } else {
+        if (queueRes.completed > 0) {
+          parts.push(t('sync_queue_sent', { n: queueRes.completed }));
+        }
+        if (queueRes.droppedInvalid > 0) {
+          parts.push(t('sync_queue_dropped_invalid', { n: queueRes.droppedInvalid }));
+        }
+        if (queueRes.failedActions > 0) {
+          parts.push(t('sync_queue_failed_remain', { n: queueRes.failedActions }));
+          if (queueRes.firstError) parts.push(queueRes.firstError);
+        }
+      }
+
+      setSyncMessage(parts.filter(Boolean).join('\n\n'));
+    } finally {
+      setSyncNowBusy(false);
       await refreshSyncMetrics();
+    }
+  };
+
+  const shareDeclarationBundle = async () => {
+    if (!farmer) {
+      Alert.alert(t('warning'), t('declaration_export_no_farmer'));
       return;
     }
-    if (!farmer?.id || plots.length === 0) {
-      setSyncMessage('Backend connection OK. No local plots to sync.');
-      await refreshSyncMetrics();
+    const bundle = buildDeclarationBundle({
+      farmer,
+      plots,
+      appVersion: Constants.expoConfig?.version ?? null,
+    });
+    const json = declarationBundleToJson(bundle);
+    try {
+      if (Platform.OS === 'web') {
+        await Share.share({ message: json, title: 'Tracebud' });
+        return;
+      }
+      const dir = FileSystem.cacheDirectory;
+      if (!dir) {
+        await Share.share({ message: json });
+        return;
+      }
+      const path = `${dir}tracebud-declaration-${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(path, json);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(path, { mimeType: 'application/json', UTI: 'public.json' });
+      } else {
+        await Share.share({ message: json });
+      }
+    } catch (e) {
+      Alert.alert(t('warning'), e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const syncDeclarationSnapshotToServer = async () => {
+    if (!farmer) {
+      Alert.alert(t('warning'), t('declaration_export_no_farmer'));
       return;
     }
-    const syncRes = await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
-    if (syncRes.stoppedForAuth) {
-      setSyncMessage('Session expired. Sign in again under Settings → Your profile.');
-    } else if (syncRes.fetchFailed) {
-      setSyncMessage('Could not reach Tracebud API while syncing plots.');
-    } else if (syncRes.unsyncedBefore === 0) {
-      setSyncMessage('All local plots are already synced.');
-    } else if (syncRes.uploaded === syncRes.unsyncedBefore) {
-      setSyncMessage(`Synced all plots (${syncRes.uploaded}/${syncRes.unsyncedBefore}).`);
-    } else {
-      const reason = syncRes.firstError ? ` ${syncRes.firstError}` : '';
-      setSyncMessage(
-        `Partially synced plots (${syncRes.uploaded}/${syncRes.unsyncedBefore}, failed ${syncRes.failed}).${reason}`,
-      );
+    const login = await testBackendLogin();
+    if (!login.ok) {
+      Alert.alert(t('warning'), login.message);
+      return;
     }
-    await refreshSyncMetrics();
+    setDeclarationBusy(true);
+    try {
+      const bundle = buildDeclarationBundle({
+        farmer,
+        plots,
+        appVersion: Constants.expoConfig?.version ?? null,
+      });
+      const res = await postAuditEventToBackend({
+        eventType: 'offline_declaration_bundle',
+        payload: { ...bundle, farmerId: farmer.id },
+        deviceId: Constants.deviceName ?? null,
+      });
+      if (!res.ok) {
+        Alert.alert(
+          t('warning'),
+          res.reason === 'no_access_token'
+            ? t('declaration_sync_need_signin')
+            : res.message ?? t('declaration_sync_failed'),
+        );
+        return;
+      }
+      Alert.alert(t('declaration_sync_ok_title'), t('declaration_sync_ok_body'));
+    } finally {
+      setDeclarationBusy(false);
+    }
   };
 
   return (
@@ -340,6 +526,53 @@ export default function SettingsScreen() {
                     {displayProfileEmail}
                   </ThemedText>
                 </View>
+                {farmer?.postalAddress?.trim() ? (
+                  <View style={styles.profileReadonlyField}>
+                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
+                      {t('settings_postal_label')}
+                    </ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
+                      {farmer.postalAddress.trim()}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {farmer?.commodityCode ? (
+                  <View style={styles.profileReadonlyField}>
+                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
+                      {t('settings_commodity_label')}
+                    </ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
+                      {t(
+                        `commodity_${farmer.commodityCode}` as
+                          | 'commodity_coffee'
+                          | 'commodity_cocoa'
+                          | 'commodity_rubber'
+                          | 'commodity_soy'
+                          | 'commodity_timber',
+                      )}
+                      {(() => {
+                        const hs = getCommodityDefinition(farmer.commodityCode)?.hsCode;
+                        return hs ? ` · HS ${formatHsHeading(hs)}` : '';
+                      })()}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {farmer?.declarationLatitude != null &&
+                farmer?.declarationLongitude != null &&
+                Number.isFinite(farmer.declarationLatitude) &&
+                Number.isFinite(farmer.declarationLongitude) ? (
+                  <View style={styles.profileReadonlyField}>
+                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
+                      {t('settings_declaration_geo_label')}
+                    </ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
+                      {Math.abs(farmer.declarationLatitude).toFixed(6)}°
+                      {farmer.declarationLatitude >= 0 ? 'N' : 'S'},{' '}
+                      {Math.abs(farmer.declarationLongitude).toFixed(6)}°
+                      {farmer.declarationLongitude >= 0 ? 'E' : 'W'}
+                    </ThemedText>
+                  </View>
+                ) : null}
                 <Button variant="secondary" size="md" fullWidth onPress={enterProfileEdit}>
                   {t('profile_edit')}
                 </Button>
@@ -378,6 +611,36 @@ export default function SettingsScreen() {
                   editable={Boolean(farmer)}
                   containerStyle={styles.nameInputWrap}
                 />
+
+                {farmer ? (
+                  <View style={{ marginTop: 12, gap: 8 }}>
+                    <ThemedText type="defaultSemiBold">{t('settings_declaration_geo_label')}</ThemedText>
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {t('simplified_declaration_geo_body')}
+                    </ThemedText>
+                    {farmer.declarationLatitude != null &&
+                    farmer.declarationLongitude != null &&
+                    Number.isFinite(farmer.declarationLatitude) &&
+                    Number.isFinite(farmer.declarationLongitude) ? (
+                      <ThemedText type="caption">
+                        {Math.abs(farmer.declarationLatitude).toFixed(6)}°
+                        {farmer.declarationLatitude >= 0 ? 'N' : 'S'},{' '}
+                        {Math.abs(farmer.declarationLongitude).toFixed(6)}°
+                        {farmer.declarationLongitude >= 0 ? 'E' : 'W'}
+                      </ThemedText>
+                    ) : null}
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      <Button variant="secondary" size="md" onPress={() => void captureDeclarationGeo()}>
+                        {t('simplified_declaration_capture_gps')}
+                      </Button>
+                      {farmer.declarationLatitude != null && farmer.declarationLongitude != null ? (
+                        <Button variant="outline" size="md" onPress={clearDeclarationGeo}>
+                          {t('simplified_declaration_clear_gps')}
+                        </Button>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : null}
 
                 <View style={styles.profileDivider} />
 
@@ -481,6 +744,56 @@ export default function SettingsScreen() {
 
         <Card variant="outlined" padding="none" style={styles.card}>
           <CardContent style={styles.cardInner}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="locate-outline" size={20} color={Brand.primary} />
+              <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                {t('settings_vertex_avg_title')}
+              </ThemedText>
+            </View>
+            <ThemedText type="caption" style={styles.mutedText}>
+              {t('settings_vertex_avg_body')}
+            </ThemedText>
+            <View style={styles.vertexAvgRow}>
+              <Pressable
+                onPress={() => {
+                  setVertexAvgSeconds(60);
+                  void setSetting('vertexAveragingSeconds', '60');
+                }}
+                style={[
+                  styles.vertexAvgChip,
+                  vertexAvgSeconds === 60 && styles.vertexAvgChipSelected,
+                ]}
+              >
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={vertexAvgSeconds === 60 ? styles.vertexAvgChipTextSelected : undefined}
+                >
+                  {t('settings_vertex_60')}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setVertexAvgSeconds(120);
+                  void setSetting('vertexAveragingSeconds', '120');
+                }}
+                style={[
+                  styles.vertexAvgChip,
+                  vertexAvgSeconds === 120 && styles.vertexAvgChipSelected,
+                ]}
+              >
+                <ThemedText
+                  type="defaultSemiBold"
+                  style={vertexAvgSeconds === 120 ? styles.vertexAvgChipTextSelected : undefined}
+                >
+                  {t('settings_vertex_120')}
+                </ThemedText>
+              </Pressable>
+            </View>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined" padding="none" style={styles.card}>
+          <CardContent style={styles.cardInner}>
             <View style={styles.rowHeaderInline}>
               <View style={styles.sectionHeaderRow}>
                 <Ionicons name="sync-outline" size={20} color={Brand.primary} />
@@ -503,6 +816,8 @@ export default function SettingsScreen() {
                 variant="secondary"
                 size="md"
                 fullWidth
+                loading={syncNowBusy}
+                disabled={syncNowBusy}
                 onPress={() => void runSyncNow()}
               >
                 {t('sync_now')}
@@ -513,6 +828,37 @@ export default function SettingsScreen() {
                 {syncMessage}
               </ThemedText>
             ) : null}
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined" padding="none" style={styles.card}>
+          <CardContent style={styles.cardInner}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="document-text-outline" size={20} color={Brand.primary} />
+              <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                {t('declaration_audit_section')}
+              </ThemedText>
+            </View>
+            <ThemedText type="caption" style={styles.mutedText}>
+              {t('declaration_audit_body')}
+            </ThemedText>
+            <View style={[styles.btnWrap, { marginTop: 10 }]}>
+              <Button variant="outline" size="md" fullWidth onPress={() => void shareDeclarationBundle()}>
+                {t('declaration_export_json')}
+              </Button>
+            </View>
+            <View style={styles.btnWrap}>
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                loading={declarationBusy}
+                disabled={declarationBusy}
+                onPress={() => void syncDeclarationSnapshotToServer()}
+              >
+                {t('declaration_sync_server')}
+              </Button>
+            </View>
           </CardContent>
         </Card>
 
@@ -781,6 +1127,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#333333',
+  },
+  vertexAvgRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  vertexAvgChip: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FAFAFA',
+  },
+  vertexAvgChipSelected: {
+    borderColor: Brand.primary,
+    backgroundColor: '#E8F8F1',
+  },
+  vertexAvgChipTextSelected: {
+    color: Brand.primary,
   },
 });
 

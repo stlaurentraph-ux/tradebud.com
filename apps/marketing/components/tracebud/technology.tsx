@@ -1,17 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  MapPin, 
-  Satellite, 
-  Camera, 
-  FileText, 
-  Shield, 
+import {
+  MapPin,
+  Satellite,
+  Camera,
+  FileText,
+  Shield,
   Database,
   WifiOff,
   Timer,
   Fingerprint,
-  Scale
+  Scale,
+  Trees,
+  Home,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -23,7 +25,12 @@ const technologies = [
     image: "/images/gis-geolocation.jpg",
     features: [
       { title: "Waypoint Averaging", description: "60-120 second coordinate streams at each polygon vertex", icon: Timer },
-      { title: "Dual-Frequency GNSS", description: "L1/L5 support with HDOP, PDOP, RMS error logging", icon: Satellite },
+      {
+        title: "Dual-Frequency GNSS",
+        description:
+          "L1/L5 when the device supports it. HDOP-style metrics are logged for QA—we never hard-lock capture in the canopy; warnings, not blocking gates.",
+        icon: Satellite,
+      },
       { title: "Offline Vector Tiles", description: "Pre-cached satellite imagery when GNSS fails", icon: WifiOff },
     ],
   },
@@ -33,9 +40,25 @@ const technologies = [
     color: "var(--mountain-clay)",
     image: "https://images.unsplash.com/photo-1586281380117-5a60ae2050cc?q=80&w=2070&auto=format&fit=crop",
     features: [
-      { title: "Deforestation AI", description: "Cross-references against Dec 31, 2020 baseline", icon: Satellite },
-      { title: "Photo Vault", description: "Timestamped, geo-tagged 360-degree photographs", icon: Camera },
-      { title: "Yield Cap Validation", description: "Biological carrying capacity fraud detection", icon: Scale },
+      { title: "Deforestation AI", description: "Cross-references polygons against the Dec 31, 2020 baseline", icon: Satellite },
+      {
+        title: "Degradation signals",
+        description:
+          "Flags structural forest-cover changes—e.g. primary or naturally regenerating forest shifting toward plantation-style cover—alongside deforestation checks.",
+        icon: Trees,
+      },
+      {
+        title: "Ground-truth photo vault",
+        description:
+          "Timestamped, geo-tagged directional photos (e.g. cardinal views) to challenge satellite false-positives during audits.",
+        icon: Camera,
+      },
+      {
+        title: "Yield & batch sanity",
+        description:
+          "Cross-checks weights against plot capacity; supports identity-preserving batches and extra scrutiny before high-liability submissions.",
+        icon: Scale,
+      },
     ],
   },
   {
@@ -45,6 +68,11 @@ const technologies = [
     image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2070&auto=format&fit=crop",
     features: [
       { title: "OCR Document Scanning", description: "Digitize Clave Catastral and formal titles", icon: FileText },
+      {
+        title: "Producer en posesión",
+        description: "Support informal tenure paths with customary agreements and local attestations where formal title is not required by domestic law.",
+        icon: Home,
+      },
       { title: "Protected Area Workflow", description: "Amber flags for SINAPH overlaps with permit support", icon: MapPin },
       { title: "FPIC Repository", description: "Community assembly minutes and social agreements", icon: Database },
     ],
@@ -55,9 +83,23 @@ const technologies = [
     color: "var(--data-emerald)",
     image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?q=80&w=2070&auto=format&fit=crop",
     features: [
-      { title: "5-Year Immutable Ledger", description: "Full audit trail with timestamp and Device ID", icon: Database },
-      { title: "RBAC Encryption", description: "PII encrypted; consumers see anonymized Polygon ID", icon: Fingerprint },
-      { title: "Identity Preservation", description: "Track IP and segregated batches to origin", icon: Shield },
+      {
+        title: "5-year retention posture",
+        description:
+          "EUDR-aligned retention of diligence and geometry from market placement; immutable-style audit logs with timestamps and device context.",
+        icon: Database,
+      },
+      {
+        title: "RBAC & reversible PII",
+        description:
+          "Farmer PII is protected with symmetric encryption and role-based access—competent authorities and importers of record can verify the chain without one-way hashing people out of audits.",
+        icon: Fingerprint,
+      },
+      {
+        title: "No mass-balance blending",
+        description: "Identity-preserving, segregated batches keep plot-level origin visible—aligned with EUDR expectations for traceability, not anonymous pooling.",
+        icon: Shield,
+      },
     ],
   },
 ];

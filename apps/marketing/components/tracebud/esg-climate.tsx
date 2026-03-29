@@ -75,6 +75,11 @@ export function EsgClimate() {
           <p className="text-foreground/80 text-xl md:text-2xl max-w-3xl mx-auto text-balance leading-relaxed">
             Future-proof your supply chain with farm-level environmental metrics aligned with ESRS, SBTi FLAG guidance, and global ESG platforms.
           </p>
+          <p className="text-foreground/70 text-base md:text-lg max-w-3xl mx-auto mt-5 leading-relaxed">
+            Under ESPR, many coffee and cocoa supply chains are not subject to a mandatory Digital Product Passport—Tracebud still
+            implements <span className="font-semibold text-foreground">DPP-style data rails</span> (EPCIS-friendly events, audit
+            packs) so buyers can meet corporate ESG and disclosure expectations early.
+          </p>
         </motion.div>
 
         {/* Hero Image with ESG Platforms */}

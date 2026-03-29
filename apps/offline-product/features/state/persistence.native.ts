@@ -161,6 +161,27 @@ export async function initDatabase() {
       value TEXT NOT NULL
     );
   `);
+  await ensureFarmerSchemaExtras(db);
+}
+
+async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(farmer);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('postalAddress')) {
+    await db.execAsync('ALTER TABLE farmer ADD COLUMN postalAddress TEXT;');
+  }
+  if (!has('commodityCode')) {
+    await db.execAsync('ALTER TABLE farmer ADD COLUMN commodityCode TEXT;');
+  }
+  if (!has('declarationLatitude')) {
+    await db.execAsync('ALTER TABLE farmer ADD COLUMN declarationLatitude REAL;');
+  }
+  if (!has('declarationLongitude')) {
+    await db.execAsync('ALTER TABLE farmer ADD COLUMN declarationLongitude REAL;');
+  }
+  if (!has('declarationGeoCapturedAt')) {
+    await db.execAsync('ALTER TABLE farmer ADD COLUMN declarationGeoCapturedAt INTEGER;');
+  }
 }
 
 export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: Plot[] }> {
@@ -183,6 +204,14 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
         fpicConsent: farmerRow.fpicConsent === 1,
         laborNoChildLabor: farmerRow.laborNoChildLabor === 1,
         laborNoForcedLabor: farmerRow.laborNoForcedLabor === 1,
+        postalAddress:
+          typeof farmerRow.postalAddress === 'string' && farmerRow.postalAddress.trim()
+            ? farmerRow.postalAddress.trim()
+            : undefined,
+        commodityCode:
+          typeof farmerRow.commodityCode === 'string' && farmerRow.commodityCode.trim()
+            ? farmerRow.commodityCode.trim()
+            : undefined,
       };
       })()
     : undefined;
@@ -194,12 +223,18 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
     }
   }
 
+  let plotsNeedPersist = false;
   const plots: Plot[] = (plotRows ?? []).map((row) => {
     let points: any[] = [];
     try {
       points = JSON.parse(row.pointsJson);
     } catch {
       points = [];
+    }
+    let kind = row.kind as Plot['kind'];
+    if (kind === 'point' && points.length >= 3) {
+      kind = 'polygon';
+      plotsNeedPersist = true;
     }
     return {
       id: row.id,
@@ -208,13 +243,17 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
       createdAt: row.createdAt,
       areaSquareMeters: row.areaSquareMeters,
       areaHectares: row.areaHectares,
-      kind: row.kind,
+      kind,
       points,
       declaredAreaHectares: row.declaredAreaHectares ?? undefined,
       discrepancyPercent: row.discrepancyPercent ?? undefined,
       precisionMetersAtSave: row.precisionMetersAtSave ?? null,
     };
   });
+
+  if (plotsNeedPersist && plots.length > 0) {
+    await persistPlots(plots);
+  }
 
   return { farmer, plots };
 }
@@ -224,7 +263,7 @@ export async function persistFarmer(farmer?: FarmerProfile) {
   await db.runAsync('DELETE FROM farmer;');
   if (!farmer) return;
   await db.runAsync(
-    'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+    'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
     [
       farmer.id,
       farmer.name ?? null,
@@ -234,6 +273,15 @@ export async function persistFarmer(farmer?: FarmerProfile) {
       farmer.fpicConsent ? 1 : 0,
       farmer.laborNoChildLabor ? 1 : 0,
       farmer.laborNoForcedLabor ? 1 : 0,
+      farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
+      farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
+      farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
+        ? farmer.declarationLatitude
+        : null,
+      farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
+        ? farmer.declarationLongitude
+        : null,
+      farmer.declarationGeoCapturedAt ?? null,
     ],
   );
 }

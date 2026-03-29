@@ -2,6 +2,7 @@ import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
 import { ProcessTimeline } from "@/components/tracebud/process-timeline";
 import { Verticals } from "@/components/tracebud/verticals";
+import { NetworkSovereignty } from "@/components/tracebud/network-sovereignty";
 import { Technology } from "@/components/tracebud/technology";
 import { Comparison } from "@/components/tracebud/comparison";
 import { CommodityEngine } from "@/components/tracebud/commodity-engine";
@@ -17,6 +18,7 @@ export default function Home() {
       <Hero />
       <ProcessTimeline />
       <Verticals />
+      <NetworkSovereignty />
       <Technology />
       <Comparison />
       <CommodityEngine />

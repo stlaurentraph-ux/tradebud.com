@@ -47,10 +47,13 @@ import {
   type PlotEvidenceItem,
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
+import {
+  MIN_GROUND_TRUTH_PHOTOS,
+  computePlotReadinessChecklist,
+} from '@/features/compliance/plotChecklist';
+import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 
 type Sub = 'photos' | 'documents' | 'harvests' | 'voucher';
-
-const MIN_GROUND_TRUTH_PHOTOS = 4;
 
 export default function PlotDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -111,24 +114,17 @@ export default function PlotDetailScreen() {
   }, [farmer?.id]);
 
   useEffect(() => {
-    if (!plot || backendPlots.length === 0) {
+    if (!plot) {
       setBackendPlotId(null);
       setOverlapFlags({ sinaph: false, indigenous: false });
       return;
     }
-    const byName = backendPlots.find((p) => String(p?.name ?? '') === plot.name);
-    const targetArea = Number(plot.areaHectares);
-    const byAreaKind = backendPlots
-      .map((p) => ({
-        p,
-        area: Number(p?.area_ha ?? NaN),
-        kind: String(p?.kind ?? ''),
-      }))
-      .filter((x) => Number.isFinite(x.area) && x.kind === plot.kind)
-      .sort((a, b) => Math.abs(a.area - targetArea) - Math.abs(b.area - targetArea))[0]?.p;
-
-    const match = byName ?? byAreaKind ?? null;
-    const id = match?.id ? String(match.id) : null;
+    const match = findBackendPlotForLocal(plot, backendPlots) as {
+      id?: unknown;
+      sinaph_overlap?: boolean;
+      indigenous_overlap?: boolean;
+    } | null;
+    const id = match?.id != null ? String(match.id) : null;
     setBackendPlotId(id);
     setOverlapFlags({
       sinaph: match?.sinaph_overlap === true,
@@ -226,13 +222,23 @@ export default function PlotDetailScreen() {
   const isCompliant = !overlapFlags.sinaph && !overlapFlags.indigenous;
 
   const plotStatusRows = useMemo(() => {
+    const evidenceKinds = evidence
+      .map((e) => e.kind)
+      .filter((k): k is string => typeof k === 'string' && k.length > 0);
+    const { groundOk, landOk, fpicOk, permitOk, syncOk } = computePlotReadinessChecklist({
+      groundTruthPhotoCount: photos.length,
+      titlePhotoCount: titlePhotos.length,
+      evidenceKinds,
+      isSyncedToServer: Boolean(backendPlotId),
+      backendFlags:
+        backendPlotId != null
+          ? {
+              sinaph_overlap: overlapFlags.sinaph,
+              indigenous_overlap: overlapFlags.indigenous,
+            }
+          : null,
+    });
     const minG = MIN_GROUND_TRUTH_PHOTOS;
-    const groundOk = photos.length >= minG;
-    const landOk =
-      titlePhotos.length > 0 || evidence.some((e) => e.kind === 'tenure_evidence');
-    const fpicOk = evidence.some((e) => e.kind === 'fpic_repository');
-    const permitOk = evidence.some((e) => e.kind === 'protected_area_permit');
-    const syncOk = Boolean(backendPlotId);
 
     const rows: {
       id: string;

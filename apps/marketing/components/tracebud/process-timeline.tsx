@@ -40,7 +40,15 @@ export function ProcessTimeline() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-[var(--data-emerald)] font-semibold text-sm uppercase tracking-wider mb-3">How It Works</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[var(--forest-canopy)]">Farm to Compliance in 3 Steps</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-[var(--forest-canopy)]">
+            A common path from field to EU readiness
+          </h2>
+          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto mt-4 leading-relaxed">
+            Many workflows start here—but Tracebud is also a{" "}
+            <span className="font-semibold text-[var(--forest-canopy)]">network</span>: brands, cooperatives, exporters, and
+            farmers can each initiate mapping, diligence, or data requests. The steps below are one clear route, not the only
+            entry point.
+          </p>
         </motion.div>
 
         {/* Timeline - Desktop Horizontal */}

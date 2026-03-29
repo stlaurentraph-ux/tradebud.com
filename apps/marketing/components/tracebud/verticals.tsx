@@ -2,7 +2,18 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Users, Truck, Building2, Globe, ArrowRight, Smartphone, FileCheck, Eye, Server } from "lucide-react";
+import {
+  Users,
+  Truck,
+  Building2,
+  Globe,
+  ArrowRight,
+  Smartphone,
+  FileCheck,
+  Eye,
+  Server,
+  Handshake,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -23,13 +34,27 @@ const verticals = [
     id: "exporters",
     title: "Exporters & Operators",
     hook: "Ship faster. Batch smarter.",
-    description: "Automated Due Diligence Statements, transaction linking, and yield cap validation to prevent illicit blending.",
-    features: ["Batch aggregation", "Yield fraud detection", "DDS automation", "TRACES NT integration"],
+    description:
+      "Automated Due Diligence Statements, identity-preserving batches (no EUDR mass-balance obscuring), yield checks, and TRACES-oriented workflows.",
+    features: ["IP / segregated batches", "Yield sanity checks", "DDS automation", "TRACES NT integration"],
     icon: Truck,
     featureIcon: FileCheck,
     color: "var(--mountain-clay)",
     href: "/exporters",
     image: "/images/exporter-hero.jpg",
+  },
+  {
+    id: "cooperatives",
+    title: "Cooperatives & Producer Groups",
+    hook: "Roll up members. Keep every plot attributable.",
+    description:
+      "Member-level field data rolls into cooperative batches for exporters—identity-preserving batches, evidence vaults, and DDS handoffs without mass-balance blending.",
+    features: ["Member plot queue", "Coop batches & DDS prep", "Exporter handoff", "Tenant-scoped roles"],
+    icon: Handshake,
+    featureIcon: Users,
+    color: "var(--data-emerald)",
+    href: "/farmers?account=cooperative",
+    image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?q=80&w=2070&auto=format&fit=crop",
   },
   {
     id: "importers",
@@ -74,11 +99,12 @@ export function Verticals() {
             Built for Every Stakeholder
           </h2>
           <p className="text-foreground/80 text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-            From smallholder farmers to EU importers, Tracebud serves the entire supply chain with role-based access and tailored workflows.
+            From smallholders and cooperatives to EU importers—each segment uses the same unified platform with organization-scoped roles
+            and tailored workflows.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
           {verticals.map((vertical, index) => {
             const Icon = vertical.icon;
             const FeatureIcon = vertical.featureIcon;

@@ -31,7 +31,7 @@ export function Hero() {
           className="inline-flex items-center gap-2 bg-[var(--mountain-clay)] text-white px-5 py-2.5 rounded-full text-lg font-bold mb-8"
         >
           <Calendar className="w-5 h-5" />
-          <span>EUDR Deadline: Dec 30, 2026</span>
+          <span>EUDR: Dec 30, 2026 (large/medium) · Jun 30, 2027 (micro/small)</span>
         </motion.div>
 
         <motion.div

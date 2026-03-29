@@ -44,10 +44,10 @@ const commodities = [
     description: "Large-scale agricultural mapping with satellite AI pre-verification.",
     image: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?q=80&w=2070&auto=format&fit=crop"
   },
-  { 
-    id: "timber", 
-    name: "Timber", 
-    hsCode: "4403",
+  {
+    id: "timber",
+    name: "Timber",
+    hsCode: "4407",
     icon: TreePine, 
     color: "#166534",
     description: "Forest management verification with protected area workflow integration.",

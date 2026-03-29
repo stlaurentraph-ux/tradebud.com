@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +16,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { useAppState } from '@/features/state/AppStateContext';
-import { postPlotToBackend } from '@/features/api/postPlot';
+import { buildGeometryFromLocalPlot, postPlotToBackend } from '@/features/api/postPlot';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { getSetting, logAuditEvent, persistPlotEvidenceItem } from '@/features/state/persistence';
+import {
+  getSetting,
+  logAuditEvent,
+  persistPlotEvidenceItem,
+  persistPlotPhoto,
+} from '@/features/state/persistence';
+import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
+import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -131,19 +140,66 @@ export function WalkPerimeterScreen() {
   const [showDeclarationsPage, setShowDeclarationsPage] = useState(false);
   const [showPhotosPage, setShowPhotosPage] = useState(false);
   const [showCompletionPage, setShowCompletionPage] = useState(false);
-  const [photoSlots, setPhotoSlots] = useState<{ north: string | null; east: string | null; south: string | null; west: string | null }>({
-    north: null,
-    east: null,
-    south: null,
-    west: null,
-  });
+  type GroundPhoto = {
+    uri: string;
+    takenAt: number;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  const [photoSlots, setPhotoSlots] = useState<{
+    north: GroundPhoto | null;
+    east: GroundPhoto | null;
+    south: GroundPhoto | null;
+    west: GroundPhoto | null;
+  }>({ north: null, east: null, south: null, west: null });
+  const lastRegisteredPlotIdRef = useRef<string | null>(null);
+  const [vertexCycleSeconds, setVertexCycleSeconds] = useState<60 | 120>(120);
   const [captureMethod, setCaptureMethod] = useState<'walk' | 'draw' | 'centroid'>('walk');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [showGpsWarning, setShowGpsWarning] = useState(false);
   const [declLandTenure, setDeclLandTenure] = useState(false);
   const [declNoDeforestation, setDeclNoDeforestation] = useState(false);
+  const [postalInput, setPostalInput] = useState('');
+  const [commodityCode, setCommodityCode] = useState('coffee');
+  /** In-memory + synced to farmer when IDs match; merged on Continue into profile. */
+  const [simplifiedDeclarationGeo, setSimplifiedDeclarationGeo] = useState<{
+    latitude: number;
+    longitude: number;
+    capturedAt: number;
+  } | null>(null);
 
   const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
+
+  const COMMODITY_OPTIONS = useMemo(
+    () =>
+      (
+        [
+          { code: 'coffee', label: t('commodity_coffee') },
+          { code: 'cocoa', label: t('commodity_cocoa') },
+          { code: 'rubber', label: t('commodity_rubber') },
+          { code: 'soy', label: t('commodity_soy') },
+          { code: 'timber', label: t('commodity_timber') },
+        ] as const
+      ).map((o) => {
+        const hs = getCommodityDefinition(o.code)?.hsCode;
+        return {
+          ...o,
+          hsLabel: hs ? `HS ${formatHsHeading(hs)}` : '',
+        };
+      }),
+    [t],
+  );
+
+  useEffect(() => {
+    if (!farmer?.id) return;
+    setFarmerIdInput(farmer.id);
+    setFarmerNameInput(farmer.name ?? '');
+    setPostalInput(farmer.postalAddress ?? '');
+    const c = farmer.commodityCode;
+    if (c === 'coffee' || c === 'cocoa' || c === 'rubber' || c === 'soy' || c === 'timber') {
+      setCommodityCode(c);
+    }
+  }, [farmer?.id, farmer?.name, farmer?.postalAddress, farmer?.commodityCode]);
 
   useEffect(() => {
     if (editPlotId) return;
@@ -213,9 +269,9 @@ export function WalkPerimeterScreen() {
 
   const averagingProgressPercent = useMemo(() => {
     if (!isRecording) return 0;
-    const cycleSeconds = recordingSeconds % 120;
-    return Math.max(1, Math.min(100, Math.round((cycleSeconds / 120) * 100)));
-  }, [isRecording, recordingSeconds]);
+    const cycleSeconds = recordingSeconds % vertexCycleSeconds;
+    return Math.max(1, Math.min(100, Math.round((cycleSeconds / vertexCycleSeconds) * 100)));
+  }, [isRecording, recordingSeconds, vertexCycleSeconds]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -226,7 +282,7 @@ export function WalkPerimeterScreen() {
   const formatLatLon = (lat: number, lon: number) => {
     const ns = lat >= 0 ? 'N' : 'S';
     const ew = lon >= 0 ? 'E' : 'W';
-    return `${Math.abs(lat).toFixed(4)}°${ns}, ${Math.abs(lon).toFixed(4)}°${ew}`;
+    return `${Math.abs(lat).toFixed(6)}°${ns}, ${Math.abs(lon).toFixed(6)}°${ew}`;
   };
 
   const initialRegion: Region | undefined =
@@ -244,6 +300,111 @@ export function WalkPerimeterScreen() {
   const isUuid = (value: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+  useEffect(() => {
+    const id = farmerIdInput.trim();
+    if (!isUuid(id)) {
+      return;
+    }
+    if (farmer?.id === id) {
+      if (
+        farmer.declarationLatitude != null &&
+        farmer.declarationLongitude != null &&
+        Number.isFinite(farmer.declarationLatitude) &&
+        Number.isFinite(farmer.declarationLongitude)
+      ) {
+        setSimplifiedDeclarationGeo({
+          latitude: farmer.declarationLatitude,
+          longitude: farmer.declarationLongitude,
+          capturedAt: farmer.declarationGeoCapturedAt ?? Date.now(),
+        });
+      } else {
+        setSimplifiedDeclarationGeo(null);
+      }
+    } else if (farmer && farmer.id !== id) {
+      setSimplifiedDeclarationGeo(null);
+    }
+  }, [farmer, farmerIdInput]);
+
+  const mergeDeclarationGeoForProfile = (profileId: string) => {
+    const lat =
+      simplifiedDeclarationGeo?.latitude ??
+      (farmer?.id === profileId ? farmer.declarationLatitude : undefined);
+    const lon =
+      simplifiedDeclarationGeo?.longitude ??
+      (farmer?.id === profileId ? farmer.declarationLongitude : undefined);
+    const at =
+      simplifiedDeclarationGeo?.capturedAt ??
+      (farmer?.id === profileId ? farmer.declarationGeoCapturedAt : undefined);
+    if (lat != null && lon != null && Number.isFinite(lat) && Number.isFinite(lon)) {
+      return {
+        declarationLatitude: lat,
+        declarationLongitude: lon,
+        declarationGeoCapturedAt: at ?? Date.now(),
+      };
+    }
+    if (
+      farmer?.id === profileId &&
+      farmer.declarationLatitude != null &&
+      farmer.declarationLongitude != null &&
+      Number.isFinite(farmer.declarationLatitude) &&
+      Number.isFinite(farmer.declarationLongitude)
+    ) {
+      return {
+        declarationLatitude: farmer.declarationLatitude,
+        declarationLongitude: farmer.declarationLongitude,
+        declarationGeoCapturedAt: farmer.declarationGeoCapturedAt ?? Date.now(),
+      };
+    }
+    return {};
+  };
+
+  const captureSimplifiedDeclarationGeo = async () => {
+    const id = farmerIdInput.trim();
+    if (!isUuid(id)) {
+      Alert.alert(t('producer_profile_error_title'), t('producer_profile_error_uuid'));
+      return;
+    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('warning'), t('simplified_declaration_location_denied'));
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const latitude = roundWgs84Coordinate(pos.coords.latitude);
+      const longitude = roundWgs84Coordinate(pos.coords.longitude);
+      const capturedAt = Date.now();
+      setSimplifiedDeclarationGeo({ latitude, longitude, capturedAt });
+      if (farmer?.id === id) {
+        setFarmer({
+          ...farmer,
+          postalAddress: postalInput.trim() || undefined,
+          commodityCode,
+          declarationLatitude: latitude,
+          declarationLongitude: longitude,
+          declarationGeoCapturedAt: capturedAt,
+        });
+      }
+    } catch (e) {
+      Alert.alert(t('warning'), e instanceof Error ? e.message : t('simplified_declaration_location_failed'));
+    }
+  };
+
+  const clearSimplifiedDeclarationGeo = () => {
+    const id = farmerIdInput.trim();
+    setSimplifiedDeclarationGeo(null);
+    if (farmer?.id === id) {
+      setFarmer({
+        ...farmer,
+        declarationLatitude: undefined,
+        declarationLongitude: undefined,
+        declarationGeoCapturedAt: undefined,
+      });
+    }
+  };
+
   const canSaveFarmerProfile =
     farmerIdInput.trim().length > 0 &&
     isUuid(farmerIdInput.trim()) &&
@@ -257,9 +418,10 @@ export function WalkPerimeterScreen() {
       return;
     }
 
+    const id = farmerIdInput.trim();
     const now = Date.now();
     setFarmer({
-      id: farmerIdInput.trim(),
+      id,
       name: farmerNameInput.trim() || undefined,
       role: 'farmer',
       selfDeclared: true,
@@ -267,6 +429,9 @@ export function WalkPerimeterScreen() {
       fpicConsent,
       laborNoChildLabor,
       laborNoForcedLabor,
+      postalAddress: postalInput.trim() || undefined,
+      commodityCode,
+      ...mergeDeclarationGeoForProfile(id),
     });
   };
 
@@ -279,9 +444,25 @@ export function WalkPerimeterScreen() {
       .catch(() => undefined);
   }, []);
 
+  const refreshVertexCycleSetting = useCallback(() => {
+    getSetting('vertexAveragingSeconds')
+      .then((v) => setVertexCycleSeconds(v === '60' ? 60 : 120))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    refreshVertexCycleSetting();
+  }, [refreshVertexCycleSetting]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshVertexCycleSetting();
+    }, [refreshVertexCycleSetting]),
+  );
+
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
-  const canContinueToCaptureMethod = estimatedSize != null;
+  const canContinueToCaptureMethod = estimatedSize != null && isUuid(farmerIdInput.trim());
   const gpsStrength =
     precisionMeters == null ? 'Unknown' : precisionMeters <= 6 ? 'Strong' : precisionMeters <= 10 ? 'Fair' : 'Weak';
   const satelliteCount =
@@ -310,13 +491,28 @@ export function WalkPerimeterScreen() {
       declaredAreaHectares = parsed;
     }
 
+    const pointPointsPayload = [{ latitude: last.latitude, longitude: last.longitude }];
+    let pointGeometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
+    try {
+      pointGeometryForUpload = buildGeometryFromLocalPlot({
+        kind: 'point',
+        points: pointPointsPayload,
+      });
+    } catch (e) {
+      Alert.alert(
+        t('plot_geometry_error_title'),
+        e instanceof Error ? e.message : t('plot_geometry_error_body'),
+      );
+      return;
+    }
+
     if (editingPlot) {
       updatePlot(editingPlot.id, {
         name,
         areaSquareMeters: 0,
         areaHectares: 0,
         kind: 'point',
-        points: [{ latitude: last.latitude, longitude: last.longitude }],
+        points: pointPointsPayload,
         declaredAreaHectares,
         discrepancyPercent: undefined,
         precisionMetersAtSave: precisionMeters ?? null,
@@ -329,16 +525,17 @@ export function WalkPerimeterScreen() {
       return;
     }
 
-    addPlot({
+    const newPlotId = addPlot({
       name,
       areaSquareMeters: 0,
       areaHectares: 0,
       kind: 'point',
-      points: [{ latitude: last.latitude, longitude: last.longitude }],
+      points: pointPointsPayload,
       declaredAreaHectares,
       discrepancyPercent: undefined,
       precisionMetersAtSave: precisionMeters ?? null,
     });
+    if (newPlotId) lastRegisteredPlotIdRef.current = newPlotId;
 
     Alert.alert('Plot saved (point)', `${name} saved using a single GPS fix.`);
 
@@ -346,10 +543,7 @@ export function WalkPerimeterScreen() {
       postPlotToBackend({
         farmerId: farmer.id,
         clientPlotId: name,
-        geometry: {
-          type: 'Point',
-          coordinates: [last.longitude, last.latitude],
-        },
+        geometry: pointGeometryForUpload,
         declaredAreaHa: declaredAreaHectares ?? null,
         precisionMeters: precisionMeters ?? null,
       }).then((r) => {
@@ -394,7 +588,9 @@ export function WalkPerimeterScreen() {
       return;
     }
 
-    const kind: 'point' | 'polygon' = area.hectares < 4 ? 'point' : 'polygon';
+    // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
+    // This path always has a walked perimeter (≥3 vertices) — store as polygon even if area <4 ha.
+    const kind: 'polygon' = 'polygon';
     const name = (plotName || defaultPlotName).trim() || defaultPlotName;
 
     let declaredAreaHectares: number | undefined;
@@ -434,6 +630,17 @@ export function WalkPerimeterScreen() {
       longitude: p.longitude,
     }));
 
+    let geometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
+    try {
+      geometryForUpload = buildGeometryFromLocalPlot({ kind, points: pointsPayload });
+    } catch (e) {
+      Alert.alert(
+        t('plot_geometry_error_title'),
+        e instanceof Error ? e.message : t('plot_geometry_error_body'),
+      );
+      return;
+    }
+
     if (editingPlot) {
       updatePlot(editingPlot.id, {
         name,
@@ -453,7 +660,7 @@ export function WalkPerimeterScreen() {
       return;
     }
 
-    addPlot({
+    const newPlotId = addPlot({
       name,
       areaSquareMeters: area.squareMeters,
       areaHectares: area.hectares,
@@ -463,6 +670,7 @@ export function WalkPerimeterScreen() {
       discrepancyPercent,
       precisionMetersAtSave: precisionMeters ?? null,
     });
+    if (newPlotId) lastRegisteredPlotIdRef.current = newPlotId;
 
     // Log raw GNSS capture metadata for GIS review (best-effort, local only).
     try {
@@ -515,29 +723,10 @@ export function WalkPerimeterScreen() {
     }
 
     if (farmer && points.length > 0 && !editingPlot) {
-      const geometry =
-        kind === 'point'
-          ? {
-              type: 'Point' as const,
-              coordinates: [points[points.length - 1].longitude, points[points.length - 1].latitude] as [
-                number,
-                number,
-              ],
-            }
-          : {
-              type: 'Polygon' as const,
-              coordinates: [
-                [
-                  ...points.map((p) => [p.longitude, p.latitude] as [number, number]),
-                  [points[0].longitude, points[0].latitude] as [number, number],
-                ],
-              ],
-            };
-
       postPlotToBackend({
         farmerId: farmer.id,
         clientPlotId: name,
-        geometry,
+        geometry: geometryForUpload,
         declaredAreaHa: declaredAreaHectares ?? null,
         precisionMeters: precisionMeters ?? null,
       }).then((r) => {
@@ -563,6 +752,10 @@ export function WalkPerimeterScreen() {
   };
 
   const finalizeGeolocationAfterDeclarations = () => {
+    if (estimatedSize === 'gte4' && points.length < 3) {
+      Alert.alert(t('plot_boundary_required_title'), t('plot_boundary_required_body'));
+      return;
+    }
     if (captureMethod === 'centroid' || (estimatedSize === 'lt4' && points.length < 3)) {
       handleSavePointPlot();
     } else {
@@ -574,9 +767,28 @@ export function WalkPerimeterScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') return;
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.6, exif: true });
       if (result.canceled || !result.assets?.[0]?.uri) return;
-      setPhotoSlots((prev) => ({ ...prev, [slot]: result.assets[0].uri }));
+      const asset = result.assets[0];
+      const takenAt = Date.now();
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      try {
+        const { status: locStatus } = await Location.requestForegroundPermissionsAsync();
+        if (locStatus === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          latitude = roundWgs84Coordinate(pos.coords.latitude);
+          longitude = roundWgs84Coordinate(pos.coords.longitude);
+        }
+      } catch {
+        // Geo tag optional if location unavailable
+      }
+      setPhotoSlots((prev) => ({
+        ...prev,
+        [slot]: { uri: asset.uri, takenAt, latitude, longitude },
+      }));
     } catch (e) {
       Alert.alert('Camera error', e instanceof Error ? e.message : 'Could not open camera.');
     }
@@ -710,6 +922,106 @@ export function WalkPerimeterScreen() {
 
             <Card variant="elevated" style={styles.card}>
               <CardHeader>
+                <ThemedText type="subtitle">{t('producer_profile_card_title')}</ThemedText>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  label={t('farmer_id_label')}
+                  placeholder={t('farmer_id_placeholder')}
+                  value={farmerIdInput}
+                  onChangeText={setFarmerIdInput}
+                  autoCapitalize="none"
+                />
+                {farmerIdInput.trim().length > 0 && !isUuid(farmerIdInput.trim()) ? (
+                  <ThemedText type="caption" style={{ marginTop: 8, color: Brand.warning }}>
+                    {t('farmer_uuid_hint')}
+                  </ThemedText>
+                ) : null}
+                <Input
+                  label={t('farmer_name_label')}
+                  placeholder={t('farmer_name_placeholder')}
+                  value={farmerNameInput}
+                  onChangeText={setFarmerNameInput}
+                  containerStyle={{ marginTop: 10 }}
+                />
+                <Input
+                  label={t('simplified_declaration_postal_label')}
+                  placeholder={t('simplified_declaration_postal_ph')}
+                  value={postalInput}
+                  onChangeText={setPostalInput}
+                  multiline
+                  containerStyle={{ marginTop: 10 }}
+                />
+                <ThemedText type="caption" style={{ marginTop: 12, marginBottom: 4 }}>
+                  {t('simplified_declaration_geo_label')}
+                </ThemedText>
+                <ThemedText type="caption" style={{ marginBottom: 8, color: '#6B7280' }}>
+                  {t('simplified_declaration_geo_body')}
+                </ThemedText>
+                {simplifiedDeclarationGeo ? (
+                  <ThemedText type="caption" style={{ marginBottom: 8 }}>
+                    {formatLatLon(simplifiedDeclarationGeo.latitude, simplifiedDeclarationGeo.longitude)}
+                  </ThemedText>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => void captureSimplifiedDeclarationGeo()}
+                    disabled={!isUuid(farmerIdInput.trim())}
+                  >
+                    {t('simplified_declaration_capture_gps')}
+                  </Button>
+                  {simplifiedDeclarationGeo ? (
+                    <Button variant="outline" size="sm" onPress={clearSimplifiedDeclarationGeo}>
+                      {t('simplified_declaration_clear_gps')}
+                    </Button>
+                  ) : null}
+                </View>
+                <ThemedText type="caption" style={{ marginTop: 10, marginBottom: 6 }}>
+                  {t('commodity_primary_label')}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {COMMODITY_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt.code}
+                      onPress={() => setCommodityCode(opt.code)}
+                      style={[
+                        styles.commodityChip,
+                        commodityCode === opt.code && styles.commodityChipSelected,
+                      ]}
+                    >
+                      <View style={{ alignItems: 'center' }}>
+                        <ThemedText
+                          type="caption"
+                          style={{
+                            color: commodityCode === opt.code ? '#FFFFFF' : '#374151',
+                            fontWeight: '600',
+                          }}
+                        >
+                          {opt.label}
+                        </ThemedText>
+                        {opt.hsLabel ? (
+                          <ThemedText
+                            type="caption"
+                            style={{
+                              marginTop: 2,
+                              fontSize: 10,
+                              color: commodityCode === opt.code ? 'rgba(255,255,255,0.85)' : '#6B7280',
+                            }}
+                          >
+                            {opt.hsLabel}
+                          </ThemedText>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              </CardContent>
+            </Card>
+
+            <Card variant="elevated" style={styles.card}>
+              <CardHeader>
                 <ThemedText type="subtitle">Estimated Plot Size</ThemedText>
               </CardHeader>
               <CardContent>
@@ -770,6 +1082,25 @@ export function WalkPerimeterScreen() {
                   if (!plotName.trim()) {
                     setPlotName(defaultPlotName);
                   }
+                  if (!isUuid(farmerIdInput.trim())) {
+                    Alert.alert(t('producer_profile_error_title'), t('producer_profile_error_uuid'));
+                    return;
+                  }
+                  const id = farmerIdInput.trim();
+                  const now = Date.now();
+                  setFarmer({
+                    id,
+                    name: farmerNameInput.trim() || undefined,
+                    role: 'farmer',
+                    selfDeclared: true,
+                    selfDeclaredAt: now,
+                    fpicConsent: farmer?.fpicConsent ?? false,
+                    laborNoChildLabor: farmer?.laborNoChildLabor ?? false,
+                    laborNoForcedLabor: farmer?.laborNoForcedLabor ?? false,
+                    postalAddress: postalInput.trim() || undefined,
+                    commodityCode,
+                    ...mergeDeclarationGeoForProfile(id),
+                  });
                   setShowDetailedForm(true);
                   setSelectedMethodPage(null);
                 }}
@@ -1133,7 +1464,7 @@ export function WalkPerimeterScreen() {
                     >
                       {photoSlots[slot] ? (
                         <>
-                          <Image source={{ uri: photoSlots[slot]! }} style={styles.photoPreview} />
+                          <Image source={{ uri: photoSlots[slot]!.uri }} style={styles.photoPreview} />
                           <View style={styles.photoCapturedOverlay}>
                             <Ionicons name="checkmark-circle" size={20} color="#10B981" />
                           </View>
@@ -1145,7 +1476,11 @@ export function WalkPerimeterScreen() {
                         {slot.charAt(0).toUpperCase() + slot.slice(1)}
                       </ThemedText>
                       <ThemedText type="caption" style={styles.photoSlotHint}>
-                        {photoSlots[slot] ? 'Captured' : 'Tap to capture'}
+                        {photoSlots[slot]
+                          ? photoSlots[slot]!.latitude != null && photoSlots[slot]!.longitude != null
+                            ? 'Captured · geo-tagged'
+                            : 'Captured'
+                          : 'Tap to capture'}
                       </ThemedText>
                     </Pressable>
                   ))}
@@ -1182,7 +1517,36 @@ export function WalkPerimeterScreen() {
                       size="sm"
                       style={{ backgroundColor: photosCapturedCount < 4 ? '#E5E7EB' : '#0A7F59' }}
                       disabled={photosCapturedCount < 4}
-                      onPress={() => {
+                      onPress={async () => {
+                        const plotId = lastRegisteredPlotIdRef.current;
+                        if (plotId) {
+                          for (const s of ['north', 'east', 'south', 'west'] as const) {
+                            const ph = photoSlots[s];
+                            if (!ph) continue;
+                            try {
+                              await persistPlotPhoto({
+                                plotId,
+                                uri: ph.uri,
+                                takenAt: ph.takenAt,
+                                latitude: ph.latitude ?? null,
+                                longitude: ph.longitude ?? null,
+                              });
+                            } catch {
+                              // SQLite errors are rare; continue with other slots
+                            }
+                          }
+                          logAuditEvent({
+                            userId: farmer?.id,
+                            eventType: 'ground_truth_photos_persisted',
+                            payload: {
+                              plotId,
+                              slots: (['north', 'east', 'south', 'west'] as const).filter((x) => photoSlots[x]),
+                              geoTaggedCount: (['north', 'east', 'south', 'west'] as const).filter(
+                                (x) => photoSlots[x]?.latitude != null && photoSlots[x]?.longitude != null,
+                              ).length,
+                            },
+                          }).catch(() => undefined);
+                        }
                         setShowPhotosPage(false);
                         setShowCompletionPage(true);
                       }}
@@ -1337,6 +1701,16 @@ export function WalkPerimeterScreen() {
                       !(laborNoChildLabor && laborNoForcedLabor)
                     }
                     onPress={() => {
+                      if (!farmer?.id) {
+                        Alert.alert(t('producer_profile_error_title'), t('producer_profile_missing_farmer'));
+                        return;
+                      }
+                      setFarmer({
+                        ...farmer,
+                        fpicConsent,
+                        laborNoChildLabor,
+                        laborNoForcedLabor,
+                      });
                       finalizeGeolocationAfterDeclarations();
                       setShowDeclarationsPage(false);
                       setShowPhotosPage(true);
@@ -1631,13 +2005,20 @@ export function WalkPerimeterScreen() {
             ) : null}
 
             {!isWalkLandingState && showCapturePage && mode === 'vertex_avg' && isRecording ? (
-              <View style={{ marginTop: 10 }}>
+              <View style={{ marginTop: 10, gap: 8 }}>
                 <Button
                   variant="secondary"
                   fullWidth
-                  onPress={() => addAveragedVertex(60)}
+                  onPress={() => addAveragedVertex(vertexCycleSeconds)}
                 >
-                  Add averaged vertex (60s)
+                  {vertexCycleSeconds === 60 ? t('vertex_avg_60s') : t('vertex_avg_120s')}
+                </Button>
+                <Button
+                  variant="outline"
+                  fullWidth
+                  onPress={() => addAveragedVertex(vertexCycleSeconds === 60 ? 120 : 60)}
+                >
+                  {vertexCycleSeconds === 60 ? t('vertex_avg_120s') : t('vertex_avg_60s')}
                 </Button>
               </View>
             ) : null}
@@ -2491,6 +2872,18 @@ const styles = StyleSheet.create({
   },
   captureChevron: {
     marginLeft: 'auto',
+  },
+  commodityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    backgroundColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  commodityChipSelected: {
+    backgroundColor: '#0A7F59',
+    borderColor: '#0A7F59',
   },
 });
 

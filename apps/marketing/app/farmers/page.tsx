@@ -25,7 +25,8 @@ const features = [
   {
     icon: Camera,
     title: "Photo Vault",
-    description: "Timestamped, geo-tagged photographs to override satellite false-positives during EU audits.",
+    description:
+      "Timestamped, geo-tagged directional photos (e.g. cardinal views) to challenge satellite false-positives during EU audits.",
     image: "/images/feature-photo-vault.jpg",
   },
   {
@@ -37,7 +38,8 @@ const features = [
   {
     icon: Shield,
     title: "Simplified Declaration",
-    description: "Low-risk country producers submit a one-time simplified declaration for market access.",
+    description:
+      "Micro/small operators in qualifying paths can file a one-time simplified declaration using a postal address and/or a single six-decimal GPS anchor—alongside plot mapping when required.",
     image: "/images/feature-declaration.jpg",
   },
 ];
@@ -435,7 +437,9 @@ export default function FarmersPage() {
             viewport={{ once: true }}
           >
             <p className="text-2xl md:text-3xl text-white font-medium leading-relaxed mb-8 italic">
-              "Before Tracebud, I had no proof my coffee was deforestation-free. Now I have a digital passport that opens doors to European buyers who pay premium prices."
+              {
+                '"Before Tracebud, I had no proof my coffee was deforestation-free. Now I have a digital passport that opens doors to European buyers who pay premium prices."'
+              }
             </p>
             <div className="flex items-center justify-center gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--data-emerald)]">

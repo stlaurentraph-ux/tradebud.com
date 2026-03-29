@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
+import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import { deleteSetting, getSetting, setSetting } from '@/features/state/persistence';
 
 type GeoJSONPoint = {
@@ -24,13 +25,21 @@ export function buildGeometryFromLocalPlot(plot: LocalPlotForUpload): GeoJSONPoi
     throw new Error('Plot has no GPS points to upload.');
   }
   if (plot.kind === 'point') {
-    const last = plot.points[plot.points.length - 1];
+    const last = normalizeWgs84Point(plot.points[plot.points.length - 1]);
+    if (!isValidWgs84LatLng(last.latitude, last.longitude)) {
+      throw new Error('Plot has invalid GPS coordinates.');
+    }
     return {
       type: 'Point',
       coordinates: [last.longitude, last.latitude],
     };
   }
-  const pts = plot.points;
+  const pts = plot.points.map(normalizeWgs84Point);
+  for (const p of pts) {
+    if (!isValidWgs84LatLng(p.latitude, p.longitude)) {
+      throw new Error('Plot has invalid GPS coordinates.');
+    }
+  }
   return {
     type: 'Polygon',
     coordinates: [
@@ -670,8 +679,59 @@ export async function syncPlotEvidenceToBackend(params: {
   return res.json();
 }
 
+export type PostAuditEventResult =
+  | { ok: true; id?: string; timestamp?: string }
+  | { ok: false; reason: 'no_access_token' | 'network_error' | 'server_error'; message?: string };
 
+/** Append a row to the server audit_log (e.g. declaration bundle snapshot). */
+export async function postAuditEventToBackend(params: {
+  eventType: string;
+  payload: Record<string, unknown>;
+  deviceId?: string | null;
+}): Promise<PostAuditEventResult> {
+  let accessToken: string | null;
+  try {
+    accessToken = await getAccessTokenFromSupabase();
+  } catch {
+    accessToken = null;
+  }
+  if (!accessToken) {
+    return { ok: false, reason: 'no_access_token' };
+  }
 
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/audit`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        eventType: params.eventType,
+        payload: params.payload,
+        deviceId: params.deviceId ?? undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        ok: false,
+        reason: 'server_error',
+        message: messageFromBackendJson(body) ?? `Audit POST failed (${res.status})`,
+      };
+    }
+
+    const row = (await res.json().catch(() => ({}))) as { id?: string; timestamp?: string };
+    return { ok: true, id: row.id, timestamp: row.timestamp };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: 'network_error',
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
 
 
 

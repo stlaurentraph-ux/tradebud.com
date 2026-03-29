@@ -35,8 +35,6 @@ import {
   loadEvidenceForPlot,
   loadPendingSyncActions,
   enqueuePendingSync,
-  deletePendingSyncAction,
-  markPendingSyncAttempt,
   persistPlotPhoto,
   persistPlotTitlePhoto,
   persistPlotEvidenceItem,
@@ -82,6 +80,10 @@ import {
   subscribeServerPlotSyncChanged,
   uploadUnsyncedPlotsForFarmer,
 } from '@/features/sync/plotServerSync';
+import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
+import { indicativeMaxKgForPlot } from '@/features/compliance/commodityCatalog';
+import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
 import * as DocumentPicker from 'expo-document-picker';
 import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
 import { PlotMap } from '@/components/plot-map/PlotMap';
@@ -232,9 +234,14 @@ export default function PlotsScreen() {
 
   const selectedBackendPlot = useMemo(() => {
     if (!selectedPlot) return undefined;
-    return backendPlots.find(
-      (p) => String(p?.name ?? '') === String(selectedPlot.name ?? ''),
-    );
+    const m = findBackendPlotForLocal(selectedPlot, backendPlots) as
+      | {
+          id?: unknown;
+          sinaph_overlap?: boolean;
+          indigenous_overlap?: boolean;
+        }
+      | null;
+    return m ?? undefined;
   }, [backendPlots, selectedPlot]);
 
   /** Backend UUID for API calls (local `plot.id` is not the server id). */
@@ -245,6 +252,22 @@ export default function PlotsScreen() {
     if (!p) return false;
     return p.sinaph_overlap || p.indigenous_overlap;
   }, [selectedBackendPlot]);
+
+  /** Indicative yield cap line for harvest UI (null = timber / unknown commodity / bad area). */
+  const harvestCapHint = useMemo(() => {
+    if (!farmer || !selectedBackendPlot) return null;
+    const areaHa = Number((selectedBackendPlot as { area_ha?: unknown }).area_ha);
+    const ind = indicativeMaxKgForPlot({
+      commodityCode: farmer.commodityCode,
+      areaHectares: areaHa,
+    });
+    if (!ind) return null;
+    return {
+      maxKg: ind.maxKg,
+      kgPerHa: ind.kgPerHa,
+      haLabel: areaHa.toFixed(2),
+    };
+  }, [farmer, selectedBackendPlot]);
 
   const refreshFromBackend = () => {
     if (!farmer) return Promise.resolve();
@@ -292,106 +315,10 @@ export default function PlotsScreen() {
   };
 
   const processPendingUploads = async () => {
+    if (!farmer) return;
     setPendingBusy(true);
-    const resolveBackendPlotId = async (localPlotId: string): Promise<string | null> => {
-      const local = plots.find((p) => p.id === localPlotId);
-      if (!local || !farmer) return null;
-      try {
-        const rows = await fetchPlotsForFarmer(farmer.id);
-        const hit = (rows ?? []).find(
-          (p: { name?: string }) => String(p?.name ?? '') === String(local.name ?? ''),
-        );
-        return hit?.id ? String(hit.id) : null;
-      } catch {
-        return null;
-      }
-    };
-
     try {
-      const actions = await loadPendingSyncActions();
-      for (const a of actions) {
-        let payload: any = null;
-        try {
-          payload = JSON.parse(a.payloadJson);
-        } catch {
-          // Bad payload, drop it.
-          deletePendingSyncAction(a.id);
-          continue;
-        }
-
-        try {
-          if (a.actionType === 'harvest') {
-            const localId = String(payload?.plotId ?? '');
-            const sid = await resolveBackendPlotId(localId);
-            if (!sid) {
-              markPendingSyncAttempt(a.id, {
-                attempts: (a.attempts ?? 0) + 1,
-                lastError: 'Plot not on server yet — upload plot from My Plots first.',
-              });
-              continue;
-            }
-            await postHarvestToBackend({ ...payload, plotId: sid });
-          } else if (a.actionType === 'photos_sync') {
-            const localId = String(payload?.plotId ?? '');
-            const sid = await resolveBackendPlotId(localId);
-            if (!sid) {
-              markPendingSyncAttempt(a.id, {
-                attempts: (a.attempts ?? 0) + 1,
-                lastError: 'Plot not on server — upload from My Plots first.',
-              });
-              continue;
-            }
-            await syncPlotPhotosToBackend({ ...payload, plotId: sid });
-          } else if (a.actionType === 'evidence_sync') {
-            const plotIdRaw = payload?.plotId as string | undefined;
-            const reason = String(payload?.reason ?? '').trim();
-            const sid = plotIdRaw ? await resolveBackendPlotId(plotIdRaw) : null;
-            if (!plotIdRaw || !sid || reason.length === 0) {
-              if (plotIdRaw && reason.length > 0 && !sid) {
-                markPendingSyncAttempt(a.id, {
-                  attempts: (a.attempts ?? 0) + 1,
-                  lastError: 'Plot not on server — upload from My Plots first.',
-                });
-              } else {
-                deletePendingSyncAction(a.id);
-              }
-              continue;
-            }
-            const items = await loadEvidenceForPlot(plotIdRaw);
-            const kinds: PlotEvidenceKind[] = [
-              'fpic_repository',
-              'protected_area_permit',
-              'labor_evidence',
-              'tenure_evidence',
-            ];
-            for (const k of kinds) {
-              const subset = items
-                .filter((ev) => ev.kind === k)
-                .map((ev) => ({
-                  kind: ev.kind,
-                  uri: ev.uri,
-                  label: ev.label ?? null,
-                  mimeType: ev.mimeType ?? null,
-                  takenAt: ev.takenAt,
-                }));
-              if (subset.length === 0) continue;
-              await syncPlotEvidenceToBackend({
-                plotId: sid,
-                kind: k,
-                items: subset,
-                reason,
-                note: 'Evidence repository sync from pending queue',
-              });
-            }
-          }
-          deletePendingSyncAction(a.id);
-        } catch (e) {
-          markPendingSyncAttempt(a.id, {
-            attempts: (a.attempts ?? 0) + 1,
-            lastError: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }
+      await processPendingSyncQueue({ farmerId: farmer.id, localPlots: plots });
     } finally {
       refreshPendingCount();
       setPendingBusy(false);
@@ -492,32 +419,24 @@ export default function PlotsScreen() {
       );
       const checklistEntries = await Promise.all(
         plots.map(async (p) => {
-          const backendMatch = backendPlots.find(
-            (bp) => String(bp?.name ?? '') === String(p.name ?? ''),
-          ) as
+          const backendMatch = findBackendPlotForLocal(p, backendPlots) as
             | { sinaph_overlap?: boolean; indigenous_overlap?: boolean; status?: string }
             | undefined;
           const [titleRows, evidenceRows] = await Promise.all([
             loadTitlePhotosForPlot(p.id).catch(() => []),
             loadEvidenceForPlot(p.id).catch(() => []),
           ]);
-          const groundOk = (photoEntries.find(([id]) => id === p.id)?.[1] ?? 0) >= 4;
-          const landOk =
-            titleRows.length > 0 ||
-            evidenceRows.some((e: { kind?: string }) => e.kind === 'tenure_evidence');
-          const needsFpic = backendMatch?.indigenous_overlap === true;
-          const needsPermit = backendMatch?.sinaph_overlap === true;
-          const fpicOk = evidenceRows.some((e: { kind?: string }) => e.kind === 'fpic_repository');
-          const permitOk = evidenceRows.some(
-            (e: { kind?: string }) => e.kind === 'protected_area_permit',
-          );
-          const syncOk = Boolean(backendMatch);
-          const done =
-            groundOk &&
-            landOk &&
-            (!needsFpic || fpicOk) &&
-            (!needsPermit || permitOk) &&
-            syncOk;
+          const photoCount = photoEntries.find(([pid]) => pid === p.id)?.[1] ?? 0;
+          const evidenceKinds = evidenceRows
+            .map((e: { kind?: string }) => e.kind)
+            .filter((k): k is string => typeof k === 'string' && k.length > 0);
+          const { done } = computePlotReadinessChecklist({
+            groundTruthPhotoCount: photoCount,
+            titlePhotoCount: titleRows.length,
+            evidenceKinds,
+            isSyncedToServer: Boolean(backendMatch),
+            backendFlags: backendMatch,
+          });
           return [p.id, done] as const;
         }),
       );
@@ -547,16 +466,20 @@ export default function PlotsScreen() {
   }, [scannerActive, cameraPermission?.granted, requestCameraPermission]);
 
   const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' => {
-    const p = backendPlots.find((bp) => String(bp?.name ?? '') === String(plot.name ?? ''));
+    const p = findBackendPlotForLocal(plot, backendPlots) as { status?: string } | null;
     const checklistDone = plotChecklistDoneByPlotId[plot.id] === true;
     if (checklistDone) return 'Compliant';
     if (!p) return 'Action Needed';
     return p.status === 'compliant' ? 'Compliant' : 'Action Needed';
   };
   const harvestCountForPlot = (plotName: string) => {
-    const backend = backendPlots.find((bp) => String(bp?.name ?? '') === plotName);
-    if (!backend?.id) return 0;
-    return vouchers.filter((v) => String(v?.plot_id ?? '') === String(backend.id)).length;
+    const local = plots.find((lp) => String(lp.name ?? '') === String(plotName));
+    const backend = local
+      ? findBackendPlotForLocal(local, backendPlots)
+      : (backendPlots as { name?: string }[]).find((bp) => String(bp?.name ?? '') === plotName);
+    const row = backend as { id?: unknown } | null | undefined;
+    if (!row?.id) return 0;
+    return vouchers.filter((v) => String(v?.plot_id ?? '') === String(row.id)).length;
   };
   const confirmDeletePlot = (plot: Plot) => {
     Alert.alert(
@@ -1063,9 +986,10 @@ export default function PlotsScreen() {
 
                     // Best-effort backend edit with immutable audit log
                     try {
-                      const matchingBackend = backendPlots.find(
-                        (p) => p.name === selectedPlot.name,
-                      );
+                      const matchingBackend = findBackendPlotForLocal(
+                        selectedPlot,
+                        backendPlots,
+                      ) as { id?: string } | null;
                       if (matchingBackend) {
                         await updatePlotMetadataOnBackend({
                           plotId: matchingBackend.id,
@@ -1822,6 +1746,15 @@ export default function PlotsScreen() {
             onChangeText={setKgInput}
             containerStyle={{ marginTop: 10 }}
           />
+          {harvestCapHint ? (
+            <ThemedText type="caption" style={{ marginTop: 6, color: '#6B7280' }}>
+              {t('harvest_yield_indicative_hint', {
+                kgPerHa: harvestCapHint.kgPerHa,
+                ha: harvestCapHint.haLabel,
+                max: harvestCapHint.maxKg,
+              })}
+            </ThemedText>
+          ) : null}
           <Button
             title={selectedBackendRejected ? 'Record harvest (Amber override)' : 'Record harvest'}
             onPress={async () => {
@@ -1861,36 +1794,58 @@ export default function PlotsScreen() {
                 );
                 return;
               }
-              setHarvestMessage(null);
-              try {
-                await postHarvestToBackend({
-                  farmerId: farmer.id,
-                  plotId: serverPlotId,
-                  kg,
-                  note: selectedBackendRejected
-                    ? `AMBER_OVERRIDE: ${overlapOverrideReason.trim()}`
-                    : undefined,
-                });
-                setHarvestMessage('Harvest recorded and voucher created.');
-                setKgInput('');
-                if (selectedBackendRejected) setOverlapOverrideReason('');
-              } catch (e) {
-                enqueuePendingSync({
-                  createdAt: Date.now(),
-                  actionType: 'harvest',
-                  payloadJson: JSON.stringify({
+
+              const doSend = async () => {
+                if (!farmer) return;
+                setHarvestMessage(null);
+                try {
+                  await postHarvestToBackend({
                     farmerId: farmer.id,
-                    plotId: selectedPlotId,
+                    plotId: serverPlotId,
                     kg,
                     note: selectedBackendRejected
                       ? `AMBER_OVERRIDE: ${overlapOverrideReason.trim()}`
                       : undefined,
+                  });
+                  setHarvestMessage('Harvest recorded and voucher created.');
+                  setKgInput('');
+                  if (selectedBackendRejected) setOverlapOverrideReason('');
+                } catch (e) {
+                  enqueuePendingSync({
+                    createdAt: Date.now(),
+                    actionType: 'harvest',
+                    payloadJson: JSON.stringify({
+                      farmerId: farmer.id,
+                      plotId: selectedPlotId,
+                      kg,
+                      note: selectedBackendRejected
+                        ? `AMBER_OVERRIDE: ${overlapOverrideReason.trim()}`
+                        : undefined,
+                    }),
+                    lastError: e instanceof Error ? e.message : String(e),
+                  });
+                  refreshPendingCount();
+                  setHarvestMessage(String(e));
+                }
+              };
+
+              if (harvestCapHint && kg > harvestCapHint.maxKg) {
+                Alert.alert(
+                  t('harvest_yield_exceeds_cap_title'),
+                  t('harvest_yield_exceeds_cap_body', {
+                    kg,
+                    max: harvestCapHint.maxKg,
+                    kgPerHa: harvestCapHint.kgPerHa,
                   }),
-                  lastError: e instanceof Error ? e.message : String(e),
-                });
-                refreshPendingCount();
-                setHarvestMessage(String(e));
+                  [
+                    { text: t('cancel'), style: 'cancel' },
+                    { text: t('harvest_record_anyway'), onPress: () => void doSend() },
+                  ],
+                );
+                return;
               }
+
+              await doSend();
             }}
           />
           {harvestMessage ? (

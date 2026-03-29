@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Code, Server, Lock, Zap } from "lucide-react";
+import { ArrowRight, Code, Server, Lock, Zap, Fingerprint } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ const apiFeatures = [
   },
   {
     title: "SOAP/XML Middleware",
-    description: "Dedicated backend layer that constructs verbose SOAP/XML envelopes for TRACES NT with WS-Security headers.",
+    description:
+      "Backend layer that maps internal JSON to TRACES NT’s SOAP/XML protocol, including WS-Security headers and cryptographic digests where the EU stack requires them.",
     icon: Code,
   },
   {
@@ -23,9 +24,16 @@ const apiFeatures = [
     icon: Zap,
   },
   {
-    title: "Role-Based Access",
-    description: "Symmetric encryption with RBAC. Consumers see Polygon ID; authorized auditors get decryption keys.",
+    title: "RBAC & audit visibility",
+    description:
+      "Tenant-scoped roles control who sees farm identities vs. abstract plot references. PII stays decryptable for authorized regulators and importers—not erased with one-way hashes.",
     icon: Lock,
+  },
+  {
+    title: "GeoID-friendly rails",
+    description:
+      "Designed to pair with open registries like AgStack so farm boundaries can publish as standardized identifiers without trapping farmers in a closed vendor graph.",
+    icon: Fingerprint,
   },
 ];
 
@@ -61,7 +69,7 @@ export function Interoperability() {
         </motion.div>
 
         {/* API Features */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mb-12 md:mb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 mb-12 md:mb-20">
           {apiFeatures.map((feature, index) => {
             const Icon = feature.icon;
             return (
