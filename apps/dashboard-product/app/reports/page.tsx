@@ -1,25 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Filter, TrendingUp, BarChart3 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+import { Download, TrendingUp, TrendingDown, BarChart3, PieChart } from 'lucide-react';
 
 // Mock data for reports
 const monthlyData = [
@@ -32,129 +17,193 @@ const monthlyData = [
 ];
 
 const complianceData = [
-  { name: 'Compliant', value: 287, fill: '#10b981' },
-  { name: 'Under Review', value: 45, fill: '#f59e0b' },
-  { name: 'Non-Compliant', value: 23, fill: '#ef4444' },
+  { name: 'Compliant', value: 287, color: 'bg-green-500', textColor: 'text-green-600' },
+  { name: 'Under Review', value: 45, color: 'bg-amber-500', textColor: 'text-amber-600' },
+  { name: 'Non-Compliant', value: 23, color: 'bg-red-500', textColor: 'text-red-600' },
 ];
 
 const riskData = [
-  { risk: 'Low', plots: 156 },
-  { risk: 'Medium', plots: 89 },
-  { risk: 'High', plots: 23 },
+  { risk: 'Low', plots: 156, percentage: 58, color: 'bg-green-500' },
+  { risk: 'Medium', plots: 89, percentage: 33, color: 'bg-amber-500' },
+  { risk: 'High', plots: 23, percentage: 9, color: 'bg-red-500' },
 ];
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState('6months');
+  const totalCompliance = complianceData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <DashboardLayout title="Reports & Analytics">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reports & Analytics</h1>
-            <p className="text-muted-foreground mt-1">Monitor compliance trends and export performance</p>
-          </div>
+    <div className="flex flex-col">
+      <AppHeader
+        title="Reports & Analytics"
+        subtitle="Monitor compliance trends and export performance"
+      />
+
+      <div className="flex-1 space-y-6 p-6">
+        {/* Filters */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-2">
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
             >
               <option value="1month">Last 1 Month</option>
               <option value="3months">Last 3 Months</option>
               <option value="6months">Last 6 Months</option>
               <option value="1year">Last 1 Year</option>
             </select>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </Button>
           </div>
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export Report
+          </Button>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Total Exports</p>
-              <p className="text-3xl font-bold mt-2">328</p>
-              <p className="text-xs text-green-600 mt-2">↑ 12% from last period</p>
+              <p className="mt-2 text-3xl font-bold">328</p>
+              <p className="mt-2 flex items-center gap-1 text-xs text-green-600">
+                <TrendingUp className="h-3 w-3" />
+                12% from last period
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Approval Rate</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">98.2%</p>
-              <p className="text-xs text-muted-foreground mt-2">Consistently high</p>
+              <p className="mt-2 text-3xl font-bold text-green-600">98.2%</p>
+              <p className="mt-2 text-xs text-muted-foreground">Consistently high</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Average Processing Time</p>
-              <p className="text-3xl font-bold mt-2">4.2 days</p>
-              <p className="text-xs text-green-600 mt-2">↓ 1.8 days improvement</p>
+              <p className="mt-2 text-3xl font-bold">4.2 days</p>
+              <p className="mt-2 flex items-center gap-1 text-xs text-green-600">
+                <TrendingDown className="h-3 w-3" />
+                1.8 days improvement
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Compliance Score</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">94%</p>
-              <p className="text-xs text-muted-foreground mt-2">Excellent standing</p>
+              <p className="mt-2 text-3xl font-bold text-primary">94%</p>
+              <p className="mt-2 text-xs text-muted-foreground">Excellent standing</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Submission Trends */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
+                <BarChart3 className="h-5 w-5" />
                 Submission Trends
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="submitted" stroke="#3b82f6" strokeWidth={2} />
-                  <Line type="monotone" dataKey="approved" stroke="#10b981" strokeWidth={2} />
-                  <Line type="monotone" dataKey="rejected" stroke="#ef4444" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className="space-y-3">
+                {monthlyData.map((item) => (
+                  <div key={item.month} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{item.month}</span>
+                      <span className="font-medium">{item.submitted} submitted</span>
+                    </div>
+                    <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
+                      <div
+                        className="bg-green-500"
+                        style={{ width: `${(item.approved / item.submitted) * 100}%` }}
+                      />
+                      <div
+                        className="bg-red-500"
+                        style={{ width: `${(item.rejected / item.submitted) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-4 text-xs">
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  Approved
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                  Rejected
+                </span>
+              </div>
             </CardContent>
           </Card>
 
           {/* Compliance Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Compliance Status Distribution</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Compliance Status Distribution
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={complianceData} cx="50%" cy="50%" labelLine={false} label dataKey="value">
-                    {complianceData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="mt-4 space-y-2">
+              {/* Simple donut chart visualization */}
+              <div className="flex items-center justify-center py-4">
+                <div className="relative h-40 w-40">
+                  <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+                    {complianceData.reduce(
+                      (acc, item, index) => {
+                        const percentage = (item.value / totalCompliance) * 100;
+                        const strokeDasharray = `${percentage} ${100 - percentage}`;
+                        const color =
+                          index === 0
+                            ? '#22c55e'
+                            : index === 1
+                              ? '#f59e0b'
+                              : '#ef4444';
+                        const element = (
+                          <circle
+                            key={item.name}
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="none"
+                            stroke={color}
+                            strokeWidth="20"
+                            strokeDasharray={strokeDasharray}
+                            strokeDashoffset={-acc.offset}
+                          />
+                        );
+                        acc.elements.push(element);
+                        acc.offset += percentage;
+                        return acc;
+                      },
+                      { elements: [] as React.ReactNode[], offset: 0 }
+                    ).elements}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold">{totalCompliance}</span>
+                    <span className="text-xs text-muted-foreground">Total</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
                 {complianceData.map((item) => (
-                  <div key={item.name} className="flex justify-between text-sm">
+                  <div key={item.name} className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: item.fill }} />
+                      <span className={`h-3 w-3 rounded ${item.color}`} />
                       {item.name}
                     </span>
-                    <span className="font-medium">{item.value}</span>
+                    <span className="font-medium">
+                      {item.value}{' '}
+                      <span className="text-muted-foreground">
+                        ({Math.round((item.value / totalCompliance) * 100)}%)
+                      </span>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -167,15 +216,24 @@ export default function ReportsPage() {
               <CardTitle>Deforestation Risk Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={riskData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="risk" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="plots" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-4">
+                {riskData.map((item) => (
+                  <div key={item.risk} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{item.risk} Risk</span>
+                      <span className="text-muted-foreground">
+                        {item.plots} plots ({item.percentage}%)
+                      </span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={`h-full ${item.color}`}
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -186,15 +244,15 @@ export default function ReportsPage() {
             <CardTitle>Recent Export Submissions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="border-b bg-muted/50">
                   <tr>
-                    <th className="text-left p-3 font-medium">Export ID</th>
-                    <th className="text-left p-3 font-medium">Package</th>
-                    <th className="text-left p-3 font-medium">Submission Date</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Plot Count</th>
+                    <th className="p-3 text-left font-medium">Export ID</th>
+                    <th className="p-3 text-left font-medium">Package</th>
+                    <th className="p-3 text-left font-medium">Submission Date</th>
+                    <th className="p-3 text-left font-medium">Status</th>
+                    <th className="p-3 text-left font-medium">Plot Count</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,17 +287,17 @@ export default function ReportsPage() {
                     },
                   ].map((row) => (
                     <tr key={row.id} className="border-b hover:bg-muted/50">
-                      <td className="p-3 font-medium text-blue-600">{row.id}</td>
+                      <td className="p-3 font-medium text-primary">{row.id}</td>
                       <td className="p-3">{row.pkg}</td>
                       <td className="p-3">{new Date(row.date).toLocaleDateString()}</td>
                       <td className="p-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
+                          className={`rounded px-2 py-1 text-xs font-medium ${
                             row.status === 'Approved'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-green-500/10 text-green-600'
                               : row.status === 'Under Review'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-blue-100 text-blue-800'
+                                ? 'bg-amber-500/10 text-amber-600'
+                                : 'bg-primary/10 text-primary'
                           }`}
                         >
                           {row.status}
@@ -254,6 +312,6 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

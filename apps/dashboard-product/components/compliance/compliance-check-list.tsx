@@ -22,26 +22,26 @@ interface ComplianceCheckListProps {
 const statusConfig = {
   compliant: {
     icon: CheckCircle,
-    className: 'text-green-600',
-    bgClassName: 'bg-green-50',
+    className: 'text-green-500',
+    bgClassName: 'bg-green-500/10 border-green-500/20',
     label: 'Passed',
   },
   warning: {
     icon: AlertTriangle,
-    className: 'text-yellow-600',
-    bgClassName: 'bg-yellow-50',
+    className: 'text-amber-500',
+    bgClassName: 'bg-amber-500/10 border-amber-500/20',
     label: 'Warning',
   },
   failed: {
     icon: AlertCircle,
-    className: 'text-red-600',
-    bgClassName: 'bg-red-50',
+    className: 'text-destructive',
+    bgClassName: 'bg-destructive/10 border-destructive/20',
     label: 'Failed',
   },
   pending: {
     icon: Clock,
-    className: 'text-blue-600',
-    bgClassName: 'bg-blue-50',
+    className: 'text-primary',
+    bgClassName: 'bg-primary/10 border-primary/20',
     label: 'Pending',
   },
 };
@@ -65,23 +65,23 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Overall Compliance</p>
-              <p className="text-3xl font-bold mt-1">{Math.round(compliancePercentage)}%</p>
+              <p className="mt-1 text-3xl font-bold">{Math.round(compliancePercentage)}%</p>
             </div>
-            <div className="text-right space-y-1">
+            <div className="space-y-1 text-right">
               <div className="flex gap-4 text-sm">
                 <div>
-                  <span className="text-green-600 font-medium">{passedChecks}</span>
+                  <span className="font-medium text-green-500">{passedChecks}</span>
                   <span className="text-muted-foreground"> Passed</span>
                 </div>
                 {warningChecks > 0 && (
                   <div>
-                    <span className="text-yellow-600 font-medium">{warningChecks}</span>
+                    <span className="font-medium text-amber-500">{warningChecks}</span>
                     <span className="text-muted-foreground"> Warnings</span>
                   </div>
                 )}
                 {failedChecks > 0 && (
                   <div>
-                    <span className="text-red-600 font-medium">{failedChecks}</span>
+                    <span className="font-medium text-destructive">{failedChecks}</span>
                     <span className="text-muted-foreground"> Failed</span>
                   </div>
                 )}
@@ -90,14 +90,14 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
             <div
               className={`h-2 rounded-full transition-all ${
                 compliancePercentage === 100
-                  ? 'bg-green-600'
+                  ? 'bg-green-500'
                   : compliancePercentage >= 75
-                    ? 'bg-yellow-600'
-                    : 'bg-red-600'
+                    ? 'bg-amber-500'
+                    : 'bg-destructive'
               }`}
               style={{ width: `${compliancePercentage}%` }}
             />
@@ -114,7 +114,7 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse h-20 bg-gray-100 rounded" />
+                <div key={i} className="h-20 animate-pulse rounded bg-secondary" />
               ))}
             </div>
           ) : (
@@ -124,14 +124,16 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
                 const Icon = config.icon;
 
                 return (
-                  <div key={check.id} className={`p-4 rounded-lg border ${config.bgClassName}`}>
-                    <div className="flex gap-3 items-start">
-                      <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${config.className}`} />
-                      <div className="flex-1 min-w-0">
+                  <div key={check.id} className={`rounded-lg border p-4 ${config.bgClassName}`}>
+                    <div className="flex items-start gap-3">
+                      <Icon className={`mt-0.5 h-5 w-5 flex-shrink-0 ${config.className}`} />
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-medium text-foreground">{check.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{check.description}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{check.description}</p>
                       </div>
-                      <span className={`text-xs font-medium px-2 py-1 rounded whitespace-nowrap ${config.className}`}>
+                      <span
+                        className={`whitespace-nowrap rounded px-2 py-1 text-xs font-medium ${config.className}`}
+                      >
                         {config.label}
                       </span>
                     </div>

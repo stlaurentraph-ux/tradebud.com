@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ComplianceCheckList } from '@/components/compliance/compliance-check-list';
 import { PlotComplianceBreakdown } from '@/components/compliance/plot-compliance-breakdown';
 import { EvidenceRequirement } from '@/components/compliance/evidence-requirement';
-import { AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronRight, ShieldCheck } from 'lucide-react';
 
 // Mock data for compliance checks
 const mockCompliance = {
@@ -83,34 +83,55 @@ const mockCompliance = {
 };
 
 export default function CompliancePage() {
-  const canSubmit = mockCompliance.plots.filter((p) => p.status === 'compliant').length === mockCompliance.plots.length;
+  const canSubmit =
+    mockCompliance.plots.filter((p) => p.status === 'compliant').length === mockCompliance.plots.length;
 
   return (
-    <DashboardLayout title="Pre-Flight Compliance Check">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Zero-Risk Pre-Flight Check</h1>
-          <p className="text-muted-foreground">
-            Comprehensive compliance verification before TRACES submission
-          </p>
-        </div>
+    <div className="flex flex-col">
+      <AppHeader
+        title="Zero-Risk Pre-Flight Check"
+        subtitle="Comprehensive compliance verification before TRACES submission"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Compliance' },
+        ]}
+      />
 
+      <div className="flex-1 space-y-6 p-6">
         {/* Package Info */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{mockCompliance.packageName}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">ID: {mockCompliance.packageId}</p>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{mockCompliance.packageName}</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">ID: {mockCompliance.packageId}</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Compliance Status</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{mockCompliance.overallCompliance}%</p>
+                <p className="text-sm text-muted-foreground">Compliance Score</p>
+                <p className="mt-1 text-2xl font-bold text-primary">{mockCompliance.overallCompliance}%</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Plots</p>
-                <p className="text-2xl font-bold mt-1">{mockCompliance.plots.length}</p>
+                <p className="mt-1 text-2xl font-bold">{mockCompliance.plots.length}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Compliant</p>
+                <p className="mt-1 text-2xl font-bold text-green-500">
+                  {mockCompliance.plots.filter((p) => p.status === 'compliant').length}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Issues</p>
+                <p className="mt-1 text-2xl font-bold text-destructive">
+                  {mockCompliance.plots.filter((p) => p.status === 'non_compliant').length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -118,11 +139,12 @@ export default function CompliancePage() {
 
         {/* Alert if not ready */}
         {!canSubmit && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              <strong>Issues Detected:</strong> {mockCompliance.plots.filter((p) => p.status === 'non_compliant').length}{' '}
-              plot(s) have deforestation concerns and must be resolved before TRACES submission.
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Issues Detected:</strong>{' '}
+              {mockCompliance.plots.filter((p) => p.status === 'non_compliant').length} plot(s) have
+              deforestation concerns and must be resolved before TRACES submission.
             </AlertDescription>
           </Alert>
         )}
@@ -131,14 +153,11 @@ export default function CompliancePage() {
         <ComplianceCheckList checks={mockCompliance.checks} />
 
         {/* Plot-by-Plot Breakdown */}
-        <PlotComplianceBreakdown
-          plots={mockCompliance.plots}
-          packageId={mockCompliance.packageId}
-        />
+        <PlotComplianceBreakdown plots={mockCompliance.plots} packageId={mockCompliance.packageId} />
 
         {/* Evidence Requirements */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Evidence Verification</h2>
+          <h2 className="mb-4 text-xl font-bold">Evidence Verification</h2>
           <div className="space-y-4">
             <EvidenceRequirement
               plotId="PLOT-001"
@@ -222,12 +241,12 @@ export default function CompliancePage() {
           {canSubmit ? (
             <>
               <Button size="lg" className="flex-1">
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <CheckCircle className="mr-2 h-4 w-4" />
                 Ready for TRACES Submission
               </Button>
               <Button variant="outline" size="lg">
                 Proceed to Export
-                <ChevronRight className="w-4 h-4 ml-2" />
+                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -242,6 +261,6 @@ export default function CompliancePage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
