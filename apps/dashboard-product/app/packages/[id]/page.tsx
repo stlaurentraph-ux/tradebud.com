@@ -1,464 +1,347 @@
 'use client';
 
+import { use } from 'react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { notFound } from 'next/navigation';
+import {
+  ArrowLeft,
+  Edit,
+  ShieldCheck,
+  Send,
+  MapPin,
+  Users,
+  FileText,
+  Calendar,
+  Clock,
+  ExternalLink,
+} from 'lucide-react';
+import { AppHeader } from '@/components/layout/app-header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages/package-status-badge';
+import { PermissionGate } from '@/components/common/permission-gate';
+import { getPackageById } from '@/lib/mock-data';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001/api';
-
-type Lot = {
-  voucherId: string;
-  plotId: string;
-  plotName: string;
-  plotKind: string;
-  plotAreaHa: number;
-  declaredAreaHa: number | null;
-  kg: number;
-  harvestDate: string | null;
-};
-
-type TracesJson = {
-  tracesReference: string | null;
-  exporterId: string;
-  ddsPackageId: string;
-  label: string | null;
-  createdAt: string;
-  status: string;
-  commodity: string;
-  hsCode: string;
-  totalKg: number;
-  lots: Lot[];
-};
-
-type ComplianceSummary = {
-  status: 'green' | 'amber' | 'red' | 'unknown';
-  alertCount: number | null;
-  alertAreaHa: number | null;
-  requiredEvidenceMissing?: string[];
-};
-
-export default function PackageDetailPage({ params }: { params: { id: string } }) {
-  const [data, setData] = useState<TracesJson | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [compliance, setCompliance] = useState<Record<string, ComplianceSummary>>({});
-  const [loadingCompliance, setLoadingCompliance] = useState(false);
-
-  const token = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    return window.sessionStorage.getItem('tracebud_exporter_token');
-  }, []);
-
-  async function fetchPlotCompliance(plotId: string): Promise<ComplianceSummary> {
-    if (!token) throw new Error('Missing token');
-    const res = await fetch(
-      `${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/compliance-history`,
-      {
-        headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
-      },
-    );
-    if (!res.ok) {
-      return {
-        status: 'unknown',
-        alertCount: null,
-        alertAreaHa: null,
-        requiredEvidenceMissing: ['history_unavailable'],
-      };
-    }
-    const rows = (await res.json()) as any[];
-    const gfwPayload = rows.find((r) => r.event_type === 'gfw_check_run')?.payload ?? null;
-    const overlapPayload =
-      rows.find((r) => r.event_type === 'plot_compliance_checked')?.payload ?? null;
-    const plotPhotosSynced = rows.some((r) => r.event_type === 'plot_photos_synced');
-
-    const evidenceKinds = new Set<string>();
-    for (const r of rows) {
-      if (r.event_type === 'plot_evidence_synced') {
-        const k = r.payload?.kind;
-        if (typeof k === 'string') evidenceKinds.add(k);
-      }
-    }
-
-    let status: ComplianceSummary['status'] = 'unknown';
-    let alertCount: number | null = null;
-    let alertAreaHa: number | null = null;
-    if (gfwPayload?.summary?.status) {
-      status = gfwPayload.summary.status;
-      alertCount = gfwPayload.summary.alertCount ?? null;
-      alertAreaHa = gfwPayload.summary.alertAreaHa ?? null;
-    }
-
-    const requiredEvidenceMissing: string[] = [];
-    if (overlapPayload?.indigenousOverlap === true && !evidenceKinds.has('fpic_repository')) {
-      requiredEvidenceMissing.push('fpic_repository');
-    }
-    if (
-      overlapPayload?.sinaphOverlap === true &&
-      !evidenceKinds.has('protected_area_permit')
-    ) {
-      requiredEvidenceMissing.push('protected_area_permit');
-    }
-    if (!plotPhotosSynced) {
-      requiredEvidenceMissing.push('ground_truth_photos');
-    }
-
-    return { status, alertCount, alertAreaHa, requiredEvidenceMissing };
-  }
-
-  useEffect(() => {
-    async function run() {
-      setLoading(true);
-      setError(null);
-      try {
-        if (!token) {
-          setError('No exporter token. Go back and log in first.');
-          return;
-        }
-        const res = await fetch(
-          `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(
-            params.id,
-          )}/traces-json`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              accept: 'application/json',
-            },
-          },
-        );
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          setError(body.message ?? `Backend responded with ${res.status}`);
-          return;
-        }
-        const json = (await res.json()) as TracesJson;
-        setData(json);
-
-        setLoadingCompliance(true);
-        const uniquePlotIds = Array.from(
-          new Set(json.lots.map((l) => l.plotId).filter(Boolean)),
-        );
-        const entries = await Promise.all(
-          uniquePlotIds.map(async (plotId) => {
-            try {
-              const c = await fetchPlotCompliance(plotId);
-              return [plotId, c] as const;
-            } catch {
-              return [plotId, { status: 'unknown', alertCount: null, alertAreaHa: null }] as const;
-            }
-          }),
-        );
-        setCompliance(Object.fromEntries(entries));
-      } catch (e: any) {
-        setError(e?.message ?? 'Could not reach backend.');
-      } finally {
-        setLoadingCompliance(false);
-        setLoading(false);
-      }
-    }
-    run();
-  }, [params.id, token]);
-
-  const complianceBlockingIssues = useMemo(() => {
-    if (!data) return [];
-    const issues: string[] = [];
-    const uniquePlotIds = Array.from(new Set(data.lots.map((l) => l.plotId).filter(Boolean)));
-    for (const plotId of uniquePlotIds) {
-      const c = compliance[plotId];
-      if (!c) {
-        issues.push(`${plotId}: missing compliance data`);
-        continue;
-      }
-      if (c.status === 'red' || c.status === 'unknown') {
-        issues.push(`${plotId}: status ${c.status}`);
-      }
-      if (c.requiredEvidenceMissing && c.requiredEvidenceMissing.length > 0) {
-        issues.push(`${plotId}: missing evidence (${c.requiredEvidenceMissing.join(', ')})`);
-      }
-    }
-    return issues;
-  }, [compliance, data]);
-
-  return (
-    <main
-      style={{
-        minHeight: '100vh',
-        padding: 24,
-        backgroundColor: '#020617',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>DDS package</div>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>{params.id}</div>
-        </div>
-        <Link href="/" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: 13 }}>
-          ← Back to packages
-        </Link>
-      </div>
-
-      {loading ? (
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>Loading…</div>
-      ) : error ? (
-        <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>
-          <div style={{ color: '#fecaca', fontWeight: 600, marginBottom: 6 }}>Error</div>
-          <div style={{ fontSize: 13, opacity: 0.9 }}>{error}</div>
-        </div>
-      ) : data ? (
-        <>
-          <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>TRACES ref</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{data.tracesReference ?? '—'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Status</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{data.status}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Total kg</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{Number(data.totalKg).toFixed(1)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Lots</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{data.lots.length}</div>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10 }}>
-              Timeline: draft → submitted (TRACES reference assigned)
-            </div>
-            {loadingCompliance ? (
-              <div style={{ marginTop: 10, fontSize: 13, opacity: 0.85 }}>
-                Loading plot compliance…
-              </div>
-            ) : complianceBlockingIssues.length > 0 ? (
-              <div style={{ marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: '#2a0f0f' }}>
-                <div style={{ fontWeight: 700, color: '#fecaca', marginBottom: 6 }}>
-                  Submission blocked (compliance issues)
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, opacity: 0.95 }}>
-                  {complianceBlockingIssues.slice(0, 8).map((i) => (
-                    <li key={i}>{i}</li>
-                  ))}
-                </ul>
-                <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
-                  Fix missing evidence in the offline app and re-run GFW checks, then reload.
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: '#0b2a14' }}>
-                <div style={{ fontWeight: 700, color: '#bbf7d0' }}>Ready to submit</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>
-                  All plots are green/amber and required evidence is present.
-                </div>
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                disabled={submitting || data.status === 'submitted' || complianceBlockingIssues.length > 0}
-                onClick={async () => {
-                  if (!token) return;
-                  setSubmitting(true);
-                  setError(null);
-                  try {
-                    const res = await fetch(
-                      `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(
-                        params.id,
-                      )}/submit`,
-                      {
-                        method: 'PATCH',
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          accept: 'application/json',
-                        },
-                      },
-                    );
-                    if (!res.ok) {
-                      const body = await res.json().catch(() => ({}));
-                      setError(body.message ?? `Submit failed: ${res.status}`);
-                      return;
-                    }
-                    // Refresh TRACES JSON view after submission
-                    const refreshed = await fetch(
-                      `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(
-                        params.id,
-                      )}/traces-json`,
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          accept: 'application/json',
-                        },
-                      },
-                    );
-                    if (refreshed.ok) {
-                      setData((await refreshed.json()) as TracesJson);
-                    }
-                  } catch (e: any) {
-                    setError(e?.message ?? 'Could not reach backend.');
-                  } finally {
-                    setSubmitting(false);
-                  }
-                }}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: 'none',
-                  backgroundColor:
-                    submitting || data.status === 'submitted' || complianceBlockingIssues.length > 0
-                      ? '#4b5563'
-                      : '#22c55e',
-                  color: '#022c22',
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor:
-                    submitting || data.status === 'submitted' || complianceBlockingIssues.length > 0
-                      ? 'not-allowed'
-                      : 'pointer',
-                }}
-              >
-                {data.status === 'submitted'
-                  ? 'Submitted'
-                  : submitting
-                    ? 'Submitting…'
-                    : 'Submit package'}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 1200);
-                  } catch {
-                    // ignore
-                  }
-                }}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: 'none',
-                  backgroundColor: '#38bdf8',
-                  color: '#082f49',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {copied ? 'Copied' : 'Copy DDS JSON'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const blob = new Blob([JSON.stringify(data, null, 2)], {
-                    type: 'application/json',
-                  });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `dds-${data.ddsPackageId}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  border: '1px solid #374151',
-                  backgroundColor: 'transparent',
-                  color: 'white',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Download JSON
-              </button>
-            </div>
-          </div>
-
-          <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#0f172a' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>Lots</div>
-            {data.lots.length === 0 ? (
-              <div style={{ fontSize: 13, opacity: 0.85 }}>No lots in this package.</div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #1f2937' }}>
-                    <th style={{ padding: '6px 4px' }}>Voucher</th>
-                    <th style={{ padding: '6px 4px' }}>Plot</th>
-                    <th style={{ padding: '6px 4px' }}>Area (ha)</th>
-                    <th style={{ padding: '6px 4px' }}>Kg</th>
-                    <th style={{ padding: '6px 4px' }}>Harvest</th>
-                    <th style={{ padding: '6px 4px' }}>Compliance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.lots.map((lot) => {
-                    const c = compliance[lot.plotId];
-                    const badge =
-                      !c
-                        ? { label: '—', bg: '#334155', fg: 'white' }
-                        : c.status === 'green'
-                          ? {
-                              label: `Green${c.alertCount != null ? ` (${c.alertCount})` : ''}`,
-                              bg: '#14532d',
-                              fg: '#bbf7d0',
-                            }
-                          : c.status === 'amber'
-                            ? {
-                                label: `Amber${c.alertCount != null ? ` (${c.alertCount})` : ''}`,
-                                bg: '#78350f',
-                                fg: '#fed7aa',
-                              }
-                            : c.status === 'red'
-                              ? {
-                                  label: `Red${c.alertCount != null ? ` (${c.alertCount})` : ''}`,
-                                  bg: '#7f1d1d',
-                                  fg: '#fecaca',
-                                }
-                              : { label: 'Unknown', bg: '#334155', fg: 'white' };
-                    return (
-                      <tr key={lot.voucherId} style={{ borderBottom: '1px solid #111827' }}>
-                        <td style={{ padding: '6px 4px' }}>{lot.voucherId.slice(0, 8)}…</td>
-                        <td style={{ padding: '6px 4px' }}>{lot.plotName}</td>
-                        <td style={{ padding: '6px 4px' }}>{Number(lot.plotAreaHa).toFixed(4)}</td>
-                        <td style={{ padding: '6px 4px' }}>{Number(lot.kg).toFixed(1)}</td>
-                        <td style={{ padding: '6px 4px' }}>{lot.harvestDate ?? '—'}</td>
-                        <td style={{ padding: '6px 4px' }}>
-                          <span
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: 999,
-                              backgroundColor: badge.bg,
-                              color: badge.fg,
-                              fontSize: 12,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {badge.label}
-                          </span>
-                          {c?.requiredEvidenceMissing && c.requiredEvidenceMissing.length > 0 ? (
-                            <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>
-                              Missing: {c.requiredEvidenceMissing.join(', ')}
-                            </div>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      ) : null}
-    </main>
-  );
+interface PackageDetailPageProps {
+  params: Promise<{ id: string }>;
 }
 
+export default function PackageDetailPage({ params }: PackageDetailPageProps) {
+  const { id } = use(params);
+  const pkg = getPackageById(id);
+
+  if (!pkg) {
+    notFound();
+  }
+
+  return (
+    <div className="flex flex-col">
+      <AppHeader
+        title={pkg.code}
+        subtitle={pkg.supplier_name}
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'DDS Packages', href: '/packages' },
+          { label: pkg.code },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <PermissionGate permission="compliance:run_check">
+              <Button variant="outline" asChild>
+                <Link href={`/packages/${pkg.id}/compliance`}>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Run Compliance
+                </Link>
+              </Button>
+            </PermissionGate>
+            {pkg.status === 'traces_ready' && (
+              <PermissionGate permission="packages:submit_traces">
+                <Button asChild>
+                  <Link href={`/packages/${pkg.id}/submit`}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Submit to TRACES
+                  </Link>
+                </Button>
+              </PermissionGate>
+            )}
+            <PermissionGate permission="packages:edit">
+              <Button variant="outline" size="icon" asChild>
+                <Link href={`/packages/${pkg.id}/edit`}>
+                  <Edit className="h-4 w-4" />
+                </Link>
+              </Button>
+            </PermissionGate>
+          </div>
+        }
+      />
+
+      <div className="flex-1 p-6">
+        {/* Back button */}
+        <Button variant="ghost" size="sm" className="mb-4" asChild>
+          <Link href="/packages">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Packages
+          </Link>
+        </Button>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Info */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Package Status Card */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">Package Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Package Status</span>
+                    <PackageStatusBadge status={pkg.status} size="md" />
+                  </div>
+                  <Separator orientation="vertical" className="h-10" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Compliance Status</span>
+                    <ComplianceStatusBadge status={pkg.compliance_status} size="md" />
+                  </div>
+                  {pkg.traces_reference && (
+                    <>
+                      <Separator orientation="vertical" className="h-10" />
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-muted-foreground">TRACES Reference</span>
+                        <span className="text-sm font-medium text-primary">{pkg.traces_reference}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Plots List */}
+            <Card className="border-border bg-card">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-base font-medium">Associated Plots</CardTitle>
+                <PermissionGate permission="plots:create">
+                  <Button variant="outline" size="sm">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Add Plot
+                  </Button>
+                </PermissionGate>
+              </CardHeader>
+              <CardContent>
+                {pkg.plots.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <MapPin className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                    <p className="mt-2 text-sm text-muted-foreground">No plots associated yet</p>
+                    <PermissionGate permission="plots:create">
+                      <Button variant="outline" size="sm" className="mt-4">
+                        Add First Plot
+                      </Button>
+                    </PermissionGate>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pkg.plots.map((plot) => (
+                      <Link
+                        key={plot.id}
+                        href={`/plots/${plot.id}`}
+                        className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-secondary/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-chart-2/10">
+                            <MapPin className="h-4 w-4 text-chart-2" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{plot.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {plot.area_hectares} ha - Risk: {plot.deforestation_risk}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              plot.verified ? 'bg-primary' : 'bg-muted-foreground'
+                            }`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {plot.verified ? 'Verified' : 'Pending'}
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Farmers List */}
+            <Card className="border-border bg-card">
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <CardTitle className="text-base font-medium">Associated Farmers</CardTitle>
+                <PermissionGate permission="farmers:create">
+                  <Button variant="outline" size="sm">
+                    <Users className="mr-2 h-4 w-4" />
+                    Link Farmer
+                  </Button>
+                </PermissionGate>
+              </CardHeader>
+              <CardContent>
+                {pkg.farmers.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Users className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                    <p className="mt-2 text-sm text-muted-foreground">No farmers linked yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pkg.farmers.map((farmer) => (
+                      <Link
+                        key={farmer.id}
+                        href={`/farmers/${farmer.id}`}
+                        className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-secondary/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-chart-3/10">
+                            <Users className="h-4 w-4 text-chart-3" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{farmer.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className={farmer.fpic_signed ? 'text-primary' : 'text-chart-4'}>
+                                FPIC: {farmer.fpic_signed ? 'Signed' : 'Pending'}
+                              </span>
+                              <span>-</span>
+                              <span className={farmer.labor_compliant ? 'text-primary' : 'text-chart-4'}>
+                                Labor: {farmer.labor_compliant ? 'Compliant' : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              farmer.verified ? 'bg-primary' : 'bg-muted-foreground'
+                            }`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {farmer.verified ? 'Verified' : 'Pending'}
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Package Details */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">Package Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Package Code</p>
+                    <p className="text-sm font-medium">{pkg.code}</p>
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Season / Year</p>
+                    <p className="text-sm font-medium">
+                      Season {pkg.season} {pkg.year}
+                    </p>
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Created</p>
+                    <p className="text-sm font-medium">
+                      {new Date(pkg.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Last Updated</p>
+                    <p className="text-sm font-medium">
+                      {new Date(pkg.updated_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {pkg.submitted_at && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+                        <Send className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Submitted</p>
+                        <p className="text-sm font-medium">
+                          {new Date(pkg.submitted_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">{pkg.plots.length}</p>
+                    <p className="text-xs text-muted-foreground">Plots</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">{pkg.farmers.length}</p>
+                    <p className="text-xs text-muted-foreground">Farmers</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">
+                      {pkg.plots.reduce((sum, p) => sum + p.area_hectares, 0).toFixed(1)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Total Ha</p>
+                  </div>
+                  <div className="rounded-lg bg-secondary p-3 text-center">
+                    <p className="text-2xl font-bold text-foreground">
+                      {pkg.plots.filter((p) => p.verified).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Verified</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
