@@ -2,7 +2,7 @@
 
 This folder groups all permanent public demo applications.
 
-- `offline` -> `offline-demo.tracebud.com`
+- `offline` -> `fieldapp-demo.tracebud.com`
 - `exporter` -> `exporter-demo.tracebud.com`
 - `importer` -> `importer-demo.tracebud.com`
 - `cooperative` -> `cooperative-demo.tracebud.com`

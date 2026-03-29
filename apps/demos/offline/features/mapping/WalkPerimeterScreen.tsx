@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Alert, FlatList, StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polyline, Region } from 'react-native-maps';
+import { Alert, FlatList, Platform, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -22,6 +21,18 @@ type LatLng = {
   latitude: number;
   longitude: number;
 };
+
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
+
+const mapsModule = Platform.OS === 'web' ? null : require('react-native-maps');
+const NativeMapView = mapsModule?.default;
+const NativeMarker = mapsModule?.Marker;
+const NativePolyline = mapsModule?.Polyline;
 
 function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): boolean {
   const cross = (ax: number, ay: number, bx: number, by: number) => ax * by - ay * bx;
@@ -408,49 +419,58 @@ export function WalkPerimeterScreen() {
                   {lowDataMap ? 'Show Map' : 'Low Data'}
                 </Button>
               </View>
-              <View style={styles.mapContainer}>
-                <MapView
-                  style={styles.map}
-                  initialRegion={initialRegion}
-                  mapType={lowDataMap ? 'none' : 'standard'}
-                >
-                  {points.length > 0 && (
-                    <>
-                      <Polyline
-                        coordinates={[
-                          ...points.map((p) => ({
-                            latitude: p.latitude,
-                            longitude: p.longitude,
-                          })),
-                          ...(points.length > 2
-                            ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                            : []),
-                        ]}
-                        strokeColor={Brand.primary}
-                        strokeWidth={4}
-                      />
-                      <Marker
-                        coordinate={{
-                          latitude: points[points.length - 1].latitude,
-                          longitude: points[points.length - 1].longitude,
-                        }}
-                        title="Current position"
-                        pinColor={Brand.accent}
-                      />
-                      {points.length > 0 && (
-                        <Marker
-                          coordinate={{
-                            latitude: points[0].latitude,
-                            longitude: points[0].longitude,
-                          }}
-                          title="Start point"
-                          pinColor={Brand.primary}
+              {Platform.OS === 'web' || !NativeMapView ? (
+                <View style={[styles.mapContainer, styles.mapFallback]}>
+                  <ThemedText type="defaultSemiBold">Map preview unavailable on web</ThemedText>
+                  <ThemedText type="caption">
+                    Continue recording points and review coordinates below.
+                  </ThemedText>
+                </View>
+              ) : (
+                <View style={styles.mapContainer}>
+                  <NativeMapView
+                    style={styles.map}
+                    initialRegion={initialRegion}
+                    mapType={lowDataMap ? 'none' : 'standard'}
+                  >
+                    {points.length > 0 && (
+                      <>
+                        <NativePolyline
+                          coordinates={[
+                            ...points.map((p) => ({
+                              latitude: p.latitude,
+                              longitude: p.longitude,
+                            })),
+                            ...(points.length > 2
+                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
+                              : []),
+                          ]}
+                          strokeColor={Brand.primary}
+                          strokeWidth={4}
                         />
-                      )}
-                    </>
-                  )}
-                </MapView>
-              </View>
+                        <NativeMarker
+                          coordinate={{
+                            latitude: points[points.length - 1].latitude,
+                            longitude: points[points.length - 1].longitude,
+                          }}
+                          title="Current position"
+                          pinColor={Brand.accent}
+                        />
+                        {points.length > 0 && (
+                          <NativeMarker
+                            coordinate={{
+                              latitude: points[0].latitude,
+                              longitude: points[0].longitude,
+                            }}
+                            title="Start point"
+                            pinColor={Brand.primary}
+                          />
+                        )}
+                      </>
+                    )}
+                  </NativeMapView>
+                </View>
+              )}
             </View>
           )}
 
@@ -634,6 +654,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
     ...Shadows.md,
+  },
+  mapFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E8DFD4',
+    backgroundColor: '#F8F4EF',
+    paddingHorizontal: Spacing.md,
   },
   map: {
     flex: 1,

@@ -33,7 +33,9 @@ const triadApproach = [
     description: "Farm Sustainability Assessment aligned forms that benchmark on-farm sustainability globally.",
     icon: ClipboardList,
     partner: "SAI Platform",
-    image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ce?q=80&w=2072&auto=format&fit=crop",
+    // Farm-level assessment / field data (FSA-style on-farm survey context)
+    image:
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=2070&auto=format&fit=crop",
   },
   {
     title: "AgStack GeoID",
@@ -95,6 +97,7 @@ export function EsgClimate() {
               src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2132&auto=format&fit=crop"
               alt="Sustainable agriculture landscape"
               fill
+              sizes="100vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)] via-[var(--forest-canopy)]/40 to-transparent" />
@@ -182,6 +185,7 @@ export function EsgClimate() {
                     src={item.image}
                     alt={item.title}
                     fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

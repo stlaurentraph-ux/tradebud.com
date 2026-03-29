@@ -20,9 +20,6 @@ const secondaryLinks = [
   { label: "Platform", href: "/#platform-architecture" },
 ];
 
-const FIELD_APP_DEMO = "https://offline-demo.tracebud.com";
-const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
-
 export function Header() {
   const pathname = usePathname();
   const isFarmersPage = pathname === "/farmers";
@@ -103,37 +100,6 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            {isFarmersPage ? (
-              <>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className={`font-bold text-sm xl:text-base rounded-full border-2 px-3 xl:px-5 shrink-0 ${
-                    isScrolled
-                      ? "border-[var(--forest-canopy)] text-[var(--forest-canopy)] bg-transparent hover:bg-[var(--forest-canopy)]/10"
-                      : "border-white/70 text-white bg-transparent hover:bg-white/10"
-                  }`}
-                >
-                  <a href={FIELD_APP_DEMO} target="_blank" rel="noopener noreferrer">
-                    Try the field app
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className={`font-bold text-sm xl:text-base rounded-full px-3 xl:px-5 shrink-0 ${
-                    isScrolled
-                      ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white"
-                      : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"
-                  }`}
-                >
-                  <a href={COOP_DASHBOARD_DEMO} target="_blank" rel="noopener noreferrer">
-                    Try the cooperative dashboard
-                  </a>
-                </Button>
-              </>
-            ) : null}
             {!isFarmersPage ? (
               <Button
                 variant="ghost"
@@ -214,34 +180,15 @@ export function Header() {
               </div>
               <div className="flex flex-col gap-4 mt-8 pb-8">
                 {isFarmersPage ? (
-                  <>
-                    <a href={FIELD_APP_DEMO} target="_blank" rel="noopener noreferrer" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
-                      >
-                        Try the field app
-                      </Button>
-                    </a>
-                    <a href={COOP_DASHBOARD_DEMO} target="_blank" rel="noopener noreferrer" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        size="lg"
-                        className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-lg py-6 rounded-full"
-                      >
-                        Try the cooperative dashboard
-                      </Button>
-                    </a>
-                    <Link href="/farmers#signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
-                      >
-                        Request access
-                      </Button>
-                    </Link>
-                  </>
+                  <Link href="/farmers#signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
+                    >
+                      Request access
+                    </Button>
+                  </Link>
                 ) : null}
                 <Button
                   variant="outline"

@@ -12,7 +12,7 @@ import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
-const FIELD_APP_DEMO = "https://offline-demo.tracebud.com";
+const FIELD_APP_DEMO = "https://fieldapp-demo.tracebud.com";
 const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
 
 const features = [

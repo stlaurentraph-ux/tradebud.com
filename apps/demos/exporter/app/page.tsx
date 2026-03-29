@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
+import { DemoBrandLogo } from '../../DemoBrandLogo';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -1890,11 +1891,7 @@ export default function ExporterDashboard() {
       <aside className={`fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-stone-200 transition-all duration-300 ${sidebarOpen ? 'w-60' : 'w-16'}`}>
         {/* Brand */}
         <div className={`flex items-center gap-2.5 h-16 border-b border-stone-100 flex-shrink-0 ${sidebarOpen ? 'px-4' : 'justify-center px-2'}`}>
-          <img
-            src="/images/tracebud-logo.png"
-            alt="Tracebud"
-            className={`object-contain rounded-lg flex-shrink-0 ${sidebarOpen ? 'h-9 w-9' : 'h-8 w-8'}`}
-          />
+          <DemoBrandLogo size={sidebarOpen ? 'md' : 'sm'} className="flex-shrink-0" />
           {sidebarOpen && (
             <div className="leading-none overflow-hidden min-w-0">
               <span className="text-base font-bold tracking-tight text-stone-900">Tracebud</span>
@@ -1956,12 +1953,13 @@ export default function ExporterDashboard() {
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-60' : 'ml-16'}`}>
         {/* Header */}
         <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-6 bg-white/90 border-b border-stone-200 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors">
+          <div className="flex items-center gap-4 min-w-0">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-stone-100 rounded-lg transition-colors shrink-0">
               <ChevronRight size={18} className={`text-stone-500 transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-stone-900">{pageTitle}</h1>
+            <DemoBrandLogo size="sm" className="shrink-0 hidden sm:flex" />
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold text-stone-900 truncate">{pageTitle}</h1>
               <p className="text-xs text-stone-400">Green Valley Exports</p>
             </div>
           </div>

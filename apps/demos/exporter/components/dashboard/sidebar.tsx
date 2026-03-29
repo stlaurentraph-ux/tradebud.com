@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DemoBrandLogo } from "../../../DemoBrandLogo";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -50,11 +51,9 @@ export function Sidebar({ userEmail, onLogout }: SidebarProps) {
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <span className="text-lg font-bold text-primary-foreground">T</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground">
+        <DemoBrandLogo size="md" />
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-semibold text-foreground truncate">
             Tracebud
           </span>
           <span className="text-xs text-muted-foreground">Exporter</span>

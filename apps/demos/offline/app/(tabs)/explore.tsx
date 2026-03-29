@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, Region } from 'react-native-maps';
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +47,18 @@ import {
   updatePlotMetadataOnBackend,
   fetchDdsPackageTracesJson,
 } from '@/features/api/postPlot';
+
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
+
+const mapsModule = Platform.OS === 'web' ? null : require('react-native-maps');
+const NativeMapView = mapsModule?.default;
+const NativeMarker = mapsModule?.Marker;
+const NativePolyline = mapsModule?.Polyline;
 
 function computeRegionFromPlot(plot: Plot): Region | undefined {
   if (plot.points.length === 0) return undefined;
@@ -336,22 +348,31 @@ export default function PlotsScreen() {
                       </Button>
                     </View>
                   </CardHeader>
-                  <View style={styles.mapContainer}>
-                    <MapView
-                      style={styles.map}
-                      initialRegion={region}
-                      mapType={lowDataMap ? 'none' : 'standard'}
-                    >
-                      {selectedPlot.kind === 'polygon' && selectedPlot.points.length > 2 && (
-                        <Polyline
-                          coordinates={[...selectedPlot.points, selectedPlot.points[0]]}
-                          strokeColor={Brand.primary}
-                          strokeWidth={3}
-                        />
-                      )}
-                      <Marker coordinate={selectedPlot.points[0]} title={selectedPlot.name} />
-                    </MapView>
-                  </View>
+                  {Platform.OS === 'web' || !NativeMapView ? (
+                    <View style={[styles.mapContainer, styles.mapFallback]}>
+                      <ThemedText type="defaultSemiBold">Map preview unavailable on web</ThemedText>
+                      <ThemedText type="caption">
+                        Plot geometry is still saved and shown in tabular view.
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <View style={styles.mapContainer}>
+                      <NativeMapView
+                        style={styles.map}
+                        initialRegion={region}
+                        mapType={lowDataMap ? 'none' : 'standard'}
+                      >
+                        {selectedPlot.kind === 'polygon' && selectedPlot.points.length > 2 && (
+                          <NativePolyline
+                            coordinates={[...selectedPlot.points, selectedPlot.points[0]]}
+                            strokeColor={Brand.primary}
+                            strokeWidth={3}
+                          />
+                        )}
+                        <NativeMarker coordinate={selectedPlot.points[0]} title={selectedPlot.name} />
+                      </NativeMapView>
+                    </View>
+                  )}
                 </Card>
 
                 {/* Edit Plot */}
@@ -906,6 +927,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
     ...Shadows.sm,
+  },
+  mapFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderColor: '#E8DFD4',
+    backgroundColor: '#F8F4EF',
+    paddingHorizontal: Spacing.md,
   },
   map: {
     flex: 1,
