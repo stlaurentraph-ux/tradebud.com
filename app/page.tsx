@@ -79,7 +79,7 @@ type Screen =
   | "documents-labor"
   | "settings"
 
-export default function PrototypePage() {
+export default function PrototypePage(): JSX.Element {
   const [activeScreen, setActiveScreen] = useState<Screen>("home")
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
