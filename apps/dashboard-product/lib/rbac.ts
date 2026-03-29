@@ -104,11 +104,9 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view' },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view' },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view' },
-  { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view' },
 ];
 
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
-  { name: 'Settings', href: '/settings', icon: 'Settings', permission: 'settings:view' },
   { name: 'Help', href: '/help', icon: 'HelpCircle', permission: 'packages:view' },
 ];
 
