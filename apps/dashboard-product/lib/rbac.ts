@@ -77,8 +77,13 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
   ],
   cooperative: [
     'plots:view',
+    'plots:create',
+    'plots:edit',
+    'plots:bulk_upload',
     'farmers:view',
+    'farmers:create',
     'farmers:edit',
+    'farmers:link_validation',
     'compliance:view',
     'reports:view',
     'settings:view',
@@ -103,10 +108,19 @@ export interface NavItem {
   href: string;
   icon: string;
   permission: Permission;
+  roles?: TenantRole[]; // If specified, only these roles see this item
 }
 
+// Role-specific navigation - each role sees different items
+const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
+  exporter: ['Overview', 'DDS Packages', 'Plots', 'Farmers', 'Compliance', 'Reports', 'Admin'],
+  importer: ['Overview', 'DDS Packages', 'Compliance', 'Reports'],
+  cooperative: ['Overview', 'Plots', 'Farmers', 'Compliance'],
+  country_reviewer: ['Overview', 'DDS Packages', 'Plots', 'Compliance', 'Reports'],
+};
+
 export const NAVIGATION_ITEMS: NavItem[] = [
-  { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'packages:view' },
+  { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'plots:view' },
   { name: 'DDS Packages', href: '/packages', icon: 'Package', permission: 'packages:view' },
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view' },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view' },
@@ -117,7 +131,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
 
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
   { name: 'Settings', href: '/settings', icon: 'Settings', permission: 'settings:view' },
-  { name: 'Help', href: '/help', icon: 'HelpCircle', permission: 'packages:view' },
+  { name: 'Help', href: '/help', icon: 'HelpCircle', permission: 'plots:view' },
 ];
 
 /**
@@ -155,7 +169,8 @@ export function getPermissionsForRole(role: TenantRole): Permission[] {
  */
 export function getVisibleNavItems(user: User | null): NavItem[] {
   if (!user) return [];
-  return NAVIGATION_ITEMS.filter((item) => hasPermission(user, item.permission));
+  const allowedItems = ROLE_NAV_CONFIG[user.active_role] || [];
+  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name));
 }
 
 /**
