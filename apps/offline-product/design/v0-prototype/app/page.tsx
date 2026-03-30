@@ -100,8 +100,12 @@ export default function PrototypePage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg">
-              <Leaf className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg p-1.5">
+              <img
+                src="/images/tracebud-logo.png"
+                alt="Tracebud"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="text-left">
               <h1 className="text-3xl font-bold text-emerald-900">Tracebud</h1>
