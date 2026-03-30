@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { DM_Sans, Playfair_Display } from 'next/font/google';
-import { DemoBanner } from '../../DemoBanner';
+import { DemoBanner } from './demo-banner';
 import './globals.css';
 
 const dmSans = DM_Sans({

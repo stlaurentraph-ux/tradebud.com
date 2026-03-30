@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type MouseEventHandler } from 'react';
-import { DemoBrandLogo } from '../../DemoBrandLogo';
 import {
   BarChart3,
   Building2,
@@ -210,7 +209,7 @@ export default function CountryDashboard() {
       <aside className="hidden lg:flex w-64 flex-col border-r border-stone-200 bg-white">
         <div className="p-6 border-b border-stone-100">
           <div className="flex items-center gap-2.5">
-            <DemoBrandLogo size="md" />
+            <img src="/images/tracebud-logo.png" alt="Tracebud" width={36} height={36} className="h-9 w-9 shrink-0 object-contain rounded-lg" />
             <div className="font-serif text-lg font-semibold text-emerald-950">Tracebud</div>
           </div>
           <p className="text-xs text-stone-500 mt-1">National registry console</p>
@@ -255,7 +254,7 @@ export default function CountryDashboard() {
         <header className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-stone-200">
           <div className="flex items-center justify-between gap-4 px-4 md:px-8 py-4">
             <div className="lg:hidden flex items-center gap-2">
-              <DemoBrandLogo size="sm" />
+              <img src="/images/tracebud-logo.png" alt="Tracebud" width={28} height={28} className="h-7 w-7 shrink-0 object-contain rounded-md" />
               <span className="font-serif font-semibold text-emerald-950">Tracebud</span>
               <select
                 className="text-sm border border-stone-200 rounded-lg px-2 py-1 bg-white"
@@ -270,7 +269,7 @@ export default function CountryDashboard() {
               </select>
             </div>
             <div className="hidden lg:flex lg:items-center lg:gap-3 min-w-0">
-              <DemoBrandLogo size="sm" className="flex-shrink-0" />
+              <img src="/images/tracebud-logo.png" alt="Tracebud" width={28} height={28} className="h-7 w-7 shrink-0 object-contain rounded-md" />
               <div className="min-w-0">
                 <h1 className="text-lg font-semibold text-stone-900 truncate">
                   {nav.find((n) => n.id === page)?.label ?? 'Overview'}
