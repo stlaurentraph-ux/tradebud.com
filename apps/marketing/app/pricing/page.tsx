@@ -20,55 +20,57 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "Starter",
-    price: "$0",
+    name: "Cooperative",
+    price: "$99",
     period: "/month",
-    description: "For individual farmers starting their traceability journey.",
+    description: "For cooperatives managing farmer networks and field data collection.",
     features: [
-      "Up to 5 plot mappings",
-      "Basic compliance reports",
-      "Mobile app access",
+      "Up to 500 farmer profiles",
+      "Offline mobile app for enumerators",
+      "Plot mapping with GPS/polygon capture",
+      "Ground-truth photo documentation",
+      "Basic EUDR compliance reports",
+      "Simplified declarations support",
       "Community support",
-      "Basic EUDR documentation",
     ],
-    cta: "Get Started Free",
-    href: "/farmers#signup",
+    cta: "Start Free Trial",
+    href: "/get-started",
     highlighted: false,
   },
   {
-    name: "Professional",
-    price: "$49",
+    name: "Exporter",
+    price: "$299",
     period: "/month",
-    description: "For cooperatives and exporters managing multiple suppliers.",
+    description: "For exporters needing full supply chain traceability and due diligence.",
     features: [
-      "Unlimited plot mappings",
-      "Advanced compliance reports",
-      "API access",
-      "Priority email support",
+      "Unlimited farmer & supplier profiles",
+      "Advanced plot verification & AI checks",
+      "Deforestation risk monitoring",
+      "Batch-level identity preservation",
+      "Yield cap validation",
       "Full EUDR documentation suite",
-      "Supplier risk scoring",
-      "Batch-level traceability",
-      "Custom branding",
+      "API access for ERP integration",
+      "Priority support",
     ],
     cta: "Start Free Trial",
-    href: "/exporters#signup",
+    href: "/get-started",
     highlighted: true,
     badge: "Most Popular",
   },
   {
-    name: "Business",
-    price: "$199",
+    name: "Importer",
+    price: "$599",
     period: "/month",
-    description: "For importers requiring full supply chain visibility.",
+    description: "For EU importers requiring complete due diligence and TRACES NT submission.",
     features: [
-      "Everything in Professional",
-      "Unlimited suppliers",
-      "Real-time risk monitoring",
+      "Everything in Exporter",
+      "Multi-supplier risk dashboard",
+      "TRACES NT submission middleware",
+      "Zero-Risk Pre-Flight checks",
       "Dedicated account manager",
-      "Custom integrations",
-      "Advanced analytics dashboard",
-      "Multi-region support",
-      "SLA guarantees",
+      "ESG platform connectors",
+      "Custom compliance workflows",
+      "99.9% SLA guarantee",
     ],
     cta: "Contact Sales",
     href: "#quote-form",
@@ -79,62 +81,70 @@ const plans = [
 const enterpriseFeatures = [
   {
     icon: Shield,
-    title: "Enterprise Security",
-    description: "SOC 2 compliance, SSO, and advanced access controls",
+    title: "Data Sovereignty",
+    description: "Multi-tenant isolation, RBAC, and farmer data wallet controls",
   },
   {
     icon: Globe,
-    title: "Global Infrastructure",
-    description: "Multi-region deployment with 99.99% uptime SLA",
+    title: "Global Commodity Support",
+    description: "Coffee, cocoa, rubber, soy, and timber with HS code mapping",
   },
   {
     icon: Users,
-    title: "Unlimited Users",
-    description: "Scale your team without per-seat pricing concerns",
+    title: "Unlimited Organizations",
+    description: "Delegated admin for cooperatives, exporters, and importers",
   },
   {
     icon: Zap,
-    title: "Custom Integrations",
-    description: "Connect with your existing ERP and supply chain systems",
+    title: "Full Integrations",
+    description: "TRACES NT, AgStack GeoID, Cool Farm Tool, EcoVadis, and more",
   },
 ];
 
 const comparisonFeatures = [
-  { name: "Plot Mappings", starter: "5", professional: "Unlimited", business: "Unlimited", enterprise: "Unlimited" },
-  { name: "Compliance Reports", starter: "Basic", professional: "Advanced", business: "Advanced", enterprise: "Custom" },
-  { name: "API Access", starter: false, professional: true, business: true, enterprise: true },
-  { name: "Mobile App", starter: true, professional: true, business: true, enterprise: true },
-  { name: "EUDR Documentation", starter: "Basic", professional: "Full Suite", business: "Full Suite", enterprise: "Full Suite" },
-  { name: "Supplier Risk Scoring", starter: false, professional: true, business: true, enterprise: true },
-  { name: "Batch Traceability", starter: false, professional: true, business: true, enterprise: true },
-  { name: "Real-time Monitoring", starter: false, professional: false, business: true, enterprise: true },
-  { name: "Dedicated Manager", starter: false, professional: false, business: true, enterprise: true },
-  { name: "Custom Integrations", starter: false, professional: false, business: true, enterprise: true },
-  { name: "SSO / SAML", starter: false, professional: false, business: false, enterprise: true },
-  { name: "SLA Guarantees", starter: false, professional: false, business: "99.9%", enterprise: "99.99%" },
-  { name: "Support", starter: "Community", professional: "Email", business: "Priority", enterprise: "24/7 Dedicated" },
+  { name: "Farmer/Supplier Profiles", cooperative: "500", exporter: "Unlimited", importer: "Unlimited", enterprise: "Unlimited" },
+  { name: "Offline Mobile App", cooperative: true, exporter: true, importer: true, enterprise: true },
+  { name: "GPS Plot Mapping", cooperative: true, exporter: true, importer: true, enterprise: true },
+  { name: "Polygon Capture (4+ ha)", cooperative: true, exporter: true, importer: true, enterprise: true },
+  { name: "Ground-Truth Photos", cooperative: true, exporter: true, importer: true, enterprise: true },
+  { name: "AI Deforestation Checks", cooperative: false, exporter: true, importer: true, enterprise: true },
+  { name: "Batch Identity Preservation", cooperative: false, exporter: true, importer: true, enterprise: true },
+  { name: "Yield Cap Validation", cooperative: false, exporter: true, importer: true, enterprise: true },
+  { name: "TRACES NT Submission", cooperative: false, exporter: false, importer: true, enterprise: true },
+  { name: "Zero-Risk Pre-Flight", cooperative: false, exporter: false, importer: true, enterprise: true },
+  { name: "ESG Platform Connectors", cooperative: false, exporter: false, importer: true, enterprise: true },
+  { name: "AgStack GeoID Integration", cooperative: false, exporter: false, importer: false, enterprise: true },
+  { name: "Cool Farm Tool API", cooperative: false, exporter: false, importer: false, enterprise: true },
+  { name: "Multi-Tenant Admin", cooperative: false, exporter: false, importer: false, enterprise: true },
+  { name: "SSO / SAML", cooperative: false, exporter: false, importer: false, enterprise: true },
+  { name: "SLA Guarantee", cooperative: false, exporter: false, importer: "99.9%", enterprise: "99.99%" },
+  { name: "Support", cooperative: "Community", exporter: "Priority Email", importer: "Dedicated", enterprise: "24/7 Dedicated" },
 ];
 
 const faqs = [
   {
-    question: "Can I switch plans at any time?",
-    answer: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, and we will prorate your billing accordingly.",
+    question: "What is the EUDR compliance deadline?",
+    answer: "The EU Deforestation Regulation requires compliance by December 30, 2026 for large/medium enterprises and June 30, 2027 for micro/small enterprises. Tracebud helps you prepare well in advance.",
   },
   {
-    question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards (Visa, MasterCard, American Express), as well as bank transfers for annual Enterprise plans.",
+    question: "Can I switch plans as my supply chain grows?",
+    answer: "Yes, you can upgrade or downgrade your plan at any time. As you onboard more suppliers or expand to new commodities, simply upgrade and we will prorate your billing accordingly.",
   },
   {
     question: "Is there a free trial?",
-    answer: "Yes! The Professional plan includes a 14-day free trial with full access to all features. No credit card required to start.",
+    answer: "Yes! Cooperative and Exporter plans include a 14-day free trial with full access to all features including offline mobile apps and plot mapping. No credit card required to start.",
   },
   {
-    question: "What happens to my data if I cancel?",
-    answer: "Your data remains accessible for 30 days after cancellation. You can export all your data at any time, and we provide data portability tools.",
+    question: "How does data retention work for EUDR?",
+    answer: "EUDR mandates 5-year retention of all due diligence documentation. Tracebud automatically stores and secures all compliance data, polygon mappings, and audit trails for the required period.",
   },
   {
-    question: "Do you offer discounts for NGOs or nonprofits?",
-    answer: "Yes, we offer special pricing for registered nonprofits, NGOs, and development organizations. Contact our sales team for details.",
+    question: "What commodities does Tracebud support?",
+    answer: "Tracebud supports all EUDR-regulated commodities: coffee, cocoa, rubber, soy, and timber. Our schema is commodity-agnostic with full HS code and risk matrix mapping.",
+  },
+  {
+    question: "Do you offer discounts for cooperatives or NGOs?",
+    answer: "Yes, we offer special pricing for farmer cooperatives, registered nonprofits, NGOs, and development organizations. Contact our sales team for details.",
   },
 ];
 
@@ -279,9 +289,9 @@ export default function PricingPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-4 px-4 font-semibold text-foreground">Features</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground">Starter</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground bg-[var(--data-emerald)]/10 rounded-t-lg">Professional</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground">Business</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Cooperative</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground bg-[var(--data-emerald)]/10 rounded-t-lg">Exporter</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Importer</th>
                   <th className="text-center py-4 px-4 font-semibold text-foreground">Enterprise</th>
                 </tr>
               </thead>
@@ -290,36 +300,36 @@ export default function PricingPage() {
                   <tr key={feature.name} className={`border-b border-border/50 ${index % 2 === 0 ? "bg-background" : ""}`}>
                     <td className="py-4 px-4 text-foreground font-medium">{feature.name}</td>
                     <td className="text-center py-4 px-4">
-                      {typeof feature.starter === "boolean" ? (
-                        feature.starter ? (
+                      {typeof feature.cooperative === "boolean" ? (
+                        feature.cooperative ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.starter}</span>
+                        <span className="text-foreground/80 text-sm">{feature.cooperative}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4 bg-[var(--data-emerald)]/5">
-                      {typeof feature.professional === "boolean" ? (
-                        feature.professional ? (
+                      {typeof feature.exporter === "boolean" ? (
+                        feature.exporter ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.professional}</span>
+                        <span className="text-foreground/80 text-sm">{feature.exporter}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
-                      {typeof feature.business === "boolean" ? (
-                        feature.business ? (
+                      {typeof feature.importer === "boolean" ? (
+                        feature.importer ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.business}</span>
+                        <span className="text-foreground/80 text-sm">{feature.importer}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
