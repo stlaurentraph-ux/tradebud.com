@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: 'National Registry Console — Tracebud',
   description:
     'Sovereign oversight of producer registries, EUDR-aligned submissions, and interoperability with national cadastre and EU systems (demo).',
+  icons: {
+    icon: '/images/tracebud-logo.png',
+    shortcut: '/images/tracebud-logo.png',
+    apple: '/images/tracebud-logo.png',
+  },
 };
 
 export const viewport: Viewport = {

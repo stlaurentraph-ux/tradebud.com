@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: 'Cooperative Console — Tracebud',
   description:
     'Coordinate member plots, aggregate due diligence, and hand off traceable batches to exporters with EUDR-ready evidence (demo).',
+  icons: {
+    icon: '/images/tracebud-logo.png',
+    shortcut: '/images/tracebud-logo.png',
+    apple: '/images/tracebud-logo.png',
+  },
 };
 
 export const viewport: Viewport = {

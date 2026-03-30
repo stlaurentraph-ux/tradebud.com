@@ -16,6 +16,11 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'Exporter Dashboard — Tracebud',
   description: 'Manage your DDS packages, plot compliance, and shipment dossiers.',
+  icons: {
+    icon: '/images/tracebud-logo.png',
+    shortcut: '/images/tracebud-logo.png',
+    apple: '/images/tracebud-logo.png',
+  },
 }
 
 export const viewport: Viewport = {

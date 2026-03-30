@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   title: 'Importer Portal — Tracebud',
   description:
     'Review due diligence, shipments, and supplier evidence for EUDR Article 9 and CSRD-ready reporting.',
+  icons: {
+    icon: '/images/tracebud-logo.png',
+    shortcut: '/images/tracebud-logo.png',
+    apple: '/images/tracebud-logo.png',
+  },
 };
 
 export const viewport: Viewport = {
