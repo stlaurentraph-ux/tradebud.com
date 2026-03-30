@@ -4,42 +4,55 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #141414;
-  --card-foreground: #fafafa;
-  --popover: #141414;
-  --popover-foreground: #fafafa;
-  --primary: #22c55e;
-  --primary-foreground: #022c22;
-  --secondary: #1f1f1f;
-  --secondary-foreground: #fafafa;
-  --muted: #1f1f1f;
-  --muted-foreground: #a1a1aa;
-  --accent: #22c55e;
-  --accent-foreground: #022c22;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #22c55e;
-  --chart-1: #22c55e;
-  --chart-2: #3b82f6;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
-  --chart-5: #8b5cf6;
+  /* TradeBud Brand Colors - Light Theme */
+  --background: #F9FAFB;
+  --foreground: #1F2937;
+  --card: #FFFFFF;
+  --card-foreground: #1F2937;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2937;
+  --primary: #064E3B;
+  --primary-foreground: #FFFFFF;
+  --secondary: #10B981;
+  --secondary-foreground: #064E3B;
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+  --accent: #10B981;
+  --accent-foreground: #064E3B;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB;
+  --input: #FFFFFF;
+  --ring: #10B981;
+  --chart-1: #064E3B;
+  --chart-2: #10B981;
+  --chart-3: #78350F;
+  --chart-4: #34D399;
+  --chart-5: #92400E;
   --radius: 0.75rem;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #fafafa;
-  --sidebar-border: #27272a;
-  --sidebar-accent: #1f1f1f;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-ring: #22c55e;
+  
+  /* Sidebar - Forest Canopy */
+  --sidebar: #064E3B;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-border: #065F46;
+  --sidebar-accent: #065F46;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-ring: #10B981;
+  --sidebar-primary: #10B981;
+  --sidebar-primary-foreground: #064E3B;
+  
+  /* TradeBud Custom Colors */
+  --forest-canopy: #064E3B;
+  --mountain-clay: #78350F;
+  --data-emerald: #10B981;
+  --forest-light: #065F46;
+  --clay-light: #92400E;
+  --emerald-light: #34D399;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), 'Inter', system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), 'Geist Mono', monospace;
+  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -70,6 +83,8 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

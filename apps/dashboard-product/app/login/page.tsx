@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,10 +81,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary mb-4">
-            <span className="text-2xl font-bold text-primary-foreground">T</span>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Tracebud</h1>
+          <Image
+            src="/tracebud-logo-v6.png"
+            alt="Tracebud"
+            width={64}
+            height={64}
+            className="rounded-xl mb-4"
+          />
+          <h1 className="text-2xl font-bold text-[#064E3B]">Tracebud</h1>
           <p className="text-sm text-muted-foreground">EUDR Compliance Platform</p>
         </div>
 

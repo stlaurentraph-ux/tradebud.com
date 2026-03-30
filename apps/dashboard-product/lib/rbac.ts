@@ -31,7 +31,11 @@ export type Permission =
   | 'reports:export'
   // Settings permissions
   | 'settings:view'
-  | 'settings:edit';
+  | 'settings:edit'
+  // Admin permissions
+  | 'admin:view'
+  | 'admin:manage_users'
+  | 'admin:manage_roles';
 
 // Role-based permission matrix
 const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
@@ -58,6 +62,9 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
     'reports:export',
     'settings:view',
     'settings:edit',
+    'admin:view',
+    'admin:manage_users',
+    'admin:manage_roles',
   ],
   importer: [
     'packages:view',
@@ -104,9 +111,12 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view' },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view' },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view' },
+  { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view' },
+  { name: 'Admin', href: '/admin', icon: 'Shield', permission: 'admin:view' },
 ];
 
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
+  { name: 'Settings', href: '/settings', icon: 'Settings', permission: 'settings:view' },
   { name: 'Help', href: '/help', icon: 'HelpCircle', permission: 'packages:view' },
 ];
 

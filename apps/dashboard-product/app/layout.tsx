@@ -17,11 +17,18 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: 'Tracebud Dashboard - EUDR Compliance Platform',
   description: 'Multi-tenant dashboard for managing EUDR compliance, DDS packages, plots, and farmers.',
+  icons: {
+    icon: [
+      { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
+      { url: '/tracebud-logo-v6.png', type: 'image/png' },
+    ],
+    apple: '/favicon-32x32-v6.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
           <DashboardLayout>{children}</DashboardLayout>

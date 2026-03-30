@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   LogOut,
   ShieldCheck,
   RefreshCw,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,7 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   Settings,
   HelpCircle,
   ShieldCheck,
+  Shield,
 };
 
 export function AppSidebar() {
@@ -55,33 +58,37 @@ export function AppSidebar() {
   const hasMultipleRoles = user && user.roles.length > 1;
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-screen w-64 flex-col bg-[#064E3B]">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <span className="text-lg font-bold text-primary-foreground">T</span>
-        </div>
+        <Image
+          src="/tracebud-logo-v6.png"
+          alt="Tracebud"
+          width={36}
+          height={36}
+          className="rounded-lg"
+        />
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground">Tracebud</span>
-          <span className="text-xs text-muted-foreground">EUDR Platform</span>
+          <span className="text-sm font-semibold text-white">Tracebud</span>
+          <span className="text-xs text-emerald-300">EUDR Platform</span>
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-white/10" />
 
       {/* Role indicator */}
       {user && (
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between rounded-lg bg-sidebar-accent/50 px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Active Role</span>
+              <span className="text-xs text-emerald-200">Active Role</span>
               <RoleBadge role={user.active_role} size="sm" />
             </div>
             {hasMultipleRoles && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-200 hover:bg-white/10 hover:text-white">
+                    <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -106,7 +113,7 @@ export function AppSidebar() {
 
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-emerald-300">
           Main
         </div>
         {navItems.map((item) => {
@@ -121,8 +128,8 @@ export function AppSidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  ? 'bg-emerald-500 text-white'
+                  : 'text-emerald-100 hover:bg-white/10 hover:text-white'
               )}
             >
               <Icon className="h-4 w-4" />
@@ -131,9 +138,9 @@ export function AppSidebar() {
           );
         })}
 
-        <Separator className="my-4" />
+        <Separator className="my-4 bg-white/10" />
 
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-emerald-300">
           Support
         </div>
         {secondaryNavItems.map((item) => {
@@ -147,8 +154,8 @@ export function AppSidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                  : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  ? 'bg-emerald-500 text-white'
+                  : 'text-emerald-100 hover:bg-white/10 hover:text-white'
               )}
             >
               <Icon className="h-4 w-4" />
@@ -159,27 +166,33 @@ export function AppSidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-white/10 p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start gap-3 px-3">
+            <Button variant="ghost" className="w-full justify-start gap-3 px-3 text-white hover:bg-white/10 hover:text-white">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                <AvatarFallback className="bg-emerald-500 text-white text-xs">
                   {user?.name ? user.name[0].toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-1 flex-col items-start text-left">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium text-white">
                   {user?.name || 'Guest'}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-emerald-300">
                   {user?.email || 'Not logged in'}
                 </span>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-emerald-300" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                Account Settings
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
