@@ -223,16 +223,16 @@ export default function PricingPage() {
       {/* Pricing Cards */}
       <section className="py-16 px-6 bg-background -mt-1">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 -mt-24">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4 -mt-24">
             {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`relative rounded-2xl p-6 lg:p-8 flex flex-col ${
+                className={`relative rounded-2xl p-6 lg:p-6 flex flex-col ${
                   plan.highlighted
-                    ? "bg-[var(--forest-canopy)] text-white ring-2 ring-[var(--data-emerald)] shadow-xl scale-[1.02] lg:scale-105"
+                    ? "bg-[var(--forest-canopy)] text-white ring-2 ring-[var(--data-emerald)] shadow-xl"
                     : "bg-card border border-border shadow-sm"
                 }`}
               >
