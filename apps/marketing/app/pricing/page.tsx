@@ -20,61 +20,84 @@ import Link from "next/link";
 
 const plans = [
   {
-    name: "Cooperative",
-    price: "$99",
-    period: "/month",
-    description: "For cooperatives managing farmer networks and field data collection.",
+    name: "Farmers & Micro-Producers",
+    price: "$0",
+    period: "/month forever",
+    description: "Free forever tier for smallholders and data creators building the global farm database.",
     features: [
-      "Up to 500 farmer profiles",
+      "Unlimited plot mappings",
       "Offline mobile app for enumerators",
-      "Plot mapping with GPS/polygon capture",
+      "GPS & polygon capture (4+ hectares)",
       "Ground-truth photo documentation",
-      "Basic EUDR compliance reports",
-      "Simplified declarations support",
+      "Farmer data wallet for data control",
+      "Free forever - no setup fees",
       "Community support",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started Free",
     href: "/get-started",
     highlighted: false,
+    tier: "Tier 1",
   },
   {
-    name: "Exporter",
-    price: "$299",
-    period: "/month",
-    description: "For exporters needing full supply chain traceability and due diligence.",
+    name: "Exporters & Cooperatives",
+    price: "$0",
+    period: "/month base",
+    description: "Aggregate farmer data for free. Pro features and per-shipment fees apply.",
     features: [
-      "Unlimited farmer & supplier profiles",
-      "Advanced plot verification & AI checks",
-      "Deforestation risk monitoring",
-      "Batch-level identity preservation",
-      "Yield cap validation",
-      "Full EUDR documentation suite",
-      "API access for ERP integration",
-      "Priority support",
+      "Free unlimited farmer aggregation",
+      "Pro Dashboard: $19/month (optional)",
+      "Advanced yield-cap anti-laundering",
+      "Automated batch management",
+      "Basic EUDR reporting",
+      "API access for integrations",
+      "$0.15 per transaction processing",
+      "Email support",
     ],
     cta: "Start Free Trial",
     href: "/get-started",
     highlighted: true,
     badge: "Most Popular",
+    tier: "Tier 2",
   },
   {
-    name: "Importer",
-    price: "$599",
-    period: "/month",
-    description: "For EU importers requiring complete due diligence and TRACES NT submission.",
+    name: "EU Importers & Roasters",
+    price: "$19",
+    period: "/month + per-shipment",
+    description: "Mandatory 5-year EUDR data retention + transaction-based shipment fees.",
     features: [
-      "Everything in Exporter",
-      "Multi-supplier risk dashboard",
+      "$19/month data retention fee",
+      "EUDR Shipment: $0.50 per DDS",
+      "Premium ESG Shipment: $1.00 per DDS",
       "TRACES NT submission middleware",
-      "Zero-Risk Pre-Flight checks",
-      "Dedicated account manager",
-      "ESG platform connectors",
-      "Custom compliance workflows",
-      "99.9% SLA guarantee",
+      "Zero-Risk pre-flight checks",
+      "Multi-supplier risk dashboard",
+      "100% predictable, usage-based pricing",
+      "Dedicated support",
+    ],
+    cta: "Request Demo",
+    href: "#quote-form",
+    highlighted: false,
+    tier: "Tier 3",
+  },
+  {
+    name: "Enterprise Brands & Sponsors",
+    price: "$199",
+    period: "/month + sponsorships",
+    description: "Multi-tenant platform for large enterprises, ESG sponsors, and supply chain networks.",
+    features: [
+      "$199/month base platform fee",
+      "$19/month per sponsored coop/exporter",
+      "Standard or Premium per-shipment fees",
+      "Multi-tenant sub-organization routing",
+      "EcoVadis & Sustainalytics connectors",
+      "Custom API integrations",
+      "Advanced compliance workflows",
+      "24/7 dedicated support team",
     ],
     cta: "Contact Sales",
     href: "#quote-form",
     highlighted: false,
+    tier: "Tier 4",
   },
 ];
 
@@ -102,49 +125,51 @@ const enterpriseFeatures = [
 ];
 
 const comparisonFeatures = [
-  { name: "Farmer/Supplier Profiles", cooperative: "500", exporter: "Unlimited", importer: "Unlimited", enterprise: "Unlimited" },
-  { name: "Offline Mobile App", cooperative: true, exporter: true, importer: true, enterprise: true },
-  { name: "GPS Plot Mapping", cooperative: true, exporter: true, importer: true, enterprise: true },
-  { name: "Polygon Capture (4+ ha)", cooperative: true, exporter: true, importer: true, enterprise: true },
-  { name: "Ground-Truth Photos", cooperative: true, exporter: true, importer: true, enterprise: true },
-  { name: "AI Deforestation Checks", cooperative: false, exporter: true, importer: true, enterprise: true },
-  { name: "Batch Identity Preservation", cooperative: false, exporter: true, importer: true, enterprise: true },
-  { name: "Yield Cap Validation", cooperative: false, exporter: true, importer: true, enterprise: true },
-  { name: "TRACES NT Submission", cooperative: false, exporter: false, importer: true, enterprise: true },
-  { name: "Zero-Risk Pre-Flight", cooperative: false, exporter: false, importer: true, enterprise: true },
-  { name: "ESG Platform Connectors", cooperative: false, exporter: false, importer: true, enterprise: true },
-  { name: "AgStack GeoID Integration", cooperative: false, exporter: false, importer: false, enterprise: true },
-  { name: "Cool Farm Tool API", cooperative: false, exporter: false, importer: false, enterprise: true },
-  { name: "Multi-Tenant Admin", cooperative: false, exporter: false, importer: false, enterprise: true },
-  { name: "SSO / SAML", cooperative: false, exporter: false, importer: false, enterprise: true },
-  { name: "SLA Guarantee", cooperative: false, exporter: false, importer: "99.9%", enterprise: "99.99%" },
-  { name: "Support", cooperative: "Community", exporter: "Priority Email", importer: "Dedicated", enterprise: "24/7 Dedicated" },
+  { name: "Cost Structure", tier1: "Free Forever", tier2: "$0/mo base", tier3: "$19/mo base", tier4: "$199/mo base" },
+  { name: "Per-Shipment Fee", tier1: "N/A", tier2: "$0.15/tx", tier3: "$0.50-$1.00", tier4: "$0.50-$1.00" },
+  { name: "Farmer Aggregation", tier1: "Unlimited", tier2: "Unlimited", tier3: "Unlimited", tier4: "Unlimited" },
+  { name: "Plot Mapping & GPS", tier1: true, tier2: true, tier3: true, tier4: true },
+  { name: "Polygon Capture (4+ ha)", tier1: true, tier2: true, tier3: true, tier4: true },
+  { name: "Ground-Truth Photos", tier1: true, tier2: true, tier3: true, tier4: true },
+  { name: "Offline Mobile App", tier1: true, tier2: true, tier3: true, tier4: true },
+  { name: "Farmer Data Wallet", tier1: true, tier2: true, tier3: true, tier4: true },
+  { name: "Pro Dashboard ($19/mo)", tier1: false, tier2: true, tier3: true, tier4: true },
+  { name: "Yield-Cap Anti-Laundering", tier1: false, tier2: true, tier3: true, tier4: true },
+  { name: "Batch Management", tier1: false, tier2: true, tier3: true, tier4: true },
+  { name: "TRACES NT Middleware", tier1: false, tier2: false, tier3: true, tier4: true },
+  { name: "Zero-Risk Pre-Flight", tier1: false, tier2: false, tier3: true, tier4: true },
+  { name: "Multi-Supplier Dashboard", tier1: false, tier2: false, tier3: true, tier4: true },
+  { name: "EUDR 5-Year Retention", tier1: false, tier2: false, tier3: true, tier4: true },
+  { name: "Multi-Tenant Admin", tier1: false, tier2: false, tier3: false, tier4: true },
+  { name: "EcoVadis Connectors", tier1: false, tier2: false, tier3: false, tier4: true },
+  { name: "Custom Integrations", tier1: false, tier2: "API Access", tier3: "Premium", tier4: "Full" },
+  { name: "Support Level", tier1: "Community", tier2: "Email", tier3: "Dedicated", tier4: "24/7 Dedicated" },
 ];
 
 const faqs = [
   {
-    question: "What is the EUDR compliance deadline?",
-    answer: "The EU Deforestation Regulation requires compliance by December 30, 2026 for large/medium enterprises and June 30, 2027 for micro/small enterprises. Tracebud helps you prepare well in advance.",
+    question: "Why is Tracebud's pricing so different from competitors?",
+    answer: "Traditional compliance platforms charge massive setup fees (€5,000+) and per-farmer monthly fees (€40-50), destroying adoption at smallholder level. Tracebud's transaction-based model scales predictably and ensures mass-market adoption—you only pay for what you actually process.",
   },
   {
-    question: "Can I switch plans as my supply chain grows?",
-    answer: "Yes, you can upgrade or downgrade your plan at any time. As you onboard more suppliers or expand to new commodities, simply upgrade and we will prorate your billing accordingly.",
+    question: "What does '$0.15 per transaction' mean?",
+    answer: "A transaction is one shipment or batch processed through our platform. This includes satellite deforestation checks, LLM document parsing, and TRACES NT API middleware. At scale, this becomes 100% cheaper than per-farmer subscription models.",
   },
   {
-    question: "Is there a free trial?",
-    answer: "Yes! Cooperative and Exporter plans include a 14-day free trial with full access to all features including offline mobile apps and plot mapping. No credit card required to start.",
+    question: "What's the difference between $0.50 and $1.00 per shipment?",
+    answer: "$0.50 covers EUDR-compliant shipment processing and due diligence statements (DDS). $1.00 adds Premium ESG features including dynamic routing to Cool Farm Tool and OSSL for comprehensive E1-E5 ESG metrics and CSRD reporting.",
   },
   {
-    question: "How does data retention work for EUDR?",
-    answer: "EUDR mandates 5-year retention of all due diligence documentation. Tracebud automatically stores and secures all compliance data, polygon mappings, and audit trails for the required period.",
+    question: "Do I have to pay for all four tiers?",
+    answer: "No. Each organization chooses one tier based on their role: Farmers stay on Tier 1 (free), Exporters on Tier 2, Importers on Tier 3, and Enterprise brands/sponsors on Tier 4. You only pay for your tier.",
   },
   {
-    question: "What commodities does Tracebud support?",
-    answer: "Tracebud supports all EUDR-regulated commodities: coffee, cocoa, rubber, soy, and timber. Our schema is commodity-agnostic with full HS code and risk matrix mapping.",
+    question: "Can an Exporter sponsor cooperatives under Tier 4?",
+    answer: "Yes. Large exporters can use Tier 4 ($199/mo) and sponsor farmer cooperatives at $19/month each. This ensures standardized data quality across their supply chain while cooperatives enjoy advanced features.",
   },
   {
-    question: "Do you offer discounts for cooperatives or NGOs?",
-    answer: "Yes, we offer special pricing for farmer cooperatives, registered nonprofits, NGOs, and development organizations. Contact our sales team for details.",
+    question: "What if my shipment volume is unpredictable?",
+    answer: "That's the beauty of transaction-based pricing—your costs scale with actual usage. In high-volume months you pay more; in quiet months you pay less. No fixed overheads or dead-money subscriptions.",
   },
 ];
 
@@ -289,10 +314,10 @@ export default function PricingPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-4 px-4 font-semibold text-foreground">Features</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground">Cooperative</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground bg-[var(--data-emerald)]/10 rounded-t-lg">Exporter</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground">Importer</th>
-                  <th className="text-center py-4 px-4 font-semibold text-foreground">Enterprise</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Tier 1: Farmers</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground bg-[var(--data-emerald)]/10 rounded-t-lg">Tier 2: Exporters</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Tier 3: Importers</th>
+                  <th className="text-center py-4 px-4 font-semibold text-foreground">Tier 4: Enterprise</th>
                 </tr>
               </thead>
               <tbody>
@@ -300,47 +325,47 @@ export default function PricingPage() {
                   <tr key={feature.name} className={`border-b border-border/50 ${index % 2 === 0 ? "bg-background" : ""}`}>
                     <td className="py-4 px-4 text-foreground font-medium">{feature.name}</td>
                     <td className="text-center py-4 px-4">
-                      {typeof feature.cooperative === "boolean" ? (
-                        feature.cooperative ? (
+                      {typeof feature.tier1 === "boolean" ? (
+                        feature.tier1 ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.cooperative}</span>
+                        <span className="text-foreground/80 text-sm">{feature.tier1}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4 bg-[var(--data-emerald)]/5">
-                      {typeof feature.exporter === "boolean" ? (
-                        feature.exporter ? (
+                      {typeof feature.tier2 === "boolean" ? (
+                        feature.tier2 ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.exporter}</span>
+                        <span className="text-foreground/80 text-sm">{feature.tier2}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
-                      {typeof feature.importer === "boolean" ? (
-                        feature.importer ? (
+                      {typeof feature.tier3 === "boolean" ? (
+                        feature.tier3 ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.importer}</span>
+                        <span className="text-foreground/80 text-sm">{feature.tier3}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
-                      {typeof feature.enterprise === "boolean" ? (
-                        feature.enterprise ? (
+                      {typeof feature.tier4 === "boolean" ? (
+                        feature.tier4 ? (
                           <Check className="w-5 h-5 mx-auto text-[var(--data-emerald)]" />
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )
                       ) : (
-                        <span className="text-foreground/80 text-sm">{feature.enterprise}</span>
+                        <span className="text-foreground/80 text-sm">{feature.tier4}</span>
                       )}
                     </td>
                   </tr>

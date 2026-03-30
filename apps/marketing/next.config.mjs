@@ -13,8 +13,10 @@ const nextConfig = {
       },
     ],
   },
-  turbopack: {
-    root: '../../',
+  experimental: {
+    turbopack: {
+      root: '../../',
+    },
   },
 }
 
