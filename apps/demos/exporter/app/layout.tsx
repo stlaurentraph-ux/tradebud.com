@@ -17,9 +17,12 @@ export const metadata: Metadata = {
   title: 'Exporter Dashboard — Tracebud',
   description: 'Manage your DDS packages, plot compliance, and shipment dossiers.',
   icons: {
-    icon: '/images/tracebud-logo.png',
-    shortcut: '/images/tracebud-logo.png',
-    apple: '/images/tracebud-logo.png',
+    icon: [
+      { url: '/favicon-16x16-v6.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/favicon-32x32-v6.png',
+    apple: '/favicon-32x32-v6.png',
   },
 }
 
