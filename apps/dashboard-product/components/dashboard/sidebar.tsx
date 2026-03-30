@@ -12,25 +12,18 @@ import {
   HelpCircle,
   ChevronDown,
   LogOut,
+  ShieldCheck,
+  Shield,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const navigation = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "DDS Packages", href: "/packages", icon: Package },
   { name: "Plots", href: "/plots", icon: MapPin },
   { name: "Farmers", href: "/farmers", icon: Users },
+  { name: "Compliance", href: "/compliance", icon: ShieldCheck },
   { name: "Reports", href: "/reports", icon: FileText },
+  { name: "Admin", href: "/admin", icon: Shield },
 ];
 
 const secondaryNavigation = [

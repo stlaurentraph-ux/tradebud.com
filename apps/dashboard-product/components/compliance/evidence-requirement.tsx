@@ -22,7 +22,6 @@ interface EvidenceRequirementProps {
 }
 
 export function EvidenceRequirement({
-  plotId,
   plotName,
   requiredEvidence,
   missingEvidence,
@@ -30,20 +29,19 @@ export function EvidenceRequirement({
   const [expanded, setExpanded] = useState(true);
 
   const verifiedCount = requiredEvidence.filter((e) => e.status === 'verified').length;
-  const totalRequired = requiredEvidence.length + missingEvidence.length;
 
   return (
-    <Card className="border-l-4 border-blue-300">
+    <Card className="border-l-4 border-blue-400">
       <CardHeader
-        className="cursor-pointer hover:bg-gray-50"
+        className="cursor-pointer hover:bg-secondary/50"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {verifiedCount === requiredEvidence.length && missingEvidence.length === 0 ? (
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
             )}
             <div>
               <CardTitle className="text-base">{plotName}</CardTitle>
@@ -68,12 +66,12 @@ export function EvidenceRequirement({
                 {requiredEvidence.map((evidence) => (
                   <div
                     key={evidence.id}
-                    className={`p-3 rounded-lg border-2 ${
+                    className={`p-3 rounded-lg border ${
                       evidence.status === 'verified'
-                        ? 'border-green-200 bg-green-50'
+                        ? 'border-green-500/30 bg-green-500/10'
                         : evidence.status === 'pending'
-                          ? 'border-yellow-200 bg-yellow-50'
-                          : 'border-red-200 bg-red-50'
+                          ? 'border-yellow-500/30 bg-yellow-500/10'
+                          : 'border-red-500/30 bg-red-500/10'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -87,10 +85,10 @@ export function EvidenceRequirement({
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded whitespace-nowrap ${
                           evidence.status === 'verified'
-                            ? 'bg-green-200 text-green-800'
+                            ? 'bg-green-500/20 text-green-400'
                             : evidence.status === 'pending'
-                              ? 'bg-yellow-200 text-yellow-800'
-                              : 'bg-red-200 text-red-800'
+                              ? 'bg-yellow-500/20 text-yellow-400'
+                              : 'bg-red-500/20 text-red-400'
                         }`}
                       >
                         {evidence.status.charAt(0).toUpperCase() + evidence.status.slice(1)}
@@ -105,12 +103,12 @@ export function EvidenceRequirement({
           {/* Missing Evidence */}
           {missingEvidence.length > 0 && (
             <div>
-              <h4 className="font-medium text-sm mb-3 text-red-900">Missing Evidence</h4>
+              <h4 className="font-medium text-sm mb-3 text-red-400">Missing Evidence</h4>
               <div className="space-y-2">
                 {missingEvidence.map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-lg border-2 border-red-200 bg-red-50">
-                    <p className="text-sm font-medium text-red-900">{item}</p>
-                    <p className="text-xs text-red-800 mt-1">
+                  <div key={idx} className="p-3 rounded-lg border border-red-500/30 bg-red-500/10">
+                    <p className="text-sm font-medium text-red-400">{item}</p>
+                    <p className="text-xs text-red-300/80 mt-1">
                       This evidence type is required to verify deforestation compliance
                     </p>
                   </div>

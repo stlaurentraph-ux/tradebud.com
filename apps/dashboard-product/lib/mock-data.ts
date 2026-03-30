@@ -9,7 +9,7 @@ import type {
   PreflightResult,
 } from '@/types';
 
-// Mock Farmers
+// Mock Farmers with extended fields for UI display
 export const mockFarmers: Farmer[] = [
   {
     id: 'farmer_001',
@@ -72,6 +72,35 @@ export const mockFarmers: Farmer[] = [
     updated_at: '2024-06-12T00:00:00Z',
   },
 ];
+
+// Extend farmer data for UI (in real app this would come from DB)
+export interface FarmerWithStats {
+  id: string;
+  name: string;
+  phone: string;
+  cooperative: string;
+  total_plots: number;
+  total_area_hectares: number;
+  compliance_status: 'compliant' | 'partial' | 'non_compliant';
+  verified: boolean;
+  fpic_signed: boolean;
+  created_at: string;
+}
+
+export function getMockFarmersWithStats(): FarmerWithStats[] {
+  return mockFarmers.map((f, i) => ({
+    id: f.id,
+    name: f.name,
+    phone: f.contact_phone,
+    cooperative: f.cooperative_id === 'coop_001' ? 'Rwanda Coffee Cooperative' : 'Huye Highland Growers',
+    total_plots: Math.floor(Math.random() * 5) + 1,
+    total_area_hectares: parseFloat((Math.random() * 10 + 1).toFixed(2)),
+    compliance_status: f.verified && f.fpic_signed && f.labor_compliant ? 'compliant' : f.verified ? 'partial' : 'non_compliant',
+    verified: f.verified,
+    fpic_signed: f.fpic_signed,
+    created_at: f.created_at,
+  }));
+}
 
 // Mock Plots
 export const mockPlots: Plot[] = [
@@ -430,4 +459,29 @@ export function getFarmerById(id: string): Farmer | undefined {
 // Get plot by ID
 export function getPlotById(id: string): Plot | undefined {
   return mockPlots.find((p) => p.id === id);
+}
+
+// Get all plots
+export function getMockPlots(): Plot[] {
+  return mockPlots;
+}
+
+// Get all farmers
+export function getMockFarmers(): Farmer[] {
+  return mockFarmers;
+}
+
+// Get all packages
+export function getMockPackages(): DDSPackage[] {
+  return mockPackages;
+}
+
+// Get all activities
+export function getMockActivities(): Activity[] {
+  return mockActivities;
+}
+
+// Get dashboard metrics
+export function getMockDashboardMetrics(): DashboardMetrics {
+  return mockDashboardMetrics;
 }
