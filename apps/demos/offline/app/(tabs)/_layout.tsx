@@ -13,6 +13,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: Brand.primary,
         tabBarInactiveTintColor: colors.tabIconDefault,
@@ -34,6 +35,12 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
       }}
     >
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="record"
         options={{
