@@ -18,6 +18,7 @@ const personaLinks = [
 const secondaryLinks = [
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Platform", href: "/#platform-architecture" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 export function Header() {
