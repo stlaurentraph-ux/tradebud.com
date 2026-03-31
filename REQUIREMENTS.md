@@ -1,5 +1,8 @@
 # Tracebud: The Comprehensive Technical & Strategic Specification
 
+This file is the strategic/commercial source of truth.
+Detailed product and implementation requirements are maintained in `PRODUCT_PRD.md`.
+
 ## I. Strategic Framework & Regulatory Alignment
 
 - **EUDR Core:** The system is explicitly built to comply with the EU Deforestation Regulation (EUDR). The compliance deadlines are **December 30, 2026**, for large/medium enterprises and **June 30, 2027**, for micro/small enterprises.

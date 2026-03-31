@@ -1,12 +1,26 @@
 # Requirements for this folder
 
-The **Tracebud ecosystem** technical and strategic specification is **not** defined here.
+The **Tracebud ecosystem** requirements are maintained at repository root.
 
-**Canonical document (entire platform):**  
-[REQUIREMENTS.md](../../REQUIREMENTS.md)
+## Canonical sources
 
-That file applies to backend, dashboards, marketing, demos, the offline field app, and all integrations. Use it for compliance, architecture, and product planning across Tracebud.
+- Strategic / commercial requirements: [REQUIREMENTS.md](../../REQUIREMENTS.md)
+- Detailed product PRD: [PRODUCT_PRD.md](../../PRODUCT_PRD.md)
 
-**How this app maps to the spec:** see **Appendix A** in [REQUIREMENTS.md](../../REQUIREMENTS.md) (implemented / partial / not-in-app by section).
+These files apply to backend, dashboards, marketing, demos, the offline field app, and integrations.
 
-**This package (`apps/offline-product`):** see [README.md](./README.md) for setup, env vars, and feature overview.
+## Offline app scope mapping
+
+For this package (`apps/offline-product`), prioritize PRD sections:
+
+- Mobile app requirements
+- Offline and sync architecture
+- Journey 1 (farmer onboarding)
+- Journey 2 (plot and evidence capture)
+- Data quality/readiness and exception handling
+
+If requirements conflict, treat `REQUIREMENTS.md` as business intent and `PRODUCT_PRD.md` as implementation detail.
+
+## Local package docs
+
+See [README.md](./README.md) for setup, env vars, and feature overview.

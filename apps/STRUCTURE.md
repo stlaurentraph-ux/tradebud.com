@@ -1,6 +1,13 @@
 # Apps Structure (Long-Term)
 
-**Ecosystem requirements:** [REQUIREMENTS.md](../REQUIREMENTS.md) (repository root) — full Tracebud technical & strategic specification for all products and integrations.
+## Documentation map
+
+- **Strategic / commercial source:** [`REQUIREMENTS.md`](../REQUIREMENTS.md)
+- **Detailed product PRD:** [`PRODUCT_PRD.md`](../PRODUCT_PRD.md)
+- **App topology and deployment map:** this file
+
+Use `REQUIREMENTS.md` for vision, market model, and regulatory positioning.  
+Use `PRODUCT_PRD.md` for operational product requirements, workflows, entities, permissions, and implementation planning.
 
 Tracebud now follows a two-product + multi-demo model:
 
