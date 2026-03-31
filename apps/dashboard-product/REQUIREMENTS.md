@@ -8,6 +8,7 @@ This package implements the unified multi-tenant dashboard product.
 - Detailed product PRD: [PRODUCT_PRD.md](../../PRODUCT_PRD.md)
 - MVP scope PRD: [MVP_PRD.md](../../MVP_PRD.md)
 - JTBD workflow PRD: [JTBD_PRD.md](../../JTBD_PRD.md)
+- v0 design handoff context: [V0_DESIGN_CONTEXT.md](./V0_DESIGN_CONTEXT.md)
 - App topology and deployment mapping: [apps/STRUCTURE.md](../STRUCTURE.md)
 
 ## Dashboard scope mapping
