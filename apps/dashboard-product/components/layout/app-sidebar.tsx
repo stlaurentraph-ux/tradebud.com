@@ -16,6 +16,9 @@ import {
   ShieldCheck,
   RefreshCw,
   Shield,
+  Wheat,
+  FileCheck,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,6 +49,9 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   HelpCircle,
   ShieldCheck,
   Shield,
+  Wheat,
+  FileCheck,
+  History,
 };
 
 export function AppSidebar() {

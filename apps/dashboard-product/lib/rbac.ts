@@ -35,7 +35,17 @@ export type Permission =
   // Admin permissions
   | 'admin:view'
   | 'admin:manage_users'
-  | 'admin:manage_roles';
+  | 'admin:manage_roles'
+  // Harvests/Batches permissions
+  | 'harvests:view'
+  | 'harvests:create'
+  | 'harvests:edit'
+  // FPIC permissions
+  | 'fpic:view'
+  | 'fpic:upload'
+  // Audit log permissions
+  | 'audit:view'
+  | 'audit:export';
 
 // Role-based permission matrix
 const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
@@ -65,6 +75,13 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
     'admin:view',
     'admin:manage_users',
     'admin:manage_roles',
+    'harvests:view',
+    'harvests:create',
+    'harvests:edit',
+    'fpic:view',
+    'fpic:upload',
+    'audit:view',
+    'audit:export',
   ],
   importer: [
     'packages:view',
@@ -87,6 +104,11 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
     'compliance:view',
     'reports:view',
     'settings:view',
+    'harvests:view',
+    'harvests:create',
+    'harvests:edit',
+    'fpic:view',
+    'fpic:upload',
   ],
   country_reviewer: [
     'packages:view',
@@ -99,6 +121,8 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
     'reports:generate',
     'reports:export',
     'settings:view',
+    'audit:view',
+    'audit:export',
   ],
 };
 
@@ -113,19 +137,22 @@ export interface NavItem {
 
 // Role-specific navigation - each role sees different items
 const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
-  exporter: ['Overview', 'DDS Packages', 'Plots', 'Farmers', 'Compliance', 'Reports', 'Admin'],
+  exporter: ['Overview', 'DDS Packages', 'Harvests', 'Plots', 'Farmers', 'FPIC', 'Compliance', 'Reports', 'Audit Log', 'Admin'],
   importer: ['Overview', 'DDS Packages', 'Compliance', 'Reports'],
-  cooperative: ['Overview', 'Plots', 'Farmers', 'Compliance'],
-  country_reviewer: ['Overview', 'DDS Packages', 'Plots', 'Compliance', 'Reports'],
+  cooperative: ['Overview', 'Harvests', 'Plots', 'Farmers', 'FPIC', 'Compliance'],
+  country_reviewer: ['Overview', 'DDS Packages', 'Plots', 'Compliance', 'Reports', 'Audit Log'],
 };
 
 export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'plots:view' },
   { name: 'DDS Packages', href: '/packages', icon: 'Package', permission: 'packages:view' },
+  { name: 'Harvests', href: '/harvests', icon: 'Wheat', permission: 'harvests:view' },
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view' },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view' },
+  { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view' },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view' },
   { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view' },
+  { name: 'Audit Log', href: '/audit-log', icon: 'History', permission: 'audit:view' },
   { name: 'Admin', href: '/admin', icon: 'Shield', permission: 'admin:view' },
 ];
 
