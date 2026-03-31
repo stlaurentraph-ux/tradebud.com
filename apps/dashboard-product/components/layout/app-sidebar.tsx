@@ -83,7 +83,7 @@ export function AppSidebar() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-emerald-200">Active Role</span>
+              <span className="text-xs font-semibold text-white">Active Role</span>
               <RoleBadge role={user.active_role} size="sm" />
             </div>
             {hasMultipleRoles && (

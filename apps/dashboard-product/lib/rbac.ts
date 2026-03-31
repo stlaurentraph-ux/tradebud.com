@@ -199,10 +199,10 @@ export function getRoleDisplayName(role: TenantRole): string {
  */
 export function getRoleBadgeColor(role: TenantRole): string {
   const colors: Record<TenantRole, string> = {
-    exporter: 'bg-primary/20 text-primary',
-    importer: 'bg-chart-2/20 text-chart-2',
-    cooperative: 'bg-chart-3/20 text-chart-3',
-    country_reviewer: 'bg-chart-5/20 text-chart-5',
+    exporter: 'bg-blue-500/20 text-blue-300',
+    importer: 'bg-purple-500/20 text-purple-300',
+    cooperative: 'bg-amber-500/20 text-amber-300',
+    country_reviewer: 'bg-red-500/20 text-red-300',
   };
   return colors[role] || 'bg-muted text-muted-foreground';
 }
