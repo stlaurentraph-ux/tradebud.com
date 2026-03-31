@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 const plans = [
   {
@@ -228,7 +227,6 @@ function PriceTierToggle({
 }
 
 export default function PricingPage() {
-  const searchParams = useSearchParams();
   const [exporterBand, setExporterBand] = useState("Starter");
   const [importerBand, setImporterBand] = useState("Starter");
   const [formData, setFormData] = useState({
@@ -246,12 +244,13 @@ export default function PricingPage() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    const plan = searchParams.get("plan");
+    if (typeof window === "undefined") return;
+    const plan = new URLSearchParams(window.location.search).get("plan");
     if (plan) {
       setFormData((prev) => ({ ...prev, tier: plan }));
       document.getElementById("quote-form")?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [searchParams]);
+  }, []);
 
   const handlePlanCta = (planTier?: string) => {
     if (planTier) {
