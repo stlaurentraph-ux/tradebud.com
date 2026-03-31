@@ -51,7 +51,7 @@ export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderPr
   ];
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background px-6">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-white px-6 shadow-sm">
       <div className="flex flex-col">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
@@ -93,7 +93,7 @@ export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderPr
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search packages, plots, farmers..."
-            className="w-72 bg-secondary pl-9"
+            className="w-72 bg-white pl-9"
           />
         </div>
 
@@ -128,10 +128,10 @@ export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderPr
                   <span
                     className={`h-2 w-2 rounded-full ${
                       notification.type === 'success'
-                        ? 'bg-primary'
+                        ? 'bg-emerald-500'
                         : notification.type === 'warning'
-                        ? 'bg-chart-3'
-                        : 'bg-chart-2'
+                        ? 'bg-amber-400'
+                        : 'bg-blue-400'
                     }`}
                   />
                   <span className="text-sm font-medium">{notification.title}</span>

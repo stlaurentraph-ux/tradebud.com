@@ -36,7 +36,6 @@ import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } f
 import { RoleBadge } from '@/components/common/role-badge';
 import type { TenantRole } from '@/types';
 
-// Icon mapping
 const iconMap: Record<string, typeof LayoutDashboard> = {
   LayoutDashboard,
   Package,
@@ -58,38 +57,45 @@ export function AppSidebar() {
   const hasMultipleRoles = user && user.roles.length > 1;
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-[#064E3B]">
+    <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
+
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/95 flex-shrink-0">
+      <div className="flex h-16 items-center gap-3 px-5 flex-shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white flex-shrink-0 shadow-sm">
           <Image
             src="/tracebud-logo-v6.png"
             alt="Tracebud"
-            width={32}
-            height={32}
+            width={28}
+            height={28}
             className="rounded-md"
           />
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-semibold text-white truncate">Tracebud</span>
-          <span className="text-xs text-emerald-200 truncate">EUDR Platform</span>
+          <span className="text-[15px] font-semibold text-white leading-tight">Tracebud</span>
+          <span className="text-[11px] text-white/50 leading-tight">EUDR Platform</span>
         </div>
       </div>
 
-      <Separator className="bg-white/10" />
+      <div className="mx-4 h-px bg-white/10" />
 
       {/* Role indicator */}
       {user && (
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
+        <div className="px-3 py-3 flex-shrink-0">
+          <div className="flex items-center justify-between rounded-md bg-white/10 px-3 py-2.5">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-white">Active Role</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                Active Role
+              </span>
               <RoleBadge role={user.active_role} size="sm" />
             </div>
             {hasMultipleRoles && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-200 hover:bg-white/10 hover:text-white">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-white/60 hover:bg-white/10 hover:text-white"
+                  >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -114,79 +120,82 @@ export function AppSidebar() {
       )}
 
       {/* Main Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-emerald-300">
-          Main
-        </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-1">
+        <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+          Navigation
+        </p>
         {navItems.map((item) => {
-          const isActive = pathname === item.href || 
+          const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = iconMap[item.icon] || LayoutDashboard;
-          
+
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
                 isActive
-                  ? 'bg-emerald-500 text-white'
-                  : 'text-emerald-100 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white/20 text-white shadow-sm'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white'
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
               {item.name}
             </Link>
           );
         })}
 
-        <Separator className="my-4 bg-white/10" />
+        {secondaryNavItems.length > 0 && (
+          <>
+            <div className="my-3 mx-3 h-px bg-white/10" />
+            <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
+              Support
+            </p>
+            {secondaryNavItems.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = iconMap[item.icon] || Settings;
 
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-emerald-300">
-          Support
-        </div>
-        {secondaryNavItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = iconMap[item.icon] || Settings;
-          
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-emerald-500 text-white'
-                  : 'text-emerald-100 hover:bg-white/10 hover:text-white'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.name}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
+                    isActive
+                      ? 'bg-white/20 text-white shadow-sm'
+                      : 'text-white/75 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* User Section */}
-      <div className="border-t border-white/10 p-3">
+      <div className="flex-shrink-0 p-3 border-t border-white/10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start gap-3 px-3 text-white hover:bg-white/10 hover:text-white">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-emerald-500 text-white text-xs">
-                  {user?.name ? user.name[0].toUpperCase() : 'U'}
+            <button className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/10">
+              <Avatar className="h-8 w-8 flex-shrink-0">
+                <AvatarFallback className="bg-emerald-500 text-white text-xs font-semibold">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-1 flex-col items-start text-left">
-                <span className="text-sm font-medium text-white">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-medium text-white">
                   {user?.name || 'Guest'}
                 </span>
-                <span className="text-xs text-emerald-300">
+                <span className="truncate text-[11px] text-white/50">
                   {user?.email || 'Not logged in'}
                 </span>
               </div>
-              <ChevronDown className="h-4 w-4 text-emerald-300" />
-            </Button>
+              <ChevronDown className="h-4 w-4 flex-shrink-0 text-white/40" />
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
@@ -196,7 +205,7 @@ export function AppSidebar() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-destructive">
+            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
