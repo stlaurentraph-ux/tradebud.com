@@ -2,7 +2,7 @@
 
 ## I. Strategic Framework & Regulatory Alignment
 
-- **EUDR Core:** The system is explicitly built to comply with the EU Deforestation Regulation (EUDR). The compliance deadlines are **December 30, 2026** for large/medium enterprises and **June 30, 2027** for micro/small enterprises.
+- **EUDR Core:** The system is explicitly built to comply with the EU Deforestation Regulation (EUDR). The compliance deadlines are **December 30, 2026**, for large/medium enterprises and **June 30, 2027**, for micro/small enterprises.
 - **Voluntary DPP Architecture:** Under the Ecodesign for Sustainable Products Regulation (ESPR), food and feed products like coffee and cocoa are exempt from mandatory Digital Product Passports. However, Tracebud will voluntarily implement a DPP-style architecture to future-proof clients against corporate ESG reporting requirements.
 - **Simplified Declarations:** Micro and small primary operators in low-risk countries who produce the commodities themselves do not need to submit per-shipment statements. The app must allow them to submit a one-time simplified declaration using a postal address or basic geolocation.
 - **Commodity Agnostic:** The data schema must be dynamically swappable (HS Code + Risk Matrix) to support Coffee, Cocoa, Rubber, Soy, and Timber.
@@ -58,7 +58,7 @@
 
 ## IX. Audit, Data Governance, & Security
 
-- **5-Year Retention:** EUDR mandates that all due diligence documentation and polygon data be stored securely for exactly 5 years from the date of market placement.
+- **5-Year Retention & Storage Lifecycle:** EUDR Article 12 mandates that all due diligence data and statements be stored securely for at least 5 years and made available to authorities upon request. While individual shipment compliance packages are small in file size, the aggregate data volume across thousands of shipments requires efficient cost management. Tracebud will implement automated data lifecycle policies: recent, active shipments will reside in standard cloud storage (e.g., standard S3 at ~$0.023/GB/month) for immediate retrieval, while older records will automatically transition to cold archive tiers (e.g., S3 Glacier Deep Archive at ~$0.00099/GB/month). This tiering strategy ensures the pure infrastructure cost to safely store a shipment's data for 5 years remains a fraction of a cent.
 - **Privacy vs. Transparency:** You cannot irreversibly hash farmer Personally Identifiable Information (PII) using one-way cryptographic functions. EU Competent Authorities and downstream Importers of Record must have full supply chain visibility to verify compliance. Farmer PII must be symmetrically encrypted and accessed strictly via Role-Based Access Control (RBAC).
 
 ## X. Corporate ESG, Climate & Biodiversity (Future-Proofing)
@@ -80,30 +80,26 @@
 
 ## XI. Business & Pricing Model (Mass-Scale DaaS)
 
-- **The Mass-Scale Strategy:** Traditional compliance platforms heavily penalize origin networks. Competitors frequently charge massive setup fees (often €5,000+) alongside per-supplier monthly fees (e.g., €40 to €50 per farmer), which completely destroys adoption amongst smallholders. Meanwhile, destination-focused tools often charge flat rates (e.g., £149/month) that don't scale accurately with enterprise usage. Tracebud disrupts this with a highly predictable, transaction-based model that prioritizes mass global scaling over high margins, ensuring predictability for supply chains of all sizes.
-- **Unit Economics:** By leveraging open-source infrastructure and cost-effective APIs, Tracebud's variable cost to process a shipment—including satellite checks, LLM document parsing, and TRACES NT API middleware (which costs roughly €0.012 to €0.025 per request)—is approximately $0.15 per transaction. This creates a sustainable path to profitability at very low market price points.
+- **The Hybrid Pricing Strategy:** Traditional compliance platforms heavily penalize origin networks with massive setup fees or per-supplier charges. Tracebud disrupts this using a "Zero-Friction Origin, Predictable Destination" model. We combine a low, tiered monthly subscription with a shared €1.00 per-shipment transaction fee. This cost is split equitably across the supply chain: the origin Exporter pays €0.50 to package the compliance data, and the destination Importer pays €0.50 to submit the final filing. By sharing the cost, we ensure no single actor bears the full burden of compliance. This provides financial predictability for clients while ensuring Tracebud covers recurring data storage (5-year EUDR mandate) and AI processing costs.
 
-### Tier 1: Farmers & Micro-Producers (Data Creators)
+### Tier 1: Farmers & Micro-Producers
 
-- **Price:** $0 (Free Forever).
-- **Logic:** Removes all barriers to first-mile data capture, empowering smallholders and building a defensible proprietary database of verified farm polygons.
+- **Price:** Free forever. No setup fees, no per-farmer charges.
+- **Features:** GPS polygon capture with offline mobile app, Farmer data wallet (self-sovereign GeoID ownership), and one-time simplified declarations for low-risk countries.
 
-### Tier 2: Exporters & Local Cooperatives (Origin)
+### Tier 2: Exporters & Cooperatives
 
-- **Price:** $0/month Base.
-- **Pro Dashboard:** $19/month (Unlocks advanced yield-cap anti-laundering validation and automated batching).
-- **Logic:** Organizations can aggregate farmer data for free. Exporters initiating their own direct-to-Europe shipments pay the universal per-shipment fee.
+- **Price:** Tiered base fee: Starter (1-50 farmers) at €19/mo; Growth (51-500 farmers) at €49/mo; Scale (501-3,000 farmers) at €99/mo; Enterprise (3,000+) via Custom quote.
+- **Shipment Fee:** +€0.50 / shipment. Includes DDS package generation, satellite deforestation checks, yield-cap validation, and document parsing.
+- **Features:** Free unlimited farmer aggregation. Subscription unlocks Pro analytics, yield-cap anti-laundering validation, automated batch management, and pre-export EUDR preparation.
 
-### Tier 3: European Importers & Roasters (Destination)
+### Tier 3: EU Importers & Roasters
 
-- **Base Retention Fee:** $19/month (Covers the mandatory 5-year EUDR cloud data retention requirements).
-- **EUDR Shipment Fee:** $0.50 per shipment/Due Diligence Statement (DDS).
-- **Premium ESG Shipment Fee (EUDR + CSRD):** $1.00 per shipment (Includes dynamic API routing to the Cool Farm Tool and OSSL for comprehensive E1-E5 ESG metrics).
-- **Logic:** Companies know exactly how many shipments they process annually, making this cost 100% predictable and extremely competitive compared to standard logistics tracking fees.
+- **Price:** Tiered base fee: Starter (1-5 suppliers) at €49/mo; Growth (6-25 suppliers) at €99/mo; Scale (26-100 suppliers) at €149/mo; Enterprise (100+) via Custom quote.
+- **Shipment Fee:** +€0.50 / shipment. Includes TRACES NT submission, pre-flight risk checks, EU filing, and 5-year audit retention.
+- **Features:** Automated TRACES NT API submission, Zero-Risk pre-flight checks, and multi-supplier risk dashboards across the sourcing network. ESG/CSRD E1-E5 reporting available upon custom request.
 
-### Tier 4: Enterprise Brands & ESG Platforms (Sponsors)
+### Tier 4: Network Sponsors
 
-- **Base Platform Fee:** $199/month (Unlocks multi-tenant sub-organization routing and API connectors to EcoVadis/Sustainalytics).
-- **Sponsorship Fee:** $19/month per sponsored Cooperative or Exporter (The enterprise covers the "Pro" dashboard fee for their origin partners to ensure standardization).
-- **Shipment Fee:** Standard $0.50 or $1.00 per shipment traversing their specific supply chain.
-- **Logic:** Protects Tracebud from unbounded enterprise computing costs while offering the enterprise a fair, strictly usage-based system.
+- **Price:** Custom (Starting at €19/month per sponsored organization).
+- **Features:** For national export boards, certification bodies, and large traders. Includes sponsorship of unlimited exporter & importer orgs, centralized compliance dashboards, and dedicated CSM/SLA support.
