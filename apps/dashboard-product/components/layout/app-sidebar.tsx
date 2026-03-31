@@ -61,16 +61,18 @@ export function AppSidebar() {
     <aside className="flex h-screen w-64 flex-col bg-[#064E3B]">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6">
-        <Image
-          src="/tracebud-logo-v6.png"
-          alt="Tracebud"
-          width={36}
-          height={36}
-          className="rounded-lg"
-        />
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-white">Tracebud</span>
-          <span className="text-xs text-emerald-300">EUDR Platform</span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/95 flex-shrink-0">
+          <Image
+            src="/tracebud-logo-v6.png"
+            alt="Tracebud"
+            width={32}
+            height={32}
+            className="rounded-md"
+          />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-semibold text-white truncate">Tracebud</span>
+          <span className="text-xs text-emerald-200 truncate">EUDR Platform</span>
         </div>
       </div>
 
