@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useSearchParams } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ComplianceCheckList } from '@/components/compliance/compliance-check-list';
 import { PlotComplianceBreakdown } from '@/components/compliance/plot-compliance-breakdown';
 import { EvidenceRequirement } from '@/components/compliance/evidence-requirement';
-import { AlertTriangle, CheckCircle, ChevronRight, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronRight, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { getPackageById } from '@/lib/mock-data';
 
 // Mock data for compliance checks
 const mockCompliance = {
@@ -83,8 +86,15 @@ const mockCompliance = {
 };
 
 export default function CompliancePage() {
+  const searchParams = useSearchParams();
+  const packageId = searchParams.get('package');
+  const pkg = packageId ? getPackageById(packageId) : null;
+  const router = useRouter();
+
   const canSubmit =
     mockCompliance.plots.filter((p) => p.status === 'compliant').length === mockCompliance.plots.length;
+
+  const backHref = pkg ? `/packages/${pkg.id}` : '/compliance';
 
   return (
     <div className="flex flex-col">
@@ -98,6 +108,15 @@ export default function CompliancePage() {
       />
 
       <div className="flex-1 space-y-6 p-6">
+        {/* Back Button */}
+        {pkg && (
+          <Button variant="ghost" size="sm" className="mb-2" asChild>
+            <Link href={backHref}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Package
+            </Link>
+          </Button>
+        )}
         {/* Package Info */}
         <Card>
           <CardHeader className="pb-2">

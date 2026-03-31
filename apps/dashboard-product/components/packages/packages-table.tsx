@@ -29,9 +29,10 @@ import type { DDSPackage } from '@/types';
 
 interface PackagesTableProps {
   packages: DDSPackage[];
+  readOnly?: boolean;
 }
 
-export function PackagesTable({ packages }: PackagesTableProps) {
+export function PackagesTable({ packages, readOnly = false }: PackagesTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'code' | 'created_at' | 'status'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -190,12 +191,14 @@ export function PackagesTable({ packages }: PackagesTableProps) {
                           </Link>
                         </DropdownMenuItem>
                         <PermissionGate permission="packages:edit">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/packages/${pkg.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Package
-                            </Link>
-                          </DropdownMenuItem>
+                          {!readOnly && (
+                            <DropdownMenuItem asChild>
+                              <Link href={`/packages/${pkg.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Package
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                         </PermissionGate>
                         <PermissionGate permission="compliance:run_check">
                           <DropdownMenuItem asChild>
@@ -216,12 +219,14 @@ export function PackagesTable({ packages }: PackagesTableProps) {
                           </PermissionGate>
                         )}
                         <DropdownMenuSeparator />
-                        <PermissionGate permission="packages:delete">
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Package
-                          </DropdownMenuItem>
-                        </PermissionGate>
+                        {!readOnly && (
+                          <PermissionGate permission="packages:delete">
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Package
+                            </DropdownMenuItem>
+                          </PermissionGate>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>

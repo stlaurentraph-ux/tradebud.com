@@ -49,7 +49,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
           <div className="flex items-center gap-2">
             <PermissionGate permission="compliance:run_check">
               <Button variant="outline" asChild>
-                <Link href={`/packages/${pkg.id}/compliance`}>
+                <Link href={`/compliance?package=${pkg.id}`}>
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Run Compliance
                 </Link>
