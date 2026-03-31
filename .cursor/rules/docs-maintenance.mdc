@@ -1,0 +1,14 @@
+---
+description: Keep Product OS docs current after implementation work
+globs: **/*
+alwaysApply: true
+---
+
+# Docs maintenance
+
+After each feature slice:
+- update relevant `product-os/02-features/*.md`
+- update `product-os/06-status/daily-log.md`
+- update `product-os/06-status/done-log.md`
+- update `product-os/06-status/current-focus.md`
+- update ADR if architectural decision changed

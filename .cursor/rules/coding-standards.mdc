@@ -1,0 +1,13 @@
+---
+description: Coding standards aligned to Tracebud Product OS
+globs: **/*
+alwaysApply: true
+---
+
+# Coding standards
+
+- Inspect local patterns before editing.
+- Prefer minimal, coherent changes.
+- Keep names consistent with canonical roles/states/event names.
+- Remove dead code and avoid speculative abstractions.
+- Update relevant docs/tests with behavior changes.

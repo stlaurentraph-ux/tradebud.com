@@ -4,10 +4,14 @@
 
 - **Strategic / commercial source:** [`REQUIREMENTS.md`](../REQUIREMENTS.md)
 - **Detailed product PRD:** [`PRODUCT_PRD.md`](../PRODUCT_PRD.md)
+- **MVP scope PRD:** [`MVP_PRD.md`](../MVP_PRD.md)
+- **JTBD workflow PRD:** [`JTBD_PRD.md`](../JTBD_PRD.md)
 - **App topology and deployment map:** this file
 
 Use `REQUIREMENTS.md` for vision, market model, and regulatory positioning.  
+Use `MVP_PRD.md` for v1 release scope boundaries and priorities.
 Use `PRODUCT_PRD.md` for operational product requirements, workflows, entities, permissions, and implementation planning.
+Use `JTBD_PRD.md` for role-based activation, remediation, and cross-tenant request workflows.
 
 Tracebud now follows a two-product + multi-demo model:
 

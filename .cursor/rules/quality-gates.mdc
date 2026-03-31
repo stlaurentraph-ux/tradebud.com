@@ -1,0 +1,19 @@
+---
+description: Quality gates for every major feature slice
+globs: **/*
+alwaysApply: true
+---
+
+# Quality gates
+
+Every feature slice must explicitly cover:
+- permissions
+- state transitions
+- exception handling and recovery
+- analytics events
+- acceptance criteria
+
+Then update:
+- feature doc
+- quality docs (if changed)
+- status logs

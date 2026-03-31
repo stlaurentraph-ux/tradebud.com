@@ -2,6 +2,9 @@
 
 This file is the strategic/commercial source of truth.
 Detailed product and implementation requirements are maintained in `PRODUCT_PRD.md`.
+MVP release scope and v1 boundaries are maintained in `MVP_PRD.md`.
+Role-based activation and remediation jobs-to-be-done are maintained in `JTBD_PRD.md`.
+Build-readiness delivery artifacts are maintained in `BUILD_READINESS_ARTIFACTS.md`.
 
 ## I. Strategic Framework & Regulatory Alignment
 

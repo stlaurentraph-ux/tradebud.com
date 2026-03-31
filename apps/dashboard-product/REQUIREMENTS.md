@@ -6,6 +6,8 @@ This package implements the unified multi-tenant dashboard product.
 
 - Strategic / commercial requirements: [REQUIREMENTS.md](../../REQUIREMENTS.md)
 - Detailed product PRD: [PRODUCT_PRD.md](../../PRODUCT_PRD.md)
+- MVP scope PRD: [MVP_PRD.md](../../MVP_PRD.md)
+- JTBD workflow PRD: [JTBD_PRD.md](../../JTBD_PRD.md)
 - App topology and deployment mapping: [apps/STRUCTURE.md](../STRUCTURE.md)
 
 ## Dashboard scope mapping
@@ -18,4 +20,4 @@ Prioritize:
 - Sponsor network visibility and compliance oversight
 - Auditability, retention, and integration orchestration
 
-If requirements conflict, treat `REQUIREMENTS.md` as business intent and `PRODUCT_PRD.md` as implementation detail.
+If requirements conflict, treat `REQUIREMENTS.md` as business intent, `MVP_PRD.md` as release boundary, `PRODUCT_PRD.md` as implementation detail, and `JTBD_PRD.md` as role-workflow behavior.

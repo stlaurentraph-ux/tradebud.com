@@ -3,6 +3,8 @@
 ## Purpose
 
 This document captures the detailed product requirements for implementation across the Tracebud ecosystem, while `REQUIREMENTS.md` remains the strategic/commercial source.
+For MVP scope boundaries and release thesis, see `MVP_PRD.md`.
+For role-by-role activation/remediation JTBD definitions, see `JTBD_PRD.md`.
 
 ## Scope
 
@@ -279,6 +281,7 @@ Required artifacts for build-readiness:
 - error/exception catalog
 - event tracking plan
 - acceptance criteria pack
+- consolidated artifact pack: `BUILD_READINESS_ARTIFACTS.md`
 
 ## Build-Readiness Rule
 

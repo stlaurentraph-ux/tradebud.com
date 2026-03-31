@@ -1,0 +1,13 @@
+---
+description: Tracebud architecture constraints for all implementation work
+globs: **/*
+alwaysApply: true
+---
+
+# Architecture constraints
+
+- Enforce strict tenant isolation.
+- Keep permissions explicit and role-scoped.
+- Mobile field flows are offline-first.
+- Filing submissions must be auditable and idempotent.
+- Do not bypass canonical state transitions.
