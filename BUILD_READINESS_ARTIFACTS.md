@@ -1,5 +1,7 @@
 ## Build Readiness Artifacts Pack
 
+Master product and execution alignment is defined in `TRACEBUD_V1_2_EUDR_SPEC.md`.
+
 ## Scope base
 
 This pack assumes **EUDR only** for v1 and treats Tracebud as a multi-tenant platform serving farmers or field agents, exporters or cooperatives, EU importers, and network sponsors.[1]

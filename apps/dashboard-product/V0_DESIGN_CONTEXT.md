@@ -4,12 +4,13 @@ Use this file as the **first input** in Vercel v0 when generating dashboard UI c
 
 ## Canonical read order
 
-1. `../../MVP_PRD.md`
-2. `../../PRODUCT_PRD.md`
-3. `../../JTBD_PRD.md`
-4. `../../REQUIREMENTS.md`
-5. `../../BUILD_READINESS_ARTIFACTS.md`
-6. `./PERMISSIONS_MATRIX.md`
+1. `../../TRACEBUD_V1_2_EUDR_SPEC.md`
+2. `../../MVP_PRD.md`
+3. `../../PRODUCT_PRD.md`
+4. `../../JTBD_PRD.md`
+5. `../../REQUIREMENTS.md`
+6. `../../BUILD_READINESS_ARTIFACTS.md`
+7. `./PERMISSIONS_MATRIX.md`
 
 If anything conflicts, follow the read-order priority above.
 
@@ -114,12 +115,13 @@ Important interactions should be easily event-instrumentable:
 Design a modern enterprise web dashboard for Tracebud, an EUDR-first multi-tenant compliance platform.
 
 Use this canonical context in priority order:
-1) MVP_PRD.md
-2) PRODUCT_PRD.md
-3) JTBD_PRD.md
-4) REQUIREMENTS.md
-5) BUILD_READINESS_ARTIFACTS.md
-6) PERMISSIONS_MATRIX.md
+1) TRACEBUD_V1_2_EUDR_SPEC.md
+2) MVP_PRD.md
+3) PRODUCT_PRD.md
+4) JTBD_PRD.md
+5) REQUIREMENTS.md
+6) BUILD_READINESS_ARTIFACTS.md
+7) PERMISSIONS_MATRIX.md
 
 Design for these roles: Field Agent, Field Manager, Supplier User, Org Admin, Compliance Analyst, Compliance Manager, Risk Reviewer, Sponsor Admin, Auditor/Read Only.
 

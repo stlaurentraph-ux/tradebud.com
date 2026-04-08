@@ -16,6 +16,8 @@
 
 ## Sequencing assumptions
 
+- No implementation work starts before Priority 0 gates are completed (`P0-01`, `P0-02`, `P0-03`).
+- MVP build and pilot execute against Section 51 scope; post-MVP scope follows Release 2/3/4 sequence.
 - No filing release without idempotent submission and audit trail.
 - No sponsor-level operations without tenant isolation verification.
 - No milestone signoff without acceptance + exception + event coverage.

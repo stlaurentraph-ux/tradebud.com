@@ -11,7 +11,7 @@ export class HarvestService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async create(dto: CreateHarvestDto, userId: string | undefined) {
-    const { farmerId, plotId, kg, harvestDate, note } = dto;
+    const { farmerId, plotId, kg, harvestDate, note, hlcTimestamp, clientEventId } = dto;
 
     if (kg <= 0) {
       throw new BadRequestException('Kg must be positive');
@@ -125,6 +125,8 @@ export class HarvestService {
           harvestId: tx.id,
           voucherId: voucherRes.rows[0].id,
           note: note ?? null,
+          hlcTimestamp: hlcTimestamp ?? null,
+          clientEventId: clientEventId ?? null,
         }),
       ],
     );

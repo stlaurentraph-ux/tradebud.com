@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import Constants from 'expo-constants';
 
 import type { FarmerProfile, Plot } from './AppStateContext';
+import { generateHlcTimestamp } from '@/features/sync/hlc';
 
 export type PlotPhoto = {
   id: number;
@@ -44,6 +45,7 @@ export type PlotTenure = {
 export type PendingSyncAction = {
   id: number;
   createdAt: number;
+  hlcTimestamp: string;
   actionType: 'harvest' | 'photos_sync' | 'evidence_sync';
   payloadJson: string;
   attempts: number;
@@ -150,6 +152,7 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS pending_sync (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       createdAt INTEGER NOT NULL,
+      hlcTimestamp TEXT,
       actionType TEXT NOT NULL,
       payloadJson TEXT NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
@@ -162,6 +165,7 @@ export async function initDatabase() {
     );
   `);
   await ensureFarmerSchemaExtras(db);
+  await ensurePendingSyncSchemaExtras(db);
 }
 
 async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
@@ -181,6 +185,14 @@ async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
   if (!has('declarationGeoCapturedAt')) {
     await db.execAsync('ALTER TABLE farmer ADD COLUMN declarationGeoCapturedAt INTEGER;');
+  }
+}
+
+async function ensurePendingSyncSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(pending_sync);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('hlcTimestamp')) {
+    await db.execAsync('ALTER TABLE pending_sync ADD COLUMN hlcTimestamp TEXT;');
   }
 }
 
@@ -485,12 +497,18 @@ export async function loadEvidenceForPlot(
   }));
 }
 
-export async function enqueuePendingSync(action: Omit<PendingSyncAction, 'id' | 'attempts'>) {
+export async function enqueuePendingSync(
+  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp'> & { hlcTimestamp?: string },
+) {
   const db = await getDb();
+  const last = await db.getFirstAsync<{ hlcTimestamp?: string | null }>(
+    'SELECT hlcTimestamp FROM pending_sync ORDER BY id DESC LIMIT 1;',
+  );
+  const hlcTimestamp = generateHlcTimestamp(action.createdAt, action.hlcTimestamp ?? last?.hlcTimestamp ?? null);
   await db.runAsync(
-    `INSERT INTO pending_sync (createdAt, actionType, payloadJson, attempts, lastError)
-     VALUES (?, ?, ?, 0, ?);`,
-    [action.createdAt, action.actionType, action.payloadJson, action.lastError ?? null],
+    `INSERT INTO pending_sync (createdAt, hlcTimestamp, actionType, payloadJson, attempts, lastError)
+     VALUES (?, ?, ?, ?, 0, ?);`,
+    [action.createdAt, hlcTimestamp, action.actionType, action.payloadJson, action.lastError ?? null],
   );
 }
 
@@ -500,6 +518,7 @@ export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {
   return (rows ?? []).map((row) => ({
     id: row.id,
     createdAt: row.createdAt,
+    hlcTimestamp: typeof row.hlcTimestamp === 'string' && row.hlcTimestamp.length > 0 ? row.hlcTimestamp : generateHlcTimestamp(row.createdAt),
     actionType: row.actionType,
     payloadJson: row.payloadJson,
     attempts: row.attempts ?? 0,

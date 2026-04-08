@@ -1,6 +1,7 @@
 // Web fallback: no SQLite (native-only). Keep minimal in-memory behavior.
 
 import type { FarmerProfile, Plot } from './AppStateContext';
+import { generateHlcTimestamp } from '@/features/sync/hlc';
 
 export type PlotPhoto = {
   id: number;
@@ -43,6 +44,7 @@ export type PlotTenure = {
 export type PendingSyncAction = {
   id: number;
   createdAt: number;
+  hlcTimestamp: string;
   actionType: 'harvest' | 'photos_sync' | 'evidence_sync';
   payloadJson: string;
   attempts: number;
@@ -144,8 +146,16 @@ export async function loadEvidenceForPlot(plotId: string, kind?: PlotEvidenceKin
   return memEvidence.filter((e) => e.plotId === plotId && (!kind || e.kind === kind));
 }
 
-export async function enqueuePendingSync(action: Omit<PendingSyncAction, 'id' | 'attempts'>) {
-  memPending.push({ id: nextId(), attempts: 0, ...action });
+export async function enqueuePendingSync(
+  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp'> & { hlcTimestamp?: string },
+) {
+  const previous = memPending.length > 0 ? memPending[memPending.length - 1].hlcTimestamp : null;
+  memPending.push({
+    id: nextId(),
+    attempts: 0,
+    ...action,
+    hlcTimestamp: generateHlcTimestamp(action.createdAt, action.hlcTimestamp ?? previous),
+  });
 }
 
 export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {

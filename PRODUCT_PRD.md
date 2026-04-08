@@ -3,6 +3,7 @@
 ## Purpose
 
 This document captures the detailed product requirements for implementation across the Tracebud ecosystem, while `REQUIREMENTS.md` remains the strategic/commercial source.
+The master v1.2 operating specification is `TRACEBUD_V1_2_EUDR_SPEC.md`.
 For MVP scope boundaries and release thesis, see `MVP_PRD.md`.
 For role-by-role activation/remediation JTBD definitions, see `JTBD_PRD.md`.
 

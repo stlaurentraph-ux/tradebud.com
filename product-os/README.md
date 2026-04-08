@@ -4,13 +4,23 @@ Repo-native operating system for product, architecture, delivery, and implementa
 
 ## Canonical sources (read first)
 
-1. `REQUIREMENTS.md` (strategy, vision, positioning)
-2. `MVP_PRD.md` (v1 scope boundaries)
-3. `PRODUCT_PRD.md` (detailed product requirements)
-4. `JTBD_PRD.md` (role workflows and activation/remediation jobs)
-5. `BUILD_READINESS_ARTIFACTS.md` (states, entitlements, exceptions, events, acceptance)
+1. `TRACEBUD_V1_2_EUDR_SPEC.md` (canonical spec file; currently contains v1.6 content)
+2. `REQUIREMENTS.md` (strategy, vision, positioning)
+3. `MVP_PRD.md` (v1 scope boundaries)
+4. `PRODUCT_PRD.md` (detailed product requirements)
+5. `JTBD_PRD.md` (role workflows and activation/remediation jobs)
+6. `BUILD_READINESS_ARTIFACTS.md` (states, entitlements, exceptions, events, acceptance)
 
 If any document conflicts with these, canonical sources win.
+
+## v1.6 enterprise architecture guardrails (must be reflected in implementation)
+
+- Spatial correctness: compliance geometry stored as `GEOGRAPHY`; area derived with spheroidal math.
+- Geometry integrity: polygon ingestion uses `ST_MakeValid`; reject excessive correction variance.
+- Lineage performance: runtime lineage traversal remains O(1) through materialized lineage fields.
+- Offline sync integrity: HLC ordering and idempotency-first conflict strategy.
+- TRACES resilience: automatic payload chunking for size/vertex limits with parent shipment linkage.
+- GDPR + retention: cryptographic shredding for PII while preserving immutable audit references.
 
 ### Filename aliases used in prompts
 

@@ -1,6 +1,7 @@
 # Tracebud: The Comprehensive Technical & Strategic Specification
 
 This file is the strategic/commercial source of truth.
+The consolidated v1.2 master execution and product specification is maintained in `TRACEBUD_V1_2_EUDR_SPEC.md`.
 Detailed product and implementation requirements are maintained in `PRODUCT_PRD.md`.
 MVP release scope and v1 boundaries are maintained in `MVP_PRD.md`.
 Role-based activation and remediation jobs-to-be-done are maintained in `JTBD_PRD.md`.

@@ -11,3 +11,9 @@ alwaysApply: true
 - Mobile field flows are offline-first.
 - Filing submissions must be auditable and idempotent.
 - Do not bypass canonical state transitions.
+- Use `GEOGRAPHY` (not `GEOMETRY`) for compliance-relevant spatial storage and area math.
+- Validate inbound polygons with `ST_MakeValid`; reject if correction changes area by more than 5%.
+- Keep lineage traversal O(1) at runtime using materialized lineage fields (for example `root_plot_ids`).
+- Use Hybrid Logical Clocks (HLC) for offline conflict ordering; do not trust client wall clocks.
+- Support TRACES payload chunking when size or vertex limits are exceeded.
+- Handle GDPR erasure with cryptographic shredding while preserving immutable audit references.

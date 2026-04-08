@@ -7,6 +7,7 @@ Tracebud’s current direction already points to an EUDR workflow spanning field
 
 This PRD turns that into a single ambitious but disciplined v1: one regulation, one core compliance engine, one geospatial workflow, one risk engine, one mobile field app, one enterprise admin layer, and one integrations framework.
 
+The master v1.2 operating specification is `TRACEBUD_V1_2_EUDR_SPEC.md`.
 Build-readiness delivery artifacts for this MVP are maintained in `BUILD_READINESS_ARTIFACTS.md`.
 
 ## Problem

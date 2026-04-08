@@ -10,12 +10,13 @@ Tracebud MVP is EUDR-only and multi-tenant.
 
 ## Mandatory read-order before major changes
 
-1. `REQUIREMENTS.md`
-2. `MVP_PRD.md`
-3. `PRODUCT_PRD.md`
-4. `JTBD_PRD.md`
-5. `BUILD_READINESS_ARTIFACTS.md`
-6. Relevant `product-os/*` files (feature/workflow/quality/status)
+1. `TRACEBUD_V1_2_EUDR_SPEC.md`
+2. `REQUIREMENTS.md`
+3. `MVP_PRD.md`
+4. `PRODUCT_PRD.md`
+5. `JTBD_PRD.md`
+6. `BUILD_READINESS_ARTIFACTS.md`
+7. Relevant `product-os/*` files (feature/workflow/quality/status)
 
 If conflicts exist, earlier items in this order win.
 
@@ -23,3 +24,4 @@ If conflicts exist, earlier items in this order win.
 
 - `requirement.md` means `REQUIREMENTS.md`
 - `PRODUCT_PDR.md` means `PRODUCT_PRD.md`
+- `tracebud v1.6 spec` means `TRACEBUD_V1_2_EUDR_SPEC.md` (canonical file currently contains v1.6 content)

@@ -7,8 +7,10 @@ on:
 
 jobs:
   backend:
-    name: Backend build & lint
+    name: Backend build, lint, and tests
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
     defaults:
       run:
         working-directory: tracebud-backend
@@ -31,6 +33,19 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Ensure integration DB secret exists
+        run: |
+          if [ -z "$TEST_DATABASE_URL" ]; then
+            echo "TEST_DATABASE_URL is required for PostGIS integration tests."
+            exit 1
+          fi
+
+      - name: Integration tests (PostGIS)
+        run: npm run test:integration
 
   app:
     name: Expo app lint

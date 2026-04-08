@@ -18,3 +18,8 @@ Use canonical event names and required properties. No alias names.
 - Filing generation/submission/response lifecycle
 - Issue/thread lifecycle
 - Audit export and dashboard usage
+- Geometry ingestion/validation lifecycle (`ST_MakeValid` outcomes and variance rejection)
+- Offline HLC lifecycle (generated, accepted, rejected, fallback-applied)
+- Lineage materialization lifecycle (`root_plot_ids` generated/refreshed/failed)
+- TRACES chunking lifecycle (chunk-plan, chunk-submit, chunk-accept/reject, reconciliation)
+- GDPR shredding lifecycle (request-received, anonymized, retention-exception, completed)

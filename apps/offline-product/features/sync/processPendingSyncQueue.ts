@@ -10,9 +10,11 @@ import {
   deletePendingSyncAction,
   loadEvidenceForPlot,
   loadPendingSyncActions,
+  logAuditEvent,
   markPendingSyncAttempt,
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
+import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
 
 const EVIDENCE_KINDS: PlotEvidenceKind[] = [
   'fpic_repository',
@@ -66,7 +68,12 @@ export async function processPendingSyncQueue(params: {
   let droppedInvalid = 0;
   let firstError: string | undefined;
 
-  const actions = await loadPendingSyncActions();
+  const actions = (await loadPendingSyncActions()).sort((a, b) => {
+    const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
+    if (cmp !== 0) return cmp;
+    if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
+    return a.id - b.id;
+  });
   for (const a of actions) {
     let payload: Record<string, unknown> | null = null;
     try {
@@ -78,6 +85,18 @@ export async function processPendingSyncQueue(params: {
     }
 
     try {
+      if (!parseHlcTimestamp(a.hlcTimestamp)) {
+        await logAuditEvent({
+          eventType: 'sync_hlc_fallback_applied',
+          payload: {
+            pendingSyncId: a.id,
+            actionType: a.actionType,
+            fallback: 'createdAt_ingestion_order',
+            invalidHlcTimestamp: a.hlcTimestamp,
+          },
+        });
+      }
+
       if (a.actionType === 'harvest') {
         const localId = String(payload?.plotId ?? '');
         const sid = resolveBackendPlotId(localId);
@@ -88,7 +107,7 @@ export async function processPendingSyncQueue(params: {
           });
           continue;
         }
-        await postHarvestToBackend({ ...payload, plotId: sid } as Parameters<
+        await postHarvestToBackend({ ...payload, plotId: sid, hlcTimestamp: a.hlcTimestamp, clientEventId: `pending-sync-${a.id}` } as Parameters<
           typeof postHarvestToBackend
         >[0]);
       } else if (a.actionType === 'photos_sync') {
@@ -101,7 +120,7 @@ export async function processPendingSyncQueue(params: {
           });
           continue;
         }
-        await syncPlotPhotosToBackend({ ...payload, plotId: sid } as Parameters<
+        await syncPlotPhotosToBackend({ ...payload, plotId: sid, hlcTimestamp: a.hlcTimestamp, clientEventId: `pending-sync-${a.id}` } as Parameters<
           typeof syncPlotPhotosToBackend
         >[0]);
       } else if (a.actionType === 'evidence_sync') {
@@ -138,6 +157,8 @@ export async function processPendingSyncQueue(params: {
             items: subset,
             reason,
             note: 'Evidence repository sync from pending queue',
+            hlcTimestamp: a.hlcTimestamp,
+            clientEventId: `pending-sync-${a.id}-${k}`,
           });
         }
       } else {

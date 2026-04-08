@@ -13,6 +13,13 @@ Every feature slice must explicitly cover:
 - analytics events
 - acceptance criteria
 
+Enterprise architecture gates for v1.6 (apply when relevant):
+- spatial correctness (`GEOGRAPHY`, `ST_MakeValid`, area variance guard)
+- lineage performance (O(1) runtime traversal; materialized lineage fields)
+- offline conflict integrity (HLC ordering, idempotency behavior)
+- TRACES NT resilience (payload size/vertex chunking and reference reconciliation)
+- GDPR compliance safety (cryptographic shredding without breaking retention obligations)
+
 Then update:
 - feature doc
 - quality docs (if changed)

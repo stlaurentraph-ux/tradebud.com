@@ -12,3 +12,4 @@ After each feature slice:
 - update `product-os/06-status/done-log.md`
 - update `product-os/06-status/current-focus.md`
 - update ADR if architectural decision changed
+- if spec behavior changed, update `TRACEBUD_V1_2_EUDR_SPEC.md` and cross-reference impacted sections in status logs

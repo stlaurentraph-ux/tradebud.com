@@ -263,6 +263,8 @@ export async function syncPlotPhotosToBackend(params: {
   kind: 'ground_truth' | 'land_title';
   photos: any[];
   note?: string;
+  hlcTimestamp?: string;
+  clientEventId?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -281,6 +283,8 @@ export async function syncPlotPhotosToBackend(params: {
         kind: params.kind,
         photos: params.photos,
         note: params.note ?? null,
+        hlcTimestamp: params.hlcTimestamp ?? null,
+        clientEventId: params.clientEventId ?? null,
       }),
     },
   );
@@ -357,6 +361,8 @@ export async function postHarvestToBackend(params: {
   kg: number;
   harvestDate?: string;
   note?: string;
+  hlcTimestamp?: string;
+  clientEventId?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -375,6 +381,8 @@ export async function postHarvestToBackend(params: {
       kg: params.kg,
       harvestDate: params.harvestDate ?? null,
       note: params.note ?? null,
+      hlcTimestamp: params.hlcTimestamp ?? null,
+      clientEventId: params.clientEventId ?? null,
     }),
   });
 
@@ -610,6 +618,8 @@ export async function syncPlotLegalToBackend(params: {
   informalTenureNote: string | null;
   reason: string;
   deviceId?: string;
+  hlcTimestamp?: string;
+  clientEventId?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -630,6 +640,8 @@ export async function syncPlotLegalToBackend(params: {
         informalTenureNote: params.informalTenureNote,
         reason: params.reason,
         deviceId: params.deviceId ?? null,
+        hlcTimestamp: params.hlcTimestamp ?? null,
+        clientEventId: params.clientEventId ?? null,
       }),
     },
   );
@@ -648,6 +660,8 @@ export async function syncPlotEvidenceToBackend(params: {
   items: any[];
   reason: string;
   note?: string;
+  hlcTimestamp?: string;
+  clientEventId?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -667,6 +681,8 @@ export async function syncPlotEvidenceToBackend(params: {
         items: params.items,
         reason: params.reason,
         note: params.note ?? null,
+        hlcTimestamp: params.hlcTimestamp ?? null,
+        clientEventId: params.clientEventId ?? null,
       }),
     },
   );

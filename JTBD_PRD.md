@@ -3,6 +3,7 @@
 ## Product context
 
 The MVP release boundary and platform scope for these role workflows is defined in `MVP_PRD.md`.
+The master v1.2 operating specification is `TRACEBUD_V1_2_EUDR_SPEC.md`.
 
 Tracebud is currently structured around four role-led tiers: Tier 1 for farmers and micro-producers, Tier 2 for exporters and cooperatives, Tier 3 for EU importers and roasters, and Tier 4 for sponsors or enterprise-style organizations managing wider supply networks. The existing product promise already includes offline mobile capture, GPS and polygon mapping, farmer data ownership, farmer aggregation, yield-cap anti-laundering validation, pre-export EUDR preparation, TRACES NT submission support, multi-supplier dashboards, delegated administration, and audit-ready retention.[3][1][2]
 

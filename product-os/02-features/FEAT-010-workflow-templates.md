@@ -2,6 +2,7 @@
 
 ## Canonical sources
 
+- `TRACEBUD_V1_2_EUDR_SPEC.md`
 - `MVP_PRD.md`
 - `PRODUCT_PRD.md`
 - `JTBD_PRD.md`
@@ -46,6 +47,7 @@ Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFAC
 - [ ] Confirm exception handling and recovery
 - [ ] Confirm analytics event coverage
 - [ ] Confirm acceptance criteria mapping
+- [ ] Confirm v1.6 architecture constraints for touched areas (spatial, HLC sync, lineage, TRACES chunking, GDPR shredding)
 - [ ] Update status docs
 
 ## Acceptance criteria

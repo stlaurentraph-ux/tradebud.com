@@ -75,6 +75,7 @@ export class PlotsService {
 
     let geometrySql: string;
     let kind: (typeof plotKindEnum.enumValues)[number];
+    let polygonWkt: string | null = null;
 
     if (geometry.type === 'Point') {
       const [lon, lat] = geometry.coordinates.map(ensureSixDecimals) as [number, number];
@@ -98,15 +99,48 @@ export class PlotsService {
       const coordText = closedRing
         .map(([lon, lat]: [number, number]) => `${ensureSixDecimals(lon)} ${ensureSixDecimals(lat)}`)
         .join(', ');
-      geometrySql = `ST_SetSRID(ST_Polygon(ST_GeomFromText('LINESTRING(${coordText})')), 4326)`;
+      polygonWkt = `POLYGON((${coordText}))`;
+      geometrySql = `ST_SetSRID(ST_GeomFromText('${polygonWkt}'), 4326)`;
       kind = 'polygon';
     } else {
       throw new BadRequestException('Unsupported geometry type');
     }
 
     // Insert using raw SQL to leverage PostGIS functions for area and centroid.
+    // For polygons, auto-correct invalid geometry via ST_MakeValid and reject if
+    // correction changes area by more than 5%.
     const text = `
-      WITH ins AS (
+      WITH input_geom AS (
+        SELECT ST_SnapToGrid(${geometrySql}, 1e-6) AS geom
+      ),
+      normalized AS (
+        SELECT
+          CASE
+            WHEN $7::text = 'polygon' THEN ST_CollectionExtract(ST_MakeValid(geom), 3)
+            ELSE geom
+          END AS geom,
+          CASE
+            WHEN $7::text = 'polygon' THEN ST_Area(geom::geography) / 10000.0
+            ELSE NULL
+          END AS original_area_ha
+        FROM input_geom
+      ),
+      validated AS (
+        SELECT
+          geom,
+          original_area_ha,
+          CASE
+            WHEN $7::text = 'polygon' THEN ST_Area(geom::geography) / 10000.0
+            ELSE NULL
+          END AS normalized_area_ha,
+          CASE
+            WHEN $7::text = 'polygon' AND original_area_ha > 0
+              THEN ABS((ST_Area(geom::geography) / 10000.0) - original_area_ha) / original_area_ha * 100.0
+            ELSE NULL
+          END AS correction_variance_pct
+        FROM normalized
+      ),
+      ins AS (
         INSERT INTO plot (
           farmer_id,
           name,
@@ -118,20 +152,34 @@ export class PlotsService {
           precision_m_at_capture,
           hdop_at_capture
         )
-        VALUES (
+        SELECT
           $1,
           $2,
-          ST_SnapToGrid(${geometrySql}, 1e-6),
-          ST_Centroid(ST_SnapToGrid(${geometrySql}, 1e-6)),
+          v.geom,
+          ST_Centroid(v.geom),
           $3,
-          ST_Area(ST_SnapToGrid(${geometrySql}, 1e-6)::geography) / 10000.0,
+          ST_Area(v.geom::geography) / 10000.0,
           $4,
           $5,
           $6
+        FROM validated v
+        WHERE (
+          $7::text <> 'polygon'
+          OR v.geom IS NOT NULL
+        ) AND (
+          $7::text <> 'polygon'
+          OR v.correction_variance_pct IS NULL
+          OR v.correction_variance_pct <= 5
         )
         RETURNING *
       )
-      SELECT * FROM ins;
+      SELECT
+        i.*,
+        v.original_area_ha,
+        v.normalized_area_ha,
+        v.correction_variance_pct
+      FROM ins i
+      CROSS JOIN validated v;
     `;
 
     const result = await this.pool.query(text, [
@@ -141,7 +189,39 @@ export class PlotsService {
       declaredAreaHa ?? null,
       precisionMeters ?? null,
       hdop ?? null,
+      kind,
     ]);
+
+    if (result.rowCount === 0 && kind === 'polygon') {
+      const varianceProbe = await this.pool.query(
+        `
+          WITH input_geom AS (
+            SELECT ST_SnapToGrid(${geometrySql}, 1e-6) AS geom
+          ),
+          normalized AS (
+            SELECT
+              ST_CollectionExtract(ST_MakeValid(geom), 3) AS geom,
+              ST_Area(geom::geography) / 10000.0 AS original_area_ha
+            FROM input_geom
+          )
+          SELECT
+            CASE
+              WHEN geom IS NULL THEN NULL
+              ELSE ABS((ST_Area(geom::geography) / 10000.0) - original_area_ha) / NULLIF(original_area_ha, 0) * 100.0
+            END AS correction_variance_pct
+          FROM normalized
+        `,
+      );
+      const variance = Number(varianceProbe.rows?.[0]?.correction_variance_pct);
+      if (Number.isFinite(variance) && variance > 5) {
+        throw new BadRequestException(
+          `Geometry correction variance ${variance.toFixed(2)}% exceeds 5% tolerance.`,
+        );
+      }
+      throw new BadRequestException(
+        'Invalid polygon geometry could not be normalized with ST_MakeValid.',
+      );
+    }
 
     const row = result.rows[0];
 
@@ -173,6 +253,14 @@ export class PlotsService {
           landTitlePhotos:
             Array.isArray(landTitlePhotos) && landTitlePhotos.length > 0
               ? landTitlePhotos
+              : null,
+          geometryNormalization:
+            kind === 'polygon'
+              ? {
+                  originalAreaHa: row.original_area_ha ?? null,
+                  normalizedAreaHa: row.normalized_area_ha ?? null,
+                  correctionVariancePct: row.correction_variance_pct ?? null,
+                }
               : null,
         }),
       ],
@@ -212,6 +300,8 @@ export class PlotsService {
           count: photosArray.length,
           photos: photosArray,
           note: dto.note ?? null,
+          hlcTimestamp: dto.hlcTimestamp ?? null,
+          clientEventId: dto.clientEventId ?? null,
         }),
       ],
     );
@@ -248,6 +338,8 @@ export class PlotsService {
           informalTenure: dto.informalTenure ?? null,
           informalTenureNote: dto.informalTenureNote ?? null,
           reason: dto.reason,
+          hlcTimestamp: dto.hlcTimestamp ?? null,
+          clientEventId: dto.clientEventId ?? null,
         }),
       ],
     );
@@ -286,6 +378,8 @@ export class PlotsService {
           note: dto.note ?? null,
           count: itemsArray.length,
           items: itemsArray,
+          hlcTimestamp: dto.hlcTimestamp ?? null,
+          clientEventId: dto.clientEventId ?? null,
         }),
       ],
     );
