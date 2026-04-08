@@ -1,0 +1,270 @@
+import type { TenantRole, User } from '@/types';
+
+// Permission actions for each resource
+export type Permission =
+  // Package permissions
+  | 'packages:view'
+  | 'packages:create'
+  | 'packages:edit'
+  | 'packages:delete'
+  | 'packages:submit_traces'
+  | 'packages:approve'
+  // Plot permissions
+  | 'plots:view'
+  | 'plots:create'
+  | 'plots:edit'
+  | 'plots:delete'
+  | 'plots:bulk_upload'
+  // Farmer permissions
+  | 'farmers:view'
+  | 'farmers:create'
+  | 'farmers:edit'
+  | 'farmers:delete'
+  | 'farmers:link_validation'
+  // Compliance permissions
+  | 'compliance:view'
+  | 'compliance:run_check'
+  | 'compliance:approve'
+  | 'compliance:create_issue'
+  | 'compliance:resolve_issue'
+  | 'packages:seal_shipment'
+  // Report permissions
+  | 'reports:view'
+  | 'reports:generate'
+  | 'reports:export'
+  // Settings permissions
+  | 'settings:view'
+  | 'settings:edit'
+  // Admin permissions
+  | 'admin:view'
+  | 'admin:manage_users'
+  | 'admin:manage_roles'
+  // Harvests/Batches permissions
+  | 'harvests:view'
+  | 'harvests:create'
+  | 'harvests:edit'
+  // FPIC permissions
+  | 'fpic:view'
+  | 'fpic:upload'
+  // Audit log permissions
+  | 'audit:view'
+  | 'audit:export';
+
+// Role-based permission matrix
+const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
+  exporter: [
+    'packages:view',
+    'packages:create',
+    'packages:edit',
+    'packages:delete',
+    'packages:submit_traces',
+    'plots:view',
+    'plots:create',
+    'plots:edit',
+    'plots:delete',
+    'plots:bulk_upload',
+    'farmers:view',
+    'farmers:create',
+    'farmers:edit',
+    'farmers:delete',
+    'farmers:link_validation',
+    'compliance:view',
+    'compliance:run_check',
+    'compliance:approve',
+    'compliance:create_issue',
+    'compliance:resolve_issue',
+    'packages:seal_shipment',
+    'reports:view',
+    'reports:generate',
+    'reports:export',
+    'settings:view',
+    'settings:edit',
+    'admin:view',
+    'admin:manage_users',
+    'admin:manage_roles',
+    'harvests:view',
+    'harvests:create',
+    'harvests:edit',
+    'fpic:view',
+    'fpic:upload',
+    'audit:view',
+    'audit:export',
+  ],
+  importer: [
+    'packages:view',
+    'plots:view',
+    'farmers:view',
+    'compliance:view',
+    'reports:view',
+    'reports:export',
+    'settings:view',
+  ],
+  cooperative: [
+    'plots:view',
+    'plots:create',
+    'plots:edit',
+    'plots:bulk_upload',
+    'farmers:view',
+    'farmers:create',
+    'farmers:edit',
+    'farmers:link_validation',
+    'compliance:view',
+    'reports:view',
+    'settings:view',
+    'harvests:view',
+    'harvests:create',
+    'harvests:edit',
+    'fpic:view',
+    'fpic:upload',
+  ],
+  country_reviewer: [
+    'packages:view',
+    'packages:approve',
+    'plots:view',
+    'farmers:view',
+    'compliance:view',
+    'compliance:approve',
+    'reports:view',
+    'reports:generate',
+    'reports:export',
+    'settings:view',
+    'audit:view',
+    'audit:export',
+  ],
+};
+
+// Navigation items visible per role
+export interface NavItem {
+  name: string;
+  href: string;
+  icon: string;
+  permission: Permission;
+  roles?: TenantRole[]; // If specified, only these roles see this item
+}
+
+// Role-specific navigation - each role sees different items
+const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
+  exporter: ['Overview', 'DDS Packages', 'Harvests', 'Plots', 'Farmers', 'FPIC', 'Compliance', 'Reports', 'Audit Log', 'Admin'],
+  importer: ['Overview', 'DDS Packages', 'Compliance', 'Reports'],
+  cooperative: ['Overview', 'Harvests', 'Plots', 'Farmers', 'FPIC', 'Compliance'],
+  country_reviewer: ['Overview', 'DDS Packages', 'Plots', 'Compliance', 'Reports', 'Audit Log'],
+};
+
+export const NAVIGATION_ITEMS: NavItem[] = [
+  { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'plots:view' },
+  { name: 'DDS Packages', href: '/packages', icon: 'Package', permission: 'packages:view' },
+  { name: 'Harvests', href: '/harvests', icon: 'Wheat', permission: 'harvests:view' },
+  { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view' },
+  { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view' },
+  { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view' },
+  { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view' },
+  { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view' },
+  { name: 'Audit Log', href: '/audit-log', icon: 'History', permission: 'audit:view' },
+  { name: 'Admin', href: '/admin', icon: 'Shield', permission: 'admin:view' },
+];
+
+export const SECONDARY_NAV_ITEMS: NavItem[] = [
+  { name: 'Settings', href: '/settings', icon: 'Settings', permission: 'settings:view' },
+  { name: 'Help', href: '/help', icon: 'HelpCircle', permission: 'plots:view' },
+];
+
+/**
+ * Check if a user has a specific permission
+ */
+export function hasPermission(user: User | null, permission: Permission): boolean {
+  if (!user) return false;
+  const rolePermissions = PERMISSION_MATRIX[user.active_role] || [];
+  return rolePermissions.includes(permission);
+}
+
+/**
+ * Check if a user has any of the specified permissions
+ */
+export function hasAnyPermission(user: User | null, permissions: Permission[]): boolean {
+  return permissions.some((p) => hasPermission(user, p));
+}
+
+/**
+ * Check if a user has all of the specified permissions
+ */
+export function hasAllPermissions(user: User | null, permissions: Permission[]): boolean {
+  return permissions.every((p) => hasPermission(user, p));
+}
+
+/**
+ * Get all permissions for a role
+ */
+export function getPermissionsForRole(role: TenantRole): Permission[] {
+  return PERMISSION_MATRIX[role] || [];
+}
+
+/**
+ * Get navigation items visible to the user based on their role
+ */
+export function getVisibleNavItems(user: User | null): NavItem[] {
+  if (!user) return [];
+  const allowedItems = ROLE_NAV_CONFIG[user.active_role] || [];
+  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name));
+}
+
+/**
+ * Get secondary navigation items visible to the user
+ */
+export function getVisibleSecondaryNavItems(user: User | null): NavItem[] {
+  if (!user) return [];
+  return SECONDARY_NAV_ITEMS.filter((item) => hasPermission(user, item.permission));
+}
+
+/**
+ * Get role display name
+ */
+export function getRoleDisplayName(role: TenantRole): string {
+  const names: Record<TenantRole, string> = {
+    exporter: 'Exporter',
+    importer: 'Importer',
+    cooperative: 'Cooperative',
+    country_reviewer: 'Country Reviewer',
+  };
+  return names[role] || role;
+}
+
+/**
+ * Get role badge color class
+ */
+export function getRoleBadgeColor(role: TenantRole): string {
+  const colors: Record<TenantRole, string> = {
+    exporter: 'bg-blue-500/20 text-blue-300',
+    importer: 'bg-purple-500/20 text-purple-300',
+    cooperative: 'bg-amber-500/20 text-amber-300',
+    country_reviewer: 'bg-red-500/20 text-red-300',
+  };
+  return colors[role] || 'bg-muted text-muted-foreground';
+}
+
+/**
+ * Check if user can transition package to a specific status
+ */
+export function canTransitionPackage(
+  user: User | null,
+  fromStatus: string,
+  toStatus: string
+): boolean {
+  if (!user) return false;
+
+  const transitions: Record<TenantRole, Record<string, string[]>> = {
+    exporter: {
+      draft: ['in_review'],
+      in_review: ['draft', 'preflight_check'],
+      preflight_check: ['in_review', 'traces_ready'],
+      traces_ready: ['preflight_check', 'submitted'],
+    },
+    importer: {},
+    cooperative: {},
+    country_reviewer: {
+      submitted: ['approved', 'rejected'],
+    },
+  };
+
+  const allowed = transitions[user.active_role]?.[fromStatus] || [];
+  return allowed.includes(toStatus);
+}

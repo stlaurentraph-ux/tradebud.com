@@ -1,0 +1,334 @@
+'use client';
+
+import { useState } from 'react';
+import { Download, Filter, Calendar, User, Package, MapPin, FileText } from 'lucide-react';
+import { AppHeader } from '@/components/layout/app-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { PermissionGate } from '@/components/common/permission-gate';
+import { cn } from '@/lib/utils';
+
+interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  user_email: string;
+  action: string;
+  entity_type: 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance';
+  entity_id: string;
+  entity_name: string;
+  changes?: Record<string, { old: string; new: string }>;
+  ip_address: string;
+}
+
+// Mock audit log data
+const mockAuditLog: AuditLogEntry[] = [
+  {
+    id: 'a1',
+    timestamp: '2024-03-31T14:32:15Z',
+    user_email: 'juan@tracebud.com',
+    action: 'created',
+    entity_type: 'package',
+    entity_id: 'PKG-2024-001',
+    entity_name: 'Q1 2024 Export Batch',
+    ip_address: '192.168.1.100',
+  },
+  {
+    id: 'a2',
+    timestamp: '2024-03-31T13:45:22Z',
+    user_email: 'maria@cooperative.com',
+    action: 'updated',
+    entity_type: 'plot',
+    entity_id: 'PLOT-001',
+    entity_name: 'North Field A',
+    changes: {
+      deforestation_risk: { old: 'low', new: 'medium' },
+      verified: { old: 'false', new: 'true' },
+    },
+    ip_address: '203.45.67.89',
+  },
+  {
+    id: 'a3',
+    timestamp: '2024-03-31T12:15:00Z',
+    user_email: 'carlos@exporter.com',
+    action: 'uploaded',
+    entity_type: 'fpic',
+    entity_id: 'FPIC-123',
+    entity_name: 'Community Minutes - January 2024',
+    ip_address: '192.168.1.101',
+  },
+  {
+    id: 'a4',
+    timestamp: '2024-03-31T11:20:33Z',
+    user_email: 'reviewer@government.gov',
+    action: 'approved',
+    entity_type: 'compliance',
+    entity_id: 'COMP-5678',
+    entity_name: 'Zero-Risk Pre-Flight Check',
+    ip_address: '198.76.54.32',
+  },
+  {
+    id: 'a5',
+    timestamp: '2024-03-30T16:45:12Z',
+    user_email: 'juan@tracebud.com',
+    action: 'submitted',
+    entity_type: 'package',
+    entity_id: 'PKG-2024-002',
+    entity_name: 'Q1 Export Batch (Revised)',
+    ip_address: '192.168.1.100',
+  },
+  {
+    id: 'a6',
+    timestamp: '2024-03-30T15:30:00Z',
+    user_email: 'maria@cooperative.com',
+    action: 'created',
+    entity_type: 'harvest',
+    entity_id: 'HARVEST-001',
+    entity_name: 'Batch 2024-001 Harvest',
+    ip_address: '203.45.67.89',
+  },
+  {
+    id: 'a7',
+    timestamp: '2024-03-30T14:12:44Z',
+    user_email: 'carlos@exporter.com',
+    action: 'deleted',
+    entity_type: 'farmer',
+    entity_id: 'FARMER-OLD-001',
+    entity_name: 'Duplicate Farmer Record',
+    ip_address: '192.168.1.101',
+  },
+  {
+    id: 'a8',
+    timestamp: '2024-03-30T10:05:21Z',
+    user_email: 'juan@tracebud.com',
+    action: 'exported',
+    entity_type: 'package',
+    entity_id: 'PKG-2024-003',
+    entity_name: 'Q1 Compliance Report',
+    ip_address: '192.168.1.100',
+  },
+];
+
+const actionColors: Record<string, string> = {
+  created: 'bg-blue-500/20 text-blue-600',
+  updated: 'bg-amber-500/20 text-amber-600',
+  deleted: 'bg-destructive/20 text-destructive',
+  approved: 'bg-emerald-500/20 text-emerald-600',
+  rejected: 'bg-destructive/20 text-destructive',
+  submitted: 'bg-purple-500/20 text-purple-600',
+  uploaded: 'bg-indigo-500/20 text-indigo-600',
+  exported: 'bg-slate-500/20 text-slate-600',
+};
+
+const entityIcons: Record<string, typeof Package> = {
+  package: Package,
+  plot: MapPin,
+  farmer: User,
+  harvest: FileText,
+  fpic: FileText,
+  compliance: FileText,
+};
+
+export default function AuditLogPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterEntity, setFilterEntity] = useState<'all' | 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance'>('all');
+  const [filterAction, setFilterAction] = useState<'all' | 'created' | 'updated' | 'deleted' | 'approved' | 'submitted' | 'uploaded' | 'exported'>('all');
+  const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all');
+
+  const filteredLog = mockAuditLog.filter((entry) => {
+    if (filterEntity !== 'all' && entry.entity_type !== filterEntity) return false;
+    if (filterAction !== 'all' && entry.action !== filterAction) return false;
+    const query = searchQuery.toLowerCase();
+    return (
+      entry.user_email.toLowerCase().includes(query) ||
+      entry.entity_name.toLowerCase().includes(query) ||
+      entry.entity_id.toLowerCase().includes(query)
+    );
+  });
+
+  return (
+    <PermissionGate permission="audit:view">
+      <div className="flex flex-col">
+        <AppHeader
+          title="Audit Log"
+          subtitle="Complete activity trail for compliance and 5-year retention"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/' },
+            { label: 'Audit Log' },
+          ]}
+          actions={
+            <PermissionGate permission="audit:export">
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </PermissionGate>
+          }
+        />
+
+        <div className="flex-1 space-y-6 p-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base font-medium">Filters</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Search */}
+                <Input
+                  placeholder="Search by user, entity name, or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                />
+
+                {/* Filter Groups */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  {/* Entity Type Filter */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Entity Type</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(['all', 'package', 'plot', 'farmer', 'harvest', 'fpic', 'compliance'] as const).map((entity) => (
+                        <Button
+                          key={entity}
+                          variant={filterEntity === entity ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setFilterEntity(entity)}
+                          className="capitalize"
+                        >
+                          {entity}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Filter */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Action</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(['all', 'created', 'updated', 'deleted', 'approved', 'submitted', 'uploaded', 'exported'] as const).map(
+                        (action) => (
+                          <Button
+                            key={action}
+                            variant={filterAction === action ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setFilterAction(action)}
+                            className="capitalize"
+                          >
+                            {action}
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Date Range Filter */}
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Date Range</p>
+                    <div className="flex flex-wrap gap-1">
+                      {(['all', '7d', '30d', '90d'] as const).map((range) => (
+                        <Button
+                          key={range}
+                          variant={dateRange === range ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setDateRange(range)}
+                        >
+                          {range === 'all' ? 'All Time' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Audit Log Entries */}
+          <div className="space-y-2">
+            {filteredLog.length === 0 ? (
+              <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
+                <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                <p className="mt-4 text-sm text-muted-foreground">No entries match your filters</p>
+              </div>
+            ) : (
+              filteredLog.map((entry) => {
+                const EntityIcon = entityIcons[entry.entity_type] || FileText;
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-4 rounded-lg border border-border p-4 hover:bg-secondary/30 transition-colors"
+                  >
+                    {/* Entity Icon */}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary flex-shrink-0">
+                      <EntityIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="font-medium text-foreground">{entry.user_email}</span>
+                        <Badge className={cn('capitalize', actionColors[entry.action] || 'bg-slate-500/20 text-slate-600')}>
+                          {entry.action}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">{entry.entity_type}</span>
+                      </div>
+
+                      <p className="text-sm text-foreground mb-2">
+                        <span className="font-medium">{entry.entity_name}</span>
+                        <span className="text-muted-foreground"> (ID: {entry.entity_id})</span>
+                      </p>
+
+                      {/* Changes if available */}
+                      {entry.changes && Object.keys(entry.changes).length > 0 && (
+                        <div className="text-xs text-muted-foreground mb-2 space-y-1">
+                          {Object.entries(entry.changes).map(([field, { old, new: newVal }]) => (
+                            <div key={field}>
+                              <span className="font-medium">{field}:</span> {old} → {newVal}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Timestamp & IP */}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(entry.timestamp).toLocaleString()}
+                        </div>
+                        <span>•</span>
+                        <div>IP: {entry.ip_address}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Info Box */}
+          <Card className="border-slate-200 bg-slate-50">
+            <CardContent className="pt-6">
+              <div className="flex gap-3">
+                <FileText className="h-5 w-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-slate-900">
+                    5-Year Retention & Audit Trail
+                  </p>
+                  <p className="text-slate-800 mt-1">
+                    All due diligence documentation and activity logs are retained securely for exactly 5 years per EUDR Section IX requirements. 
+                    This audit log captures every action performed on packages, plots, farmers, FPIC documents, and compliance checks with 
+                    user identity, timestamp, and IP address for accountability.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </PermissionGate>
+  );
+}
