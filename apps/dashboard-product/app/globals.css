@@ -45,6 +45,26 @@
   --chart-4:             #EF4444;   /* Red — error / non-compliant */
   --chart-5:             #78350F;   /* Mountain Clay — agricultural */
 
+  /* ── Severity Colors (per UX_POLISH_SPECIFICATION) ──────── */
+  --severity-blocking-bg:       #FEE2E2;   /* red-100 */
+  --severity-blocking-text:     #B91C1C;   /* red-700 */
+  --severity-blocking-border:   #DC2626;   /* red-600 */
+  --severity-warning-bg:        #FEF3C7;   /* amber-100 */
+  --severity-warning-text:      #B45309;   /* amber-700 */
+  --severity-warning-border:    #D97706;   /* amber-600 */
+  --severity-info-bg:           #DBEAFE;   /* blue-100 */
+  --severity-info-text:         #1D4ED8;   /* blue-700 */
+  --severity-info-border:       #2563EB;   /* blue-600 */
+  --severity-success-bg:        #D1FAE5;   /* emerald-100 */
+  --severity-success-text:      #047857;   /* emerald-700 */
+  --severity-success-border:    #059669;   /* emerald-600 */
+
+  /* ── SLA Countdown Colors ───────────────────────────────── */
+  --sla-overdue:         #DC2626;   /* red-600 */
+  --sla-urgent:          #D97706;   /* amber-600 */
+  --sla-warning:         #CA8A04;   /* yellow-600 */
+  --sla-healthy:         #059669;   /* emerald-600 */
+
   --radius:              0.625rem;  /* 10px — slightly softer corners */
 
   /* ── Sidebar — Forest Canopy (isolated namespace) ───────── */
@@ -113,5 +133,60 @@
   /* Ensure form inputs always render with a clean neutral style */
   input, textarea, select {
     @apply bg-input text-foreground placeholder:text-muted-foreground;
+  }
+}
+
+/* ── Mobile-First Responsive Utilities ────────────────────── */
+@layer utilities {
+  /* Hide on mobile, show on desktop */
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block lg:hidden;
+  }
+
+  /* Responsive padding for page content */
+  .page-padding {
+    @apply px-4 py-4 sm:px-6 sm:py-6 lg:px-8;
+  }
+
+  /* Responsive card grid */
+  .card-grid {
+    @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Responsive metric grid */
+  .metric-grid {
+    @apply grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  /* Safe area padding for mobile devices with notches */
+  .safe-area-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch-friendly tap targets (min 44px) */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  /* Stack layout on mobile, row on desktop */
+  .stack-to-row {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-center;
+  }
+
+  /* Truncate text with ellipsis for responsive layouts */
+  .truncate-responsive {
+    @apply truncate max-w-[150px] sm:max-w-[200px] lg:max-w-none;
   }
 }

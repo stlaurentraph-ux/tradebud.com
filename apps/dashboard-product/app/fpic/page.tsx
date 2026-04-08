@@ -2,13 +2,30 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, FileText, AlertCircle, CheckCircle, Clock, Trash2, Download } from 'lucide-react';
+import { 
+  Plus, 
+  FileText, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  Trash2, 
+  Download,
+  Copy,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Shield,
+  Link2,
+  Hash,
+} from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { StatusChip } from '@/components/ui/status-chip';
+import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { cn } from '@/lib/utils';
 
 interface FPICDocument {
@@ -20,9 +37,19 @@ interface FPICDocument {
   expiry_date: string;
   status: 'verified' | 'pending_review' | 'expired' | 'renewal_due';
   file_size_mb: number;
+  // Provenance chain fields
+  sha256_hash: string;
+  uploader_name: string;
+  uploader_org: string;
+  linked_entities: {
+    type: 'farmer' | 'plot' | 'shipment';
+    id: string;
+    label: string;
+  }[];
+  review_history: TimelineEvent[];
 }
 
-// Mock FPIC documents
+// Mock FPIC documents with provenance data
 const mockDocuments: FPICDocument[] = [
   {
     id: 'fpic-1',
@@ -33,6 +60,31 @@ const mockDocuments: FPICDocument[] = [
     expiry_date: '2025-01-15',
     status: 'verified',
     file_size_mb: 2.4,
+    sha256_hash: 'a3f9e2c14b8d7e6f5a4c3b2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f',
+    uploader_name: 'Maria Rodriguez',
+    uploader_org: 'Green Valley Exports',
+    linked_entities: [
+      { type: 'farmer', id: 'farmer-12', label: 'Cooperative #12 (42 farmers)' },
+      { type: 'plot', id: 'plot-45', label: 'South Field A (4.2 ha)' },
+      { type: 'shipment', id: 'shp-2024-003', label: 'SHP-2024-003' },
+    ],
+    review_history: [
+      {
+        id: 'rh1',
+        eventType: 'approval',
+        timestamp: '2024-01-20T14:30:00Z',
+        userName: 'Carlos Mendez',
+        description: 'Document verified and approved',
+      },
+      {
+        id: 'rh2',
+        eventType: 'document_uploaded',
+        timestamp: '2024-01-15T09:15:00Z',
+        userName: 'Maria Rodriguez',
+        description: 'Document uploaded to repository',
+        metadata: { file_hash: 'a3f9e2c1...' },
+      },
+    ],
   },
   {
     id: 'fpic-2',
@@ -43,6 +95,29 @@ const mockDocuments: FPICDocument[] = [
     expiry_date: '2025-02-01',
     status: 'verified',
     file_size_mb: 1.1,
+    sha256_hash: 'b4e8d3c26a9f1e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d',
+    uploader_name: 'Ana Garcia',
+    uploader_org: 'Green Valley Exports',
+    linked_entities: [
+      { type: 'farmer', id: 'farmer-martinez', label: 'Juan Martinez' },
+      { type: 'plot', id: 'plot-23', label: 'Martinez Farm (2.8 ha)' },
+    ],
+    review_history: [
+      {
+        id: 'rh3',
+        eventType: 'approval',
+        timestamp: '2024-02-05T11:00:00Z',
+        userName: 'Carlos Mendez',
+        description: 'Consent form verified',
+      },
+      {
+        id: 'rh4',
+        eventType: 'document_uploaded',
+        timestamp: '2024-02-01T08:45:00Z',
+        userName: 'Ana Garcia',
+        description: 'Document uploaded',
+      },
+    ],
   },
   {
     id: 'fpic-3',
@@ -53,6 +128,28 @@ const mockDocuments: FPICDocument[] = [
     expiry_date: '2024-08-20',
     status: 'renewal_due',
     file_size_mb: 3.2,
+    sha256_hash: 'c5d9e4f37b0a2e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d1',
+    uploader_name: 'Maria Rodriguez',
+    uploader_org: 'Green Valley Exports',
+    linked_entities: [
+      { type: 'farmer', id: 'farmer-12', label: 'Cooperative #12 (42 farmers)' },
+    ],
+    review_history: [
+      {
+        id: 'rh5',
+        eventType: 'escalation',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+        userName: 'System',
+        description: 'Document flagged for renewal (expires in 30 days)',
+      },
+      {
+        id: 'rh6',
+        eventType: 'approval',
+        timestamp: '2023-08-25T16:20:00Z',
+        userName: 'Carlos Mendez',
+        description: 'Agreement verified',
+      },
+    ],
   },
   {
     id: 'fpic-4',
@@ -63,6 +160,22 @@ const mockDocuments: FPICDocument[] = [
     expiry_date: '2024-12-31',
     status: 'pending_review',
     file_size_mb: 0.8,
+    sha256_hash: 'd6e0f5a48c1b3f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2',
+    uploader_name: 'Ana Garcia',
+    uploader_org: 'Green Valley Exports',
+    linked_entities: [
+      { type: 'farmer', id: 'farmer-gonzalez', label: 'Maria Gonzalez' },
+      { type: 'plot', id: 'plot-67', label: 'Gonzalez Plot (1.5 ha)' },
+    ],
+    review_history: [
+      {
+        id: 'rh7',
+        eventType: 'document_uploaded',
+        timestamp: '2024-01-10T10:30:00Z',
+        userName: 'Ana Garcia',
+        description: 'Affidavit uploaded for review',
+      },
+    ],
   },
   {
     id: 'fpic-5',
@@ -73,6 +186,28 @@ const mockDocuments: FPICDocument[] = [
     expiry_date: '2023-12-15',
     status: 'expired',
     file_size_mb: 2.1,
+    sha256_hash: 'e7f1a6b59d2c4e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3',
+    uploader_name: 'Carlos Mendez',
+    uploader_org: 'Green Valley Exports',
+    linked_entities: [
+      { type: 'farmer', id: 'community-icc', label: 'Indigenous Community Council' },
+    ],
+    review_history: [
+      {
+        id: 'rh8',
+        eventType: 'rejection',
+        timestamp: '2024-01-01T00:00:00Z',
+        userName: 'System',
+        description: 'Document expired - renewal required',
+      },
+      {
+        id: 'rh9',
+        eventType: 'approval',
+        timestamp: '2023-06-20T14:00:00Z',
+        userName: 'Carlos Mendez',
+        description: 'Minutes verified',
+      },
+    ],
   },
 ];
 
@@ -83,41 +218,184 @@ const docTypeLabels: Record<FPICDocument['type'], string> = {
   'affidavit': 'Affidavit',
 };
 
-function getStatusBadge(status: FPICDocument['status']) {
-  const config = {
-    verified: {
-      icon: CheckCircle,
-      color: 'bg-emerald-500/20 text-emerald-600',
-      label: 'Verified',
-    },
-    pending_review: {
-      icon: Clock,
-      color: 'bg-blue-500/20 text-blue-600',
-      label: 'Pending Review',
-    },
-    renewal_due: {
-      icon: AlertCircle,
-      color: 'bg-amber-500/20 text-amber-600',
-      label: 'Renewal Due',
-    },
-    expired: {
-      icon: AlertCircle,
-      color: 'bg-destructive/20 text-destructive',
-      label: 'Expired',
-    },
-  };
-  const { icon: Icon, color, label } = config[status];
+const statusToChipStatus: Record<FPICDocument['status'], 'APPROVED' | 'PENDING' | 'REJECTED' | 'WARNING'> = {
+  verified: 'APPROVED',
+  pending_review: 'PENDING',
+  renewal_due: 'WARNING',
+  expired: 'REJECTED',
+};
+
+function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text);
+}
+
+function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded: boolean; onToggle: () => void }) {
   return (
-    <Badge className={cn('gap-1', color)}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </Badge>
+    <Card className={cn('transition-shadow', expanded ? 'shadow-md ring-1 ring-primary/20' : 'hover:shadow-md')}>
+      <CardContent className="pt-6 pb-4">
+        <div className="flex items-start gap-4">
+          {/* Document Icon & Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">{doc.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {docTypeLabels[doc.type]} - {doc.farmer_or_community}
+                </p>
+              </div>
+            </div>
+
+            {/* Document Details Row */}
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div className="text-muted-foreground">
+                <span className="font-medium text-foreground">{doc.file_size_mb}</span> MB
+              </div>
+              <span className="text-muted-foreground">-</span>
+              <div className="text-muted-foreground">
+                Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
+              </div>
+              <span className="text-muted-foreground">-</span>
+              <div className={cn(
+                'font-medium',
+                doc.status === 'expired' || doc.status === 'renewal_due'
+                  ? 'text-destructive'
+                  : 'text-muted-foreground'
+              )}>
+                Expires: {new Date(doc.expiry_date).toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* SHA-256 Hash (always visible, truncated) */}
+            <div className="flex items-center gap-2 mt-3 text-xs">
+              <Hash className="h-3 w-3 text-muted-foreground" />
+              <code className="font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {doc.sha256_hash.slice(0, 16)}...{doc.sha256_hash.slice(-8)}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5"
+                onClick={() => copyToClipboard(doc.sha256_hash)}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Status & Actions */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <StatusChip status={statusToChipStatus[doc.status]} size="sm" />
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={onToggle}
+              >
+                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Expanded Provenance Section */}
+        {expanded && (
+          <div className="mt-4 pt-4 border-t border-border space-y-4">
+            {/* Provenance Info Grid */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground mb-1">Uploader</p>
+                <p className="font-medium">{doc.uploader_name}</p>
+                <p className="text-muted-foreground text-xs">{doc.uploader_org}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">Full SHA-256 Hash</p>
+                <div className="flex items-center gap-2">
+                  <code className="font-mono text-xs bg-muted px-2 py-1 rounded break-all">
+                    {doc.sha256_hash}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 flex-shrink-0"
+                    onClick={() => copyToClipboard(doc.sha256_hash)}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Linked Entities */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                <Link2 className="h-3 w-3" />
+                Linked entities
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {doc.linked_entities.map((entity) => (
+                  <Badge
+                    key={entity.id}
+                    variant="secondary"
+                    className="gap-1 cursor-pointer hover:bg-secondary/80"
+                  >
+                    {entity.type === 'farmer' && '👤'}
+                    {entity.type === 'plot' && '📍'}
+                    {entity.type === 'shipment' && '📦'}
+                    {entity.label}
+                    <ExternalLink className="h-3 w-3 ml-1" />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Review History Timeline */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                Review history
+              </p>
+              <div className="bg-muted/50 rounded-lg p-3">
+                <Timeline 
+                  events={doc.review_history} 
+                  maxHeight={150}
+                  compact
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              <PermissionGate permission="fpic:view">
+                <Button variant="outline" size="sm">
+                  <ExternalLink className="mr-2 h-3 w-3" />
+                  View full document
+                </Button>
+              </PermissionGate>
+              <PermissionGate permission="fpic:delete">
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="mr-2 h-3 w-3" />
+                  Delete
+                </Button>
+              </PermissionGate>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 export default function FPICRepositoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending_review' | 'renewal_due' | 'expired'>('all');
+  const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
 
   const filteredDocs = mockDocuments.filter((doc) => {
     if (filterStatus !== 'all' && doc.status !== filterStatus) return false;
@@ -125,7 +403,8 @@ export default function FPICRepositoryPage() {
     return (
       doc.name.toLowerCase().includes(query) ||
       doc.farmer_or_community.toLowerCase().includes(query) ||
-      docTypeLabels[doc.type].toLowerCase().includes(query)
+      docTypeLabels[doc.type].toLowerCase().includes(query) ||
+      doc.sha256_hash.toLowerCase().includes(query)
     );
   });
 
@@ -138,7 +417,7 @@ export default function FPICRepositoryPage() {
     <div className="flex flex-col">
       <AppHeader
         title="FPIC Repository"
-        subtitle="Manage Free Prior Informed Consent documents for audit-grade compliance"
+        subtitle="Manage Free Prior Informed Consent documents with full provenance chain"
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
           { label: 'FPIC Repository' },
@@ -148,7 +427,7 @@ export default function FPICRepositoryPage() {
             <Button asChild>
               <Link href="/fpic/upload">
                 <Plus className="mr-2 h-4 w-4" />
-                Upload Document
+                Upload document
               </Link>
             </Button>
           </PermissionGate>
@@ -161,7 +440,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Total Documents</p>
+                <p className="text-sm text-muted-foreground">Total documents</p>
                 <p className="text-2xl font-bold mt-1">{mockDocuments.length}</p>
               </div>
             </CardContent>
@@ -179,7 +458,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Pending Review</p>
+                <p className="text-sm text-muted-foreground">Pending review</p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">{pending}</p>
               </div>
             </CardContent>
@@ -188,7 +467,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Renewal Due</p>
+                <p className="text-sm text-muted-foreground">Renewal due</p>
                 <p className="text-2xl font-bold text-amber-600 mt-1">{renewalDue}</p>
               </div>
             </CardContent>
@@ -209,10 +488,10 @@ export default function FPICRepositoryPage() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <Input
-                placeholder="Search by document name, farmer, or community..."
+                placeholder="Search by name, farmer, community, or hash..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-xs"
+                className="max-w-md"
               />
               <div className="flex flex-wrap gap-2">
                 <span className="text-sm font-medium text-muted-foreground">Status:</span>
@@ -222,7 +501,6 @@ export default function FPICRepositoryPage() {
                     variant={filterStatus === status ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilterStatus(status)}
-                    className="capitalize"
                   >
                     {status === 'all'
                       ? 'All'
@@ -249,61 +527,12 @@ export default function FPICRepositoryPage() {
             </div>
           ) : (
             filteredDocs.map((doc) => (
-              <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6 pb-4">
-                  <div className="flex items-start gap-4">
-                    {/* Document Icon & Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">{doc.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {docTypeLabels[doc.type]} • {doc.farmer_or_community}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Document Details Row */}
-                      <div className="flex flex-wrap items-center gap-3 text-sm">
-                        <div className="text-muted-foreground">
-                          <span className="font-medium text-foreground">{doc.file_size_mb}</span> MB
-                        </div>
-                        <span className="text-muted-foreground">•</span>
-                        <div className="text-muted-foreground">
-                          Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
-                        </div>
-                        <span className="text-muted-foreground">•</span>
-                        <div className={cn(
-                          'font-medium',
-                          doc.status === 'expired' || doc.status === 'renewal_due'
-                            ? 'text-destructive'
-                            : 'text-muted-foreground'
-                        )}>
-                          Expires: {new Date(doc.expiry_date).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Status & Actions */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      {getStatusBadge(doc.status)}
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <PermissionGate permission="fpic:delete">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </PermissionGate>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <DocumentCard
+                key={doc.id}
+                doc={doc}
+                expanded={expandedDoc === doc.id}
+                onToggle={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
+              />
             ))
           )}
         </div>
@@ -312,15 +541,15 @@ export default function FPICRepositoryPage() {
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="pt-6">
             <div className="flex gap-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900">
-                  FPIC Documentation & Audit Trail
+                  Provenance chain and audit trail
                 </p>
                 <p className="text-blue-800 mt-1">
-                  A single digital signature is insufficient to prove FPIC during an audit. This repository stores PDFs, photos, 
-                  and scans of community assembly minutes, consent forms, and agreements. All documents are retained for exactly 
-                  5 years as required by EUDR regulations.
+                  Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp, 
+                  and linked entities form an immutable provenance chain. Click any document to expand its full 
+                  audit history. All records are retained for 5 years per EUDR requirements.
                 </p>
               </div>
             </div>
