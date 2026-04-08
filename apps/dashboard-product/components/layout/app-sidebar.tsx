@@ -41,6 +41,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
 import type { TenantRole } from '@/types';
+import { toast } from 'sonner';
 
 const iconMap: Record<string, typeof LayoutDashboard> = {
   LayoutDashboard,
@@ -59,18 +60,40 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   Scale,
 };
 
-// Mock tenants - in production this would come from auth context
 interface Tenant {
   id: string;
   name: string;
   tier: 'tier1' | 'tier2' | 'tier3' | 'tier4';
   logo_initial: string;
+  demo_email: string;
+  tenant_id: string;
 }
 
-const mockTenants: Tenant[] = [
-  { id: 'org-1', name: 'Green Valley Exports', tier: 'tier2', logo_initial: 'GV' },
-  { id: 'org-2', name: 'Cacao Cooperative #12', tier: 'tier1', logo_initial: 'CC' },
-  { id: 'org-3', name: 'EU Coffee Importers Ltd', tier: 'tier3', logo_initial: 'EC' },
+const demoTenants: Tenant[] = [
+  {
+    id: 'org-exporter',
+    name: 'Green Valley Exports',
+    tier: 'tier2',
+    logo_initial: 'GV',
+    demo_email: 'exporter@tracebud.com',
+    tenant_id: 'tenant_brazil_001',
+  },
+  {
+    id: 'org-coop',
+    name: 'Kivu Producers Cooperative',
+    tier: 'tier1',
+    logo_initial: 'KP',
+    demo_email: 'cooperative@tracebud.com',
+    tenant_id: 'tenant_rwanda_001',
+  },
+  {
+    id: 'org-importer',
+    name: 'EU Coffee Importers Ltd',
+    tier: 'tier3',
+    logo_initial: 'EC',
+    demo_email: 'importer@tracebud.com',
+    tenant_id: 'tenant_germany_001',
+  },
 ];
 
 const tierLabels: Record<Tenant['tier'], string> = {
@@ -82,15 +105,26 @@ const tierLabels: Record<Tenant['tier'], string> = {
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout, switchRole, impersonateDemo } = useAuth();
 
   const navItems = getVisibleNavItems(user);
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
   const hasMultipleRoles = user && user.roles.length > 1;
 
-  // Mock active tenant - in production this would come from auth context
-  const activeTenant = mockTenants[0];
-  const hasMultipleTenants = mockTenants.length > 1;
+  const activeTenant =
+    demoTenants.find((tenant) => tenant.tenant_id === user?.tenant_id) ??
+    demoTenants.find((tenant) => tenant.demo_email === user?.email) ??
+    demoTenants[0];
+  const hasMultipleTenants = demoTenants.length > 1;
+
+  const handleTenantSwitch = async (tenant: Tenant) => {
+    try {
+      await impersonateDemo(tenant.demo_email);
+      toast.success(`Switched organization to ${tenant.name}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to switch organization.');
+    }
+  };
 
   return (
     <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
@@ -147,10 +181,13 @@ export function AppSidebar() {
                 Switch organization
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {mockTenants.map((tenant) => (
+              {demoTenants.map((tenant) => (
                 <DropdownMenuItem
                   key={tenant.id}
                   className="flex items-center gap-3 py-2.5 cursor-pointer"
+                  onClick={() => {
+                    void handleTenantSwitch(tenant);
+                  }}
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white text-xs font-bold flex-shrink-0">
                     {tenant.logo_initial}

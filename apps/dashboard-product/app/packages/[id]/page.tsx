@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -23,10 +23,12 @@ import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages/package-status-badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { BlockerCard } from '@/components/ui/blocker-card';
-import { getPackageById } from '@/lib/mock-data';
+import { transitionPackage } from '@/lib/package-service';
+import { usePackageById } from '@/lib/use-packages';
 import type { ShipmentStatus } from '@/types';
 
 // Canonical shipment state machine
@@ -58,13 +60,18 @@ interface PackageDetailPageProps {
 
 export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const { id } = use(params);
-  const pkg = getPackageById(id);
+  const { pkg, isLoading, error } = usePackageById(id);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isTransitioningTo, setIsTransitioningTo] = useState<ShipmentStatus | null>(null);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<ShipmentStatus>(
-    (pkg?.status || 'DRAFT') as ShipmentStatus
-  );
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [currentStatus, setCurrentStatus] = useState<ShipmentStatus>('DRAFT');
+  useEffect(() => {
+    if (pkg) setCurrentStatus(pkg.status);
+  }, [pkg]);
 
-  if (!pkg) {
+  if (!isLoading && !pkg) {
     notFound();
   }
 
@@ -73,21 +80,95 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const blockingIssues = BLOCKING_RULES[currentStatus] || [];
   const canTransition = blockingIssues.length === 0;
 
-  const handleStateTransition = (newStatus: ShipmentStatus) => {
+  const handleStateTransition = async (newStatus: ShipmentStatus) => {
     if (!allowedTransitions.includes(newStatus)) {
       return;
     }
     if (newStatus === 'SEALED') {
       setShowLiabilityModal(true);
     } else {
-      setCurrentStatus(newStatus);
+      if (!pkg) return;
+      setIsTransitioningTo(newStatus);
+      setActionError(null);
+      try {
+        const result = await transitionPackage(pkg.id, newStatus);
+        setCurrentStatus(result.pkg.status);
+        toast.success(`Shipment moved to ${result.pkg.status}.`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Transition failed.';
+        setActionError(message);
+        toast.error(message);
+      } finally {
+        setIsTransitioningTo(null);
+      }
     }
   };
 
-  const confirmSeal = () => {
-    setCurrentStatus('SEALED');
-    setShowLiabilityModal(false);
+  const confirmSeal = async () => {
+    if (!pkg) return;
+    setIsTransitioningTo('SEALED');
+    setActionError(null);
+    try {
+      const result = await transitionPackage(pkg.id, 'SEALED', { confirmLiability: true });
+      setCurrentStatus(result.pkg.status);
+      setShowLiabilityModal(false);
+      toast.success('Shipment sealed successfully.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to seal shipment.';
+      setActionError(message);
+      toast.error(message);
+    } finally {
+      setIsTransitioningTo(null);
+    }
   };
+
+  const approveSubmittedShipment = async () => {
+    if (!pkg) return;
+    setIsTransitioningTo('ACCEPTED');
+    setActionError(null);
+    try {
+      const result = await transitionPackage(pkg.id, 'ACCEPTED');
+      setCurrentStatus(result.pkg.status);
+      toast.success('Shipment accepted.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to accept shipment.';
+      setActionError(message);
+      toast.error(message);
+    } finally {
+      setIsTransitioningTo(null);
+    }
+  };
+
+  const confirmRejectShipment = async () => {
+    if (!pkg) return;
+    if (!rejectionReason.trim()) {
+      toast.error('Please provide a rejection reason.');
+      return;
+    }
+    setIsTransitioningTo('REJECTED');
+    setActionError(null);
+    try {
+      const result = await transitionPackage(pkg.id, 'REJECTED');
+      setCurrentStatus(result.pkg.status);
+      setShowRejectModal(false);
+      setRejectionReason('');
+      toast.success('Shipment rejected.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to reject shipment.';
+      setActionError(message);
+      toast.error(message);
+    } finally {
+      setIsTransitioningTo(null);
+    }
+  };
+
+  if (isLoading || !pkg) {
+    return (
+      <div className="flex flex-col p-6 text-sm text-muted-foreground">
+        {error ? `Failed to load package: ${error}` : 'Loading package details...'}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -109,7 +190,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Link>
               </Button>
             </PermissionGate>
-            {pkg.status === 'SEALED' && (
+            {currentStatus === 'SEALED' && (
               <PermissionGate permission="packages:submit_traces">
                 <Button asChild>
                   <Link href={`/packages/${pkg.id}/submit`}>
@@ -119,7 +200,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Button>
               </PermissionGate>
             )}
-            {pkg.status === 'DRAFT' || pkg.status === 'READY' ? (
+            {currentStatus === 'DRAFT' || currentStatus === 'READY' ? (
               <PermissionGate permission="packages:seal_shipment">
                 <Button asChild variant="default">
                   <Link href={`/packages/${pkg.id}/assemble`}>
@@ -136,11 +217,39 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Link>
               </Button>
             </PermissionGate>
+            {currentStatus === 'SUBMITTED' && (
+              <PermissionGate permission="packages:approve">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      void approveSubmittedShipment();
+                    }}
+                    disabled={isTransitioningTo !== null}
+                  >
+                    {isTransitioningTo === 'ACCEPTED' ? 'Accepting...' : 'Accept Shipment'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={isTransitioningTo !== null}
+                  >
+                    Reject Shipment
+                  </Button>
+                </div>
+              </PermissionGate>
+            )}
           </div>
         }
       />
 
       <div className="flex-1 p-6">
+        {actionError && (
+          <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {actionError}
+          </div>
+        )}
+
         {/* Back button */}
         <Button variant="ghost" size="sm" className="mb-4" asChild>
           <Link href="/packages">
@@ -155,7 +264,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Blocking Issues */}
             {blockingIssues.length > 0 && (
               <BlockerCard
-                blockerType="STATE_TRANSITION"
+                blockerType="INVALID_STATE"
                 severity="BLOCKING"
                 title="Cannot proceed to next state"
                 description={`Resolve the following to advance: ${blockingIssues.join(', ')}`}
@@ -179,8 +288,8 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     allowedTransitions.map((nextStatus) => (
                       <PermissionGate key={nextStatus} permission="packages:edit">
                         <Button
-                          onClick={() => handleStateTransition(nextStatus)}
-                          disabled={!canTransition}
+                          onClick={() => void handleStateTransition(nextStatus)}
+                          disabled={!canTransition || isTransitioningTo !== null}
                           variant={canTransition ? 'default' : 'outline'}
                         >
                           {canTransition ? (
@@ -188,7 +297,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                           ) : (
                             <Lock className="mr-2 h-4 w-4" />
                           )}
-                          → {nextStatus.toUpperCase()}
+                          {isTransitioningTo === nextStatus ? 'Applying...' : `→ ${nextStatus.toUpperCase()}`}
                         </Button>
                       </PermissionGate>
                     ))
@@ -487,7 +596,48 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Button>
                 <Button onClick={confirmSeal} className="bg-red-600 hover:bg-red-700">
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  I Acknowledge
+                  {isTransitioningTo === 'SEALED' ? 'Sealing...' : 'I Acknowledge'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-[30rem]">
+            <CardHeader>
+              <CardTitle>Reject Shipment</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Provide a reason for rejection. This reason is used for downstream remediation.
+              </p>
+              <textarea
+                className="min-h-28 w-full rounded-md border border-border bg-background p-3 text-sm"
+                placeholder="Enter rejection reason..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectionReason('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    void confirmRejectShipment();
+                  }}
+                  disabled={isTransitioningTo !== null}
+                >
+                  {isTransitioningTo === 'REJECTED' ? 'Rejecting...' : 'Confirm Rejection'}
                 </Button>
               </div>
             </CardContent>

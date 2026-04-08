@@ -496,6 +496,7 @@ export interface Activity {
 export interface DashboardMetrics {
   total_packages: number;
   total_plots: number;
+  compliant_plots: number;
   total_farmers: number;
   pending_compliance: number;
   traces_submitted: number;

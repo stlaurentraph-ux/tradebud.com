@@ -204,7 +204,12 @@ export default function RequestsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<RequestCampaignStatus | 'all'>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newCampaign, setNewCampaign] = useState({
+  const [newCampaign, setNewCampaign] = useState<{
+    title: string;
+    description: string;
+    request_type: RequestCampaign['request_type'];
+    due_at: string;
+  }>({
     title: '',
     description: '',
     request_type: 'GENERAL_EVIDENCE' as const,
@@ -276,16 +281,7 @@ export default function RequestsPage() {
                       onChange={(e) =>
                         setNewCampaign({
                           ...newCampaign,
-                          request_type: e.target.value as
-                            | 'GENERAL_EVIDENCE'
-                            | 'MISSING_PLOT_GEOMETRY'
-                            | 'CONSENT_GRANT'
-                            | 'MISSING_LAND_TITLE'
-                            | 'MISSING_HARVEST_RECORD'
-                            | 'YIELD_EVIDENCE'
-                            | 'MISSING_PRODUCER_PROFILE'
-                            | 'DDS_REFERENCE'
-                            | 'OTHER',
+                          request_type: e.target.value as RequestCampaign['request_type'],
                         })
                       }
                       className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"

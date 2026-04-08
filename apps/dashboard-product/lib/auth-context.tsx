@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   switchRole: (role: TenantRole) => void;
+  impersonateDemo: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +112,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const impersonateDemo = useCallback(async (email: string) => {
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const demoUser = DEMO_USERS[email.toLowerCase()];
+    if (!demoUser) {
+      setIsLoading(false);
+      throw new Error('Unknown demo persona.');
+    }
+    setUser(demoUser);
+    sessionStorage.setItem('tracebud_user', JSON.stringify(demoUser));
+    sessionStorage.setItem('tracebud_token', 'demo_token_' + demoUser.id);
+    setIsLoading(false);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -120,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         switchRole,
+        impersonateDemo,
       }}
     >
       {children}

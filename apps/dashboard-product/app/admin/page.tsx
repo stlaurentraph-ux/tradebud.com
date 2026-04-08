@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,60 +17,120 @@ import {
   Users, 
   Building2, 
   Shield, 
-  Settings, 
   Plus, 
-  MoreHorizontal,
   CheckCircle,
-  XCircle,
   Clock
 } from 'lucide-react';
+import { toast } from 'sonner';
+import type { TenantRole } from '@/types';
+import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
+import { createOrganization, inviteUser, updateUserRole, updateUserStatus } from '@/lib/admin-service';
+import { useAdminData } from '@/lib/use-admin-data';
+import { resetDemoWorkspace, seedFirstCustomerWorkspace } from '@/lib/demo-bootstrap';
 
-// Mock admin data
-const mockOrganizations = [
-  { id: 'org_001', name: 'Rwanda Coffee Cooperative', type: 'cooperative', users: 12, status: 'active', created: '2024-01-15' },
-  { id: 'org_002', name: 'EU Coffee Importers GmbH', type: 'importer', users: 5, status: 'active', created: '2024-02-10' },
-  { id: 'org_003', name: 'Brazil Export Co.', type: 'exporter', users: 8, status: 'active', created: '2024-03-05' },
-  { id: 'org_004', name: 'Huye Highland Growers', type: 'cooperative', users: 15, status: 'pending', created: '2024-04-20' },
-];
-
-const mockUsers = [
-  { id: 'usr_001', name: 'Maria Santos', email: 'maria@example.com', role: 'exporter_admin', org: 'Brazil Export Co.', status: 'active', lastLogin: '2024-06-22' },
-  { id: 'usr_002', name: 'Jean-Baptiste Niyonzima', email: 'jb@example.com', role: 'cooperative_manager', org: 'Rwanda Coffee Cooperative', status: 'active', lastLogin: '2024-06-21' },
-  { id: 'usr_003', name: 'Klaus Mueller', email: 'klaus@example.com', role: 'importer_admin', org: 'EU Coffee Importers GmbH', status: 'active', lastLogin: '2024-06-20' },
-  { id: 'usr_004', name: 'Pierre Habimana', email: 'pierre@example.com', role: 'field_agent', org: 'Huye Highland Growers', status: 'pending', lastLogin: '-' },
-];
-
-const roleLabels: Record<string, string> = {
-  exporter_admin: 'Exporter Admin',
-  importer_admin: 'Importer Admin',
-  cooperative_manager: 'Coop Manager',
-  field_agent: 'Field Agent',
+const roleLabels: Record<TenantRole, string> = {
+  exporter: 'Exporter',
+  importer: 'Importer',
+  cooperative: 'Cooperative',
   country_reviewer: 'Country Reviewer',
 };
 
-const orgTypeLabels: Record<string, string> = {
-  cooperative: 'Cooperative',
-  exporter: 'Exporter',
-  importer: 'Importer',
-  government: 'Government',
+const orgTypeLabels: Record<AdminOrgType, string> = {
+  COOPERATIVE: 'Cooperative',
+  EXPORTER: 'Exporter',
+  IMPORTER: 'Importer',
 };
 
-const statusColors: Record<string, string> = {
-  active: 'bg-green-500/20 text-green-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  suspended: 'bg-red-500/20 text-red-400',
+const statusColors: Record<AdminStatus, string> = {
+  ACTIVE: 'bg-green-500/20 text-green-400',
+  PENDING: 'bg-yellow-500/20 text-yellow-400',
+  SUSPENDED: 'bg-red-500/20 text-red-400',
 };
 
 export default function AdminPage() {
+  const { organizations, users, isLoading, error } = useAdminData();
   const [activeTab, setActiveTab] = useState<'organizations' | 'users' | 'roles'>('organizations');
+  const [isOrgFormOpen, setIsOrgFormOpen] = useState(false);
+  const [isInviteFormOpen, setIsInviteFormOpen] = useState(false);
+  const [orgForm, setOrgForm] = useState({ name: '', type: 'COOPERATIVE' as AdminOrgType, country: 'RW' });
+  const [inviteForm, setInviteForm] = useState({
+    name: '',
+    email: '',
+    organisation_id: '',
+    role: 'cooperative' as TenantRole,
+  });
+
+  const usersByOrg = useMemo(() => {
+    const map = new Map<string, number>();
+    users.forEach((u) => map.set(u.organisation_id, (map.get(u.organisation_id) ?? 0) + 1));
+    return map;
+  }, [users]);
+
+  const activeUsersCount = users.filter((u) => u.status === 'ACTIVE').length;
+  const pendingUsersCount = users.filter((u) => u.status === 'PENDING').length;
+
+  const handleCreateOrganization = async () => {
+    if (!orgForm.name.trim()) return;
+    try {
+      await createOrganization(orgForm);
+      setOrgForm({ name: '', type: 'COOPERATIVE', country: 'RW' });
+      setIsOrgFormOpen(false);
+      toast.success('Organization created.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create organization.');
+    }
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteForm.name.trim() || !inviteForm.email.trim() || !inviteForm.organisation_id) return;
+    try {
+      await inviteUser(inviteForm);
+      setInviteForm({ name: '', email: '', organisation_id: '', role: 'cooperative' });
+      setIsInviteFormOpen(false);
+      toast.success('User invited.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to invite user.');
+    }
+  };
+
+  const handleRoleChange = async (userId: string, role: TenantRole) => {
+    try {
+      await updateUserRole(userId, role);
+      toast.success('Role updated.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update role.');
+    }
+  };
+
+  const handleStatusChange = async (userId: string, status: AdminStatus) => {
+    try {
+      await updateUserStatus(userId, status);
+      toast.success('User status updated.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update user status.');
+    }
+  };
+
+  const handleSeedWorkspace = () => {
+    seedFirstCustomerWorkspace();
+    toast.success('Seeded first-customer demo workspace.');
+  };
+
+  const handleResetWorkspace = () => {
+    resetDemoWorkspace();
+    toast.success('Reset demo workspace to baseline.');
+  };
 
   return (
     <div className="flex flex-col">
       <AppHeader
         title="Admin Panel"
-        description="Manage organizations, users, and system settings"
+        subtitle="Manage organizations, user invitations, and role assignments"
         actions={
-          <Button size="sm">
+          <Button
+            size="sm"
+            onClick={() => (activeTab === 'organizations' ? setIsOrgFormOpen((v) => !v) : setIsInviteFormOpen((v) => !v))}
+          >
             <Plus className="w-4 h-4 mr-2" />
             {activeTab === 'organizations' ? 'Add Organization' : 'Invite User'}
           </Button>
@@ -78,6 +138,15 @@ export default function AdminPage() {
       />
 
       <main className="flex-1 p-6 space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleSeedWorkspace}>
+            Seed First Customers
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleResetWorkspace}>
+            Reset Demo Data
+          </Button>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -87,7 +156,7 @@ export default function AdminPage() {
                   <Building2 className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockOrganizations.length}</p>
+                  <p className="text-2xl font-bold">{organizations.length}</p>
                   <p className="text-xs text-muted-foreground">Organizations</p>
                 </div>
               </div>
@@ -100,7 +169,7 @@ export default function AdminPage() {
                   <Users className="h-5 w-5 text-chart-2" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockUsers.length}</p>
+                  <p className="text-2xl font-bold">{users.length}</p>
                   <p className="text-xs text-muted-foreground">Total Users</p>
                 </div>
               </div>
@@ -113,7 +182,7 @@ export default function AdminPage() {
                   <CheckCircle className="h-5 w-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockUsers.filter(u => u.status === 'active').length}</p>
+                  <p className="text-2xl font-bold">{activeUsersCount}</p>
                   <p className="text-xs text-muted-foreground">Active Users</p>
                 </div>
               </div>
@@ -126,7 +195,7 @@ export default function AdminPage() {
                   <Clock className="h-5 w-5 text-yellow-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{mockUsers.filter(u => u.status === 'pending').length}</p>
+                  <p className="text-2xl font-bold">{pendingUsersCount}</p>
                   <p className="text-xs text-muted-foreground">Pending Approval</p>
                 </div>
               </div>
@@ -179,6 +248,43 @@ export default function AdminPage() {
               <CardDescription>Manage tenant organizations in the system</CardDescription>
             </CardHeader>
             <CardContent>
+              {isOrgFormOpen && (
+                <div className="mb-4 rounded-lg border p-4">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <input
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      placeholder="Organization name"
+                      value={orgForm.name}
+                      onChange={(e) => setOrgForm((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      value={orgForm.type}
+                      onChange={(e) => setOrgForm((prev) => ({ ...prev, type: e.target.value as AdminOrgType }))}
+                    >
+                      {Object.keys(orgTypeLabels).map((type) => (
+                        <option key={type} value={type}>
+                          {orgTypeLabels[type as AdminOrgType]}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      placeholder="Country code"
+                      value={orgForm.country}
+                      onChange={(e) => setOrgForm((prev) => ({ ...prev, country: e.target.value }))}
+                    />
+                    <Button onClick={handleCreateOrganization}>Create</Button>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
               <div className="rounded-lg border">
                 <Table>
                   <TableHeader>
@@ -192,7 +298,14 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockOrganizations.map((org) => (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-muted-foreground">
+                          Loading organizations...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && organizations.map((org) => (
                       <TableRow key={org.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -202,23 +315,19 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">
-                            {orgTypeLabels[org.type] || org.type}
+                            {orgTypeLabels[org.type]}
                           </Badge>
                         </TableCell>
-                        <TableCell>{org.users}</TableCell>
+                        <TableCell>{usersByOrg.get(org.id) ?? 0}</TableCell>
                         <TableCell>
                           <span className={`text-xs font-medium px-2 py-1 rounded ${statusColors[org.status]}`}>
-                            {org.status.charAt(0).toUpperCase() + org.status.slice(1)}
+                            {org.status}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(org.created).toLocaleDateString()}
+                          {new Date(org.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
+                        <TableCell />
                       </TableRow>
                     ))}
                   </TableBody>
@@ -236,6 +345,48 @@ export default function AdminPage() {
               <CardDescription>Manage user accounts and access</CardDescription>
             </CardHeader>
             <CardContent>
+              {isInviteFormOpen && (
+                <div className="mb-4 rounded-lg border p-4">
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <input
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      placeholder="Full name"
+                      value={inviteForm.name}
+                      onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                    <input
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      placeholder="Email"
+                      value={inviteForm.email}
+                      onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      value={inviteForm.organisation_id}
+                      onChange={(e) => setInviteForm((prev) => ({ ...prev, organisation_id: e.target.value }))}
+                    >
+                      <option value="">Select organization</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="rounded-md border bg-background px-3 py-2 text-sm"
+                      value={inviteForm.role}
+                      onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value as TenantRole }))}
+                    >
+                      {Object.keys(roleLabels).map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabels[role as TenantRole]}
+                        </option>
+                      ))}
+                    </select>
+                    <Button onClick={handleInviteUser}>Invite</Button>
+                  </div>
+                </div>
+              )}
               <div className="rounded-lg border">
                 <Table>
                   <TableHeader>
@@ -250,7 +401,14 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockUsers.map((user) => (
+                    {isLoading && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-muted-foreground">
+                          Loading users...
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {!isLoading && users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
@@ -262,24 +420,36 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell className="text-sm">{user.email}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {roleLabels[user.role] || user.role}
-                          </Badge>
+                          <select
+                            className="rounded-md border bg-background px-2 py-1 text-xs"
+                            value={user.roles[0]}
+                            onChange={(e) => void handleRoleChange(user.id, e.target.value as TenantRole)}
+                          >
+                            {Object.keys(roleLabels).map((role) => (
+                              <option key={role} value={role}>
+                                {roleLabels[role as TenantRole]}
+                              </option>
+                            ))}
+                          </select>
                         </TableCell>
-                        <TableCell className="text-sm">{user.org}</TableCell>
+                        <TableCell className="text-sm">
+                          {organizations.find((org) => org.id === user.organisation_id)?.name ?? '-'}
+                        </TableCell>
                         <TableCell>
-                          <span className={`text-xs font-medium px-2 py-1 rounded ${statusColors[user.status]}`}>
-                            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                          </span>
+                          <select
+                            className={`rounded-md border px-2 py-1 text-xs ${statusColors[user.status]}`}
+                            value={user.status}
+                            onChange={(e) => void handleStatusChange(user.id, e.target.value as AdminStatus)}
+                          >
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="SUSPENDED">SUSPENDED</option>
+                          </select>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {user.lastLogin}
+                          {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : '-'}
                         </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
+                        <TableCell />
                       </TableRow>
                     ))}
                   </TableBody>
@@ -298,19 +468,18 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {[
-                { role: 'exporter_admin', permissions: ['packages:*', 'plots:*', 'farmers:*', 'compliance:*', 'reports:*'] },
-                { role: 'importer_admin', permissions: ['packages:view', 'packages:review', 'compliance:view', 'reports:view'] },
-                { role: 'cooperative_manager', permissions: ['farmers:*', 'plots:*', 'packages:view'] },
-                { role: 'field_agent', permissions: ['farmers:view', 'plots:view', 'plots:create'] },
-                { role: 'country_reviewer', permissions: ['packages:review', 'compliance:approve', 'reports:view'] },
+                { role: 'exporter', permissions: ['packages:create', 'packages:edit', 'packages:submit_traces', 'requests:send'] },
+                { role: 'importer', permissions: ['packages:view', 'compliance:view', 'reports:view', 'requests:respond'] },
+                { role: 'cooperative', permissions: ['farmers:create', 'plots:create', 'requests:respond'] },
+                { role: 'country_reviewer', permissions: ['compliance:approve', 'reports:view', 'roles:manual_classify'] },
               ].map((item) => (
                 <div key={item.role} className="p-4 rounded-lg border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-primary" />
-                      <span className="font-medium">{roleLabels[item.role] || item.role}</span>
+                      <span className="font-medium">{roleLabels[item.role as TenantRole] || item.role}</span>
                     </div>
-                    <Button variant="outline" size="sm">Edit</Button>
+                    <Badge variant="outline">Canonical</Badge>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {item.permissions.map((perm) => (

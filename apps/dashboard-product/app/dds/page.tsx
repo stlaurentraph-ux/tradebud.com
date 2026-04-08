@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -9,8 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusChip } from '@/components/ui/status-chip';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { usePackages } from '@/lib/use-packages';
+import type { DDSPackage } from '@/types';
 
-// 10 Canonical DDS States from spec
+// Canonical DDS states from spec
 type DDSStatus = 
   | 'DRAFT'
   | 'READY_TO_SUBMIT'
@@ -54,7 +56,7 @@ const PREFLIGHT_CHECKS = [
     id: 'fpic',
     name: 'FPIC Check',
     description: 'Verify Free Prior Informed Consent obtained',
-    status: 'warning' as const,
+    status: 'pass' as const,
   },
   {
     id: 'yield_capacity',
@@ -70,40 +72,61 @@ const PREFLIGHT_CHECKS = [
   },
 ];
 
-// Mock DDS packages
-const mockDDSPackages = [
-  {
-    id: '1',
-    code: 'DDS-2024-0891',
-    status: 'READY_TO_SUBMIT' as DDSStatus,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    plots: 12,
-    farmers: 8,
-    preflightScore: 6,
-  },
-  {
-    id: '2',
-    code: 'DDS-2024-0890',
-    status: 'SUBMITTED' as DDSStatus,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    plots: 8,
-    farmers: 5,
-    preflightScore: 7,
-  },
-  {
-    id: '3',
-    code: 'DDS-2024-0889',
-    status: 'ACCEPTED' as DDSStatus,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
-    plots: 15,
-    farmers: 10,
-    preflightScore: 7,
-  },
-];
+type DDSWorkspaceItem = {
+  id: string;
+  code: string;
+  status: DDSStatus;
+  created_at: string;
+  plots: number;
+  farmers: number;
+  preflightScore: number;
+};
+
+function mapPackageToDDSStatus(pkg: DDSPackage): DDSStatus {
+  if (pkg.dds_status) return pkg.dds_status;
+  switch (pkg.status) {
+    case 'DRAFT':
+      return 'DRAFT';
+    case 'READY':
+      return 'READY_TO_SUBMIT';
+    case 'SEALED':
+      return 'READY_TO_SUBMIT';
+    case 'SUBMITTED':
+      return 'SUBMITTED';
+    case 'ACCEPTED':
+      return 'ACCEPTED';
+    case 'REJECTED':
+      return 'REJECTED';
+    default:
+      return 'PENDING_CONFIRMATION';
+  }
+}
 
 export default function DDSWorkspacePage() {
-  const [selectedDDS, setSelectedDDS] = useState<string>(mockDDSPackages[0].id);
-  const selected = mockDDSPackages.find((d) => d.id === selectedDDS);
+  const { packages, isLoading, error } = usePackages();
+  const [selectedDDS, setSelectedDDS] = useState<string | null>(null);
+
+  const ddsPackages = useMemo<DDSWorkspaceItem[]>(
+    () =>
+      packages.map((pkg) => ({
+        id: pkg.id,
+        code: pkg.code,
+        status: mapPackageToDDSStatus(pkg),
+        created_at: pkg.created_at,
+        plots: pkg.plots.length,
+        farmers: pkg.farmers.length,
+        preflightScore: pkg.compliance_status === 'BLOCKED' ? 4 : pkg.compliance_status === 'WARNINGS' ? 6 : 7,
+      })),
+    [packages]
+  );
+
+  useEffect(() => {
+    if (!selectedDDS && ddsPackages.length > 0) {
+      setSelectedDDS(ddsPackages[0].id);
+    }
+  }, [selectedDDS, ddsPackages]);
+
+  const selected = ddsPackages.find((d) => d.id === selectedDDS);
 
   const getStatusColor = (status: DDSStatus) => {
     switch (status) {
@@ -141,13 +164,13 @@ export default function DDSWorkspacePage() {
     <div className="flex flex-col">
       <AppHeader
         title="DDS Workspace"
-        subtitle="Manage Deforestation Due Diligence packages with 10 canonical states"
+        subtitle="Manage Deforestation Due Diligence packages with canonical states"
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
           { label: 'DDS Workspace' },
         ]}
         actions={
-          <PermissionGate permission="dds:create">
+          <PermissionGate permission="packages:create">
             <Button asChild>
               <Link href="/dds/new">
                 <Plus className="mr-2 h-4 w-4" />
@@ -159,6 +182,11 @@ export default function DDSWorkspacePage() {
       />
 
       <div className="flex-1 space-y-6 p-6">
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <Tabs defaultValue="packages" className="w-full">
           <TabsList>
             <TabsTrigger value="packages">DDS Packages</TabsTrigger>
@@ -171,7 +199,13 @@ export default function DDSWorkspacePage() {
             <div className="grid gap-4 lg:grid-cols-3">
               {/* Package List */}
               <div className="lg:col-span-2 space-y-2">
-                {mockDDSPackages.map((dds) => (
+                {isLoading && (
+                  <div className="rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
+                    Loading DDS packages...
+                  </div>
+                )}
+                {!isLoading &&
+                  ddsPackages.map((dds) => (
                   <button
                     key={dds.id}
                     onClick={() => setSelectedDDS(dds.id)}
@@ -188,7 +222,7 @@ export default function DDSWorkspacePage() {
                           {dds.plots} plots • {dds.farmers} farmers
                         </p>
                       </div>
-                      <StatusChip status={dds.status.toLowerCase()} />
+                      <StatusChip status={dds.status} />
                     </div>
                   </button>
                 ))}
@@ -212,9 +246,11 @@ export default function DDSWorkspacePage() {
                         style={{ width: `${(selected.preflightScore / 7) * 100}%` }}
                       />
                     </div>
-                    <button className="w-full rounded-lg bg-primary/10 p-3 text-sm font-medium text-primary hover:bg-primary/20">
-                      View Full Details
-                    </button>
+                    <PermissionGate permission="packages:view">
+                      <button className="w-full rounded-lg bg-primary/10 p-3 text-sm font-medium text-primary hover:bg-primary/20">
+                        View Full Details
+                      </button>
+                    </PermissionGate>
                   </CardContent>
                 </Card>
               )}
@@ -274,7 +310,7 @@ export default function DDSWorkspacePage() {
           <TabsContent value="states" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>10 Canonical DDS States</CardTitle>
+                <CardTitle>Canonical DDS States</CardTitle>
                 <CardDescription>Complete state machine for DDS lifecycle</CardDescription>
               </CardHeader>
               <CardContent>
@@ -291,6 +327,7 @@ export default function DDSWorkspacePage() {
                       { state: 'AMENDED_SUBMITTED', desc: 'Amendment submitted' },
                       { state: 'WITHDRAWAL_REQUESTED', desc: 'Withdrawal initiated' },
                       { state: 'WITHDRAWN', desc: 'Withdrawn from system' },
+                      { state: 'SUPERSEDED', desc: 'Replaced by a newer DDS record' },
                     ].map((item) => (
                       <div key={item.state} className="rounded-lg border p-3 bg-card hover:bg-secondary/50">
                         <p className="font-semibold text-sm">{item.state}</p>

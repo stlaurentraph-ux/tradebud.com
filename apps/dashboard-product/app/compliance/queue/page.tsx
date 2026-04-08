@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, Filter, AlertTriangle } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { SeverityBadge } from '@/components/ui/severity-badge';
-import { mockPackages } from '@/lib/mock-data';
+import { usePackages } from '@/lib/use-packages';
 import { cn } from '@/lib/utils';
+import type { DDSPackage } from '@/types';
 
 // Canonical compliance severity levels
 type ComplianceSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
@@ -41,7 +42,7 @@ interface QueuedPackage {
 const mockComplianceIssues: ComplianceIssue[] = [
   {
     id: 'CI-001',
-    package_id: 'PKG-001',
+    package_id: 'pkg_001',
     title: 'Deforestation detected on plot P-042',
     severity: 'BLOCKING',
     status: 'OPEN',
@@ -50,7 +51,7 @@ const mockComplianceIssues: ComplianceIssue[] = [
   },
   {
     id: 'CI-002',
-    package_id: 'PKG-001',
+    package_id: 'pkg_001',
     title: 'FPIC consent missing for 3 farmers',
     severity: 'BLOCKING',
     status: 'OPEN',
@@ -59,7 +60,7 @@ const mockComplianceIssues: ComplianceIssue[] = [
   },
   {
     id: 'CI-003',
-    package_id: 'PKG-002',
+    package_id: 'pkg_002',
     title: 'Tenure verification pending',
     severity: 'WARNING',
     status: 'IN_PROGRESS',
@@ -68,34 +69,38 @@ const mockComplianceIssues: ComplianceIssue[] = [
   },
 ];
 
-const mockQueue: QueuedPackage[] = mockPackages.map((p) => {
-  const issues = mockComplianceIssues.filter((ci) => ci.package_id === p.id);
-  const blockingCount = issues.filter((i) => i.severity === 'BLOCKING').length;
-  
-  return {
-    id: p.id,
-    code: p.code,
-    supplier_name: p.supplier_name,
-    plots_count: p.plots.length,
-    risk_level: (p.plots.some((pl) => pl.deforestation_risk === 'high')
-      ? 'high'
-      : p.plots.some((pl) => pl.deforestation_risk === 'medium')
-      ? 'medium'
-      : 'low') as 'low' | 'medium' | 'high',
-    submitted_date: p.created_at,
-    status: blockingCount > 0 ? 'OPEN' : 'RESOLVED',
-    compliance_issues: issues,
-    sla_hours_remaining: blockingCount > 0 ? 2 : 48,
-  };
-}).slice(0, 8);
+function mapPackagesToQueue(packages: DDSPackage[]): QueuedPackage[] {
+  return packages
+    .map((p) => {
+      const issues = mockComplianceIssues.filter((ci) => ci.package_id === p.id);
+      const blockingCount = issues.filter((i) => i.severity === 'BLOCKING').length;
+      const status: QueuedPackage['status'] =
+        blockingCount > 0
+          ? 'OPEN'
+          : p.status === 'ON_HOLD'
+            ? 'ESCALATED'
+            : p.status === 'SUBMITTED'
+              ? 'IN_PROGRESS'
+              : 'RESOLVED';
 
-// Sort by severity: BLOCKING first, then WARNING, then INFO
-const sortedQueue = [...mockQueue].sort((a, b) => {
-  const severityOrder = { BLOCKING: 0, WARNING: 1, INFO: 2 };
-  const maxSeverityA = Math.min(...a.compliance_issues.map((i) => severityOrder[i.severity]));
-  const maxSeverityB = Math.min(...b.compliance_issues.map((i) => severityOrder[i.severity]));
-  return maxSeverityA - maxSeverityB;
-});
+      return {
+        id: p.id,
+        code: p.code,
+        supplier_name: p.supplier_name,
+        plots_count: p.plots.length,
+        risk_level: (p.plots.some((pl) => pl.deforestation_risk === 'high')
+          ? 'high'
+          : p.plots.some((pl) => pl.deforestation_risk === 'medium')
+            ? 'medium'
+            : 'low') as 'low' | 'medium' | 'high',
+        submitted_date: p.created_at,
+        status,
+        compliance_issues: issues,
+        sla_hours_remaining: blockingCount > 0 ? 2 : status === 'IN_PROGRESS' ? 12 : 48,
+      };
+    })
+    .slice(0, 8);
+}
 
 function getRiskColor(risk: 'low' | 'medium' | 'high') {
   return risk === 'high'
@@ -138,11 +143,26 @@ function getStatusLabel(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED
 }
 
 export default function ComplianceQueuePage() {
+  const { packages, isLoading, error } = usePackages();
   const [selectedStatus, setSelectedStatus] = useState<
     'all' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED'
   >('all');
   const [selectedRisk, setSelectedRisk] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [selectedSeverity, setSelectedSeverity] = useState<'all' | 'BLOCKING' | 'WARNING' | 'INFO'>('all');
+
+  const sortedQueue = useMemo(() => {
+    const queue = mapPackagesToQueue(packages);
+    const severityOrder = { BLOCKING: 0, WARNING: 1, INFO: 2 };
+    return [...queue].sort((a, b) => {
+      const maxSeverityA = a.compliance_issues.length
+        ? Math.min(...a.compliance_issues.map((i) => severityOrder[i.severity]))
+        : severityOrder.INFO;
+      const maxSeverityB = b.compliance_issues.length
+        ? Math.min(...b.compliance_issues.map((i) => severityOrder[i.severity]))
+        : severityOrder.INFO;
+      return maxSeverityA - maxSeverityB;
+    });
+  }, [packages]);
 
   const filteredQueue = useMemo(() => {
     return sortedQueue.filter((item) => {
@@ -160,7 +180,7 @@ export default function ComplianceQueuePage() {
   const blockingCount = sortedQueue.reduce((sum, p) => sum + p.compliance_issues.filter((i) => i.severity === 'BLOCKING').length, 0);
 
   return (
-    <PermissionGate permission="packages:review">
+    <PermissionGate permission="compliance:view">
       <div className="flex flex-col">
         <AppHeader
           title="Compliance Issues Queue"
@@ -173,6 +193,12 @@ export default function ComplianceQueuePage() {
         />
 
         <div className="flex-1 space-y-6 p-6">
+          {error && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {/* Summary Stats */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
@@ -269,7 +295,11 @@ export default function ComplianceQueuePage() {
 
           {/* Queue List - Sorted by Severity */}
           <div className="space-y-3">
-            {filteredQueue.length === 0 ? (
+            {isLoading ? (
+              <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
+                <p className="text-sm text-muted-foreground">Loading compliance queue...</p>
+              </div>
+            ) : filteredQueue.length === 0 ? (
               <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
                 <p className="text-sm text-muted-foreground">No packages match the selected filters</p>
               </div>
@@ -327,7 +357,7 @@ export default function ComplianceQueuePage() {
                             <ul className="space-y-1">
                               {item.compliance_issues.map((issue) => (
                                 <li key={issue.id} className="text-xs text-muted-foreground flex items-start gap-2">
-                                  <SeverityBadge severity={issue.severity} size="xs" />
+                                  <SeverityBadge severity={issue.severity} compact />
                                   <span>{issue.title}</span>
                                 </li>
                               ))}
@@ -356,5 +386,3 @@ export default function ComplianceQueuePage() {
     </PermissionGate>
   );
 }
-
-export default function ComplianceQueuePage() {

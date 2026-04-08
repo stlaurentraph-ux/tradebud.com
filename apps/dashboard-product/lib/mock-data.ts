@@ -320,6 +320,7 @@ export const mockActivities: Activity[] = [
 export const mockDashboardMetrics: DashboardMetrics = {
   total_packages: mockPackages.length,
   total_plots: mockPlots.length,
+  compliant_plots: mockPlots.filter((p) => p.verified).length,
   total_farmers: mockFarmers.length,
   pending_compliance: mockPackages.filter(
     (p) => p.compliance_status === 'PENDING' || p.compliance_status === 'WARNINGS'
@@ -477,6 +478,44 @@ export function getMockFarmers(): Farmer[] {
 // Get all packages
 export function getMockPackages(): DDSPackage[] {
   return mockPackages;
+}
+
+type MockHarvestForAssemble = {
+  id: string;
+  name: string;
+  quantity_kg: number;
+  status: 'harvested' | 'pending_yield_check' | 'blocked';
+  yield_check_status: 'PASS' | 'WARNING' | 'BLOCKED';
+  date: string;
+};
+
+export function getMockHarvests(): MockHarvestForAssemble[] {
+  return [
+    {
+      id: 'h_batch_001',
+      name: 'Batch 2024-001',
+      quantity_kg: 12400,
+      status: 'harvested',
+      yield_check_status: 'PASS',
+      date: '2024-06-01T00:00:00Z',
+    },
+    {
+      id: 'h_batch_002',
+      name: 'Batch 2024-002',
+      quantity_kg: 9800,
+      status: 'pending_yield_check',
+      yield_check_status: 'WARNING',
+      date: '2024-06-03T00:00:00Z',
+    },
+    {
+      id: 'h_batch_003',
+      name: 'Batch 2024-003',
+      quantity_kg: 7600,
+      status: 'blocked',
+      yield_check_status: 'BLOCKED',
+      date: '2024-06-05T00:00:00Z',
+    },
+  ];
 }
 
 // Get all activities
