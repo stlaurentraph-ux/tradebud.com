@@ -1098,6 +1098,49 @@ sent_at       TIMESTAMPTZ NULLABLE
 channel       ENUM NOT NULL (IN_APP, EMAIL, WEBHOOK)
 created_at    TIMESTAMPTZ NOT NULL
 
+request_campaigns
+id                    UUID PK NOT NULL
+requester_org_id      UUID FK → organisations.id NOT NULL
+requester_person_id   UUID FK → persons.id NOT NULL
+campaign_name         TEXT NOT NULL
+request_type          ENUM NOT NULL (MISSING_PRODUCER_PROFILE, MISSING_PLOT_GEOMETRY, MISSING_LAND_TITLE, MISSING_HARVEST_RECORD, YIELD_EVIDENCE, CONSENT_GRANT, DDS_REFERENCE, GENERAL_EVIDENCE, OTHER)
+description_template  TEXT NOT NULL
+due_date              DATE NULLABLE
+channel_policy        JSONB NOT NULL
+-- canonical keys:
+-- {
+--   "in_app": BOOLEAN,
+--   "email": BOOLEAN,
+--   "webhook": BOOLEAN
+-- }
+status                ENUM NOT NULL (DRAFT, QUEUED, RUNNING, COMPLETED, PARTIAL, CANCELLED)
+total_targets         INTEGER NOT NULL DEFAULT 0
+created_requests      INTEGER NOT NULL DEFAULT 0
+failed_targets        INTEGER NOT NULL DEFAULT 0
+created_at            TIMESTAMPTZ NOT NULL
+updated_at            TIMESTAMPTZ NOT NULL
+
+request_campaign_targets
+id                    UUID PK NOT NULL
+campaign_id           UUID FK → request_campaigns.id NOT NULL
+target_org_id         UUID FK → organisations.id NOT NULL
+target_entity_type    TEXT NULLABLE
+target_entity_id      UUID NULLABLE
+target_person_id      UUID FK → persons.id NULLABLE
+request_id            UUID FK → requests.id NULLABLE
+status                ENUM NOT NULL (PENDING, REQUEST_CREATED, SKIPPED_DUPLICATE, FAILED_VALIDATION, FAILED_DELIVERY)
+failure_reason        TEXT NULLABLE
+created_at            TIMESTAMPTZ NOT NULL
+updated_at            TIMESTAMPTZ NOT NULL
+
+-- Rules for mass-demand campaigns:
+-- - A campaign expands into one `requests` row per target and stores linkage in request_campaign_targets.request_id.
+-- - Duplicate suppression: do not create a new request when an OPEN/IN_PROGRESS request with same
+--   requester_org_id + target_org_id + request_type + target_entity_id already exists.
+-- - Campaign execution is asynchronous and resumable.
+-- - Every state transition writes `audit_events` with event_type in:
+--   REQUEST_CAMPAIGN_CREATED, REQUEST_CAMPAIGN_STARTED, REQUEST_CAMPAIGN_COMPLETED, REQUEST_CAMPAIGN_PARTIAL.
+
 compliance_issues
 id               UUID PK NOT NULL
 organisation_id  UUID FK → organisations.id NOT NULL
@@ -1744,6 +1787,7 @@ Capture identity data, wallet, and GeoID if available.
 Start duplicate detection.
 Create plot or queue plot capture.
 Trigger evidence request if required by workflow.
+Bulk-demand mode: cooperatives/exporters may select multiple producers and trigger a `request_campaigns` run to request missing plot geometry or evidence in mass.
 ### 28.3 Invitation flow
 Invitation is generated for a person or producer-admin link.
 Token expires.
@@ -1932,6 +1976,9 @@ For each endpoint, document method, path, auth scope, idempotency requirement, a
   - `POST /v1/organisations`
   - `POST /v1/producers`
   - `POST /v1/organisations/{id}/members/invitations`
+  - `POST /v1/requests/campaigns`
+  - `GET /v1/requests/campaigns/{id}`
+  - `GET /v1/requests/campaigns/{id}/targets`
 - Plot capture and geometry versioning
   - `POST /v1/plots`
   - `POST /v1/plots/{id}/geometry-versions`

@@ -22,19 +22,21 @@ Design the **unified multi-tenant dashboard product** for Tracebud's EUDR-first 
 - Supplier onboarding and remediation views
 - Field/plot review and verification views
 - Shipment readiness and validation views
-- Filing pre-flight and submission status views
-- Risk review and override views
-- Sponsor oversight dashboard (cross-org rollup)
+- Filing pre-flight and `MANUAL_ASSIST` submission package status views
 - Record-linked chat/issues panel
 
 ## Hard scope constraints (MVP)
 
 - EUDR only (no multi-regulation UX)
-- One main filing path
-- One primary risk-provider path
+- `MANUAL_ASSIST` filing only (no `API_DIRECT` in MVP)
+- Web-first dashboard only (mobile offline sync is post-MVP)
+- One commodity / one country implementation lane for MVP
 - Operational dashboards first (not BI exploration)
 - Template-based workflows (not no-code builder canvas)
 - Mobile is field-capture-first (dashboard is web-first)
+- No sponsor governance console in MVP
+- No automated evidence parsing in MVP (manual upload/review only)
+- No downstream/trader workflow UX in MVP
 
 ## Canonical roles for UI behavior
 
@@ -63,12 +65,19 @@ Do not invent new status taxonomies. Use canonical labels from build readiness a
 - Issue: `open`, `assigned`, `waiting_on_partner`, `updated`, `resolved`, `reopened`, `dismissed`
 - Chat thread: `open`, `waiting_internal`, `waiting_partner`, `resolved`, `reopened`
 
+For MVP scope, prioritize canonical status display for:
+- Producer onboarding and consent capture lifecycle
+- Plot capture/review lifecycle
+- Batch yield check lifecycle (`PENDING`, `PASS`, `WARNING`, `BLOCKED`, `UNAVAILABLE`)
+- Shipment package lifecycle (`DRAFT`, `READY`, `SEALED`, `SUBMITTED`, `ACCEPTED`, `REJECTED`)
+- DDS submission lifecycle in `MANUAL_ASSIST` path
+
 ## UX priorities for v0 concepts
 
 - Show blockers and next actions first.
 - Keep explicit tenant context visible in header/switcher.
 - Make role-sensitive actions obvious (view vs review vs approve vs submit).
-- Show risk explanations and override rationale requirements inline.
+- Show manual-review rationale and acknowledgement requirements inline.
 - Keep submission timeline/audit visibility explicit.
 - Support cross-record collaboration through embedded thread panels.
 
@@ -78,10 +87,17 @@ Do not invent new status taxonomies. Use canonical labels from build readiness a
 - Supplier onboarding
 - Plot review
 - Shipment dossier
-- Risk scoring
-- Filing submission
-- Sponsor oversight
+- Filing preparation (`MANUAL_ASSIST`)
 - Audit export
+
+## Post-MVP extension lane (informative for v0 variants)
+
+Design optional extension variants for Release 2+ only:
+- `API_DIRECT` DDS submission views and SOAP dispatch status
+- Deforestation risk screening and explainability panels
+- Sponsor oversight and delegated governance views
+- Downstream/trader retention workflows
+- Automated evidence parse review queues
 
 ## Error and empty-state cues to include
 
@@ -130,18 +146,20 @@ Include these dashboard surfaces:
 - Supplier onboarding + remediation
 - Plot review/verification
 - Shipment readiness + validations
-- Filing pre-flight + submission timeline
-- Risk review + override
-- Sponsor cross-org oversight
+- Filing pre-flight + MANUAL_ASSIST submission timeline
 - Record-linked chat/issues panel
 
 Hard constraints:
 - EUDR only in v1
-- one filing path, one risk-provider path
+- MVP supports MANUAL_ASSIST filing only
+- no API_DIRECT in MVP
+- no sponsor governance console in MVP
+- no downstream/trader workflows in MVP
+- no automated evidence parsing in MVP
 - operational dashboards first
 - strict tenant isolation and role-scoped actions
 - explicit blocker/warning states
-- auditable submission + override flows
+- auditable submission + acknowledgement flows
 
 Use canonical status labels (do not invent new names):
 Supplier: draft/invited/in_progress/submitted/under_review/approved/active/changes_requested/rejected/suspended
@@ -154,9 +172,10 @@ Thread: open/waiting_internal/waiting_partner/resolved/reopened
 Generate:
 1) information architecture
 2) navigation model
-3) key screens and states
+3) key MVP screens and states
 4) role-based action visibility notes
 5) empty/error states (include codes like VAL-001, RISK-002, FIL-002, AUTH-001)
 6) reusable component system for status chips, blocker cards, risk cards, submission timeline, and audit panels
+7) a separate "Release 2+ extension" section for API_DIRECT, risk engine, and sponsor oversight
 ```
 
