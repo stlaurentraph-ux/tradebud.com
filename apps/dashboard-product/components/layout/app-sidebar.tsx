@@ -19,6 +19,8 @@ import {
   Wheat,
   FileCheck,
   History,
+  Send,
+  Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,8 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   Wheat,
   FileCheck,
   History,
+  Send,
+  Scale,
 };
 
 export function AppSidebar() {
