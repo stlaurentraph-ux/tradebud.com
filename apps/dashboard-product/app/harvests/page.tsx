@@ -19,7 +19,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { mockPackages } from '@/lib/mock-data';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface Harvest {
@@ -135,6 +135,7 @@ export default function HarvestsPage() {
   const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending_exceptions'>('all');
 
   const filteredHarvests = mockHarvests.filter((h) => {
     if (filterStatus !== 'all' && h.status !== filterStatus) return false;
@@ -148,6 +149,7 @@ export default function HarvestsPage() {
   const totalWeight = mockHarvests.reduce((sum, h) => sum + h.weight_kg, 0);
   const avgYield = totalWeight / mockHarvests.reduce((sum, h) => sum + h.plot_area_hectares, 0);
   const flaggedBatches = mockHarvests.filter((h) => h.status !== 'pass').length;
+  const pendingExceptions = mockHarvests.filter((h) => h.exception_status === 'pending');
 
   const handleRequestException = () => {
     if (!selectedHarvest) return;

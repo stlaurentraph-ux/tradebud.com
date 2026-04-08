@@ -5,6 +5,7 @@ import { ExporterDashboard } from '@/components/dashboards/exporter-dashboard';
 import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
 import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
+import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
 import { mockDashboardMetrics } from '@/lib/mock-data';
 import { useAuth } from '@/lib/auth-context';
 import { getRoleDisplayName } from '@/lib/rbac';
@@ -33,6 +34,8 @@ export default function DashboardPage() {
         return <CooperativeDashboard metrics={metrics} />;
       case 'country_reviewer':
         return <ReviewerDashboard metrics={metrics} />;
+      case 'sponsor':
+        return <SponsorDashboard metrics={metrics} />;
       default:
         return <ExporterDashboard metrics={metrics} />;
     }
@@ -51,6 +54,8 @@ export default function DashboardPage() {
         return 'Manage farmers and plot registrations';
       case 'country_reviewer':
         return 'Review and verify compliance submissions';
+      case 'sponsor':
+        return 'Monitor your sponsored producer network';
       default:
         return `${getRoleDisplayName(user.active_role)} Dashboard`;
     }
