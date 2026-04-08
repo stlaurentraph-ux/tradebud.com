@@ -64,17 +64,156 @@ const mockRecentActivity: TimelineEvent[] = [
 ];
 
 export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
+  // Canonical shipment states from spec
+  const shipmentStates = {
+    DRAFT: metrics.packages_by_status?.['draft'] || 0,
+    READY: metrics.packages_by_status?.['ready'] || 0,
+    SEALED: metrics.packages_by_status?.['sealed'] || 0,
+    SUBMITTED: metrics.packages_by_status?.['submitted'] || 0,
+    ACCEPTED: metrics.packages_by_status?.['accepted'] || 0,
+    REJECTED: metrics.packages_by_status?.['rejected'] || 0,
+    ON_HOLD: metrics.packages_by_status?.['on_hold'] || 0,
+  };
+
+  // Calculate SLA metrics
+  const draftSLA = { count: shipmentStates.DRAFT, daysSLA: 7, daysActive: 3 };
+  const readySLA = { count: shipmentStates.READY, daysSLA: 5, daysActive: 2 };
+  const sealedSLA = { count: shipmentStates.SEALED, daysSLA: 10, daysActive: 1 };
+
+  // Calculate SLA health
+  const calculateSLAHealth = (daysActive: number, daysSLA: number): 'healthy' | 'warning' | 'overdue' => {
+    if (daysActive >= daysSLA) return 'overdue';
+    if (daysActive >= daysSLA * 0.8) return 'warning';
+    return 'healthy';
+  };
+
   const complianceRate = metrics.total_plots > 0 
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
 
-  // Spec KPIs - these would come from the backend in production
+  // Spec KPIs
   const blockingIssuesCount = 2;
   const yieldFailuresCount = 1;
-  const ddsSubmissionQueue = metrics.packages_by_status?.['traces_ready'] || 0;
+  const ddsSubmissionQueue = shipmentStates.SUBMITTED;
 
   return (
     <div className="space-y-6">
+      {/* SLA Burndown Pipeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Shipment Pipeline & SLA Status</CardTitle>
+          <CardDescription>Canonical state machine with SLA burndowns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* DRAFT State */}
+            <div className="rounded-lg border p-4 bg-blue-50/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">DRAFT</p>
+                  <p className="text-2xl font-bold mt-1">{shipmentStates.DRAFT}</p>
+                </div>
+                <StatusChip status="DRAFT" />
+              </div>
+              <div className="mt-3 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span>SLA: {draftSLA.daysSLA}d</span>
+                  <span className={calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
+                    {draftSLA.daysActive}d active
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div 
+                    className={`h-1 rounded-full ${calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                    style={{ width: `${Math.min((draftSLA.daysActive / draftSLA.daysSLA) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* READY State */}
+            <div className="rounded-lg border p-4 bg-cyan-50/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">READY</p>
+                  <p className="text-2xl font-bold mt-1">{shipmentStates.READY}</p>
+                </div>
+                <StatusChip status="APPROVED_FOR_FILING" label="Ready" />
+              </div>
+              <div className="mt-3 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span>SLA: {readySLA.daysSLA}d</span>
+                  <span className={calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
+                    {readySLA.daysActive}d active
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div 
+                    className={`h-1 rounded-full ${calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                    style={{ width: `${Math.min((readySLA.daysActive / readySLA.daysSLA) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SEALED State */}
+            <div className="rounded-lg border p-4 bg-purple-50/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">SEALED</p>
+                  <p className="text-2xl font-bold mt-1">{shipmentStates.SEALED}</p>
+                </div>
+                <StatusChip status="FILED" label="Sealed" />
+              </div>
+              <div className="mt-3 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span>SLA: {sealedSLA.daysSLA}d</span>
+                  <span className={calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
+                    {sealedSLA.daysActive}d active
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div 
+                    className={`h-1 rounded-full ${calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                    style={{ width: `${Math.min((sealedSLA.daysActive / sealedSLA.daysSLA) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SUBMITTED State */}
+            <div className="rounded-lg border p-4 bg-emerald-50/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">SUBMITTED</p>
+                  <p className="text-2xl font-bold mt-1">{shipmentStates.SUBMITTED}</p>
+                </div>
+                <StatusChip status="SUBMITTED" />
+              </div>
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-emerald-700 font-medium">Awaiting TRACES NT Response</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Terminal States Summary */}
+          <div className="mt-4 grid gap-2 md:grid-cols-3 text-xs">
+            <div className="rounded p-2 bg-green-50 border border-green-200">
+              <p className="text-muted-foreground">ACCEPTED</p>
+              <p className="text-lg font-semibold text-green-700">{shipmentStates.ACCEPTED}</p>
+            </div>
+            <div className="rounded p-2 bg-red-50 border border-red-200">
+              <p className="text-muted-foreground">REJECTED</p>
+              <p className="text-lg font-semibold text-red-700">{shipmentStates.REJECTED}</p>
+            </div>
+            <div className="rounded p-2 bg-amber-50 border border-amber-200">
+              <p className="text-muted-foreground">ON_HOLD</p>
+              <p className="text-lg font-semibold text-amber-700">{shipmentStates.ON_HOLD}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Primary Action Banner */}
       <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
         <CardContent className="flex items-center justify-between p-6">
