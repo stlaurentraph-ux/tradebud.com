@@ -71,7 +71,7 @@ export function OverviewMetrics({ metrics }: OverviewMetricsProps) {
                 <div className="flex flex-col">
                   <span className="text-2xl font-bold text-foreground">
                     {displayValue}
-                    {card.suffix || ''}
+                    {'suffix' in card ? card.suffix : ''}
                   </span>
                   <span className="text-xs text-muted-foreground">{card.label}</span>
                 </div>

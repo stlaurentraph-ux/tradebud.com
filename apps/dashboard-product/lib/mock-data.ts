@@ -91,7 +91,7 @@ export function getMockFarmersWithStats(): FarmerWithStats[] {
   return mockFarmers.map((f, i) => ({
     id: f.id,
     name: f.name,
-    phone: f.contact_phone,
+    phone: f.contact_phone ?? '',
     cooperative: f.cooperative_id === 'coop_001' ? 'Rwanda Coffee Cooperative' : 'Huye Highland Growers',
     total_plots: Math.floor(Math.random() * 5) + 1,
     total_area_hectares: parseFloat((Math.random() * 10 + 1).toFixed(2)),
