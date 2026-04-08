@@ -61,7 +61,9 @@ export type AuditEventType =
   | 'YIELD_EXCEPTION_REJECTED'
   // Request Campaign Events
   | 'REQUEST_CAMPAIGN_CREATED'
-  | 'REQUEST_CAMPAIGN_SENT'
+  | 'REQUEST_CAMPAIGN_STARTED'
+  | 'REQUEST_CAMPAIGN_COMPLETED'
+  | 'REQUEST_CAMPAIGN_PARTIAL'
   | 'REQUEST_CAMPAIGN_REMINDER_SENT'
   | 'REQUEST_CAMPAIGN_RESPONSE_RECEIVED'
   | 'REQUEST_CAMPAIGN_EXPIRED'
@@ -223,7 +225,7 @@ export interface ComplianceIssueStatusChangedPayload {
 
 export interface ComplianceIssueResolvedPayload {
   issue_id: string;
-  resolution_type: 'FIXED' | 'WONT_FIX' | 'DUPLICATE' | 'INVALID';
+  resolution_type: 'FIXED' | 'DUPLICATE' | 'INVALID';
   resolution_notes: string;
   time_to_resolution_hours: number;
   sla_met: boolean;
@@ -324,7 +326,16 @@ export interface YieldExceptionRejectedPayload {
 export interface RequestCampaignCreatedPayload {
   campaign_id: string;
   title: string;
-  request_type: 'EVIDENCE' | 'FPIC' | 'CONSENT' | 'PLOT_UPDATE';
+  request_type:
+    | 'MISSING_PRODUCER_PROFILE'
+    | 'MISSING_PLOT_GEOMETRY'
+    | 'MISSING_LAND_TITLE'
+    | 'MISSING_HARVEST_RECORD'
+    | 'YIELD_EVIDENCE'
+    | 'CONSENT_GRANT'
+    | 'DDS_REFERENCE'
+    | 'GENERAL_EVIDENCE'
+    | 'OTHER';
   target_count: number;
   due_at: string;
 }
@@ -343,7 +354,7 @@ export interface RequestCampaignResponseReceivedPayload {
   response_id: string;
   responder_id: string;
   responder_type: 'organization' | 'farmer';
-  response_status: 'accepted' | 'declined';
+  response_status: 'FULFILLED' | 'EXPIRED' | 'CANCELLED';
   evidence_ids?: string[];
 }
 
@@ -643,10 +654,22 @@ export const AUDIT_EVENT_METADATA: Record<
     severity: 'info',
     retention_years: 5,
   },
-  REQUEST_CAMPAIGN_SENT: {
+  REQUEST_CAMPAIGN_STARTED: {
     category: 'Request',
-    description: 'Request campaign sent',
+    description: 'Request campaign started',
     severity: 'info',
+    retention_years: 5,
+  },
+  REQUEST_CAMPAIGN_COMPLETED: {
+    category: 'Request',
+    description: 'Request campaign completed',
+    severity: 'info',
+    retention_years: 5,
+  },
+  REQUEST_CAMPAIGN_PARTIAL: {
+    category: 'Request',
+    description: 'Request campaign partially completed',
+    severity: 'warning',
     retention_years: 5,
   },
   REQUEST_CAMPAIGN_REMINDER_SENT: {

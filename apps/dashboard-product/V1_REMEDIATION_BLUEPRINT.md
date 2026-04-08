@@ -14,7 +14,7 @@
 | **Role Model** | `useRole()` returns simplified tenant-scoped roles | Section 5: 7 legal workflow roles (OPERATOR, MICRO_SMALL_PRIMARY_OPERATOR, DOWNSTREAM_OPERATOR_FIRST/SUBSEQUENT, TRADER, OUT_OF_SCOPE, PENDING_MANUAL_CLASSIFICATION) + commercial tiers + permissions matrix | CRITICAL | Refactor: Expand RBAC to canonical role model; add role decision engine; implement permission matrix per Section 8 |
 | **State Machines** | Hardcoded status strings | Canonical status per entity (shipment_headers, dds_records, compliance_issues, yield_exception_requests) | CRITICAL | Refactor: Map current states to canonical; add missing transitions; implement immutable audit trail |
 | **Shipment Model** | `/packages/[id]/assemble` wizard with incomplete state tracking | Section 15: shipment_headers + shipment_lines + shipment_line_coverages with yield cap validation, blocking issues, liability acknowledgement | HIGH | Refactor: Align assembly flow to canonical shipment model; add lineage materialization; enforce yield-cap pre-flight gate |
-| **DDS Workflow** | `/compliance/page.tsx` shows pre-flight checks only | Section 16: dds_records with submission_status state machine (DRAFT → READY_TO_SUBMIT → SUBMITTED → ACCEPTED/REJECTED/NEEDS_MANUAL_REVIEW); MANUAL_ASSIST path only for MVP | HIGH | Refactor: Add dds_records lifecycle UI; show TRACES reference numbers; link to shipment_header; implement audit event logging |
+| **DDS Workflow** | `/compliance/page.tsx` shows pre-flight checks only | Section 16: dds_records with submission_status state machine (DRAFT → READY_TO_SUBMIT → SUBMITTED → ACCEPTED/REJECTED/PENDING_CONFIRMATION + amendment/withdrawal states); MANUAL_ASSIST path only for MVP | HIGH | Refactor: Add dds_records lifecycle UI; show TRACES reference numbers; link to shipment_header; implement audit event logging |
 | **Compliance Issues** | `/compliance/issues/page.tsx` exists but no SLA/ownership | Section 17: compliance_issues with severity, owner, SLA, blocking status, resolution path | HIGH | Refactor: Add issue ownership, SLA tracking, escalation, blocking impact visibility |
 | **Yield Exception Workflow** | `/harvests/page.tsx` has exception request dialog | Section 20: yield_exception_requests with status machine; 5-day SLA; blocking issues if unresolved | MEDIUM | Refactor: Add SLA tracking; link to compliance_issues; show approval/rejection with audit events |
 | **Role-Based Navigation** | Fixed sidebar for all roles | V0_DESIGN_CONTEXT: Role-specific nav; post-MVP gating | HIGH | Refactor: Implement role switcher; hide/show pages per Section 51 MVP gating; add "Release 2+" labels |
@@ -40,18 +40,18 @@
 | `/farmers/[id]` | Keep | MVP | All | farmers, consent_grants, plots | N/A | GET /farmers/{id}, GET /farmers/{id}/consents, GET /farmers/{id}/plots |
 | `/packages` | Refactor | MVP | Supplier User, Org Admin, Compliance Analyst | shipment_headers, dds_records | Show all shipment states; filter by legal role | GET /shipments?org_id={org_id} |
 | `/packages/new` | Refactor | MVP | Supplier User | shipment_headers | DRAFT | POST /shipments |
-| `/packages/[id]` | Refactor | MVP | All | shipment_headers, shipment_lines, shipment_line_coverages | DRAFT → COLLECTING_DATA → VALIDATING → BLOCKED → READY_FOR_APPROVAL → APPROVED_FOR_FILING → FILED | GET /shipments/{id}, GET /shipments/{id}/lines, GET /shipments/{id}/coverage |
+| `/packages/[id]` | Refactor | MVP | All | shipment_headers, shipment_lines, shipment_line_coverages | DRAFT → READY → SEALED → SUBMITTED → ACCEPTED/REJECTED → ARCHIVED/ON_HOLD | GET /shipments/{id}, GET /shipments/{id}/lines, GET /shipments/{id}/coverage |
 | `/packages/[id]/assemble` | Refactor | MVP | Supplier User, Compliance Manager | shipment_headers, shipment_lines, shipment_line_coverages, yield_checks, compliance_issues | 4-step wizard: Select Batches → Allocate Coverage → Validate Issues → Seal (with liability) | GET /batches, GET /compliance-issues?shipment_id={id} |
 | `/compliance` | Refactor | MVP | Compliance Analyst, Compliance Manager | dds_records | DRAFT → READY_TO_SUBMIT → SUBMITTED → ACCEPTED/REJECTED/NEEDS_MANUAL_REVIEW | GET /dds-records?shipment_id={id}, GET /pre-flight-checks |
 | `/compliance/queue` | Keep | MVP | Compliance Reviewer, Compliance Manager | dds_records, compliance_issues | READY_TO_SUBMIT → SUBMITTED | GET /dds-records?status=READY_TO_SUBMIT |
-| `/compliance/issues` | Refactor | MVP | Compliance Analyst, Compliance Manager, Risk Reviewer | compliance_issues | OPEN → ASSIGNED → WAITING_ON_PARTNER → UPDATED → RESOLVED/REOPENED/DISMISSED | GET/POST /compliance-issues, PATCH /compliance-issues/{id}/owner |
+| `/compliance/issues` | Refactor | MVP | Compliance Analyst, Compliance Manager, Risk Reviewer | compliance_issues | OPEN → IN_PROGRESS → ESCALATED/RESOLVED | GET/POST /compliance-issues, PATCH /compliance-issues/{id}/assign-owner |
 | `/harvests` | Refactor | MVP | Supplier User, Field Manager | batches, yield_checks, yield_exception_requests | yield_check_status: PENDING → PASS/WARNING/BLOCKED; exception_status: NONE → PENDING → APPROVED/REJECTED | GET /batches, POST /yield-exception-requests |
 | `/fpic` | Keep | MVP | Supplier User, Field Manager | evidence_documents, consent_grants | DRAFT → UPLOADED → UNDER_REVIEW → APPROVED/REJECTED | GET/POST /evidence-documents?type=FPIC |
 | `/audit-log` | Keep | MVP | Auditor, Org Admin | audit_events | N/A | GET /audit-events?org_id={org_id} |
 | `/admin` | Refactor | MVP | Org Admin | organisations, users, roles, billing | N/A | GET/PATCH /orgs/{id}, GET/POST /orgs/{id}/users, GET /orgs/{id}/billing |
 | `/reports` | Defer | V1+ | Importer, Trader, Risk Reviewer | dds_records, shipments (aggregate) | N/A | GET /reports/shipment-summary |
 | `/sponsor-admin` | **New (Release 2+)** | V1+ | Sponsor Admin, Network Admin | organisations, data_visibility_policies, delegated_admin_actions | N/A | N/A |
-| `/requests` | **New (Release 2+)** | V1+ | All roles | requests, request_campaigns, request_campaign_targets | REQUEST_DRAFT → SENT → ACCEPTED/DECLINED/EXPIRED | N/A |
+| `/requests` | **New (Release 2+)** | V1+ | All roles | requests, request_campaigns, request_campaign_targets | request status: OPEN → IN_PROGRESS → FULFILLED/EXPIRED/CANCELLED; campaign status: DRAFT → QUEUED → RUNNING → COMPLETED/PARTIAL/CANCELLED | N/A |
 
 ---
 
@@ -84,14 +84,13 @@
 | Canonical State | Current Implemented State | Required Mapping | Migration Notes |
 |-----------------|--------------------------|------------------|-----------------|
 | `DRAFT` | `draft` | 1:1 | ✓ Exists |
-| `COLLECTING_DATA` | Not explicitly tracked | Use workflow flag | Need to add |
-| `VALIDATING` | Implicit during assembly | Explicit state needed | Refactor assembly to emit |
-| `BLOCKED` | `blocked` (from assembly) | 1:1 with compliance_issues link | ✓ Partially exists |
-| `READY_FOR_APPROVAL` | `ready` | Rename to canonical | ✓ Rename only |
-| `APPROVED_FOR_FILING` | Not tracked | New state for approval gates | Add after compliance sign-off |
-| `FILED` | `submitted` | Rename to `FILED`; link dds_records | Refactor |
-| `FILING_FAILED` | Not tracked | New state when TRACES rejects | Add error handling |
-| `FILING_ACCEPTED` | Not tracked | New state when TRACES accepts | Add success handler |
+| `READY` | `ready` | 1:1 | ✓ Exists |
+| `SEALED` | Partially tracked | Explicit canonical sealed state | enforce sealing gate |
+| `SUBMITTED` | `submitted` | 1:1 | ensure linkage to dds_records |
+| `ACCEPTED` | Not consistently tracked | Add canonical accepted state | add TRACES success handler |
+| `REJECTED` | Partial | Add canonical rejected state | add rejection handling |
+| `ARCHIVED` | Not tracked | Add terminal archival state | post-accept/archive flow |
+| `ON_HOLD` | Partial blocker UX only | Add explicit canonical hold state | hold/resume transitions |
 
 ### Entity: `dds_records`
 
@@ -102,8 +101,10 @@
 | `SUBMITTED` | N/A | — | When TRACES API called (MANUAL_ASSIST only) |
 | `ACCEPTED` | N/A | — | When TRACES returns reference number |
 | `REJECTED` | N/A | — | When TRACES returns error |
-| `NEEDS_MANUAL_REVIEW` | N/A | — | When TRACES flags for review |
-| `AMENDED` | N/A | — | Link to prior dds_record via supersedes_id |
+| `PENDING_CONFIRMATION` | N/A | — | When submit outcome is ambiguous |
+| `AMENDMENT_DRAFT` | N/A | — | Amendment preparation state |
+| `AMENDED_SUBMITTED` | N/A | — | Amendment submitted state |
+| `WITHDRAWAL_REQUESTED` | N/A | — | Withdrawal requested state |
 | `WITHDRAWN` | N/A | — | TRACES withdrawal requested |
 
 ### Entity: `compliance_issues`
@@ -111,12 +112,8 @@
 | Canonical State | Current Implemented State | Required Mapping | Migration Notes |
 |-----------------|--------------------------|------------------|-----------------|
 | `OPEN` | Not tracked in current code | — | Add status field |
-| `ASSIGNED` | N/A | — | When owner assigned |
-| `WAITING_ON_PARTNER` | N/A | — | When request sent; flag escalation |
-| `UPDATED` | N/A | — | When partner responds |
 | `RESOLVED` | `resolved` | 1:1 | ✓ Partially exists |
-| `REOPENED` | N/A | — | Link to prior closed issue |
-| `DISMISSED` | N/A | — | Marked not actionable |
+| `ESCALATED` | N/A | — | escalation path for overdue/critical items |
 
 ### Entity: `yield_exception_requests`
 
@@ -125,7 +122,7 @@
 | `PENDING` | `pending` (in harvest UI) | 1:1 | Upgrade to DB entity |
 | `APPROVED` | N/A | — | Compliance Manager decision |
 | `REJECTED` | N/A | — | Compliance Manager decision |
-| `EXPIRED` | N/A | — | After 5-day SLA breach |
+| `EXPIRED` | N/A | — | After 5-day SLA breach (where policy requires) |
 
 ---
 

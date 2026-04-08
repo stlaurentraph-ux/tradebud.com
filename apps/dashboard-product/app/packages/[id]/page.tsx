@@ -56,7 +56,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Link>
               </Button>
             </PermissionGate>
-            {pkg.status === 'traces_ready' && (
+            {pkg.status === 'SEALED' && (
               <PermissionGate permission="packages:submit_traces">
                 <Button asChild>
                   <Link href={`/packages/${pkg.id}/submit`}>
@@ -66,7 +66,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Button>
               </PermissionGate>
             )}
-            {pkg.status === 'draft' || pkg.status === 'in_review' ? (
+            {pkg.status === 'DRAFT' || pkg.status === 'READY' ? (
               <PermissionGate permission="packages:seal_shipment">
                 <Button asChild variant="default">
                   <Link href={`/packages/${pkg.id}/assemble`}>

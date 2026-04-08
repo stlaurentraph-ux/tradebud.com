@@ -4,13 +4,13 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 
-export type ComplianceStatus = 'compliant' | 'warning' | 'failed' | 'pending';
+export type ComplianceCheckStatus = 'compliant' | 'warning' | 'failed' | 'pending';
 
 interface ComplianceCheckItem {
   id: string;
   title: string;
   description: string;
-  status: ComplianceStatus;
+  status: ComplianceCheckStatus;
   severity: 'critical' | 'warning' | 'info';
 }
 

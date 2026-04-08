@@ -52,8 +52,8 @@ const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending
     id: 'req-001',
     title: 'Q1 2024 FPIC Documentation Update',
     description: 'Request updated Free, Prior and Informed Consent documentation from all active producers for the upcoming EUDR compliance deadline.',
-    request_type: 'FPIC',
-    status: 'SENT',
+    request_type: 'GENERAL_EVIDENCE',
+    status: 'RUNNING',
     target_organization_ids: ['org-001', 'org-002'],
     target_farmer_ids: ['farmer-001', 'farmer-002', 'farmer-003', 'farmer-004', 'farmer-005'],
     target_plot_ids: [],
@@ -71,8 +71,8 @@ const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending
     id: 'req-002',
     title: 'Plot Boundary Verification - Zone A',
     description: 'Request GPS boundary verification for plots flagged with geometry conflicts in deforestation screening.',
-    request_type: 'PLOT_UPDATE',
-    status: 'SENT',
+    request_type: 'MISSING_PLOT_GEOMETRY',
+    status: 'RUNNING',
     target_organization_ids: [],
     target_farmer_ids: ['farmer-006', 'farmer-007'],
     target_plot_ids: ['plot-012', 'plot-013', 'plot-014'],
@@ -90,8 +90,8 @@ const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending
     id: 'req-003',
     title: 'Labor Compliance Evidence Collection',
     description: 'Collect labor compliance certificates from cooperative members for annual audit requirements.',
-    request_type: 'EVIDENCE',
-    status: 'ACCEPTED',
+    request_type: 'GENERAL_EVIDENCE',
+    status: 'COMPLETED',
     target_organization_ids: ['org-003'],
     target_farmer_ids: ['farmer-010', 'farmer-011', 'farmer-012'],
     target_plot_ids: [],
@@ -109,7 +109,7 @@ const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending
     id: 'req-004',
     title: 'Consent Renewal - Data Processing',
     description: 'Annual renewal of data processing consent for GDPR compliance.',
-    request_type: 'CONSENT',
+    request_type: 'CONSENT_GRANT',
     status: 'EXPIRED',
     target_organization_ids: [],
     target_farmer_ids: ['farmer-015', 'farmer-016', 'farmer-017', 'farmer-018'],
@@ -128,7 +128,7 @@ const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending
     id: 'req-005',
     title: 'New Season Evidence Collection',
     description: 'Draft request for 2024/25 season evidence collection - not yet sent.',
-    request_type: 'EVIDENCE',
+    request_type: 'GENERAL_EVIDENCE',
     status: 'DRAFT',
     target_organization_ids: [],
     target_farmer_ids: [],
@@ -152,7 +152,7 @@ const mockIncomingRequests = [
     campaign_id: 'req-001',
     title: 'Q1 2024 FPIC Documentation Update',
     from_organization: 'Café Exports Colombia',
-    request_type: 'FPIC',
+    request_type: 'GENERAL_EVIDENCE',
     due_at: '2024-04-15T23:59:59Z',
     status: 'pending' as const,
   },
@@ -161,7 +161,7 @@ const mockIncomingRequests = [
     campaign_id: 'req-002',
     title: 'Plot Boundary Verification - Zone A',
     from_organization: 'Café Exports Colombia',
-    request_type: 'PLOT_UPDATE',
+    request_type: 'MISSING_PLOT_GEOMETRY',
     due_at: '2024-04-01T23:59:59Z',
     status: 'pending' as const,
   },
@@ -169,25 +169,32 @@ const mockIncomingRequests = [
 
 const statusConfig: Record<RequestCampaignStatus, { label: string; color: string; icon: typeof Send }> = {
   DRAFT: { label: 'Draft', color: 'bg-gray-500/20 text-gray-400', icon: FileText },
-  SENT: { label: 'Sent', color: 'bg-blue-500/20 text-blue-400', icon: Send },
-  ACCEPTED: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400', icon: CheckCircle2 },
+  QUEUED: { label: 'Queued', color: 'bg-indigo-500/20 text-indigo-400', icon: Clock },
+  RUNNING: { label: 'Running', color: 'bg-blue-500/20 text-blue-400', icon: Send },
+  COMPLETED: { label: 'Completed', color: 'bg-emerald-500/20 text-emerald-400', icon: CheckCircle2 },
+  PARTIAL: { label: 'Partial', color: 'bg-amber-500/20 text-amber-400', icon: AlertCircle },
   EXPIRED: { label: 'Expired', color: 'bg-red-500/20 text-red-400', icon: XCircle },
   CANCELLED: { label: 'Cancelled', color: 'bg-gray-500/20 text-gray-400', icon: XCircle },
 };
 
 const requestTypeConfig = {
-  EVIDENCE: { label: 'Evidence', icon: FileText, color: 'text-purple-500' },
-  FPIC: { label: 'FPIC', icon: CheckCircle2, color: 'text-emerald-500' },
-  CONSENT: { label: 'Consent', icon: Users, color: 'text-blue-500' },
-  PLOT_UPDATE: { label: 'Plot Update', icon: MapPin, color: 'text-amber-500' },
+  GENERAL_EVIDENCE: { label: 'General Evidence', icon: FileText, color: 'text-purple-500' },
+  MISSING_PLOT_GEOMETRY: { label: 'Missing Plot Geometry', icon: MapPin, color: 'text-amber-500' },
+  CONSENT_GRANT: { label: 'Consent Grant', icon: Users, color: 'text-blue-500' },
+  MISSING_LAND_TITLE: { label: 'Missing Land Title', icon: FileText, color: 'text-orange-500' },
+  MISSING_HARVEST_RECORD: { label: 'Missing Harvest Record', icon: FileText, color: 'text-rose-500' },
+  YIELD_EVIDENCE: { label: 'Yield Evidence', icon: AlertCircle, color: 'text-yellow-500' },
+  MISSING_PRODUCER_PROFILE: { label: 'Missing Producer Profile', icon: Users, color: 'text-cyan-500' },
+  DDS_REFERENCE: { label: 'DDS Reference', icon: CheckCircle2, color: 'text-emerald-500' },
+  OTHER: { label: 'Other', icon: FileText, color: 'text-gray-500' },
 };
 
 // Stats
 const stats = {
   totalCampaigns: mockCampaigns.length,
-  activeCampaigns: mockCampaigns.filter((c) => c.status === 'SENT').length,
+  activeCampaigns: mockCampaigns.filter((c) => c.status === 'RUNNING' || c.status === 'QUEUED').length,
   pendingResponses: mockCampaigns.reduce((acc, c) => acc + c.pending_count, 0),
-  completedCampaigns: mockCampaigns.filter((c) => c.status === 'ACCEPTED').length,
+  completedCampaigns: mockCampaigns.filter((c) => c.status === 'COMPLETED').length,
   expiredCampaigns: mockCampaigns.filter((c) => c.status === 'EXPIRED').length,
   incomingRequests: mockIncomingRequests.filter((r) => r.status === 'pending').length,
 };
@@ -200,7 +207,7 @@ export default function RequestsPage() {
   const [newCampaign, setNewCampaign] = useState({
     title: '',
     description: '',
-    request_type: 'EVIDENCE' as const,
+    request_type: 'GENERAL_EVIDENCE' as const,
     due_at: '',
   });
 
@@ -222,7 +229,7 @@ export default function RequestsPage() {
   const handleCreateCampaign = () => {
     console.log('[v0] Creating campaign:', newCampaign);
     setCreateDialogOpen(false);
-    setNewCampaign({ title: '', description: '', request_type: 'EVIDENCE', due_at: '' });
+    setNewCampaign({ title: '', description: '', request_type: 'GENERAL_EVIDENCE', due_at: '' });
   };
 
   return (
@@ -269,15 +276,29 @@ export default function RequestsPage() {
                       onChange={(e) =>
                         setNewCampaign({
                           ...newCampaign,
-                          request_type: e.target.value as 'EVIDENCE' | 'FPIC' | 'CONSENT' | 'PLOT_UPDATE',
+                          request_type: e.target.value as
+                            | 'GENERAL_EVIDENCE'
+                            | 'MISSING_PLOT_GEOMETRY'
+                            | 'CONSENT_GRANT'
+                            | 'MISSING_LAND_TITLE'
+                            | 'MISSING_HARVEST_RECORD'
+                            | 'YIELD_EVIDENCE'
+                            | 'MISSING_PRODUCER_PROFILE'
+                            | 'DDS_REFERENCE'
+                            | 'OTHER',
                         })
                       }
                       className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     >
-                      <option value="EVIDENCE">Evidence Collection</option>
-                      <option value="FPIC">FPIC Documentation</option>
-                      <option value="CONSENT">Consent Renewal</option>
-                      <option value="PLOT_UPDATE">Plot Boundary Update</option>
+                      <option value="GENERAL_EVIDENCE">General Evidence</option>
+                      <option value="MISSING_PLOT_GEOMETRY">Missing Plot Geometry</option>
+                      <option value="CONSENT_GRANT">Consent Grant</option>
+                      <option value="MISSING_LAND_TITLE">Missing Land Title</option>
+                      <option value="MISSING_HARVEST_RECORD">Missing Harvest Record</option>
+                      <option value="YIELD_EVIDENCE">Yield Evidence</option>
+                      <option value="MISSING_PRODUCER_PROFILE">Missing Producer Profile</option>
+                      <option value="DDS_REFERENCE">DDS Reference</option>
+                      <option value="OTHER">Other</option>
                     </select>
                   </div>
                   <div>
@@ -414,8 +435,10 @@ export default function RequestsPage() {
                 >
                   <option value="all">All Status</option>
                   <option value="DRAFT">Draft</option>
-                  <option value="SENT">Sent</option>
-                  <option value="ACCEPTED">Completed</option>
+                  <option value="QUEUED">Queued</option>
+                  <option value="RUNNING">Running</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="PARTIAL">Partial</option>
                   <option value="EXPIRED">Expired</option>
                 </select>
               </div>
@@ -427,7 +450,7 @@ export default function RequestsPage() {
                 const statusInfo = statusConfig[campaign.status];
                 const typeInfo = requestTypeConfig[campaign.request_type];
                 const daysUntilDue = getDaysUntilDue(campaign.due_at);
-                const isOverdue = daysUntilDue < 0 && campaign.status === 'SENT';
+                const isOverdue = daysUntilDue < 0 && campaign.status === 'RUNNING';
 
                 return (
                   <Card key={campaign.id} className={isOverdue ? 'border-red-500/50' : ''}>
@@ -456,7 +479,7 @@ export default function RequestsPage() {
                                   Overdue
                                 </Badge>
                               )}
-                              {!isOverdue && daysUntilDue <= 7 && daysUntilDue > 0 && campaign.status === 'SENT' && (
+                              {!isOverdue && daysUntilDue <= 7 && daysUntilDue > 0 && campaign.status === 'RUNNING' && (
                                 <Badge className="ml-2 bg-amber-500/20 text-amber-400">
                                   {daysUntilDue}d left
                                 </Badge>
@@ -518,7 +541,7 @@ export default function RequestsPage() {
                               </Button>
                             </PermissionGate>
                           )}
-                          {campaign.status === 'SENT' && campaign.pending_count > 0 && (
+                          {campaign.status === 'RUNNING' && campaign.pending_count > 0 && (
                             <Button variant="outline" size="sm">
                               <Bell className="mr-2 h-4 w-4" />
                               Send Reminder
@@ -536,7 +559,7 @@ export default function RequestsPage() {
                               {campaign.status === 'DRAFT' && (
                                 <DropdownMenuItem>Edit Campaign</DropdownMenuItem>
                               )}
-                              {campaign.status === 'SENT' && (
+                              {campaign.status === 'RUNNING' && (
                                 <DropdownMenuItem className="text-red-600">
                                   Cancel Campaign
                                 </DropdownMenuItem>

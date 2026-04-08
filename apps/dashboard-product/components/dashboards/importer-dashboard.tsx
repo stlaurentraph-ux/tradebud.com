@@ -16,19 +16,20 @@ import {
   ArrowRight,
   MapPin,
 } from 'lucide-react';
+import type { ShipmentStatus } from '@/types';
 
 interface ImporterDashboardProps {
   metrics: {
     total_packages: number;
-    packages_by_status: Record<string, number>;
+    packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
   };
 }
 
 export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
-  const pendingReview = (metrics.packages_by_status?.['in_review'] || 0) + (metrics.packages_by_status?.['preflight'] || 0);
-  const approvedPackages = (metrics.packages_by_status?.['traces_ready'] || 0) + (metrics.packages_by_status?.['submitted'] || 0);
+  const pendingReview = (metrics.packages_by_status?.READY || 0) + (metrics.packages_by_status?.ON_HOLD || 0);
+  const approvedPackages = (metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0);
 
   return (
     <div className="space-y-6">
@@ -105,9 +106,9 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
           <CardContent className="space-y-4">
             {[
               { label: 'Fully Compliant', count: approvedPackages, color: 'bg-emerald-500', icon: CheckCircle2 },
-              { label: 'Under Review', count: metrics.packages_by_status?.['in_review'] || 0, color: 'bg-blue-500', icon: Clock },
-              { label: 'Pre-flight Check', count: metrics.packages_by_status?.['preflight'] || 0, color: 'bg-amber-500', icon: AlertTriangle },
-              { label: 'Draft', count: metrics.packages_by_status?.['draft'] || 0, color: 'bg-gray-400', icon: FileSearch },
+              { label: 'Ready', count: metrics.packages_by_status?.READY || 0, color: 'bg-blue-500', icon: Clock },
+              { label: 'On Hold', count: metrics.packages_by_status?.ON_HOLD || 0, color: 'bg-amber-500', icon: AlertTriangle },
+              { label: 'Draft', count: metrics.packages_by_status?.DRAFT || 0, color: 'bg-gray-400', icon: FileSearch },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-4">
                 <item.icon className="h-5 w-5 text-muted-foreground" />
