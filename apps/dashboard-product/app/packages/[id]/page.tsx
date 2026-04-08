@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -15,6 +15,9 @@ import {
   Calendar,
   Clock,
   ExternalLink,
+  AlertCircle,
+  CheckCircle2,
+  Unlock,
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
@@ -22,7 +25,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages/package-status-badge';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { BlockerCard } from '@/components/ui/blocker-card';
 import { getPackageById } from '@/lib/mock-data';
+
+// Canonical shipment state machine
+type ShipmentStatus = 'draft' | 'in_review' | 'traces_ready' | 'submitted' | 'approved' | 'rejected';
+
+const STATE_TRANSITIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
+  draft: ['in_review'],
+  in_review: ['traces_ready', 'draft'],
+  traces_ready: ['submitted'],
+  submitted: ['approved', 'rejected'],
+  approved: [],
+  rejected: ['draft'],
+};
+
+const BLOCKING_RULES: Record<ShipmentStatus, string[]> = {
+  draft: [],
+  in_review: ['All plots must have deforestation assessment', 'All farmers must have FPIC consent'],
+  traces_ready: ['All compliance checks must pass', 'Liability acknowledgement required'],
+  submitted: ['Cannot modify submitted shipment'],
+  approved: [],
+  rejected: [],
+};
 
 interface PackageDetailPageProps {
   params: Promise<{ id: string }>;
@@ -31,10 +56,33 @@ interface PackageDetailPageProps {
 export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const { id } = use(params);
   const pkg = getPackageById(id);
+  const [showLiabilityModal, setShowLiabilityModal] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<ShipmentStatus>((pkg?.status || 'draft') as ShipmentStatus);
 
   if (!pkg) {
     notFound();
   }
+
+  // Check if transition is allowed
+  const allowedTransitions = STATE_TRANSITIONS[currentStatus] || [];
+  const blockingIssues = BLOCKING_RULES[currentStatus] || [];
+  const canTransition = blockingIssues.length === 0;
+
+  const handleStateTransition = (newStatus: ShipmentStatus) => {
+    if (!allowedTransitions.includes(newStatus)) {
+      return;
+    }
+    if (newStatus === 'traces_ready') {
+      setShowLiabilityModal(true);
+    } else {
+      setCurrentStatus(newStatus);
+    }
+  };
+
+  const confirmSeal = () => {
+    setCurrentStatus('traces_ready');
+    setShowLiabilityModal(false);
+  };
 
   return (
     <div className="flex flex-col">
@@ -99,6 +147,67 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Info */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Blocking Issues */}
+            {blockingIssues.length > 0 && (
+              <BlockerCard
+                blockerType="STATE_TRANSITION"
+                severity="BLOCKING"
+                title="Cannot proceed to next state"
+                description={`Resolve the following to advance: ${blockingIssues.join(', ')}`}
+                relatedEntityLabel="Shipment blocking requirements"
+                slaCountdown="Immediate action required"
+                remediationAction={{
+                  label: 'View requirements',
+                  href: '#',
+                }}
+              />
+            )}
+
+            {/* State Transition Panel */}
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">State Transitions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {allowedTransitions.length > 0 ? (
+                    allowedTransitions.map((nextStatus) => (
+                      <PermissionGate key={nextStatus} permission="packages:edit">
+                        <Button
+                          onClick={() => handleStateTransition(nextStatus)}
+                          disabled={!canTransition}
+                          variant={canTransition ? 'default' : 'outline'}
+                        >
+                          {canTransition ? (
+                            <Unlock className="mr-2 h-4 w-4" />
+                          ) : (
+                            <Lock className="mr-2 h-4 w-4" />
+                          )}
+                          → {nextStatus.toUpperCase()}
+                        </Button>
+                      </PermissionGate>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No state transitions available from {currentStatus}</p>
+                  )}
+                </div>
+
+                {blockingIssues.length > 0 && (
+                  <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
+                    <p className="text-sm font-semibold text-amber-900 mb-2">Blocking Issues:</p>
+                    <ul className="space-y-1">
+                      {blockingIssues.map((issue, i) => (
+                        <li key={i} className="text-sm text-amber-800 flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Package Status Card */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
@@ -353,6 +462,33 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Liability Acknowledgement Modal */}
+      {showLiabilityModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-96">
+            <CardHeader>
+              <CardTitle>Liability Acknowledgement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
+                <p className="text-sm text-amber-900">
+                  By advancing this shipment to TRACES Ready, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowLiabilityModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmSeal} className="bg-red-600 hover:bg-red-700">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  I Acknowledge
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
