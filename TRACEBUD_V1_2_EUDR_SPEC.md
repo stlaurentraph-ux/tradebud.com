@@ -553,6 +553,22 @@ deleted_at                  TIMESTAMPTZ NULLABLE
 -- - enterprise_size must have supporting evidence for simplified-path claims.
 -- - non-SME trader/downstream workflows require information system registration before sealing.
 
+enterprise_size_assessments
+id                          UUID PK NOT NULL
+organisation_id             UUID FK → organisations.id NOT NULL
+declared_enterprise_size    ENUM NOT NULL (MICRO, SMALL, MEDIUM, LARGE)
+evidence_doc_ids            UUID[] NOT NULL DEFAULT '{}'
+review_status               ENUM NOT NULL (PENDING_REVIEW, APPROVED, REJECTED)
+reviewed_by_id              UUID FK → persons.id NULLABLE
+reviewed_at                 TIMESTAMPTZ NULLABLE
+review_note                 TEXT NULLABLE
+created_at                  TIMESTAMPTZ NOT NULL
+updated_at                  TIMESTAMPTZ NOT NULL
+
+-- Rules:
+-- - Only APPROVED assessments may set organisations.enterprise_size to a value used for simplified-path eligibility.
+-- - PENDING_REVIEW or REJECTED assessments must keep producer simplified_path_eligible = FALSE.
+
 org_members
 id              UUID PK NOT NULL
 organisation_id UUID FK → organisations.id NOT NULL
@@ -880,19 +896,22 @@ deleted_at            TIMESTAMPTZ NULLABLE
 batch_inputs
 id            UUID PK NOT NULL
 batch_id      UUID FK → batches.id NOT NULL
-source_type   ENUM NOT NULL (PLOT_HARVEST, LOT, BATCH, EXTERNAL)
+source_type   ENUM NOT NULL (PLOT_HARVEST, LOT, BATCH, EXTERNAL, PROCESSING_FACILITY)
 -- PLOT_HARVEST: direct from producer plot
 -- LOT: from a lot record
 -- BATCH: from a prior batch (split/merge)
 -- EXTERNAL: from outside Tracebud with evidence reference
+-- PROCESSING_FACILITY: sourced from intermediary facility intake (Section 52.2)
 source_id     UUID NOT NULL
 quantity_kg   NUMERIC(12,3) NOT NULL
 evidence_id   UUID FK → evidence_documents.id NULLABLE
+delivery_manifest_evidence_id UUID FK → evidence_documents.id NULLABLE
 created_at    TIMESTAMPTZ NOT NULL
 
 -- Rule: sum(batch_inputs.quantity_kg) for a batch must equal batches.quantity_kg at lineage lock.
 -- Rule: a batch cannot be lineage-locked with unresolved yield check status of BLOCKED.
 -- Rule: when lineage_locked, a background worker recursively materializes all ultimate plot IDs into batches.root_plot_ids.
+-- Rule: when source_type = PROCESSING_FACILITY, delivery_manifest_evidence_id is required and must reference evidence_documents.document_type = HARVEST_RECORD.
 
 ### 14.4 Multi-Commodity Batch Rules
 - A `batches` record has a single `commodity_id` by design; blending different commodities requires separate batch records per commodity.
@@ -975,6 +994,15 @@ created_at        TIMESTAMPTZ NOT NULL
 -- - SUM(shipment_line_coverages.quantity_kg) per line must equal shipment_lines.quantity_kg before sealing.
 -- - No coverage record may over-allocate source quantity.
 -- - A shipment may not be sealed while any line has unresolved blocking issues or while workflow_role = PENDING_MANUAL_CLASSIFICATION.
+-- - package_status transitions are:
+--   DRAFT -> READY | ON_HOLD
+--   READY -> SEALED | ON_HOLD | DRAFT
+--   SEALED -> SUBMITTED | ON_HOLD
+--   SUBMITTED -> ACCEPTED | REJECTED | ON_HOLD
+--   ACCEPTED -> ARCHIVED
+--   REJECTED -> DRAFT | ON_HOLD
+--   ON_HOLD -> DRAFT | READY
+--   ARCHIVED is terminal.
 
 
 
@@ -1090,6 +1118,13 @@ fulfilled_at          TIMESTAMPTZ NULLABLE
 created_at            TIMESTAMPTZ NOT NULL
 updated_at            TIMESTAMPTZ NOT NULL
 
+-- Request lifecycle transitions (normative):
+-- - OPEN -> IN_PROGRESS | FULFILLED | CANCELLED | EXPIRED
+-- - IN_PROGRESS -> FULFILLED | CANCELLED | EXPIRED
+-- - FULFILLED, CANCELLED, EXPIRED are terminal states.
+-- - Duplicate suppression for campaigns applies only to OPEN and IN_PROGRESS requests.
+-- - Hourly expiry job sets EXPIRED where due_date < CURRENT_DATE and status in (OPEN, IN_PROGRESS).
+
 request_reminders
 id            UUID PK NOT NULL
 request_id    UUID FK → requests.id NOT NULL
@@ -1149,11 +1184,21 @@ entity_id        UUID NOT NULL
 issue_type       TEXT NOT NULL
 severity         ENUM NOT NULL (INFO, WARNING, BLOCKING)
 description      TEXT NOT NULL
+status           ENUM NOT NULL (OPEN, IN_PROGRESS, RESOLVED, ESCALATED) DEFAULT OPEN
 owner_person_id  UUID FK → persons.id NULLABLE
+resolution_path  TEXT NULLABLE
 resolved_at      TIMESTAMPTZ NULLABLE
 resolution_note  TEXT NULLABLE
 created_at       TIMESTAMPTZ NOT NULL
 updated_at       TIMESTAMPTZ NOT NULL
+
+-- Compliance issue lifecycle rules (normative):
+-- - OPEN -> IN_PROGRESS | RESOLVED | ESCALATED
+-- - IN_PROGRESS -> RESOLVED | ESCALATED
+-- - ESCALATED -> IN_PROGRESS | RESOLVED
+-- - RESOLVED is terminal.
+-- - BLOCKING issues must have owner_person_id and resolution_path before shipment sealing.
+-- - status = RESOLVED requires resolved_at and resolution_note non-null.
 
 dedup_review_tasks
 id                      UUID PK NOT NULL
@@ -1190,6 +1235,7 @@ exception_type      ENUM NOT NULL (DISASTER_YEAR, EXCEPTIONAL_SEASON, OTHER)
 description         TEXT NOT NULL
 requested_factor    NUMERIC(4,3) NOT NULL
 evidence_ids        UUID[] NOT NULL DEFAULT '{}'
+appeal_task_id      UUID FK → yield_appeal_tasks.id NULLABLE
 status              ENUM NOT NULL (PENDING, APPROVED, REJECTED, EXPIRED)
 approved_factor     NUMERIC(4,3) NULLABLE
 reviewed_by_id      UUID FK → persons.id NULLABLE
@@ -1200,6 +1246,8 @@ updated_at          TIMESTAMPTZ NOT NULL
 -- Reconciliation rule:
 -- - yield_appeal_tasks tracks human-review workflow ownership and disposition.
 -- - yield_exception_requests tracks auditable exception-factor decisions used by the yield algorithm.
+-- - when a yield_exception_requests record originates from a blocked batch workflow,
+--   appeal_task_id must reference the corresponding yield_appeal_tasks record.
 
 substantiated_concerns
 id                  UUID PK NOT NULL
@@ -1729,6 +1777,11 @@ Rules:
 - `billing_events` creation and domain-side effect must be atomic through outbox or transactional boundary.
 - Retry policy before suspension: minimum 3 attempts over configurable dunning window.
 
+MVP billing constraints (Section 51 alignment):
+- MVP enables only Tier 2 billables: `SHIPMENT_FEE_T2` and `MONTHLY_BASE_T2`.
+- Tier 3 subscription lifecycle, `SPONSOR_SEAT`, and advanced dunning automation are Release 2+.
+- During MVP, Stripe webhook handling is limited to `invoice.paid` and `invoice.payment_failed`; other webhook families may be accepted but must be treated as no-op with audit logging.
+
 ## 27. Notifications and Communication
 Compliance-blocking events should notify both in-app and by email, and optionally by webhook where configured. This includes missing evidence, shipment blocked, payment failed, submission rejected, and credential expiring.[11]
 
@@ -1992,6 +2045,12 @@ For each endpoint, document method, path, auth scope, idempotency requirement, a
   - `POST /v1/batches`
   - `POST /v1/batches/{id}/inputs`
   - `POST /v1/batches/{id}/lock-lineage`
+- Review workflows (yield and dedup)
+  - `POST /v1/yield-exception-requests/{id}/approve`
+  - `POST /v1/yield-exception-requests/{id}/reject`
+  - `POST /v1/dedup-review-tasks/{id}/merge`
+  - `POST /v1/dedup-review-tasks/{id}/mark-distinct`
+  - `POST /v1/dedup-review-tasks/{id}/escalate`
 - Shipment assembly and sealing
   - `POST /v1/shipment-headers`
   - `POST /v1/shipment-headers/{id}/lines`
@@ -2006,12 +2065,26 @@ For each endpoint, document method, path, auth scope, idempotency requirement, a
 - Portability export request and download
   - `POST /v1/portability-requests`
   - `GET /v1/portability-requests/{id}/download`
+- Full compliance record export (continuity/BCP)
+  - `POST /v1/compliance-exports`
+  - `GET /v1/compliance-exports/{id}`
+  - `GET /v1/compliance-exports/{id}/download`
 - Audit event and access-log export
   - `GET /v1/audit-events/export`
   - `GET /v1/access-logs/export`
 - Annual reporting snapshots
   - `POST /v1/annual-reporting-snapshots/generate`
   - `GET /v1/annual-reporting-snapshots/{id}`
+- Compliance issue lifecycle
+  - `POST /v1/compliance-issues`
+  - `PATCH /v1/compliance-issues/{id}/assign-owner`
+  - `PATCH /v1/compliance-issues/{id}/resolve`
+  - `PATCH /v1/compliance-issues/{id}/escalate`
+  - `GET /v1/compliance-issues/{id}`
+- Billing and payment methods
+  - `GET /v1/billing-events`
+  - `POST /v1/billing/payment-methods`
+  - `PATCH /v1/billing/payment-methods/{id}/set-default`
 - Webhook registration and delivery logs
   - `POST /v1/webhooks`
   - `GET /v1/webhooks/{id}/deliveries`
@@ -2025,10 +2098,63 @@ Each endpoint spec block must define:
 - success response schema
 - error cases (with `error_code`, status, and field bindings)
 
-### 32.8 Webhook event catalog
+### 32.8 Endpoint contract catalog (normative)
+Every endpoint listed in Section 32.6 must have a contract row.
+
+| Endpoint | Auth scope | Idempotency | Request schema (minimum) | Success response (minimum) |
+|---|---|---|---|---|
+| `POST /v1/organisations` | `OWNER` | Required | `legal_name`, `country_iso`, `commercial_tier` | `organisation_id`, `created_at` |
+| `POST /v1/producers` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | `owner_org_id`, `full_name`, `country_iso` | `producer_id`, `verification_status` |
+| `POST /v1/organisations/{id}/members/invitations` | `OWNER, ADMIN` | Required | `email`, `role` | `invitation_id`, `expires_at` |
+| `POST /v1/requests/campaigns` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `request_type`, `campaign_name`, `targets[]`, `description_template`, `due_date` | `campaign_id`, `status`, `total_targets`, `created_requests` |
+| `GET /v1/requests/campaigns/{id}` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | path `id` | `campaign_id`, `status`, `counters` |
+| `GET /v1/requests/campaigns/{id}/targets` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | path `id`, pagination params | `items[]`, `page_info` |
+| `POST /v1/plots` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | `producer_id`, `commodity_id`, `country_iso`, `geolocation_mode` | `plot_id`, `deforestation_check_status` |
+| `POST /v1/plots/{id}/geometry-versions` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | path `id`, `geometry`, `capture_method` | `geometry_version_id`, `version_number` |
+| `POST /v1/evidence-documents` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | multipart file + `document_type`, `entity_ref` | `evidence_id`, `parse_status=PENDING` |
+| `GET /v1/evidence-documents/{id}/parse-status` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT, VIEWER` | Not required | path `id` | `evidence_id`, `parse_status`, `parse_confidence` |
+| `POST /v1/consent-grants` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `producer_id`, `grantee_org_id`, `purpose_code`, `data_scope[]` | `consent_grant_id`, `granted_at` |
+| `PATCH /v1/consent-grants/{id}/revoke` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `revocation_reason` | `consent_grant_id`, `revoked_at` |
+| `POST /v1/batches` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `commodity_id`, `batch_reference`, `quantity_kg` | `batch_id`, `yield_check_status` |
+| `POST /v1/batches/{id}/inputs` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `source_type`, `source_id`, `quantity_kg` | `batch_input_id`, `batch_id` |
+| `POST /v1/batches/{id}/lock-lineage` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id` | `batch_id`, `lineage_locked=true`, `root_plot_ids[]` |
+| `POST /v1/yield-exception-requests/{id}/approve` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `approved_factor`, `resolution_note` | `id`, `status=APPROVED`, `reviewed_at` |
+| `POST /v1/yield-exception-requests/{id}/reject` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `resolution_note` | `id`, `status=REJECTED`, `reviewed_at` |
+| `POST /v1/dedup-review-tasks/{id}/merge` | `OWNER, ADMIN, COMPLIANCE_MANAGER` (`FIELD_AGENT` if delegated) | Required | path `id`, `survivor_entity_id`, `resolution_note` | `id`, `status=MERGED`, `reviewed_at` |
+| `POST /v1/dedup-review-tasks/{id}/mark-distinct` | `OWNER, ADMIN, COMPLIANCE_MANAGER` (`FIELD_AGENT` if delegated) | Required | path `id`, `resolution_note` | `id`, `status=DISTINCT`, `reviewed_at` |
+| `POST /v1/dedup-review-tasks/{id}/escalate` | `OWNER, ADMIN, COMPLIANCE_MANAGER` (`FIELD_AGENT` if delegated) | Required | path `id`, `escalation_reason` | `id`, `status=ESCALATED` |
+| `POST /v1/shipment-headers` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `shipment_reference`, `workflow_type` | `shipment_header_id`, `package_status=DRAFT` |
+| `POST /v1/shipment-headers/{id}/lines` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `commodity_id`, `hs_code`, `quantity_kg` | `shipment_line_id`, `line_number` |
+| `POST /v1/shipment-headers/{id}/seal` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, optional `seal_note` | `shipment_header_id`, `package_status=SEALED`, `sealed_at` |
+| `POST /v1/dds-records/{id}/submit` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, optional `submission_mode_override` | `dds_record_id`, `submission_status`, `traces_submission_id` |
+| `POST /v1/dds-records/{id}/amend` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, amendment payload | `dds_record_id`, `submission_status=AMENDED_SUBMITTED` |
+| `POST /v1/dds-records/{id}/retract` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `retraction_reason` | `dds_record_id`, `submission_status=WITHDRAWAL_REQUESTED` |
+| `POST /v1/sync/flush` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | `client_event_batch[]`, `hlc_timestamp` | `accepted_count`, `conflict_count`, `rejected_count` |
+| `POST /v1/sync-conflicts/{id}/resolve` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Required | path `id`, `resolution_strategy`, optional merge payload | `conflict_id`, `resolution_status` |
+| `POST /v1/portability-requests` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `producer_id`, `request_type` | `portability_request_id`, `status` |
+| `GET /v1/portability-requests/{id}/download` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | path `id` | file stream or `download_url`, `expires_at` |
+| `POST /v1/compliance-exports` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `export_type=FULL_COMPLIANCE_RECORD`, `from_date`, `to_date` | `export_id`, `status=QUEUED`, `expires_at` |
+| `GET /v1/compliance-exports/{id}` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | path `id` | `export_id`, `status`, `progress` |
+| `GET /v1/compliance-exports/{id}/download` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | path `id` | file stream or `download_url`, `expires_at` |
+| `GET /v1/audit-events/export` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Not required | `from_date`, `to_date`, filters | `export_job_id` or stream |
+| `GET /v1/access-logs/export` | `OWNER, ADMIN` | Not required | `from_date`, `to_date`, filters | `export_job_id` or stream |
+| `POST /v1/annual-reporting-snapshots/generate` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | `reporting_year` | `snapshot_id`, `status` |
+| `GET /v1/annual-reporting-snapshots/{id}` | `OWNER, ADMIN, COMPLIANCE_MANAGER, VIEWER, BILLING_CONTACT` | Not required | path `id` | `snapshot_id`, `snapshot_data`, `status` |
+| `POST /v1/compliance-issues` | `OWNER, ADMIN, COMPLIANCE_MANAGER` (`FIELD_AGENT` if delegated) | Required | `entity_type`, `entity_id`, `issue_type`, `severity`, `description` | `id`, `status=OPEN`, `created_at` |
+| `PATCH /v1/compliance-issues/{id}/assign-owner` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `owner_person_id`, `resolution_path` | `id`, `owner_person_id`, `status` |
+| `PATCH /v1/compliance-issues/{id}/resolve` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `resolution_note` | `id`, `status=RESOLVED`, `resolved_at` |
+| `PATCH /v1/compliance-issues/{id}/escalate` | `OWNER, ADMIN, COMPLIANCE_MANAGER` | Required | path `id`, `escalation_reason` | `id`, `status=ESCALATED` |
+| `GET /v1/compliance-issues/{id}` | `OWNER, ADMIN, COMPLIANCE_MANAGER, FIELD_AGENT` | Not required | path `id` | `id`, `status`, `severity`, `owner_person_id` |
+| `GET /v1/billing-events` | `OWNER, ADMIN, BILLING_CONTACT` | Not required | date filters, pagination | `items[]`, `totals`, `page_info` |
+| `POST /v1/billing/payment-methods` | `OWNER, BILLING_CONTACT` (`ADMIN` if delegated) | Required | `provider`, `tokenized_payment_ref`, `billing_email` | `payment_method_id`, `status`, `is_default` |
+| `PATCH /v1/billing/payment-methods/{id}/set-default` | `OWNER, BILLING_CONTACT` (`ADMIN` if delegated) | Required | path `id` | `payment_method_id`, `is_default=true` |
+| `POST /v1/webhooks` | `OWNER, ADMIN` | Required | `endpoint_url`, `event_types[]`, `secret_rotation_policy` | `webhook_id`, `status` |
+| `GET /v1/webhooks/{id}/deliveries` | `OWNER, ADMIN` | Not required | path `id`, pagination | `items[]`, `delivery_status`, `attempt_count` |
+
+### 32.9 Webhook event catalog
 Webhook events must include all mandatory triggers in Section 27 plus DDS state transitions and billing lifecycle events.
 
-### 32.9 Error code taxonomy
+### 32.10 Error code taxonomy
 Error envelope:
 `{ error_code, message, field_errors, request_id }`
 
@@ -2166,6 +2292,21 @@ Requires connectivity:
 - dedup scoring
 
 ## 36. User Interface and Experience Specification
+
+### 36.0 Canonical role-to-persona mapping
+UI persona labels must map to Section 8.1 canonical roles as follows:
+
+| UI persona label | Canonical role(s) |
+|---|---|
+| Compliance Manager | `COMPLIANCE_MANAGER` |
+| Field Agent | `FIELD_AGENT` |
+| Organisation Admin | `OWNER`, `ADMIN` |
+| Billing Owner | `BILLING_CONTACT` |
+| Read-only Viewer | `VIEWER` |
+| Sponsor Admin (network context) | `OWNER` or `ADMIN` in sponsor org + `actor_type = SPONSOR_ADMIN` audit context |
+
+Normative rule:
+API scopes, audit events, and permission checks must use canonical role names; persona labels are presentation-only.
 
 ### 36.1 Tier 1 Farmer Mobile App
 - Supported platforms: iOS 16+ and Android 10+.
@@ -2356,6 +2497,10 @@ Every sponsor-admin action against a member org must write an `audit_events` rec
 ## 39. Testing and Acceptance Criteria
 
 ### 39.1 Phase acceptance gates
+Applicability:
+- MVP release gate requires Phase 1-4 criteria, except tests explicitly marked Release 2+.
+- Full v1 release gate requires Phase 1-7 criteria with no exceptions.
+
 Phase 1 (Identity, organisations, producers, consent):
 - RBAC matrix enforcement covered by integration tests.
 - Consent create/revoke and prospective-only enforcement verified by automated tests.
@@ -2363,7 +2508,7 @@ Phase 1 (Identity, organisations, producers, consent):
 - Cryptographic shredding test irreversibly removes PII while preserving geometry.
 
 Phase 2 (Plot capture, geometry, evidence):
-- Offline capture/sync conflict-injection tests pass conflict strategy suite.
+- Offline capture/sync conflict-injection tests pass conflict strategy suite. (Release 2+)
 - Geometry versioning creates immutable history on every update.
 - Evidence parsing routes low-confidence to `MANUAL_REQUIRED`.
 - PostGIS validation rejects topologically invalid inputs.
@@ -2518,7 +2663,7 @@ Monitoring job requirements:
 
 Rules:
 - If `diff_detected = TRUE` and `reviewed_at` is NULL after 48 hours, create `compliance_issues` severity BLOCKING for internal Tracebud org with `issue_type = TRACES_SCHEMA_DRIFT`.
-- While unresolved BLOCKING `TRACES_SCHEMA_DRIFT` exists, no new DDS submissions may be dispatched.
+- While unresolved BLOCKING `TRACES_SCHEMA_DRIFT` exists, no new `API_DIRECT` DDS submissions may be dispatched; `MANUAL_ASSIST` package preparation/export remains allowed.
 - Existing in-flight submissions already in `SUBMITTED` state are not affected.
 - `adapter_updated` must be set to TRUE only after engineer validation against new XSD and deployed adapter update.
 
@@ -2719,6 +2864,7 @@ Import mapping rules:
 - Imported producers run duplicate detection before write; `SUSPECTED_DUPLICATE_HIGH` is held for review.
 - Imported plots run geometry validation before write.
 - Processing returns per-record `import_report` statuses: `IMPORTED`, `DUPLICATE_HELD`, `VALIDATION_FAILED`, `QUEUED_FOR_REVIEW`.
+- Import-time duplicate scoring must use threshold override when `national_id_hash` is absent: `SUSPECTED_DUPLICATE_HIGH` threshold = 0.92 (aligns with Section 53.1).
 
 ### 47.2 Outbound data export for downstream systems
 Downstream reference package:
@@ -2890,7 +3036,7 @@ MVP includes:
 - Section 14 batch lineage (`lots`, `batches`, `batch_inputs`) with yield check required and `UNAVAILABLE` permitted with manual acknowledgement
 - Section 15 shipment model (`shipment_headers`, `shipment_lines`, `shipment_line_coverages`) for single commodity line
 - Section 16 compliance records (`dds_records`) in `MANUAL_ASSIST` mode only
-- Section 17 requests, `compliance_issues`, and `audit_events`
+- Section 17 MVP subset only: `requests`, `request_reminders`, `compliance_issues`, `audit_events` (excluding `request_campaigns`, `request_campaign_targets`, `annual_reporting_snapshots`, `portability_requests`)
 - Section 26 billing (`SHIPMENT_FEE_T2`, `MONTHLY_BASE_T2`)
 - Section 28 onboarding flows
 - Section 29 data residency and cryptographic shredding

@@ -1,19 +1,20 @@
-import type { PackageStatus, ComplianceStatus } from '@/types';
+import type { ShipmentStatus, PackageComplianceStatus } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface PackageStatusBadgeProps {
-  status: PackageStatus;
+  status: ShipmentStatus;
   size?: 'sm' | 'md';
 }
 
-const statusConfig: Record<PackageStatus, { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
-  in_review: { label: 'In Review', className: 'bg-chart-2/20 text-chart-2' },
-  preflight_check: { label: 'Pre-flight Check', className: 'bg-chart-3/20 text-chart-3' },
-  traces_ready: { label: 'TRACES Ready', className: 'bg-primary/20 text-primary' },
-  submitted: { label: 'Submitted', className: 'bg-chart-5/20 text-chart-5' },
-  approved: { label: 'Approved', className: 'bg-primary/20 text-primary' },
-  rejected: { label: 'Rejected', className: 'bg-destructive/20 text-destructive' },
+const statusConfig: Record<ShipmentStatus, { label: string; className: string }> = {
+  DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
+  READY: { label: 'Ready', className: 'bg-chart-2/20 text-chart-2' },
+  SEALED: { label: 'Sealed', className: 'bg-primary/20 text-primary' },
+  SUBMITTED: { label: 'Submitted', className: 'bg-chart-5/20 text-chart-5' },
+  ACCEPTED: { label: 'Accepted', className: 'bg-primary/20 text-primary' },
+  REJECTED: { label: 'Rejected', className: 'bg-destructive/20 text-destructive' },
+  ARCHIVED: { label: 'Archived', className: 'bg-muted text-muted-foreground' },
+  ON_HOLD: { label: 'On Hold', className: 'bg-chart-3/20 text-chart-3' },
 };
 
 export function PackageStatusBadge({ status, size = 'sm' }: PackageStatusBadgeProps) {
@@ -32,15 +33,15 @@ export function PackageStatusBadge({ status, size = 'sm' }: PackageStatusBadgePr
 }
 
 interface ComplianceStatusBadgeProps {
-  status: ComplianceStatus;
+  status: PackageComplianceStatus;
   size?: 'sm' | 'md';
 }
 
-const complianceConfig: Record<ComplianceStatus, { label: string; className: string }> = {
-  passed: { label: 'Passed', className: 'bg-primary/20 text-primary' },
-  warnings: { label: 'Warnings', className: 'bg-chart-3/20 text-chart-3' },
-  blocked: { label: 'Blocked', className: 'bg-destructive/20 text-destructive' },
-  pending: { label: 'Pending', className: 'bg-muted text-muted-foreground' },
+const complianceConfig: Record<PackageComplianceStatus, { label: string; className: string }> = {
+  PASSED: { label: 'Passed', className: 'bg-primary/20 text-primary' },
+  WARNINGS: { label: 'Warnings', className: 'bg-chart-3/20 text-chart-3' },
+  BLOCKED: { label: 'Blocked', className: 'bg-destructive/20 text-destructive' },
+  PENDING: { label: 'Pending', className: 'bg-muted text-muted-foreground' },
 };
 
 export function ComplianceStatusBadge({ status, size = 'sm' }: ComplianceStatusBadgeProps) {

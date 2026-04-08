@@ -233,7 +233,7 @@ Pre-submit button shows:
   - Message to recipients
   - Response count: [Responses]/[Targets]
 - Targets tab:
-  - Table: Recipient | Org | Response Status (not_sent | pending | responded | declined) | Responded At
+  - Table: Recipient | Org | Response Status (OPEN | IN_PROGRESS | FULFILLED | EXPIRED | CANCELLED) | Responded At
 - Responses tab:
   - For each response: Who | What data | Timestamp | Download
 - Timeline:

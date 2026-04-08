@@ -1,0 +1,1329 @@
+openapi: 3.0.3
+info:
+  title: Tracebud API (v1 Draft)
+  version: "0.1.0-draft"
+  description: |
+    Draft OpenAPI artifact generated from TRACEBUD_V1_2_EUDR_SPEC.md Section 32.8.
+    This document is intentionally minimal and should be expanded during implementation.
+  x-tracebud-error-mapping:
+    AUTH-001: INVALID_TOKEN
+    AUTH-002: INSUFFICIENT_SCOPE
+    VAL-001: FIELD_REQUIRED
+    VAL-002: FIELD_INVALID
+    TEN-001: TENANT_SCOPE_VIOLATION
+    CON-001: CONSENT_REQUIRED
+    SYNC-001: IDEMPOTENCY_REPLAY
+    SYNC-002: CONFLICT_REVIEW_REQUIRED
+    GEO-001: GEOMETRY_INVALID
+    GEO-002: GEOMETRY_VARIANCE_EXCEEDED
+    YLD-001: BENCHMARK_UNAVAILABLE
+    DDS-001: INVALID_STATE_TRANSITION
+    DDS-002: SUBMISSION_REJECTED
+    EXT-001: TRACES_AUTH_FAILED
+    EXT-002: TRACES_VALIDATION_FAULT
+    BIL-001: PAYMENT_FAILED
+    OPS-001: INTERNAL_ERROR
+servers:
+  - url: https://api.tracebud.example.com
+    description: Production placeholder
+  - url: https://sandbox-api.tracebud.example.com
+    description: Sandbox placeholder
+security:
+  - bearerAuth: []
+tags:
+  - name: Organisations
+  - name: Producers
+  - name: Requests
+  - name: Plots
+  - name: Evidence
+  - name: Consent
+  - name: Batches
+  - name: Reviews
+  - name: Shipments
+  - name: DDS
+  - name: Sync
+  - name: Portability
+  - name: ComplianceExports
+  - name: Audit
+  - name: Reporting
+  - name: ComplianceIssues
+  - name: Billing
+  - name: Webhooks
+paths:
+  /v1/organisations:
+    post:
+      tags: [Organisations]
+      summary: Create organisation
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganisationRequest"
+      responses:
+        "201":
+          description: Organisation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganisationCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/producers:
+    post:
+      tags: [Producers]
+      summary: Create producer
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProducerRequest"
+      responses:
+        "201":
+          description: Producer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProducerCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /v1/organisations/{id}/members/invitations:
+    post:
+      tags: [Organisations]
+      summary: Invite organisation member
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInvitationRequest"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberInvitationResponse"
+  /v1/requests/campaigns:
+    post:
+      tags: [Requests]
+      summary: Create request campaign
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestCampaignCreateRequest"
+      responses:
+        "202":
+          description: Campaign accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestCampaignResponse"
+  /v1/requests/campaigns/{id}:
+    get:
+      tags: [Requests]
+      summary: Get request campaign
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestCampaignResponse"
+  /v1/requests/campaigns/{id}/targets:
+    get:
+      tags: [Requests]
+      summary: List request campaign targets
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Target list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListResponse"
+  /v1/plots:
+    post:
+      tags: [Plots]
+      summary: Create plot
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlotRequest"
+      responses:
+        "201":
+          description: Plot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlotCreatedResponse"
+  /v1/plots/{id}/geometry-versions:
+    post:
+      tags: [Plots]
+      summary: Add plot geometry version
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddGeometryVersionRequest"
+      responses:
+        "201":
+          description: Geometry version added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeometryVersionResponse"
+  /v1/evidence-documents:
+    post:
+      tags: [Evidence]
+      summary: Upload evidence document
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                document_type:
+                  type: string
+                entity_ref:
+                  type: string
+              required: [file, document_type]
+      responses:
+        "202":
+          description: Evidence accepted for parsing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceUploadResponse"
+  /v1/evidence-documents/{id}/parse-status:
+    get:
+      tags: [Evidence]
+      summary: Get parse status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Parse status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceParseStatusResponse"
+  /v1/consent-grants:
+    post:
+      tags: [Consent]
+      summary: Create consent grant
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConsentGrantRequest"
+      responses:
+        "201":
+          description: Consent grant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentGrantResponse"
+  /v1/consent-grants/{id}/revoke:
+    patch:
+      tags: [Consent]
+      summary: Revoke consent grant
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                revocation_reason:
+                  type: string
+              required: [revocation_reason]
+      responses:
+        "200":
+          description: Consent revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentGrantResponse"
+  /v1/batches:
+    post:
+      tags: [Batches]
+      summary: Create batch
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBatchRequest"
+      responses:
+        "201":
+          description: Batch created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/batches/{id}/inputs:
+    post:
+      tags: [Batches]
+      summary: Add batch input
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBatchInputRequest"
+      responses:
+        "201":
+          description: Batch input added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/batches/{id}/lock-lineage:
+    post:
+      tags: [Batches]
+      summary: Lock lineage
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Lineage locked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/yield-exception-requests/{id}/approve:
+    post:
+      tags: [Reviews]
+      summary: Approve yield exception
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/YieldExceptionApproveRequest"
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/yield-exception-requests/{id}/reject:
+    post:
+      tags: [Reviews]
+      summary: Reject yield exception
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/YieldExceptionRejectRequest"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/dedup-review-tasks/{id}/merge:
+    post:
+      tags: [Reviews]
+      summary: Merge duplicate entities
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Merge applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DedupeMergeRequest"
+  /v1/dedup-review-tasks/{id}/mark-distinct:
+    post:
+      tags: [Reviews]
+      summary: Mark duplicate review as distinct
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Marked distinct
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DedupeDecisionRequest"
+  /v1/dedup-review-tasks/{id}/escalate:
+    post:
+      tags: [Reviews]
+      summary: Escalate duplicate review
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Escalated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DedupeEscalateRequest"
+  /v1/shipment-headers:
+    post:
+      tags: [Shipments]
+      summary: Create shipment header
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShipmentHeaderRequest"
+      responses:
+        "201":
+          description: Shipment header created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/shipment-headers/{id}/lines:
+    post:
+      tags: [Shipments]
+      summary: Add shipment line
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddShipmentLineRequest"
+      responses:
+        "201":
+          description: Shipment line added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/shipment-headers/{id}/seal:
+    post:
+      tags: [Shipments]
+      summary: Seal shipment
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Shipment sealed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShipmentHeaderResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/dds-records/{id}/submit:
+    post:
+      tags: [DDS]
+      summary: Submit DDS
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: DDS submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /v1/dds-records/{id}/amend:
+    post:
+      tags: [DDS]
+      summary: Amend DDS
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: DDS amended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsRecordResponse"
+  /v1/dds-records/{id}/retract:
+    post:
+      tags: [DDS]
+      summary: Retract DDS
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: DDS retraction requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsRecordResponse"
+  /v1/sync/flush:
+    post:
+      tags: [Sync]
+      summary: Flush sync queue
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncFlushRequest"
+      responses:
+        "200":
+          description: Sync flush result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncFlushResponse"
+  /v1/sync-conflicts/{id}/resolve:
+    post:
+      tags: [Sync]
+      summary: Resolve sync conflict
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncConflictResolveRequest"
+      responses:
+        "200":
+          description: Conflict resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/portability-requests:
+    post:
+      tags: [Portability]
+      summary: Create portability request
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePortabilityRequest"
+      responses:
+        "202":
+          description: Portability request queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/portability-requests/{id}/download:
+    get:
+      tags: [Portability]
+      summary: Download portability payload
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Download URL or binary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadResponse"
+  /v1/compliance-exports:
+    post:
+      tags: [ComplianceExports]
+      summary: Create full compliance export
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateComplianceExportRequest"
+      responses:
+        "202":
+          description: Export queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceExportCreateResponse"
+  /v1/compliance-exports/{id}:
+    get:
+      tags: [ComplianceExports]
+      summary: Get export status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Export status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceExportStatusResponse"
+  /v1/compliance-exports/{id}/download:
+    get:
+      tags: [ComplianceExports]
+      summary: Download compliance export
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Download URL or binary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadResponse"
+  /v1/audit-events/export:
+    get:
+      tags: [Audit]
+      summary: Export audit events
+      parameters:
+        - name: from_date
+          in: query
+          schema: { type: string, format: date }
+        - name: to_date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Export job handle or stream
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/access-logs/export:
+    get:
+      tags: [Audit]
+      summary: Export access logs
+      parameters:
+        - name: from_date
+          in: query
+          schema: { type: string, format: date }
+        - name: to_date
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Export job handle or stream
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/annual-reporting-snapshots/generate:
+    post:
+      tags: [Reporting]
+      summary: Generate annual snapshot
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateAnnualReportingSnapshotRequest"
+      responses:
+        "202":
+          description: Generation queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/annual-reporting-snapshots/{id}:
+    get:
+      tags: [Reporting]
+      summary: Get annual snapshot
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/compliance-issues:
+    post:
+      tags: [ComplianceIssues]
+      summary: Create compliance issue
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceIssueCreateRequest"
+      responses:
+        "201":
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceIssueResponse"
+  /v1/compliance-issues/{id}:
+    get:
+      tags: [ComplianceIssues]
+      summary: Get compliance issue
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Issue details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceIssueResponse"
+  /v1/compliance-issues/{id}/assign-owner:
+    patch:
+      tags: [ComplianceIssues]
+      summary: Assign issue owner
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceIssueAssignOwnerRequest"
+      responses:
+        "200":
+          description: Owner assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceIssueResponse"
+  /v1/compliance-issues/{id}/resolve:
+    patch:
+      tags: [ComplianceIssues]
+      summary: Resolve compliance issue
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceIssueResolveRequest"
+      responses:
+        "200":
+          description: Issue resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceIssueResponse"
+  /v1/compliance-issues/{id}/escalate:
+    patch:
+      tags: [ComplianceIssues]
+      summary: Escalate compliance issue
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceIssueEscalateRequest"
+      responses:
+        "200":
+          description: Issue escalated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceIssueResponse"
+  /v1/billing-events:
+    get:
+      tags: [Billing]
+      summary: List billing events
+      responses:
+        "200":
+          description: Billing events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListResponse"
+  /v1/billing/payment-methods:
+    post:
+      tags: [Billing]
+      summary: Create payment method
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentMethodRequest"
+      responses:
+        "201":
+          description: Payment method created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/billing/payment-methods/{id}/set-default:
+    patch:
+      tags: [Billing]
+      summary: Set default payment method
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Default set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/webhooks:
+    post:
+      tags: [Webhooks]
+      summary: Register webhook
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: Webhook registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+  /v1/webhooks/{id}/deliveries:
+    get:
+      tags: [Webhooks]
+      summary: List webhook deliveries
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Deliveries list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Invalid state transition or idempotency replay
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: Business validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error_code: { type: string }
+        message: { type: string }
+        field_errors:
+          type: array
+          items: { type: object }
+        request_id: { type: string }
+      required: [error_code, message, request_id]
+    GenericEntityResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+    PaginatedListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { type: object, additionalProperties: true }
+        page_info:
+          type: object
+          additionalProperties: true
+    DownloadResponse:
+      type: object
+      properties:
+        download_url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+    CreateOrganisationRequest:
+      type: object
+      properties:
+        legal_name: { type: string }
+        country_iso: { type: string, minLength: 2, maxLength: 2 }
+        commercial_tier: { type: integer, minimum: 1, maximum: 4 }
+      required: [legal_name, country_iso, commercial_tier]
+    OrganisationCreatedResponse:
+      type: object
+      properties:
+        organisation_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+      required: [organisation_id, created_at]
+    CreateProducerRequest:
+      type: object
+      properties:
+        owner_org_id: { type: string, format: uuid }
+        full_name: { type: string }
+        country_iso: { type: string, minLength: 2, maxLength: 2 }
+      required: [owner_org_id, full_name, country_iso]
+    ProducerCreatedResponse:
+      type: object
+      properties:
+        producer_id: { type: string, format: uuid }
+        verification_status: { type: string }
+      required: [producer_id, verification_status]
+    MemberInvitationRequest:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        role: { type: string }
+      required: [email, role]
+    MemberInvitationResponse:
+      type: object
+      properties:
+        invitation_id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+      required: [invitation_id, expires_at]
+    RequestCampaignCreateRequest:
+      type: object
+      properties:
+        request_type:
+          $ref: "#/components/schemas/RequestType"
+        campaign_name: { type: string }
+        description_template: { type: string }
+        due_date: { type: string, format: date }
+        targets:
+          type: array
+          items: { type: object, additionalProperties: true }
+      required: [request_type, campaign_name, description_template, targets]
+    RequestCampaignResponse:
+      type: object
+      properties:
+        campaign_id: { type: string, format: uuid }
+        status:
+          $ref: "#/components/schemas/RequestCampaignStatus"
+        total_targets: { type: integer }
+        created_requests: { type: integer }
+    CreatePlotRequest:
+      type: object
+      properties:
+        producer_id: { type: string, format: uuid }
+        commodity_id: { type: string, format: uuid }
+        country_iso: { type: string, minLength: 2, maxLength: 2 }
+        geolocation_mode:
+          $ref: "#/components/schemas/GeolocationMode"
+      required: [producer_id, commodity_id, country_iso, geolocation_mode]
+    PlotCreatedResponse:
+      type: object
+      properties:
+        plot_id: { type: string, format: uuid }
+        deforestation_check_status:
+          $ref: "#/components/schemas/DeforestationCheckStatus"
+      required: [plot_id]
+    AddGeometryVersionRequest:
+      type: object
+      properties:
+        geometry: { type: object, additionalProperties: true }
+        capture_method: { type: string }
+      required: [geometry, capture_method]
+    GeometryVersionResponse:
+      type: object
+      properties:
+        geometry_version_id: { type: string, format: uuid }
+        version_number: { type: integer }
+    EvidenceUploadResponse:
+      type: object
+      properties:
+        evidence_id: { type: string, format: uuid }
+        parse_status:
+          $ref: "#/components/schemas/EvidenceParseStatus"
+    EvidenceParseStatusResponse:
+      type: object
+      properties:
+        evidence_id: { type: string, format: uuid }
+        parse_status:
+          $ref: "#/components/schemas/EvidenceParseStatus"
+        parse_confidence: { type: number }
+    CreateConsentGrantRequest:
+      type: object
+      properties:
+        producer_id: { type: string, format: uuid }
+        grantee_org_id: { type: string, format: uuid }
+        purpose_code:
+          $ref: "#/components/schemas/ConsentPurposeCode"
+        data_scope:
+          type: array
+          items: { type: string }
+      required: [producer_id, grantee_org_id, purpose_code, data_scope]
+    ConsentGrantResponse:
+      type: object
+      properties:
+        consent_grant_id: { type: string, format: uuid }
+        granted_at: { type: string, format: date-time }
+        revoked_at: { type: string, format: date-time, nullable: true }
+    CreateShipmentHeaderRequest:
+      type: object
+      properties:
+        shipment_reference: { type: string }
+        workflow_type: { type: string }
+      required: [shipment_reference, workflow_type]
+    AddShipmentLineRequest:
+      type: object
+      properties:
+        commodity_id: { type: string, format: uuid }
+        hs_code: { type: string }
+        quantity_kg: { type: number, minimum: 0 }
+      required: [commodity_id, hs_code, quantity_kg]
+    SyncFlushResponse:
+      type: object
+      properties:
+        accepted_count: { type: integer }
+        conflict_count: { type: integer }
+        rejected_count: { type: integer }
+    SyncFlushRequest:
+      type: object
+      properties:
+        client_event_batch:
+          type: array
+          items: { type: object, additionalProperties: true }
+        hlc_timestamp: { type: string }
+      required: [client_event_batch, hlc_timestamp]
+    SyncConflictResolveRequest:
+      type: object
+      properties:
+        resolution_strategy: { type: string }
+        merged_payload:
+          type: object
+          additionalProperties: true
+      required: [resolution_strategy]
+    CreateBatchRequest:
+      type: object
+      properties:
+        commodity_id: { type: string, format: uuid }
+        batch_reference: { type: string }
+        quantity_kg: { type: number, minimum: 0 }
+      required: [commodity_id, batch_reference, quantity_kg]
+    AddBatchInputRequest:
+      type: object
+      properties:
+        source_type:
+          $ref: "#/components/schemas/BatchInputSourceType"
+        source_id: { type: string, format: uuid }
+        quantity_kg: { type: number, minimum: 0 }
+        evidence_id: { type: string, format: uuid, nullable: true }
+        delivery_manifest_evidence_id: { type: string, format: uuid, nullable: true }
+      required: [source_type, source_id, quantity_kg]
+      allOf:
+        - if:
+            properties:
+              source_type:
+                const: PROCESSING_FACILITY
+          then:
+            required: [delivery_manifest_evidence_id]
+    ShipmentHeaderResponse:
+      type: object
+      properties:
+        shipment_header_id: { type: string, format: uuid }
+        package_status:
+          $ref: "#/components/schemas/ShipmentPackageStatus"
+        sealed_at: { type: string, format: date-time, nullable: true }
+    DdsRecordResponse:
+      type: object
+      properties:
+        dds_record_id: { type: string, format: uuid }
+        submission_status:
+          $ref: "#/components/schemas/DdsSubmissionStatus"
+        traces_submission_id: { type: string, nullable: true }
+    ComplianceIssueCreateRequest:
+      type: object
+      properties:
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        issue_type: { type: string }
+        severity:
+          $ref: "#/components/schemas/ComplianceIssueSeverity"
+        description: { type: string }
+      required: [entity_type, entity_id, issue_type, severity, description]
+    ComplianceIssueAssignOwnerRequest:
+      type: object
+      properties:
+        owner_person_id: { type: string, format: uuid }
+        resolution_path: { type: string }
+      required: [owner_person_id, resolution_path]
+    ComplianceIssueResolveRequest:
+      type: object
+      properties:
+        resolution_note: { type: string }
+      required: [resolution_note]
+    ComplianceIssueEscalateRequest:
+      type: object
+      properties:
+        escalation_reason: { type: string }
+      required: [escalation_reason]
+    ComplianceIssueResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status:
+          $ref: "#/components/schemas/ComplianceIssueStatus"
+        severity:
+          $ref: "#/components/schemas/ComplianceIssueSeverity"
+        owner_person_id: { type: string, format: uuid, nullable: true }
+        resolved_at: { type: string, format: date-time, nullable: true }
+    DedupeMergeRequest:
+      type: object
+      properties:
+        survivor_entity_id: { type: string, format: uuid }
+        resolution_note: { type: string }
+      required: [survivor_entity_id, resolution_note]
+    DedupeDecisionRequest:
+      type: object
+      properties:
+        resolution_note: { type: string }
+      required: [resolution_note]
+    DedupeEscalateRequest:
+      type: object
+      properties:
+        escalation_reason: { type: string }
+      required: [escalation_reason]
+    YieldExceptionApproveRequest:
+      type: object
+      properties:
+        approved_factor: { type: number, minimum: 0 }
+        resolution_note: { type: string }
+      required: [approved_factor, resolution_note]
+    YieldExceptionRejectRequest:
+      type: object
+      properties:
+        resolution_note: { type: string }
+      required: [resolution_note]
+    RequestType:
+      type: string
+      enum:
+        - MISSING_PRODUCER_PROFILE
+        - MISSING_PLOT_GEOMETRY
+        - MISSING_LAND_TITLE
+        - MISSING_HARVEST_RECORD
+        - YIELD_EVIDENCE
+        - CONSENT_GRANT
+        - DDS_REFERENCE
+        - GENERAL_EVIDENCE
+        - OTHER
+    RequestCampaignStatus:
+      type: string
+      enum: [DRAFT, QUEUED, RUNNING, COMPLETED, PARTIAL, CANCELLED]
+    GeolocationMode:
+      type: string
+      enum: [POLYGON, POINT, POSTAL_ADDRESS]
+    DeforestationCheckStatus:
+      type: string
+      enum: [PENDING, CLEAR, FLAGGED, UNAVAILABLE, FAILED, UNDER_REVIEW]
+    EvidenceParseStatus:
+      type: string
+      enum: [PENDING, IN_PROGRESS, COMPLETED, FAILED, MANUAL_REQUIRED]
+    ConsentPurposeCode:
+      type: string
+      enum:
+        - COMPLIANCE_COLLECTION
+        - SHIPMENT_PREPARATION
+        - DDS_SUBMISSION
+        - DOWNSTREAM_REFERENCE_SHARING
+        - AUDIT_RESPONSE
+        - PORTABILITY_TRANSFER
+    BatchInputSourceType:
+      type: string
+      enum: [PLOT_HARVEST, LOT, BATCH, EXTERNAL, PROCESSING_FACILITY]
+    ShipmentPackageStatus:
+      type: string
+      enum: [DRAFT, READY, SEALED, SUBMITTED, ACCEPTED, REJECTED, ARCHIVED, ON_HOLD]
+    DdsSubmissionStatus:
+      type: string
+      enum:
+        - DRAFT
+        - READY_TO_SUBMIT
+        - SUBMITTED
+        - ACCEPTED
+        - REJECTED
+        - PENDING_CONFIRMATION
+        - AMENDMENT_DRAFT
+        - AMENDED_SUBMITTED
+        - WITHDRAWAL_REQUESTED
+        - WITHDRAWN
+        - SUPERSEDED
+    ComplianceIssueSeverity:
+      type: string
+      enum: [INFO, WARNING, BLOCKING]
+    ComplianceIssueStatus:
+      type: string
+      enum: [OPEN, IN_PROGRESS, RESOLVED, ESCALATED]
+    PortabilityRequestType:
+      type: string
+      enum: [FULL, IDENTITY_ONLY, PLOT_ONLY]
+    CreatePortabilityRequest:
+      type: object
+      properties:
+        producer_id: { type: string, format: uuid }
+        request_type:
+          $ref: "#/components/schemas/PortabilityRequestType"
+      required: [producer_id, request_type]
+    CreateComplianceExportRequest:
+      type: object
+      properties:
+        export_type:
+          type: string
+          enum: [FULL_COMPLIANCE_RECORD]
+        from_date: { type: string, format: date }
+        to_date: { type: string, format: date }
+      required: [export_type, from_date, to_date]
+    GenerateAnnualReportingSnapshotRequest:
+      type: object
+      properties:
+        reporting_year: { type: integer, minimum: 2020 }
+      required: [reporting_year]
+    CreatePaymentMethodRequest:
+      type: object
+      properties:
+        provider: { type: string, enum: [STRIPE] }
+        tokenized_payment_ref: { type: string }
+        billing_email: { type: string, format: email }
+      required: [provider, tokenized_payment_ref, billing_email]
+    CreateWebhookRequest:
+      type: object
+      properties:
+        endpoint_url: { type: string, format: uri }
+        event_types:
+          type: array
+          items: { type: string }
+        secret_rotation_policy: { type: string }
+      required: [endpoint_url, event_types, secret_rotation_policy]
+    ComplianceExportCreateResponse:
+      type: object
+      properties:
+        export_id: { type: string, format: uuid }
+        status: { type: string, example: QUEUED }
+        expires_at: { type: string, format: date-time }
+    ComplianceExportStatusResponse:
+      type: object
+      properties:
+        export_id: { type: string, format: uuid }
+        status: { type: string }
+        progress: { type: integer, minimum: 0, maximum: 100 }

@@ -208,7 +208,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                             </Link>
                           </DropdownMenuItem>
                         </PermissionGate>
-                        {pkg.status === 'traces_ready' && (
+                        {pkg.status === 'SEALED' && (
                           <PermissionGate permission="packages:submit_traces">
                             <DropdownMenuItem asChild>
                               <Link href={`/packages/${pkg.id}/submit`}>

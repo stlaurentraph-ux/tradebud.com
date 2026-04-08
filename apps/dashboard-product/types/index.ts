@@ -141,32 +141,28 @@ export interface RoleDecision {
 
 export type ShipmentStatus =
   | 'DRAFT'
-  | 'ASSEMBLY'
   | 'READY'
   | 'SEALED'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'CANCELLED';
-
-export type DDSStatus =
-  | 'DRAFT'
-  | 'VALIDATION_PENDING'
-  | 'READY_FOR_SUBMISSION'
   | 'SUBMITTED'
   | 'ACCEPTED'
   | 'REJECTED'
-  | 'SUPERSEDED'
-  | 'WITHDRAWN';
+  | 'ARCHIVED'
+  | 'ON_HOLD';
 
-// Legacy PackageStatus (backwards compatible)
-export type PackageStatus =
-  | 'draft'
-  | 'in_review'
-  | 'preflight_check'
-  | 'traces_ready'
-  | 'submitted'
-  | 'approved'
-  | 'rejected';
+export type DDSStatus =
+  | 'DRAFT'
+  | 'READY_TO_SUBMIT'
+  | 'SUBMITTED'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'PENDING_CONFIRMATION'
+  | 'AMENDMENT_DRAFT'
+  | 'AMENDED_SUBMITTED'
+  | 'WITHDRAWAL_REQUESTED'
+  | 'WITHDRAWN'
+  | 'SUPERSEDED';
+
+export type PackageComplianceStatus = 'PENDING' | 'PASSED' | 'WARNINGS' | 'BLOCKED';
 
 export interface DDSPackage {
   id: string;
@@ -174,14 +170,12 @@ export interface DDSPackage {
   supplier_name: string;
   season: string;
   year: number;
-  status: PackageStatus;
-  // New canonical status fields
-  shipment_status?: ShipmentStatus;
+  status: ShipmentStatus;
   dds_status?: DDSStatus;
   // Legal role for this specific workflow
   legal_role?: LegalWorkflowRole;
   workflow_type?: WorkflowType;
-  compliance_status: ComplianceStatus;
+  compliance_status: PackageComplianceStatus;
   plots: Plot[];
   farmers: Farmer[];
   tenant_id: string;
@@ -202,10 +196,8 @@ export type ComplianceIssueSeverity = 'BLOCKING' | 'WARNING' | 'INFO';
 export type ComplianceIssueStatus =
   | 'OPEN'
   | 'IN_PROGRESS'
-  | 'PENDING_EVIDENCE'
   | 'RESOLVED'
-  | 'ESCALATED'
-  | 'WONT_FIX';
+  | 'ESCALATED';
 
 export type ComplianceIssueType =
   | 'DEFORESTATION_RISK'
@@ -265,7 +257,7 @@ export interface YieldException {
   actual_weight_kg: number;
   expected_max_weight_kg: number;
   ratio: number; // actual / expected
-  yield_status: 'PASS' | 'WARNING' | 'BLOCKED';
+  yield_status: 'PENDING' | 'PASS' | 'WARNING' | 'BLOCKED' | 'UNAVAILABLE';
   // Exception request
   exception_status: YieldExceptionStatus;
   justification?: string;
@@ -287,8 +279,10 @@ export interface YieldException {
 
 export type RequestCampaignStatus =
   | 'DRAFT'
-  | 'SENT'
-  | 'ACCEPTED'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'PARTIAL'
   | 'EXPIRED'
   | 'CANCELLED';
 
@@ -296,7 +290,16 @@ export interface RequestCampaign {
   id: string;
   title: string;
   description: string;
-  request_type: 'EVIDENCE' | 'FPIC' | 'CONSENT' | 'PLOT_UPDATE';
+  request_type:
+    | 'MISSING_PRODUCER_PROFILE'
+    | 'MISSING_PLOT_GEOMETRY'
+    | 'MISSING_LAND_TITLE'
+    | 'MISSING_HARVEST_RECORD'
+    | 'YIELD_EVIDENCE'
+    | 'CONSENT_GRANT'
+    | 'DDS_REFERENCE'
+    | 'GENERAL_EVIDENCE'
+    | 'OTHER';
   status: RequestCampaignStatus;
   // Targets
   target_organization_ids: string[];
@@ -397,9 +400,6 @@ export interface Farmer {
   updated_at: string;
 }
 
-// Compliance types
-export type ComplianceStatus = 'passed' | 'warnings' | 'blocked' | 'pending';
-
 export type EvidenceType =
   | 'satellite_imagery'
   | 'gps_coordinates'
@@ -450,7 +450,7 @@ export interface BlockingIssue {
 
 export interface PreflightResult {
   package_id: string;
-  overall_status: ComplianceStatus;
+  overall_status: PackageComplianceStatus;
   total_plots: number;
   passed_plots: number;
   warning_plots: number;
@@ -497,11 +497,12 @@ export interface Activity {
 export interface DashboardMetrics {
   total_packages: number;
   total_plots: number;
+  compliant_plots: number;
   total_farmers: number;
   pending_compliance: number;
   traces_submitted: number;
   compliance_rate: number;
-  packages_by_status: Record<PackageStatus, number>;
+  packages_by_status: Record<ShipmentStatus, number>;
   recent_activity: Activity[];
   // New canonical metrics
   blocking_issues_count?: number;

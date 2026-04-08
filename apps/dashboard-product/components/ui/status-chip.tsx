@@ -17,11 +17,11 @@ import { cn } from '@/lib/utils';
 
 /**
  * StatusChip - Canonical entity state indicator
- * 
+ *
  * Maps directly to spec state enums:
- * - shipment_headers: DRAFT → COLLECTING_DATA → VALIDATING → BLOCKED → READY_FOR_APPROVAL → APPROVED_FOR_FILING → FILED → FILING_FAILED → FILING_ACCEPTED
- * - dds_records: DRAFT → PENDING → SUBMITTED → ACCEPTED → REJECTED
- * - compliance_issues: OPEN → ASSIGNED → WAITING → UPDATED → RESOLVED → CLOSED
+ * - shipment_headers: DRAFT → READY → SEALED → SUBMITTED → ACCEPTED/REJECTED → ARCHIVED or ON_HOLD
+ * - dds_records: DRAFT → READY_TO_SUBMIT → SUBMITTED → ACCEPTED/REJECTED/PENDING_CONFIRMATION (+ amend/withdraw states)
+ * - compliance_issues: OPEN → IN_PROGRESS → RESOLVED/ESCALATED
  * - yield_exception_requests: PENDING → APPROVED → REJECTED
  */
 
@@ -32,28 +32,30 @@ const statusChipVariants = cva(
       status: {
         // Shipment states
         DRAFT: 'bg-gray-100 text-gray-700 focus:ring-gray-400',
-        COLLECTING_DATA: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
-        VALIDATING: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
-        BLOCKED: 'bg-red-100 text-red-700 focus:ring-red-400',
-        READY_FOR_APPROVAL: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
-        APPROVED_FOR_FILING: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
-        FILED: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
-        FILING_FAILED: 'bg-red-100 text-red-700 focus:ring-red-400',
-        FILING_ACCEPTED: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
+        READY: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
+        SEALED: 'bg-indigo-100 text-indigo-700 focus:ring-indigo-400',
+        ARCHIVED: 'bg-gray-100 text-gray-700 focus:ring-gray-400',
+        ON_HOLD: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
         // DDS states
+        READY_TO_SUBMIT: 'bg-indigo-100 text-indigo-700 focus:ring-indigo-400',
+        PENDING_CONFIRMATION: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
+        AMENDMENT_DRAFT: 'bg-purple-100 text-purple-700 focus:ring-purple-400',
+        AMENDED_SUBMITTED: 'bg-purple-100 text-purple-700 focus:ring-purple-400',
+        WITHDRAWAL_REQUESTED: 'bg-orange-100 text-orange-700 focus:ring-orange-400',
+        WITHDRAWN: 'bg-gray-100 text-gray-700 focus:ring-gray-400',
+        SUPERSEDED: 'bg-gray-100 text-gray-700 focus:ring-gray-400',
         PENDING: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
         SUBMITTED: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
         ACCEPTED: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
         REJECTED: 'bg-red-100 text-red-700 focus:ring-red-400',
         // Compliance issue states
         OPEN: 'bg-red-100 text-red-700 focus:ring-red-400',
-        ASSIGNED: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
-        WAITING: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
-        UPDATED: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
         RESOLVED: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
-        CLOSED: 'bg-gray-100 text-gray-700 focus:ring-gray-400',
+        ESCALATED: 'bg-orange-100 text-orange-700 focus:ring-orange-400',
         // Yield exception states
         APPROVED: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
+        UNAVAILABLE: 'bg-amber-100 text-amber-700 focus:ring-amber-400',
+        BLOCKED: 'bg-red-100 text-red-700 focus:ring-red-400',
         // Generic states
         IN_PROGRESS: 'bg-blue-100 text-blue-700 focus:ring-blue-400',
         SUCCESS: 'bg-emerald-100 text-emerald-700 focus:ring-emerald-400',
@@ -81,25 +83,27 @@ const statusChipVariants = cva(
 
 export type StatusType =
   | 'DRAFT'
-  | 'COLLECTING_DATA'
-  | 'VALIDATING'
-  | 'BLOCKED'
-  | 'READY_FOR_APPROVAL'
-  | 'APPROVED_FOR_FILING'
-  | 'FILED'
-  | 'FILING_FAILED'
-  | 'FILING_ACCEPTED'
+  | 'READY'
+  | 'SEALED'
+  | 'ARCHIVED'
+  | 'ON_HOLD'
   | 'PENDING'
+  | 'READY_TO_SUBMIT'
   | 'SUBMITTED'
   | 'ACCEPTED'
   | 'REJECTED'
+  | 'PENDING_CONFIRMATION'
+  | 'AMENDMENT_DRAFT'
+  | 'AMENDED_SUBMITTED'
+  | 'WITHDRAWAL_REQUESTED'
+  | 'WITHDRAWN'
+  | 'SUPERSEDED'
   | 'OPEN'
-  | 'ASSIGNED'
-  | 'WAITING'
-  | 'UPDATED'
   | 'RESOLVED'
-  | 'CLOSED'
+  | 'ESCALATED'
   | 'APPROVED'
+  | 'UNAVAILABLE'
+  | 'BLOCKED'
   | 'IN_PROGRESS'
   | 'SUCCESS'
   | 'ERROR'
@@ -108,25 +112,27 @@ export type StatusType =
 
 const STATUS_ICONS: Record<StatusType, React.ElementType> = {
   DRAFT: Edit,
-  COLLECTING_DATA: Download,
-  VALIDATING: Clock,
-  BLOCKED: AlertTriangle,
-  READY_FOR_APPROVAL: CheckCircle,
-  APPROVED_FOR_FILING: CheckCircle2,
-  FILED: CheckCircle2,
-  FILING_FAILED: X,
-  FILING_ACCEPTED: Check,
+  READY: Download,
+  SEALED: CheckCircle,
+  ARCHIVED: Check,
+  ON_HOLD: AlertTriangle,
   PENDING: Clock,
+  READY_TO_SUBMIT: CheckCircle2,
   SUBMITTED: Clock,
   ACCEPTED: Check,
   REJECTED: X,
+  PENDING_CONFIRMATION: Clock,
+  AMENDMENT_DRAFT: Edit,
+  AMENDED_SUBMITTED: Clock,
+  WITHDRAWAL_REQUESTED: AlertTriangle,
+  WITHDRAWN: X,
+  SUPERSEDED: Check,
   OPEN: AlertTriangle,
-  ASSIGNED: Clock,
-  WAITING: Clock,
-  UPDATED: Clock,
   RESOLVED: CheckCircle,
-  CLOSED: Check,
+  ESCALATED: AlertTriangle,
   APPROVED: Check,
+  UNAVAILABLE: AlertTriangle,
+  BLOCKED: AlertTriangle,
   IN_PROGRESS: Clock,
   SUCCESS: Check,
   ERROR: X,
@@ -136,25 +142,27 @@ const STATUS_ICONS: Record<StatusType, React.ElementType> = {
 
 const STATUS_LABELS: Record<StatusType, string> = {
   DRAFT: 'Draft',
-  COLLECTING_DATA: 'Collecting data',
-  VALIDATING: 'Validating',
-  BLOCKED: 'Blocked',
-  READY_FOR_APPROVAL: 'Ready for approval',
-  APPROVED_FOR_FILING: 'Approved for filing',
-  FILED: 'Filed',
-  FILING_FAILED: 'Filing failed',
-  FILING_ACCEPTED: 'Filing accepted',
+  READY: 'Ready',
+  SEALED: 'Sealed',
+  ARCHIVED: 'Archived',
+  ON_HOLD: 'On hold',
   PENDING: 'Pending',
+  READY_TO_SUBMIT: 'Ready to submit',
   SUBMITTED: 'Submitted',
   ACCEPTED: 'Accepted',
   REJECTED: 'Rejected',
+  PENDING_CONFIRMATION: 'Pending confirmation',
+  AMENDMENT_DRAFT: 'Amendment draft',
+  AMENDED_SUBMITTED: 'Amended submitted',
+  WITHDRAWAL_REQUESTED: 'Withdrawal requested',
+  WITHDRAWN: 'Withdrawn',
+  SUPERSEDED: 'Superseded',
   OPEN: 'Open',
-  ASSIGNED: 'Assigned',
-  WAITING: 'Waiting',
-  UPDATED: 'Updated',
   RESOLVED: 'Resolved',
-  CLOSED: 'Closed',
+  ESCALATED: 'Escalated',
   APPROVED: 'Approved',
+  UNAVAILABLE: 'Unavailable',
+  BLOCKED: 'Blocked',
   IN_PROGRESS: 'In progress',
   SUCCESS: 'Success',
   ERROR: 'Error',

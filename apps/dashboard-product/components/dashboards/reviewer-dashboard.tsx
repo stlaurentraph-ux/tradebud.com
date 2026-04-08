@@ -18,18 +18,19 @@ import {
   Flag,
   Scale,
 } from 'lucide-react';
+import type { ShipmentStatus } from '@/types';
 
 interface ReviewerDashboardProps {
   metrics: {
     total_packages: number;
-    packages_by_status: Record<string, number>;
+    packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
   };
 }
 
 export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
-  const pendingReview = metrics.packages_by_status?.['preflight'] || 0;
+  const pendingReview = metrics.packages_by_status?.READY || 0;
   const flaggedItems = Math.ceil((metrics.total_plots - metrics.compliant_plots) * 0.3);
 
   return (
@@ -83,7 +84,7 @@ export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">
-              {(metrics.packages_by_status?.['traces_ready'] || 0) + (metrics.packages_by_status?.['submitted'] || 0)}
+              {(metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">This month</p>
           </CardContent>

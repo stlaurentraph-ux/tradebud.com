@@ -91,7 +91,7 @@ Usage: Countdown timers, SLA badges, deadline tracking
 **Status Chip (Entity State Indicator)**
 ```
 Schema:
-  status: 'DRAFT' | 'COLLECTING_DATA' | 'VALIDATING' | 'BLOCKED' | 'READY_FOR_APPROVAL' | 'APPROVED_FOR_FILING' | 'FILED' | 'FILING_FAILED' | 'FILING_ACCEPTED'
+  status: shipment (`DRAFT|READY|SEALED|SUBMITTED|ACCEPTED|REJECTED|ARCHIVED|ON_HOLD`) or dds (`DRAFT|READY_TO_SUBMIT|SUBMITTED|ACCEPTED|REJECTED|PENDING_CONFIRMATION|AMENDMENT_DRAFT|AMENDED_SUBMITTED|WITHDRAWAL_REQUESTED|WITHDRAWN|SUPERSEDED`) or compliance issue (`OPEN|IN_PROGRESS|RESOLVED|ESCALATED`)
   entity_type: 'shipment' | 'dds_record' | 'compliance_issue' | 'yield_request'
   icon: LucideIcon (optional)
   interactive: boolean (default: false)
@@ -103,14 +103,13 @@ Schema:
 | State | Color Bg | Color Text | Icon | Meaning |
 |-------|----------|-----------|------|---------|
 | DRAFT | gray-100 | gray-700 | Edit | Editable, not yet submitted |
-| COLLECTING_DATA | blue-100 | blue-700 | Download | In progress, awaiting input |
-| VALIDATING | blue-100 | blue-700 | Clock | Active validation running |
-| BLOCKED | red-100 | red-700 | AlertTriangle | Cannot proceed; resolution needed |
-| READY_FOR_APPROVAL | amber-100 | amber-700 | CheckCircle | Pending review/approval |
-| APPROVED_FOR_FILING | emerald-100 | emerald-700 | CheckCircle2 | Approved; eligible for submission |
-| FILED | emerald-100 | emerald-700 | CheckCircle2 | Submitted to TRACES NT |
-| FILING_FAILED | red-100 | red-700 | X | Submission failed; retry required |
-| FILING_ACCEPTED | emerald-100 | emerald-700 | Check | Accepted by TRACES NT |
+| READY | blue-100 | blue-700 | Download | Ready for sealing checks |
+| SEALED | indigo-100 | indigo-700 | CheckCircle | Sealed and immutable |
+| SUBMITTED | blue-100 | blue-700 | Clock | Submitted to TRACES / manual flow |
+| ACCEPTED | emerald-100 | emerald-700 | Check | Accepted |
+| REJECTED | red-100 | red-700 | X | Rejected; remediation required |
+| ON_HOLD | amber-100 | amber-700 | AlertTriangle | Hold until issue resolution |
+| ARCHIVED | gray-100 | gray-700 | CheckCircle2 | Terminal archived state |
 
 **Interaction States:**
 - **Default:** Solid color, readable label
@@ -378,7 +377,7 @@ Footer (audit trail):
 **Top 5 UX Improvements:**
 
 1. **Implement Kanban columns with SLA burndown:**
-   - Columns: OPEN (red header) | ASSIGNED | WAITING | UPDATED | RESOLVED
+   - Columns: OPEN (red header) | IN_PROGRESS | ESCALATED | RESOLVED
    - Column header shows count + overdue count (e.g., "OPEN (7, 2 overdue)")
 
 2. **Add visual hierarchy to cards:**
@@ -406,7 +405,7 @@ Footer (audit trail):
 - **After:** Kanban with visual urgency; drag-based workflow; filters; bulk operations
 
 **Scanability:**
-- Use emoji in column headers: 🟡 OPEN | 👤 ASSIGNED | ⏳ WAITING | 💬 UPDATED | ✓ RESOLVED
+- Use emoji in column headers: 🟡 OPEN | ⏳ IN_PROGRESS | 🚨 ESCALATED | ✓ RESOLVED
 - Card background: Lightest severity color (red-50 for BLOCKING, etc.)
 
 #### 3. Shipment + DDS Timeline/Status Views
@@ -414,12 +413,12 @@ Footer (audit trail):
 **Top 5 UX Improvements:**
 
 1. **Add visual state machine diagram:**
-   - Horizontal timeline: DRAFT → COLLECTING → VALIDATING → BLOCKED/READY → APPROVED → FILED → ACCEPTED
+   - Horizontal timeline: DRAFT → READY → SEALED → SUBMITTED → ACCEPTED/REJECTED
    - Current state highlighted with checkmark + green circle
    - Completed states show check; future states grayed out
 
 2. **Replace static text with actionable summary:**
-   - Show: "Status: READY_FOR_APPROVAL | Blocking: 0 | Due: 2 days"
+   - Show: "Status: READY | Blocking: 0 | Due: 2 days"
    - Not: "Status: ready_for_approval"
 
 3. **Add linked compliance issues view:**
@@ -470,7 +469,7 @@ Footer (audit trail):
 4. **Add resolution workflow buttons:**
    - Current status shown with clear transition buttons
    - Example (if OPEN): "[Assign to me] [Mark as waiting...] [Skip]"
-   - Example (if ASSIGNED): "[Mark as waiting...] [Resolve] [Reopen]"
+   - Example (if IN_PROGRESS): "[Escalate] [Resolve] [Reopen]"
    - Buttons are contextual and role-gated
 
 5. **Add comment thread (read-only for now):**
@@ -541,7 +540,7 @@ Examples:
 **Pattern: [Action] [Entity] from [Old State] to [New State]**
 
 Examples:
-- "Sealed shipment #SHP-2024-001 (DRAFT → READY_FOR_APPROVAL)"
+- "Sealed shipment #SHP-2024-001 (DRAFT → READY)"
 - "Submitted to TRACES NT (READY_TO_SUBMIT → SUBMITTED)"
 - "Resolved compliance issue #CIS-2024-0127 (OPEN → RESOLVED)"
 
@@ -665,7 +664,7 @@ All interactions must emit audit events for compliance:
 
 **Critical Canonical Constraints Preserved:**
 
-- ✅ **Role Model:** Field Agent, Field Manager, Supplier User, Org Admin, Compliance Analyst, Compliance Manager, Risk Reviewer, Sponsor Admin, Auditor. No simplification or merging of roles.
+- ✅ **Role Model:** Canonical roles `OWNER`, `ADMIN`, `COMPLIANCE_MANAGER`, `FIELD_AGENT`, `VIEWER`, `BILLING_CONTACT` with sponsor-admin handled as context, not a separate canonical role.
 
 - ✅ **State Machines:** All entity state enums (shipment, dds_record, compliance_issue, yield_exception_request) remain immutable. No removal or renaming of states.
 

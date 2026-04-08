@@ -5,6 +5,7 @@ import type {
   CommercialTier,
   WorkflowType,
   RoleDecision,
+  ShipmentStatus,
 } from '@/types';
 
 // ============================================================
@@ -529,22 +530,24 @@ export function getLegalRoleBadgeColor(role: LegalWorkflowRole): string {
  */
 export function canTransitionPackage(
   user: User | null,
-  fromStatus: string,
-  toStatus: string
+  fromStatus: ShipmentStatus,
+  toStatus: ShipmentStatus
 ): boolean {
   if (!user) return false;
 
-  const transitions: Record<TenantRole, Record<string, string[]>> = {
+  const transitions: Record<TenantRole, Partial<Record<ShipmentStatus, ShipmentStatus[]>>> = {
     exporter: {
-      draft: ['in_review'],
-      in_review: ['draft', 'preflight_check'],
-      preflight_check: ['in_review', 'traces_ready'],
-      traces_ready: ['preflight_check', 'submitted'],
+      DRAFT: ['READY', 'ON_HOLD'],
+      READY: ['DRAFT', 'SEALED', 'ON_HOLD'],
+      SEALED: ['SUBMITTED', 'ON_HOLD'],
+      SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
+      REJECTED: ['DRAFT', 'ON_HOLD'],
+      ON_HOLD: ['DRAFT', 'READY'],
     },
     importer: {},
     cooperative: {},
     country_reviewer: {
-      submitted: ['approved', 'rejected'],
+      SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
     },
   };
 

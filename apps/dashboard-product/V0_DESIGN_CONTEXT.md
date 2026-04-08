@@ -40,30 +40,26 @@ Design the **unified multi-tenant dashboard product** for Tracebud's EUDR-first 
 
 ## Canonical roles for UI behavior
 
-Use these role names in UX and role switch mockups:
+Use canonical role-to-persona mapping from spec Section 36.0:
 
-- Field Agent
-- Field Manager
-- Supplier User
-- Org Admin
-- Compliance Analyst
-- Compliance Manager
-- Risk Reviewer
-- Sponsor Admin
-- Auditor / Read Only
+- `FIELD_AGENT` -> Field Agent
+- `COMPLIANCE_MANAGER` -> Compliance Manager
+- `OWNER` or `ADMIN` -> Organisation Admin
+- `BILLING_CONTACT` -> Billing Owner
+- `VIEWER` -> Read-only Viewer
+- Sponsor Admin views are allowed only in sponsor-org context and must still enforce canonical roles in permission checks/audit.
 
 Permissions and sensitive actions are constrained by `./PERMISSIONS_MATRIX.md`.
 
 ## Must-show status language
 
-Do not invent new status taxonomies. Use canonical labels from build readiness artifacts:
+Do not invent new status taxonomies. Use canonical labels from the canonical spec:
 
-- Supplier: `draft`, `invited`, `in_progress`, `submitted`, `under_review`, `approved`, `active`, `changes_requested`, `rejected`, `suspended`
-- Plot: `draft`, `captured`, `synced`, `under_review`, `verified`, `rejected`, `archived`
-- Shipment: `draft`, `collecting_data`, `validating`, `blocked`, `ready_for_approval`, `approved_for_filing`, `filed`, `filing_failed`, `filing_accepted`
-- Filing package: `draft`, `generated`, `preflight_passed`, `preflight_failed`, `submitted`, `accepted`, `failed`, `needs_manual_review`, `regenerated`
-- Issue: `open`, `assigned`, `waiting_on_partner`, `updated`, `resolved`, `reopened`, `dismissed`
-- Chat thread: `open`, `waiting_internal`, `waiting_partner`, `resolved`, `reopened`
+- Shipment package: `DRAFT`, `READY`, `SEALED`, `SUBMITTED`, `ACCEPTED`, `REJECTED`, `ARCHIVED`, `ON_HOLD`
+- DDS submission: `DRAFT`, `READY_TO_SUBMIT`, `SUBMITTED`, `ACCEPTED`, `REJECTED`, `PENDING_CONFIRMATION`, `AMENDMENT_DRAFT`, `AMENDED_SUBMITTED`, `WITHDRAWAL_REQUESTED`, `WITHDRAWN`, `SUPERSEDED`
+- Batch yield: `PENDING`, `PASS`, `WARNING`, `BLOCKED`, `UNAVAILABLE`
+- Compliance issue: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `ESCALATED`
+- Request: `OPEN`, `IN_PROGRESS`, `FULFILLED`, `EXPIRED`, `CANCELLED`
 
 For MVP scope, prioritize canonical status display for:
 - Producer onboarding and consent capture lifecycle
@@ -98,6 +94,7 @@ Design optional extension variants for Release 2+ only:
 - Sponsor oversight and delegated governance views
 - Downstream/trader retention workflows
 - Automated evidence parse review queues
+- Request campaigns and portability/annual reporting workflows (non-MVP per Section 51.1 subset)
 
 ## Error and empty-state cues to include
 
@@ -139,7 +136,13 @@ Use this canonical context in priority order:
 6) BUILD_READINESS_ARTIFACTS.md
 7) PERMISSIONS_MATRIX.md
 
-Design for these roles: Field Agent, Field Manager, Supplier User, Org Admin, Compliance Analyst, Compliance Manager, Risk Reviewer, Sponsor Admin, Auditor/Read Only.
+Design for these canonical roles/personas:
+- FIELD_AGENT (Field Agent)
+- COMPLIANCE_MANAGER (Compliance Manager)
+- OWNER/ADMIN (Organisation Admin)
+- BILLING_CONTACT (Billing Owner)
+- VIEWER (Read-only Viewer)
+- Sponsor Admin views only in sponsor-org context with canonical role enforcement.
 
 Include these dashboard surfaces:
 - Personal task/blocker dashboard
@@ -161,13 +164,12 @@ Hard constraints:
 - explicit blocker/warning states
 - auditable submission + acknowledgement flows
 
-Use canonical status labels (do not invent new names):
-Supplier: draft/invited/in_progress/submitted/under_review/approved/active/changes_requested/rejected/suspended
-Plot: draft/captured/synced/under_review/verified/rejected/archived
-Shipment: draft/collecting_data/validating/blocked/ready_for_approval/approved_for_filing/filed/filing_failed/filing_accepted
-Filing package: draft/generated/preflight_passed/preflight_failed/submitted/accepted/failed/needs_manual_review/regenerated
-Issue: open/assigned/waiting_on_partner/updated/resolved/reopened/dismissed
-Thread: open/waiting_internal/waiting_partner/resolved/reopened
+Use canonical status labels from the spec (do not invent new names):
+Shipment package: DRAFT/READY/SEALED/SUBMITTED/ACCEPTED/REJECTED/ARCHIVED/ON_HOLD
+DDS: DRAFT/READY_TO_SUBMIT/SUBMITTED/ACCEPTED/REJECTED/PENDING_CONFIRMATION/AMENDMENT_DRAFT/AMENDED_SUBMITTED/WITHDRAWAL_REQUESTED/WITHDRAWN/SUPERSEDED
+Batch yield: PENDING/PASS/WARNING/BLOCKED/UNAVAILABLE
+Compliance issue: OPEN/IN_PROGRESS/RESOLVED/ESCALATED
+Request: OPEN/IN_PROGRESS/FULFILLED/EXPIRED/CANCELLED
 
 Generate:
 1) information architecture

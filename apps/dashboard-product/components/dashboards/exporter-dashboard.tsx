@@ -18,11 +18,12 @@ import {
 import { BlockerCard } from '@/components/ui/blocker-card';
 import { StatusChip } from '@/components/ui/status-chip';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
+import type { ShipmentStatus } from '@/types';
 
 interface ExporterDashboardProps {
   metrics: {
     total_packages: number;
-    packages_by_status: Record<string, number>;
+    packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
     total_farmers: number;
@@ -66,13 +67,13 @@ const mockRecentActivity: TimelineEvent[] = [
 export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   // Canonical shipment states from spec
   const shipmentStates = {
-    DRAFT: metrics.packages_by_status?.['draft'] || 0,
-    READY: metrics.packages_by_status?.['ready'] || 0,
-    SEALED: metrics.packages_by_status?.['sealed'] || 0,
-    SUBMITTED: metrics.packages_by_status?.['submitted'] || 0,
-    ACCEPTED: metrics.packages_by_status?.['accepted'] || 0,
-    REJECTED: metrics.packages_by_status?.['rejected'] || 0,
-    ON_HOLD: metrics.packages_by_status?.['on_hold'] || 0,
+    DRAFT: metrics.packages_by_status?.DRAFT || 0,
+    READY: metrics.packages_by_status?.READY || 0,
+    SEALED: metrics.packages_by_status?.SEALED || 0,
+    SUBMITTED: metrics.packages_by_status?.SUBMITTED || 0,
+    ACCEPTED: metrics.packages_by_status?.ACCEPTED || 0,
+    REJECTED: metrics.packages_by_status?.REJECTED || 0,
+    ON_HOLD: metrics.packages_by_status?.ON_HOLD || 0,
   };
 
   // Calculate SLA metrics
@@ -94,7 +95,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   // Spec KPIs
   const blockingIssuesCount = 2;
   const yieldFailuresCount = 1;
-  const ddsSubmissionQueue = shipmentStates.SUBMITTED;
+  const ddsSubmissionQueue = shipmentStates.SEALED;
 
   return (
     <div className="space-y-6">
@@ -138,7 +139,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">READY</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.READY}</p>
                 </div>
-                <StatusChip status="APPROVED_FOR_FILING" label="Ready" />
+                <StatusChip status="READY" label="Ready" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -163,7 +164,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">SEALED</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.SEALED}</p>
                 </div>
-                <StatusChip status="FILED" label="Sealed" />
+                <StatusChip status="SEALED" label="Sealed" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -272,7 +273,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <CardContent>
             <div className="text-2xl font-bold">{metrics.total_packages}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {metrics.packages_by_status?.['submitted'] || 0} submitted to TRACES
+              {metrics.packages_by_status?.SUBMITTED || 0} submitted to TRACES
             </p>
           </CardContent>
         </Card>
@@ -324,11 +325,11 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         <CardContent>
           <div className="grid grid-cols-5 gap-2">
             {[
-              { status: 'draft', chipStatus: 'DRAFT' as const, label: 'Draft', icon: FileText },
-              { status: 'in_review', chipStatus: 'VALIDATING' as const, label: 'In review', icon: Clock },
-              { status: 'preflight', chipStatus: 'READY_FOR_APPROVAL' as const, label: 'Pre-flight', icon: AlertTriangle },
-              { status: 'traces_ready', chipStatus: 'APPROVED_FOR_FILING' as const, label: 'Ready', icon: CheckCircle2 },
-              { status: 'submitted', chipStatus: 'FILED' as const, label: 'Submitted', icon: Upload },
+              { status: 'DRAFT' as ShipmentStatus, chipStatus: 'DRAFT' as const, label: 'Draft', icon: FileText },
+              { status: 'READY' as ShipmentStatus, chipStatus: 'READY' as const, label: 'Ready', icon: Clock },
+              { status: 'ON_HOLD' as ShipmentStatus, chipStatus: 'ON_HOLD' as const, label: 'On hold', icon: AlertTriangle },
+              { status: 'SEALED' as ShipmentStatus, chipStatus: 'SEALED' as const, label: 'Sealed', icon: CheckCircle2 },
+              { status: 'SUBMITTED' as ShipmentStatus, chipStatus: 'SUBMITTED' as const, label: 'Submitted', icon: Upload },
             ].map((stage) => (
               <div key={stage.status} className="text-center">
                 <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">

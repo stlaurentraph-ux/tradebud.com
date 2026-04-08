@@ -1,20 +1,21 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { PackageStatus } from '@/types';
+import type { ShipmentStatus } from '@/types';
 
 interface PackageStatusChartProps {
-  packagesByStatus: Record<PackageStatus, number>;
+  packagesByStatus: Record<ShipmentStatus, number>;
 }
 
-const statusConfig: Record<PackageStatus, { label: string; color: string; bgColor: string }> = {
-  draft: { label: 'Draft', color: 'bg-muted-foreground', bgColor: 'bg-muted-foreground/20' },
-  in_review: { label: 'In Review', color: 'bg-chart-2', bgColor: 'bg-chart-2/20' },
-  preflight_check: { label: 'Pre-flight', color: 'bg-chart-3', bgColor: 'bg-chart-3/20' },
-  traces_ready: { label: 'TRACES Ready', color: 'bg-primary', bgColor: 'bg-primary/20' },
-  submitted: { label: 'Submitted', color: 'bg-chart-5', bgColor: 'bg-chart-5/20' },
-  approved: { label: 'Approved', color: 'bg-primary', bgColor: 'bg-primary/20' },
-  rejected: { label: 'Rejected', color: 'bg-destructive', bgColor: 'bg-destructive/20' },
+const statusConfig: Record<ShipmentStatus, { label: string; color: string; bgColor: string }> = {
+  DRAFT: { label: 'Draft', color: 'bg-muted-foreground', bgColor: 'bg-muted-foreground/20' },
+  READY: { label: 'Ready', color: 'bg-chart-2', bgColor: 'bg-chart-2/20' },
+  SEALED: { label: 'Sealed', color: 'bg-primary', bgColor: 'bg-primary/20' },
+  SUBMITTED: { label: 'Submitted', color: 'bg-chart-5', bgColor: 'bg-chart-5/20' },
+  ACCEPTED: { label: 'Accepted', color: 'bg-primary', bgColor: 'bg-primary/20' },
+  REJECTED: { label: 'Rejected', color: 'bg-destructive', bgColor: 'bg-destructive/20' },
+  ARCHIVED: { label: 'Archived', color: 'bg-muted-foreground', bgColor: 'bg-muted-foreground/20' },
+  ON_HOLD: { label: 'On Hold', color: 'bg-chart-3', bgColor: 'bg-chart-3/20' },
 };
 
 export function PackageStatusChart({ packagesByStatus }: PackageStatusChartProps) {
@@ -30,7 +31,7 @@ export function PackageStatusChart({ packagesByStatus }: PackageStatusChartProps
         {/* Visual bar */}
         <div className="mb-4 flex h-3 overflow-hidden rounded-full bg-secondary">
           {activeStatuses.map(([status, count]) => {
-            const config = statusConfig[status as PackageStatus];
+            const config = statusConfig[status as ShipmentStatus];
             const percentage = total > 0 ? (count / total) * 100 : 0;
             return (
               <div
@@ -46,7 +47,7 @@ export function PackageStatusChart({ packagesByStatus }: PackageStatusChartProps
         {/* Legend */}
         <div className="grid grid-cols-2 gap-2">
           {activeStatuses.map(([status, count]) => {
-            const config = statusConfig[status as PackageStatus];
+            const config = statusConfig[status as ShipmentStatus];
             const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
             return (
               <div key={status} className="flex items-center gap-2">

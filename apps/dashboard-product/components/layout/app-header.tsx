@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
+import { toast } from 'sonner';
 
 interface BreadcrumbItem {
   label: string;
@@ -20,11 +22,29 @@ interface BreadcrumbItem {
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
+  description?: string;
   breadcrumbs?: BreadcrumbItem[];
   actions?: React.ReactNode;
 }
 
-export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, description, breadcrumbs, actions }: AppHeaderProps) {
+  const { user, impersonateDemo } = useAuth();
+
+  const demoPersonas = [
+    { email: 'cooperative@tracebud.com', label: 'Cooperative' },
+    { email: 'exporter@tracebud.com', label: 'Exporter' },
+    { email: 'importer@tracebud.com', label: 'Importer' },
+  ];
+
+  const handleImpersonate = async (email: string, label: string) => {
+    try {
+      await impersonateDemo(email);
+      toast.success(`Switched to ${label} demo persona.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to switch persona.');
+    }
+  };
+
   // Demo notifications
   const notifications = [
     {
@@ -51,11 +71,11 @@ export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderPr
   ];
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-white px-6 shadow-sm">
-      <div className="flex flex-col">
+    <header className="flex min-h-16 flex-wrap items-start justify-between gap-3 border-b border-border bg-white px-6 py-3 shadow-sm">
+      <div className="min-w-0 flex-1">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5">
+          <nav className="mb-0.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
             {breadcrumbs.map((crumb, index) => (
               <span key={index} className="flex items-center gap-1">
                 {crumb.href ? (
@@ -72,17 +92,39 @@ export function AppHeader({ title, subtitle, breadcrumbs, actions }: AppHeaderPr
             ))}
           </nav>
         )}
-        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-        {subtitle && (
-          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <h1 className="break-words text-xl font-semibold leading-tight text-foreground">{title}</h1>
+        {(subtitle || description) && (
+          <p className="mt-0.5 break-words text-sm leading-snug text-muted-foreground">
+            {subtitle ?? description}
+          </p>
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-end gap-3 self-start">
         {/* Custom actions slot */}
         {actions}
 
         {/* Date Filter */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="hidden lg:flex">
+              Demo Persona
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {demoPersonas.map((persona) => (
+              <DropdownMenuItem
+                key={persona.email}
+                onClick={() => {
+                  void handleImpersonate(persona.email, persona.label);
+                }}
+              >
+                {persona.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button variant="outline" size="sm" className="hidden sm:flex">
           <Calendar className="mr-2 h-4 w-4" />
           Last 30 days

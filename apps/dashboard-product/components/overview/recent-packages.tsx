@@ -5,27 +5,28 @@ import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { DDSPackage, PackageStatus, ComplianceStatus } from '@/types';
+import type { DDSPackage, ShipmentStatus, PackageComplianceStatus } from '@/types';
 
 interface RecentPackagesProps {
   packages: DDSPackage[];
 }
 
-const statusVariants: Record<PackageStatus, { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
-  in_review: { label: 'In Review', className: 'bg-chart-2/20 text-chart-2' },
-  preflight_check: { label: 'Pre-flight', className: 'bg-chart-3/20 text-chart-3' },
-  traces_ready: { label: 'TRACES Ready', className: 'bg-primary/20 text-primary' },
-  submitted: { label: 'Submitted', className: 'bg-chart-5/20 text-chart-5' },
-  approved: { label: 'Approved', className: 'bg-primary/20 text-primary' },
-  rejected: { label: 'Rejected', className: 'bg-destructive/20 text-destructive' },
+const statusVariants: Record<ShipmentStatus, { label: string; className: string }> = {
+  DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
+  READY: { label: 'Ready', className: 'bg-chart-2/20 text-chart-2' },
+  SEALED: { label: 'Sealed', className: 'bg-primary/20 text-primary' },
+  SUBMITTED: { label: 'Submitted', className: 'bg-chart-5/20 text-chart-5' },
+  ACCEPTED: { label: 'Accepted', className: 'bg-primary/20 text-primary' },
+  REJECTED: { label: 'Rejected', className: 'bg-destructive/20 text-destructive' },
+  ARCHIVED: { label: 'Archived', className: 'bg-muted text-muted-foreground' },
+  ON_HOLD: { label: 'On Hold', className: 'bg-chart-3/20 text-chart-3' },
 };
 
-const complianceVariants: Record<ComplianceStatus, { label: string; className: string }> = {
-  passed: { label: 'Passed', className: 'bg-primary/20 text-primary' },
-  warnings: { label: 'Warnings', className: 'bg-chart-3/20 text-chart-3' },
-  blocked: { label: 'Blocked', className: 'bg-destructive/20 text-destructive' },
-  pending: { label: 'Pending', className: 'bg-muted text-muted-foreground' },
+const complianceVariants: Record<PackageComplianceStatus, { label: string; className: string }> = {
+  PASSED: { label: 'Passed', className: 'bg-primary/20 text-primary' },
+  WARNINGS: { label: 'Warnings', className: 'bg-chart-3/20 text-chart-3' },
+  BLOCKED: { label: 'Blocked', className: 'bg-destructive/20 text-destructive' },
+  PENDING: { label: 'Pending', className: 'bg-muted text-muted-foreground' },
 };
 
 export function RecentPackages({ packages }: RecentPackagesProps) {

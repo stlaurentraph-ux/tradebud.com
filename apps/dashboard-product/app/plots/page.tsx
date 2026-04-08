@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Filter, ChevronRight, MapPin, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Plus, Filter, ChevronRight, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from 'lucide-react';
 import { getMockPlots, getFarmerById } from '@/lib/mock-data';
 import Link from 'next/link';
 
@@ -20,18 +20,21 @@ const riskColors = {
   low: 'text-green-400 bg-green-400/10',
   medium: 'text-amber-400 bg-amber-400/10',
   high: 'text-red-400 bg-red-400/10',
+  unknown: 'text-slate-500 bg-slate-200/40',
 };
 
 const riskLabels = {
   low: 'Low Risk',
   medium: 'Medium Risk',
   high: 'High Risk',
+  unknown: 'Unknown Risk',
 };
 
-const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' }) => {
+const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => {
   if (risk === 'low') return <CheckCircle className="w-4 h-4 text-green-400" />;
   if (risk === 'medium') return <AlertTriangle className="w-4 h-4 text-amber-400" />;
-  return <XCircle className="w-4 h-4 text-red-400" />;
+  if (risk === 'high') return <XCircle className="w-4 h-4 text-red-400" />;
+  return <AlertCircle className="w-4 h-4 text-slate-500" />;
 };
 
 export default function PlotsPage() {

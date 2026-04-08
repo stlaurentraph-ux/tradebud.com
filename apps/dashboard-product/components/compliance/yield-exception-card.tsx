@@ -109,6 +109,15 @@ export function YieldExceptionCard({
           label: 'Blocked',
           description: 'Significantly over capacity (>1.30x)',
         };
+      default:
+        return {
+          icon: AlertCircle,
+          color: 'text-slate-500',
+          bgColor: 'bg-slate-500/10',
+          borderColor: 'border-slate-500/30',
+          label: 'Unknown',
+          description: 'Yield status is not recognized',
+        };
     }
   };
 

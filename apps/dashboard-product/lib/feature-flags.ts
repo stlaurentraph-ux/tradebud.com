@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * RELEASE 2+ FEATURE FENCE
  *
@@ -367,7 +369,7 @@ export function withFeatureGate<P extends object>(
     if (!isFeatureEnabled(flag)) {
       return fallback || null;
     }
-    return <Component {...props} />;
+    return React.createElement(Component, props);
   };
 }
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import './globals.css';
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
           <DashboardLayout>{children}</DashboardLayout>
+          <Toaster richColors position="top-right" />
         </AuthProvider>
       </body>
     </html>

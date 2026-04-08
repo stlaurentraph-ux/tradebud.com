@@ -378,7 +378,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
                   View full document
                 </Button>
               </PermissionGate>
-              <PermissionGate permission="fpic:delete">
+              <PermissionGate permission="fpic:upload">
                 <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
                   <Trash2 className="mr-2 h-3 w-3" />
                   Delete

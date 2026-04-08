@@ -57,6 +57,8 @@ interface ComplianceIssue {
   resolutionPath?: string;
 }
 
+type LinkedEntityType = ComplianceIssue['linkedEntity']['type'];
+
 const mockIssues: ComplianceIssue[] = [
   {
     id: 'issue_001',
@@ -113,11 +115,17 @@ export default function ComplianceIssuesPage() {
   const [selectedIssue, setSelectedIssue] = useState<ComplianceIssue | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const [newIssue, setNewIssue] = useState({
+  const [newIssue, setNewIssue] = useState<{
+    title: string;
+    description: string;
+    severity: IssueSeverity;
+    linkedEntityType: LinkedEntityType;
+    linkedEntityId: string;
+  }>({
     title: '',
     description: '',
     severity: 'WARNING' as IssueSeverity,
-    linkedEntityType: 'plot' as const,
+    linkedEntityType: 'plot',
     linkedEntityId: '',
   });
 

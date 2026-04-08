@@ -24,3 +24,4 @@ Track completed milestones/features/docs updates.
 - Non-blocking P2 spec hardening shipped in canonical spec: controlled consent purpose vocabulary, parse_result canonical schemas, shipment JSONB canonical keys, simplified declaration geolocation payload rules, audit event partitioning strategy, risk intersection scoring, notification delivery model, portability export format, Stripe integration section, and API error taxonomy.
 - Canonical spec expanded with sections 51-55: MVP deadline phasing, commodity-specific due diligence, data reality constraints, data escrow continuity, and internal consistency rules.
 - Open questions register extended with OQ-09 and OQ-10; execution board now includes Priority 0 pre-engineering human gates and a contradiction-log artifact template.
+- Machine-readable API artifact added: `docs/openapi/tracebud-v1-draft.yaml` generated from Section 32.8 endpoint contract catalog.
