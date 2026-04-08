@@ -113,7 +113,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">DRAFT</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.DRAFT}</p>
                 </div>
-                <StatusChip status="draft" />
+                <StatusChip status="DRAFT" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -138,7 +138,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">READY</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.READY}</p>
                 </div>
-                <StatusChip status="ready" />
+                <StatusChip status="APPROVED_FOR_FILING" label="Ready" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -163,7 +163,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">SEALED</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.SEALED}</p>
                 </div>
-                <StatusChip status="sealed" />
+                <StatusChip status="FILED" label="Sealed" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -188,7 +188,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                   <p className="text-sm font-medium text-muted-foreground">SUBMITTED</p>
                   <p className="text-2xl font-bold mt-1">{shipmentStates.SUBMITTED}</p>
                 </div>
-                <StatusChip status="submitted" />
+                <StatusChip status="SUBMITTED" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
                 <p className="text-emerald-700 font-medium">Awaiting TRACES NT Response</p>
