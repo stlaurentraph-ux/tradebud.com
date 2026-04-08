@@ -21,10 +21,11 @@ import {
   History,
   Send,
   Scale,
+  Building2,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -58,6 +59,27 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   Scale,
 };
 
+// Mock tenants - in production this would come from auth context
+interface Tenant {
+  id: string;
+  name: string;
+  tier: 'tier1' | 'tier2' | 'tier3' | 'tier4';
+  logo_initial: string;
+}
+
+const mockTenants: Tenant[] = [
+  { id: 'org-1', name: 'Green Valley Exports', tier: 'tier2', logo_initial: 'GV' },
+  { id: 'org-2', name: 'Cacao Cooperative #12', tier: 'tier1', logo_initial: 'CC' },
+  { id: 'org-3', name: 'EU Coffee Importers Ltd', tier: 'tier3', logo_initial: 'EC' },
+];
+
+const tierLabels: Record<Tenant['tier'], string> = {
+  tier1: 'Farmer/Producer',
+  tier2: 'Exporter/Collector',
+  tier3: 'EU Importer',
+  tier4: 'Network Sponsor',
+};
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, switchRole } = useAuth();
@@ -65,6 +87,10 @@ export function AppSidebar() {
   const navItems = getVisibleNavItems(user);
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
   const hasMultipleRoles = user && user.roles.length > 1;
+
+  // Mock active tenant - in production this would come from auth context
+  const activeTenant = mockTenants[0];
+  const hasMultipleTenants = mockTenants.length > 1;
 
   return (
     <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
@@ -88,13 +114,72 @@ export function AppSidebar() {
 
       <div className="mx-4 h-px bg-white/10" />
 
+      {/* Tenant Context Switcher */}
+      <div className="px-3 py-3 flex-shrink-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
+                'bg-white/5 hover:bg-white/10 border border-white/10'
+              )}
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white text-xs font-bold flex-shrink-0">
+                {activeTenant.logo_initial}
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-medium text-white">
+                  {activeTenant.name}
+                </span>
+                <span className="truncate text-[10px] text-white/50">
+                  {tierLabels[activeTenant.tier]}
+                </span>
+              </div>
+              {hasMultipleTenants && (
+                <ChevronDown className="h-4 w-4 flex-shrink-0 text-white/40" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          {hasMultipleTenants && (
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Switch organization
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {mockTenants.map((tenant) => (
+                <DropdownMenuItem
+                  key={tenant.id}
+                  className="flex items-center gap-3 py-2.5 cursor-pointer"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white text-xs font-bold flex-shrink-0">
+                    {tenant.logo_initial}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-medium">
+                      {tenant.name}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {tierLabels[tenant.tier]}
+                    </span>
+                  </div>
+                  {tenant.id === activeTenant.id && (
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          )}
+        </DropdownMenu>
+      </div>
+
       {/* Role indicator */}
       {user && (
-        <div className="px-3 py-3 flex-shrink-0">
+        <div className="px-3 pb-3 flex-shrink-0">
           <div className="flex items-center justify-between rounded-md bg-white/10 px-3 py-2.5">
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
-                Active Role
+                Active role
               </span>
               <RoleBadge role={user.active_role} size="sm" />
             </div>
@@ -110,7 +195,7 @@ export function AppSidebar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+                  <DropdownMenuLabel>Switch role</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup
                     value={user.active_role}
@@ -211,7 +296,7 @@ export function AppSidebar() {
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <Settings className="mr-2 h-4 w-4" />
-                Account Settings
+                Account settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

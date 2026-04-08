@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
   Package,
@@ -13,12 +12,12 @@ import {
   Clock,
   TrendingUp,
   FileText,
-  MapPin,
-  Users,
   ArrowRight,
-  AlertCircle,
   AlertOctagon,
 } from 'lucide-react';
+import { BlockerCard } from '@/components/ui/blocker-card';
+import { StatusChip } from '@/components/ui/status-chip';
+import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 
 interface ExporterDashboardProps {
   metrics: {
@@ -30,14 +29,48 @@ interface ExporterDashboardProps {
   };
 }
 
+// Mock recent activity - in production this would come from the backend
+const mockRecentActivity: TimelineEvent[] = [
+  {
+    id: '1',
+    eventType: 'submission',
+    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    userName: 'Maria Rodriguez',
+    description: 'DDS Package SHP-2024-003 submitted to TRACES NT',
+    metadata: { reference: 'DDS-2024-0891' },
+  },
+  {
+    id: '2',
+    eventType: 'approval',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    userName: 'System',
+    description: 'Pre-flight checks passed for SHP-2024-002',
+    metadata: { checks_passed: '8/8' },
+  },
+  {
+    id: '3',
+    eventType: 'status_change',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    userName: 'Carlos Mendez',
+    description: 'Compliance issue CI-2024-015 resolved',
+  },
+  {
+    id: '4',
+    eventType: 'document_uploaded',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    userName: 'Ana Garcia',
+    description: 'FPIC consent document uploaded for Plot P-2024-042',
+  },
+];
+
 export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   const complianceRate = metrics.total_plots > 0 
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
 
   // Spec KPIs - these would come from the backend in production
-  const blockingIssuesCount = 2; // Blocking compliance issues
-  const yieldFailuresCount = 1; // Yield check failures
+  const blockingIssuesCount = 2;
+  const yieldFailuresCount = 1;
   const ddsSubmissionQueue = metrics.packages_by_status?.['traces_ready'] || 0;
 
   return (
@@ -46,7 +79,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
         <CardContent className="flex items-center justify-between p-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-emerald-900">Ready to Submit?</h3>
+            <h3 className="text-lg font-semibold text-emerald-900">Ready to submit?</h3>
             <p className="text-sm text-emerald-700">
               You have {ddsSubmissionQueue} packages ready for TRACES NT submission
             </p>
@@ -54,52 +87,47 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
             <Link href="/compliance">
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Run Pre-Flight Check
+              Run pre-flight check
             </Link>
           </Button>
         </CardContent>
       </Card>
 
-      {/* Critical Alerts */}
+      {/* Critical Alerts - Using BlockerCard component */}
       {blockingIssuesCount > 0 && (
-        <Card className="border-red-500/50 bg-red-500/10">
-          <CardContent className="flex items-start gap-4 p-6">
-            <AlertOctagon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-red-900">Blocking Issues Detected</h4>
-              <p className="text-sm text-red-700 mt-1">
-                {blockingIssuesCount} blocking compliance issues found that prevent shipment sealing. 
-                <Link href="/compliance/issues" className="font-semibold underline ml-1">
-                  Review issues
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <BlockerCard
+          blockerType="COMPLIANCE_ISSUE"
+          severity="BLOCKING"
+          title={`Shipment sealing blocked`}
+          description={`${blockingIssuesCount} blocking compliance issues found that must be resolved before any shipments can be sealed.`}
+          relatedEntityLabel="Multiple shipments affected"
+          slaCountdown="2 days"
+          remediationAction={{
+            label: 'Review issues',
+            href: '/compliance/issues',
+          }}
+        />
       )}
 
       {yieldFailuresCount > 0 && (
-        <Card className="border-amber-500/50 bg-amber-500/10">
-          <CardContent className="flex items-start gap-4 p-6">
-            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-amber-900">Yield Exceptions Pending</h4>
-              <p className="text-sm text-amber-700 mt-1">
-                {yieldFailuresCount} batch(es) failed yield checks and require exception requests or acknowledgement.
-                <Link href="/harvests" className="font-semibold underline ml-1">
-                  View harvests
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <BlockerCard
+          blockerType="YIELD_FAILURE"
+          severity="WARNING"
+          title={`Yield exceptions pending`}
+          description={`${yieldFailuresCount} batch(es) failed yield checks and require exception requests or acknowledgement.`}
+          relatedEntityLabel="Harvests awaiting review"
+          remediationAction={{
+            label: 'View harvests',
+            href: '/harvests',
+          }}
+        />
       )}
 
-      {/* Key Metrics for Exporters - Including Spec KPIs */}
+      {/* Key Metrics for Exporters */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total DDS Packages</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total DDS packages</CardTitle>
             <Package className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -112,7 +140,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Blocking Issues</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Blocking issues</CardTitle>
             <AlertOctagon className={`h-4 w-4 ${blockingIssuesCount > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
           </CardHeader>
           <CardContent>
@@ -125,7 +153,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Yield Failures</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Yield failures</CardTitle>
             <AlertTriangle className={`h-4 w-4 ${yieldFailuresCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`} />
           </CardHeader>
           <CardContent>
@@ -138,7 +166,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Submission Queue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Submission queue</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -148,30 +176,47 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </Card>
       </div>
 
-      {/* Package Pipeline */}
+      {/* Package Pipeline with StatusChip */}
       <Card>
         <CardHeader>
-          <CardTitle>DDS Package Pipeline</CardTitle>
+          <CardTitle>DDS package pipeline</CardTitle>
           <CardDescription>Track packages through the EUDR compliance workflow</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-5 gap-2">
             {[
-              { status: 'draft', label: 'Draft', icon: FileText, color: 'bg-gray-100 text-gray-700' },
-              { status: 'in_review', label: 'In Review', icon: Clock, color: 'bg-blue-100 text-blue-700' },
-              { status: 'preflight', label: 'Pre-flight', icon: AlertTriangle, color: 'bg-amber-100 text-amber-700' },
-              { status: 'traces_ready', label: 'Ready', icon: CheckCircle2, color: 'bg-emerald-100 text-emerald-700' },
-              { status: 'submitted', label: 'Submitted', icon: Upload, color: 'bg-green-100 text-green-700' },
+              { status: 'draft', chipStatus: 'DRAFT' as const, label: 'Draft', icon: FileText },
+              { status: 'in_review', chipStatus: 'VALIDATING' as const, label: 'In review', icon: Clock },
+              { status: 'preflight', chipStatus: 'READY_FOR_APPROVAL' as const, label: 'Pre-flight', icon: AlertTriangle },
+              { status: 'traces_ready', chipStatus: 'APPROVED_FOR_FILING' as const, label: 'Ready', icon: CheckCircle2 },
+              { status: 'submitted', chipStatus: 'FILED' as const, label: 'Submitted', icon: Upload },
             ].map((stage) => (
               <div key={stage.status} className="text-center">
-                <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${stage.color}`}>
-                  <stage.icon className="h-5 w-5" />
+                <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <stage.icon className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="text-2xl font-bold">{metrics.packages_by_status?.[stage.status] || 0}</div>
-                <div className="text-xs text-muted-foreground">{stage.label}</div>
+                <div className="mt-1">
+                  <StatusChip status={stage.chipStatus} size="sm" showIcon={false} />
+                </div>
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity Timeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent activity</CardTitle>
+          <CardDescription>Latest actions and system events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Timeline 
+            events={mockRecentActivity} 
+            maxHeight={250}
+            compact
+          />
         </CardContent>
       </Card>
 
@@ -184,7 +229,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                 <Package className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Create DDS Package</h4>
+                <h4 className="font-semibold">Create DDS package</h4>
                 <p className="text-sm text-muted-foreground">Start a new due diligence statement</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -199,7 +244,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                 <ShieldCheck className="h-6 w-6 text-amber-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Pre-Flight Check</h4>
+                <h4 className="font-semibold">Pre-flight check</h4>
                 <p className="text-sm text-muted-foreground">Verify compliance before TRACES</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -214,7 +259,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                 <TrendingUp className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Export Reports</h4>
+                <h4 className="font-semibold">Export reports</h4>
                 <p className="text-sm text-muted-foreground">Generate compliance documentation</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
