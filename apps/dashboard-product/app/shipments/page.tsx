@@ -1,0 +1,423 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { AppHeader } from '@/components/layout/app-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { PermissionGate } from '@/components/common/permission-gate';
+import { StatusChip } from '@/components/ui/status-chip';
+import {
+  Package,
+  Plus,
+  Search,
+  Filter,
+  ChevronRight,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  MoreHorizontal,
+  Archive,
+  FileText,
+  Download,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+
+// Canonical shipment states per spec
+type ShipmentStatus = 'DRAFT' | 'READY' | 'SEALED' | 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'ARCHIVED' | 'ON_HOLD';
+
+interface Shipment {
+  id: string;
+  code: string;
+  status: ShipmentStatus;
+  org_name: string;
+  created_at: string;
+  modified_at: string;
+  owner: string;
+  plots_count: number;
+  farmers_count: number;
+  days_in_status: number;
+  has_blocking_issues: boolean;
+}
+
+// Mock shipments data
+const mockShipments: Shipment[] = [
+  {
+    id: 'shp-001',
+    code: 'SHP-2026-001',
+    status: 'DRAFT',
+    org_name: 'Cocoa Exports Ltd',
+    created_at: '2026-04-01T10:00:00Z',
+    modified_at: '2026-04-05T14:30:00Z',
+    owner: 'Maria Rodriguez',
+    plots_count: 24,
+    farmers_count: 12,
+    days_in_status: 5,
+    has_blocking_issues: false,
+  },
+  {
+    id: 'shp-002',
+    code: 'SHP-2026-002',
+    status: 'READY',
+    org_name: 'Cocoa Exports Ltd',
+    created_at: '2026-03-28T08:00:00Z',
+    modified_at: '2026-04-06T09:15:00Z',
+    owner: 'Carlos Mendez',
+    plots_count: 18,
+    farmers_count: 8,
+    days_in_status: 2,
+    has_blocking_issues: false,
+  },
+  {
+    id: 'shp-003',
+    code: 'SHP-2026-003',
+    status: 'SEALED',
+    org_name: 'Highland Coffee Co',
+    created_at: '2026-03-20T11:00:00Z',
+    modified_at: '2026-04-04T16:45:00Z',
+    owner: 'Ana Garcia',
+    plots_count: 45,
+    farmers_count: 20,
+    days_in_status: 4,
+    has_blocking_issues: false,
+  },
+  {
+    id: 'shp-004',
+    code: 'SHP-2026-004',
+    status: 'SUBMITTED',
+    org_name: 'Highland Coffee Co',
+    created_at: '2026-03-15T09:30:00Z',
+    modified_at: '2026-04-02T11:00:00Z',
+    owner: 'Pedro Santos',
+    plots_count: 32,
+    farmers_count: 15,
+    days_in_status: 6,
+    has_blocking_issues: false,
+  },
+  {
+    id: 'shp-005',
+    code: 'SHP-2026-005',
+    status: 'ACCEPTED',
+    org_name: 'Cocoa Exports Ltd',
+    created_at: '2026-03-01T10:00:00Z',
+    modified_at: '2026-03-28T14:00:00Z',
+    owner: 'Maria Rodriguez',
+    plots_count: 28,
+    farmers_count: 14,
+    days_in_status: 11,
+    has_blocking_issues: false,
+  },
+  {
+    id: 'shp-006',
+    code: 'SHP-2026-006',
+    status: 'DRAFT',
+    org_name: 'Amazon Producers Coop',
+    created_at: '2026-04-02T08:00:00Z',
+    modified_at: '2026-04-06T10:00:00Z',
+    owner: 'Luis Martinez',
+    plots_count: 15,
+    farmers_count: 7,
+    days_in_status: 4,
+    has_blocking_issues: true,
+  },
+  {
+    id: 'shp-007',
+    code: 'SHP-2026-007',
+    status: 'ON_HOLD',
+    org_name: 'Highland Coffee Co',
+    created_at: '2026-03-10T14:00:00Z',
+    modified_at: '2026-04-01T09:30:00Z',
+    owner: 'Ana Garcia',
+    plots_count: 22,
+    farmers_count: 10,
+    days_in_status: 7,
+    has_blocking_issues: true,
+  },
+  {
+    id: 'shp-008',
+    code: 'SHP-2026-008',
+    status: 'REJECTED',
+    org_name: 'Cocoa Exports Ltd',
+    created_at: '2026-02-20T11:00:00Z',
+    modified_at: '2026-03-25T16:00:00Z',
+    owner: 'Carlos Mendez',
+    plots_count: 12,
+    farmers_count: 6,
+    days_in_status: 14,
+    has_blocking_issues: false,
+  },
+];
+
+const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon: typeof Clock }> = {
+  DRAFT: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: Clock },
+  READY: { label: 'Ready', color: 'bg-blue-100 text-blue-800', icon: CheckCircle2 },
+  SEALED: { label: 'Sealed', color: 'bg-purple-100 text-purple-800', icon: Package },
+  SUBMITTED: { label: 'Submitted', color: 'bg-cyan-100 text-cyan-800', icon: FileText },
+  ACCEPTED: { label: 'Accepted', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
+  REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-800', icon: XCircle },
+  ARCHIVED: { label: 'Archived', color: 'bg-gray-100 text-gray-600', icon: Archive },
+  ON_HOLD: { label: 'On Hold', color: 'bg-amber-100 text-amber-800', icon: AlertTriangle },
+};
+
+export default function ShipmentsPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | ShipmentStatus>('all');
+  const [selectedOrg, setSelectedOrg] = useState<'all' | string>('all');
+
+  // Get unique organizations
+  const organizations = useMemo(() => {
+    return [...new Set(mockShipments.map((s) => s.org_name))];
+  }, []);
+
+  // Filter shipments
+  const filteredShipments = useMemo(() => {
+    return mockShipments.filter((shipment) => {
+      if (selectedStatus !== 'all' && shipment.status !== selectedStatus) return false;
+      if (selectedOrg !== 'all' && shipment.org_name !== selectedOrg) return false;
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        return (
+          shipment.code.toLowerCase().includes(search) ||
+          shipment.owner.toLowerCase().includes(search) ||
+          shipment.org_name.toLowerCase().includes(search)
+        );
+      }
+      return true;
+    });
+  }, [searchTerm, selectedStatus, selectedOrg]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    return {
+      draft: mockShipments.filter((s) => s.status === 'DRAFT').length,
+      ready: mockShipments.filter((s) => s.status === 'READY').length,
+      sealed: mockShipments.filter((s) => s.status === 'SEALED').length,
+      submitted: mockShipments.filter((s) => s.status === 'SUBMITTED').length,
+      accepted: mockShipments.filter((s) => s.status === 'ACCEPTED').length,
+      onHold: mockShipments.filter((s) => s.status === 'ON_HOLD').length,
+      total: mockShipments.length,
+    };
+  }, []);
+
+  return (
+    <PermissionGate permission="packages:view">
+      <div className="flex flex-col">
+        <AppHeader
+          title="Shipments"
+          subtitle="Manage DDS shipments and TRACES submissions"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/' },
+            { label: 'Operations' },
+            { label: 'Shipments' },
+          ]}
+          action={
+            <PermissionGate permission="packages:create">
+              <Button asChild>
+                <Link href="/packages/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Shipment
+                </Link>
+              </Button>
+            </PermissionGate>
+          }
+        />
+
+        <div className="flex-1 space-y-6 p-6">
+          {/* Pipeline Stats */}
+          <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
+            {(['DRAFT', 'READY', 'SEALED', 'SUBMITTED', 'ACCEPTED', 'ON_HOLD'] as ShipmentStatus[]).map((status) => {
+              const config = STATUS_CONFIG[status];
+              const count = mockShipments.filter((s) => s.status === status).length;
+              const Icon = config.icon;
+              return (
+                <Card
+                  key={status}
+                  className={cn(
+                    'cursor-pointer transition-shadow hover:shadow-md',
+                    selectedStatus === status && 'ring-2 ring-primary'
+                  )}
+                  onClick={() => setSelectedStatus(selectedStatus === status ? 'all' : status)}
+                >
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">{config.label}</p>
+                        <p className="text-2xl font-bold mt-1">{count}</p>
+                      </div>
+                      <Icon className={cn('h-5 w-5', config.color.replace('bg-', 'text-').split(' ')[0])} />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold mt-1">{stats.total}</p>
+                  </div>
+                  <Package className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search shipments..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <select
+                  value={selectedOrg}
+                  onChange={(e) => setSelectedOrg(e.target.value)}
+                  className="px-3 py-2 border rounded-md text-sm"
+                >
+                  <option value="all">All Organizations</option>
+                  {organizations.map((org) => (
+                    <option key={org} value={org}>
+                      {org}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedStatus('all');
+                    setSelectedOrg('all');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Shipments Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-medium">
+                {filteredShipments.length} Shipment{filteredShipments.length !== 1 ? 's' : ''}
+                {selectedStatus !== 'all' && ` in ${STATUS_CONFIG[selectedStatus].label}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Code</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Organization</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Owner</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Plots</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Modified</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">SLA</th>
+                      <th className="pb-3 text-sm font-medium text-muted-foreground"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredShipments.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                          No shipments match the selected filters
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredShipments.map((shipment) => {
+                        const config = STATUS_CONFIG[shipment.status];
+                        const slaWarning = shipment.days_in_status >= 7 && ['DRAFT', 'READY'].includes(shipment.status);
+                        return (
+                          <tr key={shipment.id} className="border-b last:border-0 hover:bg-secondary/30">
+                            <td className="py-4 pr-4">
+                              <Link
+                                href={`/packages/${shipment.id}`}
+                                className="font-medium text-primary hover:underline"
+                              >
+                                {shipment.code}
+                              </Link>
+                            </td>
+                            <td className="py-4 pr-4">
+                              <div className="flex items-center gap-2">
+                                <Badge className={cn('text-xs', config.color)}>{config.label}</Badge>
+                                {shipment.has_blocking_issues && (
+                                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-4 pr-4 text-sm text-muted-foreground">{shipment.org_name}</td>
+                            <td className="py-4 pr-4 text-sm">{shipment.owner}</td>
+                            <td className="py-4 pr-4 text-sm text-muted-foreground">
+                              {shipment.plots_count} plots / {shipment.farmers_count} farmers
+                            </td>
+                            <td className="py-4 pr-4 text-sm text-muted-foreground">
+                              {new Date(shipment.modified_at).toLocaleDateString()}
+                            </td>
+                            <td className="py-4 pr-4">
+                              <span
+                                className={cn(
+                                  'text-xs font-medium',
+                                  slaWarning ? 'text-red-600' : 'text-muted-foreground'
+                                )}
+                              >
+                                {shipment.days_in_status}d
+                              </span>
+                            </td>
+                            <td className="py-4">
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link href={`/packages/${shipment.id}`}>
+                                    View
+                                    <ChevronRight className="ml-1 h-3 w-3" />
+                                  </Link>
+                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      <Link href={`/packages/${shipment.id}/timeline`}>View Timeline</Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem>Export PDF</DropdownMenuItem>
+                                    <DropdownMenuItem>Archive</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </PermissionGate>
+  );
+}

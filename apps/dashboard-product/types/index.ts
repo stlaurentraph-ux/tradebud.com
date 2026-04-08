@@ -58,7 +58,7 @@ export const COMMERCIAL_TIERS: Record<CommercialTier, CommercialTierConfig> = {
 // Will be deprecated in favor of CommercialTier + LegalWorkflowRole
 // ============================================================
 
-export type TenantRole = 'exporter' | 'importer' | 'cooperative' | 'country_reviewer';
+export type TenantRole = 'exporter' | 'importer' | 'cooperative' | 'country_reviewer' | 'sponsor';
 
 // Map legacy tenant roles to commercial tiers
 export const TENANT_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
@@ -66,6 +66,7 @@ export const TENANT_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
   importer: 'tier_3',
   cooperative: 'tier_2',
   country_reviewer: 'tier_3', // Reviewers are typically part of importer orgs
+  sponsor: 'tier_4', // Network sponsors are tier 4
 };
 
 // ============================================================

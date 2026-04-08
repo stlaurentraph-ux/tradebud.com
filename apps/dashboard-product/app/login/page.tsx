@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Leaf, Globe, Users } from 'lucide-react';
+import { ShieldCheck, Leaf, Globe, Users, Heart } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   {
@@ -34,6 +34,12 @@ const DEMO_ACCOUNTS = [
     role: 'Country Reviewer',
     description: 'Review and approve submissions',
     icon: ShieldCheck,
+  },
+  {
+    email: 'sponsor@tracebud.com',
+    role: 'Network Sponsor',
+    description: 'Monitor sponsored producer network',
+    icon: Heart,
   },
 ];
 
