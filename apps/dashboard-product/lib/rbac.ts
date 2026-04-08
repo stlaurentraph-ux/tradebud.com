@@ -25,6 +25,9 @@ export type Permission =
   | 'compliance:view'
   | 'compliance:run_check'
   | 'compliance:approve'
+  | 'compliance:create_issue'
+  | 'compliance:resolve_issue'
+  | 'packages:seal_shipment'
   // Report permissions
   | 'reports:view'
   | 'reports:generate'
@@ -67,6 +70,10 @@ const PERMISSION_MATRIX: Record<TenantRole, Permission[]> = {
     'farmers:link_validation',
     'compliance:view',
     'compliance:run_check',
+    'compliance:approve',
+    'compliance:create_issue',
+    'compliance:resolve_issue',
+    'packages:seal_shipment',
     'reports:view',
     'reports:generate',
     'reports:export',

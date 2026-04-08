@@ -8,6 +8,7 @@ import {
   Edit,
   ShieldCheck,
   Send,
+  Lock,
   MapPin,
   Users,
   FileText,
@@ -65,6 +66,16 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Button>
               </PermissionGate>
             )}
+            {pkg.status === 'draft' || pkg.status === 'in_review' ? (
+              <PermissionGate permission="packages:seal_shipment">
+                <Button asChild variant="default">
+                  <Link href={`/packages/${pkg.id}/assemble`}>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Assemble Shipment
+                  </Link>
+                </Button>
+              </PermissionGate>
+            ) : null}
             <PermissionGate permission="packages:edit">
               <Button variant="outline" size="icon" asChild>
                 <Link href={`/packages/${pkg.id}/edit`}>

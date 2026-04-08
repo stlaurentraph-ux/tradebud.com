@@ -16,6 +16,8 @@ import {
   MapPin,
   Users,
   ArrowRight,
+  AlertCircle,
+  AlertOctagon,
 } from 'lucide-react';
 
 interface ExporterDashboardProps {
@@ -33,6 +35,11 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
 
+  // Spec KPIs - these would come from the backend in production
+  const blockingIssuesCount = 2; // Blocking compliance issues
+  const yieldFailuresCount = 1; // Yield check failures
+  const ddsSubmissionQueue = metrics.packages_by_status?.['traces_ready'] || 0;
+
   return (
     <div className="space-y-6">
       {/* Primary Action Banner */}
@@ -41,7 +48,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-emerald-900">Ready to Submit?</h3>
             <p className="text-sm text-emerald-700">
-              You have {metrics.packages_by_status?.['traces_ready'] || 0} packages ready for TRACES NT submission
+              You have {ddsSubmissionQueue} packages ready for TRACES NT submission
             </p>
           </div>
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
@@ -53,7 +60,42 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Key Metrics for Exporters */}
+      {/* Critical Alerts */}
+      {blockingIssuesCount > 0 && (
+        <Card className="border-red-500/50 bg-red-500/10">
+          <CardContent className="flex items-start gap-4 p-6">
+            <AlertOctagon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-900">Blocking Issues Detected</h4>
+              <p className="text-sm text-red-700 mt-1">
+                {blockingIssuesCount} blocking compliance issues found that prevent shipment sealing. 
+                <Link href="/compliance/issues" className="font-semibold underline ml-1">
+                  Review issues
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {yieldFailuresCount > 0 && (
+        <Card className="border-amber-500/50 bg-amber-500/10">
+          <CardContent className="flex items-start gap-4 p-6">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-amber-900">Yield Exceptions Pending</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                {yieldFailuresCount} batch(es) failed yield checks and require exception requests or acknowledgement.
+                <Link href="/harvests" className="font-semibold underline ml-1">
+                  View harvests
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Key Metrics for Exporters - Including Spec KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -70,41 +112,38 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Rate</CardTitle>
-            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Blocking Issues</CardTitle>
+            <AlertOctagon className={`h-4 w-4 ${blockingIssuesCount > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{complianceRate}%</div>
-            <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-              <div 
-                className="h-2 rounded-full bg-emerald-500" 
-                style={{ width: `${complianceRate}%` }}
-              />
+            <div className={`text-2xl font-bold ${blockingIssuesCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+              {blockingIssuesCount}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">Preventing shipment sealing</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Verified Plots</CardTitle>
-            <MapPin className="h-4 w-4 text-emerald-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Yield Failures</CardTitle>
+            <AlertTriangle className={`h-4 w-4 ${yieldFailuresCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.compliant_plots}/{metrics.total_plots}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {metrics.total_plots - metrics.compliant_plots} need attention
-            </p>
+            <div className={`text-2xl font-bold ${yieldFailuresCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+              {yieldFailuresCount}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting exception requests</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Farmers</CardTitle>
-            <Users className="h-4 w-4 text-emerald-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Submission Queue</CardTitle>
+            <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.total_farmers}</div>
-            <p className="text-xs text-muted-foreground mt-1">Across all cooperatives</p>
+            <div className="text-2xl font-bold">{ddsSubmissionQueue}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ready for TRACES NT</p>
           </CardContent>
         </Card>
       </div>

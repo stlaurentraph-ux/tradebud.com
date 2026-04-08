@@ -2,12 +2,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, TrendingUp, AlertCircle, CheckCircle, Truck, MapPin } from 'lucide-react';
+import { Plus, TrendingUp, AlertCircle, CheckCircle, Truck, MapPin, MessageSquare } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { mockPackages } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
@@ -23,6 +33,7 @@ interface Harvest {
   expected_yield_kg_per_ha: number;
   date: string;
   status: 'pass' | 'warning' | 'blocked';
+  exception_status?: 'none' | 'pending' | 'approved' | 'rejected';
 }
 
 // Mock harvests data
@@ -50,6 +61,7 @@ const mockHarvests: Harvest[] = [
     expected_yield_kg_per_ha: 3000,
     date: '2024-03-14',
     status: 'warning',
+    exception_status: 'none',
   },
   {
     id: 'h3',
@@ -74,6 +86,7 @@ const mockHarvests: Harvest[] = [
     expected_yield_kg_per_ha: 3000,
     date: '2024-03-12',
     status: 'blocked',
+    exception_status: 'pending',
   },
 ];
 
@@ -118,6 +131,10 @@ function checkYieldCompliance(weight: number, capacity: number): 'pass' | 'warni
 export default function HarvestsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
+  const [harvests, setHarvests] = useState<Harvest[]>(mockHarvests);
+  const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
+  const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
+  const [exceptionNotes, setExceptionNotes] = useState('');
 
   const filteredHarvests = mockHarvests.filter((h) => {
     if (filterStatus !== 'all' && h.status !== filterStatus) return false;
@@ -131,6 +148,21 @@ export default function HarvestsPage() {
   const totalWeight = mockHarvests.reduce((sum, h) => sum + h.weight_kg, 0);
   const avgYield = totalWeight / mockHarvests.reduce((sum, h) => sum + h.plot_area_hectares, 0);
   const flaggedBatches = mockHarvests.filter((h) => h.status !== 'pass').length;
+
+  const handleRequestException = () => {
+    if (!selectedHarvest) return;
+
+    setHarvests(
+      harvests.map((h) =>
+        h.id === selectedHarvest.id
+          ? { ...h, exception_status: 'pending' }
+          : h
+      )
+    );
+    setExceptionDialogOpen(false);
+    setSelectedHarvest(null);
+    setExceptionNotes('');
+  };
 
   return (
     <div className="flex flex-col">
@@ -269,6 +301,9 @@ export default function HarvestsPage() {
                       <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Date
                       </th>
+                      <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -307,6 +342,68 @@ export default function HarvestsPage() {
                             <span className="text-sm text-muted-foreground">
                               {new Date(harvest.date).toLocaleDateString()}
                             </span>
+                          </td>
+                          <td className="py-3">
+                            {(harvest.status === 'warning' || harvest.status === 'blocked') && (
+                              <Dialog open={exceptionDialogOpen && selectedHarvest?.id === harvest.id} onOpenChange={(open) => {
+                                if (open) {
+                                  setSelectedHarvest(harvest);
+                                  setExceptionDialogOpen(true);
+                                } else {
+                                  setExceptionDialogOpen(false);
+                                  setSelectedHarvest(null);
+                                }
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedHarvest(harvest);
+                                      setExceptionDialogOpen(true);
+                                    }}
+                                  >
+                                    <MessageSquare className="h-3 w-3 mr-1" />
+                                    {harvest.exception_status === 'pending' ? 'Pending' : 'Request'}
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Request Yield Exception</DialogTitle>
+                                    <DialogDescription>
+                                      Request an exception for {harvest.batch_id} ({harvest.farmer_name})
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="rounded-lg bg-secondary/50 p-3 text-sm">
+                                      <div className="font-medium">Current Status</div>
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        {harvest.status === 'warning' 
+                                          ? `Warning: ${harvest.weight_kg.toLocaleString()} kg (1.0-1.1x capacity)` 
+                                          : `Blocked: ${harvest.weight_kg.toLocaleString()} kg (>1.1x capacity)`}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Label>Justification</Label>
+                                      <Textarea
+                                        placeholder="Explain the exceptional circumstances (e.g., favorable weather, equipment efficiency)..."
+                                        value={exceptionNotes}
+                                        onChange={(e) => setExceptionNotes(e.target.value)}
+                                        rows={4}
+                                      />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                      <Button variant="outline" onClick={() => setExceptionDialogOpen(false)}>
+                                        Cancel
+                                      </Button>
+                                      <Button onClick={handleRequestException}>
+                                        Submit Exception Request
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            )}
                           </td>
                         </tr>
                       );
