@@ -53,6 +53,15 @@ const DEMO_USERS: Record<string, User> = {
     active_role: 'country_reviewer',
     created_at: '2024-01-15T00:00:00Z',
   },
+  'sponsor@tracebud.com': {
+    id: 'usr_sponsor_001',
+    email: 'sponsor@tracebud.com',
+    name: 'David Thompson',
+    tenant_id: 'tenant_sponsor_001',
+    roles: ['sponsor'],
+    active_role: 'sponsor',
+    created_at: '2024-01-15T00:00:00Z',
+  },
   // Multi-role user
   'admin@tracebud.com': {
     id: 'usr_admin_001',

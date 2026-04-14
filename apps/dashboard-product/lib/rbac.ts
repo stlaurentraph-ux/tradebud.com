@@ -455,6 +455,7 @@ export function getRoleDisplayName(role: TenantRole): string {
     importer: 'Importer',
     cooperative: 'Cooperative',
     country_reviewer: 'Country Reviewer',
+    sponsor: 'Network Sponsor',
   };
   return names[role] || role;
 }
