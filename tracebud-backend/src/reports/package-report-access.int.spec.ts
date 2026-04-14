@@ -6,6 +6,13 @@ import { ReportsController } from './reports.controller';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
+const schema = 'tb_api_access_test';
+
+function withSearchPath(connectionString: string, targetSchema: string) {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
+  return `${connectionString}${separator}options=${options}`;
+}
 
 function makeResponseMock() {
   return {
@@ -28,13 +35,12 @@ describeIfDb('API integration: package/report access policy', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: testDbUrl,
+      connectionString: withSearchPath(testDbUrl!, schema),
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
 
-    await pool.query('CREATE SCHEMA IF NOT EXISTS tb_api_access_test');
-    await pool.query('SET search_path TO tb_api_access_test, public');
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS plot (
@@ -92,7 +98,7 @@ describeIfDb('API integration: package/report access policy', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP SCHEMA IF EXISTS tb_api_access_test CASCADE');
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.end();
   });
 
