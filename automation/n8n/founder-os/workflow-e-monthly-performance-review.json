@@ -1,0 +1,18 @@
+{
+  "name": "Founder OS - Monthly Performance Review",
+  "meta": {
+    "description": "First business-day monthly review of content outcomes."
+  },
+  "trigger": {
+    "type": "cron",
+    "timezone": "Europe/Oslo",
+    "schedule": "0 9 1-3 * 1-5"
+  },
+  "steps": [
+    "Query content published in previous month.",
+    "Aggregate metrics by pillar and format.",
+    "Compute consistency rate and missed targets.",
+    "Identify strongest and weakest patterns.",
+    "Send monthly focus recommendations."
+  ]
+}

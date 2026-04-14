@@ -13,6 +13,11 @@ Use this file to record hard evidence from required CI lanes before MVP release 
   - `Tests:`
   - `Ran all test suites`
 - Required condition: output does **not** contain non-zero `skipped` counts.
+- Required suite set:
+  - `src/harvest/ownership-scope.int.spec.ts`
+  - `src/harvest/controller-scope.int.spec.ts`
+  - `src/reports/package-report-access.int.spec.ts`
+  - `src/inbox/inbox.controller.int.spec.ts`
 
 ### Latest validated run
 

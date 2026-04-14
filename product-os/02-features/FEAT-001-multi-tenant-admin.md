@@ -58,6 +58,11 @@ Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
 
 Reference canonical catalog in `product-os/04-quality/exception-catalog.md`.
 
+- Inbox proxy routes must fail closed when backend is unavailable (`503`) rather than silently reading/writing local in-memory data.
+- Tenant-bound operations (`list`, `respond`, `bootstrap`) must remain signed-claim backed end-to-end (dashboard API proxy to backend controller/service).
+- DB-backed inbox controller integration coverage now includes tenant-claim denial/allow and exporter bootstrap role policy assertions (`src/inbox/inbox.controller.int.spec.ts`, env-gated by `TEST_DATABASE_URL`).
+- Backend integration scripts now auto-load `TEST_DATABASE_URL` from root `.env.local` when missing in shell (`scripts/run-with-root-test-db.mjs`) for consistent local DB-backed execution.
+
 ## Analytics notes
 
 Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
@@ -73,7 +78,7 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
 
 ## Status
 
-Planned
+In progress (dashboard inbox local fallback removal + backend-only enforcement slice)
 
 ## Definition of done
 

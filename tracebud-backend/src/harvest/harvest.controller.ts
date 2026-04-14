@@ -24,10 +24,20 @@ export class HarvestController {
 
   @Post()
   async create(@Body() dto: CreateHarvestDto, @Req() req: any) {
+    this.requireTenantClaim(req);
     const userId = req.user?.id as string | undefined;
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'farmer' && role !== 'agent') {
       throw new ForbiddenException('Only farmers or agents can record harvests');
+    }
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.harvestService.isFarmerOwnedByUser(dto.farmerId, userId);
+      if (!owned) {
+        throw new ForbiddenException('Farmer scope violation');
+      }
     }
     return this.harvestService.create(dto, userId);
   }
@@ -63,6 +73,7 @@ export class HarvestController {
 
   @Post('packages')
   async createPackage(@Body() dto: CreateDdsPackageDto, @Req() req: any) {
+    this.requireTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can create DDS packages');
@@ -108,6 +119,7 @@ export class HarvestController {
 
   @Patch('packages/:id/submit')
   async submitPackage(@Param('id') id: string, @Req() req: any) {
+    this.requireTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can submit DDS packages');

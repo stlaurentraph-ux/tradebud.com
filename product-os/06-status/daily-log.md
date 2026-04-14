@@ -499,3 +499,83 @@ Append-only session log.
 - Risks: Expo lint lane may still surface package-specific Node constraints and should be validated in the next CI run.
 - Blockers: None.
 - Next step: run CI and confirm Node 20 deprecation warnings are removed while ownership evidence artifact behavior remains unchanged.
+
+### 2026-04-14 (execution: Founder OS analytics + streak visibility)
+- Focus: implement Founder OS Lite analytics instrumentation and cadence streak visibility in `Today` + daily actions workflow.
+- Files changed: `apps/dashboard-product/app/founder-os/page.tsx`, `apps/dashboard-product/app/founder-os/crm/daily-actions/page.tsx`, `apps/dashboard-product/app/api/crm/daily-actions/route.ts`, `apps/dashboard-product/lib/crm-service.ts`, `apps/dashboard-product/lib/use-crm.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added history query mode (`historyDays`) for daily actions so outreach streak can be computed from recent data; reused existing audit event helper to emit founder analytics on plan bootstrap and completion actions.
+- Risks: Streak values depend on historic data availability in `daily_actions`/calendar tables and weekday-only outreach cadence assumptions.
+- Blockers: None.
+- Next step: validate with seeded historical data and add small UI tests for streak rendering + planning/completion interaction.
+
+### 2026-04-14 (execution: inbox backend-only hardening)
+- Focus: prioritize customer product by removing dashboard inbox local fallback paths and enforcing backend-authoritative request operations.
+- Files changed: `apps/dashboard-product/app/api/inbox-requests/route.ts`, `apps/dashboard-product/app/api/inbox-requests/[id]/respond/route.ts`, `apps/dashboard-product/app/api/inbox-requests/bootstrap/route.ts`, `apps/dashboard-product/lib/use-requests.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Inbox API routes now fail closed (`503`) when `TRACEBUD_BACKEND_URL` is absent and no longer read/write in-memory request-service data; client hook now reports API errors directly instead of fallbacking to local mock state.
+- Risks: Local/demo sessions without backend connectivity will now show explicit errors until backend URL/auth is configured.
+- Blockers: None.
+- Next step: add regression tests for dashboard inbox API proxy routes to verify fail-closed behavior and auth header pass-through.
+
+### 2026-04-14 (validation: inbox proxy regression coverage)
+- Focus: add automated dashboard regression tests for inbox proxy fail-closed and auth pass-through behavior.
+- Files changed: `apps/dashboard-product/app/api/inbox-requests/routes.test.ts`, `apps/dashboard-product/vitest.config.ts`, `apps/dashboard-product/app/founder-os/page.test.tsx`, `apps/dashboard-product/app/founder-os/crm/daily-actions/page.test.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Kept default Vitest environment as `node` for API route tests and pinned jsdom only on UI test files via per-file environment headers.
+- Risks: None new.
+- Blockers: None.
+- Next step: extend inbox test matrix to include backend non-2xx propagation assertions for permission and tenant-claim failures.
+
+### 2026-04-14 (validation: inbox proxy auth error propagation)
+- Focus: extend inbox proxy route tests to verify backend denial semantics propagate unchanged.
+- Files changed: `apps/dashboard-product/app/api/inbox-requests/routes.test.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added assertions for backend `401` and `403` responses (status + payload body) across list/respond/bootstrap routes.
+- Risks: None.
+- Blockers: None.
+- Next step: add backend integration assertions that tie these denial payloads to signed tenant-claim and exporter-role policy branches.
+
+### 2026-04-14 (validation: backend inbox controller denial/allow assertions)
+- Focus: extend backend inbox controller tests to lock signed tenant-claim and exporter-role policy semantics.
+- Files changed: `tracebud-backend/src/inbox/inbox.controller.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added explicit assertions for missing tenant claim denial on `respond`, non-exporter bootstrap denial message, and positive bootstrap path for exporter with signed tenant claim.
+- Risks: Existing unrelated backend tests still need separate stabilization (`audit.controller.spec.ts`, `harvest.controller.spec.ts`) when running broad `npm test` target.
+- Blockers: None.
+- Next step: add API-level integration assertions that validate end-to-end denial payload parity from backend controller through dashboard proxy.
+
+### 2026-04-14 (stabilization: backend controller policy regressions)
+- Focus: resolve backend unit test regressions in `audit` and `harvest` controllers while preserving tenant/role scope semantics.
+- Files changed: `tracebud-backend/src/audit/audit.controller.ts`, `tracebud-backend/src/harvest/harvest.controller.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Restored signed tenant-claim enforcement in `AuditController` create/list paths and restored farmer ownership enforcement in `HarvestController.create` plus tenant claim checks on create/createPackage/submitPackage.
+- Risks: None new after validation (`npm test` now green for backend unit suite).
+- Blockers: None.
+- Next step: extend inbox API-level integration assertions from backend through dashboard proxy once DB-backed lane scope is finalized.
+
+### 2026-04-14 (execution: inbox DB-backed controller integration)
+- Focus: add DB-backed inbox controller integration assertions for signed tenant claim and bootstrap role policy.
+- Files changed: `tracebud-backend/src/inbox/inbox.controller.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added env-gated controller integration suite validating deny/allow on list/respond/bootstrap with real Postgres-backed `InboxService` state and tenant-bound respond enforcement.
+- Risks: Local run is skipped without `TEST_DATABASE_URL`; CI evidence is still required for non-skipped confirmation.
+- Blockers: No DB URL in active local shell context for immediate non-skipped execution.
+- Next step: run this suite in CI (or locally with `TEST_DATABASE_URL`) and attach non-skipped proof alongside existing ownership/access evidence.
+
+### 2026-04-14 (execution: ownership CI lane expanded with inbox controller integration)
+- Focus: make inbox DB-backed policy integration mandatory in the required ownership CI lane.
+- Files changed: `tracebud-backend/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added `src/inbox/inbox.controller.int.spec.ts` to `test:integration:ownership` runTestsByPath list and updated QA evidence requirements to expect the 4-spec ownership/access suite set.
+- Risks: CI will now fail if inbox integration spec skips/fails, by design.
+- Blockers: Need first CI run artifact proving non-skipped 4-suite execution for evidence refresh.
+- Next step: run CI and update `release-qa-evidence.md` with new run URL/artifact and 4-suite summary snapshot.
+
+### 2026-04-14 (stabilization: controller-scope schema reset)
+- Focus: eliminate stale-schema foreign-key failures in `controller-scope.int.spec.ts` during full integration runs.
+- Files changed: `tracebud-backend/src/harvest/controller-scope.int.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added explicit `DROP SCHEMA IF EXISTS ... CASCADE` before schema creation in `beforeAll` to guarantee fresh relational metadata each run.
+- Risks: Local verification of non-skipped behavior still depends on `TEST_DATABASE_URL` being loaded in current shell.
+- Blockers: None.
+- Next step: rerun full `test:integration` in the same DB-enabled shell and capture output for CI parity.
+
+### 2026-04-14 (execution: automatic root env loading for backend integration tests)
+- Focus: remove manual shell export friction for DB-backed backend integration commands.
+- Files changed: `tracebud-backend/scripts/run-with-root-test-db.mjs`, `tracebud-backend/package.json`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added a Node runner that injects `TEST_DATABASE_URL` from root `.env.local` only when missing from current shell, and wired it into `test:integration` + `test:integration:ownership`.
+- Risks: If `.env.local` is missing `TEST_DATABASE_URL`, env-gated integration specs will still skip (expected behavior).
+- Blockers: None.
+- Next step: capture CI evidence for the expanded 4-suite ownership lane and refresh `release-qa-evidence.md`.

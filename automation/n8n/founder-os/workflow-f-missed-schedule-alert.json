@@ -1,0 +1,16 @@
+{
+  "name": "Founder OS - Missed Schedule Alert",
+  "meta": {
+    "description": "Daily check for missed scheduled content at 17:00."
+  },
+  "trigger": {
+    "type": "cron",
+    "timezone": "Europe/Oslo",
+    "schedule": "0 17 * * *"
+  },
+  "steps": [
+    "Query content where scheduled_at < now and status != published.",
+    "Create or update missed content_tasks records.",
+    "Send concise missed-item alert to founder."
+  ]
+}

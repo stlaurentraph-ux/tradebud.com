@@ -1,0 +1,18 @@
+{
+  "name": "Founder OS - Weekly Content Planning",
+  "meta": {
+    "description": "Review next 14 days and generate planning tasks every Friday."
+  },
+  "trigger": {
+    "type": "cron",
+    "timezone": "Europe/Oslo",
+    "schedule": "0 16 * * 5"
+  },
+  "steps": [
+    "Fetch cadence_settings and next 14 days from content_calendar.",
+    "Call generate_content_tasks(current_date).",
+    "Fetch open/overdue tasks via content_tasks_due(current_date).",
+    "Detect missing post/newsletter slots and underused pillars.",
+    "Send weekly planning digest to founder."
+  ]
+}
