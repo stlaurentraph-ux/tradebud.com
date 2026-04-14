@@ -113,6 +113,13 @@ describeIfDb('API integration: package/report access policy', () => {
       `
       INSERT INTO plot (id, farmer_id, name, kind, area_ha, declared_area_ha, created_at)
       VALUES ($1, $2, 'Plot A', 'polygon', 1, 1, NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET farmer_id = EXCLUDED.farmer_id,
+          name = EXCLUDED.name,
+          kind = EXCLUDED.kind,
+          area_ha = EXCLUDED.area_ha,
+          declared_area_ha = EXCLUDED.declared_area_ha,
+          created_at = EXCLUDED.created_at
       `,
       [plotId, farmerId],
     );
@@ -120,6 +127,12 @@ describeIfDb('API integration: package/report access policy', () => {
       `
       INSERT INTO harvest_transaction (id, farmer_id, plot_id, kg, harvest_date, created_at)
       VALUES ($1, $2, $3, 100, CURRENT_DATE, NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET farmer_id = EXCLUDED.farmer_id,
+          plot_id = EXCLUDED.plot_id,
+          kg = EXCLUDED.kg,
+          harvest_date = EXCLUDED.harvest_date,
+          created_at = EXCLUDED.created_at
       `,
       [harvestId, farmerId, plotId],
     );
@@ -127,6 +140,12 @@ describeIfDb('API integration: package/report access policy', () => {
       `
       INSERT INTO voucher (id, farmer_id, transaction_id, qr_code_ref, status, created_at)
       VALUES ($1, $2, $3, 'V-TEST001', 'issued', NOW())
+      ON CONFLICT (id) DO UPDATE
+      SET farmer_id = EXCLUDED.farmer_id,
+          transaction_id = EXCLUDED.transaction_id,
+          qr_code_ref = EXCLUDED.qr_code_ref,
+          status = EXCLUDED.status,
+          created_at = EXCLUDED.created_at
       `,
       [voucherId, farmerId, harvestId],
     );
@@ -134,6 +153,12 @@ describeIfDb('API integration: package/report access policy', () => {
       `
       INSERT INTO dds_package (id, farmer_id, label, status, created_at, traces_reference)
       VALUES ($1, $2, 'Pkg A', 'submitted', NOW(), 'TRACES-ABC123')
+      ON CONFLICT (id) DO UPDATE
+      SET farmer_id = EXCLUDED.farmer_id,
+          label = EXCLUDED.label,
+          status = EXCLUDED.status,
+          created_at = EXCLUDED.created_at,
+          traces_reference = EXCLUDED.traces_reference
       `,
       [packageId, farmerId],
     );
@@ -141,6 +166,7 @@ describeIfDb('API integration: package/report access policy', () => {
       `
       INSERT INTO dds_package_voucher (dds_package_id, voucher_id)
       VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
       `,
       [packageId, voucherId],
     );
