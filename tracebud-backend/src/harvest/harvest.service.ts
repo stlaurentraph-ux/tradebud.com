@@ -157,6 +157,20 @@ export class HarvestService {
     return res.rows;
   }
 
+  async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM farmer_profile
+        WHERE id = $1
+          AND user_id = $2
+        LIMIT 1
+      `,
+      [farmerId, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async getVoucherByQrRef(qrRef: string) {
     const trimmed = (qrRef ?? '').trim();
     if (!trimmed) {

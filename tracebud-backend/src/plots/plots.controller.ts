@@ -16,6 +16,15 @@ import { PlotsService } from './plots.service';
 export class PlotsController {
   constructor(private readonly plotsService: PlotsService) {}
 
+  private requireTenantClaim(req: any) {
+    const tenantId =
+      req?.user?.app_metadata?.tenant_id ??
+      req?.user?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim');
+    }
+  }
+
   @Post()
   async create(@Body() dto: CreatePlotDto, @Req() req: any) {
     const userId = req.user?.id as string | undefined;
@@ -31,7 +40,19 @@ export class PlotsController {
 
   @Get()
   @ApiQuery({ name: 'farmerId', required: true })
-  async listByFarmer(@Query('farmerId') farmerId: string) {
+  async listByFarmer(@Query('farmerId') farmerId: string, @Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isFarmerOwnedByUser(farmerId, userId);
+      if (!owned) {
+        throw new ForbiddenException('Farmer scope violation');
+      }
+    }
     return this.plotsService.listByFarmer(farmerId);
   }
 
@@ -58,11 +79,21 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async updateMetadata(@Param('id') id: string, @Body() dto: UpdatePlotDto, @Req() req: any) {
+    this.requireTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'farmer' && role !== 'agent') {
       throw new ForbiddenException('Only farmers or agents can edit plots');
     }
     const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    }
     return this.plotsService.updateMetadata(id, dto, userId);
   }
 
