@@ -30,6 +30,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
       max: 1,
     });
 
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
 
     await pool.query(`
