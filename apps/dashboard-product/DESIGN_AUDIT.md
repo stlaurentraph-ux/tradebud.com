@@ -11,11 +11,11 @@ The current dashboard has been built with a generic structure but lacks alignmen
 ### ✅ What the Current Dashboard Covers
 
 1. **Multi-tenant awareness** — Auth context and RBAC framework exist
-2. **Role-based navigation** — Different views for supplier/buyer/producer/reviewer roles
+2. **Role-based navigation** — Different views for exporter/importer/cooperative/reviewer roles
 3. **Core modules** — Packages, Plots, Farmers, Compliance sections present
 4. **Basic form inputs** — Input components and card layouts exist
 5. **Sidebar navigation** — Forest green branding applied
-6. **Dashboard overview** — Role-specific dashboards (supplier, buyer, producer, reviewer)
+6. **Dashboard overview** — Role-specific dashboards (exporter, importer, cooperative, reviewer)
 
 ### ❌ What is Missing
 
@@ -29,8 +29,8 @@ The current dashboard has been built with a generic structure but lacks alignmen
 6. **FPIC & Social Compliance Repository** — Section §VI requirement to store assembly minutes, agreements, and social docs is missing
 7. **Audit Logging** — No visible audit trail for sensitive actions (role changes, TRACES submissions, compliance overrides)
 8. **Protected Area & Indigenous Boundary Overlays** — Compliance checks flag amber but no visual delineation of these boundaries on map views
-9. **Buyer Visibility/Traceability** — Buyers should see only packages shared WITH them (request-grant model); currently buyer dashboards show generic data
-10. **Farmer Data Sovereignty Controls** — No UI for farmers to grant/revoke data access to producers or suppliers (§II, request-grant architecture)
+9. **Importer Visibility/Traceability** — Importers should see only packages shared WITH them (request-grant model); currently importer dashboards show generic data
+10. **Farmer Data Sovereignty Controls** — No UI for farmers to grant/revoke data access to cooperatives or exporters (§II, request-grant architecture)
 
 **Important but Post-MVP:**
 
@@ -44,7 +44,7 @@ The current dashboard has been built with a generic structure but lacks alignmen
 ### ⚠️ What is Unclear or Inconsistent
 
 1. **Package ownership vs. approval chain** — Who can edit a package in "In Review" state? What blocks transition to "Pre-flight"?
-2. **Producer workflow** — Producers manage plots and farmers, but how do they transition data to suppliers? Is there a "submit to supplier" step?
+2. **Cooperative workflow** — Cooperatives manage plots and farmers, but how do they transition data to exporters? Is there a "submit to exporter" step?
 3. **Data sharing agreements** — The request-grant model (§II) implies farmers have a wallet and grant access; dashboard has no UI for this
 4. **Compliance thresholds** — What risk score triggers Amber vs. Red? Who auto-submits vs. who requires manual intervention?
 5. **Batch approval model** — EUDR allows declaration-in-excess batching, but dashboard has no way to visualize or approve batch pools
@@ -70,7 +70,7 @@ The current dashboard has been built with a generic structure but lacks alignmen
 ### Main Navigation (Role-Adaptive)
 
 ```
-SUPPLIER (full suite):
+EXPORTER (full suite):
 ├─ Overview (KPI dashboard)
 ├─ DDS Packages (create, review, pre-flight, submit to TRACES)
 ├─ Plots & Farmers (view, link to packages)
@@ -78,23 +78,23 @@ SUPPLIER (full suite):
 ├─ Audit Log (view actions taken in this org)
 └─ Organization (switch active org, delegate admin)
 
-BUYER (read-only supply chain):
+IMPORTER (read-only supply chain):
 ├─ Overview (packages shared with me)
 ├─ DDS Packages (view shared packages, verify compliance status)
 ├─ Supply Chain Traceability (view linked plots/farmers per package)
 ├─ Compliance (view compliance status of shared packages)
 └─ Organization (view my org, export reports)
 
-PRODUCER (plot & farmer ops):
+COOPERATIVE (plot & farmer ops):
 ├─ Overview (plot coverage, farmer count, harvest status)
 ├─ Plots (register, map, verify GeoID)
 ├─ Farmers (register, link to plots, manage tenure docs)
 ├─ Harvests (record yields, link to plots, flag oversupply)
-└─ Organization (delegated admin for producer staff)
+└─ Organization (delegated admin for cooperative staff)
 
-REVIEWER (compliance review):
+COUNTRY_REVIEWER (compliance review):
 ├─ Compliance Queue (flagged packages awaiting review)
-├─ DDS Packages (search by country/supplier)
+├─ DDS Packages (search by country/exporter)
 ├─ Audit Evidence (deforestation checks, photo vault, FPIC docs)
 └─ Reports (compliance status by country/commodity)
 ```
@@ -103,15 +103,15 @@ REVIEWER (compliance review):
 
 Each module has task-specific secondary nav:
 - **DDS Packages**: Filter by status (Draft, In Review, Pre-flight, Ready, Submitted), export country, date range
-- **Plots**: Filter by risk level (Green, Amber, Red), producer, compliance status
+- **Plots**: Filter by risk level (Green, Amber, Red), cooperative, compliance status
 - **Farmers**: Filter by verification status, FPIC signed, labor compliant
 - **Compliance**: Queue priority, flag category (deforestation, degradation, protected area, tenure, FPIC)
 - **Audit Log**: Filter by user, action type, date range
 
 ### Role-Based Differences
 
-| Feature | Supplier | Buyer | Producer | Reviewer |
-|---------|----------|-------|----------|----------|
+| Feature | Exporter | Importer | Cooperative | Reviewer |
+|---------|----------|----------|-------------|----------|
 | Create DDS Package | ✅ | ❌ | ❌ | ❌ |
 | Edit DDS Package | ✅ (draft only) | ❌ | ❌ | ❌ |
 | Submit to TRACES | ✅ (after pre-flight) | ❌ | ❌ | ❌ |
@@ -126,7 +126,7 @@ Each module has task-specific secondary nav:
 1. **DDS Packages** — The central workflow; full state machine with blocking validation
 2. **Plots** — GeoID registry with compliance indicators (green/amber/red badges)
 3. **Farmers** — Tenure, FPIC status, labor compliance; farmer wallet UI (future)
-4. **Harvests** — Yield recording and capacity validation (linked to producer)
+4. **Harvests** — Yield recording and capacity validation (linked to cooperative)
 5. **Compliance** — Pre-flight check engine, flag queue, manual review workflow
 6. **Audit Log** — Immutable record of sensitive actions
 7. **Organization** — Tenant switching, delegated admin, export defaults
@@ -135,7 +135,7 @@ Each module has task-specific secondary nav:
 
 ## C. Updated Dashboard Design
 
-### 1. **Supplier Overview Dashboard**
+### 1. **Exporter Overview Dashboard**
 
 **Layout:**
 ```
@@ -177,7 +177,7 @@ Row 4 (Pending Actions):
 
 [Tab 1: Overview]
   - Package Name, Reference, Commodity, HS Code
-  - Supplier Org, Export Country
+  - Exporter Org, Export Country
   - Total Land: 42 ha | Total Harvest: 18,500 kg | Price: €52,000
   - Associated Farmers: 7 | Associated Plots: 12
 
@@ -233,7 +233,7 @@ Row 4 (Pending Actions):
      → Total batch: 18,500 kg from 42 ha = 440 kg/ha
      → Theoretical capacity: 425 kg/ha based on soil/climate
      → Overage: 3% (= declaration-in-excess model; see §VII)
-     → [Action] "Approve overage / Request recount from producer"
+     → [Action] "Approve overage / Request recount from cooperative"
 
 [Action Buttons]:
   [Green CTA] "All Clear: Submit to TRACES" (only if all checks are Green)
@@ -244,7 +244,7 @@ Row 4 (Pending Actions):
   "Pre-flight check will be logged. All decisions are immutable."
 ```
 
-### 3. **Buyer Dashboard**
+### 3. **Importer Dashboard**
 
 ```
 [Header: "Supply Chain Visibility"]
@@ -252,12 +252,12 @@ Row 4 (Pending Actions):
 Row 1 (Shared Packages):
   - [KPI Card] Packages Shared With Me: 47
   - Compliant: 44 | Flagged: 3
-  - [Link] "Request New Package from Supplier"
+  - [Link] "Request New Package from Exporter"
 
 Row 2 (Packages Shared With Me):
-  - [Table]: Supplier | Package ID | Commodity | Land Area | Compliance Status | Received Date
-  - [Filters]: Status (All/Compliant/Flagged/Pending) | Date Range | Supplier
-  - [Detail CTA] "View full traceability" (opens plot/farmer data if supplier granted access)
+  - [Table]: Exporter | Package ID | Commodity | Land Area | Compliance Status | Received Date
+  - [Filters]: Status (All/Compliant/Flagged/Pending) | Date Range | Exporter
+  - [Detail CTA] "View full traceability" (opens plot/farmer data if exporter granted access)
 
 Row 3 (Compliance Status):
   - ☑ 44 packages fully compliant
@@ -270,7 +270,7 @@ Row 4 (Actions):
   - [Share Button] "Send Traceability to Buyer"
 ```
 
-### 4. **Producer Dashboard**
+### 4. **Cooperative Dashboard**
 
 ```
 [Header: "Land Management Operations"]
@@ -302,7 +302,7 @@ Row 5 (Actions):
   - [CTA] "Record Harvest"
 ```
 
-### 5. **Reviewer Compliance Queue**
+### 5. **Country Reviewer Compliance Queue**
 
 ```
 [Header: "Compliance Review Queue — Rwanda"]
@@ -316,14 +316,14 @@ Row 2 (Priority Inbox):
   [Kanban-style]:
   
   - Red (Escalation):
-    ❌ Package RWA-2026-001 (Supplier: CoffeeCorp)
+    ❌ Package RWA-2026-001 (Exporter: CoffeeCorp)
        → Issue: Deforestation detected (satellite vs. baseline)
        → Flagged: March 20, 2026 | Days pending: 8
        → Evidence: 360° photo vault (4 images)
-       → [CTA] "Review Evidence" | "Approve" | "Reject & Notify Supplier"
+       → [CTA] "Review Evidence" | "Approve" | "Reject & Notify Exporter"
        
   - Amber (Assessable):
-    ⚠ Package RWA-2026-015 (Supplier: FarmingUP)
+    ⚠ Package RWA-2026-015 (Exporter: FarmingUP)
       → Issue: Protected area overlap (buffer zone of Nyungwe Forest)
       → Flagged: March 22, 2026 | Days pending: 3
       → Policy: Agroforestry permitted in buffer; community assembly approved
@@ -332,7 +332,7 @@ Row 2 (Priority Inbox):
 Row 3 (Filters & Search):
   - Status: Red | Amber | Approved | Rejected
   - Commodity: Coffee | Cocoa | Rubber
-  - Supplier: [text search]
+  - Exporter: [text search]
   - Flag Category: Deforestation | Degradation | Protected Area | Tenure | FPIC
   - Date Range: Last 30 days
 ```
@@ -375,8 +375,8 @@ Row 3 (Filters & Search):
   [Table]: User | Email | Role | Status | Actions
   
   alice@coffeecorp.com | Admin | Active | [Change Role] [Remove]
-  bob@coffeecorp.com | Supplier Operator | Active | [Change Role] [Remove]
-  charlie@coffeecorp.com | Supplier Operator | Pending (invite sent 3 days ago) | [Resend] [Revoke]
+  bob@coffeecorp.com | Exporter Operator | Active | [Change Role] [Remove]
+  charlie@coffeecorp.com | Exporter Operator | Pending (invite sent 3 days ago) | [Resend] [Revoke]
   
   [CTA] "Invite New Member"
   [Dialog when clicked]:
@@ -399,17 +399,17 @@ Row 3 (Filters & Search):
 ### **C1. DDS Package State Machine**
 - **What changed:** Enhanced package detail view to show explicit state transitions (Draft → In Review → Pre-flight → Ready → Submitted)
 - **Why:** REQUIREMENTS §VII mandates a formal package lifecycle with blocking conditions before TRACES submission
-- **Source:** PERMISSIONS_MATRIX (supplier can create/write/submit), REQUIREMENTS §VII (Zero-Risk Pre-Flight)
+- **Source:** PERMISSIONS_MATRIX (exporter can create/write/submit), REQUIREMENTS §VII (Zero-Risk Pre-Flight)
 
 ### **C2. Zero-Risk Pre-Flight Check**
 - **What changed:** Added dedicated pre-flight gate with 6-step checklist (deforestation, degradation, tenure, protected area, FPIC, yield capacity)
 - **Why:** REQUIREMENTS §VII explicitly mandates mandatory pre-flight validation before TRACES submission to prevent liability exposure
 - **Source:** REQUIREMENTS §VII ("must implement Zero-Risk Pre-Flight Check")
 
-### **C3. Compliance Review Queue for Reviewer**
-- **What changed:** Added dedicated "Compliance Queue" module for reviewer role showing amber/red flags with evidence
-- **Why:** PERMISSIONS_MATRIX grants reviewer `compliance.review` permission; reviewers need a prioritized inbox
-- **Source:** PERMISSIONS_MATRIX (reviewer role), REQUIREMENTS §V (compliance engine flags)
+### **C3. Compliance Review Queue for country_reviewer**
+- **What changed:** Added dedicated "Compliance Queue" module for country_reviewer role showing amber/red flags with evidence
+- **Why:** PERMISSIONS_MATRIX grants country_reviewer `compliance.review` permission; reviewers need a prioritized inbox
+- **Source:** PERMISSIONS_MATRIX (country_reviewer role), REQUIREMENTS §V (compliance engine flags)
 
 ### **C4. Audit Log (All Roles)**
 - **What changed:** Added immutable audit trail visible to all users, with filtering and export
@@ -417,9 +417,9 @@ Row 3 (Filters & Search):
 - **Source:** RBAC.md ("audit log all privileged actions"), REQUIREMENTS §IX
 
 ### **C5. Harvests & Yield Management**
-- **What changed:** Added Harvests module for producer role to record yields and validate against polygon capacity
+- **What changed:** Added Harvests module for cooperative role to record yields and validate against polygon capacity
 - **Why:** Field app captures harvests; dashboard must reconcile against §VII yield cap validation and §I simplified declaration logic
-- **Source:** PERMISSIONS_MATRIX (producer manager has `harvests.read`/`harvests.write`), REQUIREMENTS §VII
+- **Source:** PERMISSIONS_MATRIX (cooperative_manager has harvests.read/.write), REQUIREMENTS §VII
 
 ### **C6. Organization Switching & Delegated Admin**
 - **What changed:** Added "Organization" nav item with tenant switcher and admin controls (invite, role assignment, member management)
@@ -431,8 +431,8 @@ Row 3 (Filters & Search):
 - **Why:** REQUIREMENTS §II describes request-grant architecture and farmer self-sovereign identity; not scope for first iteration
 - **Source:** REQUIREMENTS §II ("farmer self-sovereign identity profile"), deferred to post-MVP
 
-### **C8. Buyer Visibility Boundaries**
-- **What changed:** Updated buyer dashboard to show only packages **shared with them** via request-grant model, not all packages
+### **C8. Importer Visibility Boundaries**
+- **What changed:** Updated importer dashboard to show only packages **shared with them** via request-grant model, not all packages
 - **Why:** Current design shows generic data; REQUIREMENTS §II specifies peer-to-peer data sharing with explicit permissions
 - **Source:** REQUIREMENTS §II ("multi-directional entry points", "request-grant authorization model")
 
@@ -462,16 +462,16 @@ Row 3 (Filters & Search):
 
 ### ✅ **All User Roles Covered**
 
-- [x] **Supplier**: Full package creation, pre-flight gating, TRACES submission workflow
-- [x] **Buyer**: Shared package visibility, supply chain traceability (read-only)
-- [x] **Producer**: Plot registration, farmer management, harvest recording
-- [x] **Reviewer**: Compliance queue, flag assessment, manual review authority
+- [x] **Exporter**: Full package creation, pre-flight gating, TRACES submission workflow
+- [x] **Importer**: Shared package visibility, supply chain traceability (read-only)
+- [x] **Cooperative**: Plot registration, farmer management, harvest recording
+- [x] **Country Reviewer**: Compliance queue, flag assessment, manual review authority
 - [x] **Tenant Admin**: Delegated member management, role assignment, invite workflows
 
 ### ✅ **All MVP Workflows Covered**
 
 - [x] **Package Lifecycle**: Draft → In Review → Pre-flight → Ready → Submitted
-- [x] **Plot Registration & GeoID Verification**: Producer registers, system validates geometry
+- [x] **Plot Registration & GeoID Verification**: Cooperative registers, system validates geometry
 - [x] **Farmer Onboarding**: Tenure declaration, FPIC signature, labor verification
 - [x] **Compliance Assessment**: Automated checks (deforestation, degradation, protected area, tenure, FPIC, yield)
 - [x] **Pre-Flight Gating**: Mandatory blocking validation before TRACES submission
@@ -502,13 +502,13 @@ Row 3 (Filters & Search):
 | Page | Purpose | Audience | MVP Status |
 |------|---------|----------|-----------|
 | **Overview (Role-Adaptive)** | KPI summary + task queue | All roles | ✅ Designed |
-| **DDS Package List** | Package browse + filter | Supplier, Buyer, Reviewer | ✅ Designed |
-| **DDS Package Detail** | Full package view + tabs | Supplier, Buyer, Reviewer | ✅ Designed |
-| **Pre-Flight Gate** | Gated validation checklist | Supplier (mandatory before submit) | ✅ Designed |
-| **Compliance Queue** | Reviewer inbox | Reviewer | ✅ Designed |
-| **Plots** | GeoID registry + map | Producer, Supplier | ✅ Designed |
-| **Farmers** | Tenure + FPIC registry | Producer, Supplier | ✅ Designed |
-| **Harvests** | Yield + capacity check | Producer | ✅ Designed |
+| **DDS Package List** | Package browse + filter | Exporter, Importer, Reviewer | ✅ Designed |
+| **DDS Package Detail** | Full package view + tabs | Exporter, Importer, Reviewer | ✅ Designed |
+| **Pre-Flight Gate** | Gated validation checklist | Exporter (mandatory before submit) | ✅ Designed |
+| **Compliance Queue** | Reviewer inbox | Country Reviewer | ✅ Designed |
+| **Plots** | GeoID registry + map | Cooperative, Exporter | ✅ Designed |
+| **Farmers** | Tenure + FPIC registry | Cooperative, Exporter | ✅ Designed |
+| **Harvests** | Yield + capacity check | Cooperative | ✅ Designed |
 | **Audit Log** | Action history + export | All roles | ✅ Designed |
 | **Organization Settings** | Delegated admin controls | Tenant Admin | ✅ Designed |
 

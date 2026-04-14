@@ -56,9 +56,9 @@
 
 Ordered by risk reduction and dependency order:
 
-1. **Refactor role-action matrix to use legal workflow roles (not commercial tiers)**
+1. **Refactor Role-Action Matrix to Use Legal Workflow Roles (Not Commercial Tiers)**
    - Replace "Supplier User" with "OPERATOR" + "DOWNSTREAM_OPERATOR_FIRST" distinction
-   - Map commercial tier (Tier 2 = Supplier) as secondary attribute, not primary role
+   - Map commercial tier (Tier 2 = Exporter) as secondary attribute, not primary role
    - Affects: All permission gates, screen routing, action visibility
    - Effort: 4 hours (matrix refactor + implementation pattern doc)
 
@@ -74,7 +74,7 @@ Ordered by risk reduction and dependency order:
    - Include audit events for request sent/accepted/expired
    - Effort: 8 hours (5 screens + API spec + state machine)
 
-4. **Add explicit "Release 2+" feature-fence document**
+4. **Add Explicit "Release 2+" Feature Fence Document**
    - List all post-MVP features (sponsor governance, API_DIRECT, simplified declarations, etc.)
    - Include feature flags or route guards to prevent accidental build-in
    - Effort: 2 hours (doc + routing patterns)

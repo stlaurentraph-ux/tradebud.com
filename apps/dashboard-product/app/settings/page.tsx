@@ -158,7 +158,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Organization Type</label>
-                      <Input value="Supplier" disabled />
+                      <Input value="Exporter" disabled />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Country</label>

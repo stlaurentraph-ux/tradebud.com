@@ -66,7 +66,7 @@ export function Sidebar({ userEmail, onLogout }: SidebarProps) {
           <span className="text-sm font-semibold text-white">
             Tracebud
           </span>
-          <span className="text-xs text-emerald-300">Supplier Dashboard</span>
+          <span className="text-xs text-emerald-300">Exporter Dashboard</span>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export function Sidebar({ userEmail, onLogout }: SidebarProps) {
                 <span className="text-sm font-medium text-white">
                   {userEmail ? userEmail.split("@")[0] : "Guest"}
                 </span>
-                <span className="text-xs text-emerald-300">Supplier</span>
+                <span className="text-xs text-emerald-300">Exporter</span>
               </div>
               <ChevronDown className="h-4 w-4 text-emerald-300" />
             </Button>

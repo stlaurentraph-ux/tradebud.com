@@ -16,7 +16,7 @@ This package implements the unified multi-tenant dashboard product.
 Prioritize:
 
 - Multi-tenant architecture, RBAC, and delegated administration
-- Supplier/producer and buyer workflow requirements
+- Exporter/cooperative and importer workflow requirements
 - Batch, shipment, DDS, pre-flight, and submission readiness flows
 - Sponsor network visibility and compliance oversight
 - Auditability, retention, and integration orchestration

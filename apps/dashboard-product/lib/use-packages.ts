@@ -8,9 +8,6 @@ export function usePackages() {
   const [packages, setPackages] = useState<DDSPackage[]>(() => getPackagesSnapshot());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadTick, setReloadTick] = useState(0);
-
-  const reload = () => setReloadTick((tick) => tick + 1);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,14 +36,14 @@ export function usePackages() {
       cancelled = true;
       unsubscribe();
     };
-  }, [reloadTick]);
+  }, []);
 
-  return { packages, isLoading, error, reload };
+  return { packages, isLoading, error };
 }
 
 export function usePackageById(id: string | null) {
-  const { packages, isLoading, error, reload } = usePackages();
+  const { packages, isLoading, error } = usePackages();
   const pkg = useMemo(() => packages.find((item) => item.id === id) ?? null, [packages, id]);
-  return { pkg, isLoading, error, reload };
+  return { pkg, isLoading, error };
 }
 

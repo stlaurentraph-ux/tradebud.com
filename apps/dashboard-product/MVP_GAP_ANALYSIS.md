@@ -4,7 +4,7 @@
 
 | Page | Status | Description |
 |------|--------|-------------|
-| `/` (Dashboard) | Done | Role-adaptive home with 4 dashboards (Supplier/Buyer/Producer/Reviewer) |
+| `/` (Dashboard) | Done | Role-adaptive home with 4 dashboards (Exporter/Importer/Cooperative/Reviewer) |
 | `/packages` | Done | DDS Packages list with create/view actions |
 | `/packages/[id]` | Done | Package detail with plots, farmers, status, compliance actions |
 | `/packages/new` | Done | New package creation form |
@@ -24,8 +24,8 @@
 
 | Gap | Requirement | User Role | Priority |
 |-----|-------------|-----------|----------|
-| **Harvests/Batches Page** | REQUIREMENTS.md VII - Supply chain batches with yield-cap validation | Supplier, Producer | MVP |
-| **FPIC Repository Page** | REQUIREMENTS.md VI - Upload FPIC documents, community minutes | Supplier, Producer | MVP |
+| **Harvests/Batches Page** | REQUIREMENTS.md VII - Supply chain batches with yield-cap validation | Exporter, Cooperative | MVP |
+| **FPIC Repository Page** | REQUIREMENTS.md VI - Upload FPIC documents, community minutes | Exporter, Cooperative | MVP |
 | **Audit Log Page** | REQUIREMENTS.md IX - 5-year retention, full activity trail | All roles | MVP |
 | **Organization Settings Page** | REQUIREMENTS.md II - Delegated admin, invite users | Org Admins | MVP |
 
@@ -36,15 +36,15 @@
 | **Yield Cap Validation** | VII - Cross-reference delivery weights vs polygon capacity | Not implemented | Add to batch/harvest creation flow |
 | **Pre-Flight Check Integration** | VII - Gate TRACES submission on zero-risk check | Compliance page exists but not linked from package detail | Link from package [id] page |
 | **Role Switching** | II - Users can belong to multiple orgs with different roles | Sidebar shows role but no switcher UI | Add role/org switcher |
-| **Data Sharing Request/Grant** | II - Request-Grant architecture | Not implemented | Add shared packages view for Buyer |
+| **Data Sharing Request/Grant** | II - Request-Grant architecture | Not implemented | Add shared packages view for Importer |
 
 ### C. Missing Role-Specific Views (MVP)
 
 | Gap | Requirement | Role | Current State |
 |-----|-------------|------|---------------|
-| **Buyer Shared Packages** | II - Buyers see packages shared with them | Buyer | Dashboard exists but no shared-packages list page |
-| **Producer Land Dashboard** | II - Producers manage farmers/plots | Producer | Dashboard exists but needs distinct `/producer/land` view |
-| **Reviewer Compliance Queue** | II - Reviewers have approval queue | Reviewer | Dashboard exists but no `/review/queue` page |
+| **Importer Shared Packages** | II - Importers see packages shared with them | Importer | Dashboard exists but no shared-packages list page |
+| **Cooperative Land Dashboard** | II - Cooperatives manage farmers/plots | Cooperative | Dashboard exists but needs distinct `/cooperative/land` view |
+| **Reviewer Compliance Queue** | II - Reviewers have approval queue | Country Reviewer | Dashboard exists but no `/review/queue` page |
 
 ### D. Missing States/Edge Cases (MVP)
 
@@ -77,7 +77,7 @@
 
 **Requirement:** "The backend must cross-reference delivery weights against the biological carrying capacity of the farmer's verified polygon to flag illicit blending or laundering."
 
-**User roles:** Supplier (full CRUD), Producer (view/create), Buyer (view only)
+**User roles:** Exporter (full CRUD), Cooperative (view/create), Importer (view only)
 
 **Priority:** MVP
 
@@ -98,7 +98,7 @@
 
 **Requirement:** Direct quote from VI.
 
-**User roles:** Supplier (upload/view), Producer (upload/view), Buyer (view only)
+**User roles:** Exporter (upload/view), Cooperative (upload/view), Importer (view only)
 
 **Priority:** MVP
 
@@ -188,24 +188,24 @@
 
 ---
 
-### Gap 7: Buyer Shared Packages View
+### Gap 7: Importer Shared Packages View
 
-**Why needed:** REQUIREMENTS.md II describes "Request-Grant" model where suppliers share packages with buyers.
+**Why needed:** REQUIREMENTS.md II describes "Request-Grant" model where exporters share packages with importers.
 
-**Current state:** Buyer dashboard exists but has no distinct list of shared packages.
+**Current state:** Importer dashboard exists but has no distinct list of shared packages.
 
 **Priority:** MVP
 
 **Design spec:**
-- `/packages` page already exists; add a "Shared With Me" tab for buyers
-- Table shows: Package Code, Supplier, Share Date, Status, View button
-- Buyer cannot edit, only view and flag for review
+- `/packages` page already exists; add a "Shared With Me" tab for importers
+- Table shows: Package Code, Exporter, Share Date, Status, View button
+- Importer cannot edit, only view and flag for review
 
 ---
 
 ### Gap 8: Reviewer Compliance Queue
 
-**Why needed:** REQUIREMENTS.md II states Reviewers need to "Review and verify compliance submissions."
+**Why needed:** REQUIREMENTS.md II states Country Reviewers need to "Review and verify compliance submissions."
 
 **Current state:** Reviewer dashboard exists but no queue page.
 
@@ -213,10 +213,10 @@
 
 **Design spec:**
 - `/compliance/queue` page with:
-  - Table: Package, Supplier, Submitted Date, Risk Level, Status, Actions
+  - Table: Package, Exporter, Submitted Date, Risk Level, Status, Actions
   - Actions: Approve, Request Changes, Reject
   - Filters: By risk level, date, status
-- Only visible to the reviewer role (`country_reviewer` internal key)
+- Only visible to `country_reviewer` role
 
 ---
 
@@ -225,7 +225,7 @@
 1. **Fix package.json** (DONE - already restored)
 2. **Gap 5: Pre-Flight Check Link** (Quick fix)
 3. **Gap 6: Role/Org Switcher** (Sidebar enhancement)
-4. **Gap 7: Buyer Shared Packages Tab** (Extend existing page)
+4. **Gap 7: Importer Shared Packages Tab** (Extend existing page)
 5. **Gap 8: Reviewer Compliance Queue** (New page)
 6. **Gap 1: Harvests/Batches Page** (New page)
 7. **Gap 2: FPIC Repository Page** (New page)

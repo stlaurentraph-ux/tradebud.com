@@ -11,7 +11,7 @@ export default function NewHarvestPage() {
     <div className="flex flex-col">
       <AppHeader
         title="Record Harvest"
-        subtitle="Create a new harvest record for producer and supplier workflows"
+        subtitle="Create a new harvest record for cooperative and exporter workflows"
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
           { label: 'Harvests', href: '/harvests' },

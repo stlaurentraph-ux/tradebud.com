@@ -15,8 +15,6 @@ export function useAdminData() {
   const [users, setUsers] = useState<AdminUser[]>(snapshot.users);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadTick, setReloadTick] = useState(0);
-  const reload = () => setReloadTick((tick) => tick + 1);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,8 +48,8 @@ export function useAdminData() {
       cancelled = true;
       unsubscribe();
     };
-  }, [reloadTick]);
+  }, []);
 
-  return { organizations, users, isLoading, error, reload };
+  return { organizations, users, isLoading, error };
 }
 

@@ -11,24 +11,20 @@ interface RoleBadgeProps {
 
 const ROLE_CONFIG: Record<TenantRole, { label: string; className: string }> = {
   exporter: {
-    label: 'Supplier',
+    label: 'Exporter',
     className: 'bg-sky-400/25 text-sky-100 ring-1 ring-sky-400/30',
   },
   importer: {
-    label: 'Buyer',
+    label: 'Importer',
     className: 'bg-violet-400/25 text-violet-100 ring-1 ring-violet-400/30',
   },
   cooperative: {
-    label: 'Producer',
+    label: 'Cooperative',
     className: 'bg-amber-400/25 text-amber-100 ring-1 ring-amber-400/30',
   },
   country_reviewer: {
     label: 'Reviewer',
     className: 'bg-rose-400/25 text-rose-100 ring-1 ring-rose-400/30',
-  },
-  sponsor_org: {
-    label: 'Sponsor',
-    className: 'bg-emerald-400/25 text-emerald-100 ring-1 ring-emerald-400/30',
   },
 };
 

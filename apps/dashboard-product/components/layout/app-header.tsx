@@ -31,10 +31,9 @@ export function AppHeader({ title, subtitle, description, breadcrumbs, actions }
   const { user, impersonateDemo } = useAuth();
 
   const demoPersonas = [
-    { email: 'cooperative@tracebud.com', label: 'Producer' },
-    { email: 'exporter@tracebud.com', label: 'Supplier' },
-    { email: 'importer@tracebud.com', label: 'Buyer' },
-    { email: 'sponsor@tracebud.com', label: 'Sponsor' },
+    { email: 'cooperative@tracebud.com', label: 'Cooperative' },
+    { email: 'exporter@tracebud.com', label: 'Exporter' },
+    { email: 'importer@tracebud.com', label: 'Importer' },
   ];
 
   const handleImpersonate = async (email: string, label: string) => {

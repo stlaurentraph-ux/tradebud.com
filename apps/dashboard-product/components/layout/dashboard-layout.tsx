@@ -18,7 +18,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isFounderOsRoute = pathname.startsWith('/founder-os');
 
   // Close sidebar on route change
   useEffect(() => {
@@ -37,15 +36,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login' && !isFounderOsRoute) {
+    if (!isLoading && !isAuthenticated && pathname !== '/login') {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router, pathname, isFounderOsRoute]);
-
-  // Founder OS runs in a separate shell outside persona dashboards and auth gate.
-  if (isFounderOsRoute) {
-    return <>{children}</>;
-  }
+  }, [isAuthenticated, isLoading, router, pathname]);
 
   // Show loading state
   if (isLoading) {

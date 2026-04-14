@@ -23,8 +23,6 @@ import {
   Scale,
   Building2,
   Check,
-  Inbox,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -60,8 +58,6 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   History,
   Send,
   Scale,
-  Inbox,
-  CheckCircle2,
 };
 
 interface Tenant {
@@ -98,21 +94,13 @@ const demoTenants: Tenant[] = [
     demo_email: 'importer@tracebud.com',
     tenant_id: 'tenant_germany_001',
   },
-  {
-    id: 'org-sponsor',
-    name: 'Tracebud Sponsor Network',
-    tier: 'tier4',
-    logo_initial: 'TS',
-    demo_email: 'sponsor@tracebud.com',
-    tenant_id: 'tenant_sponsor_001',
-  },
 ];
 
 const tierLabels: Record<Tenant['tier'], string> = {
-  tier1: 'Producer',
-  tier2: 'Supplier',
-  tier3: 'Buyer',
-  tier4: 'Sponsor',
+  tier1: 'Farmer/Producer',
+  tier2: 'Exporter/Collector',
+  tier3: 'EU Importer',
+  tier4: 'Network Sponsor',
 };
 
 export function AppSidebar() {

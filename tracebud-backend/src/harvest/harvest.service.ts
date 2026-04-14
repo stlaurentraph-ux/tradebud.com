@@ -10,21 +10,6 @@ const YIELD_CAP_KG_PER_HA = 1500;
 export class HarvestService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  async isFarmerOwnedByUser(farmerId: string, userId: string | undefined) {
-    if (!userId) return false;
-    const res = await this.pool.query(
-      `
-        SELECT 1
-        FROM farmer_profile
-        WHERE id = $1::uuid
-          AND user_id = $2::uuid
-        LIMIT 1
-      `,
-      [farmerId, userId],
-    );
-    return (res.rowCount ?? 0) > 0;
-  }
-
   async create(dto: CreateHarvestDto, userId: string | undefined) {
     const { farmerId, plotId, kg, harvestDate, note, hlcTimestamp, clientEventId } = dto;
 

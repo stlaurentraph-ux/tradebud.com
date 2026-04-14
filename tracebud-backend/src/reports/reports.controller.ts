@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Inject } from '@nestjs/common';
@@ -14,25 +14,6 @@ import { deriveRoleFromSupabaseUser } from '../auth/roles';
 export class ReportsController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  private requireTenantClaim(req: any) {
-    const tenantId =
-      (typeof req?.user?.app_metadata?.tenant_id === 'string' && req.user.app_metadata.tenant_id) ||
-      (typeof req?.user?.user_metadata?.tenant_id === 'string' && req.user.user_metadata.tenant_id) ||
-      null;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed auth token.');
-    }
-    return tenantId;
-  }
-
-  private assertExporter(req: any) {
-    this.requireTenantClaim(req);
-    const role = deriveRoleFromSupabaseUser(req?.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can access reports');
-    }
-  }
-
   @Get('plots')
   @ApiQuery({ name: 'farmerId', required: true })
   @ApiQuery({
@@ -43,11 +24,8 @@ export class ReportsController {
   async plotsReport(
     @Query('farmerId') farmerId: string,
     @Query('format') format: string | undefined,
-    @Req() req: any,
     @Res() res: Response,
   ) {
-    this.assertExporter(req);
-
     const rowsRes = await this.pool.query(
       `
         SELECT
@@ -131,11 +109,8 @@ export class ReportsController {
     @Query('from') from: string | undefined,
     @Query('to') to: string | undefined,
     @Query('format') format: string | undefined,
-    @Req() req: any,
     @Res() res: Response,
   ) {
-    this.assertExporter(req);
-
     const params: any[] = [farmerId];
     const conditions = ['ht.farmer_id = $1'];
 

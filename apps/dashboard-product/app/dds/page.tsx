@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusChip } from '@/components/ui/status-chip';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { AsyncState } from '@/components/common/async-state';
 import { usePackages } from '@/lib/use-packages';
 import type { DDSPackage } from '@/types';
 
@@ -104,7 +103,7 @@ function mapPackageToDDSStatus(pkg: DDSPackage): DDSStatus {
 }
 
 export default function DDSWorkspacePage() {
-  const { packages, isLoading, error, reload } = usePackages();
+  const { packages, isLoading, error } = usePackages();
   const [selectedDDS, setSelectedDDS] = useState<string | null>(null);
 
   const ddsPackages = useMemo<DDSWorkspaceItem[]>(
@@ -183,9 +182,11 @@ export default function DDSWorkspacePage() {
       />
 
       <div className="flex-1 space-y-6 p-6">
-        {error ? (
-          <AsyncState mode="error" title="Failed to load DDS packages" description={error} onRetry={reload} />
-        ) : null}
+        {error && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
         <Tabs defaultValue="packages" className="w-full">
           <TabsList>
             <TabsTrigger value="packages">DDS Packages</TabsTrigger>
@@ -198,7 +199,11 @@ export default function DDSWorkspacePage() {
             <div className="grid gap-4 lg:grid-cols-3">
               {/* Package List */}
               <div className="lg:col-span-2 space-y-2">
-                {isLoading && <AsyncState mode="loading" title="Loading DDS packages..." />}
+                {isLoading && (
+                  <div className="rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
+                    Loading DDS packages...
+                  </div>
+                )}
                 {!isLoading &&
                   ddsPackages.map((dds) => (
                   <button

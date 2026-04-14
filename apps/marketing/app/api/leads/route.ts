@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { mapToOutreachActivity, mapToProspect } from "@/lib/founder-os-mapper";
 
 const leadSchema = z.object({
   formType: z.enum(["exporter", "importer", "country", "farmer", "cooperative"]),
@@ -32,68 +31,6 @@ function asStringList(value: unknown): string[] {
     return [];
   }
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
-}
-
-async function mirrorLeadToFounderOs(params: {
-  formType: "exporter" | "importer" | "country" | "farmer" | "cooperative";
-  sourcePage: string;
-  name: string;
-  email: string;
-  company?: string | null;
-  country?: string | null;
-  payload: Record<string, unknown>;
-}) {
-  const supabase = getSupabaseAdmin();
-  const prospectPayload = mapToProspect(params);
-  const activityPayload = mapToOutreachActivity(params);
-
-  const existingByEmail = await supabase
-    .from("prospects")
-    .select("id")
-    .eq("email", params.email)
-    .maybeSingle();
-
-  let prospectId: string | null = null;
-
-  if (existingByEmail.error) {
-    throw new Error(existingByEmail.error.message);
-  }
-
-  if (existingByEmail.data?.id) {
-    const updated = await supabase
-      .from("prospects")
-      .update({
-        ...prospectPayload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existingByEmail.data.id)
-      .select("id")
-      .single();
-
-    if (updated.error) {
-      throw new Error(updated.error.message);
-    }
-    prospectId = updated.data.id;
-  } else {
-    const inserted = await supabase
-      .from("prospects")
-      .insert(prospectPayload)
-      .select("id")
-      .single();
-
-    if (inserted.error) {
-      throw new Error(inserted.error.message);
-    }
-    prospectId = inserted.data.id;
-  }
-
-  const activityInsert = await supabase.from("outreach_activity").insert({
-    ...activityPayload,
-    prospect_id: prospectId,
-  });
-  if (activityInsert.error) {
-    throw new Error(activityInsert.error.message);
-  }
 }
 
 export async function POST(request: Request) {
@@ -229,21 +166,6 @@ export async function POST(request: Request) {
         },
         { status: 500 },
       );
-    }
-
-    try {
-      await mirrorLeadToFounderOs({
-        formType: parsed.data.formType,
-        sourcePage: parsed.data.sourcePage,
-        name: parsed.data.name,
-        email: parsed.data.email,
-        company: parsed.data.company,
-        country: parsed.data.country,
-        payload,
-      });
-    } catch (founderOsError) {
-      // Keep existing lead-capture path resilient while Founder OS tables are being rolled out.
-      console.warn("Founder OS mirror insert failed:", founderOsError);
     }
 
     return NextResponse.json({ ok: true });

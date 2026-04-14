@@ -34,7 +34,7 @@ export default function DashboardPage() {
         return <CooperativeDashboard metrics={metrics} />;
       case 'country_reviewer':
         return <ReviewerDashboard metrics={metrics} />;
-      case 'sponsor_org':
+      case 'sponsor':
         return <SponsorDashboard metrics={metrics} />;
       default:
         return <ExporterDashboard metrics={metrics} />;
@@ -51,11 +51,11 @@ export default function DashboardPage() {
       case 'importer':
         return 'Monitor supply chain compliance status';
       case 'cooperative':
-        return 'Manage producers, farmers, and plot registrations';
+        return 'Manage farmers and plot registrations';
       case 'country_reviewer':
         return 'Review and verify compliance submissions';
-      case 'sponsor_org':
-        return 'Govern governance, escalations, and network-wide compliance oversight';
+      case 'sponsor':
+        return 'Monitor your sponsored producer network';
       default:
         return `${getRoleDisplayName(user.active_role)} Dashboard`;
     }

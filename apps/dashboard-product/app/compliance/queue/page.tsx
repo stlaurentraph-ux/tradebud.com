@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { AsyncState } from '@/components/common/async-state';
 import { SeverityBadge } from '@/components/ui/severity-badge';
 import { usePackages } from '@/lib/use-packages';
 import { cn } from '@/lib/utils';
@@ -144,7 +143,7 @@ function getStatusLabel(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED
 }
 
 export default function ComplianceQueuePage() {
-  const { packages, isLoading, error, reload } = usePackages();
+  const { packages, isLoading, error } = usePackages();
   const [selectedStatus, setSelectedStatus] = useState<
     'all' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED'
   >('all');
@@ -194,9 +193,11 @@ export default function ComplianceQueuePage() {
         />
 
         <div className="flex-1 space-y-6 p-6">
-          {error ? (
-            <AsyncState mode="error" title="Failed to load compliance queue" description={error} onRetry={reload} />
-          ) : null}
+          {error && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
           {/* Summary Stats */}
           <div className="grid gap-4 md:grid-cols-4">
@@ -295,7 +296,9 @@ export default function ComplianceQueuePage() {
           {/* Queue List - Sorted by Severity */}
           <div className="space-y-3">
             {isLoading ? (
-              <AsyncState mode="loading" title="Loading compliance queue..." />
+              <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
+                <p className="text-sm text-muted-foreground">Loading compliance queue...</p>
+              </div>
             ) : filteredQueue.length === 0 ? (
               <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
                 <p className="text-sm text-muted-foreground">No packages match the selected filters</p>

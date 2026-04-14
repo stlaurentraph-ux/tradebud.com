@@ -60,30 +60,6 @@ export function seedFirstCustomerPackages(): void {
   emitPackagesUpdated();
 }
 
-export function seedGoldenPathScenarioPackages(): void {
-  const now = new Date().toISOString();
-  localPackages = INITIAL_PACKAGES.map((pkg) => ({ ...pkg }));
-  localPackages = localPackages.map((pkg) => {
-    if (pkg.id === 'pkg_001') {
-      return { ...pkg, status: 'ACCEPTED', compliance_status: 'PASSED', submitted_at: now, updated_at: now };
-    }
-    if (pkg.id === 'pkg_002') {
-      return { ...pkg, status: 'READY', compliance_status: 'WARNINGS', updated_at: now };
-    }
-    if (pkg.id === 'pkg_003') {
-      return { ...pkg, status: 'REJECTED', compliance_status: 'WARNINGS', submitted_at: now, updated_at: now };
-    }
-    if (pkg.id === 'pkg_004') {
-      return { ...pkg, status: 'SUBMITTED', compliance_status: 'PASSED', submitted_at: now, updated_at: now };
-    }
-    if (pkg.id === 'pkg_005') {
-      return { ...pkg, status: 'ON_HOLD', compliance_status: 'BLOCKED', updated_at: now };
-    }
-    return pkg;
-  });
-  emitPackagesUpdated();
-}
-
 function assertTransitionAllowed(
   pkg: DDSPackage,
   toStatus: ShipmentStatus,

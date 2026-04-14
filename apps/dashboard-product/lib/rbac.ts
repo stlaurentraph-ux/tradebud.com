@@ -7,7 +7,6 @@ import type {
   RoleDecision,
   ShipmentStatus,
 } from '@/types';
-import { isFeatureEnabled } from '@/lib/feature-gates';
 
 // ============================================================
 // CANONICAL PERMISSION SYSTEM
@@ -75,10 +74,7 @@ export type CommercialPermission =
   | 'audit:export'
   // Role decision permissions
   | 'roles:view_decisions'
-  | 'roles:manual_classify'
-  // Founder OS permissions
-  | 'crm:view'
-  | 'content:view';
+  | 'roles:manual_classify';
 
 // Legacy Permission type alias for backwards compatibility
 export type Permission = CommercialPermission;
@@ -151,8 +147,6 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'audit:view',
     'audit:export',
     'roles:view_decisions',
-    'crm:view',
-    'content:view',
     'settings:view',
     'settings:edit',
     'admin:view',
@@ -180,8 +174,6 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'audit:export',
     'roles:view_decisions',
     'roles:manual_classify',
-    'crm:view',
-    'content:view',
     'settings:view',
     'settings:edit',
   ],
@@ -230,8 +222,6 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'audit:export',
     'roles:view_decisions',
     'roles:manual_classify',
-    'crm:view',
-    'content:view',
     'settings:view',
     'settings:edit',
     'admin:view',
@@ -281,7 +271,6 @@ const LEGACY_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
   importer: 'tier_3',
   cooperative: 'tier_2',
   country_reviewer: 'tier_3',
-  sponsor_org: 'tier_4',
 };
 
 const PERMISSION_MATRIX: Record<TenantRole, CommercialPermission[]> = {
@@ -296,7 +285,6 @@ const PERMISSION_MATRIX: Record<TenantRole, CommercialPermission[]> = {
     ...TIER_PERMISSION_MATRIX['tier_3'],
     'roles:manual_classify',
   ],
-  sponsor_org: TIER_PERMISSION_MATRIX['tier_4'],
 };
 
 // ============================================================
@@ -310,7 +298,6 @@ export interface NavItem {
   permission: CommercialPermission;
   roles?: TenantRole[];
   mvp?: boolean; // If false, hidden behind feature flag
-  featureGate?: 'request_campaigns' | 'annual_reporting';
 }
 
 // Role-specific navigation - each role sees different items
@@ -328,7 +315,6 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Reports',
     'Audit Log',
     'Admin',
-    'Demo Readiness',
   ],
   importer: [
     'Overview',
@@ -341,7 +327,6 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   ],
   cooperative: [
     'Overview',
-    'Inbox',
     'Harvests',
     'Plots',
     'Farmers',
@@ -358,18 +343,6 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Reports',
     'Audit Log',
   ],
-  sponsor_org: [
-    'Overview',
-    'Inbox',
-    'DDS Packages',
-    'Compliance',
-    'Role Decisions',
-    'Requests',
-    'Reports',
-    'Audit Log',
-    'Admin',
-    'Demo Readiness',
-  ],
 };
 
 export const NAVIGATION_ITEMS: NavItem[] = [
@@ -379,28 +352,12 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view', mvp: true },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
   { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view', mvp: true },
-  { name: 'Inbox', href: '/inbox', icon: 'Inbox', permission: 'requests:view', mvp: true },
-  {
-    name: 'Requests',
-    href: '/requests',
-    icon: 'Send',
-    permission: 'requests:view',
-    mvp: false,
-    featureGate: 'request_campaigns',
-  },
+  { name: 'Requests', href: '/requests', icon: 'Send', permission: 'requests:view', mvp: true },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view', mvp: true },
   { name: 'Role Decisions', href: '/role-decisions', icon: 'Scale', permission: 'roles:view_decisions', mvp: true },
-  {
-    name: 'Reports',
-    href: '/reports',
-    icon: 'FileText',
-    permission: 'reports:view',
-    mvp: false,
-    featureGate: 'annual_reporting',
-  },
+  { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view', mvp: true },
   { name: 'Audit Log', href: '/audit-log', icon: 'History', permission: 'audit:view', mvp: true },
   { name: 'Admin', href: '/admin', icon: 'Shield', permission: 'admin:view', mvp: true },
-  { name: 'Demo Readiness', href: '/demo-readiness', icon: 'CheckCircle2', permission: 'admin:view', mvp: true },
 ];
 
 export const SECONDARY_NAV_ITEMS: NavItem[] = [
@@ -474,11 +431,7 @@ export function getPermissionsForTier(tier: CommercialTier): CommercialPermissio
 export function getVisibleNavItems(user: User | null): NavItem[] {
   if (!user) return [];
   const allowedItems = ROLE_NAV_CONFIG[user.active_role] || [];
-  return NAVIGATION_ITEMS.filter((item) => {
-    if (!allowedItems.includes(item.name)) return false;
-    if (!item.featureGate) return true;
-    return isFeatureEnabled(item.featureGate);
-  });
+  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name));
 }
 
 /**
@@ -498,11 +451,11 @@ export function getVisibleSecondaryNavItems(user: User | null): NavItem[] {
  */
 export function getRoleDisplayName(role: TenantRole): string {
   const names: Record<TenantRole, string> = {
-    exporter: 'Supplier',
-    importer: 'Buyer',
-    cooperative: 'Producer',
-    country_reviewer: 'Reviewer',
-    sponsor_org: 'Sponsor',
+    exporter: 'Exporter',
+    importer: 'Importer',
+    cooperative: 'Cooperative',
+    country_reviewer: 'Country Reviewer',
+    sponsor: 'Network Sponsor',
   };
   return names[role] || role;
 }
@@ -548,7 +501,6 @@ export function getRoleBadgeColor(role: TenantRole): string {
     importer: 'bg-purple-500/20 text-purple-300',
     cooperative: 'bg-amber-500/20 text-amber-300',
     country_reviewer: 'bg-red-500/20 text-red-300',
-    sponsor_org: 'bg-emerald-500/20 text-emerald-300',
   };
   return colors[role] || 'bg-muted text-muted-foreground';
 }
@@ -595,9 +547,6 @@ export function canTransitionPackage(
     importer: {},
     cooperative: {},
     country_reviewer: {
-      SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
-    },
-    sponsor_org: {
       SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
     },
   };

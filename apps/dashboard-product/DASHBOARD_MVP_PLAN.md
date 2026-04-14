@@ -8,7 +8,7 @@
 
 ## EXECUTIVE SUMMARY
 
-The spec defines MVP as: *"the minimum feature set that enables one Tier 2 producer to capture farmer and plot data, assemble a batch, pass or acknowledge yield checks, build a shipment, and submit a DDS via MANUAL_ASSIST for one commodity in one country before 30 December 2026."*
+The spec defines MVP as: *"the minimum feature set that enables one Tier 2 cooperative to capture producer and plot data, assemble a batch, pass or acknowledge yield checks, build a shipment, and submit a DDS via MANUAL_ASSIST for one commodity in one country before 30 December 2026."*
 
 ### Current State (15 pages built)
 1. `/` - Dashboard Overview
@@ -222,7 +222,7 @@ The spec defines MVP as: *"the minimum feature set that enables one Tier 2 produ
 
 ---
 
-### C. POST-MVP (Explicitly excluded per Section 51.1)
+### C. POST-MVP (Explicitly Excluded per Section 51.1)
 
 The following are NOT in MVP scope:
 - ❌ API_DIRECT DDS submission (Release 2)
