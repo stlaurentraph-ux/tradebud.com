@@ -8,7 +8,7 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint --config eslint.config.mjs \"src/**/*.{ts,tsx}\"",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --testPathIgnorePatterns \"\\\\.int\\\\.spec\\\\.ts$\"",
     "test:watch": "jest --watch",
     "test:integration": "jest --runInBand --testMatch \"**/*.int.spec.ts\"",
     "test:integration:ownership": "jest --runInBand src/harvest/ownership-scope.int.spec.ts src/harvest/controller-scope.int.spec.ts src/reports/package-report-access.int.spec.ts",
