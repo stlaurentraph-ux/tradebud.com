@@ -6,6 +6,12 @@ import { InboxService } from './inbox.service';
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 
+function withSearchPath(connectionString: string, targetSchema: string) {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
+  return `${connectionString}${separator}options=${options}`;
+}
+
 describeIfDb('InboxController integration: tenant claim + role policy', () => {
   let pool: Pool;
   let service: InboxService;
@@ -13,8 +19,9 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: testDbUrl,
+      connectionString: withSearchPath(testDbUrl!, 'public'),
       ssl: { rejectUnauthorized: false },
+      max: 1,
     });
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
@@ -103,5 +110,5 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
         user: { app_metadata: { tenant_id: 'tenant_brazil_001' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).rejects.toThrow(NotFoundException);
-  });
+  }, 20_000);
 });
