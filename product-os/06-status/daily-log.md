@@ -491,3 +491,11 @@ Append-only session log.
 - Risks: None new; deprecation warning remains until issue #22 is implemented.
 - Blockers: None.
 - Next step: execute issue #22 in a workflow-only PR and verify warning-free CI runs.
+
+### 2026-04-14 (execution: CI runtime modernization)
+- Focus: implement issue #22 by updating CI action runtime settings and Node version baseline.
+- Files changed: `.github/workflows/ci.yml`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added workflow-level `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` and upgraded CI job Node versions from 18 to 20 for backend/app lanes to align with dependency engine requirements and deprecation guidance.
+- Risks: Expo lint lane may still surface package-specific Node constraints and should be validated in the next CI run.
+- Blockers: None.
+- Next step: run CI and confirm Node 20 deprecation warnings are removed while ownership evidence artifact behavior remains unchanged.
