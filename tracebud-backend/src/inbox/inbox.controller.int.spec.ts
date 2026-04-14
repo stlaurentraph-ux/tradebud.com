@@ -5,13 +5,6 @@ import { InboxService } from './inbox.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_inbox_controller_scope_test';
-
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const separator = connectionString.includes('?') ? '&' : '?';
-  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
-  return `${connectionString}${separator}options=${options}`;
-}
 
 describeIfDb('InboxController integration: tenant claim + role policy', () => {
   let pool: Pool;
@@ -20,12 +13,9 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: withSearchPath(testDbUrl!, schema),
+      connectionString: testDbUrl,
       ssl: { rejectUnauthorized: false },
-      max: 1,
     });
-
-    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -42,11 +32,14 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS inbox_requests');
     await pool.end();
   });
 
   beforeEach(async () => {
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS inbox_requests');
     await service.bootstrap('reset');
   });
 
@@ -84,6 +77,11 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   });
 
   it('enforces tenant scope on respond with DB-backed records', async () => {
+    await controller.bootstrap(
+      { action: 'reset' },
+      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
+    );
+
     const listed = await controller.list({
       user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
     });

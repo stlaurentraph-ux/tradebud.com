@@ -4,13 +4,6 @@ import { InboxService } from './inbox.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_inbox_service_scope_test';
-
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const separator = connectionString.includes('?') ? '&' : '?';
-  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
-  return `${connectionString}${separator}options=${options}`;
-}
 
 describeIfDb('InboxService integration: tenant/state boundaries', () => {
   let pool: Pool;
@@ -18,14 +11,10 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: withSearchPath(testDbUrl!, schema),
+      connectionString: testDbUrl,
       ssl: { rejectUnauthorized: false },
-      max: 1,
     });
     service = new InboxService(pool);
-
-    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
@@ -40,7 +29,8 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS inbox_requests');
     await pool.end();
   });
 
