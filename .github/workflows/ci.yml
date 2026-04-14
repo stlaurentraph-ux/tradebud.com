@@ -35,7 +35,7 @@ jobs:
         run: npm run build
 
       - name: Unit tests
-        run: npm test
+        run: npx jest --runInBand --testPathIgnorePatterns "\\.int\\.spec\\.ts$"
 
       - name: Ensure integration DB secret exists
         run: |
