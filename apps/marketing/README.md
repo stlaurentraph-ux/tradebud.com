@@ -34,6 +34,13 @@ The forms on `/farmers`, `/exporters`, `/importers`, and `/countries` post to `P
 - `importer_leads`
 - `country_leads`
 
+Founder OS integration (additive):
+
+- When Founder OS tables exist, the same API route also mirrors each submission into:
+  - `prospects` (source of truth CRM view)
+  - `outreach_activity` (activity log with `activity_type='identified'`, `channel='website'`)
+- Existing per-form lead inserts remain unchanged and continue to succeed independently.
+
 Set environment variables in Vercel (and locally in `.env.local`):
 
 ```bash

@@ -58,7 +58,7 @@ export const COMMERCIAL_TIERS: Record<CommercialTier, CommercialTierConfig> = {
 // Will be deprecated in favor of CommercialTier + LegalWorkflowRole
 // ============================================================
 
-export type TenantRole = 'exporter' | 'importer' | 'cooperative' | 'country_reviewer' | 'sponsor';
+export type TenantRole = 'exporter' | 'importer' | 'cooperative' | 'country_reviewer' | 'sponsor_org';
 
 // Map legacy tenant roles to commercial tiers
 export const TENANT_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
@@ -66,7 +66,7 @@ export const TENANT_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
   importer: 'tier_3',
   cooperative: 'tier_2',
   country_reviewer: 'tier_3', // Reviewers are typically part of importer orgs
-  sponsor: 'tier_4', // Network sponsors are tier 4
+  sponsor_org: 'tier_4',
 };
 
 // ============================================================
@@ -354,6 +354,92 @@ export interface AuditEvent {
   ip_address?: string;
   user_agent?: string;
   created_at: string;
+}
+
+// ============================================================
+// FOUNDER OS TYPES (CRM + CONTENT)
+// ============================================================
+
+export interface Prospect {
+  id: string;
+  name: string;
+  title?: string | null;
+  company: string;
+  linkedin_url?: string | null;
+  email?: string | null;
+  website?: string | null;
+  country?: string | null;
+  commodity_focus?: string | null;
+  company_size?: string | null;
+  source?: string | null;
+  notes?: string | null;
+  stage: string;
+  connection_status?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyAction {
+  id: string;
+  action_date: string;
+  prospect_id: string;
+  action_type: string;
+  priority: string;
+  reason?: string | null;
+  suggested_template_content?: string | null;
+  completed: boolean;
+  completed_at?: string | null;
+  prospects?: Prospect;
+}
+
+export interface OutreachActivity {
+  id: string;
+  prospect_id: string;
+  activity_type: string;
+  channel?: string | null;
+  content?: string | null;
+  created_at: string;
+  prospects?: {
+    id: string;
+    name: string;
+    company: string;
+  } | null;
+}
+
+export interface OutreachTemplate {
+  id: string;
+  name: string;
+  stage: string;
+  channel: string;
+  content: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ContentCalendarItem {
+  id: string;
+  content_idea_id?: string | null;
+  channel: string;
+  pillar?: string | null;
+  format?: string | null;
+  hook?: string | null;
+  status: string;
+  review_status: string;
+  scheduled_at?: string | null;
+  published_at?: string | null;
+  content_ideas?: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+export interface ContentTask {
+  id: string;
+  task_type: string;
+  related_content_id?: string | null;
+  due_date?: string | null;
+  status: 'open' | 'in_progress' | 'done' | 'missed';
+  notes?: string | null;
 }
 
 // ============================================================

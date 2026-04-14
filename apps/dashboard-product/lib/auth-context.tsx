@@ -56,10 +56,10 @@ const DEMO_USERS: Record<string, User> = {
   'sponsor@tracebud.com': {
     id: 'usr_sponsor_001',
     email: 'sponsor@tracebud.com',
-    name: 'David Thompson',
+    name: 'Tracebud Sponsor Ops',
     tenant_id: 'tenant_sponsor_001',
-    roles: ['sponsor'],
-    active_role: 'sponsor',
+    roles: ['sponsor_org'],
+    active_role: 'sponsor_org',
     created_at: '2024-01-15T00:00:00Z',
   },
   // Multi-role user
@@ -68,7 +68,7 @@ const DEMO_USERS: Record<string, User> = {
     email: 'admin@tracebud.com',
     name: 'Sophie Chen',
     tenant_id: 'tenant_global_001',
-    roles: ['exporter', 'importer', 'country_reviewer'],
+    roles: ['exporter', 'importer', 'country_reviewer', 'sponsor_org'],
     active_role: 'exporter',
     created_at: '2024-01-15T00:00:00Z',
   },
@@ -93,18 +93,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, _password: string) => {
     setIsLoading(true);
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const demoUser = DEMO_USERS[email.toLowerCase()];
-    if (demoUser) {
+      const demoUser = DEMO_USERS[email.toLowerCase()];
+      if (!demoUser) {
+        throw new Error('Invalid credentials. Use a demo account.');
+      }
+
       setUser(demoUser);
       sessionStorage.setItem('tracebud_user', JSON.stringify(demoUser));
       sessionStorage.setItem('tracebud_token', 'demo_token_' + demoUser.id);
-    } else {
-      throw new Error('Invalid credentials. Use a demo account.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const logout = useCallback(() => {

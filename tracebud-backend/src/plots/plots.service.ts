@@ -16,6 +16,37 @@ export class PlotsService {
     private readonly gfw: GfwService,
   ) {}
 
+  async isFarmerOwnedByUser(farmerId: string, userId: string | undefined) {
+    if (!userId) return false;
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM farmer_profile
+        WHERE id = $1::uuid
+          AND user_id = $2::uuid
+        LIMIT 1
+      `,
+      [farmerId, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async isPlotOwnedByUser(plotId: string, userId: string | undefined) {
+    if (!userId) return false;
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        WHERE p.id = $1::uuid
+          AND fp.user_id = $2::uuid
+        LIMIT 1
+      `,
+      [plotId, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
   /**
    * The offline app generates a local farmer UUID. Plot rows reference farmer_profile.id;
    * ensure a row exists and is owned by the authenticated Supabase user (fixes FK plot_farmer_id_fkey).

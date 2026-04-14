@@ -69,18 +69,18 @@ export default function NewPackagePage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="supplier_name" className="text-sm font-medium">
-                      Supplier / Cooperative Name *
+                      Supplier / Producer Name *
                     </label>
                     <Input
                       id="supplier_name"
-                      placeholder="e.g., Rwanda Coffee Cooperative"
+                      placeholder="e.g., Rwanda Coffee Producers Union"
                       value={formData.supplier_name}
                       onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
                       className="bg-secondary"
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      The name of the supplier or cooperative this package is for
+                      The name of the supplier or producer organization this package is for
                     </p>
                   </div>
 

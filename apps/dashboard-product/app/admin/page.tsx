@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,23 +23,25 @@ import {
   Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AsyncState } from '@/components/common/async-state';
 import type { TenantRole } from '@/types';
 import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
 import { createOrganization, inviteUser, updateUserRole, updateUserStatus } from '@/lib/admin-service';
 import { useAdminData } from '@/lib/use-admin-data';
-import { resetDemoWorkspace, seedFirstCustomerWorkspace } from '@/lib/demo-bootstrap';
+import { resetDemoWorkspace, seedFirstCustomerWorkspace, seedGoldenPathWorkspace } from '@/lib/demo-bootstrap';
 
 const roleLabels: Record<TenantRole, string> = {
-  exporter: 'Exporter',
-  importer: 'Importer',
-  cooperative: 'Cooperative',
-  country_reviewer: 'Country Reviewer',
+  exporter: 'Supplier',
+  importer: 'Buyer',
+  cooperative: 'Producer',
+  country_reviewer: 'Reviewer',
+  sponsor_org: 'Sponsor',
 };
 
 const orgTypeLabels: Record<AdminOrgType, string> = {
-  COOPERATIVE: 'Cooperative',
-  EXPORTER: 'Exporter',
-  IMPORTER: 'Importer',
+  COOPERATIVE: 'Producer',
+  EXPORTER: 'Supplier',
+  IMPORTER: 'Buyer',
 };
 
 const statusColors: Record<AdminStatus, string> = {
@@ -48,7 +51,7 @@ const statusColors: Record<AdminStatus, string> = {
 };
 
 export default function AdminPage() {
-  const { organizations, users, isLoading, error } = useAdminData();
+  const { organizations, users, isLoading, error, reload } = useAdminData();
   const [activeTab, setActiveTab] = useState<'organizations' | 'users' | 'roles'>('organizations');
   const [isOrgFormOpen, setIsOrgFormOpen] = useState(false);
   const [isInviteFormOpen, setIsInviteFormOpen] = useState(false);
@@ -111,14 +114,19 @@ export default function AdminPage() {
     }
   };
 
-  const handleSeedWorkspace = () => {
-    seedFirstCustomerWorkspace();
+  const handleSeedWorkspace = async () => {
+    await seedFirstCustomerWorkspace();
     toast.success('Seeded first-customer demo workspace.');
   };
 
-  const handleResetWorkspace = () => {
-    resetDemoWorkspace();
+  const handleResetWorkspace = async () => {
+    await resetDemoWorkspace();
     toast.success('Reset demo workspace to baseline.');
+  };
+
+  const handleSeedGoldenPath = async () => {
+    await seedGoldenPathWorkspace();
+    toast.success('Seeded golden-path demo scenario.');
   };
 
   return (
@@ -127,22 +135,30 @@ export default function AdminPage() {
         title="Admin Panel"
         subtitle="Manage organizations, user invitations, and role assignments"
         actions={
-          <Button
-            size="sm"
-            onClick={() => (activeTab === 'organizations' ? setIsOrgFormOpen((v) => !v) : setIsInviteFormOpen((v) => !v))}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {activeTab === 'organizations' ? 'Add Organization' : 'Invite User'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/founder-os">Founder OS</Link>
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => (activeTab === 'organizations' ? setIsOrgFormOpen((v) => !v) : setIsInviteFormOpen((v) => !v))}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {activeTab === 'organizations' ? 'Add Organization' : 'Invite User'}
+            </Button>
+          </div>
         }
       />
 
       <main className="flex-1 p-6 space-y-6">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleSeedWorkspace}>
+          <Button variant="outline" size="sm" onClick={() => { void handleSeedWorkspace(); }}>
             Seed First Customers
           </Button>
-          <Button variant="outline" size="sm" onClick={handleResetWorkspace}>
+          <Button variant="outline" size="sm" onClick={() => { void handleSeedGoldenPath(); }}>
+            Seed Golden Path
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { void handleResetWorkspace(); }}>
             Reset Demo Data
           </Button>
         </div>
@@ -279,11 +295,11 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {error && (
-                <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                  {error}
+              {error ? (
+                <div className="mb-4">
+                  <AsyncState mode="error" title="Failed to load organizations" description={error} onRetry={reload} />
                 </div>
-              )}
+              ) : null}
 
               <div className="rounded-lg border">
                 <Table>
@@ -472,6 +488,7 @@ export default function AdminPage() {
                 { role: 'importer', permissions: ['packages:view', 'compliance:view', 'reports:view', 'requests:respond'] },
                 { role: 'cooperative', permissions: ['farmers:create', 'plots:create', 'requests:respond'] },
                 { role: 'country_reviewer', permissions: ['compliance:approve', 'reports:view', 'roles:manual_classify'] },
+                { role: 'sponsor_org', permissions: ['admin:manage_users', 'roles:manual_classify', 'audit:view', 'reports:export'] },
               ].map((item) => (
                 <div key={item.role} className="p-4 rounded-lg border">
                   <div className="flex items-center justify-between mb-3">

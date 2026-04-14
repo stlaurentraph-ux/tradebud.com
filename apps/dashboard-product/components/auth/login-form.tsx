@@ -35,7 +35,7 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
-            Sign in to your Tracebud Exporter account
+            Sign in to your Tracebud Supplier account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -93,7 +93,7 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
 
           <div className="mt-6 text-center">
             <p className="text-xs text-muted-foreground">
-              Use your Supabase account with an exporter email
+              Use your Supabase account with a supplier email
               <br />
               (e.g., exporter+name@email.com or @tracebud.com)
             </p>

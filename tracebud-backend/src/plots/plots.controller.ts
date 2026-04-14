@@ -16,8 +16,44 @@ import { PlotsService } from './plots.service';
 export class PlotsController {
   constructor(private readonly plotsService: PlotsService) {}
 
+  private requireTenantClaim(req: any) {
+    const tenantId =
+      (typeof req?.user?.app_metadata?.tenant_id === 'string' && req.user.app_metadata.tenant_id) ||
+      (typeof req?.user?.user_metadata?.tenant_id === 'string' && req.user.user_metadata.tenant_id) ||
+      null;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed auth token.');
+    }
+    return tenantId;
+  }
+
+  private async assertFarmerScopeByFarmerId(req: any, farmerId: string) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      const allowed = await this.plotsService.isFarmerOwnedByUser(farmerId, userId);
+      if (!allowed) {
+        throw new ForbiddenException('Farmers can only access their own records');
+      }
+    }
+  }
+
+  private async assertFarmerScopeByPlotId(req: any, plotId: string) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      const allowed = await this.plotsService.isPlotOwnedByUser(plotId, userId);
+      if (!allowed) {
+        throw new ForbiddenException('Farmers can only access their own plot records');
+      }
+    }
+  }
+
   @Post()
   async create(@Body() dto: CreatePlotDto, @Req() req: any) {
+    this.requireTenantClaim(req);
     const userId = req.user?.id as string | undefined;
     const role = deriveRoleFromSupabaseUser(req.user);
     // Farmers and agents upload from the field app; exporters include @tracebud.com test accounts
@@ -25,13 +61,15 @@ export class PlotsController {
     if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
       throw new ForbiddenException('Only farmers, agents, or exporters can create plots');
     }
+    await this.assertFarmerScopeByFarmerId(req, dto.farmerId);
     const row = await this.plotsService.create(dto, userId);
     return row;
   }
 
   @Get()
   @ApiQuery({ name: 'farmerId', required: true })
-  async listByFarmer(@Query('farmerId') farmerId: string) {
+  async listByFarmer(@Query('farmerId') farmerId: string, @Req() req: any) {
+    await this.assertFarmerScopeByFarmerId(req, farmerId);
     return this.plotsService.listByFarmer(farmerId);
   }
 
@@ -43,6 +81,7 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async runComplianceCheck(@Param('id') id: string, @Req() req: any) {
+    this.requireTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'agent' && role !== 'exporter') {
       throw new ForbiddenException('Only agents or exporters can run compliance checks');
@@ -63,6 +102,7 @@ export class PlotsController {
       throw new ForbiddenException('Only farmers or agents can edit plots');
     }
     const userId = req.user?.id as string | undefined;
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.updateMetadata(id, dto, userId);
   }
 
@@ -79,6 +119,7 @@ export class PlotsController {
     @Req() req: any,
   ) {
     const userId = req.user?.id as string | undefined;
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.syncPhotos(id, dto, userId);
   }
 
@@ -95,6 +136,7 @@ export class PlotsController {
       throw new ForbiddenException('Only farmers or agents can sync legality metadata');
     }
     const userId = req.user?.id as string | undefined;
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.syncLegal(id, dto, userId);
   }
 
@@ -111,6 +153,7 @@ export class PlotsController {
       throw new ForbiddenException('Only farmers or agents can sync evidence metadata');
     }
     const userId = req.user?.id as string | undefined;
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.syncEvidence(id, dto, userId);
   }
 
@@ -127,6 +170,7 @@ export class PlotsController {
       throw new ForbiddenException('Not allowed');
     }
     const userId = req.user?.id as string | undefined;
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.runGfwCheck(id, userId);
   }
 
@@ -135,7 +179,8 @@ export class PlotsController {
     summary: 'Get compliance history for a plot (audit trail)',
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
-  async complianceHistory(@Param('id') id: string) {
+  async complianceHistory(@Param('id') id: string, @Req() req: any) {
+    await this.assertFarmerScopeByPlotId(req, id);
     return this.plotsService.getComplianceHistory(id);
   }
 }

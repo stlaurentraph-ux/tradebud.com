@@ -8,38 +8,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Leaf, Globe, Users, Heart } from 'lucide-react';
+import { ShieldCheck, Leaf, Globe, Users } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   {
     email: 'exporter@tracebud.com',
-    role: 'Exporter',
+    role: 'Supplier',
     description: 'Full access to packages, plots, farmers',
     icon: Leaf,
   },
   {
     email: 'importer@tracebud.com',
-    role: 'Importer',
+    role: 'Buyer',
     description: 'View assigned packages and compliance',
     icon: Globe,
   },
   {
     email: 'cooperative@tracebud.com',
-    role: 'Cooperative',
+    role: 'Producer',
     description: 'Manage member farmers and plots',
     icon: Users,
   },
   {
     email: 'reviewer@tracebud.com',
-    role: 'Country Reviewer',
+    role: 'Reviewer',
     description: 'Review and approve submissions',
     icon: ShieldCheck,
   },
   {
     email: 'sponsor@tracebud.com',
-    role: 'Network Sponsor',
-    description: 'Monitor sponsored producer network',
-    icon: Heart,
+    role: 'Sponsor',
+    description: 'Governance oversight across network operations',
+    icon: ShieldCheck,
   },
 ];
 

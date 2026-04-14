@@ -18,3 +18,4 @@
 10. GDPR erasure request on submitted producer -> cryptographic shredding -> audit references preserved
 11. Polygon normalization guard -> `ST_MakeValid` applies -> rejected when correction variance exceeds 5%
 12. PostGIS integration lane -> geography area query and invalid-polygon normalization checks run under `TEST_DATABASE_URL`
+13. Ownership/access policy lane -> package/report access integration suites execute non-skipped in CI, publish summary + artifact, and fail build if any ownership suite is skipped

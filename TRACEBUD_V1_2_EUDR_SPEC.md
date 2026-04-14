@@ -111,6 +111,16 @@ Core differentiators:
 - Lineage traversal must be O(1) at runtime (materialized at aggregation).
 - Producer data sovereignty is enforced by consent grants, with cryptographic shredding to handle GDPR revocations.
 
+### 2.2 Coffee Open Chain Thesis
+
+Tracebud must treat coffee as the first vertical where EUDR compliance is combined with a living-income and cooperative-strengthening operating model.
+
+Normative product thesis extensions:
+- Tracebud must operate as neutral, shared digital infrastructure that multiple buyers and sponsors can plug into across the same sourcing network.
+- The platform must preserve commodity-agnostic architecture while shipping coffee-first defaults and workflows in v1.6.
+- EUDR compliance is the non-negotiable floor; living-income progress and regenerative practice adoption are explicit, measurable objectives layered on top of the same canonical producer/plot/lineage model.
+- No Open Chain-style overlay may weaken legal-role correctness, compliance checks, or submission traceability.
+
 ---
 
 ## 3. Commercial Tier Model
@@ -299,6 +309,11 @@ annual reporting support
 substantiated-concern case handling
 GDPR-compliant access, portability, retention, and end-of-relationship handling
 credential vault for API-direct submission
+
+Coffee-first vertical scope rule for v1.6:
+- v1.6 must be built and optimized for coffee supply chains first, with cocoa and other EUDR commodities following in later releases.
+- Default examples, benchmark seeds, risk-profile presets, and workflow copy in v1.6 must assume coffee cooperatives, exporters, and EU roasters/importers as primary operators.
+- Commodity-agnostic abstractions must still be maintained in schema and APIs so the same modules can be generalized without schema breakage.
 ### 7.2 Out of scope for v1.6
 physical logistics execution
 customs brokerage
@@ -474,6 +489,29 @@ active             BOOLEAN NOT NULL DEFAULT TRUE
 created_at         TIMESTAMPTZ NOT NULL
 updated_at         TIMESTAMPTZ NOT NULL
 
+living_income_benchmarks
+id                         UUID PK
+country_iso                CHAR(2) NOT NULL
+province                   TEXT NULLABLE
+district                   TEXT NULLABLE
+household_type             ENUM NOT NULL (SMALLHOLDER_HOUSEHOLD, COOP_MEMBER_HOUSEHOLD, ESTATE_WORKER_HOUSEHOLD, OTHER)
+commodity_id               UUID FK → commodities.id NOT NULL
+living_income_reference_local NUMERIC(14,2) NOT NULL
+currency_code              CHAR(3) NOT NULL
+benchmark_year             SMALLINT NOT NULL
+source_type                ENUM NOT NULL (FAIRTRADE, LICOP, NATIONAL_SOURCE, SPONSOR_OVERRIDE)
+source_reference           TEXT NOT NULL
+source_url                 TEXT NULLABLE
+method_note                TEXT NULLABLE
+active                     BOOLEAN NOT NULL DEFAULT TRUE
+created_at                 TIMESTAMPTZ NOT NULL
+updated_at                 TIMESTAMPTZ NOT NULL
+
+-- Rules for living_income_benchmarks:
+-- - At most one active benchmark row may exist per (country_iso, province, district, household_type, commodity_id, benchmark_year).
+-- - `source_type = SPONSOR_OVERRIDE` requires an auditable justification and sponsor scope reference.
+-- - Coffee benchmark records must be seeded before enabling Coffee Open Chain profile enforcement for a country.
+
 legal_compliance_requirements
 id                         UUID PK
 regulatory_profile_version TEXT NOT NULL
@@ -542,6 +580,21 @@ billing_subtier_locked_until DATE NULLABLE
 billing_owner_id            UUID FK → persons.id NULLABLE
 plan_status                 ENUM NOT NULL (ACTIVE, SUSPENDED, CANCELLED, TRIAL)
 data_residency_zone         TEXT NOT NULL DEFAULT 'eu'
+membership_count            INTEGER NULLABLE
+governance_structure        JSONB NULLABLE
+-- canonical keys:
+-- {
+--   "board_exists": BOOLEAN,
+--   "committee_names": TEXT[],
+--   "last_election_at": DATE NULLABLE
+-- }
+premium_distribution_policies JSONB NOT NULL DEFAULT '{}'
+-- canonical keys:
+-- {
+--   "cash_payout_min_pct": NUMERIC,
+--   "services_investment_min_pct": NUMERIC,
+--   "approval_quorum_pct": NUMERIC
+-- }
 created_at                  TIMESTAMPTZ NOT NULL
 updated_at                  TIMESTAMPTZ NOT NULL
 deleted_at                  TIMESTAMPTZ NULLABLE
@@ -552,6 +605,7 @@ deleted_at                  TIMESTAMPTZ NULLABLE
 -- - address_line_1 and city are mandatory before outbound operator submission.
 -- - enterprise_size must have supporting evidence for simplified-path claims.
 -- - non-SME trader/downstream workflows require information system registration before sealing.
+-- - For organisation_type = COOPERATIVE, membership_count and premium_distribution_policies must be set before Coffee Open Chain profile enrollment.
 
 enterprise_size_assessments
 id                          UUID PK NOT NULL
@@ -651,6 +705,11 @@ simplified_path_basis         TEXT NULLABLE
 duplicate_status              ENUM NOT NULL (UNIQUE, SUSPECTED_DUPLICATE_HIGH, MERGED, CANONICAL)
 canonical_producer_id         UUID FK → producers.id NULLABLE
 wallet_active                 BOOLEAN NOT NULL DEFAULT TRUE
+household_size                INTEGER NULLABLE
+main_income_sources           TEXT[] NOT NULL DEFAULT '{}'
+on_farm_income_local          NUMERIC(14,2) NULLABLE
+off_farm_income_local         NUMERIC(14,2) NULLABLE
+income_currency_code          CHAR(3) NULLABLE
 capture_method                ENUM NOT NULL (FIELD_AGENT, SELF_ENROLL, BULK_IMPORT)
 captured_by_user_id           UUID FK → persons.id NULLABLE
 captured_at                   TIMESTAMPTZ NOT NULL
@@ -689,6 +748,26 @@ updated_at            TIMESTAMPTZ NOT NULL
 -- - An active consent grant must exist before any org may access producer data outside their own sourcing relationship.
 -- - Revocation is prospective only. Historical compliance records remain accessible to the granted org for the legally required retention period.
 -- - Wallet portability: if a producer moves between cooperatives, the producer record, historical evidence chain, and GeoID are preserved; network-specific permissions are recalculated, not cloned.
+-- - Household and income fields are optional but must be supported for Coffee Open Chain profile participants.
+
+producer_households
+id                            UUID PK NOT NULL
+producer_id                   UUID FK → producers.id NOT NULL
+household_type                ENUM NOT NULL (SMALLHOLDER_HOUSEHOLD, COOP_MEMBER_HOUSEHOLD, ESTATE_WORKER_HOUSEHOLD, OTHER)
+household_size                INTEGER NULLABLE
+main_income_sources           TEXT[] NOT NULL DEFAULT '{}'
+on_farm_income_local          NUMERIC(14,2) NULLABLE
+off_farm_income_local         NUMERIC(14,2) NULLABLE
+currency_code                 CHAR(3) NULLABLE
+data_confidence               ENUM NOT NULL (SELF_REPORTED, VERIFIED, ESTIMATED)
+effective_from                DATE NOT NULL
+effective_to                  DATE NULLABLE
+created_at                    TIMESTAMPTZ NOT NULL
+updated_at                    TIMESTAMPTZ NOT NULL
+
+-- Rules for producer_households:
+-- - At most one active row may exist per producer_id at a time.
+-- - If active household data is present and a matching living_income_benchmark exists, contract-level living-income gap calculations must be computed at shipment sealing.
 
 ### 11.4 Consent Revocation and In-Flight Workflow Rules
 When consent is revoked during an in-flight workflow, processing behavior is state-specific:
@@ -703,6 +782,18 @@ When consent is revoked during an in-flight workflow, processing behavior is sta
 
 Normative rule:
 Consent revocation never blocks completion of a compliance workflow initiated before `revoked_at`. It blocks only new workflows initiated after the revocation timestamp.
+
+### 11.5 Data Premium Consent Scope
+
+Additional consent scope keys:
+- `LIVING_INCOME_DATA`
+- `REGENERATIVE_PRACTICES_DATA`
+- `SOCIAL_INDICATORS_DATA`
+
+Normative rules:
+- Additional living-income, impact, or regenerative fields must not be processed outside consented `data_scope`.
+- When `data_scope` includes one or more additional impact domains, a `data_premium_amount` must be recorded per contract or reporting period and linked to the consented data usage.
+- If consent is revoked, cryptographic shredding must cover additional impact fields while preserving immutable EUDR audit/package references.
 
 
 
@@ -734,6 +825,17 @@ capture_device_id           TEXT NULLABLE
 captured_at                 TIMESTAMPTZ NOT NULL
 captured_by_user_id         UUID FK → persons.id NULLABLE
 latest_geometry_version     INTEGER NOT NULL DEFAULT 1
+regenerative_practice_flags JSONB NOT NULL DEFAULT '{}'
+-- canonical keys:
+-- {
+--   "shade_trees": BOOLEAN,
+--   "agroforestry": BOOLEAN,
+--   "cover_crops": BOOLEAN,
+--   "organic_fertilisation": BOOLEAN,
+--   "mulching": BOOLEAN,
+--   "water_conservation": BOOLEAN,
+--   "soil_testing": BOOLEAN
+-- }
 deforestation_check_status  ENUM NOT NULL (PENDING, CLEAR, FLAGGED, UNAVAILABLE, FAILED, UNDER_REVIEW)
 deforestation_checked_at    TIMESTAMPTZ NULLABLE
 deforestation_dataset_version TEXT NULLABLE
@@ -752,6 +854,7 @@ deleted_at                  TIMESTAMPTZ NULLABLE
 -- - POLYGON or POINT mode requires geography or lat/lng to be non-null.
 -- - All incoming polygons must pass through ST_MakeValid() before insert.
 -- - If correction causes >5% area variance, reject back to client.
+-- - Regenerative practice flags are optional but must be writable for coffee plots in sponsored or buyer-linked programmes.
 
 plot_geometry_versions
 id                    UUID PK NOT NULL
@@ -782,6 +885,28 @@ UNIQUE(plot_id, commodity_id, harvest_season)
 
 -- Rule: claimed_kg_total is updated atomically whenever a batch contribution references this plot and season. Cross-cooperative totals are accumulated here before final yield-check status is set.
 
+### 12.1 Coffee Regenerative Practices
+
+Fixed coffee-first regenerative practice flags per plot:
+- `shade_trees`
+- `agroforestry`
+- `cover_crops`
+- `organic_fertilisation`
+- `mulching`
+- `water_conservation`
+- `soil_testing`
+
+Optional evidence types for regenerative assertions:
+- `PHOTO`
+- `AGRONOMIST_REPORT`
+- `REGENERATIVE_PROJECT_REFERENCE`
+- `PRACTICE_ADOPTION_PHOTO_SERIES`
+
+Normative rules:
+- Sponsors and buyers may fund practice adoption programmes at network or cooperative level.
+- Tracebud must link programmes to plot-level adoption records.
+- Where yield and income data exists, Tracebud must support programme-linked before/after indicators for yield and income outcomes.
+
 
 
 ## 13. Data Schema — Evidence and Documents
@@ -795,7 +920,7 @@ producer_id           UUID FK → producers.id NULLABLE
 plot_id               UUID FK → plots.id NULLABLE
 batch_id              UUID FK → batches.id NULLABLE
 shipment_id           UUID FK → shipment_headers.id NULLABLE
-document_type         ENUM NOT NULL (LAND_TITLE, REGISTRATION_CERT, HARVEST_RECORD, CONSENT_FORM, PHOTO, SATELLITE_REPORT, AUDIT_CERTIFICATE, IMPORT_PERMIT, OTHER)
+document_type         ENUM NOT NULL (LAND_TITLE, REGISTRATION_CERT, HARVEST_RECORD, CONSENT_FORM, PHOTO, SATELLITE_REPORT, AUDIT_CERTIFICATE, IMPORT_PERMIT, AGRONOMIST_REPORT, REGENERATIVE_PROJECT_REFERENCE, PRACTICE_ADOPTION_PHOTO_SERIES, OTHER)
 file_storage_key      TEXT NOT NULL
 file_hash_sha256      TEXT NOT NULL
 file_size_bytes       BIGINT NOT NULL
@@ -856,6 +981,9 @@ Required `extracted_fields` keys by `document_type`:
 
 Rule:
 If any anti-fraud flag (`metadata_timestamp_plausible`, `issuer_name_match`, `document_age_within_policy`) is FALSE, `parse_confidence` is capped at 0.50 and `parse_status = MANUAL_REQUIRED`.
+
+Coffee regenerative evidence rule:
+When regenerative practice assertions are recorded for funded coffee programmes, the system must support linking AGRONOMIST_REPORT, REGENERATIVE_PROJECT_REFERENCE, or PRACTICE_ADOPTION_PHOTO_SERIES evidence to the corresponding plot/programme records.
 
 ## 14. Data Schema — Lineage: Lots, Batches, Inputs
 SQL
@@ -958,6 +1086,18 @@ blocking_issues            JSONB NOT NULL DEFAULT '[]'
 -- }
 billing_state              ENUM NOT NULL (UNPAID, PAID, SPONSOR_COVERED, WAIVED, FAILED)
 billing_event_id           UUID FK → billing_events.id NULLABLE
+farm_gate_price_local      NUMERIC(14,2) NULLABLE
+price_currency_code        CHAR(3) NULLABLE
+premium_components         JSONB NOT NULL DEFAULT '{}'
+-- canonical keys:
+-- {
+--   "quality_premium_local": NUMERIC,
+--   "living_income_differential_local": NUMERIC,
+--   "data_premium_local": NUMERIC,
+--   "other_premium_local": NUMERIC
+-- }
+living_income_gap_covered_ratio NUMERIC(6,4) NULLABLE
+data_premium_amount_local  NUMERIC(14,2) NULLABLE
 regulatory_profile_version TEXT NOT NULL
 sealed_at                  TIMESTAMPTZ NULLABLE
 created_at                 TIMESTAMPTZ NOT NULL
@@ -994,6 +1134,8 @@ created_at        TIMESTAMPTZ NOT NULL
 -- - SUM(shipment_line_coverages.quantity_kg) per line must equal shipment_lines.quantity_kg before sealing.
 -- - No coverage record may over-allocate source quantity.
 -- - A shipment may not be sealed while any line has unresolved blocking issues or while workflow_role = PENDING_MANUAL_CLASSIFICATION.
+-- - When farm_gate_price_local and a valid living_income_benchmark are present, living_income_gap_covered_ratio must be computed and persisted at seal time.
+-- - For Coffee Open Chain profile participants, package sealing must enforce profile thresholds (warning or blocking) for below-threshold living-income pricing and long-term contract share.
 -- - package_status transitions are:
 --   DRAFT -> READY | ON_HOLD
 --   READY -> SEALED | ON_HOLD | DRAFT
@@ -1003,6 +1145,29 @@ created_at        TIMESTAMPTZ NOT NULL
 --   REJECTED -> DRAFT | ON_HOLD
 --   ON_HOLD -> DRAFT | READY
 --   ARCHIVED is terminal.
+
+contract_commitments
+id                            UUID PK NOT NULL
+organisation_id               UUID FK → organisations.id NOT NULL
+counterparty_org_id           UUID FK → organisations.id NOT NULL
+commodity_id                  UUID FK → commodities.id NOT NULL
+country_iso                   CHAR(2) NOT NULL
+contract_start_date           DATE NOT NULL
+contract_end_date             DATE NOT NULL
+minimum_contract_duration_months INTEGER NOT NULL
+farm_gate_price_local         NUMERIC(14,2) NULLABLE
+price_currency_code           CHAR(3) NULLABLE
+premium_components            JSONB NOT NULL DEFAULT '{}'
+living_income_gap_covered_ratio NUMERIC(6,4) NULLABLE
+data_premium_amount_local     NUMERIC(14,2) NULLABLE
+linked_open_chain_profile_id  UUID NULLABLE
+status                        ENUM NOT NULL (DRAFT, ACTIVE, EXPIRED, TERMINATED)
+created_at                    TIMESTAMPTZ NOT NULL
+updated_at                    TIMESTAMPTZ NOT NULL
+
+-- Rules for contract_commitments:
+-- - If enough benchmark + household + price data exists, living_income_gap_covered_ratio must be computed and stored.
+-- - For coffee profile participants, contract_end_date - contract_start_date must meet profile minimum duration.
 
 
 
@@ -1175,6 +1340,107 @@ updated_at            TIMESTAMPTZ NOT NULL
 -- - Campaign execution is asynchronous and resumable.
 -- - Every state transition writes `audit_events` with event_type in:
 --   REQUEST_CAMPAIGN_CREATED, REQUEST_CAMPAIGN_STARTED, REQUEST_CAMPAIGN_COMPLETED, REQUEST_CAMPAIGN_PARTIAL.
+
+coffee_open_chain_profiles
+id                                UUID PK NOT NULL
+owner_org_id                      UUID FK → organisations.id NOT NULL
+scope_type                        ENUM NOT NULL (SPONSOR_NETWORK, BUYER_NETWORK)
+network_relationship_id           UUID FK → network_relationships.id NULLABLE
+minimum_contract_duration_months  INTEGER NOT NULL
+living_income_reference_logic     JSONB NOT NULL
+-- canonical keys:
+-- {
+--   "benchmark_source_priority": TEXT[],
+--   "fallback_policy": TEXT,
+--   "enforcement_mode": "WARNING" | "BLOCKING"
+-- }
+premium_distribution_rules        JSONB NOT NULL
+minimum_long_term_volume_share    NUMERIC(5,4) NOT NULL
+active                            BOOLEAN NOT NULL DEFAULT TRUE
+created_at                        TIMESTAMPTZ NOT NULL
+updated_at                        TIMESTAMPTZ NOT NULL
+
+-- Rules for coffee_open_chain_profiles:
+-- - Profiles are coffee-first in v1.6; commodity-specific extension must remain schema-compatible for future commodities.
+-- - Shipment sealing must evaluate active profile constraints when shipment is linked to governed network scope.
+
+open_chain_profile_assignments
+id                           UUID PK NOT NULL
+coffee_open_chain_profile_id UUID FK → coffee_open_chain_profiles.id NOT NULL
+organisation_id              UUID FK → organisations.id NOT NULL
+assigned_at                  TIMESTAMPTZ NOT NULL
+assigned_by_person_id        UUID FK → persons.id NOT NULL
+status                       ENUM NOT NULL (ACTIVE, SUSPENDED, ENDED)
+created_at                   TIMESTAMPTZ NOT NULL
+updated_at                   TIMESTAMPTZ NOT NULL
+
+premium_distribution_records
+id                            UUID PK NOT NULL
+organisation_id               UUID FK → organisations.id NOT NULL
+shipment_header_id            UUID FK → shipment_headers.id NULLABLE
+contract_commitment_id        UUID FK → contract_commitments.id NULLABLE
+beneficiary_scope             ENUM NOT NULL (COOPERATIVE_POOL, INDIVIDUAL_PRODUCER, MIXED)
+distribution_decision_payload JSONB NOT NULL
+approved_by_person_id         UUID FK → persons.id NULLABLE
+approved_at                   TIMESTAMPTZ NULLABLE
+status                        ENUM NOT NULL (PROPOSED, APPROVED, DISTRIBUTED, CANCELLED)
+created_at                    TIMESTAMPTZ NOT NULL
+updated_at                    TIMESTAMPTZ NOT NULL
+
+-- Rules:
+-- - Cooperative-level premium use must be approved before status can transition to DISTRIBUTED.
+-- - Distribution records must be linked to governance approvals and auditable member communication artifacts.
+-- - The system must be able to report, per cooperative and per buyer/sponsor, total monetary premium allocation and covered volume/value for the selected period.
+
+cooperative_health_snapshots
+id                           UUID PK NOT NULL
+organisation_id              UUID FK → organisations.id NOT NULL
+snapshot_period_start        DATE NOT NULL
+snapshot_period_end          DATE NOT NULL
+member_coverage_ratio        NUMERIC(6,4) NULLABLE
+avg_income_local             NUMERIC(14,2) NULLABLE
+training_participation_ratio NUMERIC(6,4) NULLABLE
+premium_cash_payout_ratio    NUMERIC(6,4) NULLABLE
+premium_services_ratio       NUMERIC(6,4) NULLABLE
+created_at                   TIMESTAMPTZ NOT NULL
+updated_at                   TIMESTAMPTZ NOT NULL
+
+-- Rules:
+-- - Snapshot generation must be periodic (at least quarterly for active Coffee Open Chain profile participants).
+-- - Snapshot fields may be partially null when source data is absent, but missingness must be explicit.
+
+practice_adoption_programmes
+id                    UUID PK NOT NULL
+sponsor_org_id        UUID FK → organisations.id NOT NULL
+target_org_id         UUID FK → organisations.id NOT NULL
+commodity_id          UUID FK → commodities.id NOT NULL
+programme_name        TEXT NOT NULL
+programme_type        ENUM NOT NULL (PLOT_LEVEL_PRACTICE, TRAINING, INPUT_SUPPORT, MIXED)
+funding_amount_local  NUMERIC(14,2) NULLABLE
+currency_code         CHAR(3) NULLABLE
+start_date            DATE NOT NULL
+end_date              DATE NULLABLE
+status                ENUM NOT NULL (DRAFT, ACTIVE, PAUSED, COMPLETED, CANCELLED)
+created_at            TIMESTAMPTZ NOT NULL
+updated_at            TIMESTAMPTZ NOT NULL
+
+practice_adoption_records
+id                    UUID PK NOT NULL
+programme_id          UUID FK → practice_adoption_programmes.id NOT NULL
+plot_id               UUID FK → plots.id NOT NULL
+practice_code         TEXT NOT NULL
+adoption_status       ENUM NOT NULL (NOT_STARTED, IN_PROGRESS, ADOPTED, ABANDONED)
+evidence_document_ids UUID[] NOT NULL DEFAULT '{}'
+yield_change_kg_ha    NUMERIC(10,3) NULLABLE
+income_change_local   NUMERIC(14,2) NULLABLE
+recorded_at           TIMESTAMPTZ NOT NULL
+created_at            TIMESTAMPTZ NOT NULL
+updated_at            TIMESTAMPTZ NOT NULL
+
+-- Rules:
+-- - Sponsors/buyers may fund programmes at network or cooperative scope.
+-- - Programmes must be linkable to adoption rates at plot level.
+-- - Where yield/income deltas exist, records must preserve before/after comparability metadata in audit payloads.
 
 compliance_issues
 id               UUID PK NOT NULL
@@ -1914,7 +2180,19 @@ Evidence is requested if needed.
 Investigation status is updated.
 Outcome is recorded.
 Audit event is appended.
-### 30.3 Compliance package format
+
+### 30.3 Open Chain KPI reporting (coffee-first)
+For coffee networks using Open Chain profile controls, annual reporting snapshots must expose the following KPI set alongside EUDR compliance metrics:
+- percent of mapped farmers under long-term contracts
+- average living-income gap coverage per origin and per cooperative
+- percent of shipment volume under living-income-aligned pricing
+- adoption rate of key regenerative practices per cooperative and per sponsor/buyer network
+
+Normative rules:
+- KPI computations must include denominator and data-completeness metadata.
+- KPI outputs must be queryable per cooperative and per buyer to show money/value flow transparency.
+- KPI reporting may include nulls when data is not consented or unavailable, but null reasons must be explicit.
+### 30.4 Compliance package format
 Definition:
 A compliance package is a deterministic, immutable, signed artifact generated at shipment seal and regenerated as a new artifact when DDS acceptance state changes.
 
@@ -1945,7 +2223,7 @@ Retention:
 Regeneration rule:
 Packages are never overwritten in place. If an amendment is accepted, create a new package and link via `supersedes_id`. Prior package remains immutable.
 
-### 30.4 Portability export format and schema
+### 30.5 Portability export format and schema
 Format:
 - JSON-LD for all export types.
 
@@ -3026,7 +3304,7 @@ Bootstrap ingestion must be scalable, resumable, and auditable so onboarding vol
 ## 51. MVP Scope Definition and Compliance Deadline Phasing
 
 ### 51.1 MVP definition
-MVP is the minimum feature set that enables one Tier 2 cooperative to capture producer and plot data, assemble a batch, pass or acknowledge yield checks, build a shipment, and submit a DDS via `MANUAL_ASSIST` for one commodity in one country before 30 December 2026.
+MVP is the minimum feature set that enables one Tier 2 coffee cooperative to capture producer and plot data, assemble a batch, pass or acknowledge yield checks, build a shipment, and submit a DDS via `MANUAL_ASSIST` for one commodity in one country before 30 December 2026.
 
 MVP includes:
 - Section 10 identity and organisation model (`persons`, `organisations`, `org_members`, `org_invitations`)
@@ -3085,6 +3363,17 @@ Tracebud MVP supports `MANUAL_ASSIST` DDS preparation only. Operators using Trac
 
 Normative rule:
 All customer-facing launch materials must disclose MVP submission mode limitations explicitly.
+
+### 51.4 Coffee-first defaulting rule
+
+v1.6 must ship coffee-first defaults for:
+- benchmark seeds
+- workflow examples
+- UI role/playbook guidance
+- profile presets for living-income and regenerative overlays
+
+Normative extension rule:
+Coffee-first defaulting may not require coffee-specific schema forks; all new entities in Sections 9-17 must remain generalizable to cocoa and other EUDR commodities.
 
 ## 52. Commodity-Specific Due Diligence Requirements
 
@@ -3162,6 +3451,15 @@ Rules:
 
 Normative rule:
 Data realism constraints must not exclude smallholders by default, but must always emit explicit quality and risk signals.
+
+### 53.4 Coffee Open Chain overlay non-regression rule
+The Coffee Open Chain layer is an add-on profile that sits on top of canonical EUDR producer, plot, lineage, and compliance records.
+
+Normative constraints:
+- Overlay features must not bypass, weaken, or short-circuit deforestation checks, legal role decision tree, shipment sealing rules, DDS preparation, or TRACES integration.
+- Overlay alerts may add warnings or blocks; they must not remove canonical compliance blockers.
+- All overlay actions must emit audit events with profile/version context.
+- Living-income, regenerative, and cooperative-strengthening controls must reuse canonical workflow entities; forked compliance pipelines are prohibited.
 
 ## 54. Data Escrow and Business Continuity for Customer Compliance Records
 

@@ -11,7 +11,7 @@
 
 | Area | Existing Route/Component | Canonical Requirement | Gap Severity | Remediation Approach |
 |------|---------------------------|------------------------|--------------|----------------------|
-| **Role Model** | `useRole()` returns simplified tenant-scoped roles | Section 5: 7 legal workflow roles (OPERATOR, MICRO_SMALL_PRIMARY_OPERATOR, DOWNSTREAM_OPERATOR_FIRST/SUBSEQUENT, TRADER, OUT_OF_SCOPE, PENDING_MANUAL_CLASSIFICATION) + commercial tiers + permissions matrix | CRITICAL | Refactor: Expand RBAC to canonical role model; add role decision engine; implement permission matrix per Section 8 |
+| **Role Model** | `useRole()` returns simplified tenant-scoped roles | Section 5: 7 legal workflow roles (OPERATOR, MICRO_SMALL_PRIMARY_OPERATOR, DOWNSTREAM_OPERATOR_FIRST/SUBSEQUENT, TRADER, OUT_OF_SCOPE, PENDING_MANUAL_CLASSIFICATION) + commercial tiers + permissions matrix | CRITICAL | Refactor: Expand RBAC to canonical role model, add role decision engine, and implement permission matrix per Section 8 |
 | **State Machines** | Hardcoded status strings | Canonical status per entity (shipment_headers, dds_records, compliance_issues, yield_exception_requests) | CRITICAL | Refactor: Map current states to canonical; add missing transitions; implement immutable audit trail |
 | **Shipment Model** | `/packages/[id]/assemble` wizard with incomplete state tracking | Section 15: shipment_headers + shipment_lines + shipment_line_coverages with yield cap validation, blocking issues, liability acknowledgement | HIGH | Refactor: Align assembly flow to canonical shipment model; add lineage materialization; enforce yield-cap pre-flight gate |
 | **DDS Workflow** | `/compliance/page.tsx` shows pre-flight checks only | Section 16: dds_records with submission_status state machine (DRAFT → READY_TO_SUBMIT → SUBMITTED → ACCEPTED/REJECTED/PENDING_CONFIRMATION + amendment/withdrawal states); MANUAL_ASSIST path only for MVP | HIGH | Refactor: Add dds_records lifecycle UI; show TRACES reference numbers; link to shipment_header; implement audit event logging |
@@ -49,7 +49,7 @@
 | `/fpic` | Keep | MVP | Supplier User, Field Manager | evidence_documents, consent_grants | DRAFT → UPLOADED → UNDER_REVIEW → APPROVED/REJECTED | GET/POST /evidence-documents?type=FPIC |
 | `/audit-log` | Keep | MVP | Auditor, Org Admin | audit_events | N/A | GET /audit-events?org_id={org_id} |
 | `/admin` | Refactor | MVP | Org Admin | organisations, users, roles, billing | N/A | GET/PATCH /orgs/{id}, GET/POST /orgs/{id}/users, GET /orgs/{id}/billing |
-| `/reports` | Defer | V1+ | Importer, Trader, Risk Reviewer | dds_records, shipments (aggregate) | N/A | GET /reports/shipment-summary |
+| `/reports` | Defer | V1+ | Buyer, Trader, Risk Reviewer | dds_records, shipments (aggregate) | N/A | GET /reports/shipment-summary |
 | `/sponsor-admin` | **New (Release 2+)** | V1+ | Sponsor Admin, Network Admin | organisations, data_visibility_policies, delegated_admin_actions | N/A | N/A |
 | `/requests` | **New (Release 2+)** | V1+ | All roles | requests, request_campaigns, request_campaign_targets | request status: OPEN → IN_PROGRESS → FULFILLED/EXPIRED/CANCELLED; campaign status: DRAFT → QUEUED → RUNNING → COMPLETED/PARTIAL/CANCELLED | N/A |
 
@@ -423,7 +423,7 @@ if (!featureFlags.get(requiredFlag)) {
 
 | Component | Current State | Required Refactor | Impact |
 |-----------|--------------|-------------------|--------|
-| `<ExporterDashboard />` | Shows metrics only | Add KPI cards for blocking issues, SLA breaches, DDS queue | 5 files |
+| `<SupplierDashboard />` | Shows metrics only | Add KPI cards for blocking issues, SLA breaches, DDS queue | 5 files |
 | `<SidebarNav />` | Fixed menu | Make role-aware; hide/show per MVP gating | 2 files |
 | `<PackagesTable />` | Shows shipment_headers rows | Add dds_records.submission_status column; show legal_role; add "Submit DDS" action | 3 files |
 | `<ComplianceCheckList />` | Hardcoded checks | Link to compliance_issues; show blocking vs. warning; track audit events | 2 files |
