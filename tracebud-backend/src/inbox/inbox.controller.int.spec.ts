@@ -6,12 +6,6 @@ import { InboxService } from './inbox.service';
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const separator = connectionString.includes('?') ? '&' : '?';
-  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
-  return `${connectionString}${separator}options=${options}`;
-}
-
 describeIfDb('InboxController integration: tenant claim + role policy', () => {
   let pool: Pool;
   let service: InboxService;
@@ -19,7 +13,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: withSearchPath(testDbUrl!, 'public'),
+      connectionString: testDbUrl,
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
@@ -39,14 +33,14 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
     await pool.end();
   });
 
   beforeEach(async () => {
-    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
     await service.bootstrap('reset');
   });
 
