@@ -47,7 +47,7 @@ jobs:
       - name: Integration tests (PostGIS)
         run: npm run test:integration
 
-            - name: Ownership integration tests (required)
+      - name: Ownership integration tests (required)
         run: |
           set -euo pipefail
           npm run test:integration:ownership | tee ownership-integration-output.txt
