@@ -13,6 +13,15 @@ import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 export class HarvestController {
   constructor(private readonly harvestService: HarvestService) {}
 
+  private requireTenantClaim(req: any) {
+    const tenantId =
+      req?.user?.app_metadata?.tenant_id ??
+      req?.user?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim');
+    }
+  }
+
   @Post()
   async create(@Body() dto: CreateHarvestDto, @Req() req: any) {
     const userId = req.user?.id as string | undefined;
@@ -25,7 +34,19 @@ export class HarvestController {
 
   @Get('vouchers')
   @ApiQuery({ name: 'farmerId', required: true })
-  async listVouchers(@Query('farmerId') farmerId: string) {
+  async listVouchers(@Query('farmerId') farmerId: string, @Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.harvestService.isFarmerOwnedByUser(farmerId, userId);
+      if (!owned) {
+        throw new ForbiddenException('Farmer scope violation');
+      }
+    }
     return this.harvestService.listVouchersForFarmer(farmerId);
   }
 
@@ -51,12 +72,22 @@ export class HarvestController {
 
   @Get('packages')
   @ApiQuery({ name: 'farmerId', required: true })
-  async listPackages(@Query('farmerId') farmerId: string) {
+  async listPackages(@Query('farmerId') farmerId: string, @Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role !== 'exporter') {
+      throw new ForbiddenException('Only exporters can list DDS packages');
+    }
     return this.harvestService.listDdsPackagesForFarmer(farmerId);
   }
 
   @Get('packages/:id')
-  async getPackage(@Param('id') id: string) {
+  async getPackage(@Param('id') id: string, @Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role !== 'exporter') {
+      throw new ForbiddenException('Only exporters can view DDS package details');
+    }
     return this.harvestService.getDdsPackageDetail(id);
   }
 
@@ -66,7 +97,12 @@ export class HarvestController {
     description:
       'Returns a compact JSON object with lots, kg, plot areas and a TRACES-like reference field suitable for uploading or mapping into TRACES NT.',
   })
-  async getPackageTracesJson(@Param('id') id: string) {
+  async getPackageTracesJson(@Param('id') id: string, @Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role !== 'exporter') {
+      throw new ForbiddenException('Only exporters can export TRACES JSON');
+    }
     return this.harvestService.getDdsPackageTracesJson(id);
   }
 

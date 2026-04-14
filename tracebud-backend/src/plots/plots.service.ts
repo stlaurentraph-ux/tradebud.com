@@ -518,6 +518,35 @@ export class PlotsService {
     return result.rows;
   }
 
+  async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM farmer_profile
+        WHERE id = $1
+          AND user_id = $2
+        LIMIT 1
+      `,
+      [farmerId, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async isPlotOwnedByUser(plotId: string, userId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        WHERE p.id = $1
+          AND fp.user_id = $2
+        LIMIT 1
+      `,
+      [plotId, userId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async runComplianceCheck(plotId: string) {
     const plotRes = await this.pool.query(
       `
