@@ -166,7 +166,7 @@ export class InboxService {
   private async ensureSchema(): Promise<void> {
     await this.pool.query(
       `
-        CREATE TABLE IF NOT EXISTS inbox_requests (
+        CREATE TABLE IF NOT EXISTS public.inbox_requests (
           id TEXT PRIMARY KEY,
           campaign_id TEXT NOT NULL,
           title TEXT NOT NULL,
@@ -184,9 +184,9 @@ export class InboxService {
 
     await this.pool.query(
       `
-        CREATE TABLE IF NOT EXISTS inbox_request_events (
+        CREATE TABLE IF NOT EXISTS public.inbox_request_events (
           id BIGSERIAL PRIMARY KEY,
-          request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+          request_id TEXT NOT NULL REFERENCES public.inbox_requests(id) ON DELETE CASCADE,
           event_type TEXT NOT NULL,
           actor_tenant_id TEXT NULL,
           payload JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -198,19 +198,19 @@ export class InboxService {
     await this.pool.query(
       `
         CREATE INDEX IF NOT EXISTS idx_inbox_requests_recipient_status_due
-        ON inbox_requests(recipient_tenant_id, status, due_at)
+        ON public.inbox_requests(recipient_tenant_id, status, due_at)
       `,
     );
     await this.pool.query(
       `
         CREATE INDEX IF NOT EXISTS idx_inbox_requests_campaign
-        ON inbox_requests(campaign_id)
+        ON public.inbox_requests(campaign_id)
       `,
     );
     await this.pool.query(
       `
         CREATE INDEX IF NOT EXISTS idx_inbox_request_events_request_id
-        ON inbox_request_events(request_id)
+        ON public.inbox_request_events(request_id)
       `,
     );
   }
@@ -220,13 +220,13 @@ export class InboxService {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM inbox_request_events');
-      await client.query('DELETE FROM inbox_requests');
+      await client.query('DELETE FROM public.inbox_request_events');
+      await client.query('DELETE FROM public.inbox_requests');
 
       for (const request of requests) {
         await client.query(
           `
-            INSERT INTO inbox_requests (
+            INSERT INTO public.inbox_requests (
               id,
               campaign_id,
               title,
@@ -258,7 +258,7 @@ export class InboxService {
 
         await client.query(
           `
-            INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+            INSERT INTO public.inbox_request_events (request_id, event_type, actor_tenant_id, payload)
             VALUES ($1, $2, $3, $4::jsonb)
           `,
           [
@@ -281,7 +281,7 @@ export class InboxService {
 
   private async seedIfEmpty(): Promise<void> {
     await this.ensureSchema();
-    const countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
+    const countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
     if ((Number(countRes.rows[0]?.count ?? '0')) > 0) return;
     const defaults = this.requestsForAction('reset');
     await this.upsertRequests(defaults, 'auto_init');
@@ -323,7 +323,7 @@ export class InboxService {
           status,
           created_at,
           updated_at
-        FROM inbox_requests
+        FROM public.inbox_requests
         WHERE recipient_tenant_id = $1
         ORDER BY due_at ASC, created_at ASC
       `,
@@ -352,7 +352,7 @@ export class InboxService {
       updated_at: Date | string;
     }>(
       `
-        UPDATE inbox_requests
+        UPDATE public.inbox_requests
         SET status = 'RESPONDED', updated_at = NOW()
         WHERE id = $1
           AND recipient_tenant_id = $2
@@ -376,7 +376,7 @@ export class InboxService {
     if (updatedRes.rowCount && updatedRes.rows[0]) {
       await this.pool.query(
         `
-          INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+          INSERT INTO public.inbox_request_events (request_id, event_type, actor_tenant_id, payload)
           VALUES ($1, 'REQUEST_RESPONDED', $2, $3::jsonb)
         `,
         [id, tenantId, JSON.stringify({ respondedAt: new Date().toISOString() })],
@@ -415,7 +415,7 @@ export class InboxService {
           status,
           created_at,
           updated_at
-        FROM inbox_requests
+        FROM public.inbox_requests
         WHERE id = $1
           AND recipient_tenant_id = $2
         LIMIT 1
