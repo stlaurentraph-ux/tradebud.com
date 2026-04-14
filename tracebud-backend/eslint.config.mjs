@@ -1,12 +1,19 @@
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import tsParser from "@typescript-eslint/parser";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
 
-const backendOverrides = {
-  files: ["src/**/*.{ts,tsx}"],
-  rules: {
-    "@next/next/no-html-link-for-pages": "off",
-    "@typescript-eslint/no-explicit-any": "off",
+export default [
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      ecmaVersion: "latest",
+      sourceType: "module",
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
   },
-};
-
-export default [...nextVitals, ...nextTs, backendOverrides];
+];
