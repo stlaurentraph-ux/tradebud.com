@@ -25,3 +25,38 @@ Track completed milestones/features/docs updates.
 - Canonical spec expanded with sections 51-55: MVP deadline phasing, commodity-specific due diligence, data reality constraints, data escrow continuity, and internal consistency rules.
 - Open questions register extended with OQ-09 and OQ-10; execution board now includes Priority 0 pre-engineering human gates and a contradiction-log artifact template.
 - Machine-readable API artifact added: `docs/openapi/tracebud-v1-draft.yaml` generated from Section 32.8 endpoint contract catalog.
+- Dashboard resume hardening shipped for cooperative inbox and demo readiness flows: permission-gated actions now include async recovery UX and audit-event emission; auth login loading state now recovers correctly on credential errors.
+- Cooperative inbox data is now tenant-scoped via `request-service` + `useInboxRequests` (replacing page-local mock list), and demo bootstrap seed/reset now includes inbox request state.
+- Dashboard inbox now exposes API endpoints for list/respond/bootstrap flows, and `useInboxRequests` is API-first with fallback; admin/demo seed actions are async-synced to API bootstrap state.
+- `tracebud-backend` now includes an inbox module with persistent snapshot events in `audit_log` and `/api/v1/inbox-requests` endpoints; dashboard API routes proxy to backend via `TRACEBUD_BACKEND_URL` with local fallback.
+- Backend inbox endpoints now enforce authenticated tenant context (derived from auth claims/profile) and dashboard proxy routes forward bearer auth headers to backend.
+- User-facing role naming is now aligned to product language (Producer/Supplier/Buyer/Sponsor/Reviewer) across badges, login personas, sidebar labels, and admin role displays, while internal role keys remain unchanged.
+- Secondary terminology cleanup pass completed across active demo/readiness/UI copy (runbook, readiness checklist, inbox, settings, harvest/package helper text, and legacy sidebar component).
+- Historical dashboard markdown artifacts were normalized to the same terminology set (Producer/Supplier/Buyer/Sponsor/Reviewer) for consistency across non-functional docs.
+- Readability polish applied to `DESIGN_AUDIT.md` and `MVP_GAP_ANALYSIS.md` to improve flow after terminology migration.
+- Final markdown style pass completed for `V1_REMEDIATION_BLUEPRINT.md`, `DASHBOARD_MVP_PLAN.md`, and `GRADING_ANALYSIS.md` for consistent tone and readability.
+- Strategic handoff artifacts created for next execution slice: `dashboard-auth-tenant-hardening-week-plan.md` and `FEAT-001` planning status updated with TB-DBX-001..004 sequence.
+- TB-DBX-001 delivered: backend inbox tenant resolution is now signed-claim-only (no email/domain fallback), tenant claim is mandatory for list/respond/bootstrap, and dashboard inbox proxy preserves backend auth semantics (`401`/`403`) while still forwarding bearer tokens.
+- TB-DBX-002 delivered: backend inbox persistence now uses dedicated tenant-scoped tables (`inbox_requests`, `inbox_request_events`) with indexes and idempotent respond transitions; state-changing operations continue to emit audit events for traceability.
+- TB-DBX-003 test slice delivered: added inbox tenant/state integration tests and controller claim-enforcement tests for signed tenant claims and exporter-only bootstrap authorization.
+- TB-DBX-004 delivered: deferred dashboard routes are now feature-gated at both nav and route-entry levels (`/requests`, `/reports`) with default MVP-safe flag values and a centralized gate registry/document.
+- TB-DBX-004 assertions delivered: dashboard package now includes automated gate tests (Vitest) validating default MVP blocking and flag-enabled access behavior for deferred routes.
+- TB-DBX-004 CI enforcement delivered: root CI workflow now runs dashboard `npm test` in a dedicated required `dashboard` job.
+- Founder OS foundation delivered: additive Supabase migrations/seeds/functions for outreach CRM and content cadence, plus non-breaking website lead mirror into `prospects` and `outreach_activity`.
+- Founder OS automation specs delivered: n8n workflow spec artifacts and setup runbook for daily outreach intelligence, weekly content planning, accountability checks, monthly review, and missed schedule alerts.
+- Founder OS dashboard phase 4 delivered: internal CRM/content pages and Supabase-backed API routes are now scaffolded in `apps/dashboard-product` with role-gated navigation entries and typed client hooks.
+- Founder OS Lite loop delivered: `Today` dashboard now tracks hard founder cadence goals (3 outreach actions/weekday, 2 posts/week), supports one-click queue/post plan bootstrapping, and captures outreach exchanges directly per person.
+- Backend report endpoint hardening delivered: `v1/reports` now requires exporter role, with controller-level regression tests to prevent unauthorized farmer/agent report access regressions.
+- Backend harvest/plots scope hardening delivered: farmer-role requests are now ownership-checked against `farmer_profile.user_id` for farmerId/plotId paths, and harvest package listing/detail/TRACES export endpoints now enforce exporter-only access; controller regression tests added.
+- Backend ownership integration coverage delivered: env-gated `ownership-scope.int.spec.ts` now validates farmer ownership and plot ownership join behavior against real Postgres fixtures using isolated schema setup.
+- Backend controller ownership integration coverage delivered: env-gated `controller-scope.int.spec.ts` now validates controller-level farmer scope deny/allow behavior for harvest vouchers and plot list/update paths with DB-backed ownership checks.
+- Ownership CI gate delivered: backend CI now runs `test:integration:ownership` as a dedicated required step, making ownership-scope integration execution explicit and auditable.
+- Signed tenant-claim enforcement expanded: backend `harvest`, `plots`, and `reports` controllers now reject requests missing `tenant_id` in signed token metadata; regression tests updated to cover missing-claim denial paths.
+- Signed tenant-claim enforcement closure delivered: `audit` controller now also enforces signed `tenant_id` claim with dedicated regression tests, completing coverage for all current `SupabaseAuthGuard` controllers.
+- Package/report export API integration coverage delivered: new DB-backed integration test validates combined tenant-claim + exporter-role policy deny/allow for `getPackageTracesJson` and `plotsReport`, and is included in required ownership integration CI script.
+- Package/report export API integration coverage expanded: same DB-backed test now also validates `harvestsReport` deny/allow under combined tenant-claim + exporter-role policy.
+- Ownership CI evidence publishing delivered: backend CI now writes ownership integration output log, adds a check-summary snapshot in job summary, and uploads raw run output as artifact (`backend-ownership-integration-log`).
+- Package access integration coverage expanded: DB-backed policy test now also validates `HarvestController.listPackages` and `HarvestController.getPackage` deny/allow under tenant-claim + exporter-role requirements.
+- Ownership CI enforcement tightened: backend CI now fails if ownership integration output reports non-zero skipped suites/tests, preventing silent bypass of DB-backed access-policy coverage.
+- Release QA evidence scaffold delivered: added `product-os/04-quality/release-qa-evidence.md` with required CI run/artifact fields for ownership/access signoff.
+- Ownership/access local validation delivered: DB-backed `test:integration:ownership` now confirmed non-skipped in local execution (`3/3 suites passed`, `7/7 tests passed`) with `TEST_DATABASE_URL` inline injection.

@@ -203,3 +203,275 @@ Append-only session log.
 - Risks: `apps/dashboard-product/types/index.ts` still contains some intentional compatibility scaffolding/legacy aliases and should be pruned in a dedicated cleanup pass after UI merge stabilizes.
 - Blockers: None.
 - Next step: run a compatibility-cleanup pass to remove deprecated aliases and update `lib/audit-events.ts` consumers accordingly.
+
+### 2026-04-09 (dashboard resume: inbox/demo hardening)
+- Focus: Resume dashboard-product demo slice and close reliability gaps in cooperative inbox, demo readiness controls, and auth loading recovery.
+- Files changed: `apps/dashboard-product/app/inbox/page.tsx`, `apps/dashboard-product/app/demo-readiness/page.tsx`, `apps/dashboard-product/lib/auth-context.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added explicit async state transitions and retry-safe UI feedback for inbox response/evidence actions and demo bootstrap actions; emitted audit events for key actions to preserve operational traceability.
+- Risks: Inbox data is still mock-seeded and not yet connected to backend request entities, so audit entity IDs are currently demo-local.
+- Blockers: None.
+- Next step: Wire cooperative inbox actions to backend request/evidence endpoints and replace mock request list with tenant-isolated API data.
+
+### 2026-04-09 (dashboard resume: tenant-scoped inbox data service)
+- Focus: Replace inbox page mock requests with tenant-scoped request data service and reactive hook.
+- Files changed: `apps/dashboard-product/lib/request-service.ts`, `apps/dashboard-product/lib/use-requests.ts`, `apps/dashboard-product/app/inbox/page.tsx`, `apps/dashboard-product/lib/demo-bootstrap.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Introduced in-memory request service APIs (`listInboxRequests`, `respondToInboxRequest`) with subscription updates and tenant isolation by `recipient_tenant_id`; wired seed/reset flows into demo bootstrap so readiness actions now include request state.
+- Risks: This is still local service-backed state (no external API persistence) and should be swapped to backend endpoints in the next slice.
+- Blockers: None.
+- Next step: Add backend request/evidence endpoints and switch `useInboxRequests` data source from local service to API calls without changing page-level UX contract.
+
+### 2026-04-09 (dashboard resume: inbox API endpoints + hook migration)
+- Focus: Migrate inbox request reads/actions to API endpoints while preserving `useInboxRequests` contract and demo UX.
+- Files changed: `apps/dashboard-product/app/api/inbox-requests/route.ts`, `apps/dashboard-product/app/api/inbox-requests/[id]/respond/route.ts`, `apps/dashboard-product/app/api/inbox-requests/bootstrap/route.ts`, `apps/dashboard-product/lib/use-requests.ts`, `apps/dashboard-product/lib/demo-bootstrap.ts`, `apps/dashboard-product/app/admin/page.tsx`, `apps/dashboard-product/app/demo-readiness/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added API layer for tenant-scoped inbox listing/respond action and switched hook to API-first with local fallback; demo bootstrap now syncs request seed/reset to API bootstrap endpoint.
+- Risks: Endpoints currently use in-process in-memory storage and are not yet persisted to the main backend datastore.
+- Blockers: None.
+- Next step: Move inbox request persistence to `tracebud-backend` storage and point API routes to backend service calls.
+
+### 2026-04-09 (dashboard resume: tracebud-backend inbox persistence path)
+- Focus: Add backend inbox-request service/controller/module and proxy dashboard API routes to backend for persistent storage path.
+- Files changed: `tracebud-backend/src/inbox/inbox.module.ts`, `tracebud-backend/src/inbox/inbox.service.ts`, `tracebud-backend/src/inbox/inbox.controller.ts`, `tracebud-backend/src/app.module.ts`, `apps/dashboard-product/app/api/inbox-requests/route.ts`, `apps/dashboard-product/app/api/inbox-requests/[id]/respond/route.ts`, `apps/dashboard-product/app/api/inbox-requests/bootstrap/route.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Backend now persists inbox snapshots in `audit_log` as immutable `inbox_requests_snapshot` events and exposes `/api/v1/inbox-requests` list/respond/bootstrap endpoints; dashboard routes call backend via `TRACEBUD_BACKEND_URL` and safely fallback to local service if unavailable.
+- Risks: Backend lint baseline still contains unrelated pre-existing violations; full backend lint does not pass globally yet.
+- Blockers: `TRACEBUD_BACKEND_URL` must be configured in dashboard runtime to activate backend proxy path.
+- Next step: add dedicated request tables/DTOs in backend schema (replacing snapshot-in-audit-log approach) and enforce authenticated tenant claims on backend inbox endpoints.
+
+### 2026-04-09 (dashboard resume: backend tenant-auth enforcement)
+- Focus: Enforce tenant context from authenticated backend user claims and remove tenant trust from client payload/query in inbox endpoints.
+- Files changed: `tracebud-backend/src/inbox/inbox.controller.ts`, `tracebud-backend/src/inbox/inbox.service.ts`, `apps/dashboard-product/lib/use-requests.ts`, `apps/dashboard-product/lib/demo-bootstrap.ts`, `apps/dashboard-product/app/api/inbox-requests/route.ts`, `apps/dashboard-product/app/api/inbox-requests/[id]/respond/route.ts`, `apps/dashboard-product/app/api/inbox-requests/bootstrap/route.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Backend inbox list/respond now derive tenant from auth profile (`app_metadata`/`user_metadata`/mapped demo emails) under `SupabaseAuthGuard`; dashboard API routes now forward bearer tokens to backend, while fallback local behavior remains for offline/demo continuity.
+- Risks: Demo session tokens (`demo_token_*`) are not valid Supabase JWTs, so backend auth path will activate only with real bearer tokens unless local fallback is used.
+- Blockers: None.
+- Next step: replace email-based tenant fallback mapping with signed tenant claims only, and move inbox state from audit snapshots to dedicated relational tables.
+
+### 2026-04-09 (dashboard resume: role naming UX pass)
+- Focus: Align user-facing role/dashboard naming to product language (`Producer`, `Supplier`, `Buyer`, `Sponsor`, `Reviewer`) without changing internal role keys.
+- Files changed: `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/components/common/role-badge.tsx`, `apps/dashboard-product/app/login/page.tsx`, `apps/dashboard-product/components/layout/app-header.tsx`, `apps/dashboard-product/components/layout/app-sidebar.tsx`, `apps/dashboard-product/app/admin/page.tsx`, `apps/dashboard-product/app/demo-readiness/page.tsx`, `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/components/auth/login-form.tsx`, `product-os/02-features/FEAT-008-dashboards.md`.
+- Decisions: Kept authorization/state model stable (`TenantRole` keys unchanged) and applied naming only in display layers to minimize regression risk.
+- Risks: Some long-tail copy in markdown/spec artifacts may still use legacy terms and can be harmonized in a docs-only sweep.
+- Blockers: None.
+- Next step: run a global copy/style pass for remaining legacy role terms in non-functional docs and helper text.
+
+### 2026-04-09 (dashboard resume: legacy wording cleanup sweep)
+- Focus: Harmonize remaining legacy role copy in active dashboard UI/help artifacts after initial label pass.
+- Files changed: `apps/dashboard-product/DEMO_RUNBOOK.md`, `apps/dashboard-product/DEMO_READINESS_CHECKLIST.md`, `apps/dashboard-product/app/inbox/page.tsx`, `apps/dashboard-product/app/demo-readiness/page.tsx`, `apps/dashboard-product/app/settings/page.tsx`, `apps/dashboard-product/components/dashboard/sidebar.tsx`, `apps/dashboard-product/app/harvests/new/page.tsx`, `apps/dashboard-product/app/packages/new/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/done-log.md`.
+- Decisions: Updated role wording in runbook/checklist and visible page copy to Producer/Supplier/Buyer/Sponsor/Reviewer while preserving canonical internal keys and seed persona emails.
+- Risks: Deep historical artifacts (`DESIGN_AUDIT.md`, `MVP_GAP_ANALYSIS.md`) still contain legacy terminology and may require a docs-only migration pass to fully normalize repository language.
+- Blockers: None.
+- Next step: optional docs-only pass for legacy terminology in archived/design analysis markdown files.
+
+### 2026-04-09 (dashboard resume: historical docs terminology migration)
+- Focus: Execute docs-only normalization in historical dashboard markdown docs to complete role-language migration.
+- Files changed: `apps/dashboard-product/DESIGN_AUDIT.md`, `apps/dashboard-product/MVP_GAP_ANALYSIS.md`, `apps/dashboard-product/V1_REMEDIATION_BLUEPRINT.md`, `apps/dashboard-product/GRADING_ANALYSIS.md`, `apps/dashboard-product/REQUIREMENTS.md`, `apps/dashboard-product/DASHBOARD_MVP_PLAN.md`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/done-log.md`.
+- Decisions: Replaced legacy role wording (Exporter/Importer/Cooperative/Sponsor Org/Country Reviewer) with Producer/Supplier/Buyer/Sponsor/Reviewer in non-functional markdown artifacts; restored literal example email addresses where terminology replacement accidentally altered domains.
+- Risks: Because this pass was lexical and docs-only, some context may still intentionally reference canonical legal terms in quoted spec excerpts.
+- Blockers: None.
+- Next step: optional editorial pass to tune sentence-level readability where term substitutions made long legacy paragraphs less natural.
+
+### 2026-04-09 (dashboard resume: docs readability polish)
+- Focus: Editorially polish the two highest-impact historical docs after terminology replacement.
+- Files changed: `apps/dashboard-product/DESIGN_AUDIT.md`, `apps/dashboard-product/MVP_GAP_ANALYSIS.md`.
+- Decisions: Smoothed role-section headings and role references for readability (e.g., SUPPLIER/BUYER/PRODUCER/REVIEWER nav blocks, reviewer queue wording) while preserving internal-key notes where relevant.
+- Risks: Remaining historical docs may still benefit from sentence-level polishing, but terminology consistency is now stable.
+- Blockers: None.
+- Next step: optional final copyedit pass for style/tone consistency across all dashboard markdown artifacts.
+
+### 2026-04-09 (dashboard resume: final markdown style pass)
+- Focus: Apply final tone/readability normalization on remaining dashboard markdown docs after terminology migration.
+- Files changed: `apps/dashboard-product/V1_REMEDIATION_BLUEPRINT.md`, `apps/dashboard-product/DASHBOARD_MVP_PLAN.md`, `apps/dashboard-product/GRADING_ANALYSIS.md`.
+- Decisions: Applied non-functional wording cleanup only (sentence flow, heading casing consistency, component naming consistency in documentation) without changing technical requirements or implementation scope.
+- Risks: None material; changes are editorial and docs-only.
+- Blockers: None.
+- Next step: Switch focus to next engineering task.
+
+### 2026-04-09 (strategy handoff: 1-week hardening plan)
+- Focus: Define next strategic execution plan to productionize tenant/auth boundaries and stabilize dashboard-backend integration.
+- Files changed: `product-os/01-roadmap/dashboard-auth-tenant-hardening-week-plan.md`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Created TB-DBX-001..004 ticket pack with owners/estimates/dependencies/acceptance/tests covering claim-only tenant resolution, dedicated inbox persistence, golden-path integration tests, and MVP gate enforcement.
+- Risks: Delivery risk depends on auth claim readiness and backend schema migration sequencing.
+- Blockers: None.
+- Next step: Start TB-DBX-001 implementation and wire CI checks for cross-tenant access denial tests.
+
+### 2026-04-09 (execution: TB-DBX-001 signed-claim tenant enforcement)
+- Focus: Enforce signed tenant claims in backend inbox endpoints and preserve backend auth semantics in dashboard proxy routes.
+- Files changed: `tracebud-backend/src/inbox/inbox.controller.ts`, `apps/dashboard-product/app/api/inbox-requests/route.ts`, `apps/dashboard-product/app/api/inbox-requests/[id]/respond/route.ts`, `apps/dashboard-product/app/api/inbox-requests/bootstrap/route.ts`, `apps/dashboard-product/lib/use-requests.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Removed email-based tenant fallback and root tenant fallback from backend inbox auth path; tenant claim now required for list/respond/bootstrap via signed claim lookup; dashboard proxy now forwards auth and returns backend `401/403` responses directly instead of masking with local fallback.
+- Risks: Demo `demo_token_*` values remain non-Supabase JWTs, so backend-auth path still requires real signed tokens outside fallback/demo mode.
+- Blockers: None.
+- Next step: Execute TB-DBX-002 (replace inbox snapshot persistence with dedicated relational request tables).
+
+### 2026-04-09 (execution: TB-DBX-002 dedicated inbox tables)
+- Focus: Replace inbox snapshot-in-audit persistence with dedicated tenant-scoped request/event tables while preserving dashboard API contracts.
+- Files changed: `tracebud-backend/src/inbox/inbox.service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added schema bootstrap for `inbox_requests` + `inbox_request_events`, tenant-scoped indexes, idempotent respond transition handling, and explicit audit emission (`inbox_requests_seeded`, `inbox_request_responded`) for state-changing operations.
+- Risks: Current table DDL is service-managed (`CREATE TABLE IF NOT EXISTS`) and should be moved to formal migration artifacts before production rollout.
+- Blockers: None.
+- Next step: Execute TB-DBX-003 integration tests for role/state/tenant boundaries across dashboard-backend lane.
+
+### 2026-04-09 (execution: TB-DBX-003 inbox role/state/tenant tests)
+- Focus: Add golden-path tenant and state boundary tests for inbox paths.
+- Files changed: `tracebud-backend/src/inbox/inbox.service.int.spec.ts`, `tracebud-backend/src/inbox/inbox.controller.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added env-gated integration tests for tenant-scoped list/respond flows and idempotency; added controller-level auth claim enforcement tests for missing tenant claim and exporter-only bootstrap policy.
+- Risks: Full DB-backed integration coverage executes only when `TEST_DATABASE_URL` is configured in CI/local test env.
+- Blockers: None.
+- Next step: Wire `TEST_DATABASE_URL` in CI lane for mandatory execution and expand role-path tests across shipment/reviewer/sponsor endpoints.
+
+### 2026-04-09 (execution: TB-DBX-004 MVP route/feature gating)
+- Focus: Freeze deferred post-MVP dashboard routes behind explicit feature flags with navigation + route-entry enforcement.
+- Files changed: `apps/dashboard-product/lib/feature-gates.ts`, `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/middleware.ts`, `product-os/01-roadmap/dashboard-mvp-feature-gates.md`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added central gate registry and default-disabled flags for deferred routes (`/requests`, `/reports`); gated sidebar visibility via RBAC; blocked direct deep-link access via middleware redirect when feature flags are off.
+- Risks: Route gating currently covers deferred routes present in this dashboard package; additional Release 2+ screens should be appended to the same registry as they are introduced.
+- Blockers: None.
+- Next step: Add CI assertions for "deferred route inaccessible" in dashboard lane and extend gate registry as new deferred routes are added.
+
+### 2026-04-09 (execution: TB-DBX-004 gate assertions)
+- Focus: Add automated dashboard assertions for deferred-route accessibility under MVP/default and enabled-flag modes.
+- Files changed: `apps/dashboard-product/package.json`, `apps/dashboard-product/lib/feature-gates.ts`, `apps/dashboard-product/middleware.ts`, `apps/dashboard-product/lib/feature-gates.test.ts`, `apps/dashboard-product/middleware.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Introduced Vitest in dashboard package and added tests validating default-disabled behavior for `/requests` and `/reports`, enabled-flag behavior, and middleware redirect decision logic.
+- Risks: Test lane is currently package-local; CI wiring is still needed if dashboard tests should become mandatory in pipeline.
+- Blockers: None.
+- Next step: Wire dashboard `npm test` into CI and extend gate assertions as additional deferred routes are added.
+
+### 2026-04-09 (execution: TB-DBX-004 CI enforcement)
+- Focus: Make dashboard feature-gate tests a required CI lane.
+- Files changed: `.github/workflows/ci.yml`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `dashboard` CI job in root workflow, running `npm install` and `npm test` in `apps/dashboard-product` using cached npm dependencies.
+- Risks: CI runtime increases slightly due to additional job.
+- Blockers: None.
+- Next step: Extend dashboard test suite to cover newly deferred routes as they are introduced.
+
+### 2026-04-13 (founder-os foundation slice)
+- Focus: Add Founder OS data model, SQL functions, seed templates, and safe website lead mirroring for outreach intelligence and content cadence.
+- Files changed: `supabase/migrations/20260413_001_founder_os_tables.sql`, `supabase/migrations/20260413_002_founder_os_functions.sql`, `supabase/seeds/20260413_001_founder_os_seed.sql`, `supabase/README.md`, `apps/marketing/lib/founder-os-mapper.ts`, `apps/marketing/app/api/leads/route.ts`, `apps/marketing/README.md`, `automation/n8n/founder-os/*`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Existing per-form lead tables remain canonical intake path; Founder OS writes run as additive mirror (`prospects`, `outreach_activity`) with best-effort resilience to avoid breaking active forms during rollout.
+- Risks: Founder OS mirror inserts require new tables/functions to be deployed first in Supabase; until migration application, mirror path will warn and skip while intake still succeeds.
+- Blockers: None.
+- Next step: Apply migrations + seeds in Supabase, validate daily/content function outputs with real data, then scaffold dashboard CRM/content pages behind explicit permissions.
+
+### 2026-04-13 (founder-os dashboard phase 4)
+- Focus: Deliver lightweight internal Founder OS dashboard modules with API routes, hooks, and role-gated navigation.
+- Files changed: `apps/dashboard-product/app/api/crm/*`, `apps/dashboard-product/app/api/content/*`, `apps/dashboard-product/lib/supabase-admin.ts`, `apps/dashboard-product/lib/crm-service.ts`, `apps/dashboard-product/lib/content-service.ts`, `apps/dashboard-product/lib/use-crm.ts`, `apps/dashboard-product/lib/use-content.ts`, `apps/dashboard-product/app/crm/*`, `apps/dashboard-product/app/content/*`, `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/types/index.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Exposed minimal founder UI slice first (prospects, daily actions, templates, calendar, tasks, review) using additive Supabase-backed API routes and existing dashboard architecture, with nav visibility scoped to sponsor role path.
+- Risks: API routes currently assume valid Supabase env vars and table availability in dashboard runtime; if absent, pages return explicit API errors.
+- Blockers: None.
+- Next step: Add task/action analytics events and tighten permission split for read vs write actions if founder access expands beyond sponsor role.
+
+### 2026-04-13 (founder-os lite execution loop)
+- Focus: Narrow Founder OS to a founder-operating system with explicit daily/weekly targets and exchange tracking.
+- Files changed: `apps/dashboard-product/app/founder-os/page.tsx`, `apps/dashboard-product/components/layout/founder-os-shell.tsx`, `apps/dashboard-product/app/founder-os/crm/daily-actions/page.tsx`, `apps/dashboard-product/app/founder-os/crm/prospects/page.tsx`, `apps/dashboard-product/app/founder-os/content/calendar/page.tsx`, `apps/dashboard-product/app/api/crm/daily-actions/route.ts`, `apps/dashboard-product/app/api/crm/exchanges/route.ts`, `apps/dashboard-product/app/api/content/calendar/route.ts`, `apps/dashboard-product/lib/crm-service.ts`, `apps/dashboard-product/lib/content-service.ts`, `apps/dashboard-product/lib/use-crm.ts`, `apps/dashboard-product/lib/use-content.ts`, `apps/dashboard-product/types/index.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: Enforced simple operating targets in product surface (3 outreach weekday actions/day, 2 posts/week), added bootstrap planners for missing actions/posts, and introduced per-person outreach exchange logs to keep conversation context auditable and actionable.
+- Risks: Planner currently assumes single-operator context (`owner=raph`) and generic priority heuristics; multi-operator scoring and analytics events remain follow-up work.
+- Blockers: None.
+- Next step: Add analytics event emission for plan bootstrap/action completion and introduce weekly review streak signals.
+
+### 2026-04-13 (execution: backend report role boundary hardening)
+- Focus: tighten MVP authorization boundaries by enforcing explicit role checks on report exports.
+- Files changed: `tracebud-backend/src/reports/reports.controller.ts`, `tracebud-backend/src/reports/reports.controller.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added exporter-only guard logic inside reports controller methods and regression tests for deny (farmer/agent) and allow (exporter) paths.
+- Risks: Report endpoints still filter by `farmerId` query; full tenant-claim scoping for non-inbox modules remains an open hardening lane.
+- Blockers: None.
+- Next step: Extend signed-tenant-claim and cross-tenant denial patterns into additional backend modules (reports/harvest/plots) where tenant context is currently query-driven.
+
+### 2026-04-13 (execution: harvest/plots farmer scope enforcement)
+- Focus: extend cross-tenant denial coverage beyond inbox/reports by enforcing farmer ownership on farmerId/plotId-driven endpoints.
+- Files changed: `tracebud-backend/src/harvest/harvest.controller.ts`, `tracebud-backend/src/harvest/harvest.service.ts`, `tracebud-backend/src/harvest/harvest.controller.spec.ts`, `tracebud-backend/src/plots/plots.controller.ts`, `tracebud-backend/src/plots/plots.service.ts`, `tracebud-backend/src/plots/plots.controller.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added ownership-check helpers against `farmer_profile.user_id` and enforced them for farmer-role calls on harvest create/list and plot list/mutation/history paths; tightened harvest package list/detail/TRACES export access to exporter role only.
+- Risks: Ownership checks are currently controller-level and role-conditional; full service-layer tenant-claim propagation and DB-level row security remain future hardening lanes.
+- Blockers: None.
+- Next step: Add integration tests using `TEST_DATABASE_URL` fixtures to validate farmer-ownership deny paths and exporter allow paths through real DB joins.
+
+### 2026-04-13 (execution: ownership integration fixtures)
+- Focus: add DB-backed integration coverage for newly introduced farmer ownership join checks.
+- Files changed: `tracebud-backend/src/harvest/ownership-scope.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added env-gated integration tests that use an isolated schema (`tb_scope_test`) and minimal fixture tables to validate `isFarmerOwnedByUser` and `isPlotOwnedByUser` behavior against real Postgres joins without polluting shared tables.
+- Risks: In local environments without `TEST_DATABASE_URL`, integration suite remains skipped; CI execution with DB secret remains required for enforcement.
+- Blockers: None.
+- Next step: Add controller/API-level integration assertions (not only service helper joins) for deny/allow ownership paths under DB-enabled CI.
+
+### 2026-04-13 (execution: controller ownership integration fixtures)
+- Focus: add DB-backed controller-level integration assertions for farmer scope deny/allow paths.
+- Files changed: `tracebud-backend/src/harvest/controller-scope.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added env-gated integration test with isolated schema (`tb_controller_scope_test`) validating `HarvestController.listVouchers`, `PlotsController.listByFarmer`, and `PlotsController.updateMetadata` deny/allow behavior through real ownership joins.
+- Risks: Local runs without `TEST_DATABASE_URL` still skip integration suites; CI DB-backed execution remains the enforcement path.
+- Blockers: None.
+- Next step: Add CI-level evidence step/reporting for ownership integration slices and expand to package/report endpoints with full tenant-claim fixture coverage.
+
+### 2026-04-13 (execution: ownership CI evidence gate)
+- Focus: make ownership integration execution explicit and required in CI.
+- Files changed: `tracebud-backend/package.json`, `.github/workflows/ci.yml`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added dedicated script `test:integration:ownership` and a required backend CI step `Ownership integration tests (required)` after baseline integration tests.
+- Risks: Without `TEST_DATABASE_URL`, ownership integration suites remain skipped locally; CI secret remains mandatory for non-skipped execution.
+- Blockers: None.
+- Next step: Extend explicit CI integration gate pattern to additional tenant-claim API slices (reports/harvest package/export paths) and capture pass/fail metrics in release QA artifacts.
+
+### 2026-04-13 (execution: signed tenant-claim expansion to harvest/plots/reports)
+- Focus: enforce signed tenant claim requirement consistently across additional authenticated backend controllers.
+- Files changed: `tracebud-backend/src/harvest/harvest.controller.ts`, `tracebud-backend/src/plots/plots.controller.ts`, `tracebud-backend/src/reports/reports.controller.ts`, `tracebud-backend/src/reports/reports.controller.spec.ts`, `tracebud-backend/src/harvest/harvest.controller.spec.ts`, `tracebud-backend/src/plots/plots.controller.spec.ts`, `tracebud-backend/src/harvest/controller-scope.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `tenant_id`-claim requirement checks in controller entry paths and updated regression suites to explicitly validate missing-claim denial while preserving role/scope checks.
+- Risks: Some authenticated endpoints may still rely on role checks without explicit tenant-claim enforcement and require follow-up inventory.
+- Blockers: None.
+- Next step: complete endpoint inventory for missing claim checks and add DB-backed API integration tests for package/report export paths under tenant-claim policy.
+
+### 2026-04-13 (execution: audit tenant-claim closure)
+- Focus: close remaining authenticated-controller tenant-claim gap discovered by controller inventory.
+- Files changed: `tracebud-backend/src/audit/audit.controller.ts`, `tracebud-backend/src/audit/audit.controller.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added signed `tenant_id` claim requirement for `AuditController.create` and `AuditController.list`; added regression tests for missing-claim denial and allow path when claim is present.
+- Risks: API-level integration coverage for package/report export paths under tenant-claim policy is still pending.
+- Blockers: None.
+- Next step: add DB-backed API integration tests for package/report export deny/allow paths with tenant-claim + role requirements.
+
+### 2026-04-13 (execution: package/report export access integration)
+- Focus: add DB-backed API integration tests for export/report endpoints under combined tenant-claim + role policy.
+- Files changed: `tracebud-backend/src/reports/package-report-access.int.spec.ts`, `tracebud-backend/package.json`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added isolated schema fixture test (`tb_api_access_test`) validating deny/allow for `HarvestController.getPackageTracesJson` and `ReportsController.plotsReport` across missing-claim, non-exporter, and exporter-with-claim paths; included test in required `test:integration:ownership` script.
+- Risks: Local execution remains skipped without `TEST_DATABASE_URL`; CI execution is the enforcement path for non-skipped verification.
+- Blockers: None.
+- Next step: extend integration coverage to additional report/export surfaces and capture execution evidence in CI artifacts when DB-backed suites run.
+
+### 2026-04-13 (execution: report harvest endpoint access coverage)
+- Focus: extend DB-backed export/report access integration to include harvest report endpoint.
+- Files changed: `tracebud-backend/src/reports/package-report-access.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Expanded deny/allow matrix in integration test to include `ReportsController.harvestsReport` with the same missing-claim, non-exporter, and exporter-with-claim policy assertions used for package TRACES export and plots report.
+- Risks: Execution remains env-gated by `TEST_DATABASE_URL`; local runs still skip without DB secret.
+- Blockers: None.
+- Next step: add CI artifact evidence for non-skipped execution and extend access integration coverage to any remaining export/report surfaces.
+
+### 2026-04-13 (execution: ownership CI evidence publishing)
+- Focus: publish explicit CI evidence for ownership/access integration execution.
+- Files changed: `.github/workflows/ci.yml`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: updated ownership integration CI step to tee output to log file, append key test summary lines to `$GITHUB_STEP_SUMMARY`, and upload raw output artifact (`backend-ownership-integration-log`) for PR review/auditability.
+- Risks: Evidence quality depends on DB-backed suite running non-skipped with `TEST_DATABASE_URL` in CI.
+- Blockers: None.
+- Next step: verify first CI run includes non-skipped ownership suites and attach screenshot/link to artifact in release QA notes.
+
+### 2026-04-13 (execution: package list/detail access coverage)
+- Focus: extend DB-backed package/report access integration to include package list and package detail endpoints.
+- Files changed: `tracebud-backend/src/reports/package-report-access.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: expanded integration matrix to validate `HarvestController.listPackages` and `HarvestController.getPackage` deny/allow under missing-claim, non-exporter, and exporter-with-claim paths in the same fixture suite as TRACES and reports access tests.
+- Risks: still env-gated by `TEST_DATABASE_URL`; local runs skip without DB secret.
+- Blockers: None.
+- Next step: validate first CI run with non-skipped ownership suite and archive evidence artifact link in release QA notes.
+
+### 2026-04-13 (execution: ownership skip hard-fail gate)
+- Focus: prevent silent CI pass when ownership integration suites are skipped.
+- Files changed: `.github/workflows/ci.yml`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`, `product-os/04-quality/qa-scenarios.md`.
+- Decisions: Added CI check that fails ownership step if run output contains non-zero skipped counts; updated QA scenario to require non-skipped ownership/access policy suite execution evidence.
+- Risks: If CI DB secret/config is missing or unstable, backend lane will fail by design until corrected.
+- Blockers: None.
+- Next step: run CI and record first non-skipped ownership evidence artifact link in QA notes.
+
+### 2026-04-13 (execution: release QA evidence scaffold)
+- Focus: create explicit release-QA evidence handoff template for ownership/access lane.
+- Files changed: `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added structured evidence template with required fields for CI run URL, commit SHA, artifact URL, summary snapshot, and reviewer signoff.
+- Risks: Template remains unpopulated until CI run with non-skipped DB-backed ownership suite is available.
+- Blockers: Local environment lacks `TEST_DATABASE_URL`; cannot produce non-skipped local evidence.
+- Next step: populate template from first successful CI run artifact (`backend-ownership-integration-log`) and mark reviewer decision.
+
+### 2026-04-13 (validation: ownership non-skipped local execution)
+- Focus: verify DB-backed ownership/access integration suites execute non-skipped locally with `TEST_DATABASE_URL`.
+- Files changed: `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Confirmed local run executes all required suites with no skips (`3 passed suites`, `7 passed tests`) using inline `TEST_DATABASE_URL` injection from root `.env.local`.
+- Risks: Release signoff still requires CI-hosted evidence (run URL + artifact link), not only local terminal output.
+- Blockers: None.
+- Next step: trigger CI on current branch and populate evidence template with CI run URL, artifact URL, and reviewer decision.
