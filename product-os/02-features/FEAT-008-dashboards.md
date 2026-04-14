@@ -62,6 +62,14 @@ Reference canonical catalog in `product-os/04-quality/exception-catalog.md`.
 
 Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
 
+- Founder OS Lite analytics coverage now includes:
+  - daily outreach plan bootstrap action emission (`REQUEST_CAMPAIGN_STARTED`)
+  - weekly content plan bootstrap action emission (`REQUEST_CAMPAIGN_STARTED`)
+  - outreach daily-action completion emission (`REQUEST_CAMPAIGN_RESPONSE_RECEIVED`)
+- Cadence visibility includes streak signals on `Today`:
+  - consecutive weekdays meeting outreach target (3 completed actions/day)
+  - consecutive weeks meeting content target (2 LinkedIn posts/week)
+
 ## Risks
 
 - Scope creep beyond MVP boundary
@@ -73,7 +81,7 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
 
 ## Status
 
-Planned
+In progress (Founder OS Lite analytics + cadence visibility slice delivered; coverage tests pending)
 
 ## Definition of done
 

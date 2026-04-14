@@ -1,0 +1,20 @@
+{
+  "name": "Founder OS - Daily Outreach Intelligence",
+  "meta": {
+    "description": "Generate and distribute daily outreach actions at 08:00 Europe/Oslo."
+  },
+  "trigger": {
+    "type": "cron",
+    "timezone": "Europe/Oslo",
+    "schedule": "0 8 * * *"
+  },
+  "steps": [
+    "Call Supabase SQL function generate_daily_actions(current_date).",
+    "Fetch daily_actions rows for current_date with joined prospect context.",
+    "Group actions by action_type: first_message, follow_up, demo_reminder, review_reply, stale_lead.",
+    "Format concise summary text block.",
+    "Send summary via email.",
+    "Optionally post summary to Slack and Notion."
+  ],
+  "expected_output": "TRACEBUD DAILY OUTREACH summary grouped by action type."
+}

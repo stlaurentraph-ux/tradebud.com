@@ -35,6 +35,16 @@
 - Apply Founder OS SQL artifacts in Supabase and validate `generate_daily_actions` + `generate_content_tasks` outputs against real leads/content data.
 - Founder OS phase 4 scaffold complete in dashboard app (`/crm/*`, `/content/*` + API routes); next step is hardening write-action permissions and adding analytics event coverage for founder action tracking.
 - Founder OS Lite execution slice complete: `Today` flow + target bootstrap + exchange logging shipped; next step is analytics event instrumentation for bootstrap/action completion and cadence streak visibility.
+- Founder OS analytics + cadence visibility slice complete: bootstrap/completion actions now emit audit-backed founder analytics events and `Today` now surfaces outreach/publishing streaks using recent action history; next is validating streak behavior against seeded historical data and adding UI test coverage.
+- Customer-product priority: inbox routes are being hardened to backend-only mode (no local fallback) so tenant-isolated request list/respond/bootstrap flows fail closed when backend is unavailable.
+- Inbox proxy hardening regression coverage complete in dashboard tests: fail-closed (`503` without backend URL) and auth-header pass-through are now asserted for list/respond/bootstrap routes.
+- Inbox proxy error-propagation coverage complete: dashboard route tests now also assert backend `401/403` status and payload pass-through for list/respond/bootstrap to preserve tenant-claim and role denial semantics in UI flows.
+- Backend inbox controller denial semantics coverage extended: unit tests now assert missing signed tenant-claim rejection on `respond`, explicit non-exporter bootstrap denial messaging, and allow-path bootstrap execution for exporter role.
+- Backend controller policy regressions resolved: `audit` and `harvest` controller tests now align with tenant-claim + farmer-scope rules, and backend unit suite is green again.
+- DB-backed inbox controller integration coverage added (`inbox.controller.int.spec.ts`) for tenant-claim denial/allow + exporter bootstrap role policy; next is CI evidence capture on non-skipped execution with `TEST_DATABASE_URL`.
+- Required ownership CI lane now includes inbox controller DB-backed policy integration (`src/inbox/inbox.controller.int.spec.ts`); next is capturing first CI artifact proving non-skipped 4-suite execution.
+- Controller-scope integration flake hardening applied: schema is now dropped/recreated in `controller-scope.int.spec.ts` before setup to avoid stale FK metadata across interrupted runs.
+- Backend integration test commands are now local-env resilient: `test:integration` and `test:integration:ownership` auto-load `TEST_DATABASE_URL` from repo-root `.env.local` when unset in shell; local ownership lane now passes non-skipped (`4 suites`, `10 tests`).
 
 ## Priority migration lanes (v1.6)
 

@@ -1,0 +1,21 @@
+{
+  "name": "Founder OS - Website Form Intake",
+  "meta": {
+    "description": "Normalize website lead submissions into prospects and outreach activity."
+  },
+  "trigger": {
+    "type": "webhook",
+    "path": "/founder-os/website-lead-intake"
+  },
+  "steps": [
+    "Validate payload shape from website lead source.",
+    "Check existing prospect by email.",
+    "Insert or update prospects with source=website_form and stage=identified.",
+    "Insert outreach_activity with activity_type=identified and channel=website.",
+    "Send optional founder notification."
+  ],
+  "guardrails": [
+    "Do not replace existing website form pipeline.",
+    "Use idempotent matching on email to avoid duplicates."
+  ]
+}

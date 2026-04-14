@@ -24,6 +24,15 @@ import { CreateAuditEventDto } from './dto/create-audit-event.dto';
 export class AuditController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  private requireTenantClaim(req: any) {
+    const tenantId =
+      req?.user?.app_metadata?.tenant_id ??
+      req?.user?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim');
+    }
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Append immutable audit event',
@@ -31,6 +40,7 @@ export class AuditController {
       'Field app and agents can record declaration snapshots, device metadata, and other events into the central audit_log.',
   })
   async create(@Body() dto: CreateAuditEventDto, @Req() req: any) {
+    this.requireTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
       throw new ForbiddenException('Only farmers, agents, or exporters can append audit events');
@@ -65,7 +75,8 @@ export class AuditController {
 
   @Get()
   @ApiQuery({ name: 'farmerId', required: false })
-  async list(@Query('farmerId') farmerId?: string) {
+  async list(@Query('farmerId') farmerId: string | undefined, @Req() req: any) {
+    this.requireTenantClaim(req);
     const query = (params?: string[]) => {
       if (params) {
         return this.pool.query(
