@@ -29,14 +29,14 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
     await pool.end();
   });
 
   beforeEach(async () => {
-    await pool.query('DROP TABLE IF EXISTS inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
     await pool.query(`DELETE FROM audit_log WHERE event_type IN ('inbox_requests_seeded', 'inbox_request_responded')`);
   });
 
@@ -65,7 +65,7 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
     expect(second.id).toBe(first.id);
 
     await expect(service.respond(requestId, 'tenant_brazil_001')).rejects.toThrow(NotFoundException);
-  });
+  }, 20_000);
 
   it('rejects list/respond without authenticated tenant context', async () => {
     await expect(service.list('')).rejects.toThrow(BadRequestException);

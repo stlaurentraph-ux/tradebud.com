@@ -89,7 +89,9 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     });
     expect(listed.requests.length).toBeGreaterThan(0);
 
-    const requestId = listed.requests[0].id;
+    const pending = listed.requests.find((item) => item.status === 'PENDING');
+    expect(pending).toBeDefined();
+    const requestId = pending!.id;
     await expect(
       controller.respond(requestId, {
         user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
