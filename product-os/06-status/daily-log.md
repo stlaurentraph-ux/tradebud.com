@@ -475,3 +475,11 @@ Append-only session log.
 - Risks: Release signoff still requires CI-hosted evidence (run URL + artifact link), not only local terminal output.
 - Blockers: None.
 - Next step: trigger CI on current branch and populate evidence template with CI run URL, artifact URL, and reviewer decision.
+
+### 2026-04-14 (validation: ownership CI evidence captured)
+- Focus: capture first CI-hosted non-skipped ownership/access run with artifact proof for release QA.
+- Files changed: `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Verified backend CI run `24401646754` executes ownership integration lane non-skipped (`3 passed suites`, `7 passed tests`) and uploads artifact `backend-ownership-integration-log` (`6428758408`).
+- Risks: CI still emits Node 20 deprecation warnings for `actions/checkout@v4` and `actions/setup-node@v4`; workflow runtime remains functional but should be upgraded before forced Node 24 cutoff.
+- Blockers: None.
+- Next step: complete reviewer signoff section in `product-os/04-quality/release-qa-evidence.md` and schedule CI action-runtime upgrade task.
