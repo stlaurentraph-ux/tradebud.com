@@ -61,3 +61,5 @@ Track completed milestones/features/docs updates.
 - Release QA evidence scaffold delivered: added `product-os/04-quality/release-qa-evidence.md` with required CI run/artifact fields for ownership/access signoff.
 - Ownership/access local validation delivered: DB-backed `test:integration:ownership` now confirmed non-skipped in local execution (`3/3 suites passed`, `7/7 tests passed`) with `TEST_DATABASE_URL` inline injection.
 - Ownership/access CI validation delivered: backend CI run `24401646754` executed required ownership lane non-skipped (`3/3 suites`, `7/7 tests`) and published evidence artifact `backend-ownership-integration-log` (`6428758408`) with QA template updated.
+- CI deprecation follow-up ticket created: issue #22 tracks Node 20 action-runtime modernization in GitHub Actions (`https://github.com/stlaurentraph-ux/tradebud.com/issues/22`).
+- CI runtime modernization implemented: workflow now opts GitHub actions into Node 24 runtime (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`) and uses Node 20 for backend/app jobs to align with dependency engine requirements.
