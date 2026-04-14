@@ -47,6 +47,36 @@ jobs:
       - name: Integration tests (PostGIS)
         run: npm run test:integration
 
+            - name: Ownership integration tests (required)
+        run: |
+          set -euo pipefail
+          npm run test:integration:ownership | tee ownership-integration-output.txt
+          if rg "[1-9][0-9]* skipped" ownership-integration-output.txt; then
+            echo "Ownership integration suite must not be skipped in CI."
+            exit 1
+          fi
+
+      - name: Publish ownership integration summary
+        run: |
+          {
+            echo "## Ownership Integration Evidence"
+            echo ""
+            echo "- Command: \`npm run test:integration:ownership\`"
+            echo "- Output snapshot:"
+            echo ""
+            echo '```text'
+            rg "Test Suites:|Tests:|Ran all test suites" ownership-integration-output.txt || true
+            echo '```'
+            echo ""
+            echo "_Note: This lane is expected to execute non-skipped in CI because TEST_DATABASE_URL is required in this job._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload ownership integration log artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-ownership-integration-log
+          path: tracebud-backend/ownership-integration-output.txt
+
   app:
     name: Expo app lint
     runs-on: ubuntu-latest
