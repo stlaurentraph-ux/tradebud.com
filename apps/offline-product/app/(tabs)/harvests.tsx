@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -28,16 +28,13 @@ export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const params = useLocalSearchParams<{ plotId?: string; voucherId?: string }>();
+  const params = useLocalSearchParams<{ plotId?: string }>();
   const { farmer, plots: localPlots } = useAppState();
   const { t, lang } = useLanguage();
 
-  const [loading, setLoading] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
-  const [selectedVoucherId, setSelectedVoucherId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showNewHarvestLog, setShowNewHarvestLog] = useState(false);
   const [showRecordWeight, setShowRecordWeight] = useState(false);
@@ -67,23 +64,16 @@ export default function HarvestsScreen() {
       setBackendError(null);
       return;
     }
-    setLoading(true);
-    setBackendError(null);
     Promise.all([fetchPlotsForFarmer(farmer.id), fetchVouchersForFarmer(farmer.id)])
       .then(([plotsRows, voucherRows]) => {
         setBackendPlots(plotsRows ?? []);
         setVouchers(voucherRows ?? []);
-        if (typeof params.voucherId === 'string') {
-          setSelectedVoucherId(params.voucherId);
-        }
       })
-      .catch((e) => {
-        setBackendError(e instanceof Error ? e.message : String(e));
+      .catch(() => {
         setBackendPlots([]);
         setVouchers([]);
-      })
-      .finally(() => setLoading(false));
-  }, [farmer?.id, params.plotId, params.voucherId]);
+      });
+  }, [farmer, params.plotId]);
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
   const mergedHarvestPlots = useMemo(() => {
@@ -129,9 +119,7 @@ export default function HarvestsScreen() {
       const first = mergedHarvestPlots[0];
       return first ? String(first.id) : null;
     });
-  }, [farmer?.id, params.plotId, mergedHarvestPlots]);
-
-  const selectedVoucher = vouchers.find((v) => v.id === selectedVoucherId) ?? null;
+  }, [farmer, params.plotId, mergedHarvestPlots]);
   const selectedPlot = useMemo(
     () =>
       mergedHarvestPlots.find((p) => String(p.id) === String(selectedPlotId ?? '')) ?? null,

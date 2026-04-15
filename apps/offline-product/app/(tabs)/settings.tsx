@@ -59,6 +59,11 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
 
+const fsAny = FileSystem as unknown as {
+  documentDirectory?: string | null;
+  cacheDirectory?: string | null;
+};
+
 export default function SettingsScreen() {
   const { lang, setLang, t } = useLanguage();
   const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
@@ -104,7 +109,7 @@ export default function SettingsScreen() {
     } catch {
       // Keep previous unsynced count on network errors so we don't flash "up to date" incorrectly.
     }
-  }, [farmer?.id, plots]);
+  }, [farmer, plots]);
 
   useFocusEffect(
     useCallback(() => {
@@ -140,7 +145,7 @@ export default function SettingsScreen() {
     let out = uri;
     if (Platform.OS !== 'web') {
       try {
-        const dest = `${FileSystem.documentDirectory}farmer-profile.jpg`;
+        const dest = `${fsAny.documentDirectory ?? ''}farmer-profile.jpg`;
         await FileSystem.copyAsync({ from: uri, to: dest });
         out = dest;
       } catch {
@@ -413,7 +418,7 @@ export default function SettingsScreen() {
         await Share.share({ message: json, title: 'Tracebud' });
         return;
       }
-      const dir = FileSystem.cacheDirectory;
+      const dir = fsAny.cacheDirectory;
       if (!dir) {
         await Share.share({ message: json });
         return;

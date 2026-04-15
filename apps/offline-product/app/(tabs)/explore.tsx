@@ -88,7 +88,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
 import { PlotMap } from '@/components/plot-map/PlotMap';
 import { compactTabHeaderStyles } from '@/constants/compactTabHeader';
-import { Brand, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 function computeRegionFromPlot(plot: Plot): Region | undefined {
@@ -269,7 +269,7 @@ export default function PlotsScreen() {
     };
   }, [farmer, selectedBackendPlot]);
 
-  const refreshFromBackend = () => {
+  const refreshFromBackend = useCallback(() => {
     if (!farmer) return Promise.resolve();
     setLoadingBackend(true);
     setBackendError(null);
@@ -308,7 +308,7 @@ export default function PlotsScreen() {
         setAuditEvents([]);
       })
       .finally(() => setLoadingBackend(false));
-  };
+  }, [farmer]);
 
   const refreshPendingCount = () => {
     loadPendingSyncActions().then((actions) => setPendingCount(actions.length));
@@ -351,7 +351,7 @@ export default function PlotsScreen() {
     refreshFromBackend();
     refreshPendingCount();
     loadLocalAuditEvents({ limit: 50 }).then(setLocalAuditEvents).catch(() => undefined);
-  }, [farmer?.id]);
+  }, [farmer, refreshFromBackend]);
 
   /** After signing in under Settings, refetch plots when returning to this tab. */
   useFocusEffect(
@@ -360,7 +360,7 @@ export default function PlotsScreen() {
         void refreshFromBackend();
         refreshPendingCount();
       }
-    }, [farmer?.id]),
+    }, [farmer?.id, refreshFromBackend]),
   );
 
   useEffect(() => {
@@ -456,7 +456,7 @@ export default function PlotsScreen() {
       setEditName('');
     }
     setEditReason('');
-  }, [selectedPlot?.id]);
+  }, [selectedPlot]);
 
   useEffect(() => {
     if (!scannerActive) return;
