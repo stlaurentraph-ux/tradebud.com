@@ -579,3 +579,75 @@ Append-only session log.
 - Risks: If `.env.local` is missing `TEST_DATABASE_URL`, env-gated integration specs will still skip (expected behavior).
 - Blockers: None.
 - Next step: capture CI evidence for the expanded 4-suite ownership lane and refresh `release-qa-evidence.md`.
+
+### 2026-04-15 (validation + hardening: ownership evidence refresh and CI lane stability)
+- Focus: refresh ownership/access QA evidence to 4-suite CI baseline and remove remaining backend/offline-product CI blockers.
+- Files changed: `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`, `tracebud-backend/src/inbox/inbox.service.ts`, `tracebud-backend/src/inbox/inbox.service.int.spec.ts`, `apps/offline-product/app/(tabs)/index.tsx`, `apps/offline-product/app/documents.tsx`, `apps/offline-product/app/modal.tsx`, `apps/offline-product/app/plot/[id].tsx`.
+- Decisions: Updated QA evidence to CI run `24407562162` + artifact `6431368794` (`4 suites`, `10 tests`) including inbox controller integration in required lane; hardened inbox schema bootstrapping with serialized verification and one-time undefined-table retry; removed remaining offline-product lint blockers and raised inbox service integration test timeout for stability.
+- Risks: GitHub-hosted Node 20 action-runtime deprecation warning remains non-blocking and intentionally deferred.
+- Blockers: None.
+- Next step: merge branch and continue next customer-product slice with CI currently green on backend integration + offline-product lint lanes.
+
+### 2026-04-15 (validation: dashboard role-path gate coverage)
+- Focus: extend dashboard access-control regression coverage for mixed feature-gate states across role-specific navigation paths.
+- Files changed: `apps/dashboard-product/lib/rbac.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added importer and country-reviewer role-path assertions under split gate toggles so deferred routes (`/requests`, `/reports`) remain role-aware and gate-aware in combination.
+- Risks: None.
+- Blockers: None.
+- Next step: expand this same role-path matrix to runtime route-entry enforcement if role-aware middleware redirects are introduced.
+
+### 2026-04-15 (validation: middleware gated-route context markers)
+- Focus: strengthen runtime route-entry enforcement observability for deferred routes in dashboard middleware.
+- Files changed: `apps/dashboard-product/middleware.ts`, `apps/dashboard-product/middleware.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Middleware redirect URLs now include explicit gate identifiers (`request_campaigns`/`annual_reporting`) in addition to `feature=mvp_gated`, while preserving existing query params; tests now assert both gate variants.
+- Risks: None.
+- Blockers: None.
+- Next step: wire lightweight client analytics on homepage banner parsing (`feature` + `gate`) if we need aggregate counts of gated-entry attempts.
+
+### 2026-04-15 (execution: dashboard gated-entry analytics capture)
+- Focus: instrument dashboard landing to capture deferred-route redirect attempts for product diagnostics and gating analytics.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/lib/gated-entry-analytics.ts`, `apps/dashboard-product/lib/gated-entry-analytics.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added strict parser for redirect markers (`feature=mvp_gated` + known `gate`) and sessionStorage-based dedupe keying so analytics emits once per gate per session; dashboard overview now emits audit helper event with gate/role context when redirected.
+- Risks: Event currently reuses existing audit event family (`ORG_SETTINGS_CHANGED`) as analytics transport and should move to a dedicated dashboard telemetry endpoint if backend audit ingestion becomes strict on event taxonomy.
+- Blockers: None.
+- Next step: add backend-facing analytics endpoint/event type for gated-entry tracking to avoid overloading generic organization settings events.
+
+### 2026-04-15 (execution: dedicated dashboard gated-entry telemetry endpoint)
+- Focus: replace reused audit-helper transport with a dedicated dashboard telemetry route and explicit event typing for deferred-route redirects.
+- Files changed: `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/page.test.tsx`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added `/api/analytics/gated-entry` POST route with payload validation (`feature`, `gate`, `tenantId`, `role`) and dedicated event type (`DASHBOARD_GATED_ENTRY_ATTEMPT`); switched landing-page telemetry emit to this route while preserving per-session dedupe.
+- Risks: Route currently logs telemetry locally (`console.info`) and should be wired to persistent backend storage/stream in a follow-up slice.
+- Blockers: None.
+- Next step: connect gated-entry telemetry route to persistent backend sink (audit table or analytics stream) with tenant-authenticated ingestion semantics.
+
+### 2026-04-15 (execution: gated-entry telemetry backend persistence proxy)
+- Focus: connect dashboard gated-entry telemetry route to persistent backend ingestion with tenant-authenticated forwarding semantics.
+- Files changed: `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/page.test.tsx`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Route now forwards validated telemetry to `${TRACEBUD_BACKEND_URL}/v1/audit` as `dashboard_gated_entry_attempt` payloads and passes through Authorization header; dashboard page now includes bearer token from `tracebud_token` when available; local console sink remains as explicit fallback only when backend URL is missing.
+- Risks: Demo token values are non-Supabase JWTs, so backend auth may reject these in strict environments; production sessions with valid tokens are expected path.
+- Blockers: None.
+- Next step: add backend-side dedicated telemetry event taxonomy/table (or strict allowlist update) so dashboard gating analytics can be queried separately from generic audit events.
+
+### 2026-04-15 (execution: backend gated-entry telemetry query surface)
+- Focus: make gated-entry analytics queryable through a dedicated backend audit endpoint with tenant-safe filtering.
+- Files changed: `tracebud-backend/src/audit/audit.controller.ts`, `tracebud-backend/src/audit/audit.controller.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added `GET /v1/audit/gated-entry` that enforces signed tenant claim and filters `audit_log` to `event_type='dashboard_gated_entry_attempt'` + matching payload `tenantId`; controller tests now cover missing-claim denial and tenant-filtered query behavior.
+- Risks: Current persistence still relies on generic `audit_log` JSON payload fields and should evolve to dedicated analytics schema/indexes if query volume grows.
+- Blockers: None.
+- Next step: add integration coverage for gated-entry endpoint with real DB fixtures and consider indexing strategy for `(event_type, payload->>'tenantId')`.
+
+### 2026-04-15 (validation: gated-entry telemetry DB integration coverage)
+- Focus: add DB-backed integration coverage for tenant-safe gated-entry telemetry reads and fold it into required ownership lane execution.
+- Files changed: `tracebud-backend/src/audit/audit.gated-entry.int.spec.ts`, `tracebud-backend/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added env-gated integration test using isolated schema (`tb_audit_gated_entry_test`) to verify missing-claim rejection and tenant-filtered `dashboard_gated_entry_attempt` listing; expanded `test:integration:ownership` to include the new audit suite and validated local non-skipped run (`5 suites`, `13 tests`).
+- Risks: CI-hosted release evidence still reflects prior 4-suite ownership baseline and must be refreshed for the expanded 5-suite contract.
+- Blockers: None.
+- Next step: run CI and capture updated ownership/access artifact evidence for expanded suite set.
+
+### 2026-04-15 (validation: dashboard telemetry read-proxy coverage)
+- Focus: complete dashboard-side telemetry read path by proxying gated-entry analytics GET requests to backend tenant-scoped endpoint.
+- Files changed: `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions: Added `GET /api/analytics/gated-entry` with fail-closed `503` when backend URL is missing, auth-header pass-through, backend status/payload propagation, and non-JSON fallback/error handling aligned with existing proxy patterns.
+- Risks: No dashboard UI consumer for this read path yet; endpoint is ready for future diagnostics/ops surfaces.
+- Blockers: None.
+- Next step: add a lightweight internal diagnostics panel or admin card that consumes `GET /api/analytics/gated-entry` for tenant-level gate-attempt visibility.

@@ -11,7 +11,7 @@
     "test": "jest --runInBand --testPathIgnorePatterns \"\\\\.int\\\\.spec\\\\.ts$\"",
     "test:watch": "jest --watch",
     "test:integration": "node scripts/run-with-root-test-db.mjs jest --runInBand --testMatch \"**/*.int.spec.ts\"",
-    "test:integration:ownership": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/harvest/ownership-scope.int.spec.ts src/harvest/controller-scope.int.spec.ts src/reports/package-report-access.int.spec.ts src/inbox/inbox.controller.int.spec.ts",
+    "test:integration:ownership": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/harvest/ownership-scope.int.spec.ts src/harvest/controller-scope.int.spec.ts src/reports/package-report-access.int.spec.ts src/inbox/inbox.controller.int.spec.ts src/audit/audit.gated-entry.int.spec.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

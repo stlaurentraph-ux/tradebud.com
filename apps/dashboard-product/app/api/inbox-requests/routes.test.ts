@@ -148,4 +148,59 @@ describe('inbox API proxy routes', () => {
       error: 'Only exporter/admin users can run inbox bootstrap actions.',
     });
   });
+
+  it('falls back to generic payload when backend returns non-JSON error bodies', async () => {
+    process.env.TRACEBUD_BACKEND_URL = 'https://backend.tracebud.test';
+    vi.spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        json: async () => {
+          throw new Error('invalid json');
+        },
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('invalid json');
+        },
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => {
+          throw new Error('invalid json');
+        },
+      } as Response);
+
+    const listRes = await listInboxRequests(new Request('http://localhost/api/inbox-requests'));
+    const respondRes = await respondInboxRequest(
+      new Request('http://localhost/api/inbox-requests/req_1/respond', { method: 'POST' }),
+      { params: Promise.resolve({ id: 'req_1' }) }
+    );
+    const bootstrapRes = await bootstrapInboxRequests(
+      new Request('http://localhost/api/inbox-requests/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'seed_first_customer' }),
+      })
+    );
+
+    expect(listRes.status).toBe(502);
+    expect(await listRes.json()).toEqual({ error: 'Backend request failed.' });
+    expect(respondRes.status).toBe(500);
+    expect(await respondRes.json()).toEqual({ error: 'Backend request failed.' });
+    expect(bootstrapRes.status).toBe(503);
+    expect(await bootstrapRes.json()).toEqual({ error: 'Backend request failed.' });
+  });
+
+  it('returns 500 with thrown fetch error message', async () => {
+    process.env.TRACEBUD_BACKEND_URL = 'https://backend.tracebud.test';
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('upstream timeout'));
+
+    const listRes = await listInboxRequests(new Request('http://localhost/api/inbox-requests'));
+    expect(listRes.status).toBe(500);
+    expect(await listRes.json()).toEqual({ error: 'upstream timeout' });
+  });
 });

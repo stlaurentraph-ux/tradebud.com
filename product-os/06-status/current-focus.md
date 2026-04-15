@@ -39,12 +39,22 @@
 - Customer-product priority: inbox routes are being hardened to backend-only mode (no local fallback) so tenant-isolated request list/respond/bootstrap flows fail closed when backend is unavailable.
 - Inbox proxy hardening regression coverage complete in dashboard tests: fail-closed (`503` without backend URL) and auth-header pass-through are now asserted for list/respond/bootstrap routes.
 - Inbox proxy error-propagation coverage complete: dashboard route tests now also assert backend `401/403` status and payload pass-through for list/respond/bootstrap to preserve tenant-claim and role denial semantics in UI flows.
+- Dashboard RBAC role-path coverage expanded: mixed feature-gate states are now asserted for importer and country-reviewer navigation visibility to prevent regressions in deferred-route gating by role.
+- Dashboard middleware route-entry coverage expanded: gated redirects now preserve query params and include explicit gate markers for deferred routes to improve diagnostics/analytics attribution.
+- Dashboard gated-entry analytics slice complete: landing page now parses `feature` + `gate` markers and emits a session-deduped audit analytics event for deferred-route redirect attempts.
+- Dashboard gated-entry telemetry endpoint slice complete: dedicated route (`/api/analytics/gated-entry`) now validates marker payloads and receives session-deduped landing telemetry via page-level fetch path with route/page test coverage.
+- Dashboard telemetry persistence slice complete: gated-entry route now proxies validated events to backend `/v1/audit` with auth-header pass-through, using local sink fallback only when backend URL is unset.
+- Dashboard telemetry read-proxy slice complete: `GET /api/analytics/gated-entry` now proxies tenant-scoped backend reads from `/v1/audit/gated-entry` with fail-closed backend-url enforcement and denial/error pass-through semantics.
+- Backend telemetry queryability slice complete: `AuditController` now provides tenant-scoped `GET /v1/audit/gated-entry` for `dashboard_gated_entry_attempt` events with dedicated controller tests.
+- Backend telemetry integration slice complete: DB-backed audit integration spec now validates tenant-safe `GET /v1/audit/gated-entry` behavior; ownership lane expanded to include this audit telemetry spec (`5 suites`, `13 tests` local non-skipped).
 - Backend inbox controller denial semantics coverage extended: unit tests now assert missing signed tenant-claim rejection on `respond`, explicit non-exporter bootstrap denial messaging, and allow-path bootstrap execution for exporter role.
 - Backend controller policy regressions resolved: `audit` and `harvest` controller tests now align with tenant-claim + farmer-scope rules, and backend unit suite is green again.
 - DB-backed inbox controller integration coverage added (`inbox.controller.int.spec.ts`) for tenant-claim denial/allow + exporter bootstrap role policy; next is CI evidence capture on non-skipped execution with `TEST_DATABASE_URL`.
 - Required ownership CI lane now includes inbox controller DB-backed policy integration (`src/inbox/inbox.controller.int.spec.ts`); next is capturing first CI artifact proving non-skipped 4-suite execution.
 - Controller-scope integration flake hardening applied: schema is now dropped/recreated in `controller-scope.int.spec.ts` before setup to avoid stale FK metadata across interrupted runs.
 - Backend integration test commands are now local-env resilient: `test:integration` and `test:integration:ownership` auto-load `TEST_DATABASE_URL` from repo-root `.env.local` when unset in shell; local ownership lane now passes non-skipped (`4 suites`, `10 tests`).
+- Ownership/access CI evidence is refreshed for prior 4-suite lane (`run 24407562162`, artifact `6431368794`, `4/4 suites`, `10/10 tests`); next is refreshing CI evidence for the expanded 5-suite ownership set including audit gated-entry integration.
+- Backend and offline-product CI blockers are stabilized: inbox schema checks now self-heal on transient missing-table states and offline-product lint lane is warning-clean on current branch state.
 
 ## Priority migration lanes (v1.6)
 

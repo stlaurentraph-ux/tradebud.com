@@ -62,6 +62,12 @@ Reference canonical catalog in `product-os/04-quality/exception-catalog.md`.
 - Tenant-bound operations (`list`, `respond`, `bootstrap`) must remain signed-claim backed end-to-end (dashboard API proxy to backend controller/service).
 - DB-backed inbox controller integration coverage now includes tenant-claim denial/allow and exporter bootstrap role policy assertions (`src/inbox/inbox.controller.int.spec.ts`, env-gated by `TEST_DATABASE_URL`).
 - Backend integration scripts now auto-load `TEST_DATABASE_URL` from root `.env.local` when missing in shell (`scripts/run-with-root-test-db.mjs`) for consistent local DB-backed execution.
+- Dashboard RBAC tests now include mixed feature-gate role-path assertions for importer and country-reviewer navigation visibility to prevent deferred-route regressions by role.
+- Middleware route-entry redirects for gated paths now carry explicit gate context (`gate=request_campaigns|annual_reporting`) in query params for diagnostics and analytics-safe attribution while preserving existing query params.
+- Dashboard landing now emits one-time session-scoped telemetry to dedicated endpoint `/api/analytics/gated-entry` when redirected from deferred routes (`feature=mvp_gated` + known `gate`), enabling gated-entry tracking without duplicate spam.
+- Gated-entry telemetry route now forwards events to backend audit ingestion (`/v1/audit`) when `TRACEBUD_BACKEND_URL` is configured and propagates Authorization header from client session token (`tracebud_token`) for tenant-authenticated capture.
+- Backend audit API now exposes tenant-scoped gated-entry telemetry listing at `GET /v1/audit/gated-entry`, filtered to `event_type='dashboard_gated_entry_attempt'` and current tenant claim for query-safe diagnostics.
+- Dashboard analytics route now also proxies telemetry reads via `GET /api/analytics/gated-entry` to backend `GET /v1/audit/gated-entry` with fail-closed `503` semantics and Authorization header pass-through.
 
 ## Analytics notes
 

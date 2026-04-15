@@ -103,4 +103,28 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
       }),
     ).rejects.toThrow(NotFoundException);
   }, 20_000);
+
+  it('self-heals table state for controller list/respond after external table drop', async () => {
+    await controller.bootstrap(
+      { action: 'reset' },
+      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
+    );
+
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+
+    const listed = await controller.list({
+      user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+    });
+    expect(listed.requests.length).toBeGreaterThan(0);
+
+    const pending = listed.requests.find((item) => item.status === 'PENDING');
+    expect(pending).toBeDefined();
+    await expect(
+      controller.respond(pending!.id, {
+        user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+      }),
+    ).resolves.toMatchObject({
+      request: expect.objectContaining({ id: pending!.id, status: 'RESPONDED' }),
+    });
+  }, 20_000);
 });
