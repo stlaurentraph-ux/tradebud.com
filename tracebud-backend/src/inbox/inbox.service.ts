@@ -24,6 +24,7 @@ type BootstrapAction = 'reset' | 'seed_first_customer' | 'seed_golden_path';
 @Injectable()
 export class InboxService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  private schemaCheckInFlight: Promise<void> | null = null;
 
   private defaultRequests(nowIso: string): InboxRequestRecord[] {
     return [
@@ -224,13 +225,56 @@ export class InboxService {
     }
   }
 
+  private async ensureSchemaVerified(): Promise<void> {
+    // Collapse concurrent callers to one schema verification pass.
+    if (this.schemaCheckInFlight) {
+      await this.schemaCheckInFlight;
+      return;
+    }
+    this.schemaCheckInFlight = (async () => {
+      await this.ensureSchema();
+      const verify = await this.pool.query<{
+        inbox_requests: string | null;
+        inbox_request_events: string | null;
+      }>(
+        `
+          SELECT
+            to_regclass('public.inbox_requests')::text AS inbox_requests,
+            to_regclass('public.inbox_request_events')::text AS inbox_request_events
+        `,
+      );
+      const row = verify.rows[0];
+      if (!row?.inbox_requests || !row?.inbox_request_events) {
+        await this.ensureSchema();
+      }
+    })();
+    try {
+      await this.schemaCheckInFlight;
+    } finally {
+      this.schemaCheckInFlight = null;
+    }
+  }
+
   private async upsertRequests(requests: InboxRequestRecord[], action: BootstrapAction | 'auto_init'): Promise<void> {
-    await this.ensureSchema();
+    await this.ensureSchemaVerified();
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM public.inbox_request_events');
-      await client.query('DELETE FROM public.inbox_requests');
+      try {
+        await client.query('DELETE FROM public.inbox_request_events');
+        await client.query('DELETE FROM public.inbox_requests');
+      } catch (error: any) {
+        // If tests dropped tables between operations, recreate schema and retry once.
+        if (error?.code === '42P01') {
+          await client.query('ROLLBACK');
+          await this.ensureSchemaVerified();
+          await client.query('BEGIN');
+          await client.query('DELETE FROM public.inbox_request_events');
+          await client.query('DELETE FROM public.inbox_requests');
+        } else {
+          throw error;
+        }
+      }
 
       for (const request of requests) {
         await client.query(
@@ -289,8 +333,18 @@ export class InboxService {
   }
 
   private async seedIfEmpty(): Promise<void> {
-    await this.ensureSchema();
-    const countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
+    await this.ensureSchemaVerified();
+    let countRes;
+    try {
+      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        await this.ensureSchemaVerified();
+        countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
+      } else {
+        throw error;
+      }
+    }
     if ((Number(countRes.rows[0]?.count ?? '0')) > 0) return;
     const defaults = this.requestsForAction('reset');
     await this.upsertRequests(defaults, 'auto_init');
