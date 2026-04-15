@@ -9,9 +9,9 @@ const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = 'tb_api_access_test';
 
 function withSearchPath(connectionString: string, targetSchema: string) {
-  const separator = connectionString.includes('?') ? '&' : '?';
-  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
-  return `${connectionString}${separator}options=${options}`;
+  const url = new URL(connectionString);
+  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
+  return url.toString();
 }
 
 function makeResponseMock() {
@@ -40,6 +40,7 @@ describeIfDb('API integration: package/report access policy', () => {
       max: 1,
     });
 
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
 
     await pool.query(`
