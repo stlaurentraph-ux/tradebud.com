@@ -40,7 +40,6 @@ import {
   loadTitlePhotosForPlot,
   loadEvidenceForPlot,
   persistPlotPhoto,
-  persistPlotTitlePhoto,
   persistPlotEvidenceItem,
   type PlotPhoto,
   type PlotTitlePhoto,
@@ -157,7 +156,7 @@ export default function PlotDetailScreen() {
     }
     const v = plot.declaredAreaHectares;
     setDeclaredHaDraft(v != null && Number.isFinite(v) ? String(v) : '');
-  }, [plot?.id, plot?.declaredAreaHectares]);
+  }, [plot]);
 
   const isOnline = !!farmer?.id && !loadingBackend && !backendError;
 
@@ -329,20 +328,6 @@ export default function PlotDetailScreen() {
     });
     const updated = await loadPhotosForPlot(plot.id);
     setPhotos(updated);
-  };
-
-  const addLandTitlePhoto = async () => {
-    if (!plot) return;
-    setNote(null);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    const uri = result.assets[0].uri;
-    const takenAt = Date.now();
-    persistPlotTitlePhoto({ plotId: plot.id, uri, takenAt });
-    const updated = await loadTitlePhotosForPlot(plot.id);
-    setTitlePhotos(updated);
   };
 
   const addEvidence = async (kind: PlotEvidenceKind, label: string) => {

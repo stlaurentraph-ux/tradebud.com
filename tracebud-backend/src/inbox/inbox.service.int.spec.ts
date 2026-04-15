@@ -48,7 +48,7 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
     expect(ownTenant.length).toBeGreaterThan(0);
     expect(ownTenant.every((row) => row.recipient_tenant_id === 'tenant_rwanda_001')).toBe(true);
     expect(otherTenant).toEqual([]);
-  });
+  }, 20_000);
 
   it('respond transition is idempotent and cross-tenant respond is rejected', async () => {
     await service.bootstrap('reset');

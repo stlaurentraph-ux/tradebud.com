@@ -5,12 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { CompactTabHeader, HomeHeaderBrandLeft } from '@/components/layout/CompactTabHeader';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedScrollView } from '@/components/themed-view';
+import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Brand, Colors, Radius, Spacing } from '@/constants/theme';
+import { Brand, Colors, Radius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -59,7 +58,7 @@ export default function HomeScreen() {
         setBackendError(err instanceof Error ? err.message : t('backend_unreachable'));
       })
       .finally(() => setLoadingBackend(false));
-  }, [farmer?.id, t]);
+  }, [farmer, t]);
 
   useEffect(() => {
     let cancelled = false;
