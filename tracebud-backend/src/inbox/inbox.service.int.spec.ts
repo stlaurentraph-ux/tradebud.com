@@ -70,4 +70,24 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
     await expect(service.list('')).rejects.toThrow(BadRequestException);
     await expect(service.respond('req_inbox_001', '')).rejects.toThrow(BadRequestException);
   });
+
+  it('self-heals when inbox tables are dropped between calls', async () => {
+    await service.bootstrap('reset');
+    const initial = await service.list('tenant_rwanda_001');
+    expect(initial.length).toBeGreaterThan(0);
+
+    // Simulate external cleanup/race condition while service continues running.
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+
+    const afterDrop = await service.list('tenant_rwanda_001');
+    expect(afterDrop.length).toBeGreaterThan(0);
+    expect(afterDrop.every((row) => row.recipient_tenant_id === 'tenant_rwanda_001')).toBe(true);
+
+    const pending = afterDrop.find((row) => row.status === 'PENDING');
+    expect(pending).toBeDefined();
+    await expect(service.respond(pending!.id, 'tenant_rwanda_001')).resolves.toMatchObject({
+      id: pending!.id,
+      status: 'RESPONDED',
+    });
+  }, 20_000);
 });

@@ -6,6 +6,18 @@ export function getGateRedirectPath(pathname: string): string | null {
   return getDeferredGateForPath(pathname) ? '/' : null;
 }
 
+export function applyGateRedirectParams(url: URL): URL {
+  const gate = getDeferredGateForPath(url.pathname);
+  const redirectUrl = new URL(url.toString());
+  redirectUrl.pathname = '/';
+  redirectUrl.searchParams.set('feature', 'mvp_gated');
+  // Keep a lightweight route-entry breadcrumb for diagnostics/analytics.
+  if (gate) {
+    redirectUrl.searchParams.set('gate', gate);
+  }
+  return redirectUrl;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const redirectPath = getGateRedirectPath(pathname);
@@ -13,9 +25,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = redirectPath;
-  redirectUrl.searchParams.set('feature', 'mvp_gated');
+  const redirectUrl = applyGateRedirectParams(request.nextUrl);
   return NextResponse.redirect(redirectUrl);
 }
 

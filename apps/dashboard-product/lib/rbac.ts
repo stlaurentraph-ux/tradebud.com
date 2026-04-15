@@ -7,6 +7,7 @@ import type {
   RoleDecision,
   ShipmentStatus,
 } from '@/types';
+import { isRouteEnabled } from '@/lib/feature-gates';
 
 // ============================================================
 // CANONICAL PERMISSION SYSTEM
@@ -431,7 +432,7 @@ export function getPermissionsForTier(tier: CommercialTier): CommercialPermissio
 export function getVisibleNavItems(user: User | null): NavItem[] {
   if (!user) return [];
   const allowedItems = ROLE_NAV_CONFIG[user.active_role] || [];
-  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name));
+  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name) && isRouteEnabled(item.href));
 }
 
 /**

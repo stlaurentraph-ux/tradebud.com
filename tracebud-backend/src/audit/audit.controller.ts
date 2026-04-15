@@ -24,13 +24,18 @@ import { CreateAuditEventDto } from './dto/create-audit-event.dto';
 export class AuditController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  private requireTenantClaim(req: any) {
+  private getTenantClaim(req: any): string {
     const tenantId =
       req?.user?.app_metadata?.tenant_id ??
       req?.user?.user_metadata?.tenant_id;
     if (!tenantId) {
       throw new ForbiddenException('Missing tenant claim');
     }
+    return tenantId;
+  }
+
+  private requireTenantClaim(req: any) {
+    this.getTenantClaim(req);
   }
 
   @Post()
@@ -112,6 +117,36 @@ export class AuditController {
     } catch (e) {
       const err = e as { code?: string; message?: string };
       // Early in development the DB may not have the audit table yet.
+      if (err?.code === '42P01') {
+        return [];
+      }
+      throw e;
+    }
+  }
+
+  @Get('gated-entry')
+  @ApiOperation({
+    summary: 'List dashboard gated-entry telemetry for current tenant',
+    description:
+      'Returns recent dashboard deferred-route redirect telemetry (`dashboard_gated_entry_attempt`) for the signed tenant claim.',
+  })
+  async listGatedEntry(@Req() req: any) {
+    const tenantId = this.getTenantClaim(req);
+    try {
+      const res = await this.pool.query(
+        `
+          SELECT id, timestamp, user_id, device_id, event_type, payload
+          FROM audit_log
+          WHERE event_type = 'dashboard_gated_entry_attempt'
+            AND payload ->> 'tenantId' = $1
+          ORDER BY timestamp DESC
+          LIMIT 100
+        `,
+        [tenantId],
+      );
+      return res.rows;
+    } catch (e) {
+      const err = e as { code?: string };
       if (err?.code === '42P01') {
         return [];
       }

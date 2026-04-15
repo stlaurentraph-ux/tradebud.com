@@ -1,17 +1,51 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { ExporterDashboard } from '@/components/dashboards/exporter-dashboard';
 import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
 import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
 import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
+import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { mockDashboardMetrics } from '@/lib/mock-data';
 import { useAuth } from '@/lib/auth-context';
 import { getRoleDisplayName } from '@/lib/rbac';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const context = getGatedEntryContext(
+      searchParams.get('feature'),
+      searchParams.get('gate'),
+    );
+    if (!context || !user) return;
+
+    const sessionKey = getGatedEntrySessionKey(context);
+    if (window.sessionStorage.getItem(sessionKey)) return;
+    window.sessionStorage.setItem(sessionKey, '1');
+    const token = window.sessionStorage.getItem('tracebud_token');
+
+    void fetch('/api/analytics/gated-entry', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        feature: context.feature,
+        gate: context.gate,
+        tenantId: user.tenant_id,
+        role: user.active_role,
+        redirectedPath: '/',
+      }),
+    }).catch(() => {
+      // Analytics failures should not block dashboard rendering.
+    });
+  }, [searchParams, user]);
 
   // Determine which dashboard to show based on user role
   const renderDashboard = () => {
