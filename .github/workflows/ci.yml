@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: tracebud-offline-app
+        working-directory: apps/offline-product
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -95,6 +95,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: apps/offline-product/package-lock.json
 
       - name: Install dependencies
         run: npm install

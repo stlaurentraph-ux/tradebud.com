@@ -30,14 +30,12 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.end();
   });
 
   beforeEach(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.query(`DELETE FROM audit_log WHERE event_type IN ('inbox_requests_seeded', 'inbox_request_responded')`);
   });
 

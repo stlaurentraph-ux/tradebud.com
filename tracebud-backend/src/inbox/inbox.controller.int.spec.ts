@@ -33,14 +33,12 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.end();
   });
 
   beforeEach(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_request_events');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests');
+    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await service.bootstrap('reset');
   });
 
