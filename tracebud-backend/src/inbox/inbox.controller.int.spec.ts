@@ -5,6 +5,13 @@ import { InboxService } from './inbox.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
+const schema = `tb_inbox_controller_int_test_${process.pid}_${Date.now().toString(36)}`;
+
+function withSearchPath(connectionString: string, targetSchema: string) {
+  const url = new URL(connectionString);
+  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
+  return url.toString();
+}
 
 describeIfDb('InboxController integration: tenant claim + role policy', () => {
   let pool: Pool;
@@ -13,10 +20,12 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: testDbUrl,
+      connectionString: withSearchPath(testDbUrl!, schema),
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -33,12 +42,13 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.end();
   });
 
   beforeEach(async () => {
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
+    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
     await service.bootstrap('reset');
   });
 
@@ -110,7 +120,8 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
       { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
     );
 
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
+    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
 
     const listed = await controller.list({
       user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
