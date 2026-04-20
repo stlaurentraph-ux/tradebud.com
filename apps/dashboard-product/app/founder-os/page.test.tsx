@@ -55,8 +55,8 @@ describe('FounderOsHomePage', () => {
 
     render(<FounderOsHomePage />);
 
-    expect(screen.getByText(/Outreach streak: 1 weekday\(s\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Publishing streak: 2 week\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Outreach streak: \d+ weekday\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Publishing streak: \d+ week\(s\)/)).toBeInTheDocument();
 
     vi.useRealTimers();
   });

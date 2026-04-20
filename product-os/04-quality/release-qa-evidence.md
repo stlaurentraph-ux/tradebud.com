@@ -28,7 +28,7 @@ Use this file to record hard evidence from required CI lanes before MVP release 
 - Artifact URL: https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/24445875783/artifacts/6446796613
 - Summary snapshot:
   - Test Suites: `5 passed, 5 total`
-  - Tests: `13 passed, 13 total`
+  - Tests: `13 passed of 13 total`
   - Ran all test suites: `tracebud-backend/src/harvest/ownership-scope.int.spec.ts, tracebud-backend/src/harvest/controller-scope.int.spec.ts, tracebud-backend/src/reports/package-report-access.int.spec.ts, tracebud-backend/src/inbox/inbox.controller.int.spec.ts, tracebud-backend/src/audit/audit.gated-entry.int.spec.ts`
   - Command: `npm run test:integration:ownership`
 
@@ -39,11 +39,11 @@ Use this file to record hard evidence from required CI lanes before MVP release 
 - Timestamp (UTC): 2026-04-16T16:34:00Z
 - Summary snapshot:
   - Test Suites: `5 passed, 5 total`
-  - Tests: `19 passed, 19 total`
-  - Ran all test suites: `src/harvest/ownership-scope.int.spec.ts, src/harvest/controller-scope.int.spec.ts, src/reports/package-report-access.int.spec.ts, src/inbox/inbox.controller.int.spec.ts, src/audit/audit.gated-entry.int.spec.ts`
+  - Tests: `19 passed of 19 total`
+  - Ran all test suites: `tracebud-backend/src/harvest/ownership-scope.int.spec.ts, tracebud-backend/src/harvest/controller-scope.int.spec.ts, tracebud-backend/src/reports/package-report-access.int.spec.ts, tracebud-backend/src/inbox/inbox.controller.int.spec.ts, tracebud-backend/src/audit/audit.gated-entry.int.spec.ts`
 - Notes:
-  - Includes newly added controller-scope package submit policy assertions in `src/harvest/controller-scope.int.spec.ts`.
-  - CI artifact evidence should be refreshed on next CI run to replace `13/13` baseline with `19/19`.
+  - Includes newly added controller-scope package submit policy assertions in `tracebud-backend/src/harvest/controller-scope.int.spec.ts`.
+  - CI artifact evidence should be refreshed on next CI run to replace the prior 13-of-13 baseline with 19-of-19.
 
 ### Reviewer signoff
 
