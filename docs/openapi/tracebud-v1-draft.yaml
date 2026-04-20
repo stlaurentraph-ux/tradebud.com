@@ -5,6 +5,9 @@ info:
   description: |
     Draft OpenAPI artifact generated from TRACEBUD_V1_2_EUDR_SPEC.md Section 32.8.
     This document is intentionally minimal and should be expanded during implementation.
+  license:
+    name: Proprietary
+    url: https://tracebud.com/legal
   x-tracebud-error-mapping:
     AUTH-001: INVALID_TOKEN
     AUTH-002: INSUFFICIENT_SCOPE
@@ -24,35 +27,60 @@ info:
     BIL-001: PAYMENT_FAILED
     OPS-001: INTERNAL_ERROR
 servers:
-  - url: https://api.tracebud.example.com
-    description: Production placeholder
-  - url: https://sandbox-api.tracebud.example.com
-    description: Sandbox placeholder
+  - url: https://api.tracebud.com
+    description: Production API
+  - url: https://sandbox-api.tracebud.com
+    description: Sandbox API
 security:
   - bearerAuth: []
 tags:
   - name: Organisations
+    description: Organisation management and membership setup.
   - name: Producers
+    description: Producer identity and profile creation.
   - name: Requests
+    description: Evidence and campaign request workflows.
   - name: Plots
+    description: Plot registration and geometry versioning.
   - name: Evidence
+    description: Evidence document upload and parse tracking.
   - name: Consent
+    description: Consent grant lifecycle operations.
   - name: Batches
+    description: Batch creation, input linkage, and lineage lock.
+  - name: Harvest
+    description: Harvest capture, vouchers, DDS packaging, and readiness checks.
   - name: Reviews
+    description: Yield exception and deduplication review actions.
   - name: Shipments
+    description: Shipment header, lines, and seal operations.
   - name: DDS
+    description: DDS submission, amendment, and retraction flows.
   - name: Sync
+    description: Offline sync flush and conflict resolution endpoints.
   - name: Portability
+    description: Data portability request and download workflows.
   - name: ComplianceExports
+    description: Compliance export creation, status, and retrieval.
   - name: Audit
+    description: Audit event export and telemetry diagnostics endpoints.
   - name: Reporting
+    description: Annual snapshot generation and reporting retrieval.
   - name: ComplianceIssues
+    description: Compliance issue tracking and remediation actions.
   - name: Billing
+    description: Billing events and payment method management.
   - name: Webhooks
+    description: Webhook registration and delivery inspection.
+  - name: WorkflowTemplates
+    description: Tenant-scoped workflow template and stage transition operations.
+  - name: Integrations
+    description: External integration health, submission, and status operations.
 paths:
   /v1/organisations:
     post:
       tags: [Organisations]
+      operationId: createOrganisation
       summary: Create organisation
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -76,6 +104,7 @@ paths:
   /v1/producers:
     post:
       tags: [Producers]
+      operationId: createProducer
       summary: Create producer
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -97,6 +126,7 @@ paths:
   /v1/organisations/{id}/members/invitations:
     post:
       tags: [Organisations]
+      operationId: inviteOrganisationMember
       summary: Invite organisation member
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -114,9 +144,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MemberInvitationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/requests/campaigns:
     post:
       tags: [Requests]
+      operationId: createRequestCampaign
       summary: Create request campaign
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -133,9 +168,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RequestCampaignResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/requests/campaigns/{id}:
     get:
       tags: [Requests]
+      operationId: getRequestCampaign
       summary: Get request campaign
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -146,9 +186,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RequestCampaignResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/requests/campaigns/{id}/targets:
     get:
       tags: [Requests]
+      operationId: listRequestCampaignTargets
       summary: List request campaign targets
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -159,9 +204,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/plots:
     post:
       tags: [Plots]
+      operationId: createPlot
       summary: Create plot
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -178,9 +228,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlotCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/plots/{id}/geometry-versions:
     post:
       tags: [Plots]
+      operationId: addPlotGeometryVersion
       summary: Add plot geometry version
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -198,9 +253,502 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GeometryVersionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/plots/{id}/photos-sync:
+    post:
+      tags: [Plots]
+      operationId: syncPlotPhotos
+      summary: Sync plot photos metadata
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPlotPhotosRequest"
+      responses:
+        "201":
+          description: Sync accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or assignment/ownership scope violation
+  /v1/plots/{id}/legal-sync:
+    post:
+      tags: [Plots]
+      operationId: syncPlotLegal
+      summary: Sync plot legality metadata
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPlotLegalRequest"
+      responses:
+        "201":
+          description: Sync accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or assignment/ownership scope violation
+  /v1/plots/{id}/evidence-sync:
+    post:
+      tags: [Plots]
+      operationId: syncPlotEvidence
+      summary: Sync plot evidence metadata
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPlotEvidenceRequest"
+      responses:
+        "201":
+          description: Sync accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or assignment/ownership scope violation
+  /v1/plots/{id}/assignments:
+    get:
+      tags: [Plots]
+      operationId: listPlotAssignments
+      summary: List plot assignment history
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, active, completed, cancelled]
+            default: all
+        - name: fromDays
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 30
+        - name: agentUserId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        "200":
+          description: Assignment rows ordered by latest assignment timestamp (JSON) or CSV export when format=csv
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlotAssignmentResponse"
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  status:
+                    type: string
+                    enum: [all, active, completed, cancelled]
+                  fromDays: { type: integer }
+                  agentUserId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                required: [items, total, limit, offset, status, fromDays, agentUserId]
+        "400":
+          description: Assignment relation unavailable
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-assignment-management role
+    post:
+      tags: [Plots]
+      operationId: createPlotAssignment
+      summary: Create active plot assignment
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlotAssignmentRequest"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlotAssignmentResponse"
+        "400":
+          description: Assignment relation missing, duplicate assignment, or invalid payload
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-assignment-management role
+  /v1/plots/assignments/{assignmentId}/complete:
+    patch:
+      tags: [Plots]
+      operationId: completePlotAssignment
+      summary: Complete active plot assignment
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlotAssignmentStatusRequest"
+      responses:
+        "200":
+          description: Assignment completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlotAssignmentResponse"
+        "400":
+          description: Assignment not found, invalid transition, or relation missing
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-assignment-management role
+  /v1/plots/assignments/{assignmentId}/cancel:
+    patch:
+      tags: [Plots]
+      operationId: cancelPlotAssignment
+      summary: Cancel active plot assignment
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlotAssignmentStatusRequest"
+      responses:
+        "200":
+          description: Assignment cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlotAssignmentResponse"
+        "400":
+          description: Assignment not found, invalid transition, or relation missing
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-assignment-management role
+  /v1/plots/{id}/geometry-history:
+    get:
+      tags: [Plots]
+      operationId: getPlotGeometryHistory
+      summary: Get plot geometry revision history
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+            default: desc
+        - name: anomalyProfile
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [strict, balanced, lenient]
+            default: balanced
+        - name: signalsOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Immutable geometry revision audit events page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlotGeometryHistoryEvent"
+                  anomalies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlotGeometryHistoryAnomaly"
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  sort:
+                    type: string
+                    enum: [desc, asc]
+                  anomalyProfile:
+                    type: string
+                    enum: [strict, balanced, lenient]
+                  signalsOnly:
+                    type: boolean
+                  anomalySummary:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      highSeverity: { type: integer }
+                      mediumSeverity: { type: integer }
+                      byType:
+                        type: object
+                        properties:
+                          largeRevisionJump: { type: integer }
+                          frequentSupersession: { type: integer }
+                  anomalySummaryScope:
+                    type: string
+                    enum: [current_page, full_filtered_set]
+                required: [items, anomalies, total, limit, offset, sort, anomalyProfile, signalsOnly, anomalySummary, anomalySummaryScope]
+              examples:
+                createdAndRevised:
+                  value:
+                    items:
+                      - id: "e1a11111-1111-4111-8111-111111111111"
+                        timestamp: "2026-04-16T09:12:10.000Z"
+                        userId: "11111111-1111-4111-8111-111111111111"
+                        deviceId: null
+                        eventType: "plot_created"
+                        payload:
+                          plotId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                          details:
+                            plotId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                            farmerId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                            clientPlotId: "local-plot-1"
+                            geometryNormalization:
+                              originalAreaHa: 1.02
+                              normalizedAreaHa: 1.01
+                              correctionVariancePct: 0.98
+                      - id: "e2b22222-2222-4222-8222-222222222222"
+                        timestamp: "2026-04-16T10:45:33.000Z"
+                        userId: "11111111-1111-4111-8111-111111111111"
+                        deviceId: "device-field-01"
+                        eventType: "plot_geometry_superseded"
+                        payload:
+                          plotId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                          details:
+                            plotId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+                            reason: "boundary correction after resurvey"
+                            previous:
+                              kind: "polygon"
+                            next:
+                              kind: "polygon"
+                            geometryNormalization:
+                              originalAreaHa: 1.01
+                              normalizedAreaHa: 1.0
+                              correctionVariancePct: 0.99
+                    total: 2
+                    anomalies:
+                      - eventId: "e2b22222-2222-4222-8222-222222222222"
+                        type: "large_revision_jump"
+                        severity: "medium"
+                        message: "Large revision jump: 3.20% area correction variance."
+                    limit: 100
+                    offset: 0
+                    sort: "desc"
+                    anomalyProfile: "balanced"
+                    signalsOnly: false
+                    anomalySummary:
+                      total: 1
+                      highSeverity: 1
+                      mediumSeverity: 0
+                      byType:
+                        largeRevisionJump: 1
+                        frequentSupersession: 0
+                    anomalySummaryScope: "current_page"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/plots/{id}/deforestation-decision:
+    post:
+      tags: [Plots]
+      operationId: runPlotDeforestationDecision
+      summary: Run historical deforestation decision for a plot
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: cutoffDate
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Historical decision cutoff date in YYYY-MM-DD format.
+      responses:
+        "200":
+          description: Deforestation decision computed and logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  plotId: { type: string }
+                  cutoffDate: { type: string }
+                  verdict:
+                    type: string
+                    enum: [no_deforestation_detected, possible_deforestation_detected, unknown]
+                  usedFallback: { type: boolean }
+                  historicalSqlApplied: { type: boolean }
+                  provider: { type: string }
+                  providerMode:
+                    type: string
+                    enum: [glad_s2_primary, radd_fallback]
+                  summary:
+                    type: object
+                    properties:
+                      alertCount:
+                        type: integer
+                        nullable: true
+                      alertAreaHa:
+                        type: number
+                        nullable: true
+                  source:
+                    type: object
+                    properties:
+                      dataset:
+                        type: string
+                        nullable: true
+                      version:
+                        type: string
+                        nullable: true
+                required: [ok, plotId, cutoffDate, verdict, usedFallback, historicalSqlApplied, provider, providerMode, summary, source]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Only agents/exporters can run deforestation decisions
+  /v1/plots/{id}/deforestation-decision-history:
+    get:
+      tags: [Plots]
+      operationId: getPlotDeforestationDecisionHistory
+      summary: Get historical deforestation decision history for a plot
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Immutable deforestation decision events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    timestamp: { type: string, format: date-time }
+                    user_id: { type: string, nullable: true }
+                    device_id: { type: string, nullable: true }
+                    event_type:
+                      type: string
+                      enum: [plot_deforestation_decision_recorded]
+                    payload:
+                      type: object
+                      properties:
+                        plotId: { type: string }
+                        cutoffDate: { type: string }
+                        verdict:
+                          type: string
+                          enum: [no_deforestation_detected, possible_deforestation_detected, unknown]
+                        provider: { type: string }
+                        providerMode:
+                          type: string
+                          enum: [glad_s2_primary, radd_fallback]
+                        summary:
+                          type: object
+                          properties:
+                            alertCount: { type: integer, nullable: true }
+                            alertAreaHa: { type: number, nullable: true }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/evidence-documents:
     post:
       tags: [Evidence]
+      operationId: uploadEvidenceDocument
       summary: Upload evidence document
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -226,9 +774,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EvidenceUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/evidence-documents/{id}/parse-status:
     get:
       tags: [Evidence]
+      operationId: getEvidenceParseStatus
       summary: Get parse status
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -239,9 +792,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EvidenceParseStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/consent-grants:
     post:
       tags: [Consent]
+      operationId: createConsentGrant
       summary: Create consent grant
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -258,9 +816,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConsentGrantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/consent-grants/{id}/revoke:
     patch:
       tags: [Consent]
+      operationId: revokeConsentGrant
       summary: Revoke consent grant
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -282,9 +845,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConsentGrantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/batches:
     post:
       tags: [Batches]
+      operationId: createBatch
       summary: Create batch
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -301,9 +871,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/batches/{id}/inputs:
     post:
       tags: [Batches]
+      operationId: addBatchInput
       summary: Add batch input
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -321,9 +896,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/batches/{id}/lock-lineage:
     post:
       tags: [Batches]
+      operationId: lockBatchLineage
       summary: Lock lineage
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -335,9 +917,307 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/chat-threads:
+    get:
+      tags: [Requests]
+      operationId: listChatThreads
+      summary: List chat threads
+      parameters:
+        - name: recordId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tenant-scoped chat thread list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatThreadSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+    post:
+      tags: [Requests]
+      operationId: createChatThread
+      summary: Create chat thread with initial message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatThreadRequest"
+      responses:
+        "201":
+          description: Thread created or replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageWriteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+  /v1/chat-threads/{id}/messages:
+    get:
+      tags: [Requests]
+      operationId: listChatThreadMessages
+      summary: List chat thread messages
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Tenant-scoped message timeline for thread
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+    post:
+      tags: [Requests]
+      operationId: postChatThreadMessage
+      summary: Post message to thread
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostChatMessageRequest"
+      responses:
+        "201":
+          description: Message posted or replayed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageWriteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+  /v1/chat-threads/{id}/resolve:
+    post:
+      tags: [Requests]
+      operationId: resolveChatThread
+      summary: Resolve chat thread
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "201":
+          description: Thread resolved or already resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThreadStatusTransitionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+  /v1/chat-threads/{id}/reopen:
+    post:
+      tags: [Requests]
+      operationId: reopenChatThread
+      summary: Reopen resolved chat thread
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "201":
+          description: Thread reopened or already active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThreadStatusTransitionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+  /v1/chat-threads/{id}/archive:
+    post:
+      tags: [Requests]
+      operationId: archiveChatThread
+      summary: Archive chat thread
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "201":
+          description: Thread archived or already archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThreadStatusTransitionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim
+  /v1/harvest/packages/{id}/readiness:
+    get:
+      tags: [Harvest]
+      operationId: getDdsPackageReadiness
+      summary: Evaluate DDS package readiness rules
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Deterministic package readiness evaluation with blocker/warning counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsPackageReadinessResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
+  /v1/harvest/packages/{id}/evidence-documents:
+    get:
+      tags: [Harvest]
+      operationId: listDdsPackageEvidenceDocuments
+      summary: List package evidence documents
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Typed evidence-document diagnostics rows for the selected DDS package
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DdsPackageEvidenceDocument"
+              examples:
+                default:
+                  value:
+                    - evidenceId: evidence_v_1
+                      packageId: 8d09c964-f95b-4a7a-8bd1-e7f3006a3f77
+                      plotId: 9afad390-c0fd-4c46-bded-f4076144f7b5
+                      title: South Field B document packet
+                      type: tenure_evidence
+                      reviewStatus: pending
+                      source: South Field B
+                      capturedAt: "2026-04-16"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
+  /v1/harvest/packages/{id}/risk-score:
+    get:
+      tags: [Harvest]
+      operationId: getDdsPackageRiskScore
+      summary: Evaluate DDS package risk score
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Deterministic package risk scoring result with explainability reasons
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsPackageRiskScoreResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
+  /v1/harvest/packages/{id}/filing-preflight:
+    get:
+      tags: [Harvest]
+      operationId: getDdsPackageFilingPreflight
+      summary: Evaluate filing pre-flight readiness
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Deterministic filing pre-flight result combining readiness and risk outcomes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsPackageFilingPreflightResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
+  /v1/harvest/packages/{id}/generate:
+    post:
+      tags: [Harvest]
+      operationId: generateDdsPackageArtifacts
+      summary: Generate filing package artifacts
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Filing package artifacts generated after successful pre-flight checks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DdsPackageGenerationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
+  /v1/harvest/packages/{id}/submit:
+    patch:
+      tags: [Harvest]
+      operationId: submitDdsPackage
+      summary: Submit DDS package with idempotency semantics
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitDdsPackageRequest"
+      responses:
+        "200":
+          description: Submission accepted or replayed for same idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitDdsPackageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or non-exporter role
   /v1/yield-exception-requests/{id}/approve:
     post:
       tags: [Reviews]
+      operationId: approveYieldExceptionRequest
       summary: Approve yield exception
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -355,9 +1235,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/yield-exception-requests/{id}/reject:
     post:
       tags: [Reviews]
+      operationId: rejectYieldExceptionRequest
       summary: Reject yield exception
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -375,13 +1262,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/dedup-review-tasks/{id}/merge:
     post:
       tags: [Reviews]
+      operationId: mergeDedupReviewTask
       summary: Merge duplicate entities
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DedupeMergeRequest"
       responses:
         "200":
           description: Merge applied
@@ -389,19 +1289,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/dedup-review-tasks/{id}/mark-distinct:
+    post:
+      tags: [Reviews]
+      operationId: markDedupReviewTaskDistinct
+      summary: Mark duplicate review as distinct
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DedupeMergeRequest"
-  /v1/dedup-review-tasks/{id}/mark-distinct:
-    post:
-      tags: [Reviews]
-      summary: Mark duplicate review as distinct
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/IdPath"
+              $ref: "#/components/schemas/DedupeDecisionRequest"
       responses:
         "200":
           description: Marked distinct
@@ -409,19 +1316,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/dedup-review-tasks/{id}/escalate:
+    post:
+      tags: [Reviews]
+      operationId: escalateDedupReviewTask
+      summary: Escalate duplicate review
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IdPath"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DedupeDecisionRequest"
-  /v1/dedup-review-tasks/{id}/escalate:
-    post:
-      tags: [Reviews]
-      summary: Escalate duplicate review
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/IdPath"
+              $ref: "#/components/schemas/DedupeEscalateRequest"
       responses:
         "200":
           description: Escalated
@@ -429,15 +1343,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DedupeEscalateRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/shipment-headers:
     post:
       tags: [Shipments]
+      operationId: createShipmentHeader
       summary: Create shipment header
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -454,9 +1369,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/shipment-headers/{id}/lines:
     post:
       tags: [Shipments]
+      operationId: addShipmentHeaderLine
       summary: Add shipment line
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -474,9 +1394,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/shipment-headers/{id}/seal:
     post:
       tags: [Shipments]
+      operationId: sealShipmentHeader
       summary: Seal shipment
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -488,11 +1415,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ShipmentHeaderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
   /v1/dds-records/{id}/submit:
     post:
       tags: [DDS]
+      operationId: submitDdsRecord
       summary: Submit DDS
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -504,6 +1438,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DdsRecordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
         "422":
@@ -511,6 +1451,7 @@ paths:
   /v1/dds-records/{id}/amend:
     post:
       tags: [DDS]
+      operationId: amendDdsRecord
       summary: Amend DDS
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -522,9 +1463,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DdsRecordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/dds-records/{id}/retract:
     post:
       tags: [DDS]
+      operationId: retractDdsRecord
       summary: Retract DDS
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -536,9 +1484,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DdsRecordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/sync/flush:
     post:
       tags: [Sync]
+      operationId: flushSyncQueue
       summary: Flush sync queue
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -555,9 +1510,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SyncFlushResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/sync-conflicts/{id}/resolve:
     post:
       tags: [Sync]
+      operationId: resolveSyncConflict
       summary: Resolve sync conflict
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -575,9 +1535,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/portability-requests:
     post:
       tags: [Portability]
+      operationId: createPortabilityRequest
       summary: Create portability request
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -594,9 +1561,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/portability-requests/{id}/download:
     get:
       tags: [Portability]
+      operationId: downloadPortabilityPayload
       summary: Download portability payload
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -607,9 +1579,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DownloadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-exports:
     post:
       tags: [ComplianceExports]
+      operationId: createComplianceExport
       summary: Create full compliance export
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -626,9 +1603,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceExportCreateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/compliance-exports/{id}:
     get:
       tags: [ComplianceExports]
+      operationId: getComplianceExportStatus
       summary: Get export status
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -639,9 +1621,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceExportStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-exports/{id}/download:
     get:
       tags: [ComplianceExports]
+      operationId: downloadComplianceExport
       summary: Download compliance export
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -652,9 +1639,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DownloadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/audit-events/export:
     get:
       tags: [Audit]
+      operationId: exportAuditEvents
       summary: Export audit events
       parameters:
         - name: from_date
@@ -670,9 +1662,790 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry:
+    get:
+      tags: [Audit]
+      operationId: listGatedEntryTelemetry
+      summary: List gated-entry telemetry events
+      parameters:
+        - name: gate
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [request_campaigns, annual_reporting]
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 24
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          example: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          example: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+          example: desc
+      responses:
+        "200":
+          description: Tenant-scoped gated-entry telemetry page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatedEntryTelemetryListResponse"
+              examples:
+                success:
+                  value:
+                    items:
+                      - id: "f4f4f4f4-1111-4444-8888-f4f4f4f4f4f4"
+                        timestamp: "2026-04-15T14:12:01.000Z"
+                        user_id: "11111111-1111-1111-1111-111111111111"
+                        device_id: "dashboard-web"
+                        event_type: "dashboard_gated_entry_attempt"
+                        payload:
+                          tenantId: "tenant_1"
+                          gate: "request_campaigns"
+                          role: "exporter"
+                          feature: "mvp_gated"
+                          redirectedPath: "/"
+                          capturedAt: "2026-04-15T14:12:00.900Z"
+                    total: 1
+                    limit: 50
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/export:
+    get:
+      tags: [Audit]
+      operationId: exportGatedEntryTelemetryCsv
+      summary: Export gated-entry telemetry as CSV
+      parameters:
+        - name: gate
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [request_campaigns, annual_reporting]
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+      responses:
+        "200":
+          description: CSV export stream with metadata headers
+          headers:
+            X-Export-Row-Limit:
+              schema:
+                type: string
+            X-Export-Row-Count:
+              schema:
+                type: string
+            X-Export-Truncated:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/exports:
+    get:
+      tags: [Audit]
+      operationId: listGatedEntryExportActivity
+      summary: List gated-entry export activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 24
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          example: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          example: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+          example: desc
+      responses:
+        "200":
+          description: Tenant-scoped export activity page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatedEntryTelemetryListResponse"
+              examples:
+                success:
+                  value:
+                    items:
+                      - id: "a3a3a3a3-2222-4444-9999-a3a3a3a3a3a3"
+                        timestamp: "2026-04-15T15:00:00.000Z"
+                        user_id: "11111111-1111-1111-1111-111111111111"
+                        device_id: "dashboard-web"
+                        event_type: "dashboard_gated_entry_exported"
+                        payload:
+                          tenantId: "tenant_1"
+                          gate: "all"
+                          fromHours: 24
+                          sort: "desc"
+                          rowCount: 42
+                          rowLimit: 5000
+                          truncated: false
+                          format: "csv"
+                          exportedBy: "ops@tracebud.test"
+                          exportedAt: "2026-04-15T15:00:00.000Z"
+                    total: 1
+                    limit: 20
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/assignment-exports:
+    get:
+      tags: [Audit]
+      operationId: listAssignmentExportActivity
+      summary: List assignment export activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 24
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          example: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          example: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+          example: desc
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [requested, succeeded, failed]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, active, completed, cancelled]
+      responses:
+        "200":
+          description: Tenant-scoped assignment export activity page with explicit pagination metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentExportTelemetryListResponse"
+              examples:
+                success:
+                  value:
+                    items:
+                      - id: "b4b4b4b4-2222-4444-9999-b4b4b4b4b4b4"
+                        timestamp: "2026-04-16T10:00:00.000Z"
+                        user_id: "11111111-1111-1111-1111-111111111111"
+                        device_id: null
+                        event_type: "plot_assignment_export_succeeded"
+                        payload:
+                          tenantId: "tenant_1"
+                          plotId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+                          exportedBy: "ops@tracebud.test"
+                          rowCount: 32
+                          status: "active"
+                          fromDays: 30
+                          agentUserId: null
+                          error: null
+                    total: 73
+                    limit: 20
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/assignment-exports/export:
+    get:
+      tags: [Audit]
+      operationId: exportAssignmentExportActivityCsv
+      summary: Export assignment export activity as CSV
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [requested, succeeded, failed]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, active, completed, cancelled]
+      responses:
+        "200":
+          description: CSV export stream with metadata headers
+          headers:
+            X-Export-Row-Limit:
+              schema:
+                type: string
+            X-Export-Row-Count:
+              schema:
+                type: string
+            X-Export-Truncated:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/risk-scores:
+    get:
+      tags: [Audit]
+      operationId: listRiskScoreActivity
+      summary: List risk score activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+          example: 24
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          example: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          example: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+          example: desc
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [requested, evaluated, low, medium, high]
+        - name: band
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, low, medium, high]
+      responses:
+        "200":
+          description: Tenant-scoped risk score activity page with explicit pagination metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskScoreTelemetryListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/risk-scores/export:
+    get:
+      tags: [Audit]
+      operationId: exportRiskScoreActivityCsv
+      summary: Export risk score activity as CSV
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [requested, evaluated, low, medium, high]
+        - name: band
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, low, medium, high]
+      responses:
+        "200":
+          description: CSV export stream with metadata headers
+          headers:
+            X-Export-Row-Limit:
+              schema:
+                type: string
+            X-Export-Row-Count:
+              schema:
+                type: string
+            X-Export-Truncated:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/filing-activity:
+    get:
+      tags: [Audit]
+      operationId: listFilingActivity
+      summary: List filing activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [generation_requested, generation_generated, submission_requested, submission_accepted, submission_replayed]
+      responses:
+        "200":
+          description: Tenant-scoped filing activity page with explicit pagination metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FilingActivityTelemetryListResponse"
+              examples:
+                generation_activity:
+                  value:
+                    items:
+                      - id: "9dd9d74a-2ac4-4cfd-94d0-f8bcb3df43cc"
+                        timestamp: "2026-04-20T09:10:11.000Z"
+                        user_id: "77777777-7777-4777-8777-777777777777"
+                        device_id: null
+                        event_type: "dds_package_generation_generated"
+                        payload:
+                          tenantId: "tenant_1"
+                          packageId: "11111111-1111-4111-8111-111111111111"
+                          status: "package_generated"
+                          artifactVersion: "v1"
+                          lotCount: 2
+                    total: 1
+                    limit: 20
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/filing-activity/export:
+    get:
+      tags: [Audit]
+      operationId: exportFilingActivityCsv
+      summary: Export filing activity as CSV
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [generation_requested, generation_generated, submission_requested, submission_accepted, submission_replayed]
+      responses:
+        "200":
+          description: CSV export stream with metadata headers
+          headers:
+            X-Export-Row-Limit:
+              schema:
+                type: string
+            X-Export-Row-Count:
+              schema:
+                type: string
+            X-Export-Truncated:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+              example: |
+                captured_at,actor,phase,package_id,status,artifact_version,lot_count,idempotency_key,submission_state,traces_reference,replayed,persisted_at,generated_at
+                2026-04-20T09:10:11.000Z,ops@tracebud.test,generation_generated,pkg_1,package_generated,v1,2,,,,,,2026-04-20T09:10:11.000Z
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/chat-threads:
+    get:
+      tags: [Audit]
+      operationId: listChatThreadActivity
+      summary: List chat-thread activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created, posted, replayed, resolved, reopened, archived]
+      responses:
+        "200":
+          description: Tenant-scoped chat-thread activity page with explicit pagination metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThreadActivityTelemetryListResponse"
+              examples:
+                created_phase:
+                  value:
+                    items:
+                      - id: "497e0d1d-c7c6-4e70-ad13-6a5b52c07b9f"
+                        timestamp: "2026-04-20T09:15:00.000Z"
+                        user_id: "77777777-7777-4777-8777-777777777777"
+                        event_type: "chat_thread_created"
+                        payload:
+                          tenantId: "tenant_1"
+                          threadId: "thread_1"
+                          recordId: "record_1"
+                          messageId: "msg_1"
+                          actorRole: "exporter"
+                    total: 1
+                    limit: 20
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/workflow-activity:
+    get:
+      tags: [Audit]
+      operationId: listWorkflowActivity
+      summary: List workflow activity events
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [desc, asc]
+        - name: phase
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [template_created, stage_transitioned, sla_warning, sla_breached, sla_escalated, sla_recovered]
+        - name: slaState
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, on_track, warning, breached, escalated]
+      responses:
+        "200":
+          description: Tenant-scoped workflow activity page with explicit pagination metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowActivityTelemetryListResponse"
+              examples:
+                sla_warning_phase:
+                  value:
+                    items:
+                      - id: "875e2ec4-fec5-4fd4-87ec-9314c7ea0805"
+                        timestamp: "2026-04-20T09:20:00.000Z"
+                        user_id: "77777777-7777-4777-8777-777777777777"
+                        event_type: "workflow_stage_sla_warning"
+                        payload:
+                          tenantId: "tenant_1"
+                          templateId: "template_1"
+                          stageId: "verify_docs"
+                          slaState: "warning"
+                          actorRole: "exporter"
+                    total: 1
+                    limit: 20
+                    offset: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/dashboard-summary:
+    get:
+      tags: [Audit]
+      operationId: getDashboardDiagnosticsSummary
+      summary: Get dashboard diagnostics summary
+      parameters:
+        - name: fromHours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 720
+      responses:
+        "200":
+          description: Tenant-scoped aggregate diagnostics counters across dashboard event families
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardDiagnosticsSummaryResponse"
+              examples:
+                tenant_summary:
+                  value:
+                    tenantId: "tenant_1"
+                    fromHours: 24
+                    totalDiagnostics: 5
+                    counters:
+                      gatedEntryAttempts: 1
+                      assignmentExportEvents: 1
+                      riskScoreEvents: 1
+                      filingActivityEvents: 1
+                      chatActivityEvents: 1
+                    breakdown:
+                      assignmentPhase: { requested: 1, succeeded: 0, failed: 0 }
+                      assignmentStatus: { active: 1, completed: 0, cancelled: 0 }
+                      riskBand: { low: 0, medium: 1, high: 0 }
+                      filingFamily: { generation: 0, submission: 1 }
+                      chatPhase: { created: 0, posted: 1, replayed: 0, resolved: 0, reopened: 0, archived: 0 }
+                    readiness:
+                      hasAnyDiagnostics: true
+                      canExportDetailed: true
+                      latestEventAt: "2026-04-20T09:30:00.000Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/audit/gated-entry/actors:
+    get:
+      tags: [Audit]
+      operationId: resolveGatedEntryActors
+      summary: Resolve gated-entry export actor labels
+      parameters:
+        - name: ids
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated UUID user IDs (max 50)
+          example: "11111111-1111-1111-1111-111111111111,22222222-2222-2222-2222-222222222222"
+      responses:
+        "200":
+          description: Actor labels resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GatedEntryActorLookupResponse"
+              examples:
+                success:
+                  value:
+                    actors:
+                      "11111111-1111-1111-1111-111111111111": "ops@tracebud.test"
+                      "22222222-2222-2222-2222-222222222222": "Tenant One User"
+        "400":
+          description: Invalid or missing ids input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_ids:
+                  value:
+                    error_code: VAL-002
+                    message: ids must be UUID values.
+                    request_id: req_actor_lookup_invalid
+                missing_ids:
+                  value:
+                    error_code: VAL-001
+                    message: ids is required.
+                    request_id: req_actor_lookup_missing
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/access-logs/export:
     get:
       tags: [Audit]
+      operationId: exportAccessLogs
       summary: Export access logs
       parameters:
         - name: from_date
@@ -688,9 +2461,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/annual-reporting-snapshots/generate:
     post:
       tags: [Reporting]
+      operationId: generateAnnualReportingSnapshot
       summary: Generate annual snapshot
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -707,9 +2485,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/annual-reporting-snapshots/{id}:
     get:
       tags: [Reporting]
+      operationId: getAnnualReportingSnapshot
       summary: Get annual snapshot
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -720,9 +2503,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-issues:
     post:
       tags: [ComplianceIssues]
+      operationId: createComplianceIssue
       summary: Create compliance issue
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -739,9 +2527,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceIssueResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/compliance-issues/{id}:
     get:
       tags: [ComplianceIssues]
+      operationId: getComplianceIssue
       summary: Get compliance issue
       parameters:
         - $ref: "#/components/parameters/IdPath"
@@ -752,9 +2545,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceIssueResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-issues/{id}/assign-owner:
     patch:
       tags: [ComplianceIssues]
+      operationId: assignComplianceIssueOwner
       summary: Assign issue owner
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -772,9 +2570,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceIssueResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-issues/{id}/resolve:
     patch:
       tags: [ComplianceIssues]
+      operationId: resolveComplianceIssue
       summary: Resolve compliance issue
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -792,9 +2597,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceIssueResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/compliance-issues/{id}/escalate:
     patch:
       tags: [ComplianceIssues]
+      operationId: escalateComplianceIssue
       summary: Escalate compliance issue
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -812,9 +2624,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceIssueResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/billing-events:
     get:
       tags: [Billing]
+      operationId: listBillingEvents
       summary: List billing events
       responses:
         "200":
@@ -823,9 +2642,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/billing/payment-methods:
     post:
       tags: [Billing]
+      operationId: createBillingPaymentMethod
       summary: Create payment method
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -842,9 +2664,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/billing/payment-methods/{id}/set-default:
     patch:
       tags: [Billing]
+      operationId: setDefaultBillingPaymentMethod
       summary: Set default payment method
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -856,9 +2683,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/webhooks:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhooks
+      summary: List webhooks
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Webhook registrations list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     post:
       tags: [Webhooks]
+      operationId: registerWebhook
       summary: Register webhook
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -875,12 +2738,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
   /v1/webhooks/{id}/deliveries:
     get:
       tags: [Webhooks]
+      operationId: listWebhookDeliveries
       summary: List webhook deliveries
       parameters:
         - $ref: "#/components/parameters/IdPath"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
       responses:
         "200":
           description: Deliveries list
@@ -888,6 +2771,317 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/integrations/eudr/echo:
+    get:
+      tags: [Integrations]
+      operationId: checkEudrConnectivity
+      summary: Check EUDR connectivity
+      description: Performs server-side connectivity check against EUDR echo endpoint using backend-managed credentials.
+      parameters:
+        - name: message
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: EUDR connectivity check succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - provider
+                  - endpoint
+                  - statusCode
+                  - version
+                  - latencyMs
+                  - message
+                properties:
+                  ok:
+                    type: boolean
+                  provider:
+                    type: string
+                    example: eudr_api_service
+                  endpoint:
+                    type: string
+                    example: /api/eudr/echo
+                  statusCode:
+                    type: integer
+                  version:
+                    type: string
+                    example: "2"
+                  latencyMs:
+                    type: integer
+                  message:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+        "502":
+          description: Upstream EUDR connectivity check failed
+  /v1/integrations/eudr/dds:
+    post:
+      tags: [Integrations]
+      operationId: submitEudrDds
+      summary: Submit DDS to EUDR
+      description: Submits tenant-scoped DDS payload to EUDR provider and returns replay-aware outcome metadata.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - statement
+                - idempotencyKey
+              properties:
+                statement:
+                  type: object
+                  additionalProperties: true
+                idempotencyKey:
+                  type: string
+      responses:
+        "200":
+          description: DDS submit accepted (including replay-safe duplicate outcomes)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - provider
+                  - endpoint
+                  - idempotencyKey
+                  - statusCode
+                  - version
+                  - latencyMs
+                properties:
+                  ok:
+                    type: boolean
+                  provider:
+                    type: string
+                    example: eudr_api_service
+                  endpoint:
+                    type: string
+                    example: /api/eudr/dds
+                  idempotencyKey:
+                    type: string
+                  statusCode:
+                    type: integer
+                  version:
+                    type: string
+                    example: "2"
+                  latencyMs:
+                    type: integer
+                  replayed:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+        "502":
+          description: Upstream EUDR DDS submit failed
+  /v1/integrations/eudr/dds/status:
+    get:
+      tags: [Integrations]
+      operationId: readEudrDdsStatus
+      summary: Read DDS status from EUDR
+      parameters:
+        - name: referenceNumber
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: EUDR DDS status read succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - provider
+                  - endpoint
+                  - referenceNumber
+                  - statusCode
+                  - version
+                  - latencyMs
+                properties:
+                  ok:
+                    type: boolean
+                  provider:
+                    type: string
+                    example: eudr_api_service
+                  endpoint:
+                    type: string
+                    example: /api/eudr/dds
+                  referenceNumber:
+                    type: string
+                  statusCode:
+                    type: integer
+                  version:
+                    type: string
+                    example: "2"
+                  latencyMs:
+                    type: integer
+                  payload:
+                    type: object
+                    additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+        "502":
+          description: Upstream EUDR DDS status read failed
+  /v1/workflow-templates:
+    get:
+      tags: [WorkflowTemplates]
+      operationId: listWorkflowTemplates
+      summary: List workflow templates
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: Workflow template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+    post:
+      tags: [WorkflowTemplates]
+      operationId: createWorkflowTemplate
+      summary: Create workflow template
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkflowTemplateRequest"
+      responses:
+        "201":
+          description: Workflow template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericEntityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/workflow-templates/{id}/stages/{stageId}/transitions:
+    post:
+      tags: [WorkflowTemplates]
+      operationId: transitionWorkflowStage
+      summary: Transition workflow stage
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: stageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionWorkflowStageRequest"
+      responses:
+        "200":
+          description: Transition accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transitionId: { type: string, format: uuid }
+                  templateId: { type: string, format: uuid }
+                  stageId: { type: string }
+                  fromStatus: { $ref: "#/components/schemas/WorkflowStageStatus" }
+                  toStatus: { $ref: "#/components/schemas/WorkflowStageStatus" }
+                required: [transitionId, templateId, stageId, fromStatus, toStatus]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/workflow-templates/{id}/stages/{stageId}/sla-transitions:
+    post:
+      tags: [WorkflowTemplates]
+      operationId: transitionWorkflowStageSla
+      summary: Transition workflow stage SLA state
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: stageId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionWorkflowStageSlaRequest"
+      responses:
+        "200":
+          description: SLA transition accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transitionId: { type: string, format: uuid }
+                  templateId: { type: string, format: uuid }
+                  stageId: { type: string }
+                  fromState: { $ref: "#/components/schemas/WorkflowSlaState" }
+                  toState: { $ref: "#/components/schemas/WorkflowSlaState" }
+                required: [transitionId, templateId, stageId, fromState, toState]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
 components:
   securitySchemes:
     bearerAuth:
@@ -951,6 +3145,678 @@ components:
         id:
           type: string
           format: uuid
+    GatedEntryTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GatedEntryTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    AssignmentExportTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignmentExportTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    RiskScoreTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskScoreTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    FilingActivityTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilingActivityTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    ChatThreadActivityTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatThreadActivityTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    WorkflowActivityTelemetryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowActivityTelemetryEvent"
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required: [items, total, limit, offset]
+    ChatThreadActivityTelemetryEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          nullable: true
+        event_type:
+          type: string
+          enum:
+            [
+              chat_thread_created,
+              chat_thread_message_posted,
+              chat_thread_message_replayed,
+              chat_thread_resolved,
+              chat_thread_reopened,
+              chat_thread_archived,
+            ]
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            threadId:
+              type: string
+            recordId:
+              type: string
+              nullable: true
+            messageId:
+              type: string
+            idempotencyKey:
+              type: string
+              nullable: true
+            actorRole:
+              type: string
+              enum: [farmer, agent, exporter]
+            actorUserId:
+              type: string
+              nullable: true
+            capturedAt:
+              type: string
+              format: date-time
+              nullable: true
+          required: [tenantId, threadId, messageId, actorRole]
+      required: [id, timestamp, event_type, payload]
+    WorkflowActivityTelemetryEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          nullable: true
+        event_type:
+          type: string
+          enum:
+            [
+              workflow_template_created,
+              workflow_stage_transitioned,
+              workflow_stage_sla_warning,
+              workflow_stage_sla_breached,
+              workflow_stage_sla_escalated,
+              workflow_stage_sla_recovered,
+            ]
+        payload:
+          type: object
+          properties:
+            tenantId:
+              type: string
+            templateId:
+              type: string
+            stageId:
+              type: string
+              nullable: true
+            transitionId:
+              type: string
+              nullable: true
+            fromStatus:
+              type: string
+              nullable: true
+            toStatus:
+              type: string
+              nullable: true
+            slaState:
+              type: string
+              nullable: true
+              enum: [on_track, warning, breached, escalated]
+            actorRole:
+              type: string
+              enum: [farmer, agent, exporter]
+            actorUserId:
+              type: string
+              nullable: true
+          required: [tenantId, templateId, actorRole]
+      required: [id, timestamp, event_type, payload]
+    ChatThreadStatusTransitionResponse:
+      type: object
+      properties:
+        threadId:
+          type: string
+        status:
+          type: string
+          enum: [active, resolved, archived]
+        changed:
+          type: boolean
+      required: [threadId, status, changed]
+    DashboardDiagnosticsSummaryResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        fromHours:
+          type: integer
+        totalDiagnostics:
+          type: integer
+        counters:
+          type: object
+          properties:
+            gatedEntryAttempts:
+              type: integer
+            assignmentExportEvents:
+              type: integer
+            riskScoreEvents:
+              type: integer
+            filingActivityEvents:
+              type: integer
+            chatActivityEvents:
+              type: integer
+          required:
+            [gatedEntryAttempts, assignmentExportEvents, riskScoreEvents, filingActivityEvents, chatActivityEvents]
+        breakdown:
+          type: object
+          properties:
+            assignmentPhase:
+              type: object
+              properties:
+                requested: { type: integer }
+                succeeded: { type: integer }
+                failed: { type: integer }
+              required: [requested, succeeded, failed]
+            assignmentStatus:
+              type: object
+              properties:
+                active: { type: integer }
+                completed: { type: integer }
+                cancelled: { type: integer }
+              required: [active, completed, cancelled]
+            riskBand:
+              type: object
+              properties:
+                low: { type: integer }
+                medium: { type: integer }
+                high: { type: integer }
+              required: [low, medium, high]
+            filingFamily:
+              type: object
+              properties:
+                generation: { type: integer }
+                submission: { type: integer }
+              required: [generation, submission]
+            chatPhase:
+              type: object
+              properties:
+                created: { type: integer }
+                posted: { type: integer }
+                replayed: { type: integer }
+                resolved: { type: integer }
+                reopened: { type: integer }
+                archived: { type: integer }
+              required: [created, posted, replayed, resolved, reopened, archived]
+          required: [assignmentPhase, assignmentStatus, riskBand, filingFamily, chatPhase]
+        readiness:
+          type: object
+          properties:
+            hasAnyDiagnostics:
+              type: boolean
+            canExportDetailed:
+              type: boolean
+            latestEventAt:
+              type: string
+              format: date-time
+              nullable: true
+          required: [hasAnyDiagnostics, canExportDetailed, latestEventAt]
+      required: [tenantId, fromHours, totalDiagnostics, counters, breakdown, readiness]
+    GatedEntryTelemetryEvent:
+      oneOf:
+        - $ref: "#/components/schemas/GatedEntryAttemptEvent"
+        - $ref: "#/components/schemas/GatedEntryExportedEvent"
+      discriminator:
+        propertyName: event_type
+        mapping:
+          dashboard_gated_entry_attempt: "#/components/schemas/GatedEntryAttemptEvent"
+          dashboard_gated_entry_exported: "#/components/schemas/GatedEntryExportedEvent"
+    AssignmentExportTelemetryEvent:
+      oneOf:
+        - $ref: "#/components/schemas/AssignmentExportRequestedEvent"
+        - $ref: "#/components/schemas/AssignmentExportSucceededEvent"
+        - $ref: "#/components/schemas/AssignmentExportFailedEvent"
+      discriminator:
+        propertyName: event_type
+        mapping:
+          plot_assignment_export_requested: "#/components/schemas/AssignmentExportRequestedEvent"
+          plot_assignment_export_succeeded: "#/components/schemas/AssignmentExportSucceededEvent"
+          plot_assignment_export_failed: "#/components/schemas/AssignmentExportFailedEvent"
+    RiskScoreTelemetryEvent:
+      oneOf:
+        - $ref: "#/components/schemas/RiskScoreRequestedEvent"
+        - $ref: "#/components/schemas/RiskScoreEvaluatedEvent"
+        - $ref: "#/components/schemas/RiskScoreLowEvent"
+        - $ref: "#/components/schemas/RiskScoreMediumEvent"
+        - $ref: "#/components/schemas/RiskScoreHighEvent"
+      discriminator:
+        propertyName: event_type
+        mapping:
+          dds_package_risk_score_requested: "#/components/schemas/RiskScoreRequestedEvent"
+          dds_package_risk_score_evaluated: "#/components/schemas/RiskScoreEvaluatedEvent"
+          dds_package_risk_score_low: "#/components/schemas/RiskScoreLowEvent"
+          dds_package_risk_score_medium: "#/components/schemas/RiskScoreMediumEvent"
+          dds_package_risk_score_high: "#/components/schemas/RiskScoreHighEvent"
+    FilingActivityTelemetryEvent:
+      oneOf:
+        - $ref: "#/components/schemas/FilingGenerationRequestedEvent"
+        - $ref: "#/components/schemas/FilingGenerationGeneratedEvent"
+        - $ref: "#/components/schemas/FilingSubmissionRequestedEvent"
+        - $ref: "#/components/schemas/FilingSubmissionAcceptedEvent"
+        - $ref: "#/components/schemas/FilingSubmissionReplayedEvent"
+      discriminator:
+        propertyName: event_type
+        mapping:
+          dds_package_generation_requested: "#/components/schemas/FilingGenerationRequestedEvent"
+          dds_package_generation_generated: "#/components/schemas/FilingGenerationGeneratedEvent"
+          dds_package_submission_requested: "#/components/schemas/FilingSubmissionRequestedEvent"
+          dds_package_submission_accepted: "#/components/schemas/FilingSubmissionAcceptedEvent"
+          dds_package_submission_replayed: "#/components/schemas/FilingSubmissionReplayedEvent"
+    GatedEntryTelemetryEventBase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        device_id:
+          type: string
+          nullable: true
+      required: [id, timestamp, event_type, payload]
+    GatedEntryAttemptEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dashboard_gated_entry_attempt]
+            payload:
+              $ref: "#/components/schemas/GatedEntryAttemptPayload"
+          required: [event_type, payload]
+    GatedEntryExportedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dashboard_gated_entry_exported]
+            payload:
+              $ref: "#/components/schemas/GatedEntryExportedPayload"
+          required: [event_type, payload]
+    AssignmentExportRequestedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [plot_assignment_export_requested]
+            payload:
+              $ref: "#/components/schemas/AssignmentExportPayload"
+          required: [event_type, payload]
+    AssignmentExportSucceededEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [plot_assignment_export_succeeded]
+            payload:
+              $ref: "#/components/schemas/AssignmentExportPayload"
+          required: [event_type, payload]
+    AssignmentExportFailedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [plot_assignment_export_failed]
+            payload:
+              $ref: "#/components/schemas/AssignmentExportPayload"
+          required: [event_type, payload]
+    RiskScoreRequestedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_risk_score_requested]
+            payload:
+              $ref: "#/components/schemas/RiskScorePayload"
+          required: [event_type, payload]
+    RiskScoreEvaluatedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_risk_score_evaluated]
+            payload:
+              $ref: "#/components/schemas/RiskScorePayload"
+          required: [event_type, payload]
+    RiskScoreLowEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_risk_score_low]
+            payload:
+              $ref: "#/components/schemas/RiskScorePayload"
+          required: [event_type, payload]
+    RiskScoreMediumEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_risk_score_medium]
+            payload:
+              $ref: "#/components/schemas/RiskScorePayload"
+          required: [event_type, payload]
+    RiskScoreHighEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_risk_score_high]
+            payload:
+              $ref: "#/components/schemas/RiskScorePayload"
+          required: [event_type, payload]
+    FilingGenerationRequestedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_generation_requested]
+            payload:
+              $ref: "#/components/schemas/FilingActivityPayload"
+          required: [event_type, payload]
+    FilingGenerationGeneratedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_generation_generated]
+            payload:
+              $ref: "#/components/schemas/FilingActivityPayload"
+          required: [event_type, payload]
+    FilingSubmissionRequestedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_submission_requested]
+            payload:
+              $ref: "#/components/schemas/FilingActivityPayload"
+          required: [event_type, payload]
+    FilingSubmissionAcceptedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_submission_accepted]
+            payload:
+              $ref: "#/components/schemas/FilingActivityPayload"
+          required: [event_type, payload]
+    FilingSubmissionReplayedEvent:
+      allOf:
+        - $ref: "#/components/schemas/GatedEntryTelemetryEventBase"
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum: [dds_package_submission_replayed]
+            payload:
+              $ref: "#/components/schemas/FilingActivityPayload"
+          required: [event_type, payload]
+    GatedEntryAttemptPayload:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        gate:
+          type: string
+          enum: [request_campaigns, annual_reporting]
+        role:
+          type: string
+        feature:
+          type: string
+        redirectedPath:
+          type: string
+        capturedAt:
+          type: string
+          format: date-time
+      required: [tenantId, gate]
+      additionalProperties: true
+    GatedEntryExportedPayload:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        gate:
+          type: string
+          enum: [request_campaigns, annual_reporting, all]
+        fromHours:
+          type: integer
+          minimum: 1
+          maximum: 720
+        sort:
+          type: string
+          enum: [desc, asc]
+        rowCount:
+          type: integer
+          minimum: 0
+        rowLimit:
+          type: integer
+          minimum: 1
+        truncated:
+          type: boolean
+        format:
+          type: string
+          enum: [csv]
+        exportedBy:
+          type: string
+          nullable: true
+        exportedAt:
+          type: string
+          format: date-time
+      required: [tenantId, fromHours, sort, rowCount, rowLimit, truncated, format, exportedAt]
+      additionalProperties: true
+    AssignmentExportPayload:
+      type: object
+      properties:
+        plotId:
+          type: string
+        tenantId:
+          type: string
+        exportedBy:
+          type: string
+          nullable: true
+        rowCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        status:
+          type: string
+          enum: [all, active, completed, cancelled]
+        fromDays:
+          type: integer
+          minimum: 1
+        agentUserId:
+          type: string
+          format: uuid
+          nullable: true
+        error:
+          type: string
+          nullable: true
+    RiskScorePayload:
+      type: object
+      properties:
+        packageId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        exportedBy:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          enum: [internal_v1]
+          nullable: true
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        band:
+          type: string
+          enum: [low, medium, high]
+          nullable: true
+        reasonCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        scoredAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [packageId, tenantId]
+      additionalProperties: true
+    FilingActivityPayload:
+      type: object
+      properties:
+        packageId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        exportedBy:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        artifactVersion:
+          type: string
+          nullable: true
+        lotCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        generatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        idempotencyKey:
+          type: string
+          nullable: true
+        submissionState:
+          type: string
+          nullable: true
+        tracesReference:
+          type: string
+          nullable: true
+        replayed:
+          type: boolean
+          nullable: true
+        persistedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [packageId, tenantId]
+      additionalProperties: true
+    GatedEntryActorLookupResponse:
+      type: object
+      properties:
+        actors:
+          type: object
+          additionalProperties:
+            type: string
+      required: [actors]
     PaginatedListResponse:
       type: object
       properties:
@@ -965,6 +3831,105 @@ components:
       properties:
         download_url: { type: string, format: uri }
         expires_at: { type: string, format: date-time }
+    CreateChatThreadRequest:
+      type: object
+      properties:
+        recordId:
+          type: string
+        message:
+          type: string
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [recordId, message]
+    PostChatMessageRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [message]
+    ChatMessageWriteResponse:
+      type: object
+      properties:
+        threadId:
+          type: string
+        recordId:
+          type: string
+          nullable: true
+        created:
+          type: boolean
+        replayed:
+          type: boolean
+        message:
+          type: object
+          properties:
+            id:
+              type: string
+            body:
+              type: string
+            idempotencyKey:
+              type: string
+              nullable: true
+          required: [id, body]
+      required: [threadId, created, replayed, message]
+    ChatThreadSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        record_id:
+          type: string
+        status:
+          type: string
+          enum: [active, resolved, archived]
+        created_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        message_count:
+          type: integer
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, tenant_id, record_id, status, created_at, message_count]
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        thread_id:
+          type: string
+        tenant_id:
+          type: string
+        author_user_id:
+          type: string
+          nullable: true
+        author_role:
+          type: string
+          enum: [farmer, agent, exporter]
+        body:
+          type: string
+        idempotency_key:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, thread_id, tenant_id, author_role, body, created_at]
     CreateOrganisationRequest:
       type: object
       properties:
@@ -1050,6 +4015,118 @@ components:
       properties:
         geometry_version_id: { type: string, format: uuid }
         version_number: { type: integer }
+    OkResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+      required: [ok]
+    SyncPlotPhotosRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ground_truth, land_title]
+        photos:
+          type: array
+          items: { type: object, additionalProperties: true }
+        note: { type: string }
+        hlcTimestamp:
+          type: string
+          description: Hybrid Logical Clock timestamp in <ms>:<logical> format
+          pattern: "^[0-9]{10,16}:[0-9]{1,6}$"
+        clientEventId: { type: string }
+        assignmentId: { type: string }
+      required: [kind, photos]
+    SyncPlotLegalRequest:
+      type: object
+      properties:
+        cadastralKey: { type: string }
+        informalTenure: { type: boolean }
+        informalTenureNote: { type: string }
+        reason: { type: string }
+        deviceId: { type: string }
+        hlcTimestamp:
+          type: string
+          description: Hybrid Logical Clock timestamp in <ms>:<logical> format
+          pattern: "^[0-9]{10,16}:[0-9]{1,6}$"
+        clientEventId: { type: string }
+        assignmentId: { type: string }
+      required: [reason]
+    SyncPlotEvidenceRequest:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [fpic_repository, protected_area_permit, labor_evidence, tenure_evidence]
+        items:
+          type: array
+          items: { type: object, additionalProperties: true }
+        reason: { type: string }
+        note: { type: string }
+        hlcTimestamp:
+          type: string
+          description: Hybrid Logical Clock timestamp in <ms>:<logical> format
+          pattern: "^[0-9]{10,16}:[0-9]{1,6}$"
+        clientEventId: { type: string }
+        assignmentId: { type: string }
+      required: [kind, items, reason]
+    CreatePlotAssignmentRequest:
+      type: object
+      properties:
+        assignmentId: { type: string }
+        agentUserId: { type: string, format: uuid }
+      required: [assignmentId, agentUserId]
+    UpdatePlotAssignmentStatusRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    PlotAssignmentResponse:
+      type: object
+      properties:
+        assignmentId: { type: string }
+        plotId: { type: string, format: uuid }
+        agentUserId: { type: string, format: uuid }
+        agentName: { type: string, nullable: true }
+        agentEmail: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [active, completed, cancelled]
+        assignedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+      required: [assignmentId, plotId, agentUserId, status, assignedAt, endedAt]
+    PlotGeometryHistoryEvent:
+      type: object
+      properties:
+        id: { type: string }
+        timestamp: { type: string, format: date-time }
+        userId: { type: string, nullable: true }
+        deviceId: { type: string, nullable: true }
+        eventType:
+          type: string
+          enum: [plot_created, plot_geometry_superseded]
+        payload:
+          $ref: "#/components/schemas/PlotGeometryHistoryPayload"
+      required: [id, timestamp, userId, deviceId, eventType, payload]
+    PlotGeometryHistoryPayload:
+      type: object
+      properties:
+        plotId: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+      required: [plotId]
+    PlotGeometryHistoryAnomaly:
+      type: object
+      properties:
+        eventId: { type: string }
+        type:
+          type: string
+          enum: [large_revision_jump, frequent_supersession]
+        severity:
+          type: string
+          enum: [medium, high]
+        message: { type: string }
+      required: [eventId, type, severity, message]
     EvidenceUploadResponse:
       type: object
       properties:
@@ -1132,13 +4209,17 @@ components:
         evidence_id: { type: string, format: uuid, nullable: true }
         delivery_manifest_evidence_id: { type: string, format: uuid, nullable: true }
       required: [source_type, source_id, quantity_kg]
-      allOf:
-        - if:
-            properties:
-              source_type:
-                const: PROCESSING_FACILITY
-          then:
-            required: [delivery_manifest_evidence_id]
+      oneOf:
+        - properties:
+            source_type:
+              type: string
+              enum: [PROCESSING_FACILITY]
+          required: [delivery_manifest_evidence_id]
+        - properties:
+            source_type:
+              not:
+                type: string
+                enum: [PROCESSING_FACILITY]
     ShipmentHeaderResponse:
       type: object
       properties:
@@ -1153,6 +4234,146 @@ components:
         submission_status:
           $ref: "#/components/schemas/DdsSubmissionStatus"
         traces_submission_id: { type: string, nullable: true }
+    DdsPackageReadinessIssue:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        severity:
+          type: string
+          enum: [blocker, warning]
+      required: [code, message, severity]
+    DdsPackageReadinessResponse:
+      type: object
+      properties:
+        packageId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [blocked, warning_review, ready_to_submit]
+        blockers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DdsPackageReadinessIssue"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/DdsPackageReadinessIssue"
+        checkedAt: { type: string, format: date-time }
+      required: [packageId, status, blockers, warnings, checkedAt]
+    DdsPackageEvidenceDocument:
+      type: object
+      properties:
+        evidenceId: { type: string }
+        packageId: { type: string, format: uuid }
+        plotId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        type:
+          type: string
+          enum: [tenure_evidence, labor_evidence, fpic_repository, protected_area_permit]
+        reviewStatus:
+          type: string
+          enum: [verified, pending, rejected]
+        source: { type: string }
+        capturedAt:
+          type: string
+          nullable: true
+      required: [evidenceId, packageId, plotId, title, type, reviewStatus, source, capturedAt]
+    DdsPackageRiskScoreReason:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        weight: { type: number }
+      required: [code, message, weight]
+    DdsPackageRiskScoreResponse:
+      type: object
+      properties:
+        packageId: { type: string, format: uuid }
+        provider:
+          type: string
+          enum: [internal_v1]
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        band:
+          type: string
+          enum: [low, medium, high]
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/DdsPackageRiskScoreReason"
+        scoredAt: { type: string, format: date-time }
+      required: [packageId, provider, score, band, reasons, scoredAt]
+    DdsPackageFilingPreflightResponse:
+      type: object
+      properties:
+        packageId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [preflight_blocked, preflight_ready]
+        readinessStatus:
+          type: string
+          enum: [blocked, warning_review, ready_to_submit]
+        riskBand:
+          type: string
+          enum: [low, medium, high]
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        blockerCount:
+          type: integer
+          minimum: 0
+        warningCount:
+          type: integer
+          minimum: 0
+        checkedAt:
+          type: string
+          format: date-time
+      required: [packageId, status, readinessStatus, riskBand, riskScore, blockerCount, warningCount, checkedAt]
+    DdsPackageGenerationResponse:
+      type: object
+      properties:
+        packageId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [package_generated]
+        artifactVersion:
+          type: string
+          enum: [v1]
+        lotCount:
+          type: integer
+          minimum: 0
+        generatedAt:
+          type: string
+          format: date-time
+      required: [packageId, status, artifactVersion, lotCount, generatedAt]
+    SubmitDdsPackageRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [idempotencyKey]
+    SubmitDdsPackageResponse:
+      type: object
+      properties:
+        packageId: { type: string, format: uuid }
+        idempotencyKey: { type: string }
+        status:
+          type: string
+          enum: [submitted]
+        submissionState:
+          type: string
+          enum: [submitted]
+        tracesReference: { type: string }
+        replayed: { type: boolean }
+        persistedAt:
+          type: string
+          format: date-time
+      required: [packageId, idempotencyKey, status, submissionState, tracesReference, replayed, persistedAt]
     ComplianceIssueCreateRequest:
       type: object
       properties:
@@ -1315,6 +4536,35 @@ components:
           items: { type: string }
         secret_rotation_policy: { type: string }
       required: [endpoint_url, event_types, secret_rotation_policy]
+    WorkflowStageStatus:
+      type: string
+      enum: [pending, in_progress, completed, approved, rejected]
+    WorkflowSlaState:
+      type: string
+      enum: [on_track, warning, breached, escalated]
+    CreateWorkflowTemplateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        stages:
+          type: array
+          items: { type: string }
+        slaHours: { type: integer, minimum: 1, maximum: 720 }
+      required: [name, stages, slaHours]
+    TransitionWorkflowStageRequest:
+      type: object
+      properties:
+        toStatus:
+          $ref: "#/components/schemas/WorkflowStageStatus"
+        reason: { type: string }
+      required: [toStatus]
+    TransitionWorkflowStageSlaRequest:
+      type: object
+      properties:
+        toState:
+          $ref: "#/components/schemas/WorkflowSlaState"
+        reason: { type: string }
+      required: [toState]
     ComplianceExportCreateResponse:
       type: object
       properties:
