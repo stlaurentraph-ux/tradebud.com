@@ -74,6 +74,20 @@ const runCase = ({
         2,
       )}\n`,
     );
+    writeFileSync(
+      join(tempDir, 'openapi-snapshot-registry-report.json'),
+      `${JSON.stringify(
+        {
+          status: 'PASS',
+          schemaVersion: 1,
+          rowCount: 1,
+          errors: [],
+          generatedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+    );
 
     execFileSync('node', [scriptPath], {
       cwd: tempDir,
@@ -127,13 +141,14 @@ const runCase = ({
         `${name}: expected codeownersValidationStatus ${codeownersStatus}, got ${metrics.codeownersValidationStatus}`,
       );
     }
-    if (!Array.isArray(metrics.expectedArtifacts) || metrics.expectedArtifacts.length !== 3) {
-      throw new Error(`${name}: expectedArtifacts must contain 3 entries`);
+    if (!Array.isArray(metrics.expectedArtifacts) || metrics.expectedArtifacts.length !== 4) {
+      throw new Error(`${name}: expectedArtifacts must contain 4 entries`);
     }
     const expectedArtifactNames = [
       'contracts-openapi-readme-governance-metrics',
       'contracts-openapi-governance-metrics',
       'contracts-openapi-governance-reports',
+      'contracts-openapi-snapshot-registry-metrics',
     ];
     for (const artifactName of expectedArtifactNames) {
       if (!metrics.expectedArtifacts.some((artifact) => artifact.name === artifactName)) {
