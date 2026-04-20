@@ -487,7 +487,10 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
 
-          const output = fs.readFileSync('openapi-lint-output.txt', 'utf8');
+          const outputPath = 'openapi-lint-output.txt';
+          const output = fs.existsSync(outputPath)
+            ? fs.readFileSync(outputPath, 'utf8')
+            : '';
           const baseline = JSON.parse(
             fs.readFileSync('docs/openapi/lint-baseline.json', 'utf8'),
           );
@@ -510,9 +513,12 @@ jobs:
             }
           }
 
-          const status = /Woohoo! Your API description is valid\./.test(output)
-            ? 'PASS'
-            : 'FAIL';
+          const lintStepAvailable = output.length > 0;
+          const status = !lintStepAvailable
+            ? 'SKIPPED'
+            : /Woohoo! Your API description is valid\./.test(output)
+              ? 'PASS'
+              : 'FAIL';
           const baselineWarnings = Number(baseline.warnings ?? 0);
           const baselineErrors = Number(baseline.errors ?? 0);
           const warningDelta = warnings - baselineWarnings;
@@ -525,6 +531,7 @@ jobs:
             '',
             '- Command: `npm run openapi:lint`',
             `- Status: ${status}`,
+            `- Lint output available: ${lintStepAvailable ? 'yes' : 'no (likely skipped due earlier contract failure)'}`,
             `- Errors: ${errors} (baseline ${baselineErrors}, delta ${deltaLabel(errorDelta)})`,
             `- Warnings: ${warnings} (baseline ${baselineWarnings}, delta ${deltaLabel(warningDelta)})`,
           ].join('\n');
@@ -681,9 +688,6 @@ jobs:
   dashboard-product:
     name: Dashboard product lint and tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/dashboard-product
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -693,23 +697,20 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: apps/dashboard-product/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --prefix apps/dashboard-product
 
       - name: Tests
-        run: npm test
+        run: npm test --prefix apps/dashboard-product
 
   marketing:
     name: Marketing site lint and build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/marketing
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -719,16 +720,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: apps/marketing/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --prefix apps/marketing
 
       - name: Build
-        run: npm run build
+        run: npm run build --prefix apps/marketing
 
   app:
     name: Expo app lint
