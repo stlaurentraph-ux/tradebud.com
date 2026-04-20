@@ -23,7 +23,7 @@ This folder contains governance guard scripts used by CI and local verification 
   - Validates `.github/CODEOWNERS` against required protected paths and owner handles from governance policy.
   - Optional report output: `-- --report <path>`
 - `npm run openapi:governance:evidence-doc:parity:check`
-  - Validates backend/OpenAPI parity for `DdsPackageEvidenceDocument` across required field set, field-level `type/format/nullable/enum` semantics, and response example key+enum validity.
+  - Validates backend/OpenAPI parity for `DdsPackageEvidenceDocument` across required field set, field-level `type`, `format`, `nullable`, and `enum` semantics, and response example key+enum validity.
   - Uses parser-backed extraction (`typescript` AST + YAML parser) to reduce formatting-coupled false positives from text-shape changes.
   - Emits stable machine-readable error codes (for example `EVIDENCE_DOC_PARITY_FIELD_MISMATCH`) alongside human-readable diagnostics for CI/smoke assertion stability.
   - Optional flags: `--dto <path>`, `--openapi <path>`, `--json` (JSON pass/fail payload for machine consumers).
