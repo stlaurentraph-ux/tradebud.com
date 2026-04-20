@@ -2949,6 +2949,224 @@ paths:
           description: Missing tenant claim or role policy violation
         "502":
           description: Upstream EUDR DDS status read failed
+  /v1/yield-benchmarks:
+    get:
+      tags: [Integrations]
+      operationId: listYieldBenchmarks
+      summary: List yield benchmarks
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: Yield benchmark list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - commodity
+                        - geography
+                        - source_type
+                        - source_reference
+                        - yield_lower_kg_ha
+                        - yield_upper_kg_ha
+                        - seasonality_factor
+                        - review_cadence
+                        - active
+                        - created_at
+                        - updated_at
+                      properties:
+                        id:
+                          type: string
+                        commodity:
+                          type: string
+                        geography:
+                          type: string
+                        source_type:
+                          type: string
+                          enum: [SPONSOR_OVERRIDE, NATIONAL_STATS, USDA_FAS, FAOSTAT]
+                        source_reference:
+                          type: string
+                        yield_lower_kg_ha:
+                          type: string
+                        yield_upper_kg_ha:
+                          type: string
+                        seasonality_factor:
+                          type: string
+                        review_cadence:
+                          type: string
+                        active:
+                          type: boolean
+                        created_at:
+                          type: string
+                        updated_at:
+                          type: string
+                        approved_at:
+                          type: string
+                          nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+    post:
+      tags: [Integrations]
+      operationId: createYieldBenchmarkDraft
+      summary: Create yield benchmark draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - commodity
+                - geography
+                - sourceType
+                - sourceReference
+                - yieldLowerKgHa
+                - yieldUpperKgHa
+              properties:
+                commodity:
+                  type: string
+                geography:
+                  type: string
+                sourceType:
+                  type: string
+                  enum: [SPONSOR_OVERRIDE, NATIONAL_STATS, USDA_FAS, FAOSTAT]
+                sourceReference:
+                  type: string
+                yieldLowerKgHa:
+                  type: number
+                yieldUpperKgHa:
+                  type: number
+                seasonalityFactor:
+                  type: number
+                reviewCadence:
+                  type: string
+      responses:
+        "200":
+          description: Yield benchmark draft created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, active, status, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: string
+                  active:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [draft]
+                  createdAt:
+                    type: string
+                  updatedAt:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/yield-benchmarks/{id}:
+    patch:
+      tags: [Integrations]
+      operationId: updateYieldBenchmarkDraft
+      summary: Update yield benchmark draft
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commodity:
+                  type: string
+                geography:
+                  type: string
+                sourceType:
+                  type: string
+                  enum: [SPONSOR_OVERRIDE, NATIONAL_STATS, USDA_FAS, FAOSTAT]
+                sourceReference:
+                  type: string
+                yieldLowerKgHa:
+                  type: number
+                yieldUpperKgHa:
+                  type: number
+                seasonalityFactor:
+                  type: number
+                reviewCadence:
+                  type: string
+      responses:
+        "200":
+          description: Yield benchmark draft updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, active, status, updatedAt]
+                properties:
+                  id:
+                    type: string
+                  active:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [draft]
+                  updatedAt:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/yield-benchmarks/{id}/activate:
+    post:
+      tags: [Integrations]
+      operationId: activateYieldBenchmarkDraft
+      summary: Activate yield benchmark draft with dual-control
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Yield benchmark active
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, active, status]
+                properties:
+                  id:
+                    type: string
+                  active:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [active]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim, role policy violation, or dual-control violation
   /v1/workflow-templates:
     get:
       tags: [WorkflowTemplates]

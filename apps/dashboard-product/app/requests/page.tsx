@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   Send,
   Inbox,
@@ -20,7 +20,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,133 @@ import {
 import { PermissionGate } from '@/components/common/permission-gate';
 import type { RequestCampaign, RequestCampaignStatus } from '@/types';
 import { cn } from '@/lib/utils';
+
+interface ImportedRequestTarget {
+  email: string;
+  fullName: string;
+  organization?: string;
+  farmerId?: string;
+  plotId?: string;
+}
+
+const BULK_TARGETS_CSV_TEMPLATE = [
+  'email,full_name,organization,farmer_id,plot_id',
+  'jane@example.com,Jane Doe,Coop North,farmer-001,plot-001',
+  'john@example.com,John Doe,Coop South,farmer-002,plot-002',
+].join('\n');
+
+function parseBulkTargetsCsv(raw: string): {
+  targets: ImportedRequestTarget[];
+  errors: string[];
+  aliasesUsed: string[];
+} {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { targets: [], errors: [], aliasesUsed: [] };
+  }
+
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length === 0) {
+    return { targets: [], errors: [], aliasesUsed: [] };
+  }
+
+  const splitRow = (line: string) =>
+    line
+      .split(',')
+      .map((cell) => cell.trim().replace(/^"(.*)"$/, '$1'));
+
+  const rawHeaderCells = splitRow(lines[0]).map((cell) => cell.toLowerCase());
+  const aliasesUsed: string[] = [];
+  const headerCells = rawHeaderCells.map((cell) => {
+    const normalizedCell = cell.replace(/[\s-]+/g, '_');
+    if (normalizedCell === 'name') {
+      aliasesUsed.push('name->full_name');
+      return 'full_name';
+    }
+    if (normalizedCell === 'email_address') {
+      aliasesUsed.push('email_address->email');
+      return 'email';
+    }
+    if (normalizedCell === 'farmerid') {
+      aliasesUsed.push('farmerid->farmer_id');
+      return 'farmer_id';
+    }
+    if (normalizedCell === 'plotid') {
+      aliasesUsed.push('plotid->plot_id');
+      return 'plot_id';
+    }
+    if (normalizedCell === 'full_name') {
+      return 'full_name';
+    }
+    if (normalizedCell === 'farmer_id') {
+      return 'farmer_id';
+    }
+    if (normalizedCell === 'plot_id') {
+      return 'plot_id';
+    }
+    return cell;
+  });
+  const required = ['email', 'full_name'];
+  const missing = required.filter((field) => !headerCells.includes(field));
+  if (missing.length > 0) {
+    return {
+      targets: [],
+      errors: [`Missing required column(s): ${missing.join(', ')}.`],
+      aliasesUsed,
+    };
+  }
+
+  const rowToTarget = (cells: string[]): ImportedRequestTarget | null => {
+    const read = (key: string) => {
+      const index = headerCells.indexOf(key);
+      return index >= 0 ? (cells[index] ?? '') : '';
+    };
+    const email = read('email');
+    const fullName = read('full_name');
+    if (!email || !fullName) {
+      return null;
+    }
+    const target: ImportedRequestTarget = {
+      email,
+      fullName,
+    };
+    const organization = read('organization');
+    const farmerId = read('farmer_id');
+    const plotId = read('plot_id');
+    if (organization) target.organization = organization;
+    if (farmerId) target.farmerId = farmerId;
+    if (plotId) target.plotId = plotId;
+    return target;
+  };
+
+  const targets: ImportedRequestTarget[] = [];
+  const errors: string[] = [];
+  const seenEmails = new Set<string>();
+  for (let index = 1; index < lines.length; index += 1) {
+    const lineNumber = index + 1;
+    const cells = splitRow(lines[index]);
+    const target = rowToTarget(cells);
+    if (!target) {
+      errors.push(`Row ${lineNumber}: email and full_name are required.`);
+      continue;
+    }
+    const normalizedEmail = target.email.toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      errors.push(`Row ${lineNumber}: invalid email "${target.email}".`);
+      continue;
+    }
+    if (seenEmails.has(normalizedEmail)) {
+      continue;
+    }
+    seenEmails.add(normalizedEmail);
+    targets.push(target);
+  }
+
+  return { targets, errors, aliasesUsed };
+}
 
 // Mock request campaigns
 const mockCampaigns: (RequestCampaign & { responses: { accepted: number; pending: number; expired: number } })[] = [
@@ -215,6 +342,14 @@ export default function RequestsPage() {
     request_type: 'GENERAL_EVIDENCE' as const,
     due_at: '',
   });
+  const [bulkTargetsInput, setBulkTargetsInput] = useState('');
+  const [importedTargets, setImportedTargets] = useState<ImportedRequestTarget[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importAliasesUsed, setImportAliasesUsed] = useState<string[]>([]);
+  const [lastParsedRowCount, setLastParsedRowCount] = useState(0);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
 
   const filteredCampaigns = mockCampaigns.filter((campaign) => {
     const matchesSearch =
@@ -231,10 +366,114 @@ export default function RequestsPage() {
     return diff;
   };
 
-  const handleCreateCampaign = () => {
-    console.log('[v0] Creating campaign:', newCampaign);
-    setCreateDialogOpen(false);
-    setNewCampaign({ title: '', description: '', request_type: 'GENERAL_EVIDENCE', due_at: '' });
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handleCreateCampaign = async () => {
+    setCreateError(null);
+    setCreateSuccess(null);
+    setIsCreatingDraft(true);
+    try {
+      const response = await fetch('/api/requests/campaigns', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': `req-campaign-${Date.now()}`,
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          request_type: newCampaign.request_type,
+          campaign_name: newCampaign.title,
+          description_template: newCampaign.description,
+          due_date: newCampaign.due_at,
+          targets: importedTargets.map((target) => ({
+            email: target.email,
+            full_name: target.fullName,
+            organization: target.organization ?? null,
+            farmer_id: target.farmerId ?? null,
+            plot_id: target.plotId ?? null,
+          })),
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? 'Failed to create request campaign.');
+      }
+      const body = (await response.json().catch(() => ({}))) as { campaign_id?: string };
+      setCreateSuccess(
+        body.campaign_id ? `Draft campaign created (${body.campaign_id}).` : 'Draft campaign created.',
+      );
+      setCreateDialogOpen(false);
+      setNewCampaign({ title: '', description: '', request_type: 'GENERAL_EVIDENCE', due_at: '' });
+      setBulkTargetsInput('');
+      setImportedTargets([]);
+      setImportErrors([]);
+      setImportAliasesUsed([]);
+      setLastParsedRowCount(0);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Failed to create request campaign.');
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  };
+
+  const handleParseTargets = () => {
+    const result = parseBulkTargetsCsv(bulkTargetsInput);
+    setImportedTargets(result.targets);
+    setImportErrors(result.errors);
+    setImportAliasesUsed(result.aliasesUsed);
+    const rows = bulkTargetsInput
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    setLastParsedRowCount(rows.length > 0 ? Math.max(0, rows.length - 1) : 0);
+  };
+
+  const handleTargetsFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setBulkTargetsInput(text);
+    const result = parseBulkTargetsCsv(text);
+    setImportedTargets(result.targets);
+    setImportErrors(result.errors);
+    setImportAliasesUsed(result.aliasesUsed);
+    const rows = text
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    setLastParsedRowCount(rows.length > 0 ? Math.max(0, rows.length - 1) : 0);
+  };
+
+  const handleDownloadTargetsTemplate = () => {
+    if (typeof window === 'undefined') return;
+    const blob = new Blob([BULK_TARGETS_CSV_TEMPLATE], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'tracebud-request-targets-template.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePasteSampleTargets = () => {
+    setBulkTargetsInput(BULK_TARGETS_CSV_TEMPLATE);
+    const result = parseBulkTargetsCsv(BULK_TARGETS_CSV_TEMPLATE);
+    setImportedTargets(result.targets);
+    setImportErrors(result.errors);
+    setImportAliasesUsed(result.aliasesUsed);
+    const rows = BULK_TARGETS_CSV_TEMPLATE
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    setLastParsedRowCount(rows.length > 0 ? Math.max(0, rows.length - 1) : 0);
   };
 
   return (
@@ -270,6 +509,7 @@ export default function RequestsPage() {
                     <Label>Campaign Title</Label>
                     <Input
                       placeholder="e.g., Q2 2024 FPIC Collection"
+                      aria-label="Campaign Title"
                       value={newCampaign.title}
                       onChange={(e) => setNewCampaign({ ...newCampaign, title: e.target.value })}
                     />
@@ -310,12 +550,87 @@ export default function RequestsPage() {
                     <Label>Due Date</Label>
                     <Input
                       type="date"
+                      aria-label="Due Date"
                       value={newCampaign.due_at}
                       onChange={(e) => setNewCampaign({ ...newCampaign, due_at: e.target.value })}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Bulk targets (CSV)</Label>
+                    <Input
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={handleTargetsFileUpload}
+                      aria-label="Upload targets CSV"
+                    />
+                    <Textarea
+                      placeholder={'email,full_name,organization,farmer_id,plot_id\njane@example.com,Jane Doe,Coop North,farmer-001,plot-001'}
+                      aria-label="Bulk targets CSV"
+                      value={bulkTargetsInput}
+                      onChange={(e) => setBulkTargetsInput(e.target.value)}
+                      rows={5}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={handleParseTargets}>
+                        Parse targets
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadTargetsTemplate}
+                      >
+                        Download CSV template
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handlePasteSampleTargets}
+                      >
+                        Paste sample CSV
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Required columns: <code>email</code>, <code>full_name</code>
+                      </span>
+                    </div>
+                    {importErrors.length > 0 ? (
+                      <div className="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-700">
+                        {importErrors.map((error) => (
+                          <p key={error}>{error}</p>
+                        ))}
+                      </div>
+                    ) : null}
+                    {importedTargets.length > 0 ? (
+                      <div className="rounded-md border border-emerald-300 bg-emerald-50 p-2 text-xs text-emerald-800">
+                        Parsed {importedTargets.length} unique target{importedTargets.length === 1 ? '' : 's'}.
+                        <div className="mt-1 max-h-24 overflow-auto">
+                          {importedTargets.slice(0, 5).map((target) => (
+                            <p key={target.email}>
+                              {target.fullName} ({target.email})
+                            </p>
+                          ))}
+                          {importedTargets.length > 5 ? <p>...and {importedTargets.length - 5} more</p> : null}
+                        </div>
+                      </div>
+                    ) : null}
+                    {importAliasesUsed.length > 0 ? (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                        Column aliases applied: {Array.from(new Set(importAliasesUsed)).join(', ')}.
+                      </div>
+                    ) : null}
+                    {lastParsedRowCount > 0 ? (
+                      <div className="rounded-md border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700">
+                        Parse summary: {importedTargets.length} valid / {Math.max(0, importErrors.length)} invalid excluded
+                        {lastParsedRowCount !== importedTargets.length + importErrors.length
+                          ? ` (${lastParsedRowCount - (importedTargets.length + importErrors.length)} duplicate email row${lastParsedRowCount - (importedTargets.length + importErrors.length) === 1 ? '' : 's'} skipped)`
+                          : ''}
+                        .
+                      </div>
+                    ) : null}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    After creating, you can select specific targets (farmers, plots, organizations) before sending.
+                    Import contacts in bulk, validate, then create draft with attached target list.
                   </p>
                 </div>
                 <DialogFooter>
@@ -324,15 +639,28 @@ export default function RequestsPage() {
                   </Button>
                   <Button
                     onClick={handleCreateCampaign}
-                    disabled={!newCampaign.title || !newCampaign.due_at}
+                    disabled={
+                      !newCampaign.title || !newCampaign.due_at || importedTargets.length === 0 || isCreatingDraft
+                    }
                   >
-                    Create Draft
+                    {isCreatingDraft ? 'Creating...' : 'Create Draft'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </PermissionGate>
         </div>
+
+        {createSuccess ? (
+          <Card className="border-emerald-300">
+            <CardContent className="p-4 text-sm text-emerald-700">{createSuccess}</CardContent>
+          </Card>
+        ) : null}
+        {createError ? (
+          <Card className="border-red-300">
+            <CardContent className="p-4 text-sm text-red-700">{createError}</CardContent>
+          </Card>
+        ) : null}
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5">

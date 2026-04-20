@@ -8,12 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { StatusChip } from '@/components/ui/status-chip';
 import {
   Package,
   Plus,
   Search,
-  Filter,
   ChevronRight,
   Clock,
   AlertTriangle,
@@ -22,7 +20,6 @@ import {
   MoreHorizontal,
   Archive,
   FileText,
-  Download,
 } from 'lucide-react';
 import {
   DropdownMenu,

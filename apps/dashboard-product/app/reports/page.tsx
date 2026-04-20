@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,7 +74,7 @@ const complianceDistribution = [
 ];
 
 export default function ReportsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState('6months');
+  const selectedPeriod = '6months';
 
   return (
     <div className="flex flex-col">

@@ -34,6 +34,10 @@ export class GfwService {
     );
   }
 
+  private deforestationSqlTemplate() {
+    return this.config.get<string>('GFW_DEFORESTATION_SQL_TEMPLATE') ?? null;
+  }
+
   async runGeometryQuery(params: { geometry: any; sql?: string }) {
     const dataset = this.dataset();
     const version = this.version();
@@ -144,6 +148,25 @@ export class GfwService {
       version,
       sql: params.sql ?? this.sql(),
       result: bodyJson,
+    };
+  }
+
+  async runHistoricalDeforestationQuery(params: { geometry: any; cutoffDate: string }) {
+    const sqlTemplate = this.deforestationSqlTemplate();
+    const resolvedSql =
+      typeof sqlTemplate === 'string' && sqlTemplate.includes('{{cutoffDate}}')
+        ? sqlTemplate.split('{{cutoffDate}}').join(params.cutoffDate)
+        : this.sql();
+
+    const response = await this.runGeometryQuery({
+      geometry: params.geometry,
+      sql: resolvedSql,
+    });
+
+    return {
+      ...response,
+      historicalSqlApplied: resolvedSql !== this.sql(),
+      cutoffDate: params.cutoffDate,
     };
   }
 }

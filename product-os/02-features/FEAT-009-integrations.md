@@ -557,6 +557,179 @@ Verification commands:
 
 - `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
 
+### S1 post-closeout hardening slice 34 - status filename timestamp placeholder clarification
+
+- Added tiny inline clarification in DDS status last-error panel that `<timestamp>` in suggested filename is resolved at download time.
+- Reduces operator ambiguity when pre-filling escalation templates with filename previews.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 35 - status error-export filename builder de-duplication
+
+- Added shared local filename builder in admin DDS status panel and reused it for both filename preview and download action.
+- Removes filename-shape drift risk between preview text and actual downloaded artifact naming.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 36 - status error-context utility extraction
+
+- Extracted DDS status error-context helpers to shared utility (`lib/eudr-dds-status-error-context.ts`) for filename generation and normalized payload serialization.
+- Updated admin status panel to consume shared utility for preview, download filename, and context serialization.
+- Added dedicated utility tests to lock helper behavior and reduce future admin-page drift risk.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 37 - status filename timestamp-token constant alignment
+
+- Added shared timestamp placeholder constant (`EUDR_DDS_STATUS_ERROR_FILENAME_TIMESTAMP_TOKEN`) in DDS status error-context utility.
+- Updated admin status panel to consume the same token constant for filename preview and explanatory note text.
+- Expanded utility tests to lock the timestamp-token constant and prevent copy drift.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 38 - status error-export accessibility labels
+
+- Added explicit `aria-label` attributes for DDS status error-export action controls (`Copy error context`, `Download error JSON`, `Copy filename`).
+- Improves assistive-technology clarity in the last-error export helper cluster without altering existing behavior.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 39 - admin interaction coverage for status export accessibility
+
+- Added focused admin page interaction test (`app/admin/page.test.tsx`) that simulates DDS status-read failure and asserts accessible names for last-error export controls.
+- Locked explicit control-name expectations for `Copy DDS status error context JSON`, `Download DDS status error context JSON`, and `Copy DDS status error export filename`.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 40 - admin interaction coverage for timestamp helper note
+
+- Extended admin DDS status last-error interaction test to assert timestamp helper note rendering alongside export control accessible-name checks.
+- Locked helper-note presence (`is replaced at download time.`) and timestamp placeholder rendering in the same failure-path interaction flow.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 41 - admin interaction test split for DDS status export helpers
+
+- Refactored admin DDS status interaction coverage into two focused tests: one for accessible export-control names and one for timestamp helper-note rendering.
+- Added shared failure-path render helper to keep test setup deterministic while narrowing failure blast radius.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 42 - reusable admin status-failure test helper extraction
+
+- Extracted shared failure-path interaction setup into reusable admin test helper (`app/admin/test-helpers.tsx`).
+- Updated admin page test suite to consume helper export and keep per-test assertions focused on behavior under test.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 43 - admin copy-filename interaction toast/clipboard coverage
+
+- Extended admin DDS status interaction coverage to assert `Copy filename` action writes to clipboard and emits success toast.
+- Added `sonner` toast mock plus clipboard mock in admin page test to lock operator feedback behavior.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 44 - admin copy-filename failure-path toast coverage
+
+- Extended admin DDS status interaction tests with clipboard rejection branch for `Copy filename`.
+- Locked failure behavior to show deterministic error toast (`Failed to copy EUDR status error filename.`) when clipboard write fails.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 45 - admin copy-error-context failure-path toast coverage
+
+- Extended admin DDS status interaction tests with clipboard rejection branch for `Copy error context`.
+- Locked failure behavior to show deterministic error toast (`Failed to copy EUDR status error context.`) when clipboard write fails.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 46 - admin copy-error-context success-path payload coverage
+
+- Extended admin DDS status interaction tests to assert `Copy error context` success branch writes normalized JSON payload and emits success toast.
+- Locked expected payload fields (`message`, `referenceNumber`, `occurredAt`) for malformed-status failure scenario in the same interaction flow.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 47 - admin download-error-json interaction semantics coverage
+
+- Extended admin DDS status interaction tests to assert `Download error JSON` semantics: filename pattern, object URL lifecycle, and success toast feedback.
+- Locked download artifact naming contract (`eudr-dds-status-error-<reference>-<timestamp>.json`) and URL cleanup behavior.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 48 - admin download-error-json payload-content coverage
+
+- Extended `Download error JSON` interaction test to validate downloaded payload content keys (`message`, `referenceNumber`, `occurredAt`) in addition to filename/lifecycle semantics.
+- Added deterministic Blob stub inside test harness to assert serialized JSON payload content in jsdom runtime.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 49 - reusable download mock helper extraction for admin tests
+
+- Extracted URL/Blob/anchor download-path stubbing into shared admin test helper (`setupDownloadMocks`) to reduce repeated mock boilerplate.
+- Updated admin page interaction tests to consume helper and keep download-assertion test focused on behavior semantics.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 50 - admin status-payload download interaction coverage
+
+- Added reusable success-path admin status-read helper (`renderAdminWithStatusReadSuccess`) to support payload-download interaction tests.
+- Extended admin interaction coverage for main `Download JSON` status payload export: filename contract, payload content assertions, URL lifecycle, and success toast.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 51 - admin status-download control visibility gating coverage
+
+- Added explicit interaction assertion that main status-payload `Download JSON` control is absent before successful status read and appears only after success-path completion.
+- Keeps status-download affordance gating deterministic without relying on unstable unhandled exception branches in jsdom.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
+### S1 post-closeout hardening slice 52 - admin status-read success toast assertion coverage
+
+- Extended success-path interaction coverage to assert deterministic status-read completion toast after successful `Check Status` flow.
+- Completes visibility + feedback pairing in admin DDS status-read interaction matrix by locking both control gating and operator success confirmation.
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts`
+
 ### S1 post-closeout hardening slice 33 - EUDR integration OpenAPI contract publication + governance evidence
 
 - Published implemented EUDR integration routes in Tracebud OpenAPI draft:

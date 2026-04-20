@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracebud.local/schemas/queue-i18n-baseline-metadata.schema.json",
+  "title": "QueueI18nBaselineMetadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactId",
+    "runId",
+    "workflowPath",
+    "workflowName"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflowPath": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "workflowName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

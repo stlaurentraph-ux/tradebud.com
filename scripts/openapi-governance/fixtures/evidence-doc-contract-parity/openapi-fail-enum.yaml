@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: evidence-doc parity smoke fail enum
+  version: 1.0.0
+paths:
+  /v1/harvest/packages/{id}/evidence-documents:
+    get:
+      responses:
+        "200":
+          description: fail fixture enum
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    - evidenceId: evidence_v_1
+                      packageId: 8d09c964-f95b-4a7a-8bd1-e7f3006a3f77
+                      plotId: 9afad390-c0fd-4c46-bded-f4076144f7b5
+                      title: South Field B document packet
+                      type: tenure_evidence
+                      reviewStatus: pending
+                      source: South Field B
+                      capturedAt: "2026-04-16"
+components:
+  schemas:
+    DdsPackageEvidenceDocument:
+      type: object
+      properties:
+        evidenceId: { type: string }
+        packageId: { type: string, format: uuid }
+        plotId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        type:
+          type: string
+          enum: [tenure_evidence, labor_evidence, fpic_repository, protected_area_permit]
+        reviewStatus:
+          type: string
+          enum: [verified, pending]
+        source: { type: string }
+        capturedAt:
+          type: string
+          nullable: true
+      required: [evidenceId, packageId, plotId, title, type, reviewStatus, source, capturedAt]

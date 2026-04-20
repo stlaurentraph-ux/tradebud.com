@@ -1,0 +1,21 @@
+{
+  "description": "Required CODEOWNERS protections for OpenAPI governance-critical assets.",
+  "requiredEntries": [
+    {
+      "path": "docs/openapi/lint-baseline.json",
+      "owners": ["@stlaurentraph-ux"]
+    },
+    {
+      "path": ".github/workflows/openapi-baseline-refresh.yml",
+      "owners": ["@stlaurentraph-ux"]
+    },
+    {
+      "path": ".redocly.yaml",
+      "owners": ["@stlaurentraph-ux"]
+    },
+    {
+      "path": "docs/openapi/tracebud-v1-draft.yaml",
+      "owners": ["@stlaurentraph-ux"]
+    }
+  ]
+}

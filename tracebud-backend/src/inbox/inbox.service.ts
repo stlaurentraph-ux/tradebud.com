@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../db/db.module';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
@@ -164,61 +164,64 @@ export class InboxService {
     );
   }
 
+  private async ensureSchemaWithClient(client: PoolClient): Promise<void> {
+    await client.query(
+      `
+      CREATE TABLE IF NOT EXISTS inbox_requests (
+        id TEXT PRIMARY KEY,
+        campaign_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
+        due_at TIMESTAMPTZ NOT NULL,
+        from_org TEXT NOT NULL,
+        sender_tenant_id TEXT NOT NULL,
+        recipient_tenant_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL
+      )
+    `,
+    );
+
+    await client.query(
+      `
+      CREATE TABLE IF NOT EXISTS inbox_request_events (
+        id BIGSERIAL PRIMARY KEY,
+        request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+        event_type TEXT NOT NULL,
+        actor_tenant_id TEXT NULL,
+        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `,
+    );
+
+    await client.query(
+      `
+      CREATE INDEX IF NOT EXISTS idx_inbox_requests_recipient_status_due
+      ON inbox_requests(recipient_tenant_id, status, due_at)
+    `,
+    );
+    await client.query(
+      `
+      CREATE INDEX IF NOT EXISTS idx_inbox_requests_campaign
+      ON inbox_requests(campaign_id)
+    `,
+    );
+    await client.query(
+      `
+      CREATE INDEX IF NOT EXISTS idx_inbox_request_events_request_id
+      ON inbox_request_events(request_id)
+    `,
+    );
+  }
+
   private async ensureSchema(): Promise<void> {
     const client = await this.pool.connect();
     const advisoryLockKey = 9162401;
     try {
       await client.query('SELECT pg_advisory_lock($1)', [advisoryLockKey]);
-
-      await client.query(
-        `
-        CREATE TABLE IF NOT EXISTS public.inbox_requests (
-          id TEXT PRIMARY KEY,
-          campaign_id TEXT NOT NULL,
-          title TEXT NOT NULL,
-          request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
-          due_at TIMESTAMPTZ NOT NULL,
-          from_org TEXT NOT NULL,
-          sender_tenant_id TEXT NOT NULL,
-          recipient_tenant_id TEXT NOT NULL,
-          status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
-          created_at TIMESTAMPTZ NOT NULL,
-          updated_at TIMESTAMPTZ NOT NULL
-        )
-      `,
-      );
-
-      await client.query(
-        `
-        CREATE TABLE IF NOT EXISTS public.inbox_request_events (
-          id BIGSERIAL PRIMARY KEY,
-          request_id TEXT NOT NULL REFERENCES public.inbox_requests(id) ON DELETE CASCADE,
-          event_type TEXT NOT NULL,
-          actor_tenant_id TEXT NULL,
-          payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `,
-      );
-
-      await client.query(
-        `
-        CREATE INDEX IF NOT EXISTS idx_inbox_requests_recipient_status_due
-        ON public.inbox_requests(recipient_tenant_id, status, due_at)
-      `,
-      );
-      await client.query(
-        `
-        CREATE INDEX IF NOT EXISTS idx_inbox_requests_campaign
-        ON public.inbox_requests(campaign_id)
-      `,
-      );
-      await client.query(
-        `
-        CREATE INDEX IF NOT EXISTS idx_inbox_request_events_request_id
-        ON public.inbox_request_events(request_id)
-      `,
-      );
+      await this.ensureSchemaWithClient(client);
     } finally {
       await client.query('SELECT pg_advisory_unlock($1)', [advisoryLockKey]).catch(() => undefined);
       client.release();
@@ -239,8 +242,8 @@ export class InboxService {
       }>(
         `
           SELECT
-            to_regclass('public.inbox_requests')::text AS inbox_requests,
-            to_regclass('public.inbox_request_events')::text AS inbox_request_events
+            to_regclass('inbox_requests')::text AS inbox_requests,
+            to_regclass('inbox_request_events')::text AS inbox_request_events
         `,
       );
       const row = verify.rows[0];
@@ -261,16 +264,16 @@ export class InboxService {
     try {
       await client.query('BEGIN');
       try {
-        await client.query('DELETE FROM public.inbox_request_events');
-        await client.query('DELETE FROM public.inbox_requests');
+        await client.query('DELETE FROM inbox_request_events');
+        await client.query('DELETE FROM inbox_requests');
       } catch (error: any) {
-        // If tests dropped tables between operations, recreate schema and retry once.
+        // If tests dropped tables between operations, recreate schema and retry once using the same client.
         if (error?.code === '42P01') {
           await client.query('ROLLBACK');
-          await this.ensureSchemaVerified();
           await client.query('BEGIN');
-          await client.query('DELETE FROM public.inbox_request_events');
-          await client.query('DELETE FROM public.inbox_requests');
+          await this.ensureSchemaWithClient(client);
+          await client.query('DELETE FROM inbox_request_events');
+          await client.query('DELETE FROM inbox_requests');
         } else {
           throw error;
         }
@@ -279,7 +282,7 @@ export class InboxService {
       for (const request of requests) {
         await client.query(
           `
-            INSERT INTO public.inbox_requests (
+            INSERT INTO inbox_requests (
               id,
               campaign_id,
               title,
@@ -311,7 +314,7 @@ export class InboxService {
 
         await client.query(
           `
-            INSERT INTO public.inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+            INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
             VALUES ($1, $2, $3, $4::jsonb)
           `,
           [
@@ -336,11 +339,11 @@ export class InboxService {
     await this.ensureSchemaVerified();
     let countRes;
     try {
-      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
+      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
     } catch (error: any) {
       if (error?.code === '42P01') {
         await this.ensureSchemaVerified();
-        countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM public.inbox_requests');
+        countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
       } else {
         throw error;
       }
@@ -386,7 +389,7 @@ export class InboxService {
           status,
           created_at,
           updated_at
-        FROM public.inbox_requests
+        FROM inbox_requests
         WHERE recipient_tenant_id = $1
         ORDER BY due_at ASC, created_at ASC
       `,
@@ -415,7 +418,7 @@ export class InboxService {
       updated_at: Date | string;
     }>(
       `
-        UPDATE public.inbox_requests
+        UPDATE inbox_requests
         SET status = 'RESPONDED', updated_at = NOW()
         WHERE id = $1
           AND recipient_tenant_id = $2
@@ -439,7 +442,7 @@ export class InboxService {
     if (updatedRes.rowCount && updatedRes.rows[0]) {
       await this.pool.query(
         `
-          INSERT INTO public.inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+          INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
           VALUES ($1, 'REQUEST_RESPONDED', $2, $3::jsonb)
         `,
         [id, tenantId, JSON.stringify({ respondedAt: new Date().toISOString() })],
@@ -478,7 +481,7 @@ export class InboxService {
           status,
           created_at,
           updated_at
-        FROM public.inbox_requests
+        FROM inbox_requests
         WHERE id = $1
           AND recipient_tenant_id = $2
         LIMIT 1

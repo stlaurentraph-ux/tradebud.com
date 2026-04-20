@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Users,
-  Plus,
   Search,
   MoreHorizontal,
   Mail,
@@ -338,7 +337,9 @@ export default function UserManagementPage() {
                 </div>
                 <select
                   value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value as any)}
+                  onChange={(e) =>
+                    setFilterRole(e.target.value as typeof filterRole)
+                  }
                   className="px-3 py-2 border rounded-md text-sm"
                 >
                   <option value="all">All Roles</option>
@@ -350,7 +351,9 @@ export default function UserManagementPage() {
                 </select>
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  onChange={(e) =>
+                    setFilterStatus(e.target.value as typeof filterStatus)
+                  }
                   className="px-3 py-2 border rounded-md text-sm"
                 >
                   <option value="all">All Statuses</option>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, Filter, AlertTriangle } from 'lucide-react';
+import { ChevronRight, Filter, AlertTriangle } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,19 +116,6 @@ function getSLAColor(hoursRemaining: number): string {
   return 'text-emerald-600 bg-emerald-100';
 }
 
-function getStatusIcon(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED') {
-  switch (status) {
-    case 'RESOLVED':
-      return <CheckCircle className="h-4 w-4 text-emerald-500" />;
-    case 'ESCALATED':
-      return <XCircle className="h-4 w-4 text-destructive" />;
-    case 'IN_PROGRESS':
-      return <AlertCircle className="h-4 w-4 text-amber-500" />;
-    default:
-      return <Clock className="h-4 w-4 text-muted-foreground" />;
-  }
-}
-
 function getStatusLabel(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED') {
   switch (status) {
     case 'RESOLVED':
@@ -174,7 +161,7 @@ export default function ComplianceQueuePage() {
       }
       return true;
     });
-  }, [selectedStatus, selectedRisk, selectedSeverity]);
+  }, [sortedQueue, selectedStatus, selectedRisk, selectedSeverity]);
 
   const pendingCount = sortedQueue.filter((p) => p.status === 'OPEN').length;
   const blockingCount = sortedQueue.reduce((sum, p) => sum + p.compliance_issues.filter((i) => i.severity === 'BLOCKING').length, 0);
@@ -249,26 +236,28 @@ export default function ComplianceQueuePage() {
               <div className="flex flex-wrap gap-4">
                 <div className="flex gap-2">
                   <span className="text-sm font-medium text-muted-foreground">Status:</span>
-                  {['all', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'ESCALATED'].map((status) => (
-                    <Button
-                      key={status}
-                      variant={selectedStatus === status ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedStatus(status as any)}
-                      className="capitalize"
-                    >
-                      {status === 'all' ? 'all' : getStatusLabel(status as Exclude<typeof selectedStatus, 'all'>)}
-                    </Button>
-                  ))}
+                  {(['all', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'ESCALATED'] as const).map(
+                    (status) => (
+                      <Button
+                        key={status}
+                        variant={selectedStatus === status ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedStatus(status)}
+                        className="capitalize"
+                      >
+                        {status === 'all' ? 'all' : getStatusLabel(status)}
+                      </Button>
+                    ),
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <span className="text-sm font-medium text-muted-foreground">Risk:</span>
-                  {['all', 'low', 'medium', 'high'].map((risk) => (
+                  {(['all', 'low', 'medium', 'high'] as const).map((risk) => (
                     <Button
                       key={risk}
                       variant={selectedRisk === risk ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSelectedRisk(risk as any)}
+                      onClick={() => setSelectedRisk(risk)}
                       className="capitalize"
                     >
                       {risk}
@@ -277,12 +266,12 @@ export default function ComplianceQueuePage() {
                 </div>
                 <div className="flex gap-2">
                   <span className="text-sm font-medium text-muted-foreground">Severity:</span>
-                  {['all', 'BLOCKING', 'WARNING', 'INFO'].map((sev) => (
+                  {(['all', 'BLOCKING', 'WARNING', 'INFO'] as const).map((sev) => (
                     <Button
                       key={sev}
                       variant={selectedSeverity === sev ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setSelectedSeverity(sev as any)}
+                      onClick={() => setSelectedSeverity(sev)}
                       className="capitalize"
                     >
                       {sev}

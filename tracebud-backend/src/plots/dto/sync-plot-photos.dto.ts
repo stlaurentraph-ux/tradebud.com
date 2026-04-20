@@ -44,5 +44,13 @@ export class SyncPlotPhotosDto {
   @IsOptional()
   @IsString()
   clientEventId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Optional assignment identifier used to enforce agent sync scope',
+  })
+  @IsOptional()
+  @IsString()
+  assignmentId?: string;
 }
 

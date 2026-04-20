@@ -1,0 +1,30 @@
+{
+  "scannedPaths": [
+    "/Users/raphaelstl/Downloads/Tracebud website"
+  ],
+  "fileCount": 1,
+  "statusCounts": {
+    "PASS": 0,
+    "FAIL": 0,
+    "UNKNOWN": 1
+  },
+  "totalPresentationDriftWarnings": 0,
+  "snapshotRegistryStatusCounts": {
+    "PASS": 1,
+    "FAIL": 0
+  },
+  "totalSnapshotRegistryRows": 1,
+  "earliestPresentationValidationRecordedAt": null,
+  "latestPresentationValidationRecordedAt": null,
+  "files": [
+    {
+      "path": "/Users/raphaelstl/Downloads/Tracebud website/openapi-governance-metrics.json",
+      "status": "UNKNOWN",
+      "warningCount": 0,
+      "recordedAt": null,
+      "generatedAt": "2026-04-16T13:52:28.704Z",
+      "snapshotRegistryStatus": "PASS",
+      "snapshotRegistryRowCount": 1
+    }
+  ]
+}

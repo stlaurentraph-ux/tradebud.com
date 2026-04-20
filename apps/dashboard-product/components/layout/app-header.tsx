@@ -28,7 +28,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ title, subtitle, description, breadcrumbs, actions }: AppHeaderProps) {
-  const { user, impersonateDemo } = useAuth();
+  const { impersonateDemo } = useAuth();
 
   const demoPersonas = [
     { email: 'cooperative@tracebud.com', label: 'Cooperative' },

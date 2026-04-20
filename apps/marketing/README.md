@@ -26,8 +26,9 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Supabase Lead Forms Setup
 
-The forms on `/farmers`, `/exporters`, `/importers`, and `/countries` post to `POST /api/leads`, which inserts into dedicated Supabase tables:
+The forms on `/pilot`, `/farmers`, `/exporters`, `/importers`, and `/countries` post to `POST /api/leads`, which inserts into dedicated Supabase tables:
 
+- `pilot_leads` (MVP pilot program; see `supabase/pilot_leads.sql`)
 - `farmer_leads`
 - `cooperative_leads`
 - `exporter_leads`
@@ -41,10 +42,30 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 ```
 
-Create the tables in Supabase SQL editor:
+Create the tables in Supabase SQL editor. The pilot table DDL also lives in `supabase/pilot_leads.sql`:
 
 ```sql
 create extension if not exists pgcrypto;
+
+create table if not exists public.pilot_leads (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  pilot_role text not null,
+  organization_name text not null,
+  contact_name text not null,
+  title text,
+  email text not null,
+  phone text,
+  country text,
+  primary_commodity text,
+  organization_scale text,
+  eudr_readiness text,
+  earliest_start text,
+  success_criteria text,
+  additional_notes text,
+  source_page text not null,
+  raw_payload jsonb not null default '{}'::jsonb
+);
 
 create table if not exists public.farmer_leads (
   id uuid primary key default gen_random_uuid(),

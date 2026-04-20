@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
-  ShieldCheck,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -13,7 +12,6 @@ import {
   FileSearch,
   BarChart3,
   MapPin,
-  Eye,
   ArrowRight,
   Flag,
   Scale,

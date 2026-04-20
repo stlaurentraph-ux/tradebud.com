@@ -7,13 +7,11 @@ import Link from 'next/link';
 import {
   MapPin,
   Users,
-  Leaf,
   AlertTriangle,
   CheckCircle2,
   Plus,
   ArrowRight,
   TreePine,
-  Scale,
   FileCheck,
 } from 'lucide-react';
 

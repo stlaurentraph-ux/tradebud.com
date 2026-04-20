@@ -5,10 +5,20 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
+    "i18n:queue:smoke": "node ./scripts/i18n-queue-panel.smoke.mjs",
+    "i18n:queue:summary:assert": "node ./scripts/i18n-queue-summary-assert.mjs",
+    "i18n:queue:baseline:schema:assert": "node ./scripts/i18n-queue-baseline-schema-assert.mjs",
+    "i18n:queue:report:generate": "node ./scripts/i18n-queue-report-generate.mjs",
+    "i18n:queue:report:assert": "node ./scripts/i18n-queue-report-assert.mjs",
+    "i18n:queue:verify": "node ./scripts/i18n-queue-verify.mjs",
+    "i18n:queue:clean": "node ./scripts/i18n-queue-verify-clean.mjs",
+    "i18n:queue:clean:all": "node ./scripts/i18n-queue-verify-clean.mjs --all",
+    "i18n:queue:verify:clean": "npm run i18n:queue:verify && npm run i18n:queue:clean",
+    "i18n:queue:verify:clean:all": "npm run i18n:queue:verify && npm run i18n:queue:clean:all",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint --max-warnings 0"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

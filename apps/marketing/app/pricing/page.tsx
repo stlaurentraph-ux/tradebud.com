@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, startTransition } from "react";
 import { motion } from "framer-motion";
 import { Check, ArrowRight, Building2, Shield, Zap, Users, Globe } from "lucide-react";
 import { Header } from "@/components/tracebud/header";
@@ -247,7 +247,9 @@ export default function PricingPage() {
     if (typeof window === "undefined") return;
     const plan = new URLSearchParams(window.location.search).get("plan");
     if (plan) {
-      setFormData((prev) => ({ ...prev, tier: plan }));
+      startTransition(() => {
+        setFormData((prev) => ({ ...prev, tier: plan }));
+      });
       document.getElementById("quote-form")?.scrollIntoView({ behavior: "smooth" });
     }
   }, []);
@@ -427,21 +429,20 @@ export default function PricingPage() {
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  let lastGroup = "";
-                  return comparisonFeatures.map((feature) => {
-                    const showHeader = feature.group !== lastGroup;
-                    lastGroup = feature.group;
-                    return (
-                      <Fragment key={feature.name}>
-                        {showHeader && (
-                          <tr className="bg-white/5 sticky top-0 z-10">
-                            <td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              {feature.group}
-                            </td>
-                          </tr>
-                        )}
-                        <tr className="border-b border-border/50">
+                {comparisonFeatures.map((feature, index) => {
+                  const showGroupHeader =
+                    index === 0 ||
+                    comparisonFeatures[index - 1]!.group !== feature.group;
+                  return (
+                    <Fragment key={feature.name}>
+                      {showGroupHeader && (
+                        <tr className="bg-white/5 sticky top-0 z-10">
+                          <td colSpan={5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {feature.group}
+                          </td>
+                        </tr>
+                      )}
+                      <tr className="border-b border-border/50">
                           <td className="py-4 px-4 text-foreground font-medium">{feature.name}</td>
                           <td className="text-center py-4 px-4">
                             {typeof feature.tier1 === "boolean" ? (
@@ -487,11 +488,10 @@ export default function PricingPage() {
                               <span className="text-foreground/80 text-sm">{feature.tier4}</span>
                             )}
                           </td>
-                        </tr>
-                      </Fragment>
-                    );
-                  });
-                })()}
+                      </tr>
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </motion.div>

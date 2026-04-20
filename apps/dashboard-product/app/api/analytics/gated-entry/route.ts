@@ -24,10 +24,84 @@ export async function GET(request: Request) {
   }
 
   try {
-    const backendResponse = await fetch(`${backendBase}/v1/audit/gated-entry`, {
+    const requestUrl = new URL(request.url);
+    const format = requestUrl.searchParams.get('format');
+    const eventKind = requestUrl.searchParams.get('eventKind');
+    const wantsCsv = format === 'csv';
+    const backendUrl = new URL(`${backendBase}/v1/audit/gated-entry`);
+    if (eventKind === 'exports') {
+      backendUrl.pathname = '/v1/audit/gated-entry/exports';
+    }
+    if (eventKind === 'assignment_exports') {
+      backendUrl.pathname = '/v1/audit/gated-entry/assignment-exports';
+    }
+    if (eventKind === 'risk_scores') {
+      backendUrl.pathname = '/v1/audit/gated-entry/risk-scores';
+    }
+    if (eventKind === 'filing_activity') {
+      backendUrl.pathname = '/v1/audit/gated-entry/filing-activity';
+    }
+    if (eventKind === 'chat_threads') {
+      backendUrl.pathname = '/v1/audit/gated-entry/chat-threads';
+    }
+    if (eventKind === 'workflow_activity') {
+      backendUrl.pathname = '/v1/audit/gated-entry/workflow-activity';
+    }
+    if (eventKind === 'dashboard_summary') {
+      backendUrl.pathname = '/v1/audit/gated-entry/dashboard-summary';
+    }
+    if (eventKind === 'actors') {
+      backendUrl.pathname = '/v1/audit/gated-entry/actors';
+    }
+    if (eventKind === 'webhooks') {
+      backendUrl.pathname = '/v1/webhooks';
+    }
+    if (eventKind === 'webhook_deliveries') {
+      const webhookId = requestUrl.searchParams.get('webhookId');
+      if (!webhookId) {
+        return NextResponse.json({ error: 'webhookId is required for webhook delivery reads.' }, { status: 400 });
+      }
+      backendUrl.pathname = `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries`;
+    }
+    if (wantsCsv && eventKind === 'assignment_exports') {
+      backendUrl.pathname = '/v1/audit/gated-entry/assignment-exports/export';
+    } else if (wantsCsv && eventKind === 'risk_scores') {
+      backendUrl.pathname = '/v1/audit/gated-entry/risk-scores/export';
+    } else if (wantsCsv && eventKind === 'filing_activity') {
+      backendUrl.pathname = '/v1/audit/gated-entry/filing-activity/export';
+    } else if (wantsCsv) {
+      backendUrl.pathname = '/v1/audit/gated-entry/export';
+    }
+    ['gate', 'fromHours', 'limit', 'offset', 'sort', 'ids', 'phase', 'status', 'band', 'slaState'].forEach((key) => {
+      const value = requestUrl.searchParams.get(key);
+      if (value) backendUrl.searchParams.set(key, value);
+    });
+
+    const backendResponse = await fetch(backendUrl.toString(), {
       cache: 'no-store',
       headers: authHeader ? { Authorization: authHeader } : undefined,
     });
+    if (wantsCsv) {
+      const payload = await backendResponse
+        .text()
+        .catch(() => 'captured_at,gate,role,feature,redirected_path');
+      if (!backendResponse.ok) {
+        return NextResponse.json(
+          { error: payload || 'Backend telemetry CSV export failed.' },
+          { status: backendResponse.status },
+        );
+      }
+      return new NextResponse(payload, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'X-Export-Row-Limit': backendResponse.headers.get('x-export-row-limit') ?? '0',
+          'X-Export-Row-Count': backendResponse.headers.get('x-export-row-count') ?? '0',
+          'X-Export-Truncated': backendResponse.headers.get('x-export-truncated') ?? 'false',
+        },
+      });
+    }
+
     const payload = await backendResponse.json().catch(() => ({ error: 'Backend telemetry request failed.' }));
     if (!backendResponse.ok) {
       return NextResponse.json(payload, { status: backendResponse.status });

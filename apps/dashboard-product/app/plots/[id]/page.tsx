@@ -3,6 +3,9 @@
 import { useParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlotGeometryHistoryPanel } from '@/components/plots/plot-geometry-history-panel';
+import { PlotAssignmentLifecyclePanel } from '@/components/plots/plot-assignment-lifecycle-panel';
+import { PlotDeforestationDecisionHistoryPanel } from '@/components/plots/plot-deforestation-decision-history-panel';
 
 export default function PlotDetailPage() {
   const params = useParams<{ id: string }>();
@@ -19,7 +22,7 @@ export default function PlotDetailPage() {
           { label: id },
         ]}
       />
-      <div className="flex-1 p-6">
+      <div className="flex-1 space-y-6 p-6">
         <Card>
           <CardHeader>
             <CardTitle>Plot Record</CardTitle>
@@ -28,6 +31,9 @@ export default function PlotDetailPage() {
             Route enabled and ready for detailed plot data wiring.
           </CardContent>
         </Card>
+        <PlotDeforestationDecisionHistoryPanel plotId={id} />
+        <PlotGeometryHistoryPanel plotId={id} />
+        <PlotAssignmentLifecyclePanel plotId={id} />
       </div>
     </div>
   );

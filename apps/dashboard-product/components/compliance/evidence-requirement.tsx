@@ -4,15 +4,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
-
-interface EvidenceItem {
-  id: string;
-  type: 'satellite_imagery' | 'field_report' | 'government_source' | 'certification';
-  title: string;
-  status: 'verified' | 'pending' | 'rejected';
-  date: string;
-  source: string;
-}
+import {
+  evaluateComplianceEvidenceRequirements,
+  type EvidenceItem,
+} from '@/lib/compliance-doc-reason-codes';
 
 interface EvidenceRequirementProps {
   plotId: string;
@@ -29,9 +24,18 @@ export function EvidenceRequirement({
   const [expanded, setExpanded] = useState(true);
 
   const verifiedCount = requiredEvidence.filter((e) => e.status === 'verified').length;
+  const evaluation = evaluateComplianceEvidenceRequirements(requiredEvidence, missingEvidence);
 
   return (
-    <Card className="border-l-4 border-blue-400">
+    <Card
+      className={`border-l-4 ${
+        evaluation.status === 'fail'
+          ? 'border-red-500'
+          : evaluation.status === 'warning'
+            ? 'border-yellow-500'
+            : 'border-green-500'
+      }`}
+    >
       <CardHeader
         className="cursor-pointer hover:bg-secondary/50"
         onClick={() => setExpanded(!expanded)}
@@ -47,6 +51,9 @@ export function EvidenceRequirement({
               <CardTitle className="text-base">{plotName}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 {verifiedCount}/{requiredEvidence.length} evidence items verified
+              </p>
+              <p className="text-xs mt-1 text-muted-foreground">
+                Autonomous check: {evaluation.status === 'pass' ? 'pass' : evaluation.status}
               </p>
             </div>
           </div>
@@ -111,6 +118,29 @@ export function EvidenceRequirement({
                     <p className="text-xs text-red-300/80 mt-1">
                       This evidence type is required to verify deforestation compliance
                     </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {evaluation.reasons.length > 0 && (
+            <div>
+              <h4 className="font-medium text-sm mb-3">Autonomous document checks</h4>
+              <div className="space-y-2">
+                {evaluation.reasons.map((reason, index) => (
+                  <div
+                    key={`${reason.code}-${index}`}
+                    className={`p-3 rounded-lg border ${
+                      reason.severity === 'blocking'
+                        ? 'border-red-500/30 bg-red-500/10'
+                        : 'border-yellow-500/30 bg-yellow-500/10'
+                    }`}
+                  >
+                    <p className="text-sm font-medium">
+                      {reason.code}: {reason.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Remediation: {reason.remediation}</p>
                   </div>
                 ))}
               </div>

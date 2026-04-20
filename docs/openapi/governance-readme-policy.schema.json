@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracebud.com/schemas/openapi-governance-readme-policy.schema.json",
+  "title": "OpenAPI Governance README Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["requiredAnchors"],
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requiredAnchors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracebud.local/schemas/queue-i18n-report.schema.json",
+  "title": "QueueI18nReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "schemaDigestAlgorithm",
+    "schemaSha256",
+    "schemaDigestRef",
+    "generatedAt",
+    "current",
+    "comparison",
+    "baseline"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaDigestAlgorithm": {
+      "type": "string",
+      "const": "sha256"
+    },
+    "schemaSha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "description": "Raw SHA-256 hex of the report schema file bytes. Prefer schemaDigestRef for single-token provenance; this field is retained for compatibility."
+    },
+    "schemaDigestRef": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Primary provenance token: algorithm plus digest (e.g. sha256:<hex>). Preferred key for tooling and trend consumers."
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "smokeVersion",
+        "requiredKeyCount",
+        "locales"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "smokeVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requiredKeyCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previousAvailable",
+        "requiredKeyDelta",
+        "previousSmokeVersion",
+        "previousReportAvailable",
+        "previousSchemaDigestRef",
+        "schemaDigestRefChanged"
+      ],
+      "properties": {
+        "previousAvailable": {
+          "type": "boolean"
+        },
+        "requiredKeyDelta": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "previousSmokeVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previousReportAvailable": {
+          "type": "boolean",
+          "description": "True when a previous-run queue-i18n-report.json was extracted from the baseline artifact and parsed."
+        },
+        "previousSchemaDigestRef": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          ],
+          "description": "Primary digest ref from the previous combined report, when present and valid; null if no comparable previous report."
+        },
+        "schemaDigestRefChanged": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Null when no valid previousSchemaDigestRef; otherwise whether current schemaDigestRef differs from the previous run."
+        }
+      }
+    },
+    "baseline": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "artifactId",
+        "runId",
+        "workflowPath",
+        "workflowName"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflowPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workflowName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

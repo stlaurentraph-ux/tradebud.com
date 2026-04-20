@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, startTransition, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
@@ -21,7 +21,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Close sidebar on route change
   useEffect(() => {
-    setSidebarOpen(false);
+    startTransition(() => {
+      setSidebarOpen(false);
+    });
   }, [pathname]);
 
   // Close sidebar on escape key

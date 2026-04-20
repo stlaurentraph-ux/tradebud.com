@@ -6,6 +6,9 @@ import { HarvestModule } from './harvest/harvest.module';
 import { AuditModule } from './audit/audit.module';
 import { HealthModule } from './health/health.module';
 import { ReportsModule } from './reports/reports.module';
+import { ChatThreadsModule } from './chat-threads/chat-threads.module';
+import { IntegrationsModule } from './integrations/integrations.module';
+import { WorkflowTemplatesModule } from './workflow-templates/workflow-templates.module';
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { ReportsModule } from './reports/reports.module';
     AuditModule,
     HealthModule,
     ReportsModule,
+    ChatThreadsModule,
+    IntegrationsModule,
+    WorkflowTemplatesModule,
   ],
 })
 export class AppModule {}

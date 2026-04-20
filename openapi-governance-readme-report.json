@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "commandCount": 15,
+  "pathCount": 11,
+  "requiredAnchorCount": 6,
+  "missingAnchors": [],
+  "markdownErrors": [],
+  "readmePath": "scripts/openapi-governance/README.md",
+  "packageJsonPath": "package.json",
+  "readmePolicyPath": "docs/openapi/governance-readme-policy.json",
+  "readmePolicySchemaPath": "docs/openapi/governance-readme-policy.schema.json",
+  "generatedAt": "2026-04-16T10:08:28.312Z"
+}

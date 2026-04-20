@@ -3,14 +3,7 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import {
-  ArrowLeft,
-  Check,
-  AlertCircle,
-  ChevronRight,
-  Lock,
-  Wheat,
-} from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, ChevronRight, Lock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +98,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
         <div className="grid gap-6 lg:grid-cols-4">
           {/* Step Navigator */}
           <div className="space-y-2 lg:col-span-1">
-            {steps.map((step, idx) => (
+            {steps.map((step) => (
               <button
                 key={step.id}
                 onClick={() => {

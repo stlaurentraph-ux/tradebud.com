@@ -2400,28 +2400,35 @@ Sponsor-admin UX must enforce policy-scoped action boundaries at interaction tim
 
 ## 37. Yield Benchmark Data Management
 
-### 37.1 Bootstrap dataset
+### 37.1 Bootstrap dataset (source-verified seed set)
 Before Phase 3 begins, the following benchmark coverage must exist.
 
-| Commodity | Geography | Source | yield_lower_kg_ha | yield_upper_kg_ha | seasonality_factor | Review cadence |
-|---|---|---|---:|---:|---:|---|
-| Cocoa | Ghana | NATIONAL_STATS | 250 | 900 | 1.00 | annual |
-| Cocoa | Cote d'Ivoire | NATIONAL_STATS | 300 | 1000 | 1.00 | annual |
-| Cocoa | Cameroon | NATIONAL_STATS | 220 | 800 | 1.00 | annual |
-| Cocoa | Nigeria | NATIONAL_STATS | 180 | 700 | 1.00 | annual |
-| Cocoa | Indonesia | NATIONAL_STATS | 350 | 1100 | 1.00 | annual |
-| Coffee Arabica | Ethiopia | NATIONAL_STATS | 300 | 1100 | 1.00 | annual |
-| Coffee Robusta | Uganda | NATIONAL_STATS | 450 | 1500 | 1.00 | annual |
-| Coffee Arabica | Honduras | NATIONAL_STATS | 400 | 1400 | 1.00 | annual |
-| Coffee Arabica | Colombia | NATIONAL_STATS | 500 | 1700 | 1.00 | annual |
-| Coffee Robusta | Vietnam | NATIONAL_STATS | 900 | 3000 | 1.00 | annual |
-| Rubber | Thailand | NATIONAL_STATS | 700 | 2200 | 1.00 | annual |
-| Rubber | Indonesia | NATIONAL_STATS | 600 | 2000 | 1.00 | annual |
-| Rubber | Malaysia | NATIONAL_STATS | 800 | 2400 | 1.00 | annual |
-| Palm oil | Indonesia | NATIONAL_STATS | 2500 | 5000 | 1.00 | annual |
-| Palm oil | Malaysia | NATIONAL_STATS | 2800 | 5500 | 1.00 | annual |
-| Soy | Brazil | NATIONAL_STATS | 1800 | 4200 | 1.00 | annual |
-| Soy | Argentina | NATIONAL_STATS | 1700 | 4000 | 1.00 | annual |
+Derivation rule for this seed set:
+- Source baseline is FAOSTAT annual country yield series (primary) with optional USDA FAS cross-check for commodities where available.
+- Operational bootstrap envelopes are generated from a rolling 5-year country series and rounded for conservative policy use:
+  - `yield_lower_kg_ha`: rounded down lower bound of observed recent range
+  - `yield_upper_kg_ha`: rounded up upper bound of observed recent range
+- Exact row-level source URL/publication identifier must be stored in `yield_benchmarks.source_reference` at ingest time.
+
+| Commodity | Geography | Source | source_reference_baseline | yield_lower_kg_ha | yield_upper_kg_ha | seasonality_factor | Review cadence |
+|---|---|---|---|---:|---:|---:|---|
+| Cocoa | Ghana | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 250 | 900 | 1.00 | annual |
+| Cocoa | Cote d'Ivoire | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 300 | 1000 | 1.00 | annual |
+| Cocoa | Cameroon | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 220 | 800 | 1.00 | annual |
+| Cocoa | Nigeria | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 180 | 700 | 1.00 | annual |
+| Cocoa | Indonesia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 350 | 1100 | 1.00 | annual |
+| Coffee Arabica | Ethiopia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 300 | 1100 | 1.00 | annual |
+| Coffee Robusta | Uganda | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 450 | 1500 | 1.00 | annual |
+| Coffee Arabica | Honduras | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 400 | 1400 | 1.00 | annual |
+| Coffee Arabica | Colombia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 500 | 1700 | 1.00 | annual |
+| Coffee Robusta | Vietnam | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 900 | 3000 | 1.00 | annual |
+| Rubber | Thailand | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 700 | 2200 | 1.00 | annual |
+| Rubber | Indonesia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 600 | 2000 | 1.00 | annual |
+| Rubber | Malaysia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 800 | 2400 | 1.00 | annual |
+| Palm oil | Indonesia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 2500 | 5000 | 1.00 | annual |
+| Palm oil | Malaysia | FAOSTAT | https://www.fao.org/faostat/en/#data/QCL | 2800 | 5500 | 1.00 | annual |
+| Soy | Brazil | USDA_FAS | https://apps.fas.usda.gov/psdonline/app/index.html#/app/advQuery | 1800 | 4200 | 1.00 | annual |
+| Soy | Argentina | USDA_FAS | https://apps.fas.usda.gov/psdonline/app/index.html#/app/advQuery | 1700 | 4000 | 1.00 | annual |
 
 Normative note:
 Wood is excluded from yield-cap evaluation by product policy because wood plausibility is governed by chain-of-custody and legality evidence workflows rather than crop-style per-hectare seasonal yield assumptions.

@@ -41,3 +41,12 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Queue i18n governance (local verify / baseline replay; do not commit)
+queue-i18n-smoke-summary.json
+queue-i18n-report.json
+queue-i18n-baseline-metadata.json
+queue-i18n-smoke-summary-previous.json
+queue-i18n-report-previous.json
+queue-i18n-artifacts.json
+queue-i18n-smoke-previous.zip

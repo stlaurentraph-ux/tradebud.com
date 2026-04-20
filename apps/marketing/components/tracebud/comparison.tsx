@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { X, Check, AlertTriangle, FileCheck, Shield, Globe } from "lucide-react";
+import { Check, FileCheck, Globe } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

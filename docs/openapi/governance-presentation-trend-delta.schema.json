@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenAPI Governance Presentation Trend Delta Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "currentPath",
+    "previousPath",
+    "previousAvailable",
+    "baseline",
+    "current",
+    "delta"
+  ],
+  "properties": {
+    "currentPath": { "type": "string", "minLength": 1 },
+    "previousPath": { "type": ["string", "null"] },
+    "previousAvailable": { "type": "boolean" },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "workflowPath", "workflowName"],
+      "properties": {
+        "runId": { "type": ["string", "null"] },
+        "workflowPath": { "type": ["string", "null"] },
+        "workflowName": { "type": ["string", "null"] }
+      }
+    },
+    "current": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileCount",
+        "passCount",
+        "failCount",
+        "unknownCount",
+        "totalPresentationDriftWarnings",
+        "snapshotRegistryFailCount",
+        "totalSnapshotRegistryRows"
+      ],
+      "properties": {
+        "fileCount": { "type": "integer", "minimum": 0 },
+        "passCount": { "type": "integer", "minimum": 0 },
+        "failCount": { "type": "integer", "minimum": 0 },
+        "unknownCount": { "type": "integer", "minimum": 0 },
+        "totalPresentationDriftWarnings": { "type": "integer", "minimum": 0 },
+        "snapshotRegistryFailCount": { "type": "integer", "minimum": 0 },
+        "totalSnapshotRegistryRows": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "delta": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "failCount",
+        "totalPresentationDriftWarnings",
+        "snapshotRegistryFailCount",
+        "totalSnapshotRegistryRows"
+      ],
+      "properties": {
+        "failCount": { "type": "integer" },
+        "totalPresentationDriftWarnings": { "type": "integer" },
+        "snapshotRegistryFailCount": { "type": "integer" },
+        "totalSnapshotRegistryRows": { "type": "integer" }
+      }
+    }
+  }
+}

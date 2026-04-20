@@ -1,0 +1,79 @@
+{
+  "overallStatus": "PASS",
+  "readmeValidationStatus": "PASS",
+  "presentationValidationStatus": "UNKNOWN",
+  "presentationDriftWarningCount": 0,
+  "presentationValidationRecordedAt": null,
+  "policyValidationStatus": "PASS",
+  "codeownersValidationStatus": "PASS",
+  "readmeReport": {
+    "status": "PASS",
+    "commandCount": 15,
+    "pathCount": 11,
+    "requiredAnchorCount": 6,
+    "missingAnchors": [],
+    "markdownErrors": [],
+    "readmePath": "scripts/openapi-governance/README.md",
+    "packageJsonPath": "package.json",
+    "readmePolicyPath": "docs/openapi/governance-readme-policy.json",
+    "readmePolicySchemaPath": "docs/openapi/governance-readme-policy.schema.json",
+    "generatedAt": "2026-04-16T10:08:28.312Z"
+  },
+  "policyReport": {
+    "status": "PASS",
+    "errorCount": 0,
+    "errors": [],
+    "entryCount": 4,
+    "policyPath": "docs/openapi/governance-codeowners-policy.json",
+    "schemaPath": "docs/openapi/governance-codeowners-policy.schema.json",
+    "generatedAt": "2026-04-16T09:09:20.953Z"
+  },
+  "codeownersReport": {
+    "status": "PASS",
+    "missingEntries": [],
+    "ownerMismatch": [],
+    "requiredEntryCount": 4,
+    "policyPath": "docs/openapi/governance-codeowners-policy.json",
+    "codeownersPath": ".github/CODEOWNERS",
+    "generatedAt": "2026-04-16T09:09:21.270Z"
+  },
+  "snapshotRegistryStatus": "PASS",
+  "snapshotRegistryRowCount": 1,
+  "snapshotRegistryReport": {
+    "schemaVersion": 1,
+    "markdownPath": "product-os/04-quality/release-qa-evidence.md",
+    "rowCount": 1,
+    "status": "PASS",
+    "errors": []
+  },
+  "expectedArtifacts": [
+    {
+      "name": "contracts-openapi-readme-governance-metrics",
+      "files": [
+        "openapi-governance-readme-report.json"
+      ]
+    },
+    {
+      "name": "contracts-openapi-governance-metrics",
+      "files": [
+        "openapi-governance-metrics.json"
+      ]
+    },
+    {
+      "name": "contracts-openapi-governance-reports",
+      "files": [
+        "openapi-governance-policy-report.json",
+        "openapi-governance-codeowners-report.json"
+      ]
+    },
+    {
+      "name": "contracts-openapi-snapshot-registry-metrics",
+      "files": [
+        "openapi-snapshot-registry-report.json"
+      ]
+    }
+  ],
+  "generatedAt": "2026-04-20T08:44:59.506Z",
+  "runId": null,
+  "runNumber": null
+}

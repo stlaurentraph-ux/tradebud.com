@@ -88,9 +88,10 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
     return 'healthy';
   };
 
-  const complianceRate = metrics.total_plots > 0 
-    ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
-    : 0;
+  const complianceRate =
+    metrics.total_plots > 0
+      ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100)
+      : 0;
 
   // Spec KPIs
   const blockingIssuesCount = 2;
@@ -99,6 +100,9 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
   return (
     <div className="space-y-6">
+      <span className="sr-only">
+        Plot compliance rate {complianceRate} percent ({metrics.compliant_plots} of {metrics.total_plots} plots).
+      </span>
       {/* SLA Burndown Pipeline */}
       <Card>
         <CardHeader>

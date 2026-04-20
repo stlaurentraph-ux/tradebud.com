@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { PlotComplianceBreakdown } from '@/components/compliance/plot-compliance
 import { EvidenceRequirement } from '@/components/compliance/evidence-requirement';
 import { AlertTriangle, CheckCircle, ChevronRight, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { getPackageById } from '@/lib/mock-data';
+import { usePackageReadiness } from '@/lib/use-package-readiness';
+import { usePackageEvidenceDocuments } from '@/lib/use-package-evidence-documents';
 
 // Mock data for compliance checks
 const mockCompliance = {
@@ -89,12 +91,123 @@ export default function CompliancePage() {
   const searchParams = useSearchParams();
   const packageId = searchParams.get('package');
   const pkg = packageId ? getPackageById(packageId) : null;
-  const router = useRouter();
+  const { data: readiness, isLoading: isReadinessLoading, error: readinessError } = usePackageReadiness(packageId);
+  const { data: evidenceDocuments, isLoading: isEvidenceDocumentsLoading, error: evidenceDocumentsError } =
+    usePackageEvidenceDocuments(packageId);
 
   const canSubmit =
     mockCompliance.plots.filter((p) => p.status === 'compliant').length === mockCompliance.plots.length;
 
   const backHref = pkg ? `/packages/${pkg.id}` : '/compliance';
+
+  const reasonCodeRemediation: Record<string, string> = {
+    DOC_MISSING: 'Upload missing document artifacts and re-run readiness checks.',
+    DOC_PENDING_REVIEW: 'Complete reviewer validation before submission.',
+    DOC_REJECTED: 'Upload corrected documents and request a fresh review.',
+    DOC_STALE: 'Refresh outdated documents with current evidence versions.',
+    DOC_SOURCE_MISSING: 'Attach source metadata for audit traceability.',
+  };
+
+  const backendChecks = readiness
+    ? [
+        {
+          id: 'backend-check-status',
+          title: 'Backend Readiness Status',
+          description: `Package readiness is ${readiness.status}.`,
+          status:
+            readiness.status === 'ready_to_submit'
+              ? ('compliant' as const)
+              : readiness.status === 'warning_review'
+                ? ('warning' as const)
+                : ('failed' as const),
+          severity: 'critical' as const,
+        },
+        ...readiness.blockers.map((issue, index) => ({
+          id: `backend-blocker-${index}`,
+          title: issue.code,
+          description: issue.message,
+          status: 'failed' as const,
+          severity: 'critical' as const,
+        })),
+        ...readiness.warnings.map((issue, index) => ({
+          id: `backend-warning-${index}`,
+          title: issue.code,
+          description: issue.message,
+          status: 'warning' as const,
+          severity: 'warning' as const,
+        })),
+      ]
+    : mockCompliance.checks;
+
+  const backendEvidenceRows =
+    evidenceDocuments?.map((document, index) => {
+      return {
+        plotId: document.plotId ?? `plot_${index + 1}`,
+        plotName: document.source || `Plot ${index + 1}`,
+        requiredEvidence: [
+          {
+            id: document.evidenceId,
+            type: 'field_report' as const,
+            title: document.title,
+            status: document.reviewStatus,
+            date: document.capturedAt ?? new Date().toISOString().slice(0, 10),
+            source: document.source,
+          },
+        ],
+        missingEvidence: document.type === 'tenure_evidence' ? ['Declared area evidence'] : [],
+      };
+    }) ?? [];
+
+  const evidenceRows = backendEvidenceRows.length > 0
+    ? backendEvidenceRows
+    : [
+        {
+          plotId: 'PLOT-001',
+          plotName: 'North Field A',
+          requiredEvidence: [
+            {
+              id: 'ev-1',
+              type: 'satellite_imagery' as const,
+              title: 'Sentinel-2 Satellite Image (Jan 2024)',
+              status: 'verified' as const,
+              date: '2024-01-15',
+              source: 'ESA',
+            },
+            {
+              id: 'ev-2',
+              type: 'certification' as const,
+              title: 'Rainforest Alliance Certification',
+              status: 'verified' as const,
+              date: '2023-12-01',
+              source: 'RA Database',
+            },
+          ],
+          missingEvidence: [],
+        },
+        {
+          plotId: 'PLOT-002',
+          plotName: 'South Field B',
+          requiredEvidence: [
+            {
+              id: 'ev-3',
+              type: 'satellite_imagery' as const,
+              title: 'Sentinel-2 Satellite Image (Jan 2024)',
+              status: 'verified' as const,
+              date: '2024-01-15',
+              source: 'ESA',
+            },
+            {
+              id: 'ev-4',
+              type: 'field_report' as const,
+              title: 'Physical Field Inspection Report',
+              status: 'rejected' as const,
+              date: '2023-01-20',
+              source: '',
+            },
+          ],
+          missingEvidence: ['Government Deforestation Evidence Clearance', 'Recent Farmer Certification Update'],
+        },
+      ];
 
   return (
     <div className="flex flex-col">
@@ -169,7 +282,64 @@ export default function CompliancePage() {
         )}
 
         {/* Compliance Checks */}
-        <ComplianceCheckList checks={mockCompliance.checks} />
+        <ComplianceCheckList checks={backendChecks} loading={isReadinessLoading} />
+
+        {/* Backend Readiness Reason Codes */}
+        {packageId ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Backend Readiness Reason Codes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isReadinessLoading ? (
+                <p className="text-sm text-muted-foreground">Loading readiness diagnostics...</p>
+              ) : null}
+              {readinessError ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{readinessError}</AlertDescription>
+                </Alert>
+              ) : null}
+              {readiness ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Status: <span className="font-medium text-foreground">{readiness.status}</span>
+                  </p>
+                  {[...readiness.blockers, ...readiness.warnings].length > 0 ? (
+                    [...readiness.blockers, ...readiness.warnings].map((issue, index) => (
+                      <div
+                        key={`${issue.code}-${index}`}
+                        className={`rounded-lg border p-3 ${
+                          issue.severity === 'blocker'
+                            ? 'border-red-500/30 bg-red-500/10'
+                            : 'border-yellow-500/30 bg-yellow-500/10'
+                        }`}
+                      >
+                        <p className="text-sm font-medium">
+                          {issue.code}: {issue.message}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Remediation:{' '}
+                          {reasonCodeRemediation[issue.code] ??
+                            'Resolve the flagged readiness issue and re-run checks.'}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-emerald-700">
+                      No backend readiness reason codes reported for this package.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+              {!isReadinessLoading && !readinessError && !readiness ? (
+                <p className="text-sm text-muted-foreground">
+                  Select a package from Packages to load backend readiness diagnostics.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Plot-by-Plot Breakdown */}
         <PlotComplianceBreakdown plots={mockCompliance.plots} packageId={mockCompliance.packageId} />
@@ -178,80 +348,24 @@ export default function CompliancePage() {
         <div>
           <h2 className="mb-4 text-xl font-bold">Evidence Verification</h2>
           <div className="space-y-4">
-            <EvidenceRequirement
-              plotId="PLOT-001"
-              plotName="North Field A"
-              requiredEvidence={[
-                {
-                  id: 'ev-1',
-                  type: 'satellite_imagery',
-                  title: 'Sentinel-2 Satellite Image (Jan 2024)',
-                  status: 'verified',
-                  date: '2024-01-15',
-                  source: 'ESA',
-                },
-                {
-                  id: 'ev-2',
-                  type: 'certification',
-                  title: 'Rainforest Alliance Certification',
-                  status: 'verified',
-                  date: '2023-12-01',
-                  source: 'RA Database',
-                },
-              ]}
-              missingEvidence={[]}
-            />
-
-            <EvidenceRequirement
-              plotId="PLOT-002"
-              plotName="South Field B"
-              requiredEvidence={[
-                {
-                  id: 'ev-3',
-                  type: 'satellite_imagery',
-                  title: 'Sentinel-2 Satellite Image (Jan 2024)',
-                  status: 'verified',
-                  date: '2024-01-15',
-                  source: 'ESA',
-                },
-                {
-                  id: 'ev-4',
-                  type: 'field_report',
-                  title: 'Physical Field Inspection Report',
-                  status: 'pending',
-                  date: '2024-01-20',
-                  source: 'Inspector: Maria Santos',
-                },
-              ]}
-              missingEvidence={[
-                'Government Deforestation Evidence Clearance',
-                'Recent Farmer Certification Update',
-              ]}
-            />
-
-            <EvidenceRequirement
-              plotId="PLOT-003"
-              plotName="East Terrace"
-              requiredEvidence={[
-                {
-                  id: 'ev-5',
-                  type: 'satellite_imagery',
-                  title: 'Sentinel-2 Satellite Image (Jan 2024)',
-                  status: 'verified',
-                  date: '2024-01-15',
-                  source: 'ESA',
-                },
-                {
-                  id: 'ev-6',
-                  type: 'certification',
-                  title: 'UTZ Certified Certification',
-                  status: 'verified',
-                  date: '2024-01-10',
-                  source: 'UTZ Database',
-                },
-              ]}
-              missingEvidence={[]}
-            />
+            {isEvidenceDocumentsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading package evidence diagnostics...</p>
+            ) : null}
+            {evidenceDocumentsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{evidenceDocumentsError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {evidenceRows.map((row) => (
+              <EvidenceRequirement
+                key={row.plotId}
+                plotId={row.plotId}
+                plotName={row.plotName}
+                requiredEvidence={row.requiredEvidence}
+                missingEvidence={row.missingEvidence}
+              />
+            ))}
           </div>
         </div>
 

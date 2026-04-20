@@ -17,7 +17,6 @@ async function bootstrap() {
   const MAX_REQUESTS = 120;
   const buckets = new Map<string, { count: number; resetAt: number }>();
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.use((req: any, res: any, next: () => void) => {
     const ip =
@@ -56,12 +55,10 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT) || 4000;
   await app.listen(port);
-  // eslint-disable-next-line no-console
   console.log(`Tracebud API listening on http://localhost:${port}/api (docs: /api/docs)`);
 }
 
 bootstrap().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });

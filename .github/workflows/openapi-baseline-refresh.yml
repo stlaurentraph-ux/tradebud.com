@@ -1,0 +1,94 @@
+name: OpenAPI Baseline Refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved:
+        description: "Set to true after maintainer governance approval"
+        required: true
+        type: boolean
+        default: false
+      reason:
+        description: "Approval reason / governance ticket reference"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh-openapi-baseline:
+    name: Refresh OpenAPI lint baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Enforce manual approval flag
+        run: |
+          if [ "${{ inputs.approved }}" != "true" ]; then
+            echo "Refusing baseline refresh: workflow input 'approved' must be true."
+            exit 1
+          fi
+
+      - name: Refresh baseline with guard contract
+        env:
+          OPENAPI_BASELINE_APPROVED: "true"
+          OPENAPI_BASELINE_REASON: ${{ inputs.reason }}
+        run: npm run openapi:baseline:refresh
+
+      - name: Publish baseline refresh summary
+        if: always()
+        run: |
+          {
+            echo "## OpenAPI Baseline Refresh"
+            echo ""
+            echo "- Workflow approval flag: \`${{ inputs.approved }}\`"
+            echo "- Reason: \`${{ inputs.reason }}\`"
+            echo "- Actor: \`${{ github.actor }}\`"
+            echo "- Command: \`npm run openapi:baseline:refresh\`"
+            echo "- Resulting baseline file: \`docs/openapi/lint-baseline.json\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload refreshed baseline artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: openapi-lint-baseline-refreshed
+          path: docs/openapi/lint-baseline.json
+
+      - name: Create baseline refresh pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: |
+            chore(openapi): refresh lint baseline after approved governance run
+          title: "chore(openapi): refresh lint baseline"
+          body: |
+            ## Summary
+            - refreshes `docs/openapi/lint-baseline.json` after approved manual governance workflow run
+            - preserves explicit approval/reason trail from workflow dispatch inputs
+            - keeps baseline adoption as protected-branch PR review instead of direct mutation
+
+            ## Dispatch metadata
+            - Approved flag: `${{ inputs.approved }}`
+            - Reason: `${{ inputs.reason }}`
+            - Actor: `${{ github.actor }}`
+            - Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          branch: "ci/openapi-baseline-refresh-${{ github.run_id }}"
+          delete-branch: true
+          labels: |
+            contracts
+            governance
+          add-paths: |
+            docs/openapi/lint-baseline.json

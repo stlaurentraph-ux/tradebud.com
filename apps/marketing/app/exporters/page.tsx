@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Building2, MapPin, Users, ArrowRight, TrendingUp, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
-import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
@@ -338,7 +337,8 @@ export default function ExportersPage() {
             viewport={{ once: true }}
           >
             <p className="text-xl md:text-3xl text-white font-medium leading-relaxed mb-6 md:mb-8 italic">
-              "We cut our compliance processing time by 80%. What used to take weeks now happens in hours."
+              &ldquo;We cut our compliance processing time by 80%. What used to take weeks now happens in
+              hours.&rdquo;
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
@@ -372,7 +372,7 @@ export default function ExportersPage() {
               Get Started Today
             </h2>
             <p className="text-base md:text-xl text-foreground/70">
-              Tell us about your operation and we'll set up your dashboard.
+              Tell us about your operation and we&apos;ll set up your dashboard.
             </p>
           </motion.div>
 

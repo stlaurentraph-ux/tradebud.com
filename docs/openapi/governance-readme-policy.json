@@ -1,0 +1,11 @@
+{
+  "description": "Required README structure anchors for OpenAPI governance runbook integrity checks.",
+  "requiredAnchors": [
+    "## Markdown Schema Bump Procedure",
+    "1. Update `docs/openapi/markdown-reference-report.schema.json`",
+    "2. Update report producer `scripts/openapi-governance/markdown-reference-check.mjs`",
+    "3. Update validator `scripts/openapi-governance/markdown-report-assert.mjs`",
+    "4. Validate locally:",
+    "5. Confirm CI summary shows expected `Schema version`"
+  ]
+}

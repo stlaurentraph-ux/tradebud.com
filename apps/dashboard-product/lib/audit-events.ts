@@ -17,9 +17,6 @@ import type {
   ComplianceIssueStatus,
   ComplianceIssueSeverity,
   ShipmentStatus,
-  DDSStatus,
-  YieldExceptionStatus,
-  RequestCampaignStatus,
 } from '@/types';
 
 // ============================================================

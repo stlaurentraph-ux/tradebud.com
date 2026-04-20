@@ -37,11 +37,12 @@ import {
   buildDeclarationBundle,
   declarationBundleToJson,
 } from '@/features/compliance/declarationBundle';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getSetting,
   loadPendingSyncActions,
   setSetting,
+  type PendingSyncAction,
 } from '@/features/state/persistence';
 import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
 import {
@@ -58,6 +59,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
+import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
 
 const fsAny = FileSystem as unknown as {
   documentDirectory?: string | null;
@@ -76,6 +78,17 @@ export default function SettingsScreen() {
   const [declarationBusy, setDeclarationBusy] = useState(false);
   /** SQLite queue: harvests, photo sync, evidence sync (not plot geometry upload). */
   const [queuePendingCount, setQueuePendingCount] = useState(0);
+  const [queueRetryingCount, setQueueRetryingCount] = useState(0);
+  const [queueMaxAttempts, setQueueMaxAttempts] = useState(0);
+  const [queueLastError, setQueueLastError] = useState<string | null>(null);
+  const [queueLastErrorActionType, setQueueLastErrorActionType] = useState<string | null>(null);
+  const [queueCountByActionType, setQueueCountByActionType] = useState<
+    Record<PendingSyncAction['actionType'], number>
+  >({
+    harvest: 0,
+    photos_sync: 0,
+    evidence_sync: 0,
+  });
   /** Local plots with no matching server row (by name). */
   const [unsyncedPlotCount, setUnsyncedPlotCount] = useState(0);
   const [syncEmail, setSyncEmail] = useState('');
@@ -85,6 +98,16 @@ export default function SettingsScreen() {
   const [syncSignedIn, setSyncSignedIn] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
   const [vertexAvgSeconds, setVertexAvgSeconds] = useState<60 | 120>(120);
+  const [queueActionFilter, setQueueActionFilter] = useState<
+    Record<PendingSyncAction['actionType'], boolean>
+  >({
+    harvest: true,
+    photos_sync: true,
+    evidence_sync: true,
+  });
+  const [queueAttemptScope, setQueueAttemptScope] = useState<PendingSyncAttemptScope>('all');
+  const [queueSmartSweepEnabled, setQueueSmartSweepEnabled] = useState(false);
+  const [queueSmartSweepCap, setQueueSmartSweepCap] = useState<25 | 50 | 100 | 200>(100);
 
   const refreshSavedSyncEmail = useCallback(async () => {
     await hydrateSyncAuthFromSettings();
@@ -96,6 +119,26 @@ export default function SettingsScreen() {
   const refreshSyncMetrics = useCallback(async () => {
     const rows = await loadPendingSyncActions().catch(() => []);
     setQueuePendingCount(rows.length);
+    setQueueCountByActionType(
+      rows.reduce<Record<PendingSyncAction['actionType'], number>>(
+        (acc, row) => {
+          acc[row.actionType] += 1;
+          return acc;
+        },
+        { harvest: 0, photos_sync: 0, evidence_sync: 0 },
+      ),
+    );
+    const retryingRows = rows.filter((row) => (row.attempts ?? 0) > 0);
+    setQueueRetryingCount(retryingRows.length);
+    setQueueMaxAttempts(rows.reduce((max, row) => Math.max(max, row.attempts ?? 0), 0));
+    const latestErrored = [...retryingRows]
+      .sort((a, b) => {
+        if ((b.attempts ?? 0) !== (a.attempts ?? 0)) return (b.attempts ?? 0) - (a.attempts ?? 0);
+        return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+      })
+      .find((row) => typeof row.lastError === 'string' && row.lastError.trim().length > 0);
+    setQueueLastError(latestErrored?.lastError?.trim() ?? null);
+    setQueueLastErrorActionType(latestErrored?.actionType ?? null);
 
     const { email, password } = getAuthCredentials();
     const canQueryServer = Boolean(farmer?.id && email?.trim() && password);
@@ -118,6 +161,25 @@ export default function SettingsScreen() {
         await refreshSyncMetrics();
         const v = await getSetting('vertexAveragingSeconds').catch(() => null);
         setVertexAvgSeconds(v === '60' ? 60 : 120);
+        const storedAttemptScope = await getSetting('syncQueueAttemptScope').catch(() => null);
+        if (
+          storedAttemptScope === 'all' ||
+          storedAttemptScope === 'retrying_only' ||
+          storedAttemptScope === 'first_attempt_only'
+        ) {
+          setQueueAttemptScope(storedAttemptScope);
+        }
+        const storedSmartSweepEnabled = await getSetting('syncQueueSmartSweepEnabled').catch(() => null);
+        setQueueSmartSweepEnabled(storedSmartSweepEnabled === '1');
+        const storedSmartSweepCap = await getSetting('syncQueueSmartSweepCap').catch(() => null);
+        if (
+          storedSmartSweepCap === '25' ||
+          storedSmartSweepCap === '50' ||
+          storedSmartSweepCap === '100' ||
+          storedSmartSweepCap === '200'
+        ) {
+          setQueueSmartSweepCap(Number(storedSmartSweepCap) as 25 | 50 | 100 | 200);
+        }
       })();
     }, [refreshSavedSyncEmail, refreshSyncMetrics]),
   );
@@ -137,6 +199,39 @@ export default function SettingsScreen() {
   }, [farmer?.id, farmer?.name]);
 
   const totalSyncPending = queuePendingCount + unsyncedPlotCount;
+  const selectedQueueActionTypes = useMemo(
+    () =>
+      (Object.entries(queueActionFilter)
+        .filter(([, enabled]) => enabled)
+        .map(([actionType]) => actionType) as PendingSyncAction['actionType'][]),
+    [queueActionFilter],
+  );
+  const queueFilterSummaryLabel = useMemo(() => {
+    const labels = selectedQueueActionTypes.map((actionType) => {
+      if (actionType === 'harvest') return t('sync_queue_filter_harvest');
+      if (actionType === 'photos_sync') return t('sync_queue_filter_photos');
+      return t('sync_queue_filter_evidence');
+    });
+    if (labels.length === 0) return t('sync_queue_filter_none');
+    return t('sync_queue_filter_summary', { labels: labels.join(', ') });
+  }, [selectedQueueActionTypes, t]);
+  const queueAttemptScopeSummaryLabel = useMemo(() => {
+    if (queueSmartSweepEnabled)
+      return t('sync_queue_attempt_scope_smart', { cap: queueSmartSweepCap });
+    if (queueAttemptScope === 'retrying_only') return t('sync_queue_attempt_scope_retrying');
+    if (queueAttemptScope === 'first_attempt_only') return t('sync_queue_attempt_scope_first');
+    return t('sync_queue_attempt_scope_all');
+  }, [queueAttemptScope, queueSmartSweepEnabled, queueSmartSweepCap, t]);
+
+  const resetQueueRetryPreferences = () => {
+    setQueueAttemptScope('all');
+    setQueueSmartSweepEnabled(false);
+    setQueueSmartSweepCap(100);
+    setSyncMessage(t('sync_queue_preferences_reset'));
+    void setSetting('syncQueueAttemptScope', 'all');
+    void setSetting('syncQueueSmartSweepEnabled', '0');
+    void setSetting('syncQueueSmartSweepCap', '100');
+  };
   const usedMb = Math.max(24, 120 + totalSyncPending * 6);
   const totalMb = 500;
   const usagePct = Math.min(1, usedMb / totalMb);
@@ -292,18 +387,69 @@ export default function SettingsScreen() {
           await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
         }
         if (farmer?.id) {
-          const qr = await processPendingSyncQueue({ farmerId: farmer.id, localPlots: plots });
-          if (qr.fetchFailed) {
-            setSyncMessage(t('sync_queue_fetch_failed'));
-          } else if (qr.completed > 0 || qr.failedActions > 0 || qr.droppedInvalid > 0) {
-            const bits: string[] = [];
+          const bits: string[] = [];
+          const appendQueueResultBits = (
+            qr: Awaited<ReturnType<typeof processPendingSyncQueue>>,
+            label?: string,
+          ) => {
+            if (label) bits.push(label);
+            if (qr.fetchFailed) {
+              bits.push(t('sync_queue_fetch_failed'));
+              return;
+            }
             if (qr.completed > 0) bits.push(t('sync_queue_sent', { n: qr.completed }));
             if (qr.droppedInvalid > 0) bits.push(t('sync_queue_dropped_invalid', { n: qr.droppedInvalid }));
             if (qr.failedActions > 0) {
               bits.push(t('sync_queue_failed_remain', { n: qr.failedActions }));
               if (qr.firstError) bits.push(qr.firstError);
             }
+          };
+          if (selectedQueueActionTypes.length === 0) {
+            setSyncMessage(t('sync_queue_no_action_selected'));
+          } else if (queueSmartSweepEnabled) {
+            const retryingPass = await processPendingSyncQueue({
+              farmerId: farmer.id,
+              localPlots: plots,
+              actionTypes: selectedQueueActionTypes,
+              attemptScope: 'retrying_only',
+              maxActions: queueSmartSweepCap,
+            });
+            appendQueueResultBits(retryingPass, t('sync_queue_smart_pass_retrying'));
+            const firstPassProcessed =
+              retryingPass.completed + retryingPass.failedActions + retryingPass.droppedInvalid;
+            const remainingBudget = Math.max(0, queueSmartSweepCap - firstPassProcessed);
+            if (!retryingPass.fetchFailed) {
+              if (remainingBudget > 0) {
+                const firstAttemptPass = await processPendingSyncQueue({
+                  farmerId: farmer.id,
+                  localPlots: plots,
+                  actionTypes: selectedQueueActionTypes,
+                  attemptScope: 'first_attempt_only',
+                  maxActions: remainingBudget,
+                });
+                appendQueueResultBits(firstAttemptPass, t('sync_queue_smart_pass_first'));
+              } else {
+                bits.push(t('sync_queue_smart_cap_reached'));
+              }
+            }
+            bits.push(queueFilterSummaryLabel);
+            bits.push(queueAttemptScopeSummaryLabel);
             setSyncMessage(bits.join('\n\n'));
+          } else {
+            const qr = await processPendingSyncQueue({
+              farmerId: farmer.id,
+              localPlots: plots,
+              actionTypes: selectedQueueActionTypes,
+              attemptScope: queueAttemptScope,
+            });
+            if (qr.fetchFailed) {
+              setSyncMessage(t('sync_queue_fetch_failed'));
+            } else if (qr.completed > 0 || qr.failedActions > 0 || qr.droppedInvalid > 0) {
+              appendQueueResultBits(qr);
+              bits.push(queueFilterSummaryLabel);
+              bits.push(queueAttemptScopeSummaryLabel);
+              setSyncMessage(bits.join('\n\n'));
+            }
           }
         }
         void refreshSyncMetrics();
@@ -376,13 +522,15 @@ export default function SettingsScreen() {
         }
       }
 
-      const queueRes = await processPendingSyncQueue({
-        farmerId: farmer.id,
-        localPlots: plots,
-      });
-      if (queueRes.fetchFailed) {
-        parts.push(t('sync_queue_fetch_failed'));
-      } else {
+      const appendQueueResultParts = (
+        queueRes: Awaited<ReturnType<typeof processPendingSyncQueue>>,
+        label?: string,
+      ) => {
+        if (label) parts.push(label);
+        if (queueRes.fetchFailed) {
+          parts.push(t('sync_queue_fetch_failed'));
+          return;
+        }
         if (queueRes.completed > 0) {
           parts.push(t('sync_queue_sent', { n: queueRes.completed }));
         }
@@ -393,7 +541,46 @@ export default function SettingsScreen() {
           parts.push(t('sync_queue_failed_remain', { n: queueRes.failedActions }));
           if (queueRes.firstError) parts.push(queueRes.firstError);
         }
+      };
+      if (selectedQueueActionTypes.length === 0) {
+        parts.push(t('sync_queue_no_action_selected'));
+      } else if (queueSmartSweepEnabled) {
+        const retryingPass = await processPendingSyncQueue({
+          farmerId: farmer.id,
+          localPlots: plots,
+          actionTypes: selectedQueueActionTypes,
+          attemptScope: 'retrying_only',
+          maxActions: queueSmartSweepCap,
+        });
+        appendQueueResultParts(retryingPass, t('sync_queue_smart_pass_retrying'));
+        const firstPassProcessed =
+          retryingPass.completed + retryingPass.failedActions + retryingPass.droppedInvalid;
+        const remainingBudget = Math.max(0, queueSmartSweepCap - firstPassProcessed);
+        if (!retryingPass.fetchFailed) {
+          if (remainingBudget > 0) {
+            const firstAttemptPass = await processPendingSyncQueue({
+              farmerId: farmer.id,
+              localPlots: plots,
+              actionTypes: selectedQueueActionTypes,
+              attemptScope: 'first_attempt_only',
+              maxActions: remainingBudget,
+            });
+            appendQueueResultParts(firstAttemptPass, t('sync_queue_smart_pass_first'));
+          } else {
+            parts.push(t('sync_queue_smart_cap_reached'));
+          }
+        }
+      } else {
+        const queueRes = await processPendingSyncQueue({
+          farmerId: farmer.id,
+          localPlots: plots,
+          actionTypes: selectedQueueActionTypes,
+          attemptScope: queueAttemptScope,
+        });
+        appendQueueResultParts(queueRes);
       }
+      parts.push(queueFilterSummaryLabel);
+      parts.push(queueAttemptScopeSummaryLabel);
 
       setSyncMessage(parts.filter(Boolean).join('\n\n'));
     } finally {
@@ -833,6 +1020,143 @@ export default function SettingsScreen() {
                 {syncMessage}
               </ThemedText>
             ) : null}
+            {queuePendingCount > 0 ? (
+              <View style={styles.syncQueueHealth}>
+                <ThemedText type="caption">
+                  {t('sync_queue_health_summary', {
+                    pending: queuePendingCount,
+                    retrying: queueRetryingCount,
+                    max: queueMaxAttempts,
+                  })}
+                </ThemedText>
+                {queueLastError ? (
+                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                    Latest queue error
+                    {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}: {queueLastError}
+                  </ThemedText>
+                ) : null}
+                <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
+                <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
+                <View style={styles.syncQueueFilterRow}>
+                  <Pressable
+                    onPress={() =>
+                      setQueueSmartSweepEnabled((prev) => {
+                        const next = !prev;
+                        void setSetting('syncQueueSmartSweepEnabled', next ? '1' : '0');
+                        return next;
+                      })
+                    }
+                    style={[
+                      styles.syncQueueFilterChip,
+                      queueSmartSweepEnabled && styles.syncQueueFilterChipActive,
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <ThemedText
+                      type="caption"
+                      style={queueSmartSweepEnabled ? styles.syncQueueFilterChipTextActive : undefined}
+                    >
+                      {t('sync_queue_smart_sweep_label')}
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={resetQueueRetryPreferences}
+                    style={styles.syncQueueFilterChip}
+                    accessibilityRole="button"
+                  >
+                    <ThemedText type="caption">{t('sync_queue_reset_preferences_label')}</ThemedText>
+                  </Pressable>
+                </View>
+                {queueSmartSweepEnabled ? (
+                  <View style={styles.syncQueueFilterRow}>
+                    {([25, 50, 100, 200] as const).map((cap) => {
+                      const enabled = queueSmartSweepCap === cap;
+                      return (
+                        <Pressable
+                          key={cap}
+                          onPress={() => {
+                            setQueueSmartSweepCap(cap);
+                            void setSetting('syncQueueSmartSweepCap', String(cap));
+                          }}
+                          style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
+                          accessibilityRole="button"
+                        >
+                          <ThemedText
+                            type="caption"
+                            style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                          >
+                            Cap {cap}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+                <View style={styles.syncQueueFilterRow}>
+                  {(
+                    [
+                      ['all', t('sync_queue_attempt_chip_all')],
+                      ['retrying_only', t('sync_queue_attempt_chip_retrying')],
+                      ['first_attempt_only', t('sync_queue_attempt_chip_first')],
+                    ] as const
+                  ).map(([scope, label]) => {
+                    const enabled = queueAttemptScope === scope;
+                    return (
+                      <Pressable
+                        key={scope}
+                        onPress={() => {
+                          setQueueAttemptScope(scope);
+                          setQueueSmartSweepEnabled(false);
+                          void setSetting('syncQueueAttemptScope', scope);
+                          void setSetting('syncQueueSmartSweepEnabled', '0');
+                        }}
+                        style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
+                        accessibilityRole="button"
+                      >
+                        <ThemedText
+                          type="caption"
+                          style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                        >
+                          {label}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <View style={styles.syncQueueFilterRow}>
+                  {(
+                    [
+                      ['harvest', 'Harvest'],
+                      ['photos_sync', 'Photos'],
+                      ['evidence_sync', 'Evidence'],
+                    ] as const
+                  ).map(([actionType, label]) => {
+                    const enabled = queueActionFilter[actionType];
+                    const count = queueCountByActionType[actionType] ?? 0;
+                    return (
+                      <Pressable
+                        key={actionType}
+                        onPress={() =>
+                          setQueueActionFilter((prev) => ({
+                            ...prev,
+                            [actionType]: !prev[actionType],
+                          }))
+                        }
+                        style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
+                        accessibilityRole="button"
+                      >
+                        <ThemedText
+                          type="caption"
+                          style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                        >
+                          {label} ({count})
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -954,6 +1278,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#666666',
+  },
+  syncQueueHealth: {
+    marginTop: 8,
+    gap: 6,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5E5',
+  },
+  syncQueueWarningText: {
+    color: '#8A5A00',
+  },
+  syncQueueFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  syncQueueFilterChip: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  syncQueueFilterChipActive: {
+    borderColor: Brand.primary,
+    backgroundColor: '#E8F8F1',
+  },
+  syncQueueFilterChipTextActive: {
+    color: Brand.primary,
   },
   rowHeaderInline: {
     flexDirection: 'row',

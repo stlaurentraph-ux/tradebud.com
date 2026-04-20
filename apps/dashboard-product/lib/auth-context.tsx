@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  startTransition,
+  type ReactNode,
+} from 'react';
 import type { User, TenantRole } from '@/types';
 
 interface AuthContextType {
@@ -83,15 +91,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = sessionStorage.getItem('tracebud_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser) as User;
+        startTransition(() => {
+          setUser(parsed);
+        });
       } catch {
         sessionStorage.removeItem('tracebud_user');
       }
     }
-    setIsLoading(false);
+    startTransition(() => {
+      setIsLoading(false);
+    });
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
+    void password;
     setIsLoading(true);
     // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 500));

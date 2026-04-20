@@ -9,7 +9,6 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  User,
   FileCheck,
   Calendar,
 } from 'lucide-react';

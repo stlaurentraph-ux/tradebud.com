@@ -1,0 +1,20 @@
+{
+  "currentPath": "openapi-governance-presentation-trend.json",
+  "previousPath": null,
+  "previousAvailable": false,
+  "baseline": {
+    "runId": null,
+    "workflowPath": null,
+    "workflowName": null
+  },
+  "current": {
+    "fileCount": 1,
+    "passCount": 0,
+    "failCount": 0,
+    "unknownCount": 1,
+    "totalPresentationDriftWarnings": 0,
+    "snapshotRegistryFailCount": 0,
+    "totalSnapshotRegistryRows": 1
+  },
+  "delta": null
+}

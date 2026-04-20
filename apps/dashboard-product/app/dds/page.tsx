@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -120,32 +120,9 @@ export default function DDSWorkspacePage() {
     [packages]
   );
 
-  useEffect(() => {
-    if (!selectedDDS && ddsPackages.length > 0) {
-      setSelectedDDS(ddsPackages[0].id);
-    }
-  }, [selectedDDS, ddsPackages]);
-
-  const selected = ddsPackages.find((d) => d.id === selectedDDS);
-
-  const getStatusColor = (status: DDSStatus) => {
-    switch (status) {
-      case 'DRAFT':
-        return 'bg-blue-50 border-blue-200';
-      case 'READY_TO_SUBMIT':
-        return 'bg-cyan-50 border-cyan-200';
-      case 'SUBMITTED':
-        return 'bg-purple-50 border-purple-200';
-      case 'ACCEPTED':
-        return 'bg-emerald-50 border-emerald-200';
-      case 'REJECTED':
-        return 'bg-red-50 border-red-200';
-      case 'PENDING_CONFIRMATION':
-        return 'bg-amber-50 border-amber-200';
-      default:
-        return 'bg-gray-50 border-gray-200';
-    }
-  };
+  const firstPackageId = ddsPackages[0]?.id ?? null;
+  const resolvedSelectedId = selectedDDS ?? firstPackageId;
+  const selected = ddsPackages.find((d) => d.id === resolvedSelectedId);
 
   const getCheckIcon = (status: string) => {
     switch (status) {
@@ -210,7 +187,7 @@ export default function DDSWorkspacePage() {
                     key={dds.id}
                     onClick={() => setSelectedDDS(dds.id)}
                     className={`w-full rounded-lg border-2 p-4 text-left transition-colors ${
-                      selectedDDS === dds.id
+                      resolvedSelectedId === dds.id
                         ? 'border-primary bg-primary/5'
                         : 'border-transparent bg-card hover:bg-secondary'
                     }`}
