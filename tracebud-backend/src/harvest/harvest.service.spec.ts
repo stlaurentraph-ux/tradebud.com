@@ -73,6 +73,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
           kg: 42,
           harvest_date: '2026-04-16',
           declared_area_ha: 1.1,
+          plot_name: 'North Parcel',
         },
       ],
     } as any);
@@ -213,7 +214,16 @@ describe('HarvestService.evaluateDdsPackageFilingPreflight', () => {
     const service = new HarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_file_2' },
-      vouchers: [{ id: 'v_1', kg: 10, area_ha: 1, harvest_date: '2026-04-16', declared_area_ha: 1 }],
+      vouchers: [
+        {
+          id: 'v_1',
+          kg: 10,
+          area_ha: 1,
+          harvest_date: '2026-04-16',
+          declared_area_ha: 1,
+          plot_name: 'West Block',
+        },
+      ],
     } as any);
 
     const result = await service.evaluateDdsPackageFilingPreflight('pkg_file_2', { tenantId: 'tenant_1' });
