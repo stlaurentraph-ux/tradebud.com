@@ -688,9 +688,6 @@ jobs:
   dashboard-product:
     name: Dashboard product lint and tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/dashboard-product
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -700,23 +697,20 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: apps/dashboard-product/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --prefix apps/dashboard-product
 
       - name: Tests
-        run: npm test
+        run: npm test --prefix apps/dashboard-product
 
   marketing:
     name: Marketing site lint and build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/marketing
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -726,16 +720,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: apps/marketing/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm install
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --prefix apps/marketing
 
       - name: Build
-        run: npm run build
+        run: npm run build --prefix apps/marketing
 
   app:
     name: Expo app lint
