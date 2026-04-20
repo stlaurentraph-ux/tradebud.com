@@ -1,3 +1,218 @@
+### 2026-04-20 (execution: remaining-execution scorecard blocked-vs-ready checkpoint refresh)
+- Focus: make handoff state explicit by separating closed in-repo lanes from external blockers.
+- Files changed: `product-os/06-status/remaining-execution-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Decisions: replaced stale two-week in-repo plan section with explicit `Ready now` vs `Blocked now` checkpoint, confirming only remaining blocker is owner-level `spatial_ref_sys` remediation plus Supabase ticket follow-through.
+- Verification: docs-only update; no runtime/test behavior changed.
+- Risks: low; status/reporting clarity change only.
+- Blockers: external privileged operator dependency remains unchanged (`42501 must be owner of table spatial_ref_sys`, project `uzsktajlnofosxeqwdwl`).
+- Next step: execute owner-window runbook + verifier and replace scorecard ticket placeholder (`TBD`) with actual support ticket ID.
+
+### 2026-04-20 (execution: FEAT-009 admin status-read success toast assertion coverage)
+- Focus: complete success-path operator-feedback test coverage for DDS status reads.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: extended existing success helper flow assertion to verify deterministic completion toast text (`EUDR DDS status read completed (status 200).`) in the same test that validates `Download JSON` visibility gating.
+- Verification: `cd apps/dashboard-product && npm test -- app/admin/page.test.tsx lib/eudr-dds-status-feedback.test.ts lib/eudr-dds-status-error-context.test.ts app/api/integrations/eudr/dds/status/route.test.ts` (pass, `4 files / 20 tests`).
+- Risks: low; test-only assertion expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed; external privileged `spatial_ref_sys` owner remediation/support ticket lane remains unchanged.
+- Next step: FEAT-009 admin DDS status interaction matrix is fully covered for current post-closeout scope; remaining outstanding execution items are external operational blockers (owner-level staging remediation + Supabase support ticket follow-through).
+
+### 2026-04-20 (execution: FEAT-009 admin status-download control visibility gating coverage)
+- Focus: lock UI gating semantics for main status payload `Download JSON` control.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: replaced unstable jsdom failure-branch approach with deterministic visibility-gating assertion (`Download JSON` absent before success, present after successful status read).
+- Risks: low; test-only interaction assertion update, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add explicit success-path assertion for status-read success toast text in same helper flow to complete visibility + feedback pairing.
+
+### 2026-04-20 (execution: FEAT-009 admin status-payload download interaction coverage)
+- Focus: extend admin interaction matrix from last-error exports to main status-payload `Download JSON` path.
+- Files changed: `apps/dashboard-product/app/admin/test-helpers.tsx`, `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `renderAdminWithStatusReadSuccess` helper and asserted download filename contract, payload content, URL lifecycle, and success toast for status payload export.
+- Risks: low; test-only interaction coverage expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add failure-path test for status payload download if object URL creation fails (for parity with copy-action failure branches).
+
+### 2026-04-20 (execution: FEAT-009 reusable download mock helper extraction)
+- Focus: reduce download-test boilerplate by centralizing URL/Blob/anchor mock setup.
+- Files changed: `apps/dashboard-product/app/admin/test-helpers.tsx`, `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: extracted `setupDownloadMocks` helper and updated admin download interaction test to consume helper + restore function.
+- Risks: low; test-harness refactor only, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally reuse `setupDownloadMocks` for future download action tests (telemetry CSV/JSON export paths) to keep patterns consistent.
+
+### 2026-04-20 (execution: FEAT-009 admin download-error-json payload-content coverage)
+- Focus: close download-action contract by asserting serialized error JSON payload content in interaction tests.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added Blob stub in test runtime and asserted downloaded JSON payload keys/content (`message`, `referenceNumber`, `occurredAt`) alongside existing filename/lifecycle assertions.
+- Risks: low; test-only assertion expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally extract URL/Blob mocking helpers into reusable test utilities if more download-path tests are added.
+
+### 2026-04-20 (execution: FEAT-009 admin download-error-json interaction semantics coverage)
+- Focus: complete export-action matrix by locking `Download error JSON` semantics in admin interaction tests.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added assertions for download filename pattern, object URL creation/revocation, anchor lifecycle (`append/remove/click`), and success toast (`EUDR status error context downloaded.`).
+- Risks: low; test-only assertion expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add focused guard that confirms downloaded blob JSON payload contains expected keys (`message`, `referenceNumber`, `occurredAt`) once blob-content introspection is needed.
+
+### 2026-04-20 (execution: FEAT-009 admin copy-error-context success-path payload coverage)
+- Focus: complete copy-action matrix by locking `Copy error context` success payload semantics and operator feedback.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added success-branch assertion for clipboard payload JSON (`message`, `referenceNumber`, `occurredAt`) and success toast (`EUDR status error context copied to clipboard.`).
+- Risks: low; test-only assertion expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add branch-specific coverage for `Download error JSON` filename/payload semantics to complete full export-action matrix.
+
+### 2026-04-20 (execution: FEAT-009 admin copy-error-context failure-path toast coverage)
+- Focus: lock deterministic operator feedback when `Copy error context` clipboard write fails.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added clipboard rejection test branch and asserted error toast text (`Failed to copy EUDR status error context.`).
+- Risks: low; test-only branch coverage addition, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add parity success-path assertion for `Copy error context` payload shape + success toast to fully close copy-action matrix.
+
+### 2026-04-20 (execution: FEAT-009 admin copy-filename failure-path toast coverage)
+- Focus: lock deterministic operator feedback when `Copy filename` clipboard write fails.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added clipboard rejection test branch and asserted error toast text (`Failed to copy EUDR status error filename.`); added toast mock reset per test for isolation.
+- Risks: low; test-only branch coverage addition, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally mirror this failure-branch coverage for `Copy error context` control to complete last-error copy-action parity.
+
+### 2026-04-20 (execution: FEAT-009 admin copy-filename interaction toast/clipboard coverage)
+- Focus: lock operator feedback behavior for DDS status `Copy filename` action.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added clipboard mock + `sonner` toast mock assertions to verify filename copy writes expected value and emits success toast.
+- Risks: low; test-only assertion expansion, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add complementary failure-branch assertion for clipboard rejection -> error toast behavior.
+
+### 2026-04-20 (execution: FEAT-009 admin reusable failure-path test helper extraction)
+- Focus: reduce duplication in admin DDS status interaction tests by extracting shared failure-path setup.
+- Files changed: `apps/dashboard-product/app/admin/test-helpers.tsx`, `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: moved failure-path render/click/wait setup into `renderAdminWithStatusReadFailure` helper and updated page tests to consume helper.
+- Risks: low; test-structure refactor only, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally reuse this helper in future admin diagnostics panel tests (copy/download telemetry/export actions).
+
+### 2026-04-20 (execution: FEAT-009 admin interaction test split for status export helpers)
+- Focus: reduce diagnosis time by splitting DDS status export-helper coverage into narrow tests.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced shared failure-path render helper and split assertions into two tests (accessible export controls vs timestamp helper note).
+- Risks: low; test-structure refactor only, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally promote the shared failure-path helper into a reusable admin test utility if more panel interaction tests are added.
+
+### 2026-04-20 (execution: FEAT-009 admin timestamp-helper interaction coverage)
+- Focus: lock DDS status timestamp helper-note rendering in panel interaction test flow.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: extended admin failure-path interaction test assertions to include timestamp helper-note content (`is replaced at download time.`) plus placeholder presence.
+- Risks: low; test-only assertion expansion, no runtime behavior change.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally split this combined accessibility-helper test into two focused cases (controls vs helper note) if future failures need narrower fault isolation.
+
+### 2026-04-20 (execution: FEAT-009 admin accessibility interaction test for status exports)
+- Focus: lock accessible-name behavior for DDS status last-error export controls with panel interaction coverage.
+- Files changed: `apps/dashboard-product/app/admin/page.test.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added admin jsdom interaction test that triggers DDS status-read failure path and asserts accessible names for copy/download filename/context controls.
+- Risks: low; test-only addition, runtime behavior unchanged.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally expand this harness to also assert timestamp-token helper note rendering alongside control presence.
+
+### 2026-04-20 (execution: FEAT-009 DDS status export-control accessibility labels)
+- Focus: improve assistive-technology clarity for DDS status last-error export controls.
+- Files changed: `apps/dashboard-product/app/admin/page.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added explicit `aria-label` attributes to `Copy error context`, `Download error JSON`, and `Copy filename` controls in last-error panel.
+- Risks: low; accessibility metadata only, no backend/API/permission/state behavior changes.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add panel-level interaction tests that verify accessible names for the export helper controls once admin UI test harness is expanded.
+
+### 2026-04-20 (execution: FEAT-005 CI claim-preflight fail-closed gate)
+- Focus: make benchmark-admin claim safety blocking in CI instead of observability-only.
+- Files changed: `.github/workflows/ci.yml`, `tracebud-backend/scripts/check-benchmark-admin-claims.mjs`, `tracebud-backend/package.json`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: backend CI now requires `BENCHMARK_ADMIN_ROLE_CLAIMS` secret and runs `npm run auth:benchmark-admin:claims:check`, which fails if claim list is empty or missing required canonical claims (`ADMIN`, `COMPLIANCE_MANAGER`).
+- Verification: `cd tracebud-backend && BENCHMARK_ADMIN_ROLE_CLAIMS="ADMIN,COMPLIANCE_MANAGER" npm run auth:benchmark-admin:claims:check`; `cd tracebud-backend && npm test -- --runTestsByPath src/health/health.controller.spec.ts src/integrations/yield-benchmarks.controller.spec.ts` (pass).
+- Risks: medium; CI will now hard-fail until repository secret `BENCHMARK_ADMIN_ROLE_CLAIMS` is configured with required claims.
+- Blockers: configure CI secret to avoid expected fail on next backend workflow run.
+- Next step: set repository secret `BENCHMARK_ADMIN_ROLE_CLAIMS=ADMIN,COMPLIANCE_MANAGER` and re-run backend CI lane.
+
+### 2026-04-20 (execution: FEAT-005 benchmark-admin claim health diagnostics)
+- Focus: reduce operational lockout risk after claim-only enforcement by surfacing benchmark-admin claim config status in health checks.
+- Files changed: `tracebud-backend/src/health/health.controller.ts`, `tracebud-backend/src/health/health.controller.spec.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `/health` now returns `benchmarkAdminAuth` diagnostics (`claimEnforced`, `configured`, `requiredClaims`) and emits warning when `BENCHMARK_ADMIN_ROLE_CLAIMS` resolves empty; defaults to `ADMIN,COMPLIANCE_MANAGER`.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/health/health.controller.spec.ts src/integrations/yield-benchmarks.controller.spec.ts src/integrations/eudr.controller.spec.ts src/integrations/integrations.controller.spec.ts` (pass).
+- Risks: low; additive health payload change only.
+- Blockers: none new.
+- Next step: wire this health diagnostic into deployment/runbook checks so empty-claim config fails pre-release validation.
+
+### 2026-04-20 (execution: FEAT-005 claim-only benchmark-admin enforcement)
+- Focus: finalize auth hardening by removing legacy fallback from yield benchmark admin routes.
+- Files changed: `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: removed `exporter+@tracebud.com` legacy fallback; benchmark admin operations now require canonical claims (`ADMIN` / `COMPLIANCE_MANAGER`) only.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts src/integrations/eudr.controller.spec.ts src/integrations/integrations.controller.spec.ts`; `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/yield-benchmarks.controller.int.spec.ts` (all pass).
+- Risks: low-medium; stricter auth may deny users missing claims until identity provisioning is fully aligned.
+- Blockers: none new.
+- Next step: ensure internal benchmark operators in Supabase auth have `ADMIN` or `COMPLIANCE_MANAGER` claim configured.
+
+### 2026-04-20 (execution: FEAT-005 canonical benchmark-admin claim mapping)
+- Focus: shift yield benchmark admin authorization from identity-domain proxy to canonical role claims.
+- Files changed: `tracebud-backend/src/auth/roles.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.int.spec.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `deriveRoleFromSupabaseUser` now parses canonical claim roles (`ADMIN`, `COMPLIANCE_MANAGER` plus existing roles), yield-benchmark route auth is claim-first with temporary legacy fallback, and audit payload now captures `policyMode` for rollout observability.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts src/integrations/eudr.controller.spec.ts src/integrations/integrations.controller.spec.ts`; `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/yield-benchmarks.controller.int.spec.ts` (all pass).
+- Risks: low-medium; broader role derivation changed globally but claim parsing is additive and existing email-prefix fallback remains in place.
+- Blockers: no new blockers introduced.
+- Next step: phase out legacy fallback once canonical claims are guaranteed across internal benchmark-admin sessions.
+
+### 2026-04-20 (execution: FEAT-005 yield-benchmark governance write path)
+- Focus: implement runtime enforcement for Section 37 benchmark source-traceability and dual-control activation semantics.
+- Files changed: `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.int.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `tracebud-backend/sql/tb_v16_011_yield_benchmarks.sql`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added internal-admin-only yield benchmark contract (create/update/list/activate), enforced citable `sourceReference` checks for `NATIONAL_STATS`/`USDA_FAS`/`FAOSTAT`, enforced draft-only updates and creator!=approver dual-control activation, and appended benchmark lifecycle audit events.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`; `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/yield-benchmarks.controller.int.spec.ts`; `npm run openapi:lint` (all pass).
+- Risks: low-medium; new contract is implemented and tested, but external role taxonomy still uses internal `exporter+@tracebud.com` proxy until dedicated admin/compliance role claims are introduced.
+- Blockers: no new blockers introduced; external infra blocker remains `spatial_ref_sys` owner execution window.
+- Next step: add dedicated auth claim mapping for `ADMIN`/`COMPLIANCE_MANAGER` and migrate endpoint policy check from email-domain proxy to canonical claims.
+
+### 2026-04-20 (execution: Section 37 source-verified benchmark seed hardening)
+- Focus: advance P2 spec hardening by replacing provisional benchmark seed framing with source-verified bootstrap rules.
+- Files changed: `TRACEBUD_V1_2_EUDR_SPEC.md`, `product-os/06-status/remaining-execution-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: updated Section 37.1 to define explicit bootstrap derivation rule (rolling recent-series envelope, conservative rounding), added `source_reference_baseline` field in benchmark table, and aligned source strategy to FAOSTAT primary with USDA FAS cross-check lane for soy rows.
+- Risks: low-medium; this is spec-governance hardening and still requires data-ingest implementation to enforce row-level `source_reference` capture in operational tables.
+- Blockers: none new; external privileged `spatial_ref_sys` owner window remains the only infra-coupled lane blocker.
+- Next step: implement/verify ingest-side enforcement that persists row-level `yield_benchmarks.source_reference` values consistent with Section 37.1/37.2 requirements.
+
+### 2026-04-20 (execution: FEAT-009 DDS status timestamp-token constant alignment)
+- Focus: prevent `<timestamp>` copy drift across filename preview and helper note.
+- Files changed: `apps/dashboard-product/lib/eudr-dds-status-error-context.ts`, `apps/dashboard-product/lib/eudr-dds-status-error-context.test.ts`, `apps/dashboard-product/app/admin/page.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced shared timestamp-token constant and switched admin panel preview/note rendering to use the same exported value; added utility assertion for token stability.
+- Risks: low; utility/UI copy alignment only, no backend/API/permission/state behavior changes.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add tiny accessibility label refinement on filename helper controls if panel-level interaction tests flag wording friction.
+
+### 2026-04-20 (execution: FEAT-009 DDS status error-context utility extraction)
+- Focus: reduce admin-panel helper drift by centralizing DDS status error-export utility logic.
+- Files changed: `apps/dashboard-product/lib/eudr-dds-status-error-context.ts`, `apps/dashboard-product/lib/eudr-dds-status-error-context.test.ts`, `apps/dashboard-product/app/admin/page.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: extracted shared filename builder + context serializer utility and switched admin flow to consume it for preview/download/copy paths; added focused utility unit coverage.
+- Risks: low; refactor + tests only, no backend/API/permission/state behavior changes.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add admin interaction tests around the last-error export controls once panel-level UI test harness is available.
+
+### 2026-04-20 (execution: FEAT-009 DDS status filename builder de-duplication)
+- Focus: prevent preview/download filename drift for DDS status error exports.
+- Files changed: `apps/dashboard-product/app/admin/page.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added shared local filename builder and reused it for suggested filename preview plus download action naming.
+- Risks: low; refactor-only change in UI helper path, no API/runtime/permission/state behavior changes.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally extract DDS status error-context helpers into a tiny dedicated utility once admin panel interaction tests are introduced.
+
+### 2026-04-20 (execution: TB-V16-009 owner-remediation deterministic verifier)
+- Focus: remove ambiguity from privileged `spatial_ref_sys` remediation handoff by adding one-command post-run PASS/FAIL evidence output.
+- Files changed: `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_verify.sql`, `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_runbook.sql`, `product-os/04-quality/remaining-lanes-final-execution-pack.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added standalone verification SQL that emits extension/table/policy/grant snapshots plus deterministic `remediation_status` (`PASS`/`FAIL`) row; updated runbook and operator packet to use this verifier as the primary post-run check.
+- Risks: low; verification-only addition, no runtime app behavior changes.
+- Blockers: privileged owner execution window still required to run remediation and verifier against target.
+- Next step: run owner remediation in privileged window, execute verifier script, and paste PASS/FAIL output into scorecard evidence lines.
+
 ### 2026-04-20 (execution: FEAT-009 OpenAPI contract lock + BLK-003 closure evidence)
 - Focus: publish implemented EUDR integration contract in Tracebud OpenAPI and close integration-target blocker with governance evidence.
 - Files changed: `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/blockers.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
@@ -6,6 +221,14 @@
 - Risks: low-medium; internal Tracebud contract is locked for implemented routes, while external provider Swagger extraction remains a separate upstream visibility dependency.
 - Blockers: `BLK-003` closed.
 - Next step: capture provider-side Swagger JSON/YAML artifact when accessible and append to FEAT-009/P1 evidence register for cross-contract traceability.
+
+### 2026-04-20 (execution: FEAT-009 DDS status filename timestamp clarification)
+- Focus: remove ambiguity in filename preview placeholder semantics during escalation prep.
+- Files changed: `apps/dashboard-product/app/admin/page.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added inline note in DDS status last-error panel clarifying `<timestamp>` token is replaced at actual download time.
+- Risks: low; UI-copy clarification only, no backend/API/runtime/permission/state changes.
+- Blockers: `BLK-003` remains closed.
+- Next step: optionally add lightweight UI test coverage around the last-error helper copy text/action cluster once admin panel interaction tests are introduced.
 
 ### 2026-04-20 (execution: FEAT-009 DDS status copy-filename action)
 - Focus: streamline escalation template completion with filename-only clipboard export.
@@ -3692,6 +3915,14 @@ Append-only session log.
 - Risks: AST extraction currently assumes `@ApiProperty({...})` object-literal usage and string-compatible DTO field types; if decorator style/type modeling shifts materially, parser rules may need targeted extension.
 - Blockers: None.
 - Next step: optionally add focused smoke fixtures for the parity checker so AST/YAML extraction behavior is regression-tested independently from live contract files.
+
+### 2026-04-20 (execution: marketing standalone demo atlas MVP)
+- Focus: add an isolated demo-only landing surface that explains the Tracebud ecosystem in one detailed visual narrative without coupling to main marketing navigation.
+- Files changed: `apps/marketing/app/demo-ecosystem/page.tsx`, `apps/marketing/components/tracebud/demo-ecosystem-view.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: implemented a static diagram-first page at `/demo-ecosystem` with noindex metadata, sticky presenter map, and four walkthrough sections (ecosystem map, data flow, state transitions, exception/recovery) including concise demo talk tracks.
+- Risks: current diagrams are static cards (not interactive graph controls), so deeper animated step-through and PDF export remain optional follow-up improvements.
+- Blockers: None.
+- Next step: optionally add presenter modes (`90-second`, `5-minute`, `deep dive`) and a print/PDF export stylesheet for sales handoff.
 
 ### 2026-04-17 (execution: FEAT-004 S1 post-closeout hardening slice 14)
 - Focus: add independent regression coverage for evidence-document parity checker behavior using fixture-driven smoke scenarios.

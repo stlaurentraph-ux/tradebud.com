@@ -4,21 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   Scale,
-  AlertTriangle,
   CheckCircle,
   Clock,
   ChevronRight,
   Filter,
   Search,
   AlertOctagon,
-  FileText,
-  ArrowRight,
-  User,
   Building2,
-  Package,
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -37,8 +32,7 @@ import {
   getLegalRoleDescription,
   getLegalRoleBadgeColor,
 } from '@/lib/rbac';
-import type { LegalWorkflowRole, RoleDecision, WorkflowType } from '@/types';
-import { cn } from '@/lib/utils';
+import type { LegalWorkflowRole, RoleDecision } from '@/types';
 
 // Mock role decisions data
 const mockRoleDecisions: (RoleDecision & {

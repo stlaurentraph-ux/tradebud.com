@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "errorCount": 0,
+  "errors": [],
+  "entryCount": 4,
+  "policyPath": "docs/openapi/governance-codeowners-policy.json",
+  "schemaPath": "docs/openapi/governance-codeowners-policy.schema.json",
+  "generatedAt": "2026-04-16T09:09:20.953Z"
+}

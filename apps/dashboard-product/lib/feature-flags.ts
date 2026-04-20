@@ -294,7 +294,7 @@ export function isFeatureEnabled(flag: FeatureFlag): boolean {
  * Check if a route is gated by a disabled feature
  */
 export function isRouteGated(route: string): boolean {
-  for (const [flag, config] of Object.entries(FEATURE_CONFIG)) {
+  for (const [, config] of Object.entries(FEATURE_CONFIG)) {
     if (!config.enabled && config.gatedRoutes) {
       for (const gatedRoute of config.gatedRoutes) {
         // Handle dynamic routes like /packages/[id]
@@ -313,7 +313,7 @@ export function isRouteGated(route: string): boolean {
  * Check if a component is gated by a disabled feature
  */
 export function isComponentGated(componentName: string): boolean {
-  for (const [flag, config] of Object.entries(FEATURE_CONFIG)) {
+  for (const [, config] of Object.entries(FEATURE_CONFIG)) {
     if (!config.enabled && config.gatedComponents?.includes(componentName)) {
       return true;
     }
@@ -326,7 +326,7 @@ export function isComponentGated(componentName: string): boolean {
  */
 export function getDisabledFeatures(): FeatureFlag[] {
   return Object.entries(FEATURE_CONFIG)
-    .filter(([_, config]) => !config.enabled)
+    .filter(([, config]) => !config.enabled)
     .map(([flag]) => flag as FeatureFlag);
 }
 
@@ -335,7 +335,7 @@ export function getDisabledFeatures(): FeatureFlag[] {
  */
 export function getMVPFeatures(): FeatureFlag[] {
   return Object.entries(FEATURE_CONFIG)
-    .filter(([_, config]) => config.release === 'mvp')
+    .filter(([, config]) => config.release === 'mvp')
     .map(([flag]) => flag as FeatureFlag);
 }
 

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenAPI Governance Presentation Trend Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scannedPaths",
+    "fileCount",
+    "statusCounts",
+    "totalPresentationDriftWarnings",
+    "snapshotRegistryStatusCounts",
+    "totalSnapshotRegistryRows",
+    "earliestPresentationValidationRecordedAt",
+    "latestPresentationValidationRecordedAt",
+    "files"
+  ],
+  "properties": {
+    "scannedPaths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "fileCount": { "type": "integer", "minimum": 0 },
+    "statusCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PASS", "FAIL", "UNKNOWN"],
+      "properties": {
+        "PASS": { "type": "integer", "minimum": 0 },
+        "FAIL": { "type": "integer", "minimum": 0 },
+        "UNKNOWN": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "totalPresentationDriftWarnings": { "type": "integer", "minimum": 0 },
+    "snapshotRegistryStatusCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PASS", "FAIL"],
+      "properties": {
+        "PASS": { "type": "integer", "minimum": 0 },
+        "FAIL": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "totalSnapshotRegistryRows": { "type": "integer", "minimum": 0 },
+    "earliestPresentationValidationRecordedAt": {
+      "type": ["string", "null"]
+    },
+    "latestPresentationValidationRecordedAt": {
+      "type": ["string", "null"]
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "status",
+          "warningCount",
+          "recordedAt",
+          "generatedAt",
+          "snapshotRegistryStatus",
+          "snapshotRegistryRowCount"
+        ],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["PASS", "FAIL", "UNKNOWN"] },
+          "warningCount": { "type": "integer", "minimum": 0 },
+          "recordedAt": { "type": ["string", "null"] },
+          "generatedAt": { "type": ["string", "null"] },
+          "snapshotRegistryStatus": { "type": "string", "enum": ["PASS", "FAIL"] },
+          "snapshotRegistryRowCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

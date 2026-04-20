@@ -12,6 +12,7 @@ import {
   loadPendingSyncActions,
   logAuditEvent,
   markPendingSyncAttempt,
+  type PendingSyncAction,
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
 import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
@@ -34,6 +35,8 @@ export type ProcessPendingSyncQueueResult = {
   firstError?: string;
 };
 
+export type PendingSyncAttemptScope = 'all' | 'retrying_only' | 'first_attempt_only';
+
 /**
  * Drains the SQLite pending sync queue (harvests, photo sync, evidence sync).
  * Fetches server plots once per run and uses the same local↔server matching as Home / My Plots.
@@ -41,6 +44,9 @@ export type ProcessPendingSyncQueueResult = {
 export async function processPendingSyncQueue(params: {
   farmerId: string;
   localPlots: Plot[];
+  actionTypes?: PendingSyncAction['actionType'][];
+  attemptScope?: PendingSyncAttemptScope;
+  maxActions?: number;
 }): Promise<ProcessPendingSyncQueueResult> {
   let backendRows: unknown[] = [];
   try {
@@ -68,18 +74,41 @@ export async function processPendingSyncQueue(params: {
   let droppedInvalid = 0;
   let firstError: string | undefined;
 
-  const actions = (await loadPendingSyncActions()).sort((a, b) => {
-    const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
-    if (cmp !== 0) return cmp;
-    if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
-    return a.id - b.id;
-  });
+  const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync'];
+  const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
+  const attemptScope = params.attemptScope ?? 'all';
+  const scopedActions = (await loadPendingSyncActions())
+    .filter((row) => allowedActionTypeSet.has(row.actionType))
+    .filter((row) => {
+      if (attemptScope === 'retrying_only') return (row.attempts ?? 0) > 0;
+      if (attemptScope === 'first_attempt_only') return (row.attempts ?? 0) === 0;
+      return true;
+    })
+    .sort((a, b) => {
+      const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
+      if (cmp !== 0) return cmp;
+      if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
+      return a.id - b.id;
+    });
+  const maxActions =
+    params.maxActions != null && Number.isFinite(params.maxActions)
+      ? Math.max(0, Math.floor(params.maxActions))
+      : null;
+  const actions = maxActions == null ? scopedActions : scopedActions.slice(0, maxActions);
   for (const a of actions) {
     let payload: Record<string, unknown> | null = null;
     try {
       payload = JSON.parse(a.payloadJson) as Record<string, unknown>;
     } catch {
       await deletePendingSyncAction(a.id);
+      await logAuditEvent({
+        eventType: 'sync_queue_action_dropped_invalid',
+        payload: {
+          pendingSyncId: a.id,
+          actionType: a.actionType,
+          reason: 'invalid_payload_json',
+        },
+      }).catch(() => undefined);
       droppedInvalid += 1;
       continue;
     }
@@ -135,6 +164,14 @@ export async function processPendingSyncQueue(params: {
             });
           } else {
             await deletePendingSyncAction(a.id);
+            await logAuditEvent({
+              eventType: 'sync_queue_action_dropped_invalid',
+              payload: {
+                pendingSyncId: a.id,
+                actionType: a.actionType,
+                reason: 'missing_plot_or_reason',
+              },
+            }).catch(() => undefined);
             droppedInvalid += 1;
           }
           continue;
@@ -163,18 +200,45 @@ export async function processPendingSyncQueue(params: {
         }
       } else {
         await deletePendingSyncAction(a.id);
+        await logAuditEvent({
+          eventType: 'sync_queue_action_dropped_invalid',
+          payload: {
+            pendingSyncId: a.id,
+            actionType: a.actionType,
+            reason: 'unknown_action_type',
+          },
+        }).catch(() => undefined);
         droppedInvalid += 1;
         continue;
       }
       await deletePendingSyncAction(a.id);
+      await logAuditEvent({
+        eventType: 'sync_queue_action_succeeded',
+        payload: {
+          pendingSyncId: a.id,
+          actionType: a.actionType,
+          attemptsBeforeSuccess: a.attempts ?? 0,
+        },
+      }).catch(() => undefined);
       completed += 1;
     } catch (e) {
+      const nextAttempts = (a.attempts ?? 0) + 1;
+      const errorText = e instanceof Error ? e.message : String(e);
       failedActions += 1;
-      firstError = firstError ?? (e instanceof Error ? e.message : String(e));
+      firstError = firstError ?? errorText;
       await markPendingSyncAttempt(a.id, {
-        attempts: (a.attempts ?? 0) + 1,
-        lastError: e instanceof Error ? e.message : String(e),
+        attempts: nextAttempts,
+        lastError: errorText,
       });
+      await logAuditEvent({
+        eventType: 'sync_queue_action_failed',
+        payload: {
+          pendingSyncId: a.id,
+          actionType: a.actionType,
+          attempts: nextAttempts,
+          error: errorText,
+        },
+      }).catch(() => undefined);
     }
   }
 

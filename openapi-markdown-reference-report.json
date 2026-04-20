@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "markdownPath": "product-os/04-quality/release-qa-evidence.md",
+  "packageJsonPath": "package.json",
+  "enforceCommands": false,
+  "enforcePaths": true,
+  "commandCount": 12,
+  "pathCount": 16,
+  "missingCommands": [],
+  "missingPaths": [],
+  "status": "PASS",
+  "errors": []
+}

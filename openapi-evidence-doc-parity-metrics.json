@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-17T16:57:22.281Z",
+  "parityJsonSchemaVersion": 1,
+  "passStatus": "PASS",
+  "failStatus": "FAIL",
+  "failCode": "EVIDENCE_DOC_PARITY_FIELD_MISMATCH",
+  "passRequiredFieldCount": 8,
+  "passFieldCheckCount": 4,
+  "runId": null,
+  "runNumber": null
+}

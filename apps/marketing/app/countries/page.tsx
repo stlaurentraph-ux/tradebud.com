@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Server, Globe, Shield, Database, Link2, FileText, Users, Building2, CheckCircle } from "lucide-react";
+import { Server, Globe, Shield, Database, Link2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
-import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
@@ -150,7 +149,7 @@ export default function CountriesPage() {
               DPI-Native<br />Infrastructure
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed">
-              Strengthen national registries and public interest data while maintaining full sovereignty. We power infrastructure, we don't replace it.
+              Strengthen national registries and public interest data while maintaining full sovereignty. We power infrastructure, we don&apos;t replace it.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <Button
@@ -388,7 +387,8 @@ export default function CountriesPage() {
             viewport={{ once: true }}
           >
             <p className="text-2xl md:text-3xl text-white font-medium leading-relaxed mb-8 italic">
-              "Tracebud helps us modernize our producer registry without replacing systems we've invested years in building. True digital public infrastructure."
+              &ldquo;Tracebud helps us modernize our producer registry without replacing systems we&apos;ve invested
+              years in building. True digital public infrastructure.&rdquo;
             </p>
             <div className="flex items-center justify-center gap-4">
               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--data-emerald)]">

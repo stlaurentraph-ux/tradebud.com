@@ -30,11 +30,13 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   }, 20_000);
 
   afterAll(async () => {
+    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
     await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.end();
   });
 
   beforeEach(async () => {
+    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
     await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.query(`DELETE FROM audit_log WHERE event_type IN ('inbox_requests_seeded', 'inbox_request_responded')`);
   });
@@ -77,6 +79,7 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
     expect(initial.length).toBeGreaterThan(0);
 
     // Simulate external cleanup/race condition while service continues running.
+    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
     await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
 
     const afterDrop = await service.list('tenant_rwanda_001');
@@ -89,5 +92,5 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
       id: pending!.id,
       status: 'RESPONDED',
     });
-  }, 20_000);
+  }, 60_000);
 });

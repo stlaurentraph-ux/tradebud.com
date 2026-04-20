@@ -5,10 +5,10 @@ import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
   Upload, Shield, ChevronRight, Globe, Camera, FileCheck, Scale, Truck, AlertTriangle,
-  Map, Layers, Download, Eye, Send, X, ChevronDown, Leaf, Building2, QrCode, Lock,
-  History, Filter, RefreshCw, ExternalLink, Satellite, PenTool, Trash2, Edit3, Copy,
+  Map, Layers, Download, Eye, Send, X, Leaf, Building2, QrCode, Lock,
+  History, Filter, RefreshCw, ExternalLink, Satellite, PenTool, Edit3,
   FolderOpen, UserCheck, Landmark, FileSignature, ShieldCheck, Workflow, Database,
-  ArrowRight, Check, Info, Minus, CircleDot, Hexagon
+  Info, CircleDot, Hexagon
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -143,24 +143,6 @@ function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: 
         <h2 className="text-xl font-semibold text-stone-900">{title}</h2>
         {subtitle && <p className="text-sm text-stone-500 mt-1">{subtitle}</p>}
       </div>
-      {action}
-    </div>
-  );
-}
-
-function EmptyState({ icon: Icon, title, description, action }: { 
-  icon: typeof Package; 
-  title: string; 
-  description: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-4">
-        <Icon size={28} className="text-stone-400" />
-      </div>
-      <h3 className="text-lg font-semibold text-stone-900 mb-1">{title}</h3>
-      <p className="text-sm text-stone-500 max-w-sm mb-4">{description}</p>
       {action}
     </div>
   );
@@ -1193,7 +1175,8 @@ function FarmersPage() {
                   </div>
                 </Card>
                 <p className="text-xs text-stone-500 mt-2">
-                  Supports OCR for Clave Catastral, formal land titles, and "Productor en Posesión" declarations
+                  Supports OCR for Clave Catastral, formal land titles, and{' '}
+                  <span className="whitespace-nowrap">&ldquo;Productor en Posesión&rdquo;</span> declarations
                 </p>
               </div>
 
@@ -1326,7 +1309,8 @@ function TransactionsPage() {
             <h4 className="font-semibold text-amber-900">Yield Cap Validation (Anti-Fraud)</h4>
             <p className="text-sm text-amber-800 mt-1">
               Delivery weights are cross-referenced against biological carrying capacity (e.g., 1ha &asymp; 1,500kg coffee).
-              Exceeding the cap flags the transaction for "Laundering/Illicit Blending" investigation.
+              Exceeding the cap flags the transaction for{' '}
+              <span className="whitespace-nowrap">&ldquo;Laundering/Illicit Blending&rdquo;</span> investigation.
             </p>
           </div>
         </div>
@@ -1387,7 +1371,8 @@ function TransactionsPage() {
           <div>
             <h4 className="font-semibold text-stone-900">Declaration in Excess</h4>
             <p className="text-sm text-stone-500 mt-1">
-              Bundle surplus of verified "Farmer Vouchers" into delivery payloads for operational fluidity while maintaining 100% compliance.
+              Bundle surplus of verified{' '}
+              <span className="whitespace-nowrap">&ldquo;Farmer Vouchers&rdquo;</span> into delivery payloads for operational fluidity while maintaining 100% compliance.
             </p>
           </div>
           <Button variant="secondary">

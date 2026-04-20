@@ -104,6 +104,7 @@ describeIfDb('API integration: package/report access policy', () => {
   });
 
   beforeEach(async () => {
+    await pool.query('DROP TABLE IF EXISTS agent_plot_assignment');
     await pool.query('DELETE FROM dds_package_voucher');
     await pool.query('DELETE FROM dds_package');
     await pool.query('DELETE FROM voucher');

@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "missingEntries": [],
+  "ownerMismatch": [],
+  "requiredEntryCount": 4,
+  "policyPath": "docs/openapi/governance-codeowners-policy.json",
+  "codeownersPath": ".github/CODEOWNERS",
+  "generatedAt": "2026-04-16T09:09:21.270Z"
+}

@@ -1,0 +1,38 @@
+{
+  "status": "PASS",
+  "schemaVersion": 1,
+  "checks": {
+    "typeEnumValues": [
+      "tenure_evidence",
+      "labor_evidence",
+      "fpic_repository",
+      "protected_area_permit"
+    ],
+    "reviewStatusEnumValues": [
+      "verified",
+      "pending",
+      "rejected"
+    ],
+    "requiredFields": [
+      "evidenceId",
+      "packageId",
+      "plotId",
+      "title",
+      "type",
+      "reviewStatus",
+      "source",
+      "capturedAt"
+    ],
+    "fieldChecks": [
+      "type",
+      "format",
+      "nullable",
+      "enum"
+    ],
+    "exampleParity": [
+      "keys",
+      "enum_validity",
+      "non_nullable_non_null"
+    ]
+  }
+}

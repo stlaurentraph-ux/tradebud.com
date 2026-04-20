@@ -9,13 +9,10 @@ import {
   XCircle,
   Clock,
   FileText,
-  ArrowRight,
-  Scale,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   Upload,
-  TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +27,6 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { YieldException, ComplianceIssue } from '@/types';
 import { emitAuditEvent } from '@/lib/audit-events';
@@ -552,8 +548,7 @@ export function YieldExceptionCard({
  */
 export function createComplianceIssueFromYieldException(
   exception: YieldException,
-  plotName: string,
-  farmerName: string
+  plotName: string
 ): Omit<ComplianceIssue, 'id' | 'created_at' | 'updated_at'> {
   const isBlocked = exception.yield_status === 'BLOCKED';
 

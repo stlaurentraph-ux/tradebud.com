@@ -9,11 +9,599 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  contracts:
+    name: Contracts (OpenAPI lint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate OpenAPI governance README commands
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:readme:check -- --report openapi-governance-readme-report.json | tee openapi-governance-readme-output.txt
+
+      - name: Publish OpenAPI governance README summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const reportPath = 'openapi-governance-readme-report.json';
+          if (!fs.existsSync(reportPath)) {
+            throw new Error(`Missing report: ${reportPath}`);
+          }
+
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          const runUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            '## OpenAPI Governance README Checks',
+            '',
+            '- Command: `npm run openapi:governance:readme:check -- --report openapi-governance-readme-report.json`',
+            `- Status: ${report.status ?? 'FAIL'}`,
+            `- Referenced commands detected: ${report.commandCount ?? 0}`,
+            `- Referenced paths detected: ${report.pathCount ?? 0}`,
+            `- Required anchors: ${report.requiredAnchorCount ?? 0}`,
+            `- Missing anchors: ${(report.missingAnchors ?? []).length}`,
+            `- Artifact: \`contracts-openapi-readme-governance-metrics\` ([run](${runUrl}))`,
+          ].join('\n');
+
+          fs.appendFileSync(summaryPath, `${summary}\n`);
+          NODE
+
+      - name: Assert OpenAPI governance README report schema
+        if: always()
+        run: npm run openapi:governance:readme:report:assert
+
+      - name: Upload OpenAPI governance README metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-readme-governance-metrics
+          path: openapi-governance-readme-report.json
+
+      - name: Validate release QA doc references (path integrity)
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:markdown:check -- --markdown product-os/04-quality/release-qa-evidence.md --no-commands --report openapi-markdown-reference-report.json | tee openapi-markdown-reference-output.txt
+
+      - name: Validate snapshot-backed feature registry
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:snapshot:registry:check -- --report openapi-snapshot-registry-report.json
+
+      - name: Publish snapshot registry summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'openapi-snapshot-registry-report.json';
+          if (!fs.existsSync(reportPath)) {
+            throw new Error(`Missing report: ${reportPath}`);
+          }
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          const runUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            '## Snapshot Registry Checks',
+            '',
+            `- Command: \`npm run openapi:governance:snapshot:registry:check -- --report ${reportPath}\``,
+            `- Status: ${report.status ?? 'FAIL'}`,
+            `- Schema version: ${report.schemaVersion ?? 'unknown'}`,
+            `- Registry rows: ${report.rowCount ?? 0}`,
+            `- Errors: ${(report.errors ?? []).length}`,
+            `- Artifact: \`contracts-openapi-snapshot-registry-metrics\` ([run](${runUrl}))`,
+          ].join('\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          NODE
+
+      - name: Assert snapshot registry report schema
+        if: always()
+        run: npm run openapi:governance:snapshot:registry:report:assert
+
+      - name: Upload snapshot registry metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-snapshot-registry-metrics
+          path: openapi-snapshot-registry-report.json
+
+      - name: Publish markdown reference summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const reportPath = 'openapi-markdown-reference-report.json';
+          if (!fs.existsSync(reportPath)) {
+            throw new Error(`Missing report: ${reportPath}`);
+          }
+
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          const runUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            '## Markdown Reference Checks',
+            '',
+            `- Command: \`npm run openapi:governance:markdown:check -- --markdown ${report.markdownPath} --no-commands --report ${reportPath}\``,
+            `- Status: ${report.status ?? 'FAIL'}`,
+            `- Schema version: ${report.schemaVersion ?? 'unknown'}`,
+            `- Referenced commands detected: ${report.commandCount ?? 0}`,
+            `- Referenced paths detected: ${report.pathCount ?? 0}`,
+            `- Missing commands: ${(report.missingCommands ?? []).length}`,
+            `- Missing paths: ${(report.missingPaths ?? []).length}`,
+            `- Artifact: \`contracts-markdown-reference-metrics\` ([run](${runUrl}))`,
+          ].join('\n');
+
+          fs.appendFileSync(summaryPath, `${summary}\n`);
+          NODE
+
+      - name: Assert markdown reference report schema
+        if: always()
+        run: npm run openapi:governance:markdown:report:assert
+
+      - name: Upload markdown reference metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-markdown-reference-metrics
+          path: openapi-markdown-reference-report.json
+
+      - name: Validate OpenAPI governance policy
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:policy:validate -- --report openapi-governance-policy-report.json | tee openapi-governance-policy-output.txt
+
+      - name: Verify OpenAPI governance CODEOWNERS
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:check -- --report openapi-governance-codeowners-report.json | tee openapi-governance-codeowners-output.txt
+
+      - name: Enforce evidence-document OpenAPI/DTO enum parity
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:evidence-doc:parity:check | tee openapi-governance-evidence-doc-parity-output.txt
+
+      - name: Smoke test evidence-document parity checker
+        run: npm run openapi:governance:evidence-doc:parity:smoke
+
+      - name: Assert evidence-document parity JSON report contract
+        run: npm run openapi:governance:evidence-doc:parity:report:assert
+
+      - name: Capture evidence-document parity JSON payload snapshots
+        if: always()
+        run: |
+          set -euo pipefail
+          node scripts/openapi-governance/evidence-doc-contract-parity-check.mjs --json > openapi-evidence-doc-parity-pass.json
+          if node scripts/openapi-governance/evidence-doc-contract-parity-check.mjs --json --dto scripts/openapi-governance/fixtures/evidence-doc-contract-parity/dto.ts --openapi scripts/openapi-governance/fixtures/evidence-doc-contract-parity/openapi-fail-format.yaml 2> openapi-evidence-doc-parity-fail.json; then
+            echo "Expected fixture fail scenario to exit non-zero."
+            exit 1
+          fi
+
+      - name: Publish evidence-document parity JSON summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const passPath = 'openapi-evidence-doc-parity-pass.json';
+          const failPath = 'openapi-evidence-doc-parity-fail.json';
+          if (!fs.existsSync(passPath) || !fs.existsSync(failPath)) {
+            throw new Error('Missing parity JSON snapshot files for summary publishing.');
+          }
+
+          const passPayload = JSON.parse(fs.readFileSync(passPath, 'utf8'));
+          const failPayload = JSON.parse(fs.readFileSync(failPath, 'utf8'));
+          const runUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const summary = [
+            '## Evidence-Doc Parity JSON Contract',
+            '',
+            '- Command: `npm run openapi:governance:evidence-doc:parity:report:assert`',
+            `- PASS payload status: ${passPayload.status ?? 'unknown'}`,
+            `- PASS schema version: ${passPayload.schemaVersion ?? 'unknown'}`,
+            `- FAIL payload status: ${failPayload.status ?? 'unknown'}`,
+            `- FAIL schema version: ${failPayload.schemaVersion ?? 'unknown'}`,
+            `- FAIL code: ${failPayload.code ?? 'unknown'}`,
+            `- Artifact: \`contracts-openapi-evidence-doc-parity-contract\` ([run](${runUrl}))`,
+          ].join('\n');
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          NODE
+
+      - name: Generate evidence-document parity JSON metrics
+        if: always()
+        run: npm run openapi:governance:evidence-doc:parity:metrics:generate
+
+      - name: Upload evidence-document parity JSON contract artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-evidence-doc-parity-contract
+          path: |
+            openapi-evidence-doc-parity-pass.json
+            openapi-evidence-doc-parity-fail.json
+            docs/openapi/evidence-doc-parity-report.schema.json
+
+      - name: Upload evidence-document parity JSON metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-evidence-doc-parity-metrics
+          path: openapi-evidence-doc-parity-metrics.json
+
+      - name: Publish OpenAPI governance summary
+        if: always()
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:metrics:generate
+
+      - name: Smoke test OpenAPI governance metrics generator
+        if: always()
+        run: npm run openapi:governance:metrics:smoke
+
+      - name: Presentation snapshot check (non-blocking)
+        id: metrics_presentation_check
+        if: always()
+        continue-on-error: true
+        run: npm run openapi:governance:metrics:presentation:check
+
+      - name: Publish presentation drift warning
+        if: always() && steps.metrics_presentation_check.outcome == 'failure'
+        run: |
+          {
+            echo "## Governance Presentation Drift Warning"
+            echo ""
+            echo "- Non-blocking check \`openapi:governance:metrics:presentation:check\` detected summary formatting drift."
+            echo "- Blocking governance contract gates still determine pass/fail."
+            echo "- Recommended action: review recent changes to \`scripts/openapi-governance/metrics-summary-lines.mjs\` and summary generation paths."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Annotate governance metrics with presentation status
+        if: always()
+        env:
+          PRESENTATION_VALIDATION_STATUS: ${{ steps.metrics_presentation_check.outcome == 'success' && 'PASS' || 'FAIL' }}
+        run: |
+          set -euo pipefail
+          PRESENTATION_VALIDATION_STATUS="$PRESENTATION_VALIDATION_STATUS" npm run openapi:governance:metrics:generate -- --no-summary
+
+      - name: Upload OpenAPI governance metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-governance-metrics
+          path: openapi-governance-metrics.json
+
+      - name: Assert OpenAPI governance artifact JSON shapes
+        if: always()
+        run: npm run openapi:governance:artifacts:assert
+
+      - name: Fetch previous governance presentation trend artifact
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export TARGET_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          export TARGET_WORKFLOW_NAME="${GITHUB_WORKFLOW}"
+          export TARGET_WORKFLOW_PATH="$(node -e "const ref=process.env.GITHUB_WORKFLOW_REF||'';const repo=process.env.GITHUB_REPOSITORY||'';let value=ref;if(repo&&value.startsWith(repo + '/')){value=value.slice(repo.length+1);}const at=value.indexOf('@');if(at>=0){value=value.slice(0,at);}process.stdout.write(value);")"
+          curl -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=contracts-openapi-governance-presentation-trend&per_page=100" \
+            -o artifacts.json
+          run_ids=$(node - <<'NODE'
+          const fs = require('fs');
+          const runId = String(process.env.GITHUB_RUN_ID);
+          const targetBranch = process.env.TARGET_BRANCH;
+          const payload = JSON.parse(fs.readFileSync('artifacts.json', 'utf8'));
+          const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+          const ids = artifacts
+            .filter((artifact) => {
+              if (!artifact || artifact.expired) return false;
+              if (String(artifact.workflow_run?.id ?? '') === runId) return false;
+              if (targetBranch && artifact.workflow_run?.head_branch !== targetBranch) return false;
+              return true;
+            })
+            .map((artifact) => String(artifact.workflow_run?.id ?? ''))
+            .filter(Boolean);
+          process.stdout.write(Array.from(new Set(ids)).join(' '));
+          NODE
+          )
+          if [ -z "${run_ids}" ]; then
+            echo "No previous trend artifact candidates found."
+            exit 0
+          fi
+          curl -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+            -o runs.json
+          artifact_id=$(RUN_IDS="$run_ids" node - <<'NODE'
+          const fs = require('fs');
+          const allowedRunIds = new Set((process.env.RUN_IDS || '').split(/\s+/).filter(Boolean));
+          const targetWorkflowName = process.env.TARGET_WORKFLOW_NAME;
+          const targetWorkflowPath = process.env.TARGET_WORKFLOW_PATH;
+          const runsPayload = JSON.parse(fs.readFileSync('runs.json', 'utf8'));
+          const runById = new Map(
+            (Array.isArray(runsPayload.workflow_runs) ? runsPayload.workflow_runs : []).map((run) => [
+              String(run.id),
+              run,
+            ]),
+          );
+          const payload = JSON.parse(fs.readFileSync('artifacts.json', 'utf8'));
+          const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+          const match = artifacts.find((artifact) => {
+            if (!artifact || artifact.expired) return false;
+            const sourceRunId = String(artifact.workflow_run?.id ?? '');
+            if (!allowedRunIds.has(sourceRunId)) return false;
+            const sourceRun = runById.get(sourceRunId);
+            if (!sourceRun) return false;
+            if (targetWorkflowPath) {
+              if (sourceRun.path !== targetWorkflowPath) return false;
+            } else if (targetWorkflowName && sourceRun.name !== targetWorkflowName) {
+              return false;
+            }
+            if (sourceRun.conclusion !== 'success') return false;
+            return true;
+          });
+          if (match) {
+            process.stdout.write(String(match.id));
+          }
+          NODE
+          )
+          if [ -z "${artifact_id}" ]; then
+            echo "No previous trend artifact found from successful matching workflow."
+            exit 0
+          fi
+          run_id=$(node -e "const fs=require('fs');const artifactId=String(process.argv[1]);const payload=JSON.parse(fs.readFileSync('artifacts.json','utf8'));const artifacts=Array.isArray(payload.artifacts)?payload.artifacts:[];const match=artifacts.find((a)=>String(a.id)===artifactId);if(match&&match.workflow_run&&match.workflow_run.id){process.stdout.write(String(match.workflow_run.id));}" "$artifact_id")
+          if [ -n "${run_id}" ]; then
+            echo "Using previous trend artifact from workflow run ${run_id}."
+          fi
+          RUN_ID="$run_id" node - <<'NODE'
+          const fs = require('fs');
+          const runId = process.env.RUN_ID;
+          const runsPayload = JSON.parse(fs.readFileSync('runs.json', 'utf8'));
+          const run = (Array.isArray(runsPayload.workflow_runs) ? runsPayload.workflow_runs : []).find(
+            (entry) => String(entry.id) === String(runId),
+          );
+          fs.writeFileSync(
+            'openapi-governance-presentation-trend-baseline.json',
+            `${JSON.stringify(
+              {
+                runId: run ? String(run.id) : null,
+                workflowPath: run?.path ?? null,
+                workflowName: run?.name ?? null,
+              },
+              null,
+              2,
+            )}\n`,
+          );
+          NODE
+          curl -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+            -o previous-trend.zip
+          unzip -p previous-trend.zip openapi-governance-presentation-trend.json > openapi-governance-presentation-trend-previous.json
+
+      - name: Publish governance presentation trend summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node scripts/openapi-governance/metrics-trend-summary.mjs --input . --json > openapi-governance-presentation-trend.json
+          node scripts/openapi-governance/metrics-trend-delta.mjs --current openapi-governance-presentation-trend.json --previous openapi-governance-presentation-trend-previous.json --baseline-metadata openapi-governance-presentation-trend-baseline.json --json > openapi-governance-presentation-trend-delta.json
+          node <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'openapi-governance-presentation-trend.json';
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          const delta = JSON.parse(
+            fs.readFileSync('openapi-governance-presentation-trend-delta.json', 'utf8'),
+          );
+          const runUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const formatSigned = (n) => (typeof n === 'number' && n > 0 ? `+${n}` : `${n ?? 'n/a'}`);
+          const summary = [
+            '## Governance Presentation Drift Trend',
+            '',
+            '- Command: `npm run openapi:governance:metrics:trend -- --input . --json`',
+            `- Metrics files scanned: ${report.fileCount ?? 0}`,
+            `- PASS: ${report.statusCounts?.PASS ?? 0}`,
+            `- FAIL: ${report.statusCounts?.FAIL ?? 0}`,
+            `- UNKNOWN: ${report.statusCounts?.UNKNOWN ?? 0}`,
+            `- Total drift warnings: ${report.totalPresentationDriftWarnings ?? 0}`,
+            `- Snapshot registry PASS: ${report.snapshotRegistryStatusCounts?.PASS ?? 0}`,
+            `- Snapshot registry FAIL: ${report.snapshotRegistryStatusCounts?.FAIL ?? 0}`,
+            `- Total snapshot registry rows: ${report.totalSnapshotRegistryRows ?? 0}`,
+            `- Validation window: ${report.earliestPresentationValidationRecordedAt ?? 'n/a'} -> ${report.latestPresentationValidationRecordedAt ?? 'n/a'}`,
+            `- Previous trend available: ${delta.previousAvailable ? 'yes' : 'no'}`,
+            `- Baseline run id: ${delta.baseline?.runId ?? 'n/a'}`,
+            `- Baseline workflow path: ${delta.baseline?.workflowPath ?? 'n/a'}`,
+            `- Baseline workflow name: ${delta.baseline?.workflowName ?? 'n/a'}`,
+            `- FAIL delta vs previous: ${delta.delta ? formatSigned(delta.delta.failCount) : 'n/a'}`,
+            `- Drift warning delta vs previous: ${delta.delta ? formatSigned(delta.delta.totalPresentationDriftWarnings) : 'n/a'}`,
+            `- Snapshot registry FAIL delta vs previous: ${delta.delta ? formatSigned(delta.delta.snapshotRegistryFailCount) : 'n/a'}`,
+            `- Snapshot registry rows delta vs previous: ${delta.delta ? formatSigned(delta.delta.totalSnapshotRegistryRows) : 'n/a'}`,
+            `- Artifact: \`contracts-openapi-governance-presentation-trend\` ([run](${runUrl}))`,
+          ].join('\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+          NODE
+
+      - name: Assert governance presentation trend report schema
+        if: always()
+        run: npm run openapi:governance:metrics:trend:report:assert
+
+      - name: Assert governance presentation trend delta report schema
+        if: always()
+        run: npm run openapi:governance:metrics:trend:delta:report:assert
+
+      - name: Smoke test governance trend assertion scripts
+        if: always()
+        run: npm run openapi:governance:metrics:trend:assertions:smoke
+
+      - name: Upload governance presentation trend artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-governance-presentation-trend
+          path: openapi-governance-presentation-trend.json
+
+      - name: Upload governance presentation trend delta artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-governance-presentation-trend-delta
+          path: openapi-governance-presentation-trend-delta.json
+
+      - name: Upload OpenAPI governance raw reports artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-governance-reports
+          path: |
+            openapi-governance-policy-report.json
+            openapi-governance-codeowners-report.json
+
+      - name: Lint OpenAPI draft
+        run: |
+          set -euo pipefail
+          npm run openapi:lint | tee openapi-lint-output.txt
+
+      - name: Publish OpenAPI lint summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const output = fs.readFileSync('openapi-lint-output.txt', 'utf8');
+          const baseline = JSON.parse(
+            fs.readFileSync('docs/openapi/lint-baseline.json', 'utf8'),
+          );
+
+          let warnings = 0;
+          let errors = 0;
+
+          const warningMatch = output.match(/You have (\d+) warnings?/i);
+          if (warningMatch) {
+            warnings = Number(warningMatch[1]);
+          }
+
+          const errorWarningMatch = output.match(
+            /(\d+) errors?(?: and (\d+) warnings?)?/i,
+          );
+          if (errorWarningMatch) {
+            errors = Number(errorWarningMatch[1]);
+            if (errorWarningMatch[2] !== undefined) {
+              warnings = Number(errorWarningMatch[2]);
+            }
+          }
+
+          const status = /Woohoo! Your API description is valid\./.test(output)
+            ? 'PASS'
+            : 'FAIL';
+          const baselineWarnings = Number(baseline.warnings ?? 0);
+          const baselineErrors = Number(baseline.errors ?? 0);
+          const warningDelta = warnings - baselineWarnings;
+          const errorDelta = errors - baselineErrors;
+          const deltaLabel = (n) => (n === 0 ? '0' : n > 0 ? `+${n}` : `${n}`);
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+
+          const summary = [
+            '## OpenAPI Contracts Lint',
+            '',
+            '- Command: `npm run openapi:lint`',
+            `- Status: ${status}`,
+            `- Errors: ${errors} (baseline ${baselineErrors}, delta ${deltaLabel(errorDelta)})`,
+            `- Warnings: ${warnings} (baseline ${baselineWarnings}, delta ${deltaLabel(warningDelta)})`,
+          ].join('\n');
+
+          fs.appendFileSync(summaryPath, `${summary}\n`);
+          fs.writeFileSync(
+            'openapi-lint-metrics.json',
+            JSON.stringify(
+              {
+                status,
+                errors,
+                warnings,
+                baselineErrors,
+                baselineWarnings,
+                errorDelta,
+                warningDelta,
+                generatedAt: new Date().toISOString(),
+                runId: process.env.GITHUB_RUN_ID ?? null,
+                runNumber: process.env.GITHUB_RUN_NUMBER ?? null,
+              },
+              null,
+              2,
+            ),
+          );
+          NODE
+
+      - name: Upload OpenAPI lint metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: contracts-openapi-lint-metrics
+          path: openapi-lint-metrics.json
+
+  # Root `app/` uses repo-level eslint.config.mjs; keep separate from package-scoped jobs.
+  workspace-root:
+    name: Workspace root Next app lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Paths filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            root_next:
+              - 'app/**'
+              - 'eslint.config.mjs'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'next.config.mjs'
+              - 'tsconfig.json'
+              - 'next-env.d.ts'
+
+      - name: Use Node 20
+        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
+        run: npm install
+
+      - name: Lint
+        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
+        run: npm run lint
+
   backend:
     name: Backend build, lint, and tests
     runs-on: ubuntu-latest
     env:
       TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      BENCHMARK_ADMIN_ROLE_CLAIMS: ${{ secrets.BENCHMARK_ADMIN_ROLE_CLAIMS }}
     defaults:
       run:
         working-directory: tracebud-backend
@@ -46,6 +634,16 @@ jobs:
             echo "TEST_DATABASE_URL is required for PostGIS integration tests."
             exit 1
           fi
+
+      - name: Ensure benchmark-admin claims config exists
+        run: |
+          if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then
+            echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
+            exit 1
+          fi
+
+      - name: Benchmark-admin claim preflight
+        run: npm run auth:benchmark-admin:claims:check
 
       - name: Integration tests (PostGIS)
         run: npm run test:integration
@@ -80,6 +678,58 @@ jobs:
           name: backend-ownership-integration-log
           path: tracebud-backend/ownership-integration-output.txt
 
+  dashboard-product:
+    name: Dashboard product lint and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard-product/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+  marketing:
+    name: Marketing site lint and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/marketing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: apps/marketing/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
   app:
     name: Expo app lint
     runs-on: ubuntu-latest
@@ -102,3 +752,196 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Queue i18n smoke
+        run: npm run i18n:queue:smoke
+
+      - name: Generate queue i18n smoke summary payload
+        run: node ./scripts/i18n-queue-panel.smoke.mjs --summary-json > queue-i18n-smoke-summary.json
+
+      - name: Fetch previous queue i18n smoke summary artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass through so bash can gate optional `unzip -l` diagnostics (same secret as GitHub step-debug docs).
+          ACTIONS_STEP_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG }}
+        run: |
+          set -euo pipefail
+          curl -sSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=offline-app-queue-i18n-smoke-summary&per_page=100" \
+            -o queue-i18n-artifacts.json
+
+          baseline_json=$(node <<'NODE'
+          const fs = require('fs');
+          const { execFileSync } = require('child_process');
+          const BASELINE_METADATA_SCHEMA_VERSION = '1';
+          const payload = JSON.parse(fs.readFileSync('queue-i18n-artifacts.json', 'utf8'));
+          const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+          const currentRunId = String(process.env.GITHUB_RUN_ID ?? '');
+          const branch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || '';
+          const currentWorkflowRef = String(process.env.GITHUB_WORKFLOW_REF ?? '');
+          const currentWorkflowPath = currentWorkflowRef.includes('@')
+            ? currentWorkflowRef.split('@')[0]
+            : currentWorkflowRef;
+          const currentWorkflowName = String(process.env.GITHUB_WORKFLOW ?? '');
+          const repo = process.env.GITHUB_REPOSITORY || '';
+          const token = process.env.GITHUB_TOKEN || '';
+          const candidates = artifacts.filter((artifact) => {
+            if (!artifact || artifact.expired) return false;
+            if (String(artifact.workflow_run?.id ?? '') === currentRunId) return false;
+            if (branch && artifact.workflow_run?.head_branch && artifact.workflow_run.head_branch !== branch) return false;
+            return true;
+          });
+          for (const artifact of candidates) {
+            const runId = String(artifact.workflow_run?.id ?? '');
+            if (!runId) continue;
+            try {
+              const raw = execFileSync(
+                'curl',
+                [
+                  '-sSL',
+                  '-H',
+                  `Authorization: Bearer ${token}`,
+                  '-H',
+                  'Accept: application/vnd.github+json',
+                  `https://api.github.com/repos/${repo}/actions/runs/${runId}`,
+                ],
+                { encoding: 'utf8' },
+              );
+              const run = JSON.parse(raw);
+              const runPath = String(run?.path ?? '');
+              const runName = String(run?.name ?? '');
+              const workflowPathMatch = currentWorkflowPath
+                ? runPath === currentWorkflowPath
+                : true;
+              const workflowNameMatch = currentWorkflowName
+                ? runName === currentWorkflowName
+                : true;
+              if (!workflowPathMatch && !workflowNameMatch) {
+                continue;
+              }
+              if (String(run?.conclusion ?? '') === 'success') {
+                process.stdout.write(
+                  JSON.stringify({
+                    schemaVersion: BASELINE_METADATA_SCHEMA_VERSION,
+                    artifactId: String(artifact.id),
+                    runId,
+                    workflowPath: runPath || null,
+                    workflowName: runName || null,
+                  }),
+                );
+                break;
+              }
+            } catch {
+              // Ignore run-inspection failures and continue scanning older candidates.
+            }
+          }
+          NODE
+          )
+
+          if [ -z "${baseline_json}" ]; then
+            echo "No previous queue i18n smoke artifact found."
+            exit 0
+          fi
+          printf '%s' "${baseline_json}" > queue-i18n-baseline-metadata.json
+          artifact_id=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('queue-i18n-baseline-metadata.json','utf8'));process.stdout.write(String(p.artifactId??''));")
+
+          curl -sSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+            -o queue-i18n-smoke-previous.zip
+          QUEUE_I18N_EXTRACT_FAIL=0
+          if unzip -p queue-i18n-smoke-previous.zip "apps/offline-product/queue-i18n-smoke-summary.json" > queue-i18n-smoke-summary-previous.json 2>/dev/null; then
+            :
+          elif unzip -p queue-i18n-smoke-previous.zip "queue-i18n-smoke-summary.json" > queue-i18n-smoke-summary-previous.json 2>/dev/null; then
+            :
+          else
+            rm -f queue-i18n-smoke-summary-previous.json
+            echo "Warning: could not extract previous queue-i18n-smoke-summary.json from baseline artifact zip (tried apps/offline-product/ and root paths)."
+            QUEUE_I18N_EXTRACT_FAIL=1
+          fi
+          if unzip -p queue-i18n-smoke-previous.zip "apps/offline-product/queue-i18n-report.json" > queue-i18n-report-previous.json 2>/dev/null; then
+            :
+          elif unzip -p queue-i18n-smoke-previous.zip "queue-i18n-report.json" > queue-i18n-report-previous.json 2>/dev/null; then
+            :
+          else
+            rm -f queue-i18n-report-previous.json
+            QUEUE_I18N_EXTRACT_FAIL=1
+          fi
+          if [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] && [ "${QUEUE_I18N_EXTRACT_FAIL}" -eq 1 ]; then
+            echo "::group::Debug: queue-i18n-smoke-previous.zip listing (extraction miss; enable repo secret ACTIONS_STEP_DEBUG=true for this output)"
+            unzip -l queue-i18n-smoke-previous.zip || true
+            echo "::endgroup::"
+          fi
+
+      - name: Assert queue i18n summary JSON shapes
+        run: npm run i18n:queue:summary:assert
+
+      - name: Assert queue i18n baseline metadata schema
+        run: npm run i18n:queue:baseline:schema:assert
+
+      - name: Generate queue i18n combined report
+        run: npm run i18n:queue:report:generate
+
+      - name: Assert queue i18n combined report schema
+        run: npm run i18n:queue:report:assert
+
+      - name: Assert queue i18n report schema file present
+        run: test -f ../../docs/openapi/queue-i18n-report.schema.json
+
+      - name: Publish queue i18n smoke summary
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('queue-i18n-report.json', 'utf8'));
+          const current = report.current ?? {};
+          const comparison = report.comparison ?? {};
+          const baseline = report.baseline;
+          const formatSigned = (n) => (n >= 0 ? `+${n}` : `${n}`);
+          const keyDelta = comparison.requiredKeyDelta;
+
+          const lines = [
+            '## Offline App Queue i18n Smoke',
+            '',
+            '- Command: `npm run i18n:queue:smoke`',
+            `- Status: ${current.status ?? 'PASS'}`,
+            `- Smoke version: \`${current.smokeVersion ?? 'unknown'}\``,
+            `- Required key count: \`${current.requiredKeyCount ?? 'unknown'}\``,
+            `- Previous summary available: ${comparison.previousAvailable ? 'yes' : 'no'}`,
+            `- Required key delta vs previous: ${keyDelta == null ? 'n/a' : formatSigned(keyDelta)}`,
+            `- Previous smoke version: ${comparison.previousSmokeVersion ?? 'n/a'}`,
+            `- Previous report parsed (for digest drift): ${comparison.previousReportAvailable ? 'yes' : 'no'}`,
+            `- Previous schema digest ref: ${comparison.previousSchemaDigestRef ?? 'n/a'}`,
+            `- Schema digest ref changed vs previous: ${
+              comparison.schemaDigestRefChanged == null
+                ? 'n/a'
+                : comparison.schemaDigestRefChanged
+                  ? 'yes'
+                  : 'no'
+            }`,
+            `- Baseline run id: ${baseline?.runId ?? 'n/a'}`,
+            `- Baseline metadata schema version: ${baseline?.schemaVersion ?? 'n/a'}`,
+            `- Baseline workflow path: ${baseline?.workflowPath ?? 'n/a'}`,
+            `- Baseline workflow name: ${baseline?.workflowName ?? 'n/a'}`,
+            '',
+            '- Combined report contract (downstream consumers should pin `schemaDigestRef` first; `schemaSha256` remains for compatibility)',
+            `- Primary provenance key (schemaDigestRef): \`${report.schemaDigestRef ?? 'n/a'}\``,
+            '- Combined report schema file: `docs/openapi/queue-i18n-report.schema.json`',
+            `- Combined report schema version: ${report.schemaVersion ?? 'n/a'}`,
+            `- Combined report digest algorithm: \`${report.schemaDigestAlgorithm ?? 'n/a'}\``,
+            `- Compatibility raw hex (schemaSha256): \`${report.schemaSha256 ?? 'n/a'}\``,
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload queue i18n smoke summary artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: offline-app-queue-i18n-smoke-summary
+          path: |
+            apps/offline-product/queue-i18n-smoke-summary.json
+            apps/offline-product/queue-i18n-baseline-metadata.json
+            apps/offline-product/queue-i18n-report.json
+            docs/openapi/queue-i18n-report.schema.json

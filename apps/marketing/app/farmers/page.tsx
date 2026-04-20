@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { WifiOff, Camera, FileCheck, Shield, Smartphone, MapPin, CheckCircle, Users, User, ArrowRight } from "lucide-react";
+import { WifiOff, Camera, FileCheck, Shield, Smartphone, CheckCircle, Users, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -308,10 +308,13 @@ export default function FarmersPage() {
               className="flex justify-center w-full"
             >
               {/* App Mockup Image */}
-              <img
+              <Image
                 src="/images/farmer-app-homepage.png"
                 alt="Tracebud farmer app homepage - Maria Santos dashboard"
+                width={400}
+                height={800}
                 className="w-72 md:w-80 h-auto"
+                sizes="(max-width: 768px) 18rem, 20rem"
               />
             </motion.div>
           </div>

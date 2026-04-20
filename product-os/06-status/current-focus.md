@@ -2,8 +2,36 @@
 
 ## Work now
 
+- Demo enablement slice complete: standalone marketing demo atlas route is now live at `/demo-ecosystem` with isolated shell (no main-site header/footer links), noindex metadata, and one-page ecosystem diagrams covering actors, end-to-end data flow, canonical state transitions, and exception/recovery talk tracks.
+- Remaining execution scorecard checkpoint refreshed: in-repo lanes are explicitly marked closed (`CI/Test`, `OpenAPI`, inbox/requests, `TB-V16-003`), and only external blocker lane remains (`spatial_ref_sys` owner remediation + Supabase ticket follow-through).
+- FEAT-009 post-closeout hardening slice complete: admin interaction coverage now asserts success-path DDS status-read completion toast text (`EUDR DDS status read completed (status 200).`) in the same flow that reveals `Download JSON`.
+- FEAT-009 post-closeout hardening slice complete: admin interaction tests now lock visibility gating for main status `Download JSON` control (appears only after successful status read).
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now cover main status-payload `Download JSON` semantics (filename/payload/URL lifecycle/toast) using shared success-path helper.
+- FEAT-009 post-closeout hardening slice complete: admin test download-path URL/Blob stubbing is now centralized in reusable helper (`app/admin/test-helpers.tsx`) to reduce interaction-test boilerplate.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now validate downloaded error-JSON payload content keys (`message`, `referenceNumber`, `occurredAt`) via Blob-stub assertions.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now verify `Download error JSON` artifact semantics (filename pattern + object URL lifecycle + success toast).
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now verify `Copy error context` success branch payload shape and success-toast feedback.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now lock `Copy error context` clipboard failure branch and verify deterministic error toast behavior.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status tests now lock `Copy filename` clipboard failure branch and verify deterministic error toast behavior.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status interaction tests now verify `Copy filename` clipboard write and success-toast feedback.
+- FEAT-009 post-closeout hardening slice complete: shared DDS status failure-path test setup now lives in reusable admin helper (`app/admin/test-helpers.tsx`) to keep interaction tests concise.
+- FEAT-009 post-closeout hardening slice complete: admin DDS status interaction coverage is now split into focused tests (export control names vs timestamp helper note) for faster fault isolation.
+- FEAT-005 post-closeout hardening slice complete: backend CI now enforces benchmark-admin claim preflight (`BENCHMARK_ADMIN_ROLE_CLAIMS` required and must include `ADMIN,COMPLIANCE_MANAGER`) before integration tests run.
+- FEAT-009 post-closeout hardening slice complete: admin interaction test now also asserts timestamp helper-note rendering in DDS status last-error export panel.
+- FEAT-005 post-closeout hardening slice complete: backend health endpoint now exposes benchmark-admin claim diagnostics (`requiredClaims`, configured flag, warning on empty config) to prevent silent claim-policy lockout.
+- FEAT-005 post-closeout hardening slice complete: yield benchmark admin routes are now claim-only (`ADMIN` / `COMPLIANCE_MANAGER`) with legacy exporter-email fallback removed.
+- FEAT-005 post-closeout hardening slice complete: benchmark-admin auth now supports canonical role claims (`ADMIN`, `COMPLIANCE_MANAGER`) with claim-first enforcement in yield benchmark routes and explicit policy-mode audit attribution (`claim` vs `legacy_fallback`).
+- FEAT-005 post-closeout hardening slice complete: backend now has canonical yield benchmark governance write path (`/v1/yield-benchmarks` create/update/list + `/{id}/activate`) with source-reference validation, draft->active dual-control enforcement, audit events, SQL migration baseline (`tb_v16_011_yield_benchmarks.sql`), and OpenAPI publication.
+- P2 spec hardening advanced: `TRACEBUD_V1_2_EUDR_SPEC.md` Section 37 now uses source-verified bootstrap benchmark guidance with explicit derivation and source-reference baseline fields (FAOSTAT primary; USDA FAS cross-check lane for soy rows).
+- Supabase owner-remediation execution lane is now automation-ready: deterministic post-run verifier `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_verify.sql` is available and wired into `product-os/04-quality/remaining-lanes-final-execution-pack.md` for one-shot PASS/FAIL evidence capture during the privileged window.
 - BLK-003 is now closed: initial integration targets are documented in `product-os/04-quality/p1-integration-target-decision-template.md`, and implemented EUDR integration routes are now published in `docs/openapi/tracebud-v1-draft.yaml` with governance checks green.
 - FEAT-009 post-closeout hardening slice complete: Tracebud OpenAPI now includes `GET /v1/integrations/eudr/echo`, `POST /v1/integrations/eudr/dds`, and `GET /v1/integrations/eudr/dds/status` under the `Integrations` tag.
+- FEAT-009 post-closeout hardening slice complete: admin interaction coverage now verifies accessible export-control names in DDS status last-error panel (`app/admin/page.test.tsx`).
+- FEAT-009 post-closeout hardening slice complete: DDS status last-error export controls now include explicit accessibility labels for copy/download filename/context actions.
+- FEAT-009 post-closeout hardening slice complete: DDS status filename placeholder token is now centralized in shared utility and reused by both preview filename and explanatory note text.
+- FEAT-009 post-closeout hardening slice complete: DDS status error-context handling now uses shared utility helpers (`lib/eudr-dds-status-error-context.ts`) with dedicated unit coverage.
+- FEAT-009 post-closeout hardening slice complete: DDS status error-export filename generation now uses one shared builder for preview + download, preventing naming drift.
+- FEAT-009 post-closeout hardening slice complete: DDS status filename preview now explicitly clarifies `<timestamp>` resolves at download time to avoid escalation-template ambiguity.
 - FEAT-009 post-closeout hardening slice complete: DDS status last-error panel now includes one-click `Copy filename` beside the export filename preview for faster escalation template fill-ins.
 - FEAT-009 post-closeout hardening slice complete: DDS status last-error panel now shows a deterministic suggested filename preview (`eudr-dds-status-error-<reference>-<timestamp>.json`) before exporting error JSON.
 - FEAT-009 post-closeout hardening slice complete: DDS status last-error panel now includes inline helper text clarifying exported error JSON files are saved to the browser default Downloads folder.

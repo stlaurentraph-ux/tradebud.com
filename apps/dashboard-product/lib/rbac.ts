@@ -4,7 +4,6 @@ import type {
   LegalWorkflowRole,
   CommercialTier,
   WorkflowType,
-  RoleDecision,
   ShipmentStatus,
 } from '@/types';
 import { isRouteEnabled } from '@/lib/feature-gates';
@@ -260,18 +259,6 @@ const LEGAL_ROLE_PERMISSION_MATRIX: Record<LegalWorkflowRole, LegalWorkflowPermi
     'legal:acknowledge_liability',
   ],
   PENDING_MANUAL_CLASSIFICATION: [],
-};
-
-// ============================================================
-// LEGACY TENANT ROLE PERMISSION MATRIX (backwards compatible)
-// Maps to commercial tiers internally
-// ============================================================
-
-const LEGACY_ROLE_TO_TIER: Record<TenantRole, CommercialTier> = {
-  exporter: 'tier_2',
-  importer: 'tier_3',
-  cooperative: 'tier_2',
-  country_reviewer: 'tier_3',
 };
 
 const PERMISSION_MATRIX: Record<TenantRole, CommercialPermission[]> = {

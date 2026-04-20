@@ -29,7 +29,6 @@ interface Plot {
 
 interface PlotsTableProps {
   plots: Plot[];
-  onPlotSelect?: (plotId: string) => void;
 }
 
 const riskColors = {
@@ -44,7 +43,7 @@ const riskLabels = {
   high: 'High',
 };
 
-export function PlotsTable({ plots, onPlotSelect }: PlotsTableProps) {
+export function PlotsTable({ plots }: PlotsTableProps) {
   return (
     <Card>
       <CardHeader>

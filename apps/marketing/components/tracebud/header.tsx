@@ -16,6 +16,7 @@ const personaLinks = [
 ];
 
 const secondaryLinks = [
+  { label: "Pilot", href: "/pilot" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "Platform", href: "/#platform-architecture" },
   { label: "Pricing", href: "/pricing" },

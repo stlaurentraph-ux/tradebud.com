@@ -4,17 +4,15 @@ import React, { useState } from 'react';
 import {
   AlertCircle,
   Plus,
-  Filter,
   Search,
   AlertTriangle,
   Info,
   CheckCircle,
   Clock,
-  X,
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,

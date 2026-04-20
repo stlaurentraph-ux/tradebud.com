@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PermissionGate } from '@/components/common/permission-gate';
 import {
-  Shield,
   Check,
   X,
   ArrowLeft,
@@ -221,7 +220,12 @@ export default function RBACMatrixPage() {
             </CardContent>
           </Card>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              if (v === 'commercial' || v === 'legal') setActiveTab(v);
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2 max-w-md">
               <TabsTrigger value="commercial" className="gap-2">
                 <Building2 className="h-4 w-4" />

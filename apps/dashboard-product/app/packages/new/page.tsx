@@ -27,9 +27,6 @@ export default function NewPackagePage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Generate a mock package code
-    const packageCode = `DDS-${formData.year}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
-    
     // In a real app, this would create the package via API
     // For now, redirect to packages list
     router.push('/packages');

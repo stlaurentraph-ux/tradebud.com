@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, TrendingUp, AlertCircle, CheckCircle, Truck, MapPin, MessageSquare } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 interface Harvest {
@@ -121,13 +120,6 @@ function calculateYieldCap(area: number, expectedYield: number): number {
   return area * expectedYield;
 }
 
-function checkYieldCompliance(weight: number, capacity: number): 'pass' | 'warning' | 'blocked' {
-  const ratio = weight / capacity;
-  if (ratio > 1.1) return 'blocked'; // More than 10% over
-  if (ratio > 1.0) return 'warning'; // Over capacity but within tolerance
-  return 'pass';
-}
-
 export default function HarvestsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
@@ -135,7 +127,6 @@ export default function HarvestsPage() {
   const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'pending_exceptions'>('all');
 
   const filteredHarvests = mockHarvests.filter((h) => {
     if (filterStatus !== 'all' && h.status !== filterStatus) return false;
@@ -149,7 +140,6 @@ export default function HarvestsPage() {
   const totalWeight = mockHarvests.reduce((sum, h) => sum + h.weight_kg, 0);
   const avgYield = totalWeight / mockHarvests.reduce((sum, h) => sum + h.plot_area_hectares, 0);
   const flaggedBatches = mockHarvests.filter((h) => h.status !== 'pass').length;
-  const pendingExceptions = mockHarvests.filter((h) => h.exception_status === 'pending');
 
   const handleRequestException = () => {
     if (!selectedHarvest) return;

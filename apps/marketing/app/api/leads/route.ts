@@ -4,7 +4,14 @@ import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const leadSchema = z.object({
-  formType: z.enum(["exporter", "importer", "country", "farmer", "cooperative"]),
+  formType: z.enum([
+    "exporter",
+    "importer",
+    "country",
+    "farmer",
+    "cooperative",
+    "pilot",
+  ]),
   sourcePage: z.string().min(1),
   name: z.string().min(1),
   email: z.string().email(),
@@ -150,6 +157,27 @@ export async function POST(request: Request) {
         biggest_challenge:
           parsed.data.message ??
           asString(payload.biggestChallenge),
+        source_page: parsed.data.sourcePage,
+        raw_payload: payload,
+      });
+      error = result.error;
+    }
+
+    if (parsed.data.formType === "pilot") {
+      const result = await supabase.from("pilot_leads").insert({
+        pilot_role: asString(payload.pilotRole) ?? "",
+        organization_name: parsed.data.company ?? asString(payload.organizationName) ?? "",
+        contact_name: parsed.data.name,
+        title: asString(payload.title),
+        email: parsed.data.email,
+        phone: parsed.data.phone ?? asString(payload.phone),
+        country: parsed.data.country ?? asString(payload.country),
+        primary_commodity: asString(payload.primaryCommodity),
+        organization_scale: asString(payload.organizationScale),
+        eudr_readiness: asString(payload.eudrReadiness),
+        earliest_start: asString(payload.earliestStart),
+        success_criteria: asString(payload.successCriteria) ?? "",
+        additional_notes: asString(payload.additionalNotes) ?? "",
         source_page: parsed.data.sourcePage,
         raw_payload: payload,
       });

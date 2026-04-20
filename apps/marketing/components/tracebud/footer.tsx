@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const platformLinks = [
+  { label: "Pilot program", href: "/pilot" },
   { label: "For Farmers", href: "/farmers" },
   { label: "For Exporters", href: "/exporters" },
   { label: "For Importers", href: "/importers" },

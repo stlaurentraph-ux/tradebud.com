@@ -88,7 +88,7 @@ export interface FarmerWithStats {
 }
 
 export function getMockFarmersWithStats(): FarmerWithStats[] {
-  return mockFarmers.map((f, i) => ({
+  return mockFarmers.map((f) => ({
     id: f.id,
     name: f.name,
     phone: f.contact_phone ?? '',

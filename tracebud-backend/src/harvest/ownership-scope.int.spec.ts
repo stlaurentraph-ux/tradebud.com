@@ -67,6 +67,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
   });
 
   beforeEach(async () => {
+    await pool.query('DROP TABLE IF EXISTS agent_plot_assignment');
     await pool.query('DELETE FROM plot');
     await pool.query('DELETE FROM farmer_profile');
     await pool.query('DELETE FROM user_account');

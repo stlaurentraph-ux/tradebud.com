@@ -10,22 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { getPackageById } from '@/lib/mock-data';
-import {
-  ArrowLeft,
-  Package,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  User,
-  MapPin,
-  ShieldCheck,
-  Send,
-  XCircle,
-  Edit,
-  Upload,
-  Lock,
-} from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TimelinePageProps {
@@ -33,7 +18,7 @@ interface TimelinePageProps {
 }
 
 // Mock timeline events for the shipment
-const getShipmentTimeline = (shipmentId: string): TimelineEvent[] => [
+const getShipmentTimeline = (): TimelineEvent[] => [
   {
     id: 'evt-1',
     eventType: 'creation',
@@ -157,7 +142,7 @@ export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
     notFound();
   }
 
-  const timelineEvents = getShipmentTimeline(id);
+  const timelineEvents = getShipmentTimeline();
   const currentStateIndex = STATE_FLOW.findIndex(
     (s) => s.state.toLowerCase() === pkg.status.toLowerCase()
   );

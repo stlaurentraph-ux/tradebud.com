@@ -1,0 +1,10 @@
+{
+  "status": "FAIL",
+  "schemaVersion": 1,
+  "code": "EVIDENCE_DOC_PARITY_FIELD_MISMATCH",
+  "message": "packageId.format mismatch",
+  "details": {
+    "expected": "uuid",
+    "actual": "date-time"
+  }
+}

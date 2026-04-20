@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracebud.dev/schemas/openapi/evidence-doc-parity-report.schema.json",
+  "title": "EvidenceDocParityReport",
+  "description": "Schema for --json output from openapi:governance:evidence-doc:parity:check",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "PASS" },
+        "schemaVersion": { "const": 1 },
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "typeEnumValues": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "reviewStatusEnumValues": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "requiredFields": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "fieldChecks": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "exampleParity": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "typeEnumValues",
+            "reviewStatusEnumValues",
+            "requiredFields",
+            "fieldChecks",
+            "exampleParity"
+          ]
+        }
+      },
+      "required": ["status", "schemaVersion", "checks"]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "FAIL" },
+        "schemaVersion": { "const": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "details": {}
+      },
+      "required": ["status", "schemaVersion", "code", "message", "details"]
+    }
+  ]
+}

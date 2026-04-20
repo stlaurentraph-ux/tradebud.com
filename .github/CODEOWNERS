@@ -1,0 +1,5 @@
+# OpenAPI governance ownership
+docs/openapi/lint-baseline.json @stlaurentraph-ux
+.github/workflows/openapi-baseline-refresh.yml @stlaurentraph-ux
+.redocly.yaml @stlaurentraph-ux
+docs/openapi/tracebud-v1-draft.yaml @stlaurentraph-ux

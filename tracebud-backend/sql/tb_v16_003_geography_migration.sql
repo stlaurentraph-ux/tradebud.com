@@ -26,26 +26,44 @@ SET geography = geometry::geography
 WHERE geography IS NULL
   AND geometry IS NOT NULL;
 
-UPDATE plot_geometry_version
-SET geography = geometry::geography
-WHERE geography IS NULL
-  AND geometry IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'plot_geometry_version') THEN
+    EXECUTE $q$
+      UPDATE plot_geometry_version
+      SET geography = geometry::geography
+      WHERE geography IS NULL
+        AND geometry IS NOT NULL
+    $q$;
+  END IF;
+END $$;
 
 -- 3) Recompute canonical area_ha from geography for consistency.
 UPDATE plot
 SET area_ha = ROUND((ST_Area(geography) / 10000.0)::numeric, 4)
 WHERE geography IS NOT NULL;
 
-UPDATE plot_geometry_version
-SET area_ha = ROUND((ST_Area(geography) / 10000.0)::numeric, 4)
-WHERE geography IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'plot_geometry_version') THEN
+    EXECUTE $q$
+      UPDATE plot_geometry_version
+      SET area_ha = ROUND((ST_Area(geography) / 10000.0)::numeric, 4)
+      WHERE geography IS NOT NULL
+    $q$;
+  END IF;
+END $$;
 
 -- 4) Add spatial indexes for geography queries.
 CREATE INDEX IF NOT EXISTS idx_plot_geography_gist
   ON plot USING GIST (geography);
 
-CREATE INDEX IF NOT EXISTS idx_plot_geometry_version_geography_gist
-  ON plot_geometry_version USING GIST (geography);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'plot_geometry_version') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_plot_geometry_version_geography_gist ON plot_geometry_version USING GIST (geography)';
+  END IF;
+END $$;
 
 -- 5) Guardrail check constraints (non-blocking if table missing).
 DO $$

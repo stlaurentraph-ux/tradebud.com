@@ -6,22 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
   Users,
-  MapPin,
-  FileCheck,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
   Building2,
   Send,
   ArrowRight,
-  Target,
-  Wallet,
   ShieldCheck,
   BarChart3,
 } from 'lucide-react';
-import { StatusChip } from '@/components/ui/status-chip';
-import { SeverityBadge } from '@/components/ui/severity-badge';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { cn } from '@/lib/utils';
 
@@ -166,7 +157,7 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
     }
   };
 
-  const getCampaignStatusColor = (status: string) => {
+  const getCampaignStatusColor = (status: string): 'default' | 'outline' | 'secondary' => {
     switch (status) {
       case 'RUNNING':
         return 'default';
@@ -181,6 +172,10 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
 
   return (
     <div className="space-y-6">
+      <span className="sr-only">
+        Network metrics snapshot: {metrics.total_packages} packages, {metrics.total_plots} plots (
+        {metrics.compliant_plots} compliant), {metrics.total_farmers} farmers.
+      </span>
       {/* Network Overview KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -371,7 +366,7 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
                       <Badge variant="outline" className="text-xs">
                         {campaign.type}
                       </Badge>
-                      <Badge variant={getCampaignStatusColor(campaign.status) as any}>
+                      <Badge variant={getCampaignStatusColor(campaign.status)}>
                         {campaign.status}
                       </Badge>
                     </div>

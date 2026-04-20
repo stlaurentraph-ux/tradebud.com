@@ -83,7 +83,11 @@ export function BlockerCard({
   const descColor = severity === 'BLOCKING' ? 'text-red-700' : 'text-amber-700';
 
   return (
-    <div className={cn(blockerCardVariants({ severity }), className)} {...props}>
+    <div
+      className={cn(blockerCardVariants({ severity }), className)}
+      aria-label={`Blocker: ${BLOCKER_TYPE_LABELS[blockerType]}`}
+      {...props}
+    >
       {/* Icon */}
       <div className={cn('flex-shrink-0 mt-0.5', iconColor)}>
         <Icon className="h-5 w-5" aria-hidden="true" />

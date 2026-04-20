@@ -84,7 +84,6 @@ function CompliancePieChart({
   data: { name: string; value: number; color: string }[];
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  let currentAngle = -90;
 
   const createArcPath = (
     startAngle: number,
@@ -104,22 +103,27 @@ function CompliancePieChart({
     return `M 50 50 L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
   };
 
+  const arcSegments = data.reduce<
+    { segment: (typeof data)[number]; startAngle: number; endAngle: number }[]
+  >((acc, segment) => {
+    const span = (segment.value / total) * 360;
+    const startAngle = acc.length === 0 ? -90 : acc[acc.length - 1].endAngle;
+    const endAngle = startAngle + span;
+    acc.push({ segment, startAngle, endAngle });
+    return acc;
+  }, []);
+
   return (
     <div className="flex items-center gap-6">
       <svg viewBox="0 0 100 100" className="h-32 w-32">
-        {data.map((segment, i) => {
-          const angle = (segment.value / total) * 360;
-          const path = createArcPath(currentAngle, currentAngle + angle, 45);
-          currentAngle += angle;
-          return (
-            <path
-              key={i}
-              d={path}
-              fill={segment.color}
-              className="transition-opacity hover:opacity-80"
-            />
-          );
-        })}
+        {arcSegments.map(({ segment, startAngle, endAngle }, i) => (
+          <path
+            key={i}
+            d={createArcPath(startAngle, endAngle, 45)}
+            fill={segment.color}
+            className="transition-opacity hover:opacity-80"
+          />
+        ))}
         <circle cx="50" cy="50" r="25" fill="var(--card)" />
         <text
           x="50"

@@ -1,11 +1,17 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Factory, Leaf, Users } from "lucide-react";
+import { ArrowRight, Building2, Factory, Leaf, Rocket, Users } from "lucide-react";
 
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
 
 const options = [
+  {
+    title: "Pilot program",
+    description: "Apply for the supported EUDR cohort (dedicated form).",
+    href: "/pilot#apply",
+    icon: Rocket,
+  },
   {
     title: "Farmer",
     description: "Map plots and prepare your compliance passport.",

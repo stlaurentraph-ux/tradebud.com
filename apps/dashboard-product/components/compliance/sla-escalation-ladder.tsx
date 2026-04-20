@@ -1,18 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  AlertTriangle,
-  Clock,
-  ArrowUp,
-  User,
-  UserPlus,
-  CheckCircle,
-  XCircle,
-  Bell,
-  Calendar,
-  Shield,
-} from 'lucide-react';
+import { Clock, ArrowUp, CheckCircle, XCircle, Bell, Calendar, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -302,7 +291,7 @@ export function SLAEscalationLadder({
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
   const [extensionReason, setExtensionReason] = useState('');
   const config = SLA_CONFIGS[issue.severity];
-  const { hoursRemaining, currentLevel, isBreached } = calculateSLAStatus(issue);
+  const { hoursRemaining, isBreached } = calculateSLAStatus(issue);
 
   const getStepStatus = (level: EscalationLevel) => {
     if (isBreached && level.trigger_hours_before_breach === 0) return 'active';

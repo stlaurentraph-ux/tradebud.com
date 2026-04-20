@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracebud.com/schemas/openapi-governance-readme-report.schema.json",
+  "title": "OpenAPI Governance README Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "commandCount",
+    "pathCount",
+    "requiredAnchorCount",
+    "missingAnchors",
+    "markdownErrors",
+    "readmePath",
+    "packageJsonPath",
+    "readmePolicyPath",
+    "readmePolicySchemaPath",
+    "generatedAt"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL"]
+    },
+    "commandCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pathCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "requiredAnchorCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "missingAnchors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "markdownErrors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "readmePath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "packageJsonPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readmePolicyPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readmePolicySchemaPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

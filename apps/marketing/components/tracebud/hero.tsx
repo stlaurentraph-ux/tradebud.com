@@ -59,12 +59,21 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <a href="#how-it-works">
+          <a href="/pilot">
             <Button
               size="lg"
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all"
             >
-              See how simple it is
+              Apply for pilot
+            </Button>
+          </a>
+          <a href="#how-it-works">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-xl rounded-full"
+            >
+              See how it works
             </Button>
           </a>
         </motion.div>

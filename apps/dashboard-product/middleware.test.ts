@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { applyGateRedirectParams, getGateRedirectPath, middleware } from './middleware';
+
+function makeMiddlewareRequest(url: string): NextRequest {
+  return { nextUrl: new URL(url) } as NextRequest;
+}
 
 describe('middleware gate redirect', () => {
   beforeEach(() => {
@@ -40,9 +44,7 @@ describe('middleware gate redirect', () => {
   });
 
   it('middleware redirects gated request with feature marker', () => {
-    const request = {
-      nextUrl: new URL('https://tracebud.test/reports/annual?tenant=tenant_1'),
-    } as any;
+    const request = makeMiddlewareRequest('https://tracebud.test/reports/annual?tenant=tenant_1');
 
     const response = middleware(request);
     expect(response.headers.get('location')).toContain('/?tenant=tenant_1&feature=mvp_gated&gate=annual_reporting');
@@ -50,9 +52,7 @@ describe('middleware gate redirect', () => {
   });
 
   it('adds request_campaigns gate marker for requests route redirect', () => {
-    const request = {
-      nextUrl: new URL('https://tracebud.test/requests/new?tenant=tenant_1'),
-    } as any;
+    const request = makeMiddlewareRequest('https://tracebud.test/requests/new?tenant=tenant_1');
 
     const response = middleware(request);
     expect(response.headers.get('location')).toContain('/?tenant=tenant_1&feature=mvp_gated&gate=request_campaigns');
@@ -60,9 +60,7 @@ describe('middleware gate redirect', () => {
   });
 
   it('middleware passes through non-gated request', () => {
-    const request = {
-      nextUrl: new URL('https://tracebud.test/compliance?tenant=tenant_1'),
-    } as any;
+    const request = makeMiddlewareRequest('https://tracebud.test/compliance?tenant=tenant_1');
 
     const response = middleware(request);
     expect(response.status).toBe(200);
