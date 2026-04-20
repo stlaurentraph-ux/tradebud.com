@@ -2,13 +2,14 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { AppRole } from '../auth/roles';
 import { CreateChatThreadDto } from './dto/create-chat-thread.dto';
 import { PostChatMessageDto } from './dto/post-chat-message.dto';
 
 interface ChatContext {
   tenantId: string;
   userId?: string | null;
-  actorRole: 'farmer' | 'agent' | 'exporter';
+  actorRole: AppRole;
 }
 
 type ChatLifecycleEvent =
@@ -42,7 +43,7 @@ export class ChatThreadsService {
         thread_id TEXT NOT NULL REFERENCES public.chat_threads(id) ON DELETE CASCADE,
         tenant_id TEXT NOT NULL,
         author_user_id TEXT NULL,
-        author_role TEXT NOT NULL CHECK (author_role IN ('farmer', 'agent', 'exporter')),
+        author_role TEXT NOT NULL CHECK (author_role IN ('farmer', 'agent', 'exporter', 'admin', 'compliance_manager')),
         body TEXT NOT NULL,
         idempotency_key TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -80,7 +81,7 @@ export class ChatThreadsService {
       recordId?: string | null;
       messageId: string;
       idempotencyKey?: string | null;
-      actorRole: 'farmer' | 'agent' | 'exporter';
+      actorRole: AppRole;
       actorUserId?: string | null;
     },
   ): Promise<void> {
