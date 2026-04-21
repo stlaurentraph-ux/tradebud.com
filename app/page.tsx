@@ -15,7 +15,7 @@ import {
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings';
+type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings' | 'integrations';
 type PlotStatus = 'compliant' | 'pending' | 'flagged';
 type PackageStatus = 'verified' | 'pending' | 'issue' | 'submitted';
 
@@ -40,6 +40,7 @@ const navItems: NavItem[] = [
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'traces', label: 'TRACES NT', icon: Globe, badge: 'EU' },
   { id: 'reports', label: 'Reports', icon: FileText },
+  { id: 'integrations', label: 'Integrations', icon: Workflow },
 ];
 
 const packages = [
@@ -1844,6 +1845,424 @@ function SettingsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PAGE: INTEGRATIONS OPERATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type RunStatus = 'pending' | 'claimed' | 'running' | 'complete' | 'failed' | 'stale';
+type RunType = 'cool_farm' | 'sai_v2';
+
+interface IntegrationRun {
+  id: string;
+  type: RunType;
+  status: RunStatus;
+  farmerId: string;
+  farmerName: string;
+  plotId: string;
+  dueAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  claimedBy: string | null;
+  retryCount: number;
+  errorMessage: string | null;
+  payload: Record<string, unknown>;
+}
+
+const mockRuns: IntegrationRun[] = [
+  { id: 'run-001', type: 'cool_farm', status: 'pending', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-21T14:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee' } },
+  { id: 'run-002', type: 'sai_v2', status: 'running', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T13:30:00Z', startedAt: '2026-04-21T13:32:00Z', completedAt: null, claimedBy: 'worker-1', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full' } },
+  { id: 'run-003', type: 'cool_farm', status: 'complete', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T12:00:00Z', startedAt: '2026-04-21T12:01:00Z', completedAt: '2026-04-21T12:05:30Z', claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa' } },
+  { id: 'run-004', type: 'sai_v2', status: 'failed', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T11:00:00Z', startedAt: '2026-04-21T11:02:00Z', completedAt: '2026-04-21T11:03:45Z', claimedBy: 'worker-1', retryCount: 2, errorMessage: 'API timeout after 3 retries', payload: { assessmentType: 'quick' } },
+  { id: 'run-005', type: 'cool_farm', status: 'stale', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-20T10:00:00Z', startedAt: '2026-04-20T10:01:00Z', completedAt: null, claimedBy: 'worker-3', retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee' } },
+  { id: 'run-006', type: 'sai_v2', status: 'claimed', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T15:00:00Z', startedAt: null, completedAt: null, claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full' } },
+  { id: 'run-007', type: 'cool_farm', status: 'pending', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T16:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa' } },
+  { id: 'run-008', type: 'sai_v2', status: 'complete', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T09:00:00Z', startedAt: '2026-04-21T09:01:00Z', completedAt: '2026-04-21T09:04:20Z', claimedBy: 'worker-1', retryCount: 1, errorMessage: null, payload: { assessmentType: 'quick' } },
+];
+
+function RunStatusBadge({ status }: { status: RunStatus }) {
+  const config: Record<RunStatus, { cls: string; label: string }> = {
+    pending: { cls: 'bg-stone-100 text-stone-700 border-stone-200', label: 'Pending' },
+    claimed: { cls: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Claimed' },
+    running: { cls: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Running' },
+    complete: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Complete' },
+    failed: { cls: 'bg-red-50 text-red-700 border-red-200', label: 'Failed' },
+    stale: { cls: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Stale' },
+  };
+  const { cls, label } = config[status];
+  return <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${cls}`}>{label}</span>;
+}
+
+function TypeBadge({ type }: { type: RunType }) {
+  const config: Record<RunType, { cls: string; label: string }> = {
+    cool_farm: { cls: 'bg-emerald-50 text-emerald-700', label: 'Cool Farm' },
+    sai_v2: { cls: 'bg-violet-50 text-violet-700', label: 'SAI V2' },
+  };
+  const { cls, label } = config[type];
+  return <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded ${cls}`}>{label}</span>;
+}
+
+function IntegrationsPage() {
+  const [activeTab, setActiveTab] = useState<'queue' | 'scheduler'>('queue');
+  const [selectedRun, setSelectedRun] = useState<IntegrationRun | null>(null);
+  const [statusFilter, setStatusFilter] = useState<RunStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<RunType | 'all'>('all');
+
+  const filteredRuns = mockRuns.filter(run => {
+    if (statusFilter !== 'all' && run.status !== statusFilter) return false;
+    if (typeFilter !== 'all' && run.type !== typeFilter) return false;
+    return true;
+  });
+
+  const stats = {
+    pending: mockRuns.filter(r => r.status === 'pending').length,
+    running: mockRuns.filter(r => r.status === 'running' || r.status === 'claimed').length,
+    complete: mockRuns.filter(r => r.status === 'complete').length,
+    failed: mockRuns.filter(r => r.status === 'failed').length,
+    stale: mockRuns.filter(r => r.status === 'stale').length,
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-stone-900">Integrations Operations</h2>
+          <p className="text-sm text-stone-500 mt-1">Monitor and operate Cool Farm + SAI V2 run workflows</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm">
+            <RefreshCw size={14} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-stone-100 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('queue')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'queue' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'}`}
+        >
+          Run Queue
+        </button>
+        <button
+          onClick={() => setActiveTab('scheduler')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'scheduler' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'}`}
+        >
+          Scheduler
+        </button>
+      </div>
+
+      {activeTab === 'queue' && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { label: 'Pending', value: stats.pending, color: 'stone' },
+              { label: 'In Progress', value: stats.running, color: 'amber' },
+              { label: 'Completed', value: stats.complete, color: 'emerald' },
+              { label: 'Failed', value: stats.failed, color: 'red' },
+              { label: 'Stale', value: stats.stale, color: 'orange' },
+            ].map(stat => (
+              <Card key={stat.label} className="p-4">
+                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">{stat.label}</p>
+                <p className={`mt-1 text-2xl font-semibold text-${stat.color}-700`}>{stat.value}</p>
+              </Card>
+            ))}
+          </div>
+
+          {/* Filters */}
+          <Card className="p-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter size={16} className="text-stone-400" />
+                <span className="text-sm font-medium text-stone-700">Filters:</span>
+              </div>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as RunStatus | 'all')}
+                className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="claimed">Claimed</option>
+                <option value="running">Running</option>
+                <option value="complete">Complete</option>
+                <option value="failed">Failed</option>
+                <option value="stale">Stale</option>
+              </select>
+              <select
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value as RunType | 'all')}
+                className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+              >
+                <option value="all">All Types</option>
+                <option value="cool_farm">Cool Farm</option>
+                <option value="sai_v2">SAI V2</option>
+              </select>
+              <div className="flex-1" />
+              <Button variant="secondary" size="sm">
+                <AlertTriangle size={14} />
+                Release Stale ({stats.stale})
+              </Button>
+            </div>
+          </Card>
+
+          {/* Run Queue Table */}
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-stone-50 border-b border-stone-100">
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Run ID</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Type</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Farmer</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Plot</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Due</th>
+                    <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredRuns.map(run => (
+                    <tr key={run.id} className="hover:bg-stone-50 transition-colors">
+                      <td className="px-5 py-3.5 font-mono text-xs text-emerald-900 font-semibold">{run.id}</td>
+                      <td className="px-5 py-3.5"><TypeBadge type={run.type} /></td>
+                      <td className="px-5 py-3.5 text-stone-800">{run.farmerName}</td>
+                      <td className="px-5 py-3.5 text-stone-500 font-mono text-xs">{run.plotId}</td>
+                      <td className="px-5 py-3.5"><RunStatusBadge status={run.status} /></td>
+                      <td className="px-5 py-3.5 text-stone-500 text-xs">{new Date(run.dueAt).toLocaleString()}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedRun(run)}
+                            className="p-1.5 hover:bg-stone-100 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye size={14} className="text-stone-500" />
+                          </button>
+                          {run.status === 'pending' && (
+                            <button className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" title="Claim">
+                              <Lock size={14} className="text-emerald-600" />
+                            </button>
+                          )}
+                          {(run.status === 'claimed' || run.status === 'stale') && (
+                            <button className="p-1.5 hover:bg-orange-50 rounded-lg transition-colors" title="Release">
+                              <RefreshCw size={14} className="text-orange-600" />
+                            </button>
+                          )}
+                          {run.status === 'failed' && (
+                            <button className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="Retry">
+                              <RefreshCw size={14} className="text-blue-600" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Run Details Drawer */}
+          {selectedRun && (
+            <div className="fixed inset-0 z-50 flex justify-end">
+              <div className="absolute inset-0 bg-black/20" onClick={() => setSelectedRun(null)} />
+              <div className="relative w-full max-w-lg bg-white shadow-xl overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-stone-900">Run Details</h3>
+                    <p className="text-sm text-stone-500 font-mono">{selectedRun.id}</p>
+                  </div>
+                  <button onClick={() => setSelectedRun(null)} className="p-2 hover:bg-stone-100 rounded-lg">
+                    <X size={18} className="text-stone-500" />
+                  </button>
+                </div>
+                <div className="p-6 space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Type</p>
+                      <div className="mt-1"><TypeBadge type={selectedRun.type} /></div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Status</p>
+                      <div className="mt-1"><RunStatusBadge status={selectedRun.status} /></div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Farmer</p>
+                      <p className="mt-1 text-sm text-stone-900">{selectedRun.farmerName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Plot ID</p>
+                      <p className="mt-1 text-sm text-stone-900 font-mono">{selectedRun.plotId}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Due At</p>
+                      <p className="mt-1 text-sm text-stone-900">{new Date(selectedRun.dueAt).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Claimed By</p>
+                      <p className="mt-1 text-sm text-stone-900">{selectedRun.claimedBy || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-stone-500 uppercase tracking-wide">Retry Count</p>
+                      <p className="mt-1 text-sm text-stone-900">{selectedRun.retryCount}</p>
+                    </div>
+                    {selectedRun.startedAt && (
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Started At</p>
+                        <p className="mt-1 text-sm text-stone-900">{new Date(selectedRun.startedAt).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedRun.completedAt && (
+                      <div>
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Completed At</p>
+                        <p className="mt-1 text-sm text-stone-900">{new Date(selectedRun.completedAt).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                  {selectedRun.errorMessage && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs text-red-600 uppercase tracking-wide font-semibold mb-1">Error Message</p>
+                      <p className="text-sm text-red-800">{selectedRun.errorMessage}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase tracking-wide mb-2">Payload</p>
+                    <pre className="p-4 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 overflow-x-auto">
+                      {JSON.stringify(selectedRun.payload, null, 2)}
+                    </pre>
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedRun.status === 'pending' && (
+                      <Button variant="primary" className="flex-1">
+                        <Lock size={14} />
+                        Claim Run
+                      </Button>
+                    )}
+                    {(selectedRun.status === 'claimed' || selectedRun.status === 'stale') && (
+                      <Button variant="secondary" className="flex-1">
+                        <RefreshCw size={14} />
+                        Release
+                      </Button>
+                    )}
+                    {selectedRun.status === 'failed' && (
+                      <Button variant="primary" className="flex-1">
+                        <RefreshCw size={14} />
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'scheduler' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Stale Sweeper */}
+          <Card className="p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="font-semibold text-stone-900">Stale Sweeper</h3>
+                <p className="text-sm text-stone-500 mt-1">Automatically release stale runs</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                Active
+              </span>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-stone-700">Stale Threshold (minutes)</label>
+                <input
+                  type="number"
+                  defaultValue={30}
+                  className="mt-1 w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-stone-700">Max Releases per Sweep</label>
+                <input
+                  type="number"
+                  defaultValue={10}
+                  className="mt-1 w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+                />
+              </div>
+              <Button variant="primary" className="w-full">
+                <RefreshCw size={14} />
+                Trigger Sweep Now
+              </Button>
+            </div>
+          </Card>
+
+          {/* Token Status */}
+          <Card className="p-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="font-semibold text-stone-900">API Token Status</h3>
+                <p className="text-sm text-stone-500 mt-1">Integration credentials health</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Leaf size={20} className="text-emerald-700" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-stone-900">Cool Farm Token</p>
+                    <p className="text-xs text-stone-500">Expires in 23 days</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">Valid</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <Database size={20} className="text-violet-700" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-stone-900">SAI V2 Token</p>
+                    <p className="text-xs text-stone-500">Expires in 45 days</p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">Valid</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Last Sweep Result */}
+          <Card className="p-6 lg:col-span-2">
+            <h3 className="font-semibold text-stone-900 mb-4">Last Sweep Result</h3>
+            <div className="p-4 bg-stone-50 border border-stone-200 rounded-lg">
+              <div className="flex items-center gap-4 text-sm">
+                <div>
+                  <span className="text-stone-500">Executed:</span>
+                  <span className="ml-2 text-stone-900">Apr 21, 2026 at 1:30 PM</span>
+                </div>
+                <div className="w-px h-4 bg-stone-200" />
+                <div>
+                  <span className="text-stone-500">Released:</span>
+                  <span className="ml-2 text-emerald-700 font-semibold">3 runs</span>
+                </div>
+                <div className="w-px h-4 bg-stone-200" />
+                <div>
+                  <span className="text-stone-500">Duration:</span>
+                  <span className="ml-2 text-stone-900">1.2s</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1862,8 +2281,9 @@ export default function ExporterDashboard() {
       case 'documents': return <DocumentsPage />;
       case 'traces': return <TracesPage />;
       case 'reports': return <ReportsPage />;
-      case 'settings': return <SettingsPage />;
-      default: return <OverviewPage setPage={setPage} />;
+case 'settings': return <SettingsPage />;
+  case 'integrations': return <IntegrationsPage />;
+  default: return <OverviewPage setPage={setPage} />;
     }
   };
 
