@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { RunQueueSection } from '@/components/integrations/run-queue-section';
+import { SchedulerSection } from '@/components/integrations/scheduler-section';
 
 export default function IntegrationsPage() {
   const [activeTab, setActiveTab] = useState('run-queue');
@@ -21,7 +23,6 @@ export default function IntegrationsPage() {
         />
 
         <div className="flex-1 space-y-6 p-6">
-          {/* Tab Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="bg-muted/50">
               <TabsTrigger value="run-queue" className="data-[state=active]:bg-card">
@@ -33,17 +34,11 @@ export default function IntegrationsPage() {
             </TabsList>
 
             <TabsContent value="run-queue" className="mt-6">
-              <div className="rounded-lg border border-border p-6">
-                <h3 className="text-lg font-semibold mb-4">Run Queue</h3>
-                <p className="text-muted-foreground">Run queue section loading...</p>
-              </div>
+              <RunQueueSection />
             </TabsContent>
 
             <TabsContent value="scheduler" className="mt-6">
-              <div className="rounded-lg border border-border p-6">
-                <h3 className="text-lg font-semibold mb-4">Scheduler</h3>
-                <p className="text-muted-foreground">Scheduler section loading...</p>
-              </div>
+              <SchedulerSection />
             </TabsContent>
           </Tabs>
         </div>

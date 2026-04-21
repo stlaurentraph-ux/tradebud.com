@@ -113,8 +113,6 @@ export function AppSidebar() {
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
   const hasMultipleRoles = user && user.roles.length > 1;
 
-  console.log('[v0] navItems:', navItems.map(i => i.name));
-
   const activeTenant =
     demoTenants.find((tenant) => tenant.tenant_id === user?.tenant_id) ??
     demoTenants.find((tenant) => tenant.demo_email === user?.email) ??
