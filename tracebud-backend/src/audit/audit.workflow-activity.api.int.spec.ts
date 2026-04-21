@@ -59,17 +59,6 @@ describeIfDb('Audit workflow-activity API integration: phase and slaState filter
         payload JSONB NOT NULL DEFAULT '{}'::jsonb
       )
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.audit_log (
-        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        user_id UUID NULL,
-        device_id TEXT NULL,
-        event_type TEXT NOT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb
-      )
-    `);
-
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
       providers: [{ provide: PG_POOL, useValue: pool }],
@@ -89,9 +78,10 @@ describeIfDb('Audit workflow-activity API integration: phase and slaState filter
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(
       `
-        DELETE FROM audit_log
+        DELETE FROM ${schema}.audit_log
         WHERE event_type IN (
           'workflow_template_created',
           'workflow_stage_transitioned',
@@ -114,7 +104,7 @@ describeIfDb('Audit workflow-activity API integration: phase and slaState filter
   it('applies phase filter through HTTP pipeline', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '77777777-7777-4777-8777-777777777777'::uuid,
@@ -159,7 +149,7 @@ describeIfDb('Audit workflow-activity API integration: phase and slaState filter
   it('applies slaState filter together with tenant scoping', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '77777777-7777-4777-8777-777777777777'::uuid,

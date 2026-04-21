@@ -564,13 +564,29 @@ export class InboxService {
     );
 
     if (updatedRes.rowCount && updatedRes.rows[0]) {
-      await this.pool.query(
-        `
-          INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
-          VALUES ($1, 'REQUEST_RESPONDED', $2, $3::jsonb)
-        `,
-        [id, tenantId, JSON.stringify({ respondedAt: new Date().toISOString() })],
-      );
+      try {
+        await this.pool.query(
+          `
+            INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+            VALUES ($1, 'REQUEST_RESPONDED', $2, $3::jsonb)
+          `,
+          [id, tenantId, JSON.stringify({ respondedAt: new Date().toISOString() })],
+        );
+      } catch (error: any) {
+        if (error?.code === '42P01') {
+          // Table may have been dropped between list/respond in integration tests; self-heal once.
+          await this.ensureSchemaVerified();
+          await this.pool.query(
+            `
+              INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+              VALUES ($1, 'REQUEST_RESPONDED', $2, $3::jsonb)
+            `,
+            [id, tenantId, JSON.stringify({ respondedAt: new Date().toISOString() })],
+          );
+        } else {
+          throw error;
+        }
+      }
       await this.emitAuditEvent('inbox_request_responded', {
         requestId: id,
         tenantId,

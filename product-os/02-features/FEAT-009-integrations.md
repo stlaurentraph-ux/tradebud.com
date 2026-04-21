@@ -1379,6 +1379,22 @@ Verification commands:
 - `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
 - `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`
 
+### S1 post-closeout hardening slice 66 - migration guidance cleanup + DB proof for auto-linking
+
+- Harmonized stale migration guidance strings in `AssessmentRequestsController`:
+  - replaced residual `TB-V16-019` guidance with correct assessment workflow migrations (`TB-V16-021`, `TB-V16-022`).
+- Added DB-backed integration proof for auto-link persistence:
+  - new spec `assessment-requests.controller.int.spec.ts` validates that request creation without `questionnaireDraftId`:
+    - creates an `integration_questionnaire_v2` draft,
+    - persists `integration_assessment_requests.questionnaire_id`,
+    - keeps linked questionnaire status at `draft`.
+- Confirmed integration path is executable in targeted mode using `--runTestsByPath` to isolate new coverage from unrelated suite failures.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/assessment-requests.controller.int.spec.ts`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
