@@ -22,6 +22,11 @@ import {
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import {
+  fetchAssignedAssessmentRequests,
+  updateAssessmentRequestStatus,
+  type FarmerAssessmentRequest,
+} from '@/features/api/postPlot';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -36,6 +41,9 @@ export default function HomeScreen() {
   const [backendError, setBackendError] = useState<string | null>(null);
   const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
+  const [assessmentRequests, setAssessmentRequests] = useState<FarmerAssessmentRequest[]>([]);
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [assessmentSavingId, setAssessmentSavingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPendingSyncActions()
@@ -125,6 +133,26 @@ export default function HomeScreen() {
     };
   }, [plots, backendPlots, t]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchAssignedAssessmentRequests()
+      .then((rows) => {
+        if (!cancelled) {
+          setAssessmentRequests(rows);
+          setAssessmentError(null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAssessmentRequests([]);
+          setAssessmentError(error instanceof Error ? error.message : 'Assessment requests unavailable');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [farmer?.id]);
+
   const counts = useMemo(() => {
     const plotsCount = plots.length;
     const compliant = plots.filter((p) => {
@@ -142,6 +170,23 @@ export default function HomeScreen() {
   const hasPlots = plots.length > 0;
   const needsOnboarding = !backendConfigured || !hasFarmer || !hasPlots;
   const isOnline = backendConfigured && !loadingBackend && !backendError;
+  const nextAssessment =
+    assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
+    null;
+
+  const markAssessmentProgress = async (requestId: string, status: 'opened' | 'in_progress' | 'submitted') => {
+    setAssessmentSavingId(requestId);
+    try {
+      await updateAssessmentRequestStatus({ requestId, status });
+      const rows = await fetchAssignedAssessmentRequests();
+      setAssessmentRequests(rows);
+      setAssessmentError(null);
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : 'Could not update assessment');
+    } finally {
+      setAssessmentSavingId((prev) => (prev === requestId ? null : prev));
+    }
+  };
 
   return (
     <ThemedView style={styles.screen}>
@@ -360,6 +405,69 @@ export default function HomeScreen() {
           <ThemedText type="caption" style={{ marginTop: 6 }}>
             {pendingCount > 0 ? t('last_sync_pending') : t('last_sync_now')}
           </ThemedText>
+        </Card>
+
+        <Card variant="outlined" style={styles.syncCard}>
+          <View style={styles.syncHeader}>
+            <View style={styles.syncTitleRow}>
+              <Ionicons name="clipboard-outline" size={16} color={colors.textSecondary} />
+              <ThemedText type="defaultSemiBold">Assessment Tasks</ThemedText>
+            </View>
+            <View style={styles.pendingPill}>
+              <ThemedText type="caption">{assessmentRequests.length} assigned</ThemedText>
+            </View>
+          </View>
+          {assessmentError ? (
+            <ThemedText type="caption" style={{ color: Brand.warning }}>
+              {assessmentError}
+            </ThemedText>
+          ) : nextAssessment ? (
+            <View style={{ gap: 8 }}>
+              <ThemedText type="defaultSemiBold">{nextAssessment.title}</ThemedText>
+              <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+                {nextAssessment.pathway} · status: {nextAssessment.status}
+              </ThemedText>
+              <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+                Questionnaire: {nextAssessment.questionnaire_id ?? 'not linked'}
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {nextAssessment.status === 'sent' ? (
+                  <Pressable
+                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'opened')}
+                    style={styles.onboardingPill}
+                  >
+                    <ThemedText type="caption">
+                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Open task'}
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+                {(nextAssessment.status === 'opened' || nextAssessment.status === 'needs_changes') ? (
+                  <Pressable
+                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'in_progress')}
+                    style={styles.onboardingPill}
+                  >
+                    <ThemedText type="caption">
+                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Start form'}
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+                {nextAssessment.status === 'in_progress' ? (
+                  <Pressable
+                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'submitted')}
+                    style={styles.onboardingPill}
+                  >
+                    <ThemedText type="caption">
+                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Submit to dashboard'}
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          ) : (
+            <ThemedText type="caption" style={{ color: colors.textSecondary }}>
+              No pending assessments right now.
+            </ThemedText>
+          )}
         </Card>
       </ThemedScrollView>
     </ThemedView>

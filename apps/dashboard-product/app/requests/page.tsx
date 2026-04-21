@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import {
   Send,
   Inbox,
@@ -53,6 +53,27 @@ interface ImportedRequestTarget {
   farmerId?: string;
   plotId?: string;
 }
+
+type AssessmentRequestStatus =
+  | 'sent'
+  | 'opened'
+  | 'in_progress'
+  | 'submitted'
+  | 'reviewed'
+  | 'needs_changes'
+  | 'cancelled';
+
+type AssessmentRequest = {
+  id: string;
+  pathway: 'annuals' | 'rice';
+  farmer_user_id: string;
+  questionnaire_id?: string | null;
+  status: AssessmentRequestStatus;
+  title: string;
+  instructions: string;
+  due_at: string | null;
+  updated_at: string;
+};
 
 const BULK_TARGETS_CSV_TEMPLATE = [
   'email,full_name,organization,farmer_id,plot_id',
@@ -350,6 +371,45 @@ export default function RequestsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const [assessmentRequests, setAssessmentRequests] = useState<AssessmentRequest[]>([]);
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+  const [sendingAssessment, setSendingAssessment] = useState(false);
+  const [assessmentForm, setAssessmentForm] = useState({
+    title: '',
+    instructions: '',
+    pathway: 'annuals' as 'annuals' | 'rice',
+    farmerUserId: '',
+    questionnaireDraftId: '',
+    dueAt: '',
+  });
+
+  const loadAssessmentRequests = async () => {
+    const authHeaders = getAuthHeaders();
+    if (!authHeaders.Authorization) {
+      setAssessmentRequests([]);
+      return;
+    }
+    setAssessmentError(null);
+    try {
+      const response = await fetch('/api/integrations/assessments/requests', {
+        cache: 'no-store',
+        headers: authHeaders,
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? 'Failed to load assessment requests.');
+      }
+      const body = (await response.json()) as { items?: AssessmentRequest[] };
+      setAssessmentRequests(body.items ?? []);
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : 'Failed to load assessment requests.');
+      setAssessmentRequests([]);
+    }
+  };
+
+  useEffect(() => {
+    void loadAssessmentRequests();
+  }, []);
 
   const filteredCampaigns = mockCampaigns.filter((campaign) => {
     const matchesSearch =
@@ -416,6 +476,66 @@ export default function RequestsPage() {
       setCreateError(error instanceof Error ? error.message : 'Failed to create request campaign.');
     } finally {
       setIsCreatingDraft(false);
+    }
+  };
+
+  const handleSendAssessmentRequest = async () => {
+    setAssessmentError(null);
+    setSendingAssessment(true);
+    try {
+      const response = await fetch('/api/integrations/assessments/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          title: assessmentForm.title,
+          instructions: assessmentForm.instructions,
+          pathway: assessmentForm.pathway,
+          farmerUserId: assessmentForm.farmerUserId,
+          questionnaireDraftId: assessmentForm.questionnaireDraftId || null,
+          dueAt: assessmentForm.dueAt || null,
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? 'Failed to send assessment request.');
+      }
+      setAssessmentForm({
+        title: '',
+        instructions: '',
+        pathway: 'annuals',
+        farmerUserId: '',
+        questionnaireDraftId: '',
+        dueAt: '',
+      });
+      await loadAssessmentRequests();
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : 'Failed to send assessment request.');
+    } finally {
+      setSendingAssessment(false);
+    }
+  };
+
+  const handleAssessmentStatusUpdate = async (id: string, status: AssessmentRequestStatus) => {
+    setAssessmentError(null);
+    try {
+      const response = await fetch(`/api/integrations/assessments/requests/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? 'Failed to update status.');
+      }
+      await loadAssessmentRequests();
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : 'Failed to update status.');
     }
   };
 
@@ -661,6 +781,116 @@ export default function RequestsPage() {
             <CardContent className="p-4 text-sm text-red-700">{createError}</CardContent>
           </Card>
         ) : null}
+        {assessmentError ? (
+          <Card className="border-red-300">
+            <CardContent className="p-4 text-sm text-red-700">{assessmentError}</CardContent>
+          </Card>
+        ) : null}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>SAI + Cool Farm Assessment Requests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-6">
+              <Input
+                placeholder="Assessment title"
+                value={assessmentForm.title}
+                onChange={(e) => setAssessmentForm((prev) => ({ ...prev, title: e.target.value }))}
+              />
+              <Input
+                placeholder="Farmer user UUID"
+                value={assessmentForm.farmerUserId}
+                onChange={(e) => setAssessmentForm((prev) => ({ ...prev, farmerUserId: e.target.value }))}
+              />
+              <Input
+                placeholder="Questionnaire draft UUID"
+                value={assessmentForm.questionnaireDraftId}
+                onChange={(e) =>
+                  setAssessmentForm((prev) => ({ ...prev, questionnaireDraftId: e.target.value }))
+                }
+              />
+              <select
+                value={assessmentForm.pathway}
+                onChange={(e) =>
+                  setAssessmentForm((prev) => ({
+                    ...prev,
+                    pathway: e.target.value === 'rice' ? 'rice' : 'annuals',
+                  }))
+                }
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="annuals">Annuals</option>
+                <option value="rice">Rice</option>
+              </select>
+              <Input
+                type="date"
+                value={assessmentForm.dueAt}
+                onChange={(e) => setAssessmentForm((prev) => ({ ...prev, dueAt: e.target.value }))}
+              />
+              <Button
+                onClick={handleSendAssessmentRequest}
+                disabled={
+                  sendingAssessment ||
+                  !assessmentForm.title.trim() ||
+                  !assessmentForm.farmerUserId.trim()
+                }
+              >
+                {sendingAssessment ? 'Sending...' : 'Send to Farmer'}
+              </Button>
+            </div>
+            <Textarea
+              placeholder="Instructions for farmer"
+              value={assessmentForm.instructions}
+              onChange={(e) =>
+                setAssessmentForm((prev) => ({ ...prev, instructions: e.target.value }))
+              }
+              rows={2}
+            />
+            <div className="space-y-2">
+              {assessmentRequests.slice(0, 8).map((request) => (
+                <div
+                  key={request.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3"
+                >
+                  <div>
+                    <p className="font-medium">{request.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {request.pathway} · Farmer {request.farmer_user_id} · Updated{' '}
+                      {new Date(request.updated_at).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Questionnaire draft: {request.questionnaire_id ?? 'not linked'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{request.status}</Badge>
+                    {request.status === 'submitted' ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleAssessmentStatusUpdate(request.id, 'needs_changes')}
+                        >
+                          Needs changes
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => void handleAssessmentStatusUpdate(request.id, 'reviewed')}
+                        >
+                          Review complete
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              {assessmentRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No assessment requests yet.</p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5">

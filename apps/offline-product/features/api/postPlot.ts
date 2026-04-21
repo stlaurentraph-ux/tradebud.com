@@ -749,5 +749,74 @@ export async function postAuditEventToBackend(params: {
   }
 }
 
+export type AssessmentRequestStatus =
+  | 'sent'
+  | 'opened'
+  | 'in_progress'
+  | 'submitted'
+  | 'reviewed'
+  | 'needs_changes'
+  | 'cancelled';
+
+export type FarmerAssessmentRequest = {
+  id: string;
+  pathway: 'annuals' | 'rice';
+  farmer_user_id: string;
+  questionnaire_id?: string | null;
+  status: AssessmentRequestStatus;
+  title: string;
+  instructions: string;
+  due_at: string | null;
+  updated_at: string;
+};
+
+export async function fetchAssignedAssessmentRequests(): Promise<FarmerAssessmentRequest[]> {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    throw new Error('No access token available for assessment requests');
+  }
+
+  const res = await fetch(`${API_BASE_URL}/v1/integrations/assessments/requests?assignedToMe=true`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Assessment request fetch error: ${res.status}`);
+  }
+  const body = (await res.json()) as { items?: FarmerAssessmentRequest[] };
+  return body.items ?? [];
+}
+
+export async function updateAssessmentRequestStatus(params: {
+  requestId: string;
+  status: AssessmentRequestStatus;
+}) {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    throw new Error('No access token available for assessment requests');
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/v1/integrations/assessments/requests/${encodeURIComponent(params.requestId)}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: params.status }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Assessment request status update error: ${res.status}`);
+  }
+  return res.json();
+}
+
 
 

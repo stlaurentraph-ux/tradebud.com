@@ -504,6 +504,8 @@
 - FEAT-009 scheduler-triggered retry sweep is now implemented as S1 slice 59 (`retry-sweep/trigger` + sweep telemetry); next execution step is sweep execution-ID taxonomy (`started/completed/failed`) and summary rollups for operator runbook observability.
 - FEAT-009 sweep execution lifecycle taxonomy + summary rollups are now implemented as S1 slice 60 (`started/completed/failed` + `sweepExecutionId` + `lastSweepRun`); next execution step is sweep trend-window metrics (`24h/7d`) and scheduler-token-version rollups for cross-environment diagnostics.
 - FEAT-009 scheduler header-auth + token-version rollups are now implemented as S1 slice 61; next execution step is sweep trend-window metrics (`24h/7d`) for reliability trend visibility in retry summary.
+- FEAT-009 assessment workflow handoff backbone is now implemented as S1 slice 62: dashboard can create tenant-scoped farmer assessment requests and both dashboard/farmer roles can move lifecycle states (`sent -> opened -> in_progress -> submitted -> reviewed/needs_changes/cancelled`); next execution step is dashboard/offline-product UI binding to this backend contract plus request-to-questionnaire linkage.
+- FEAT-009 assessment workflow UI wiring is now implemented as S1 slice 63: dashboard `Requests` now sends and reviews live assessment requests through API proxy routes, and offline app home now exposes assigned assessment tasks with progression actions; next execution step is request-to-questionnaire draft linkage + validation gating before farmer submission completion.
 
 ## Priority migration lanes (v1.6)
 

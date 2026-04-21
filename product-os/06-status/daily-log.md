@@ -3028,6 +3028,22 @@ Append-only session log.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
 
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 63)
+- Focus: wire the new assessment-request backend contract into both operator surfaces so dashboard can dispatch/review and offline app can progress farmer execution states.
+- Files changed: `apps/dashboard-product/app/api/integrations/assessments/requests/route.ts`, `apps/dashboard-product/app/api/integrations/assessments/requests/[id]/status/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/app/(tabs)/index.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added dashboard proxy routes to preserve auth/session patterns while delegating to backend assessment APIs; added a dedicated assessment panel in dashboard requests for send + review transitions; added offline `Assessment Tasks` card + API helpers so farmers can step through `sent/opened/in_progress/submitted` without leaving the app home flow.
+- Verification: `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`.
+- Risks: Mobile UI currently exposes only linear progression controls and does not yet deep-link to the full questionnaire form sections; linkage remains pending in next slice.
+- Next step: connect request records to questionnaire draft IDs and block `submitted` transitions until required questionnaire sections are complete.
+
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 62)
+- Focus: implement the missing assessment handoff backbone so dashboard users can request farmer execution of SAI + Cool Farm assessments through app workflow states.
+- Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `tracebud-backend/sql/tb_v16_021_integration_assessment_requests.sql`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added tenant-safe assessment request API (`create/list/get/status transitions`) and persisted lifecycle states (`sent/opened/in_progress/submitted/reviewed/needs_changes/cancelled`) in dedicated V2 table indexed by tenant/status and tenant/farmer assignment; dashboard manager roles can create/manage, farmers can access assigned requests and progress execution states.
+- Verification: `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`.
+- Risks: Request-to-questionnaire linkage is not yet enforced in this slice, so status transitions are contract-ready but not yet hard-coupled to completed questionnaire payload validation.
+- Next step: wire dashboard-product send-request UI and offline-product assigned-task execution screens to this backend contract, then attach questionnaire draft IDs for end-to-end submission traceability.
+
 ### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 53)
 - Focus: define execution-ready external partner data platform contract so third-party software can consume Tracebud data for reporting and analytics without direct database access.
 - Files changed: `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
