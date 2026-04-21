@@ -1069,6 +1069,242 @@ Verification commands:
 - `cd apps/dashboard-product && npm test -- app/api/analytics/gated-entry/route.test.ts`
 - `npm run openapi:lint`
 
+### S1 post-closeout hardening slice 53 - external partner reporting and analytics data platform contract (MVP)
+
+- Added execution-ready external partner data platform contract for third-party software analytics/reporting consumption:
+  - partner pull API (`/v1/partner-data/*`) for tenant-scoped incremental extraction
+  - partner webhook push model for near-real-time state/event synchronization
+  - scheduled bulk export contract (CSV/Parquet object delivery with signed URL retrieval).
+- Defined strict permission and tenant boundaries for external consumers:
+  - integration administration remains exporter-scoped
+  - read-only partner access remains explicit-scope (`read:lineage`, `read:compliance`, `read:risk`, `read:shipments`)
+  - all partner paths fail closed on missing tenant claim or scope mismatch.
+- Defined canonical partner state transitions:
+  - `partner_connection_requested -> partner_connection_active`
+  - `partner_connection_active -> partner_sync_pending`
+  - `partner_sync_pending -> partner_sync_succeeded|partner_sync_retryable_failed|partner_sync_terminal_failed`
+  - `partner_sync_retryable_failed -> partner_sync_succeeded|partner_sync_terminal_failed`.
+- Defined deterministic exception handling and recovery:
+  - idempotent replay keys required for export job start and webhook replay
+  - retryable classes (`429`, `5xx`, transient network/provider) use bounded exponential retry
+  - terminal failures route to explicit reconciliation queue with immutable evidence.
+- Defined analytics and immutable evidence baseline:
+  - required events: `partner_dataset_requested`, `partner_dataset_exported`, `partner_webhook_delivered`, `partner_webhook_retryable_failed`, `partner_webhook_terminal_failed`, `partner_sync_replayed`
+  - required payload baseline: `tenantId`, `partnerKey`, `scope`, `dataset`, `cursor`, `idempotencyKey`, `attemptCount`, `latencyMs`, `timestamp`.
+- Added acceptance mapping for MVP partner consumption:
+  - third-party analytics tools can pull or receive data without direct DB access
+  - tenant isolation, role scope, idempotency, and immutable evidence are test-covered
+  - OpenAPI and partner event schema contracts are published before pilot onboarding.
+- v1.6 architecture constraints applicability:
+  - spatial payload fields must originate from canonical `GEOGRAPHY` + `ST_MakeValid` validated sources only
+  - partner sync ordering must use persisted HLC/audit chronology, never client wall-clock precedence
+  - lineage payloads must consume materialized O(1) lineage fields only
+  - TRACES-related partner exports must support chunk/reference reconciliation metadata
+  - GDPR shredding must preserve immutable audit references while preventing PII rehydration.
+
+Verification commands:
+
+- `n/a (documentation slice)`
+
+### S1 post-closeout hardening slice 54 - backend partner-data API skeleton + contract publication
+
+- Added tenant-safe partner-data backend controller:
+  - `GET /v1/partner-data/datasets?scope=...`
+  - `POST /v1/partner-data/exports`
+- Enforced explicit permissions and tenant boundaries:
+  - missing tenant claim fails closed on both endpoints
+  - `datasets` endpoint role gate: `exporter|agent`
+  - `exports` endpoint role gate: `exporter` only.
+- Enforced deterministic input contracts:
+  - `scope` must be one of `read:lineage|read:compliance|read:risk|read:shipments`
+  - export start requires `dataset`, `format(csv|parquet)`, and `idempotencyKey`.
+- Added immutable analytics evidence baseline:
+  - dataset reads write `partner_dataset_requested`
+  - export starts write `partner_dataset_exported`
+  - both include tenant, actor role/id, scope, and capture timestamp context.
+- Published OpenAPI draft paths for partner-data endpoints:
+  - `GET /v1/partner-data/datasets`
+  - `POST /v1/partner-data/exports`
+  - includes request/response contracts and `400/401/403` policy semantics.
+- Added focused controller unit test coverage for deny/allow paths and audit evidence behavior.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/integrations.controller.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 55 - persistent idempotency replay + export status/download retrieval
+
+- Added partner export persistence migration:
+  - `tracebud-backend/sql/tb_v16_018_partner_data_exports.sql`
+  - table: `integration_partner_exports`
+  - includes tenant + idempotency uniqueness (`UNIQUE (tenant_id, idempotency_key)`), status/state constraints, artifact URL storage, and update timestamp trigger.
+- Upgraded `POST /v1/partner-data/exports` to deterministic replay behavior:
+  - checks existing `(tenant_id, idempotency_key)` before insert
+  - returns existing export row with `replayed=true` for duplicate requests
+  - returns newly queued export row with `replayed=false` for first request.
+- Added tenant-safe export status endpoint:
+  - `GET /v1/partner-data/exports/{id}`
+  - role gate: `exporter|agent`
+  - returns immutable export state + created/updated timestamps.
+- Added tenant-safe export artifact endpoint:
+  - `GET /v1/partner-data/exports/{id}/download`
+  - role gate: `exporter|agent`
+  - returns signed artifact URL contract only when export is `completed`; otherwise deterministic fail-closed validation error.
+- Added migration-availability fail-closed semantics:
+  - endpoints return deterministic guidance when `TB-V16-018` has not been applied.
+- Extended OpenAPI contract publication for new partner export status and download paths.
+- Extended controller unit coverage for replay behavior and status/download retrieval.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/integrations.controller.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 56 - export lifecycle finalize endpoint + DB-backed integration coverage
+
+- Added worker-style export lifecycle finalization endpoint:
+  - `POST /v1/partner-data/exports/{id}/finalize`
+  - allows deterministic transition from `queued` to `completed|failed`
+  - role gate: `exporter|admin|compliance_manager`.
+- Added immutable lifecycle telemetry for finalize outcomes:
+  - success path emits `partner_webhook_delivered`
+  - terminal failure path emits `partner_webhook_terminal_failed`
+  - replay path now emits `partner_sync_replayed` when duplicate idempotency export starts are detected.
+- Added DB-backed integration test suite:
+  - `src/integrations/partner-data.controller.int.spec.ts`
+  - covers missing-tenant fail-closed, persisted replay semantics, and queued->completed finalize + download retrieval flow.
+- Extended OpenAPI contract publication with finalize path:
+  - `POST /v1/partner-data/exports/{id}/finalize`
+  - explicit outcome/body and response state contracts.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 57 - retry queue metadata + retry endpoint operability
+
+- Added retry/backoff persistence migration:
+  - `tracebud-backend/sql/tb_v16_019_partner_data_export_retry_queue.sql`
+  - new columns: `attempt_count`, `error_code`, `next_retry_at`
+  - queue index: `idx_partner_exports_retry_queue`.
+- Extended export finalize behavior:
+  - failed finalize now persists `error_code` and computes initial `next_retry_at` backoff window
+  - completed finalize clears retry schedule through success-state transition.
+- Added tenant-safe retry queue read endpoint:
+  - `GET /v1/partner-data/exports/retry-queue?limit=...`
+  - returns due failed exports (`next_retry_at <= now`) with deterministic ordering.
+- Added failed-export retry endpoint:
+  - `POST /v1/partner-data/exports/{id}/retry`
+  - allowed only for failed tenant-scoped exports
+  - increments `attempt_count`, clears `error_code`, clears `next_retry_at`, re-queues to `partner_sync_pending`.
+- Added retry lifecycle telemetry:
+  - emits `partner_webhook_retryable_failed` on retry actions with attempt context.
+- Extended OpenAPI contracts for retry queue and retry action paths and updated export response schema fields (`attemptCount`, `errorCode`, `nextRetryAt`).
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 58 - retry-cap policy + exponential backoff + summary diagnostics
+
+- Added retry-cap policy migration:
+  - `tracebud-backend/sql/tb_v16_020_partner_data_export_retry_policy.sql`
+  - column: `retry_exhausted_at` + index for exhausted-run diagnostics.
+- Implemented bounded exponential retry backoff policy:
+  - failed finalize computes `next_retry_at` via `2^(attempt-1)` minutes, capped at 60 minutes
+  - max retry attempts fixed at `5`
+  - exhausted retries set `retry_exhausted_at` and produce terminal telemetry.
+- Hardened retry endpoint behavior:
+  - `POST /v1/partner-data/exports/{id}/retry` now blocks retries at cap with deterministic error
+  - emits terminal telemetry when retry exhaustion is reached.
+- Added retry summary diagnostics endpoint:
+  - `GET /v1/partner-data/exports/retry-summary`
+  - returns `dueRetryCount`, `failedCount`, `exhaustedCount`, `maxAttempts`, and latest retry activity pointer.
+- Extended export/status/finalize response contract to include `retryExhaustedAt`.
+- Extended unit + DB-backed integration coverage for retry-cap and summary behavior.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 59 - scheduler-triggered retry sweep + sweep telemetry
+
+- Added scheduler-triggered retry sweep endpoint:
+  - `POST /v1/partner-data/exports/retry-sweep/trigger?schedulerToken=...`
+  - requires configured scheduler secret (`PARTNER_EXPORT_RETRY_SWEEP_TOKEN`)
+  - enforces role + tenant fail-closed behavior.
+- Sweep execution behavior:
+  - scans due failed exports up to bounded `limit`
+  - retries eligible exports (below retry cap) to `queued/partner_sync_pending`
+  - returns deterministic sweep summary (`scannedCount`, `retriedCount`, `retriedExportIds`).
+- Added immutable sweep telemetry:
+  - event: `partner_retry_sweep_executed`
+  - payload includes actor, scanned/retried counts, selected IDs, and limit.
+- Added unit and DB-backed integration coverage:
+  - scheduler trigger success path
+  - due-failure retry transition verification.
+- Published OpenAPI contract for retry-sweep trigger path and response shape.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 60 - sweep execution lifecycle taxonomy + summary rollups
+
+- Extended sweep telemetry to explicit lifecycle taxonomy:
+  - `partner_retry_sweep_started`
+  - `partner_retry_sweep_completed`
+  - `partner_retry_sweep_failed`
+  - retained compatibility event: `partner_retry_sweep_executed`.
+- Added deterministic sweep execution IDs:
+  - each trigger call now generates `sweepExecutionId`
+  - included in trigger response and sweep lifecycle telemetry payloads.
+- Added retry summary rollups for latest sweep execution:
+  - `GET /v1/partner-data/exports/retry-summary` now returns `lastSweepRun`
+  - includes execution id, status, scanned/retried counts, and failure message when present.
+- Extended OpenAPI contracts:
+  - retry sweep trigger response now includes `sweepExecutionId` and `status`
+  - retry summary now includes `lastSweepRun` object contract.
+- Extended unit + integration coverage:
+  - scheduler sweep response assertions now include execution id + status
+  - retry summary unit coverage now validates `lastSweepRun`.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
+- `npm run openapi:lint`
+
+### S1 post-closeout hardening slice 61 - scheduler header auth + token-version rollups
+
+- Hardened scheduler trigger auth contract:
+  - changed sweep trigger token from query parameter to required header
+  - header: `x-tracebud-scheduler-token`
+  - keeps fail-closed behavior on missing/invalid token.
+- Added scheduler token-version rollout visibility:
+  - reads optional `PARTNER_EXPORT_RETRY_SWEEP_TOKEN_VERSION`
+  - includes token version in sweep lifecycle telemetry payloads
+  - includes token version in trigger response and retry-summary `lastSweepRun`.
+- Extended OpenAPI contract publication:
+  - sweep trigger now documents header auth parameter and `schedulerTokenVersion` response field
+  - retry summary `lastSweepRun` now documents `schedulerTokenVersion`.
+- Extended tests:
+  - unit and DB-backed integration assertions now validate `schedulerTokenVersion` propagation.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/partner-data.controller.spec.ts src/integrations/partner-data.controller.int.spec.ts src/integrations/integrations.controller.spec.ts`
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
+- `npm run openapi:lint`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.

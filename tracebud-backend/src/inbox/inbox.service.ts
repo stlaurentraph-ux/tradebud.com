@@ -31,6 +31,20 @@ export class InboxService {
     return code === '23505' || code === '42P07' || code === '42710';
   }
 
+  private async waitForTable(client: PoolClient, tableName: 'inbox_requests' | 'inbox_request_events'): Promise<void> {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const verify = await client.query<{ exists: string | null }>(
+        `SELECT to_regclass($1)::text AS exists`,
+        [tableName],
+      );
+      if (verify.rows[0]?.exists) {
+        return;
+      }
+      await client.query('SELECT pg_sleep(0.05)');
+    }
+    throw new Error(`Inbox schema bootstrap failed: missing ${tableName}`);
+  }
+
   private defaultRequests(nowIso: string): InboxRequestRecord[] {
     return [
       {
@@ -193,6 +207,7 @@ export class InboxService {
         throw error;
       }
     }
+    await this.waitForTable(client, 'inbox_requests');
 
     try {
       await client.query(
@@ -212,6 +227,7 @@ export class InboxService {
         throw error;
       }
     }
+    await this.waitForTable(client, 'inbox_request_events');
 
     try {
       await client.query(

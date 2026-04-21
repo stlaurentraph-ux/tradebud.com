@@ -3028,6 +3028,78 @@ Append-only session log.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
 
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 53)
+- Focus: define execution-ready external partner data platform contract so third-party software can consume Tracebud data for reporting and analytics without direct database access.
+- Files changed: `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added FEAT-009 partner contract slice covering pull API, webhook push, and scheduled bulk export modes with explicit scope-based permissions, canonical sync transitions, deterministic retry/recovery semantics, immutable analytics evidence events, and v1.6 architecture gate applicability (GEOGRAPHY/ST_MakeValid, HLC ordering, O(1) lineage, TRACES chunk reconciliation, GDPR shredding safety).
+- Risks: This is a documentation contract slice only; backend endpoint implementation, OpenAPI path publication, and partner portal operational controls are not yet shipped in code.
+- Blockers: None.
+- Next step: implement backend `partner-data` endpoint skeletons and webhook delivery contracts, then publish OpenAPI and add controller/integration tests for tenant-scope + idempotency behavior.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 54)
+- Focus: ship first backend/API implementation slice for external partner reporting access with tenant-safe controller endpoints and OpenAPI publication.
+- Files changed: `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `GET /v1/partner-data/datasets` and `POST /v1/partner-data/exports` with fail-closed tenant claim checks, explicit role gates, strict scope/format/idempotency validation, and immutable audit evidence events (`partner_dataset_requested`, `partner_dataset_exported`); published matching OpenAPI contracts and wired controller into integrations module.
+- Risks: Export endpoint currently queues/audits intent only (no external object storage dispatch or webhook delivery worker yet); replay suppression is contracted through required idempotency key but not yet backed by persistent idempotency store.
+- Blockers: None.
+- Next step: add DB-backed idempotency ledger + replay behavior (`replayed=true`) and implement export artifact retrieval/status endpoints for partner pull workflows.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 55)
+- Focus: harden partner export API with persistent idempotency replay and retrieval surfaces for status/download workflows.
+- Files changed: `tracebud-backend/sql/tb_v16_018_partner_data_exports.sql`, `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added migration-backed `integration_partner_exports` table with tenant+idempotency uniqueness and status/state constraints; upgraded export start endpoint to return deterministic replay outcomes from persisted rows; added `GET /v1/partner-data/exports/{id}` and `GET /v1/partner-data/exports/{id}/download` with tenant+role fail-closed policy and completed-only artifact URL semantics.
+- Risks: Download response currently returns stored artifact URL contract only; signed URL generation/rotation and worker-driven export completion remain pending implementation slices.
+- Blockers: None.
+- Next step: add DB-backed controller integration coverage with migration-applied test schema and implement worker path that transitions `queued -> completed|failed` while appending `partner_webhook_*` delivery lifecycle events.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 56)
+- Focus: implement worker-style export completion transition and validate it with DB-backed integration tests.
+- Files changed: `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.int.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `POST /v1/partner-data/exports/{id}/finalize` for canonical queued-to-terminal transitions (`completed|failed`) with role-scope enforcement; added immutable telemetry events (`partner_webhook_delivered`, `partner_webhook_terminal_failed`) and replay telemetry (`partner_sync_replayed`) on duplicate idempotency starts.
+- Risks: Finalize endpoint currently performs direct state updates from API calls; background worker orchestration, retry backoff, and dead-letter handling are not yet modeled as separate runtime components.
+- Blockers: None.
+- Next step: add queue metadata (`attempt_count`, `next_retry_at`, `error_code`) to partner export persistence and introduce retry/release endpoints mirroring existing V2 run-operability patterns.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 57)
+- Focus: implement partner-export retry queue operability with persisted retry metadata and deterministic retry endpoint behavior.
+- Files changed: `tracebud-backend/sql/tb_v16_019_partner_data_export_retry_queue.sql`, `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.int.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added retry metadata columns/index (`attempt_count`, `error_code`, `next_retry_at`), retry queue read endpoint (`GET /v1/partner-data/exports/retry-queue`), and failed-export retry endpoint (`POST /v1/partner-data/exports/{id}/retry`) with role+tenant fail-closed guards and re-queue semantics.
+- Risks: Retry backoff policy is currently fixed at a single computed window on failure finalize; dynamic exponential policy and retry-cap exhaustion telemetry are not yet implemented for partner exports.
+- Blockers: None.
+- Next step: add retry-cap + exponential backoff policy (`maxAttempts`, bounded next-retry growth) and expose compact retry summary diagnostics for operator runbooks.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 58)
+- Focus: introduce deterministic retry-cap policy and compact retry summary diagnostics for partner export operations.
+- Files changed: `tracebud-backend/sql/tb_v16_020_partner_data_export_retry_policy.sql`, `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.int.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added max-attempt retry policy (`5`) with bounded exponential backoff on failed finalize, exhaustion marker persistence (`retry_exhausted_at`), retry-cap guard on retry action, and new retry diagnostics surface (`GET /v1/partner-data/exports/retry-summary`).
+- Risks: Retry scheduling is still API-driven and not yet delegated to a dedicated queue worker/cron trigger lane for autonomous processing.
+- Blockers: None.
+- Next step: add scheduler trigger contract for due retry queue processing and append per-run execution telemetry (`retry sweep started/completed/failed`) for operator runbook evidence.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 59)
+- Focus: add scheduler-safe retry sweep trigger for due partner export retries with immutable sweep telemetry.
+- Files changed: `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.int.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `POST /v1/partner-data/exports/retry-sweep/trigger` with scheduler token contract and bounded queue scan/retry behavior; added sweep telemetry event `partner_retry_sweep_executed` and response summary fields for deterministic runbook evidence.
+- Risks: Sweep trigger currently uses query token contract (`schedulerToken`) and API-invoked execution; migration to header-based scheduler auth and cron ownership workflow remains a follow-up hardening option.
+- Blockers: None.
+- Next step: add sweep failure taxonomy (`started/completed/failed`) with per-run execution IDs and optional stale-claim style rollup fields in retry summary.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 60)
+- Focus: add explicit retry-sweep lifecycle taxonomy and expose latest sweep rollups in retry diagnostics.
+- Files changed: `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Retry sweep now emits lifecycle events (`started/completed/failed`) with deterministic `sweepExecutionId`; retry summary now includes `lastSweepRun` payload (execution id, status, scanned/retried counts, failure context) for operator runbook visibility.
+- Risks: Sweep lifecycle events currently share `audit_log` without dedicated retention partitioning; high-volume production rollouts may require event partition or archive policy to keep query costs predictable.
+- Blockers: None.
+- Next step: add summary counters for sweep success/failure trend windows (`24h`, `7d`) and optional scheduler token version rollup for cross-environment diagnostics.
+
+### 2026-04-21 (execution: FEAT-009 S1 post-closeout hardening slice 61)
+- Focus: harden scheduler trigger auth contract and surface scheduler token-version rollups in sweep diagnostics.
+- Files changed: `tracebud-backend/src/integrations/partner-data.controller.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.int.spec.ts`, `docs/openapi/tracebud-v1-draft.yaml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: migrated sweep auth token from query parameter to required header (`x-tracebud-scheduler-token`), and propagated `PARTNER_EXPORT_RETRY_SWEEP_TOKEN_VERSION` through sweep lifecycle telemetry, trigger response, and retry-summary `lastSweepRun` rollups.
+- Risks: Header/token contract is now explicit but still env-driven; managed secret rotation automation and token-version policy enforcement cadence remain operational follow-up tasks.
+- Blockers: None.
+- Next step: add `24h/7d` sweep trend counters (started/completed/failed) into retry summary for higher-level operator reliability tracking.
+
 ### 2026-04-16 (execution: FEAT-004 compliance-section backend parity)
 - Focus: remove remaining static compliance checks/evidence rows from package compliance workflow path.
 - Files changed: `apps/dashboard-product/app/api/harvest/packages/[id]/route.ts`, `apps/dashboard-product/app/api/harvest/packages/[id]/route.test.ts`, `apps/dashboard-product/lib/use-package-detail.ts`, `apps/dashboard-product/app/compliance/page.tsx`, `apps/dashboard-product/app/compliance/page.test.tsx`, `product-os/02-features/FEAT-004-eudr-rules-engine.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

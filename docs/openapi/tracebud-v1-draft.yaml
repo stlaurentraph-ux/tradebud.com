@@ -2777,6 +2777,556 @@ paths:
           description: Missing tenant claim or role policy violation
         "404":
           $ref: "#/components/responses/BadRequest"
+  /v1/partner-data/datasets:
+    get:
+      tags: [Integrations]
+      operationId: listPartnerDatasets
+      summary: List external partner datasets
+      description: Returns tenant-scoped dataset inventory for external reporting and analytics partners by explicit scope.
+      parameters:
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [read:lineage, read:compliance, read:risk, read:shipments]
+      responses:
+        "200":
+          description: Dataset list by requested scope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tenantId
+                  - scope
+                  - datasets
+                  - state
+                properties:
+                  tenantId:
+                    type: string
+                  scope:
+                    type: string
+                    enum: [read:lineage, read:compliance, read:risk, read:shipments]
+                  datasets:
+                    type: array
+                    items:
+                      type: string
+                  state:
+                    type: string
+                    enum: [partner_connection_active]
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports:
+    post:
+      tags: [Integrations]
+      operationId: startPartnerDatasetExport
+      summary: Start partner dataset export
+      description: Queues a tenant-safe export job for external analytics/reporting systems with explicit idempotency key and immutable audit evidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scope
+                - dataset
+                - format
+                - idempotencyKey
+              properties:
+                scope:
+                  type: string
+                  enum: [read:lineage, read:compliance, read:risk, read:shipments]
+                dataset:
+                  type: string
+                format:
+                  type: string
+                  enum: [csv, parquet]
+                idempotencyKey:
+                  type: string
+                cursor:
+                  type: string
+      responses:
+        "200":
+          description: Export queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - exportId
+                  - status
+                  - state
+                  - dataset
+                  - format
+                  - idempotencyKey
+                  - replayed
+                  - attemptCount
+                  - errorCode
+                  - nextRetryAt
+                  - retryExhaustedAt
+                  - createdAt
+                  - updatedAt
+                properties:
+                  exportId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued]
+                  state:
+                    type: string
+                    enum: [partner_sync_pending]
+                  dataset:
+                    type: string
+                  format:
+                    type: string
+                    enum: [csv, parquet]
+                  idempotencyKey:
+                    type: string
+                  cursor:
+                    type: string
+                    nullable: true
+                  replayed:
+                    type: boolean
+                  attemptCount:
+                    type: integer
+                  errorCode:
+                    type: string
+                    nullable: true
+                  nextRetryAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  retryExhaustedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/{id}:
+    get:
+      tags: [Integrations]
+      operationId: getPartnerDatasetExportStatus
+      summary: Get partner dataset export status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Export status payload
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - exportId
+                  - status
+                  - state
+                  - dataset
+                  - format
+                  - idempotencyKey
+                  - replayed
+                  - attemptCount
+                  - errorCode
+                  - nextRetryAt
+                  - retryExhaustedAt
+                  - createdAt
+                  - updatedAt
+                properties:
+                  exportId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued, completed, failed]
+                  state:
+                    type: string
+                    enum: [partner_sync_pending, partner_sync_succeeded, partner_sync_terminal_failed]
+                  dataset:
+                    type: string
+                  format:
+                    type: string
+                    enum: [csv, parquet]
+                  idempotencyKey:
+                    type: string
+                  cursor:
+                    type: string
+                    nullable: true
+                  replayed:
+                    type: boolean
+                  attemptCount:
+                    type: integer
+                  errorCode:
+                    type: string
+                    nullable: true
+                  nextRetryAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  retryExhaustedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/{id}/download:
+    get:
+      tags: [Integrations]
+      operationId: getPartnerDatasetExportDownload
+      summary: Get partner dataset export download URL
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Download URL for completed export
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - exportId
+                  - status
+                  - dataset
+                  - format
+                  - downloadUrl
+                  - expiresInSeconds
+                properties:
+                  exportId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [completed]
+                  dataset:
+                    type: string
+                  format:
+                    type: string
+                    enum: [csv, parquet]
+                  downloadUrl:
+                    type: string
+                    format: uri
+                  expiresInSeconds:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/{id}/finalize:
+    post:
+      tags: [Integrations]
+      operationId: finalizePartnerDatasetExport
+      summary: Finalize partner dataset export outcome
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome:
+                  type: string
+                  enum: [completed, failed]
+                artifactUrl:
+                  type: string
+                  format: uri
+                errorCode:
+                  type: string
+      responses:
+        "200":
+          description: Export finalized
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - exportId
+                  - status
+                  - state
+                  - dataset
+                  - format
+                  - idempotencyKey
+                  - replayed
+                  - attemptCount
+                  - errorCode
+                  - nextRetryAt
+                  - retryExhaustedAt
+                  - createdAt
+                  - updatedAt
+                properties:
+                  exportId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [completed, failed]
+                  state:
+                    type: string
+                    enum: [partner_sync_succeeded, partner_sync_terminal_failed]
+                  dataset:
+                    type: string
+                  format:
+                    type: string
+                    enum: [csv, parquet]
+                  idempotencyKey:
+                    type: string
+                  cursor:
+                    type: string
+                    nullable: true
+                  replayed:
+                    type: boolean
+                  attemptCount:
+                    type: integer
+                  errorCode:
+                    type: string
+                    nullable: true
+                  nextRetryAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  retryExhaustedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/retry-queue:
+    get:
+      tags: [Integrations]
+      operationId: listPartnerDatasetExportRetryQueue
+      summary: List partner export retry queue
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: Due retry queue entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tenantId, limit, items]
+                properties:
+                  tenantId:
+                    type: string
+                  limit:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/{id}/retry:
+    post:
+      tags: [Integrations]
+      operationId: retryPartnerDatasetExport
+      summary: Retry failed partner export
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Failed export re-queued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exportId, status, state, attemptCount]
+                properties:
+                  exportId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [queued]
+                  state:
+                    type: string
+                    enum: [partner_sync_pending]
+                  attemptCount:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/retry-summary:
+    get:
+      tags: [Integrations]
+      operationId: getPartnerDatasetExportRetrySummary
+      summary: Get partner export retry summary
+      responses:
+        "200":
+          description: Retry summary diagnostics
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tenantId
+                  - maxAttempts
+                  - dueRetryCount
+                  - failedCount
+                  - exhaustedCount
+                  - latestRetryActivity
+                  - lastSweepRun
+                properties:
+                  tenantId:
+                    type: string
+                  maxAttempts:
+                    type: integer
+                  dueRetryCount:
+                    type: integer
+                  failedCount:
+                    type: integer
+                  exhaustedCount:
+                    type: integer
+                  latestRetryActivity:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                  lastSweepRun:
+                    type: object
+                    nullable: true
+                    properties:
+                      at:
+                        type: string
+                        format: date-time
+                      eventType:
+                        type: string
+                      sweepExecutionId:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        nullable: true
+                      scannedCount:
+                        type: integer
+                      retriedCount:
+                        type: integer
+                      schedulerTokenVersion:
+                        type: string
+                        nullable: true
+                      errorMessage:
+                        type: string
+                        nullable: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/partner-data/exports/retry-sweep/trigger:
+    post:
+      tags: [Integrations]
+      operationId: triggerPartnerDatasetExportRetrySweep
+      summary: Trigger partner export retry sweep
+      parameters:
+        - name: x-tracebud-scheduler-token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 200
+      responses:
+        "200":
+          description: Sweep executed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tenantId
+                  - schedulerContract
+                  - sweepExecutionId
+                  - status
+                  - scannedCount
+                  - retriedCount
+                  - retriedExportIds
+                  - limit
+                properties:
+                  tenantId:
+                    type: string
+                  schedulerContract:
+                    type: boolean
+                  sweepExecutionId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [completed]
+                  schedulerTokenVersion:
+                    type: string
+                    nullable: true
+                  scannedCount:
+                    type: integer
+                  retriedCount:
+                    type: integer
+                  retriedExportIds:
+                    type: array
+                    items:
+                      type: string
+                  limit:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Invalid scheduler token or policy violation
   /v1/integrations/eudr/echo:
     get:
       tags: [Integrations]
