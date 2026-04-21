@@ -250,18 +250,55 @@ export class InboxService {
       }
     }
     if (!(await this.waitForTable(client, 'inbox_request_events'))) {
-      await client.query(
-        `
-        CREATE TABLE IF NOT EXISTS inbox_request_events (
-          id BIGSERIAL PRIMARY KEY,
-          request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
-          event_type TEXT NOT NULL,
-          actor_tenant_id TEXT NULL,
-          payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `,
-      );
+      try {
+        await client.query(
+          `
+          CREATE TABLE IF NOT EXISTS inbox_request_events (
+            id BIGSERIAL PRIMARY KEY,
+            request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            actor_tenant_id TEXT NULL,
+            payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `,
+        );
+      } catch (error) {
+        // During concurrent create/drop races, the FK target may momentarily be missing.
+        if ((error as { code?: string } | null)?.code === '42P01') {
+          await client.query(
+            `
+            CREATE TABLE IF NOT EXISTS inbox_requests (
+              id TEXT PRIMARY KEY,
+              campaign_id TEXT NOT NULL,
+              title TEXT NOT NULL,
+              request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
+              due_at TIMESTAMPTZ NOT NULL,
+              from_org TEXT NOT NULL,
+              sender_tenant_id TEXT NOT NULL,
+              recipient_tenant_id TEXT NOT NULL,
+              status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
+              created_at TIMESTAMPTZ NOT NULL,
+              updated_at TIMESTAMPTZ NOT NULL
+            )
+          `,
+          );
+          await client.query(
+            `
+            CREATE TABLE IF NOT EXISTS inbox_request_events (
+              id BIGSERIAL PRIMARY KEY,
+              request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+              event_type TEXT NOT NULL,
+              actor_tenant_id TEXT NULL,
+              payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+          `,
+          );
+        } else if (!this.isRetriableDdlCollision(error)) {
+          throw error;
+        }
+      }
       await this.waitForTable(client, 'inbox_request_events');
     }
 

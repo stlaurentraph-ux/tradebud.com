@@ -8,7 +8,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_audit_risk_scores_api_int_test';
+const schema = `tb_audit_risk_scores_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string) {
   const url = new URL(connectionString);
@@ -59,17 +59,6 @@ describeIfDb('Audit risk-score API integration: phase/band filters', () => {
         payload JSONB NOT NULL DEFAULT '{}'::jsonb
       )
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.audit_log (
-        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        user_id UUID NULL,
-        device_id TEXT NULL,
-        event_type TEXT NOT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb
-      )
-    `);
-
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
       providers: [{ provide: PG_POOL, useValue: pool }],
@@ -89,9 +78,10 @@ describeIfDb('Audit risk-score API integration: phase/band filters', () => {
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(
       `
-        DELETE FROM audit_log
+        DELETE FROM ${schema}.audit_log
         WHERE event_type IN (
           'dds_package_risk_score_requested',
           'dds_package_risk_score_evaluated',
@@ -112,7 +102,7 @@ describeIfDb('Audit risk-score API integration: phase/band filters', () => {
   it('applies combined phase/band filters through HTTP pipeline', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '11111111-1111-1111-1111-111111111111'::uuid,
@@ -158,7 +148,7 @@ describeIfDb('Audit risk-score API integration: phase/band filters', () => {
   it('exports filtered risk-score activity as csv with metadata headers', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '11111111-1111-1111-1111-111111111111'::uuid,
