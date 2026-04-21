@@ -10,11 +10,14 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_controller_scope_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, _targetSchema: string) {
-  return connectionString;
+function withSearchPath(connectionString: string, targetSchema: string) {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
+  return `${connectionString}${separator}options=${options}`;
 }
 
 describeIfDb('Controller scope integration: farmer ownership enforcement', () => {
+  jest.setTimeout(60_000);
   let pool: Pool;
   let harvestService: HarvestService;
   let plotsService: PlotsService;
