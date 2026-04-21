@@ -302,6 +302,7 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Role Decisions',
     'Reports',
     'Audit Log',
+    'Integrations',
     'Admin',
   ],
   importer: [
@@ -345,6 +346,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Role Decisions', href: '/role-decisions', icon: 'Scale', permission: 'roles:view_decisions', mvp: true },
   { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view', mvp: true },
   { name: 'Audit Log', href: '/audit-log', icon: 'History', permission: 'audit:view', mvp: true },
+  { name: 'Integrations', href: '/integrations', icon: 'Zap', permission: 'admin:view', mvp: true },
   { name: 'Admin', href: '/admin', icon: 'Shield', permission: 'admin:view', mvp: true },
 ];
 

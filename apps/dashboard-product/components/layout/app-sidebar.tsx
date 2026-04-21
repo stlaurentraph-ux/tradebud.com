@@ -23,6 +23,7 @@ import {
   Scale,
   Building2,
   Check,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   History,
   Send,
   Scale,
+  Zap,
 };
 
 interface Tenant {
@@ -110,6 +112,8 @@ export function AppSidebar() {
   const navItems = getVisibleNavItems(user);
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
   const hasMultipleRoles = user && user.roles.length > 1;
+
+  console.log('[v0] navItems:', navItems.map(i => i.name));
 
   const activeTenant =
     demoTenants.find((tenant) => tenant.tenant_id === user?.tenant_id) ??
