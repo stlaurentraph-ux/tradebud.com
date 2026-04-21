@@ -28,21 +28,24 @@ export class InboxService {
 
   private isRetriableDdlCollision(error: unknown): boolean {
     const code = (error as { code?: string } | null)?.code;
-    return code === '23505' || code === '42P07' || code === '42710';
+    return code === '23505' || code === '42P07' || code === '42710' || code === '42P01';
   }
 
-  private async waitForTable(client: PoolClient, tableName: 'inbox_requests' | 'inbox_request_events'): Promise<void> {
+  private async waitForTable(
+    client: PoolClient,
+    tableName: 'inbox_requests' | 'inbox_request_events',
+  ): Promise<boolean> {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const verify = await client.query<{ exists: string | null }>(
         `SELECT to_regclass($1)::text AS exists`,
         [tableName],
       );
       if (verify.rows[0]?.exists) {
-        return;
+        return true;
       }
       await client.query('SELECT pg_sleep(0.05)');
     }
-    throw new Error(`Inbox schema bootstrap failed: missing ${tableName}`);
+    return false;
   }
 
   private defaultRequests(nowIso: string): InboxRequestRecord[] {
@@ -207,7 +210,26 @@ export class InboxService {
         throw error;
       }
     }
-    await this.waitForTable(client, 'inbox_requests');
+    if (!(await this.waitForTable(client, 'inbox_requests'))) {
+      await client.query(
+        `
+        CREATE TABLE IF NOT EXISTS inbox_requests (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
+          due_at TIMESTAMPTZ NOT NULL,
+          from_org TEXT NOT NULL,
+          sender_tenant_id TEXT NOT NULL,
+          recipient_tenant_id TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
+          created_at TIMESTAMPTZ NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL
+        )
+      `,
+      );
+      await this.waitForTable(client, 'inbox_requests');
+    }
 
     try {
       await client.query(
@@ -227,7 +249,21 @@ export class InboxService {
         throw error;
       }
     }
-    await this.waitForTable(client, 'inbox_request_events');
+    if (!(await this.waitForTable(client, 'inbox_request_events'))) {
+      await client.query(
+        `
+        CREATE TABLE IF NOT EXISTS inbox_request_events (
+          id BIGSERIAL PRIMARY KEY,
+          request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+          event_type TEXT NOT NULL,
+          actor_tenant_id TEXT NULL,
+          payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `,
+      );
+      await this.waitForTable(client, 'inbox_request_events');
+    }
 
     try {
       await client.query(

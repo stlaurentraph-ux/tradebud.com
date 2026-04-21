@@ -1305,6 +1305,45 @@ Verification commands:
 - `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/partner-data.controller.int.spec.ts`
 - `npm run openapi:lint`
 
+### S1 post-closeout hardening slice 62 - assessment request workflow backbone (dashboard -> farmer)
+
+- Added new tenant-scoped assessment request contract for SAI + Cool Farm workflow handoff:
+  - `POST /v1/integrations/assessments/requests` (dashboard sends farmer request)
+  - `GET /v1/integrations/assessments/requests` (dashboard list + farmer assigned feed)
+  - status transitions for field execution and review lifecycle (`sent/opened/in_progress/submitted/reviewed/needs_changes/cancelled`).
+- Added dedicated persistence migration:
+  - `TB-V16-021` creating `integration_assessment_requests` with pathway, assignment, due date, metadata, and tenant/farmer indexes.
+- Added immutable telemetry events for critical lifecycle checkpoints:
+  - `integration_assessment_request_sent`
+  - `integration_assessment_request_status_updated`.
+- Added unit regression coverage for role guards, create/list flow, and status validation.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
+
+### S1 post-closeout hardening slice 63 - assessment workflow UI wiring (dashboard + offline app)
+
+- Wired dashboard request operations to live backend assessment contract:
+  - added proxy routes:
+    - `GET/POST /api/integrations/assessments/requests`
+    - `PATCH /api/integrations/assessments/requests/:id/status`
+  - updated dashboard requests page with a dedicated assessment section:
+    - send assessment request to farmer (`title`, `pathway`, `farmerUserId`, `dueAt`, `instructions`)
+    - list recent requests with status chips
+    - manager review actions (`submitted -> reviewed | needs_changes`).
+- Wired offline app farmer task feed to assessment request lifecycle:
+  - added mobile API helpers for assigned requests + status transitions.
+  - home tab now surfaces `Assessment Tasks` card with next-step action buttons:
+    - `sent -> opened`
+    - `opened|needs_changes -> in_progress`
+    - `in_progress -> submitted`.
+- Preserved tenant isolation and explicit role/status transition boundaries through backend contract reuse (no local bypass flow).
+
+Verification commands:
+
+- `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
