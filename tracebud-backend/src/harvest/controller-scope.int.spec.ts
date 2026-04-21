@@ -84,6 +84,16 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
         payload JSONB NOT NULL DEFAULT '{}'::jsonb
       )
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dds_package (
+        id UUID PRIMARY KEY,
+        farmer_id UUID NOT NULL REFERENCES farmer_profile(id),
+        label TEXT NULL,
+        status TEXT NOT NULL DEFAULT 'draft',
+        traces_reference TEXT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
 
     harvestService = new HarvestService(pool);
     plotsService = new PlotsService(pool, {} as any);
@@ -97,6 +107,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   beforeEach(async () => {
+    await pool.query('DELETE FROM dds_package');
     await pool.query('DELETE FROM agent_plot_assignment');
     await pool.query('DELETE FROM plot');
     await pool.query('DELETE FROM audit_log');

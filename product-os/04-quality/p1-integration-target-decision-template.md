@@ -123,6 +123,29 @@ Draft prefill status: `locked_for_execution` (evidence-linked in FEAT-009 + BLK-
 - Security guardrail:
   - Never use `NEXT_PUBLIC_*` for EUDR secrets.
 
+### Scheduler token contract and rotation checklist (V2 integration sweeper)
+
+- Scheduler trigger endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger`
+- Required auth header:
+  - `x-tracebud-scheduler-token: <COOLFARM_SAI_V2_SCHEDULER_TOKEN>`
+- Required backend env:
+  - `COOLFARM_SAI_V2_SCHEDULER_TOKEN`
+- Rotation cadence:
+  - rotate every `90` days minimum or immediately on suspected leak.
+- Rotation one-pass procedure:
+  1. Generate new random token in secret manager.
+  2. Deploy backend with new token in target environment.
+  3. Update scheduler secret reference.
+  4. Run one scheduler trigger smoke check.
+  5. Revoke old token.
+- Evidence to capture after each rotation:
+  - rotation timestamp
+  - operator
+  - environment
+  - successful trigger response code
+  - rollback note (if any).
+
 ### TRACES/EUDR filing lifecycle endpoint mapping (provisional until Swagger extraction)
 
 - Base API prefix: `https://www.eudr-api.eu/api`

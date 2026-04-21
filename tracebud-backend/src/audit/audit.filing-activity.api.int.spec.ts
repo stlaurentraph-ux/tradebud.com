@@ -8,7 +8,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_audit_filing_activity_api_int_test';
+const schema = `tb_audit_filing_activity_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string) {
   const url = new URL(connectionString);

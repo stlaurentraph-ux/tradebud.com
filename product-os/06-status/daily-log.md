@@ -1,3 +1,235 @@
+### 2026-04-21 (execution: FEAT-005 benchmark-path runtime closure + yearly cadence lock)
+- Focus: close the live runtime gap between activated FAOSTAT benchmarks and harvest yield-cap enforcement, then finalize ops cadence.
+- Files changed: `tracebud-backend/src/harvest/harvest.service.ts`, `tracebud-backend/src/harvest/harvest.service.spec.ts`, `tracebud-backend/src/plots/plots.service.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added commodity alias resolution in harvest benchmark lookup (`coffee` <-> `656` / `coffee, green`) so activated FAOSTAT rows are used in live cap checks.
+  - Fixed plot insert path to persist `plot.geography` (`GEOGRAPHY`) and satisfy `plot_geography_present_check`.
+  - Executed live below/near/above harvest validations and confirmed benchmark-path audit evidence (`yield_cap_resolved`, non-null `benchmarkId`, `sourceType=FAOSTAT`).
+  - Locked FAOSTAT sync cadence to yearly, consistent with FAOSTAT annual publication cadence.
+- Verification:
+  - `npx jest src/harvest/harvest.service.spec.ts --runInBand` (pass)
+  - `npm test -- plots.service.spec.ts` (pass)
+  - live API checks: `POST /api/v1/plots`, `POST /api/v1/harvest` (below/near/above), audit-log verification query for yield-cap events.
+- Risks: one broad backend test command currently fails on pre-existing FEAT-009 Cool Farm V2 spec drift unrelated to FEAT-005 runtime fix; targeted FEAT-005/plots suites are green.
+- Blockers: none for FEAT-005 benchmark runtime path.
+- Next step: schedule yearly FAOSTAT sync runbook execution and optional integration-test coverage for live benchmark-path API flow.
+
+### 2026-04-21 (execution: FEAT-009 scheduler token auth contract for stale sweeper trigger)
+- Focus: secure scheduler-triggered stale sweeper path with explicit non-user token contract.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger` now requires header `x-tracebud-scheduler-token` and backend env `COOLFARM_SAI_V2_SCHEDULER_TOKEN`; missing env yields deterministic config error, invalid/missing token yields deterministic forbidden response.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 28 tests`).
+- Risks: low-medium; secure trigger contract is now in place, but production secret rotation and scheduler secret distribution still require deployment runbook alignment.
+- Blockers: none new.
+- Next step: add scheduler secret rotation checklist entry and optional hash-based token metadata telemetry (without logging raw secret).
+
+### 2026-04-21 (execution: FEAT-009 scheduler token rotation runbook documentation)
+- Focus: complete operations guidance for secure scheduler token lifecycle management.
+- Files changed: `product-os/04-quality/p1-integration-target-decision-template.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added scheduler token contract + rotation checklist (required header/env, 90-day cadence, one-pass rotation procedure, and evidence capture fields) for V2 stale-sweeper trigger operations.
+- Verification: docs-only update; no runtime behavior changes.
+- Risks: low; operational guidance update only.
+- Blockers: none new.
+- Next step: optionally add token-version telemetry field (non-secret) to scheduler sweeper execution payload for audit-friendly rotation traceability.
+
+### 2026-04-21 (execution: FEAT-009 DB-backed scheduler wrapper integration coverage)
+- Focus: validate scheduler wrapper auth and telemetry behavior against real DB tables rather than unit-only mocks.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.int.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added isolated-schema integration spec covering missing env token fail-closed, invalid scheduler token forbidden path, and successful scheduler execution with DB assertion for `integration_v2_stale_sweeper_executed` payload including scheduler token-version lineage.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.int.spec.ts` (pass, `1 suite / 3 tests`).
+- Risks: low; coverage-only slice with no runtime behavior change.
+- Blockers: none new.
+- Next step: expand DB-backed suite to claim/retry/release path assertions for full worker lifecycle integration proof.
+
+### 2026-04-21 (execution: release hygiene + FAOSTAT yearly ops automation + governance cleanup)
+- Focus: complete post-benchmark-slice hardening by validating full backend quality gates, automating yearly FAOSTAT workflow, and standardizing benchmark dimensions.
+- Files changed: `.github/workflows/faostat-yearly-sync-dry-run.yml`, `tracebud-backend/scripts/run-faostat-yearly-sync.mjs`, `tracebud-backend/scripts/cleanup-yield-cap-fixtures.mjs`, `tracebud-backend/package.json`, `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/sql/tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/04-quality/faostat-yearly-sync-runbook.md`, `product-os/01-roadmap/next-milestone-decision-pack.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Ran backend full test matrix once (`unit + integration`) and recorded green baseline.
+  - Added yearly FAOSTAT dry-run automation (workflow + script) with explicit human review and dual-control activation runbook.
+  - Standardized benchmark keys toward canonical runtime format: commodity `coffee` and geography ISO-2 uppercase; added migration to backfill existing benchmark rows.
+  - Chose fixture hygiene strategy as scripted cleanup-by-default after QA runs (`npm run fixtures:yield-cap:cleanup`).
+  - Published next milestone decision pack with explicit FEAT-009 (integrations-first) vs FEAT-004 (compliance UX-first) fork.
+- Verification:
+  - `cd tracebud-backend && npm test` (pass)
+  - `cd tracebud-backend && npm run test:integration` (pass)
+- Risks:
+  - Yearly workflow depends on repository secrets (`TRACEBUD_API_BASE_URL`, `TRACEBUD_BENCHMARK_ADMIN_JWT`) and operational token rotation discipline.
+  - Geography canonicalization currently includes the active exporter-country mapping set; additional country mappings should be added as scope expands.
+- Blockers: none.
+- Next step: choose and lock the next milestone lane from decision pack, then start targeted implementation.
+
+### 2026-04-20 (execution: FEAT-009 V2 parallel execution pack for Cool Farm + SAI)
+- Focus: convert Cool Farm + SAI implementation planning into in-repo Product OS execution management (non-Jira) while preserving V1 boundaries.
+- Files changed: `product-os/01-roadmap/coolfarm-sai-v2-parallel-execution-pack.md`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: published a track-based execution pack with non-Jira backlog IDs (`TB-CFSAI-V2-*`), isolated persistence + feature-flag guardrails, shadow adapter strategy, pathway-first implementation ordering (`annuals`, `rice` first), and explicit readiness gates before any real provider enablement.
+- Verification: docs-only update; no runtime behavior changes.
+- Risks: low; planning/governance artifact only, implementation still pending.
+- Blockers: none new.
+- Next step: start `TB-CFSAI-V2-001..004` (schema, mapping register, transition model, flag policy) as first implementation slice.
+
+### 2026-04-20 (execution: FEAT-009 scheduler trigger wrapper + sweeper rollup summary fields)
+- Focus: provide a clean scheduler entrypoint and simplify sweeper result interpretation in summary output.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger` (scheduled wrapper), and `GET /v1/integrations/coolfarm-sai/v2/runs/summary` now includes `lastSweeperReleasedCount` + `lastSweeperTriggerSource` derived from latest sweeper rollup event.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 26 tests`).
+- Risks: low; scheduler wrapper is additive and reuses existing stale-release flow, but production cron/auth boundary policy still needs deployment-level setup.
+- Blockers: none new.
+- Next step: add optional endpoint auth token contract for non-user scheduler invocations if required by deployment architecture.
+
+### 2026-04-20 (execution: FEAT-009 V2 scheduled sweeper trigger contract + last-run metadata)
+- Focus: make stale-claim sweeper schedule-friendly and expose last sweeper execution context in diagnostics.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: stale sweeper now accepts `triggerSource` (`manual|scheduled`) and always emits execution rollup event `integration_v2_stale_sweeper_executed`; run summary now includes `lastSweeperRun` payload for operator context on latest cleanup execution.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 25 tests`).
+- Risks: low-medium; contract is schedule-ready but actual cron runner wiring/deployment policy remains environment-level configuration work.
+- Blockers: none new.
+- Next step: wire a real scheduled trigger job and add summary fields for last sweeper release count + trigger source breakdown trends.
+
+### 2026-04-20 (execution: FEAT-009 V2 stale-claim sweeper + summary stale counter)
+- Focus: automate stale-claim cleanup and expose stuck-claim visibility in run diagnostics summary.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale` with `staleMinutes` + `limit` controls and per-run `integration_v2_run_stale_released` telemetry; `GET /v1/integrations/coolfarm-sai/v2/runs/summary` now returns `staleClaimCount`.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 24 tests`).
+- Risks: low-medium; sweeper endpoint is manual/triggered and would benefit from scheduled cron orchestration and environment-specific thresholds.
+- Blockers: none new.
+- Next step: wire sweeper into scheduled job path and include last-sweeper-run metadata in summary endpoint for operator context.
+
+### 2026-04-20 (execution: FEAT-009 V2 claim release endpoint)
+- Focus: add safe claim-release handling so orphaned or stale claims can be returned to queue processing.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/release`; releases are owner-only by default and support `force=true` for stale claims held by other actors; added immutable release event `integration_v2_run_released` with forced/reason context.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 22 tests`).
+- Risks: low-medium; claim-release now handles stale lock recovery, but automatic stale-claim timeout scanning is still manual/endpoint-driven.
+- Blockers: none new.
+- Next step: add scheduled stale-claim sweeper policy (release claims older than threshold) and expose stale-claim diagnostics counter in run summary.
+
+### 2026-04-20 (execution: FEAT-009 V2 run claim locking)
+- Focus: prevent duplicate worker processing by introducing explicit run claim semantics.
+- Files changed: `tracebud-backend/sql/tb_v16_016_coolfarm_sai_v2_run_claim_lock.sql`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added claim metadata (`claimed_by_user_id`, `claimed_at`) and `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/claim`; claims are allowed only for tenant-scoped due failed unclaimed runs; retry queue now excludes claimed rows; immutable claim event `integration_v2_run_claimed` added for lineage.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 19 tests`).
+- Risks: low-medium; claim lock now prevents duplicate processing at app level, but row-level transactional claim/execute bundling is still recommended for distributed multi-worker race hardening.
+- Blockers: none new.
+- Next step: add claim timeout/release endpoint (`/runs/{runId}/release`) for orphaned claims when worker crashes mid-processing.
+
+### 2026-04-20 (execution: FEAT-009 V2 retry queue scan endpoint)
+- Focus: expose worker-friendly polling surface for runs that are due for retry.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `GET /v1/integrations/coolfarm-sai/v2/runs/retry-queue` to return tenant-scoped due retries (`status='failed'` and `next_retry_at<=now`) with deterministic ordering and limit guardrails (`default=50`, range `1..200`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 17 tests`).
+- Risks: low-medium; polling endpoint is in place but queue worker execution coordination (claim/lock semantics) is still pending for concurrent processors.
+- Blockers: none new.
+- Next step: add run-claim endpoint (`claimed_by`, `claimed_at`) to prevent duplicate worker processing under parallel pollers.
+
+### 2026-04-20 (execution: FEAT-009 V2 retry backoff + max-attempt guardrail)
+- Focus: make retry behavior safer and more realistic by adding scheduling metadata and retry exhaustion limits.
+- Files changed: `tracebud-backend/sql/tb_v16_015_coolfarm_sai_v2_retry_backoff.sql`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `next_retry_at` column/index; retry now computes exponential backoff (`2^(attempt-1)` minutes, capped at `60`), enforces `maxRetryAttempts=5`, emits `integration_v2_run_retry_exhausted` when cap reached, and returns deterministic cap error.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 15 tests`).
+- Risks: medium; backoff is calculated in controller path and should later move into dedicated queue worker/scheduler for distributed execution consistency.
+- Blockers: none new.
+- Next step: add admin endpoint for retry queue scan (`next_retry_at <= now`) and lock max-attempt policy into config/env contract.
+
+### 2026-04-20 (execution: FEAT-009 V2 run retry lifecycle endpoint)
+- Focus: add deterministic retry execution path for failed V2 runs with auditable attempt lineage.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/retry`; retries are allowed only for failed runs, increment `attempt_count`, refresh queue metadata, and finalize with deterministic `completed|failed` status plus retry lineage events (`integration_v2_run_retry_completed|integration_v2_run_retry_failed`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 14 tests`).
+- Risks: medium; retry is synchronous and still relies on simulated execution semantics rather than true asynchronous worker scheduling/backoff policy.
+- Blockers: none new.
+- Next step: add backoff metadata (`next_retry_at`) and max-attempt guardrail policy for fail-safe retry exhaustion behavior.
+
+### 2026-04-20 (execution: FEAT-009 V2 queue metadata + run summary diagnostics)
+- Focus: make V2 runs operationally monitorable with queue metadata and a compact tenant summary surface.
+- Files changed: `tracebud-backend/sql/tb_v16_014_coolfarm_sai_v2_run_queue_metadata.sql`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added queue metadata columns (`queued_at`, `attempt_count`, `error_code`) and status index on `integration_runs_v2`; run execution now writes these fields and failed runs set deterministic code (`V2_SHADOW_RUN_FAILED`); added `GET /v1/integrations/coolfarm-sai/v2/runs/summary` returning tenant-scoped status counts plus latest run pointer.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 12 tests`).
+- Risks: medium; queue metadata is now available but a real async worker/queue orchestrator is still needed for production-grade throughput and retries.
+- Blockers: none new.
+- Next step: add explicit retry endpoint that increments `attempt_count` and records retry audit lineage before rerun.
+
+### 2026-04-20 (execution: FEAT-009 V2 run failure semantics + run-history API)
+- Focus: complete V2 run lifecycle semantics by adding explicit failure outcomes and run diagnostics read surface.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs` for `validation|scoring` execution with deterministic `completed|failed` finalization in `integration_runs_v2`, plus `GET /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs` diagnostics read path and immutable outcome events (`integration_v2_run_completed|integration_v2_run_failed`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 11 tests`).
+- Risks: medium; run execution is currently synchronous/simulated and should be replaced by queue-backed worker execution for production-scale scoring complexity.
+- Blockers: none new.
+- Next step: add async worker contract + run polling fields (`queued_at`, `attempt_count`, `error_code`) and expose run status summaries for admin/operator surfaces.
+
+### 2026-04-20 (execution: FEAT-009 V2 submit transition + run lifecycle persistence)
+- Focus: implement canonical `draft->submitted` transition with auditable run lifecycle evidence for V2 shadow flow.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/submit` with tenant/role fail-closed policy, transition guard (`draft` required), `integration_runs_v2` validation lifecycle persistence (`started` then `completed`), and submit audit event (`integration_v2_questionnaire_submitted`) linked to `runId`.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 8 tests`).
+- Risks: medium; submit flow currently performs lightweight lifecycle completion in-process and does not yet enqueue async validator/scorer workers for non-trivial workloads.
+- Blockers: none new.
+- Next step: add explicit validation/scoring worker trigger contract and represent failure path with `integration_runs_v2.status=failed` when validator rejects payload.
+
+### 2026-04-20 (execution: FEAT-009 V2 isolated persistence + draft save API)
+- Focus: implement first real V2 write-path with isolated tables and replay-safe draft persistence.
+- Files changed: `tracebud-backend/sql/tb_v16_013_coolfarm_sai_v2_questionnaire.sql`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added isolated V2 tables (`integration_questionnaire_v2`, `integration_runs_v2`, `integration_evidence_v2`, `integration_audit_v2`) and `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts` endpoint with tenant fail-closed checks, role-scoped write policy, required `idempotencyKey`, `(tenant_id,idempotency_key)` upsert semantics, and audit event persistence (`integration_v2_questionnaire_draft_saved`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 6 tests`).
+- Risks: medium; migration must be applied in target environments before write path can execute, and current API does not yet expose submit/validate/score transitions.
+- Blockers: none new.
+- Next step: implement `submit` transition endpoint and `integration_runs_v2` lifecycle writes (`started/completed/failed`) for validation/scoring shadow jobs.
+
+### 2026-04-20 (execution: FEAT-009 V2 mapping registry + required-field coverage guard)
+- Focus: implement executable field mapping contract from questionnaire to Cool Farm + SAI for V2 shadow lane.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.schema.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: endpoint now returns `mappingRegistry` (`farmQuestionnaireMappingV1`) with explicit `sectionId.fieldId -> coolfarmPath + saiIndicators[]` entries and pathway-specific rice mapping; added required-field mapping coverage validation to fail fast if any required question is missing a mapping entry.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 4 tests`).
+- Risks: low-medium; SAI indicator set is initial scaffold taxonomy and will need product/compliance refinement before scoring policy lock.
+- Blockers: none new.
+- Next step: implement `TB-CFSAI-V2-010` SQL migration for isolated questionnaire/run/evidence/audit tables and add save-draft API contract.
+
+### 2026-04-20 (execution: FEAT-009 V2 Cool Farm + SAI schema bootstrap API)
+- Focus: start executable V2 development with a tenant-safe, versioned questionnaire contract endpoint in shadow mode.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.schema.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `GET /v1/integrations/coolfarm-sai/v2/questionnaire-schema` with tenant fail-closed policy and role-scoped access (`exporter|agent|admin|compliance_manager`); endpoint returns versioned `farmQuestionnaireV1` (`0.1.0-draft`) schema for `annuals`/`rice`, canonical transition model (`draft->submitted->validated->scored->reviewed`), data-quality baseline (`actual|estimated|defaulted`), and rollout metadata (`coolfarm_sai_v2_enabled`, `off`, `shadow`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 4 tests`).
+- Risks: low-medium; schema currently bootstrap-level and intentionally narrow (`annuals`, `rice`) pending mapping-register and persistence slices.
+- Blockers: none new.
+- Next step: implement `TB-CFSAI-V2-002` mapping registry artifact and `TB-CFSAI-V2-010` isolated SQL persistence tables.
+
+### 2026-04-20 (execution: FEAT-005 direct FAOSTAT authenticated fetch fallback)
+- Focus: make FAOSTAT source sync operational without requiring a separate adapter URL service.
+- Files changed: `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `FAOSTAT` sync now uses adapter URL mode when `YIELD_BENCHMARKS_FAOSTAT_URL` is configured, otherwise falls back to direct authenticated fetch (`x-api-key` from `YIELD_BENCHMARKS_FAOSTAT_API_KEY`) against default `https://faostatservices.fao.org/api/v1/en/data/QCL`; direct payload mapping now normalizes FAOSTAT `value` from hg/ha to kg/ha benchmark bounds before canonical draft import validation/upsert.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`; `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts` (pass, `2 suites / 26 tests`).
+- Risks: medium; direct FAOSTAT path depends on valid API key provisioning and upstream schema continuity.
+- Blockers: no new blockers introduced.
+- Next step: add OpenAPI contract entries for `import/sync-source` and `import-runs`, then run real FAOSTAT dry-run in environment with key configured.
+
+### 2026-04-20 (execution: FEAT-005 source-sync adapter boundary + import-run persistence)
+- Focus: continue Sprint 2 by introducing source-driven ingestion scaffolding and auditable import-run tracking.
+- Files changed: `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `tracebud-backend/sql/tb_v16_012_yield_benchmark_import_runs.sql`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/yield-benchmarks/import/sync-source` (`USDA_FAS`/`FAOSTAT`, optional commodity/geography filters, dry-run mode), `GET /v1/yield-benchmarks/import-runs` diagnostics read, and import-run persistence schema (`yield_benchmark_import_runs`) for `started/completed/failed` run lifecycle metadata.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`; `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts` (pass, `2 suites / 25 tests`).
+- Risks: medium; source-sync currently depends on external adapter endpoint shape/availability and does not yet include built-in scheduler/retry policy orchestration.
+- Blockers: no new blockers introduced.
+- Next step: add scheduled execution wrapper (cron-triggered sync jobs with bounded retries) and publish OpenAPI updates for new source-sync/import-run routes.
+
+### 2026-04-20 (execution: FEAT-005 benchmark import draft-upsert scaffold)
+- Focus: start Sprint 2 ingestion lane with a deterministic benchmark batch import write-path for inactive drafts.
+- Files changed: `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/src/integrations/yield-benchmarks.controller.spec.ts`, `tracebud-backend/src/harvest/harvest.service.spec.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `POST /v1/yield-benchmarks/import` for internal benchmark admins; row validation reuses canonical source/citation/numeric checks; import behavior is deterministic inactive-draft upsert (update matching draft by `(commodity, geography, source_type, source_reference)`, otherwise insert new draft); import lifecycle telemetry now records `yield_benchmark_import_started` and `yield_benchmark_import_completed`.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`; `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts` (pass, `2 suites / 23 tests`).
+- Risks: medium; import is currently request-driven/manual (no scheduler/source pull yet), and import matching relies on exact `source_reference` identity.
+- Blockers: no new blockers introduced.
+- Next step: add source-adapter pull + scheduled ingestion job wrapper (FAOSTAT/USDA lanes), plus explicit import-run report persistence for replay/debug workflows.
+
+### 2026-04-20 (execution: FEAT-005 benchmark-driven harvest yield-cap runtime enforcement)
+- Focus: replace hardcoded harvest yield cap with active benchmark-driven runtime resolution while preserving deterministic fail-closed behavior.
+- Files changed: `tracebud-backend/src/harvest/harvest.service.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: harvest create path now resolves cap from active `yield_benchmarks` using `commodity=coffee` + plot-linked geography (`farmer_profile.country_code`) with deterministic fallback chain (exact geography -> `GLOBAL` -> default `1500 kg/ha`); package risk-density cap check now uses the same resolver (`GLOBAL`-scoped).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts`; `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.controller.spec.ts` (pass, `2 suites / 26 tests`).
+- Risks: low-medium; resolver currently depends on available active benchmark data quality, but explicit fallback path keeps runtime deterministic under missing/invalid benchmark rows.
+- Blockers: no new blockers introduced.
+- Next step: wire tenant-aware commodity/geography benchmark selection into harvest/package contexts and add ingest-backed benchmark freshness controls to reduce fallback usage in production.
+
 ### 2026-04-20 (execution: remaining-execution scorecard blocked-vs-ready checkpoint refresh)
 - Focus: make handoff state explicit by separating closed in-repo lanes from external blockers.
 - Files changed: `product-os/06-status/remaining-execution-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.

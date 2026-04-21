@@ -9,7 +9,9 @@ import {
   DdsPackageEvidenceDocumentType,
 } from './dto/dds-package-evidence-document.dto';
 
-const YIELD_CAP_KG_PER_HA = 1500;
+const DEFAULT_YIELD_CAP_KG_PER_HA = 1500;
+const DEFAULT_YIELD_BENCHMARK_GEOGRAPHY = 'GLOBAL';
+const DEFAULT_YIELD_BENCHMARK_COMMODITY = 'coffee';
 
 export interface ReadinessIssue {
   code: string;
@@ -84,6 +86,13 @@ interface DdsPackageRiskScoreAuditContext {
   userId?: string | null;
   exportedBy?: string | null;
 }
+interface YieldCapResolutionResult {
+  capKgPerHa: number;
+  source: 'benchmark' | 'fallback';
+  benchmarkId: string | null;
+  geography: string;
+  sourceType: string | null;
+}
 type DdsPackageFilingPreflightAuditPhase = 'requested' | 'evaluated' | 'blocked' | 'ready';
 type DdsPackageGenerationAuditPhase = 'requested' | 'generated';
 type DdsPackageSubmissionAuditPhase = 'requested' | 'accepted' | 'replayed';
@@ -100,8 +109,19 @@ export class HarvestService {
     }
 
     const plotRes = await this.pool.query(
-      'SELECT id, area_ha, sinaph_overlap, indigenous_overlap FROM plot WHERE id = $1 AND farmer_id = $2',
-      [plotId, farmerId],
+      `
+        SELECT
+          p.id,
+          p.area_ha,
+          p.sinaph_overlap,
+          p.indigenous_overlap,
+          COALESCE(fp.country_code, $3) AS country_code
+        FROM plot p
+        LEFT JOIN farmer_profile fp ON fp.id = p.farmer_id
+        WHERE p.id = $1
+          AND p.farmer_id = $2
+      `,
+      [plotId, farmerId, DEFAULT_YIELD_BENCHMARK_GEOGRAPHY],
     );
     if (plotRes.rowCount === 0) {
       throw new BadRequestException('Plot does not belong to farmer');
@@ -110,6 +130,9 @@ export class HarvestService {
     const areaHa = Number(plotRes.rows[0].area_ha);
     const sinaphOverlap = plotRes.rows[0].sinaph_overlap === true;
     const indigenousOverlap = plotRes.rows[0].indigenous_overlap === true;
+    const benchmarkGeography = String(
+      plotRes.rows[0].country_code ?? DEFAULT_YIELD_BENCHMARK_GEOGRAPHY,
+    ).toUpperCase();
 
     // If overlap-flagged, require an explicit override reason and the required evidence synced.
     if (sinaphOverlap || indigenousOverlap) {
@@ -144,8 +167,34 @@ export class HarvestService {
       }
     }
     if (areaHa > 0) {
-      const capKg = areaHa * YIELD_CAP_KG_PER_HA;
+      const capResolution = await this.resolveYieldCapKgPerHa(DEFAULT_YIELD_BENCHMARK_COMMODITY, benchmarkGeography);
+      await this.appendYieldCapAuditEvent(
+        userId ?? null,
+        capResolution.source === 'benchmark' ? 'yield_cap_resolved' : 'yield_cap_fallback_used',
+        {
+          farmerId,
+          plotId,
+          commodity: DEFAULT_YIELD_BENCHMARK_COMMODITY,
+          geography: capResolution.geography,
+          sourceType: capResolution.sourceType,
+          benchmarkId: capResolution.benchmarkId,
+          capKgPerHa: capResolution.capKgPerHa,
+        },
+      );
+      const capKg = areaHa * capResolution.capKgPerHa;
       if (kg > capKg) {
+        await this.appendYieldCapAuditEvent(userId ?? null, 'yield_cap_violation_detected', {
+          farmerId,
+          plotId,
+          commodity: DEFAULT_YIELD_BENCHMARK_COMMODITY,
+          geography: capResolution.geography,
+          sourceType: capResolution.sourceType,
+          benchmarkId: capResolution.benchmarkId,
+          capKgPerHa: capResolution.capKgPerHa,
+          attemptedKg: kg,
+          allowedKg: capKg,
+          areaHa,
+        });
         throw new BadRequestException(
           `Yield cap exceeded: ${kg.toFixed(
             1,
@@ -815,8 +864,12 @@ export class HarvestService {
     const totalKg = vouchers.reduce((acc: number, voucher: any) => acc + Number(voucher.kg ?? 0), 0);
     const totalArea = vouchers.reduce((acc: number, voucher: any) => acc + Number(voucher.area_ha ?? 0), 0);
     if (totalArea > 0) {
+      const capResolution = await this.resolveYieldCapKgPerHa(
+        DEFAULT_YIELD_BENCHMARK_COMMODITY,
+        DEFAULT_YIELD_BENCHMARK_GEOGRAPHY,
+      );
       const density = totalKg / totalArea;
-      if (density > YIELD_CAP_KG_PER_HA) {
+      if (density > capResolution.capKgPerHa) {
         reasons.push({
           code: 'RISK-HIGH-YIELD-DENSITY',
           message: 'Aggregated yield density exceeds benchmark cap.',
@@ -1002,6 +1055,104 @@ export class HarvestService {
       );
     } catch {
       // Submission should not fail because audit append failed.
+    }
+  }
+
+  private async resolveYieldCapKgPerHa(
+    commodity: string,
+    geography: string,
+  ): Promise<YieldCapResolutionResult> {
+    try {
+      const commodityAliases = this.expandYieldBenchmarkCommodityAliases(commodity);
+      const benchmarkRes = await this.pool.query<{
+        id: string;
+        geography: string;
+        source_type: string;
+        yield_upper_kg_ha: string;
+        seasonality_factor: string;
+      }>(
+        `
+          SELECT id, geography, source_type, yield_upper_kg_ha, seasonality_factor
+          FROM yield_benchmarks
+          WHERE active = TRUE
+            AND LOWER(commodity) = ANY($1::text[])
+            AND LOWER(geography) IN (LOWER($2), LOWER($3))
+          ORDER BY
+            CASE
+              WHEN LOWER(geography) = LOWER($2) THEN 0
+              ELSE 1
+            END,
+            updated_at DESC
+          LIMIT 1
+        `,
+        [commodityAliases, geography, DEFAULT_YIELD_BENCHMARK_GEOGRAPHY],
+      );
+      const row = benchmarkRes.rows[0];
+      if (!row) {
+        return {
+          capKgPerHa: DEFAULT_YIELD_CAP_KG_PER_HA,
+          source: 'fallback',
+          benchmarkId: null,
+          geography,
+          sourceType: null,
+        };
+      }
+      const upper = Number(row.yield_upper_kg_ha);
+      const seasonality = Number(row.seasonality_factor);
+      if (!Number.isFinite(upper) || upper <= 0 || !Number.isFinite(seasonality) || seasonality <= 0) {
+        return {
+          capKgPerHa: DEFAULT_YIELD_CAP_KG_PER_HA,
+          source: 'fallback',
+          benchmarkId: null,
+          geography,
+          sourceType: null,
+        };
+      }
+      return {
+        capKgPerHa: upper * seasonality,
+        source: 'benchmark',
+        benchmarkId: row.id,
+        geography: row.geography,
+        sourceType: row.source_type,
+      };
+    } catch {
+      return {
+        capKgPerHa: DEFAULT_YIELD_CAP_KG_PER_HA,
+        source: 'fallback',
+        benchmarkId: null,
+        geography,
+        sourceType: null,
+      };
+    }
+  }
+
+  private expandYieldBenchmarkCommodityAliases(commodity: string): string[] {
+    const normalized = commodity.trim().toLowerCase();
+    const aliases = new Set<string>([normalized]);
+    if (normalized === 'coffee') {
+      aliases.add('656');
+      aliases.add('coffee, green');
+    } else if (normalized === '656' || normalized === 'coffee, green') {
+      aliases.add('coffee');
+    }
+    return Array.from(aliases);
+  }
+
+  private async appendYieldCapAuditEvent(
+    userId: string | null,
+    eventType: 'yield_cap_resolved' | 'yield_cap_fallback_used' | 'yield_cap_violation_detected',
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      await this.pool.query(
+        `
+          INSERT INTO audit_log (user_id, event_type, payload)
+          VALUES ($1, $2, $3::jsonb)
+        `,
+        [userId, eventType, JSON.stringify(payload)],
+      );
+    } catch {
+      // Yield cap telemetry should not block harvest flow.
     }
   }
 }

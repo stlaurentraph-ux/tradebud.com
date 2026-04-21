@@ -1,0 +1,42 @@
+name: FAOSTAT Yearly Sync Dry Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "FAOSTAT year to sync (defaults to previous year)"
+        required: false
+      dryRun:
+        description: "Keep dry-run mode enabled"
+        required: false
+        default: "true"
+  schedule:
+    # Yearly cadence aligned with FAOSTAT annual publication updates.
+    - cron: "0 6 15 1 *"
+
+jobs:
+  yearly-faostat-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: tracebud-backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: tracebud-backend
+        run: npm ci
+
+      - name: Run yearly FAOSTAT sync dry-run
+        working-directory: tracebud-backend
+        env:
+          TRACEBUD_API_BASE_URL: ${{ secrets.TRACEBUD_API_BASE_URL }}
+          TRACEBUD_BENCHMARK_ADMIN_JWT: ${{ secrets.TRACEBUD_BENCHMARK_ADMIN_JWT }}
+          TRACEBUD_FAOSTAT_SYNC_YEAR: ${{ inputs.year }}
+          TRACEBUD_FAOSTAT_SYNC_DRY_RUN: ${{ inputs.dryRun || 'true' }}
+        run: npm run benchmarks:faostat:yearly-sync
