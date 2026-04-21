@@ -59,17 +59,6 @@ describeIfDb('Audit filing-activity API integration: phase filters and export', 
         payload JSONB NOT NULL DEFAULT '{}'::jsonb
       )
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.audit_log (
-        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        user_id UUID NULL,
-        device_id TEXT NULL,
-        event_type TEXT NOT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb
-      )
-    `);
-
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
       providers: [{ provide: PG_POOL, useValue: pool }],
@@ -89,9 +78,10 @@ describeIfDb('Audit filing-activity API integration: phase filters and export', 
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(
       `
-        DELETE FROM audit_log
+        DELETE FROM ${schema}.audit_log
         WHERE event_type IN (
           'dds_package_generation_requested',
           'dds_package_generation_generated',
@@ -113,7 +103,7 @@ describeIfDb('Audit filing-activity API integration: phase filters and export', 
   it('applies phase filter through HTTP pipeline', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '77777777-7777-4777-8777-777777777777'::uuid,
@@ -157,7 +147,7 @@ describeIfDb('Audit filing-activity API integration: phase filters and export', 
   it('exports filtered filing activity as csv with metadata headers', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '77777777-7777-4777-8777-777777777777'::uuid,

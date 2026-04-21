@@ -1344,6 +1344,41 @@ Verification commands:
 
 - `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`
 
+### S1 post-closeout hardening slice 64 - request-to-questionnaire linkage + submit gate
+
+- Added assessment-request to questionnaire linkage persistence:
+  - migration `TB-V16-022` adds `questionnaire_id` FK on `integration_assessment_requests`.
+- Extended assessment request contract:
+  - create endpoint accepts optional `questionnaireDraftId`.
+  - list/get responses now include `questionnaire_id` for dashboard/offline visibility.
+- Enforced farmer submit gate on linked questionnaire readiness:
+  - `PATCH /v1/integrations/assessments/requests/:id/submitted` now checks linked questionnaire status first.
+  - allowed questionnaire statuses for submit: `submitted`, `validated`, `scored`, `reviewed`.
+  - reject when linkage is missing or still in `draft`.
+- Extended UI visibility:
+  - dashboard request cards display linked questionnaire draft id.
+  - offline assessment task card shows linked questionnaire id context.
+- Added controller regression coverage for submit-gate denial when linked questionnaire is not submitted.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
+- `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`
+
+### S1 post-closeout hardening slice 65 - auto-link questionnaire draft on request creation
+
+- Added backend auto-link behavior for assessment dispatch:
+  - when `questionnaireDraftId` is omitted, request creation now auto-creates a tenant-scoped questionnaire draft in `integration_questionnaire_v2` and links it via `questionnaire_id`.
+  - preserves explicit linkage when `questionnaireDraftId` is provided and tenant-valid.
+- Strengthened audit payload for dispatch visibility:
+  - `integration_assessment_request_sent` now records whether questionnaire linkage was auto-created.
+- Updated controller regression setup to validate new auto-create query sequence while keeping prior role/validation coverage.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
+- `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.

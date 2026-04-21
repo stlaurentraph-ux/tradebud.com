@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import {
   Send,
   Inbox,
@@ -383,7 +383,12 @@ export default function RequestsPage() {
     dueAt: '',
   });
 
-  const loadAssessmentRequests = async () => {
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, []);
+
+  const loadAssessmentRequests = useCallback(async () => {
     const authHeaders = getAuthHeaders();
     if (!authHeaders.Authorization) {
       setAssessmentRequests([]);
@@ -405,11 +410,11 @@ export default function RequestsPage() {
       setAssessmentError(error instanceof Error ? error.message : 'Failed to load assessment requests.');
       setAssessmentRequests([]);
     }
-  };
+  }, [getAuthHeaders]);
 
   useEffect(() => {
     void loadAssessmentRequests();
-  }, []);
+  }, [loadAssessmentRequests]);
 
   const filteredCampaigns = mockCampaigns.filter((campaign) => {
     const matchesSearch =
@@ -424,11 +429,6 @@ export default function RequestsPage() {
     const now = new Date();
     const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
-  };
-
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
-    return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
   const handleCreateCampaign = async () => {

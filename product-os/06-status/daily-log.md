@@ -3036,6 +3036,22 @@ Append-only session log.
 - Risks: Mobile UI currently exposes only linear progression controls and does not yet deep-link to the full questionnaire form sections; linkage remains pending in next slice.
 - Next step: connect request records to questionnaire draft IDs and block `submitted` transitions until required questionnaire sections are complete.
 
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 64)
+- Focus: enforce request-to-questionnaire linkage integrity so farmer submission cannot close before linked questionnaire content is ready.
+- Files changed: `tracebud-backend/sql/tb_v16_022_integration_assessment_request_questionnaire_link.sql`, `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/app/(tabs)/index.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added `questionnaire_id` FK linkage for assessment requests and fail-closed submit guard that requires linked questionnaire state to be at least submitted; request create now accepts optional `questionnaireDraftId` while submit transition enforces readiness to preserve backward-compatible request creation and strict completion controls.
+- Verification: `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`; `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`.
+- Risks: Dashboard currently allows creating assessment requests without a questionnaire link (for backward compatibility), which defers strict linkage to submit-time validation rather than create-time prevention.
+- Next step: auto-create/link questionnaire drafts at dashboard request creation so operators no longer need manual draft ID management and submit gate failures are minimized.
+
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 65)
+- Focus: remove manual draft-link friction by auto-creating questionnaire drafts during assessment request dispatch when no draft id is provided.
+- Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: request creation now attempts tenant-validated explicit `questionnaireDraftId` when supplied, otherwise generates a draft in `integration_questionnaire_v2` (`status=draft`) and links it automatically before writing assessment request; audit payload now includes `questionnaireAutoCreated` for operator traceability.
+- Verification: `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`; `cd apps/dashboard-product && npm test -- app/requests/page.test.tsx`.
+- Risks: auto-created drafts currently use generated idempotency keys and minimal metadata, so downstream analytics may need additional metadata enrichment fields for stronger lineage traceability.
+- Next step: harmonize stale migration guidance strings in controller error branches (`TB-V16-019` remnants) and add integration test coverage for auto-created draft linkage persistence.
+
 ### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 62)
 - Focus: implement the missing assessment handoff backbone so dashboard users can request farmer execution of SAI + Cool Farm assessments through app workflow states.
 - Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `tracebud-backend/sql/tb_v16_021_integration_assessment_requests.sql`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

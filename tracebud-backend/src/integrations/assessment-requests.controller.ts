@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
@@ -812,7 +813,8 @@ export class AssessmentRequestsController {
     if (!title) {
       throw new BadRequestException('title is required');
     }
-    if (questionnaireDraftId) {
+    let linkedQuestionnaireDraftId = questionnaireDraftId;
+    if (linkedQuestionnaireDraftId) {
       const questionnaireRes = await this.pool.query(
         `
           SELECT id
@@ -821,7 +823,7 @@ export class AssessmentRequestsController {
             AND tenant_id = $2
           LIMIT 1
         `,
-        [questionnaireDraftId, tenantId],
+        [linkedQuestionnaireDraftId, tenantId],
       );
       if ((questionnaireRes.rowCount ?? 0) === 0) {
         throw new BadRequestException('questionnaireDraftId is not found for tenant');
@@ -833,6 +835,49 @@ export class AssessmentRequestsController {
     }
     const dueAt = body?.dueAt?.trim() || null;
     try {
+      let questionnaireAutoCreated = false;
+      if (!linkedQuestionnaireDraftId) {
+        const generatedIdempotencyKey = `assessment-request-auto-${randomUUID()}`;
+        const autoDraftInsert = await this.pool.query<{ id: string }>(
+          `
+            INSERT INTO integration_questionnaire_v2 (
+              tenant_id,
+              pathway,
+              status,
+              idempotency_key,
+              response,
+              metadata,
+              created_by_user_id,
+              updated_by_user_id
+            )
+            VALUES (
+              $1,
+              $2,
+              'draft',
+              $3,
+              '{}'::jsonb,
+              $4::jsonb,
+              $5::uuid,
+              $5::uuid
+            )
+            RETURNING id
+          `,
+          [
+            tenantId,
+            pathway,
+            generatedIdempotencyKey,
+            JSON.stringify({
+              source: 'assessment_request_auto_link',
+              title,
+              farmerUserId,
+            }),
+            actorUserId,
+          ],
+        );
+        linkedQuestionnaireDraftId = autoDraftInsert.rows[0].id;
+        questionnaireAutoCreated = true;
+      }
+
       const insertRes = await this.pool.query<{ id: string; status: string }>(
         `
           INSERT INTO integration_assessment_requests (
@@ -854,7 +899,7 @@ export class AssessmentRequestsController {
           tenantId,
           pathway,
           farmerUserId,
-          questionnaireDraftId || null,
+          linkedQuestionnaireDraftId || null,
           actorUserId,
           title,
           instructions,
@@ -877,7 +922,8 @@ export class AssessmentRequestsController {
             requestId: id,
             farmerUserId,
             pathway,
-            questionnaireDraftId: questionnaireDraftId || null,
+            questionnaireDraftId: linkedQuestionnaireDraftId || null,
+            questionnaireAutoCreated,
             status: 'sent',
           }),
         ],
@@ -887,7 +933,7 @@ export class AssessmentRequestsController {
         status: 'sent',
         pathway,
         farmerUserId,
-        questionnaireDraftId: questionnaireDraftId || null,
+        questionnaireDraftId: linkedQuestionnaireDraftId || null,
         title,
       };
     } catch (error) {
