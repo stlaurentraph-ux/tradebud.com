@@ -24,6 +24,20 @@ Use canonical role matrix in `BUILD_READINESS_ARTIFACTS.md`.
 
 Public API, webhooks, and first integration adapters.
 
+## V2 parallel delivery lane (not integrated into V1 runtime)
+
+- V2 planning/implementation track is approved to run in parallel as a shadow lane.
+- Execution pack: `product-os/01-roadmap/coolfarm-sai-v2-parallel-execution-pack.md`.
+- V1 safety boundary:
+  - no production-path Cool Farm calls in current V1 flow
+  - all V2 writes/reads in isolated integration tables
+  - feature-flag off by default with tenant-scoped pilot enablement only.
+- V2 acceptance gate minimums:
+  - explicit permissions
+  - canonical state transitions with immutable audit events
+  - deterministic exception handling/recovery
+  - analytics event coverage for submit/validate/score lifecycle.
+
 ## Non-goals
 
 Anything outside v1 boundaries in `MVP_PRD.md`.
@@ -100,6 +114,309 @@ Scope: integrations execution matrix bootstrap for tenant-safe public API, webho
 - **GDPR shredding safety:** delivery evidence must preserve immutable reference identifiers while preventing rehydration of shredded personal attributes.
 
 ## Execution slices
+
+### S1 post-closeout hardening slice 30 - Cool Farm + SAI V2 schema bootstrap API (shadow mode)
+
+- Added a new tenant-safe V2 schema bootstrap endpoint:
+  - `GET /v1/integrations/coolfarm-sai/v2/questionnaire-schema?pathway=annuals|rice`
+- Added versioned canonical schema builder artifact:
+  - `coolfarm-sai-v2.schema.ts` with `farmQuestionnaireV1` (`0.1.0-draft`) contract
+  - initial pathway coverage for `annuals` and `rice`
+  - canonical transition model: `draft -> submitted -> validated -> scored -> reviewed`
+  - data-quality baseline: `actual|estimated|defaulted`
+- Enforced tenant and role boundaries:
+  - missing tenant claim fails closed
+  - allowed roles: `exporter`, `agent`, `admin`, `compliance_manager`
+- Explicitly marked rollout mode in response payload:
+  - feature flag key: `coolfarm_sai_v2_enabled`
+  - default state: `off`
+  - mode: `shadow`
+- Added focused controller unit coverage for deny/allow and pathway behavior.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 31 - V2 mapping registry + required-field coverage validator
+
+- Extended V2 schema endpoint payload to include mapping registry:
+  - `mappingRegistry.mappingId = farmQuestionnaireMappingV1`
+  - `mappingRegistry.mappingVersion = 0.1.0-draft`
+  - pathway-specific mapping set (`annuals|rice`)
+- Implemented explicit field-level mapping contract:
+  - `sectionId + fieldId -> coolfarmPath + saiIndicators[]`
+  - includes pathway-specific `rice` paddy mapping.
+- Added fail-fast mapping coverage guard:
+  - validates every required questionnaire field has a mapping entry
+  - throws deterministic error if required-field mapping drift appears.
+- Added regression assertions:
+  - annuals response includes non-empty mapping registry
+  - rice response includes `paddy_management.paddy_water_regime` mapping row.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 32 - V2 isolated persistence + draft save API
+
+- Added V2 isolated SQL persistence baseline:
+  - `tracebud-backend/sql/tb_v16_013_coolfarm_sai_v2_questionnaire.sql`
+  - tables: `integration_questionnaire_v2`, `integration_runs_v2`, `integration_evidence_v2`, `integration_audit_v2`
+  - tenant-scoped indexes and constrained status/run-type enums.
+- Added tenant-safe draft save endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts`
+  - requires signed tenant claim + role gate (`exporter|agent|admin|compliance_manager`)
+  - requires `idempotencyKey`; validates `response`/`metadata` object shape
+  - upserts by `(tenant_id, idempotency_key)` for deterministic replay-safe draft writes.
+- Added V2 audit write-path:
+  - inserts `integration_v2_questionnaire_draft_saved` into `integration_audit_v2`
+  - includes schema + mapping version metadata for evidence lineage.
+- Added deterministic migration-not-applied handling:
+  - returns explicit error guidance when V2 tables are missing (`TB-V16-013` not applied).
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 33 - V2 submit transition + validation run lifecycle
+
+- Added V2 submit transition endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/submit`
+- Enforced canonical transition guard:
+  - allowed: `draft -> submitted`
+  - invalid transitions return deterministic `Invalid transition` validation errors.
+- Added run lifecycle persistence in `integration_runs_v2`:
+  - on submit: insert `validation` run with `status=started`
+  - then finalize same run with `status=completed` + `finished_at`.
+- Added immutable submit audit evidence:
+  - `integration_v2_questionnaire_submitted` event in `integration_audit_v2`
+  - payload includes `draftId` and `runId` for trace lineage.
+- Preserved migration fail-closed behavior for missing V2 tables (`TB-V16-013` guidance).
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 34 - V2 run failure semantics + run-history read surface
+
+- Added explicit V2 run execution endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs`
+  - supports `runType=validation|scoring` and deterministic completion/failure outcomes.
+- Added explicit failed-run path:
+  - run rows are now finalized as either `completed` or `failed` in `integration_runs_v2`
+  - failure reason can be captured in run details (`reason`).
+- Added tenant-safe run-history read endpoint:
+  - `GET /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs`
+  - returns questionnaire-scoped run history ordered by latest run.
+- Added immutable run outcome audit events:
+  - `integration_v2_run_completed`
+  - `integration_v2_run_failed`
+- Preserved migration fail-closed guidance when V2 tables are unavailable.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 35 - V2 queue metadata + run summary diagnostics
+
+- Added queue/worker-ready run metadata migration:
+  - `tracebud-backend/sql/tb_v16_014_coolfarm_sai_v2_run_queue_metadata.sql`
+  - `queued_at`, `attempt_count`, `error_code` on `integration_runs_v2`
+  - tenant/status diagnostics index for run monitoring.
+- Updated run execution persistence to populate queue metadata:
+  - sets `queued_at` and `attempt_count` at run creation
+  - records `error_code` (`V2_SHADOW_RUN_FAILED`) on failed runs.
+- Extended run history response payload:
+  - includes `queued_at`, `attempt_count`, `error_code` fields.
+- Added compact run summary endpoint:
+  - `GET /v1/integrations/coolfarm-sai/v2/runs/summary`
+  - returns tenant-scoped aggregate counts (`started|completed|failed`) and latest run pointer.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 36 - V2 retry lifecycle endpoint
+
+- Added failed-run retry endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/retry`
+  - only failed runs are eligible for retry.
+- Retry lifecycle behavior:
+  - increments `attempt_count`
+  - sets `status=started` and refreshes `queued_at`
+  - re-finalizes to `completed|failed`
+  - clears/sets `error_code` based on retry outcome.
+- Added immutable retry lineage events:
+  - `integration_v2_run_retry_completed`
+  - `integration_v2_run_retry_failed`
+- Added guardrails:
+  - deterministic error if run missing or not failed
+  - tenant/role fail-closed and migration availability checks.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 37 - V2 retry backoff + retry exhaustion guardrail
+
+- Added retry backoff metadata migration:
+  - `tracebud-backend/sql/tb_v16_015_coolfarm_sai_v2_retry_backoff.sql`
+  - `next_retry_at` column + tenant retry scheduling index.
+- Added retry cap policy:
+  - max retry attempts set to `5`
+  - retries beyond cap are rejected with deterministic error.
+- Added retry scheduling semantics:
+  - exponential backoff in minutes (`2^(attempt-1)`, capped at `60`)
+  - `next_retry_at` now updated on failed retry outcomes.
+- Added retry exhaustion evidence event:
+  - `integration_v2_run_retry_exhausted` when retry cap is reached.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 38 - V2 retry queue scan endpoint
+
+- Added retry queue scan endpoint:
+  - `GET /v1/integrations/coolfarm-sai/v2/runs/retry-queue?limit=...`
+- Queue semantics:
+  - returns tenant-scoped runs where `status='failed'` and `next_retry_at <= NOW()`
+  - ordered by earliest due retry time.
+- Added query guardrails:
+  - default `limit=50`
+  - bounded `limit` validation (`1..200`).
+- Added focused tests:
+  - due queue read path
+  - invalid limit rejection path.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 39 - V2 run claim locking endpoint
+
+- Added claim-lock schema migration:
+  - `tracebud-backend/sql/tb_v16_016_coolfarm_sai_v2_run_claim_lock.sql`
+  - fields: `claimed_by_user_id`, `claimed_at`
+  - tenant claim index for operator diagnostics.
+- Added run claim endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/claim`
+  - claimable only when run is tenant-scoped, failed, due (`next_retry_at <= now`), and unclaimed.
+- Updated retry queue behavior:
+  - queue now excludes already claimed runs (`claimed_at IS NULL`).
+- Added immutable claim telemetry:
+  - event: `integration_v2_run_claimed`.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 40 - V2 claim release endpoint
+
+- Added claimed-run release endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/release`
+- Release semantics:
+  - standard release allowed for claiming actor
+  - forced release supported (`force=true`) for stale/orphaned claims.
+- Added safety guards:
+  - rejects release for unclaimed runs
+  - rejects non-owner release unless forced.
+- Added immutable release audit event:
+  - `integration_v2_run_released` with forced/reason metadata.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 41 - V2 stale-claim sweeper + summary stale counter
+
+- Added stale-claim sweeper endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale`
+  - supports `staleMinutes` threshold + `limit` scan cap.
+- Sweeper behavior:
+  - selects claimed runs older than threshold
+  - bulk releases claims
+  - emits per-run stale release telemetry (`integration_v2_run_stale_released`).
+- Added stale claim visibility in run summary:
+  - `GET /v1/integrations/coolfarm-sai/v2/runs/summary`
+  - now returns `staleClaimCount` metric.
+- Added tests:
+  - stale release positive path
+  - stale release no-op path
+  - summary includes stale count.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 42 - V2 scheduled sweeper contract + last-run summary metadata
+
+- Added cron-compatible sweeper trigger contract:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale`
+  - new `triggerSource` input (`manual|scheduled`).
+- Added sweeper execution summary event:
+  - `integration_v2_stale_sweeper_executed`
+  - emitted for both no-op and release paths.
+- Extended run summary diagnostics:
+  - `GET /v1/integrations/coolfarm-sai/v2/runs/summary`
+  - now includes `lastSweeperRun` (timestamp + payload context).
+- Added tests:
+  - summary includes `lastSweeperRun`
+  - stale sweeper supports scheduled trigger source.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 43 - Scheduler trigger endpoint + summary rollup fields
+
+- Added scheduler-friendly trigger endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger`
+  - wrapper over stale sweeper with fixed `triggerSource=scheduled`.
+- Added compact summary rollup fields:
+  - `lastSweeperReleasedCount`
+  - `lastSweeperTriggerSource`
+  - derived from latest sweeper execution payload.
+- Added regression tests:
+  - summary includes new rollup fields
+  - scheduler trigger wrapper returns expected contract (`schedulerContract=true`).
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 44 - Scheduler token auth contract
+
+- Added scheduler token auth guard for trigger endpoint:
+  - `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger`
+  - requires header `x-tracebud-scheduler-token`.
+- Added backend env contract:
+  - `COOLFARM_SAI_V2_SCHEDULER_TOKEN` (required for scheduler trigger path).
+- Failure semantics:
+  - missing env token -> deterministic bad request
+  - invalid/missing request token -> forbidden.
+- Added tests:
+  - success with valid token
+  - missing env token rejection
+  - invalid token rejection.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts`
+
+### S1 post-closeout hardening slice 45 - DB-backed scheduler wrapper integration coverage
+
+- Added DB-backed integration spec:
+  - `src/integrations/coolfarm-sai-v2.controller.int.spec.ts`
+- Coverage now includes real-schema scheduler wrapper behavior:
+  - missing scheduler token env fail-closed
+  - invalid scheduler header token forbidden
+  - valid scheduler token executes sweeper and persists rollup event payload.
+- Scheduler token-version payload is asserted at DB read level in `integration_audit_v2`.
+
+Verification commands:
+
+- `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.int.spec.ts`
 
 ### S1 code slice 1 - integrations execution matrix bootstrap
 

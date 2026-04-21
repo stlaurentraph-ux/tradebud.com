@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { DbModule } from '../db/db.module';
+import { CoolFarmSaiV2Controller } from './coolfarm-sai-v2.controller';
 import { EudrController } from './eudr.controller';
 import { IntegrationsController } from './integrations.controller';
 import { YieldBenchmarksController } from './yield-benchmarks.controller';
 
 @Module({
   imports: [DbModule],
-  controllers: [IntegrationsController, EudrController, YieldBenchmarksController],
+  controllers: [IntegrationsController, EudrController, YieldBenchmarksController, CoolFarmSaiV2Controller],
 })
 export class IntegrationsModule {}
 
