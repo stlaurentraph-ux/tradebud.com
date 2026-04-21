@@ -6,10 +6,8 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = 'tb_scope_test';
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const separator = connectionString.includes('?') ? '&' : '?';
-  const options = encodeURIComponent(`-c search_path=${targetSchema},public`);
-  return `${connectionString}${separator}options=${options}`;
+function withSearchPath(connectionString: string, _targetSchema: string) {
+  return connectionString;
 }
 
 describeIfDb('Ownership scope integration: farmer/profile joins', () => {
@@ -29,6 +27,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
+    await pool.query(`SET search_path TO ${schema},public`);
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
@@ -67,6 +66,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query('DROP TABLE IF EXISTS agent_plot_assignment');
     await pool.query('DELETE FROM plot');
     await pool.query('DELETE FROM farmer_profile');

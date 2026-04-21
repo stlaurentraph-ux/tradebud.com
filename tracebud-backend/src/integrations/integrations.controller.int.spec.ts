@@ -20,6 +20,7 @@ describeIfDb('IntegrationsController integration', () => {
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
     await pool.query(`
@@ -41,6 +42,7 @@ describeIfDb('IntegrationsController integration', () => {
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query('DELETE FROM audit_log');
   });
 
