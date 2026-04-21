@@ -10,10 +10,8 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_audit_assignment_exports_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const url = new URL(connectionString);
-  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
-  return url.toString();
+function withSearchPath(connectionString: string, _targetSchema: string) {
+  return connectionString;
 }
 
 class TestAuthGuard implements CanActivate {

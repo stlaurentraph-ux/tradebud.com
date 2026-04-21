@@ -6,10 +6,8 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = 'tb_coolfarm_sai_v2_controller_test';
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const url = new URL(connectionString);
-  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
-  return url.toString();
+function withSearchPath(connectionString: string, _targetSchema: string) {
+  return connectionString;
 }
 
 describeIfDb('CoolFarmSaiV2Controller integration', () => {

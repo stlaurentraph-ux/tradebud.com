@@ -1390,10 +1390,25 @@ Verification commands:
     - keeps linked questionnaire status at `draft`.
 - Confirmed integration path is executable in targeted mode using `--runTestsByPath` to isolate new coverage from unrelated suite failures.
 
+### S1 post-closeout hardening slice 67 - assessment API alias reduction
+
+- Reduced assessment request API surface to canonical routes only:
+  - removed redundant alias endpoints for duplicated status/meta/path/detail actions
+  - retained primary explicit routes (`opened`, `in-progress`, `submitted`, `reviewed`, `needs-changes`, `cancelled`, `sent`, etc.).
+- Verified no runtime references remain for removed alias URLs outside feature documentation.
+- Keeps behavior unchanged while reducing long-term maintenance overhead and route confusion risk.
+
 Verification commands:
 
 - `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
 - `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/assessment-requests.controller.int.spec.ts`
+
+### S1 post-closeout hardening slice 68 - canonical endpoint map publication
+
+- Published a single-source endpoint map for assessment workflow contracts:
+  - new quality artifact: `product-os/04-quality/assessment-workflow-endpoint-map.md`.
+- Documented canonical backend + dashboard proxy routes, roles, transition semantics, and submit-gate requirements.
+- Explicitly marks alias endpoints as removed and sets canonical path usage expectation for frontend/integration consumers.
 
 ## Acceptance criteria
 

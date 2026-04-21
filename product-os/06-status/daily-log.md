@@ -3028,6 +3028,22 @@ Append-only session log.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
 
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 67)
+- Focus: simplify assessment API contract by removing duplicated alias routes and keeping canonical endpoints only.
+- Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: removed alias endpoints (`open/submit/cancel/...` variants) that forwarded to canonical handlers, retaining explicit lifecycle and update routes to reduce route-surface ambiguity and future maintenance load.
+- Verification: `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`; repository search confirms removed alias URL paths have no runtime callers.
+- Risks: Any undocumented external consumers using deleted alias paths would now fail; no in-repo callers were detected.
+- Next step: publish an internal endpoint map for assessment workflow to align frontend and partner clients on canonical routes.
+
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 68)
+- Focus: publish a single-source canonical endpoint map so frontend/integration teams align on stable assessment workflow routes.
+- Files changed: `product-os/04-quality/assessment-workflow-endpoint-map.md`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: documented canonical backend/proxy routes, role requirements, status transition semantics, and questionnaire submit-gate behavior; explicitly marks alias endpoints as removed to prevent re-adoption drift.
+- Verification: doc publication slice; no runtime code changes in this step.
+- Risks: without automation, documentation can drift if future route changes are introduced without updating the map.
+- Next step: add optional OpenAPI/CI contract guardrail to fail when removed alias routes are reintroduced.
+
 ### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 63)
 - Focus: wire the new assessment-request backend contract into both operator surfaces so dashboard can dispatch/review and offline app can progress farmer execution states.
 - Files changed: `apps/dashboard-product/app/api/integrations/assessments/requests/route.ts`, `apps/dashboard-product/app/api/integrations/assessments/requests/[id]/status/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/app/(tabs)/index.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
