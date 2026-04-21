@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, type MouseEventHandler } from 'react';
+import { useState, useCallback, type MouseEventHandler } from 'react';
+import { toast, Toaster } from 'sonner';
 import {
   Package, MapPin, Users, BarChart3, Settings, LogOut, Bell, Search, Plus, FileText,
   ArrowUpRight, MoreHorizontal, CheckCircle2, Clock, AlertCircle, TrendingUp, TrendingDown,
@@ -8,7 +9,7 @@ import {
   Map, Layers, Download, Eye, Send, X, Leaf, Building2, QrCode, Lock,
   History, Filter, RefreshCw, ExternalLink, Satellite, PenTool, Edit3,
   FolderOpen, UserCheck, Landmark, FileSignature, ShieldCheck, Workflow, Database,
-  Info, CircleDot, Hexagon
+  Info, CircleDot, Hexagon, Loader2, Play, Pause, CheckCircle, XCircle, Timer, Unlock, RotateCcw
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1865,30 +1866,113 @@ interface IntegrationRun {
   retryCount: number;
   errorMessage: string | null;
   payload: Record<string, unknown>;
+  events: RunEvent[];
 }
 
+interface RunEvent {
+  id: string;
+  type: 'created' | 'claimed' | 'started' | 'progress' | 'completed' | 'failed' | 'released' | 'retried';
+  timestamp: string;
+  actor: string | null;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Extended mock data with more variety
 const mockRuns: IntegrationRun[] = [
-  { id: 'run-001', type: 'cool_farm', status: 'pending', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-21T14:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee' } },
-  { id: 'run-002', type: 'sai_v2', status: 'running', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T13:30:00Z', startedAt: '2026-04-21T13:32:00Z', completedAt: null, claimedBy: 'worker-1', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full' } },
-  { id: 'run-003', type: 'cool_farm', status: 'complete', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T12:00:00Z', startedAt: '2026-04-21T12:01:00Z', completedAt: '2026-04-21T12:05:30Z', claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa' } },
-  { id: 'run-004', type: 'sai_v2', status: 'failed', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T11:00:00Z', startedAt: '2026-04-21T11:02:00Z', completedAt: '2026-04-21T11:03:45Z', claimedBy: 'worker-1', retryCount: 2, errorMessage: 'API timeout after 3 retries', payload: { assessmentType: 'quick' } },
-  { id: 'run-005', type: 'cool_farm', status: 'stale', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-20T10:00:00Z', startedAt: '2026-04-20T10:01:00Z', completedAt: null, claimedBy: 'worker-3', retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee' } },
-  { id: 'run-006', type: 'sai_v2', status: 'claimed', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T15:00:00Z', startedAt: null, completedAt: null, claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full' } },
-  { id: 'run-007', type: 'cool_farm', status: 'pending', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T16:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa' } },
-  { id: 'run-008', type: 'sai_v2', status: 'complete', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T09:00:00Z', startedAt: '2026-04-21T09:01:00Z', completedAt: '2026-04-21T09:04:20Z', claimedBy: 'worker-1', retryCount: 1, errorMessage: null, payload: { assessmentType: 'quick' } },
+  { id: 'run-001', type: 'cool_farm', status: 'pending', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-21T14:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee', region: 'Copán' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T10:00:00Z', actor: 'system', message: 'Run created from scheduled job' }
+  ]},
+  { id: 'run-002', type: 'sai_v2', status: 'running', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T13:30:00Z', startedAt: '2026-04-21T13:32:00Z', completedAt: null, claimedBy: 'worker-1', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full', categories: ['land', 'labor', 'environment'] }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T10:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T13:30:00Z', actor: 'worker-1', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T13:32:00Z', actor: 'worker-1', message: 'Execution started' },
+    { id: 'e4', type: 'progress', timestamp: '2026-04-21T13:33:00Z', actor: 'worker-1', message: 'Processing land assessment (1/3)', metadata: { progress: 33 } }
+  ]},
+  { id: 'run-003', type: 'cool_farm', status: 'complete', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T12:00:00Z', startedAt: '2026-04-21T12:01:00Z', completedAt: '2026-04-21T12:05:30Z', claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa', region: 'Yoro' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T08:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T12:00:00Z', actor: 'worker-2', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T12:01:00Z', actor: 'worker-2', message: 'Execution started' },
+    { id: 'e4', type: 'completed', timestamp: '2026-04-21T12:05:30Z', actor: 'worker-2', message: 'Run completed successfully', metadata: { duration: '4m 30s', score: 87 } }
+  ]},
+  { id: 'run-004', type: 'sai_v2', status: 'failed', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T11:00:00Z', startedAt: '2026-04-21T11:02:00Z', completedAt: '2026-04-21T11:03:45Z', claimedBy: 'worker-1', retryCount: 2, errorMessage: 'API timeout after 3 retries', payload: { assessmentType: 'quick' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T07:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T11:00:00Z', actor: 'worker-1', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T11:02:00Z', actor: 'worker-1', message: 'Execution started' },
+    { id: 'e4', type: 'failed', timestamp: '2026-04-21T11:03:45Z', actor: 'worker-1', message: 'API timeout after 3 retries', metadata: { errorCode: 'TIMEOUT', attempts: 3 } },
+    { id: 'e5', type: 'retried', timestamp: '2026-04-21T11:10:00Z', actor: 'admin@tracebud.com', message: 'Manual retry initiated' },
+    { id: 'e6', type: 'failed', timestamp: '2026-04-21T11:12:00Z', actor: 'worker-1', message: 'API timeout persists', metadata: { errorCode: 'TIMEOUT', attempts: 3 } }
+  ]},
+  { id: 'run-005', type: 'cool_farm', status: 'stale', farmerId: 'F-001', farmerName: 'Juan Carlos Mejía', plotId: 'HN-COP-001', dueAt: '2026-04-20T10:00:00Z', startedAt: '2026-04-20T10:01:00Z', completedAt: null, claimedBy: 'worker-3', retryCount: 0, errorMessage: null, payload: { farmSize: 2.8, commodity: 'Coffee' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-20T06:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-20T10:00:00Z', actor: 'worker-3', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-20T10:01:00Z', actor: 'worker-3', message: 'Execution started' }
+  ]},
+  { id: 'run-006', type: 'sai_v2', status: 'claimed', farmerId: 'F-002', farmerName: 'María Elena López', plotId: 'HN-COP-002', dueAt: '2026-04-21T15:00:00Z', startedAt: null, completedAt: null, claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T11:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T14:55:00Z', actor: 'worker-2', message: 'Run claimed by worker' }
+  ]},
+  { id: 'run-007', type: 'cool_farm', status: 'pending', farmerId: 'F-003', farmerName: 'Carlos Hernández', plotId: 'HN-YOR-003', dueAt: '2026-04-21T16:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 5.2, commodity: 'Cocoa' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T12:00:00Z', actor: 'system', message: 'Run created from scheduled job' }
+  ]},
+  { id: 'run-008', type: 'sai_v2', status: 'complete', farmerId: 'F-004', farmerName: 'Ana Sofía Reyes', plotId: 'HN-COP-004', dueAt: '2026-04-21T09:00:00Z', startedAt: '2026-04-21T09:01:00Z', completedAt: '2026-04-21T09:04:20Z', claimedBy: 'worker-1', retryCount: 1, errorMessage: null, payload: { assessmentType: 'quick' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T05:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T09:00:00Z', actor: 'worker-1', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T09:01:00Z', actor: 'worker-1', message: 'Execution started' },
+    { id: 'e4', type: 'completed', timestamp: '2026-04-21T09:04:20Z', actor: 'worker-1', message: 'Run completed successfully', metadata: { duration: '3m 20s', score: 92 } }
+  ]},
+  // Additional runs for more variety
+  { id: 'run-009', type: 'cool_farm', status: 'pending', farmerId: 'F-005', farmerName: 'Roberto Martínez', plotId: 'HN-ATL-005', dueAt: '2026-04-21T17:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { farmSize: 3.1, commodity: 'Coffee', region: 'Atlántida' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T13:00:00Z', actor: 'system', message: 'Run created from scheduled job' }
+  ]},
+  { id: 'run-010', type: 'sai_v2', status: 'running', farmerId: 'F-006', farmerName: 'Patricia Gómez', plotId: 'HN-COR-006', dueAt: '2026-04-21T14:30:00Z', startedAt: '2026-04-21T14:32:00Z', completedAt: null, claimedBy: 'worker-2', retryCount: 0, errorMessage: null, payload: { assessmentType: 'full', categories: ['land', 'labor'] }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T10:30:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T14:30:00Z', actor: 'worker-2', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T14:32:00Z', actor: 'worker-2', message: 'Execution started' },
+    { id: 'e4', type: 'progress', timestamp: '2026-04-21T14:34:00Z', actor: 'worker-2', message: 'Processing land assessment (1/2)', metadata: { progress: 50 } }
+  ]},
+  { id: 'run-011', type: 'cool_farm', status: 'complete', farmerId: 'F-007', farmerName: 'Fernando Díaz', plotId: 'HN-OLA-007', dueAt: '2026-04-21T08:00:00Z', startedAt: '2026-04-21T08:02:00Z', completedAt: '2026-04-21T08:06:15Z', claimedBy: 'worker-1', retryCount: 0, errorMessage: null, payload: { farmSize: 4.5, commodity: 'Cocoa', region: 'Olancho' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T04:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T08:00:00Z', actor: 'worker-1', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T08:02:00Z', actor: 'worker-1', message: 'Execution started' },
+    { id: 'e4', type: 'completed', timestamp: '2026-04-21T08:06:15Z', actor: 'worker-1', message: 'Run completed successfully', metadata: { duration: '4m 15s', score: 78 } }
+  ]},
+  { id: 'run-012', type: 'sai_v2', status: 'stale', farmerId: 'F-008', farmerName: 'Lucía Fernández', plotId: 'HN-COP-008', dueAt: '2026-04-20T15:00:00Z', startedAt: '2026-04-20T15:02:00Z', completedAt: null, claimedBy: 'worker-3', retryCount: 0, errorMessage: null, payload: { assessmentType: 'quick' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-20T11:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-20T15:00:00Z', actor: 'worker-3', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-20T15:02:00Z', actor: 'worker-3', message: 'Execution started' }
+  ]},
+  { id: 'run-013', type: 'cool_farm', status: 'failed', farmerId: 'F-009', farmerName: 'Diego Morales', plotId: 'HN-INT-009', dueAt: '2026-04-21T10:00:00Z', startedAt: '2026-04-21T10:01:00Z', completedAt: '2026-04-21T10:02:30Z', claimedBy: 'worker-2', retryCount: 1, errorMessage: 'Invalid farm coordinates', payload: { farmSize: 2.2, commodity: 'Coffee', region: 'Intibucá' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T06:00:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T10:00:00Z', actor: 'worker-2', message: 'Run claimed by worker' },
+    { id: 'e3', type: 'started', timestamp: '2026-04-21T10:01:00Z', actor: 'worker-2', message: 'Execution started' },
+    { id: 'e4', type: 'failed', timestamp: '2026-04-21T10:02:30Z', actor: 'worker-2', message: 'Invalid farm coordinates', metadata: { errorCode: 'INVALID_COORDS' } }
+  ]},
+  { id: 'run-014', type: 'sai_v2', status: 'pending', farmerId: 'F-010', farmerName: 'Carmen Ortiz', plotId: 'HN-LEM-010', dueAt: '2026-04-21T18:00:00Z', startedAt: null, completedAt: null, claimedBy: null, retryCount: 0, errorMessage: null, payload: { assessmentType: 'full', categories: ['land', 'labor', 'environment', 'governance'] }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T14:00:00Z', actor: 'system', message: 'Run created from scheduled job' }
+  ]},
+  { id: 'run-015', type: 'cool_farm', status: 'claimed', farmerId: 'F-011', farmerName: 'Miguel Ángel Torres', plotId: 'HN-COP-011', dueAt: '2026-04-21T15:30:00Z', startedAt: null, completedAt: null, claimedBy: 'worker-1', retryCount: 0, errorMessage: null, payload: { farmSize: 6.8, commodity: 'Coffee', region: 'Copán' }, events: [
+    { id: 'e1', type: 'created', timestamp: '2026-04-21T11:30:00Z', actor: 'system', message: 'Run created from scheduled job' },
+    { id: 'e2', type: 'claimed', timestamp: '2026-04-21T15:25:00Z', actor: 'worker-1', message: 'Run claimed by worker' }
+  ]},
 ];
 
 function RunStatusBadge({ status }: { status: RunStatus }) {
-  const config: Record<RunStatus, { cls: string; label: string }> = {
-    pending: { cls: 'bg-stone-100 text-stone-700 border-stone-200', label: 'Pending' },
-    claimed: { cls: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Claimed' },
-    running: { cls: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Running' },
-    complete: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Complete' },
-    failed: { cls: 'bg-red-50 text-red-700 border-red-200', label: 'Failed' },
-    stale: { cls: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Stale' },
+  const config: Record<RunStatus, { cls: string; label: string; icon: typeof Clock }> = {
+    pending: { cls: 'bg-stone-100 text-stone-700 border-stone-200', label: 'Pending', icon: Clock },
+    claimed: { cls: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Claimed', icon: Lock },
+    running: { cls: 'bg-amber-50 text-amber-700 border-amber-200', label: 'Running', icon: Loader2 },
+    complete: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Complete', icon: CheckCircle },
+    failed: { cls: 'bg-red-50 text-red-700 border-red-200', label: 'Failed', icon: XCircle },
+    stale: { cls: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Stale', icon: Timer },
   };
-  const { cls, label } = config[status];
-  return <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full border ${cls}`}>{label}</span>;
+  const { cls, label, icon: Icon } = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border ${cls}`}>
+      <Icon size={12} className={status === 'running' ? 'animate-spin' : ''} />
+      {label}
+    </span>
+  );
 }
 
 function TypeBadge({ type }: { type: RunType }) {
@@ -1900,25 +1984,223 @@ function TypeBadge({ type }: { type: RunType }) {
   return <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded ${cls}`}>{label}</span>;
 }
 
+function EventIcon({ type }: { type: RunEvent['type'] }) {
+  const icons: Record<RunEvent['type'], { icon: typeof Clock; cls: string }> = {
+    created: { icon: Plus, cls: 'text-stone-500 bg-stone-100' },
+    claimed: { icon: Lock, cls: 'text-blue-600 bg-blue-50' },
+    started: { icon: Play, cls: 'text-amber-600 bg-amber-50' },
+    progress: { icon: Loader2, cls: 'text-amber-600 bg-amber-50' },
+    completed: { icon: CheckCircle, cls: 'text-emerald-600 bg-emerald-50' },
+    failed: { icon: XCircle, cls: 'text-red-600 bg-red-50' },
+    released: { icon: Unlock, cls: 'text-orange-600 bg-orange-50' },
+    retried: { icon: RotateCcw, cls: 'text-blue-600 bg-blue-50' },
+  };
+  const { icon: Icon, cls } = icons[type];
+  return (
+    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${cls}`}>
+      <Icon size={14} />
+    </div>
+  );
+}
+
+// Confirmation Modal Component
+function ConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  description, 
+  confirmLabel, 
+  confirmVariant = 'primary',
+  isLoading = false 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  title: string; 
+  description: string; 
+  confirmLabel: string; 
+  confirmVariant?: 'primary' | 'destructive';
+  isLoading?: boolean;
+}) {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-stone-900">{title}</h3>
+        <p className="mt-2 text-sm text-stone-600">{description}</p>
+        <div className="mt-6 flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button 
+            variant={confirmVariant === 'destructive' ? 'secondary' : 'primary'} 
+            onClick={onConfirm}
+            disabled={isLoading}
+            className={confirmVariant === 'destructive' ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' : ''}
+          >
+            {isLoading && <Loader2 size={14} className="animate-spin" />}
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IntegrationsPage() {
   const [activeTab, setActiveTab] = useState<'queue' | 'scheduler'>('queue');
   const [selectedRun, setSelectedRun] = useState<IntegrationRun | null>(null);
   const [statusFilter, setStatusFilter] = useState<RunStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<RunType | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [runs, setRuns] = useState(mockRuns);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    confirmVariant: 'primary' | 'destructive';
+    onConfirm: () => void;
+  } | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const filteredRuns = mockRuns.filter(run => {
+  const filteredRuns = runs.filter(run => {
     if (statusFilter !== 'all' && run.status !== statusFilter) return false;
     if (typeFilter !== 'all' && run.type !== typeFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return run.id.toLowerCase().includes(q) || 
+             run.farmerName.toLowerCase().includes(q) || 
+             run.plotId.toLowerCase().includes(q);
+    }
     return true;
   });
 
   const stats = {
-    pending: mockRuns.filter(r => r.status === 'pending').length,
-    running: mockRuns.filter(r => r.status === 'running' || r.status === 'claimed').length,
-    complete: mockRuns.filter(r => r.status === 'complete').length,
-    failed: mockRuns.filter(r => r.status === 'failed').length,
-    stale: mockRuns.filter(r => r.status === 'stale').length,
+    pending: runs.filter(r => r.status === 'pending').length,
+    running: runs.filter(r => r.status === 'running' || r.status === 'claimed').length,
+    complete: runs.filter(r => r.status === 'complete').length,
+    failed: runs.filter(r => r.status === 'failed').length,
+    stale: runs.filter(r => r.status === 'stale').length,
   };
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // TODO: Replace with actual API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+    toast.success('Queue refreshed', { description: `${runs.length} runs loaded` });
+  }, [runs.length]);
+
+  const handleClaimRun = useCallback((run: IntegrationRun) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Claim Run',
+      description: `Are you sure you want to claim run ${run.id}? This will assign it to your worker.`,
+      confirmLabel: 'Claim Run',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        setIsActionLoading(true);
+        // TODO: Replace with actual API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setRuns(prev => prev.map(r => r.id === run.id ? { ...r, status: 'claimed' as RunStatus, claimedBy: 'current-user' } : r));
+        setIsActionLoading(false);
+        setConfirmModal(null);
+        toast.success('Run claimed', { description: `${run.id} has been assigned to you` });
+      }
+    });
+  }, []);
+
+  const handleReleaseRun = useCallback((run: IntegrationRun, force = false) => {
+    setConfirmModal({
+      isOpen: true,
+      title: force ? 'Force Release Run' : 'Release Run',
+      description: force 
+        ? `This will forcefully release ${run.id} even though it may be in progress. This could cause data inconsistency.`
+        : `Are you sure you want to release ${run.id}? It will return to the pending queue.`,
+      confirmLabel: force ? 'Force Release' : 'Release',
+      confirmVariant: force ? 'destructive' : 'primary',
+      onConfirm: async () => {
+        setIsActionLoading(true);
+        // TODO: Replace with actual API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setRuns(prev => prev.map(r => r.id === run.id ? { ...r, status: 'pending' as RunStatus, claimedBy: null, startedAt: null } : r));
+        setIsActionLoading(false);
+        setConfirmModal(null);
+        setSelectedRun(null);
+        toast.success('Run released', { description: `${run.id} is now available in the queue` });
+      }
+    });
+  }, []);
+
+  const handleRetryRun = useCallback((run: IntegrationRun) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Retry Run',
+      description: `This will reset ${run.id} and queue it for re-execution. Retry count: ${run.retryCount + 1}`,
+      confirmLabel: 'Retry Run',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        setIsActionLoading(true);
+        // TODO: Replace with actual API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setRuns(prev => prev.map(r => r.id === run.id ? { 
+          ...r, 
+          status: 'pending' as RunStatus, 
+          claimedBy: null, 
+          startedAt: null, 
+          completedAt: null,
+          errorMessage: null,
+          retryCount: r.retryCount + 1 
+        } : r));
+        setIsActionLoading(false);
+        setConfirmModal(null);
+        setSelectedRun(null);
+        toast.success('Run queued for retry', { description: `${run.id} will be re-executed` });
+      }
+    });
+  }, []);
+
+  const handleBulkReleaseStale = useCallback(() => {
+    const staleRuns = runs.filter(r => r.status === 'stale');
+    if (staleRuns.length === 0) {
+      toast.info('No stale runs', { description: 'There are no stale runs to release' });
+      return;
+    }
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Release All Stale Runs',
+      description: `This will release ${staleRuns.length} stale run(s) back to the pending queue. This action cannot be undone.`,
+      confirmLabel: `Release ${staleRuns.length} Runs`,
+      confirmVariant: 'destructive',
+      onConfirm: async () => {
+        setIsActionLoading(true);
+        // TODO: Replace with actual API call
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        setRuns(prev => prev.map(r => r.status === 'stale' ? { ...r, status: 'pending' as RunStatus, claimedBy: null, startedAt: null } : r));
+        setIsActionLoading(false);
+        setConfirmModal(null);
+        toast.success('Stale runs released', { description: `${staleRuns.length} runs returned to queue` });
+      }
+    });
+  }, [runs]);
+
+  const handleTriggerSweep = useCallback(async () => {
+    setIsActionLoading(true);
+    // TODO: Replace with actual API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const staleCount = runs.filter(r => r.status === 'stale').length;
+    setRuns(prev => prev.map(r => r.status === 'stale' ? { ...r, status: 'pending' as RunStatus, claimedBy: null, startedAt: null } : r));
+    setIsActionLoading(false);
+    toast.success('Sweep completed', { description: `Released ${staleCount} stale runs` });
+  }, [runs]);
 
   return (
     <div className="space-y-6">
@@ -1929,22 +2211,26 @@ function IntegrationsPage() {
           <p className="text-sm text-stone-500 mt-1">Monitor and operate Cool Farm + SAI V2 run workflows</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm">
-            <RefreshCw size={14} />
-            Refresh
+          <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-stone-100 rounded-lg w-fit">
+      <div className="flex gap-1 p-1 bg-stone-100 rounded-lg w-fit" role="tablist">
         <button
+          role="tab"
+          aria-selected={activeTab === 'queue'}
           onClick={() => setActiveTab('queue')}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'queue' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'}`}
         >
           Run Queue
         </button>
         <button
+          role="tab"
+          aria-selected={activeTab === 'scheduler'}
           onClick={() => setActiveTab('scheduler')}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'scheduler' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'}`}
         >
@@ -1956,18 +2242,26 @@ function IntegrationsPage() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {[
-              { label: 'Pending', value: stats.pending, color: 'stone' },
-              { label: 'In Progress', value: stats.running, color: 'amber' },
-              { label: 'Completed', value: stats.complete, color: 'emerald' },
-              { label: 'Failed', value: stats.failed, color: 'red' },
-              { label: 'Stale', value: stats.stale, color: 'orange' },
-            ].map(stat => (
-              <Card key={stat.label} className="p-4">
-                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">{stat.label}</p>
-                <p className={`mt-1 text-2xl font-semibold text-${stat.color}-700`}>{stat.value}</p>
-              </Card>
-            ))}
+            <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('pending')}>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Pending</p>
+              <p className="mt-1 text-2xl font-semibold text-stone-700">{stats.pending}</p>
+            </Card>
+            <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('running')}>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">In Progress</p>
+              <p className="mt-1 text-2xl font-semibold text-amber-600">{stats.running}</p>
+            </Card>
+            <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('complete')}>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Completed</p>
+              <p className="mt-1 text-2xl font-semibold text-emerald-600">{stats.complete}</p>
+            </Card>
+            <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('failed')}>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Failed</p>
+              <p className="mt-1 text-2xl font-semibold text-red-600">{stats.failed}</p>
+            </Card>
+            <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('stale')}>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Stale</p>
+              <p className="mt-1 text-2xl font-semibold text-orange-600">{stats.stale}</p>
+            </Card>
           </div>
 
           {/* Filters */}
@@ -1981,6 +2275,7 @@ function IntegrationsPage() {
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value as RunStatus | 'all')}
                 className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+                aria-label="Filter by status"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -1994,13 +2289,33 @@ function IntegrationsPage() {
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value as RunType | 'all')}
                 className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+                aria-label="Filter by type"
               >
                 <option value="all">All Types</option>
                 <option value="cool_farm">Cool Farm</option>
                 <option value="sai_v2">SAI V2</option>
               </select>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  placeholder="Search runs..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20 w-48"
+                  aria-label="Search runs"
+                />
+              </div>
               <div className="flex-1" />
-              <Button variant="secondary" size="sm">
+              {statusFilter !== 'all' && (
+                <button 
+                  onClick={() => { setStatusFilter('all'); setTypeFilter('all'); setSearchQuery(''); }}
+                  className="text-xs text-stone-500 hover:text-stone-700 underline"
+                >
+                  Clear filters
+                </button>
+              )}
+              <Button variant="secondary" size="sm" onClick={handleBulkReleaseStale} disabled={stats.stale === 0}>
                 <AlertTriangle size={14} />
                 Release Stale ({stats.stale})
               </Button>
@@ -2023,74 +2338,126 @@ function IntegrationsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {filteredRuns.map(run => (
-                    <tr key={run.id} className="hover:bg-stone-50 transition-colors">
-                      <td className="px-5 py-3.5 font-mono text-xs text-emerald-900 font-semibold">{run.id}</td>
-                      <td className="px-5 py-3.5"><TypeBadge type={run.type} /></td>
-                      <td className="px-5 py-3.5 text-stone-800">{run.farmerName}</td>
-                      <td className="px-5 py-3.5 text-stone-500 font-mono text-xs">{run.plotId}</td>
-                      <td className="px-5 py-3.5"><RunStatusBadge status={run.status} /></td>
-                      <td className="px-5 py-3.5 text-stone-500 text-xs">{new Date(run.dueAt).toLocaleString()}</td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setSelectedRun(run)}
-                            className="p-1.5 hover:bg-stone-100 rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            <Eye size={14} className="text-stone-500" />
-                          </button>
-                          {run.status === 'pending' && (
-                            <button className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" title="Claim">
-                              <Lock size={14} className="text-emerald-600" />
-                            </button>
-                          )}
-                          {(run.status === 'claimed' || run.status === 'stale') && (
-                            <button className="p-1.5 hover:bg-orange-50 rounded-lg transition-colors" title="Release">
-                              <RefreshCw size={14} className="text-orange-600" />
-                            </button>
-                          )}
-                          {run.status === 'failed' && (
-                            <button className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors" title="Retry">
-                              <RefreshCw size={14} className="text-blue-600" />
-                            </button>
-                          )}
+                  {filteredRuns.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+                            <Package size={24} className="text-stone-400" />
+                          </div>
+                          <p className="text-sm font-medium text-stone-900">No runs found</p>
+                          <p className="text-xs text-stone-500">
+                            {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' 
+                              ? 'Try adjusting your filters or search query' 
+                              : 'No integration runs are currently queued'}
+                          </p>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredRuns.map(run => (
+                      <tr 
+                        key={run.id} 
+                        className="hover:bg-stone-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedRun(run)}
+                        tabIndex={0}
+                        onKeyDown={e => e.key === 'Enter' && setSelectedRun(run)}
+                      >
+                        <td className="px-5 py-3.5 font-mono text-xs text-emerald-900 font-semibold">{run.id}</td>
+                        <td className="px-5 py-3.5"><TypeBadge type={run.type} /></td>
+                        <td className="px-5 py-3.5 text-stone-800">{run.farmerName}</td>
+                        <td className="px-5 py-3.5 text-stone-500 font-mono text-xs">{run.plotId}</td>
+                        <td className="px-5 py-3.5"><RunStatusBadge status={run.status} /></td>
+                        <td className="px-5 py-3.5 text-stone-500 text-xs">{new Date(run.dueAt).toLocaleString()}</td>
+                        <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setSelectedRun(run)}
+                              className="p-1.5 hover:bg-stone-100 rounded-lg transition-colors"
+                              title="View Details"
+                              aria-label={`View details for ${run.id}`}
+                            >
+                              <Eye size={14} className="text-stone-500" />
+                            </button>
+                            {run.status === 'pending' && (
+                              <button 
+                                onClick={() => handleClaimRun(run)}
+                                className="p-1.5 hover:bg-emerald-50 rounded-lg transition-colors" 
+                                title="Claim"
+                                aria-label={`Claim ${run.id}`}
+                              >
+                                <Lock size={14} className="text-emerald-600" />
+                              </button>
+                            )}
+                            {(run.status === 'claimed' || run.status === 'stale') && (
+                              <button 
+                                onClick={() => handleReleaseRun(run, run.status === 'stale')}
+                                className="p-1.5 hover:bg-orange-50 rounded-lg transition-colors" 
+                                title={run.status === 'stale' ? 'Force Release' : 'Release'}
+                                aria-label={`Release ${run.id}`}
+                              >
+                                <Unlock size={14} className="text-orange-600" />
+                              </button>
+                            )}
+                            {run.status === 'failed' && (
+                              <button 
+                                onClick={() => handleRetryRun(run)}
+                                className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="Retry"
+                                aria-label={`Retry ${run.id}`}
+                              >
+                                <RotateCcw size={14} className="text-blue-600" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            {filteredRuns.length > 0 && (
+              <div className="px-5 py-3 border-t border-stone-100 bg-stone-50 text-xs text-stone-500">
+                Showing {filteredRuns.length} of {runs.length} runs
+              </div>
+            )}
           </Card>
 
           {/* Run Details Drawer */}
           {selectedRun && (
-            <div className="fixed inset-0 z-50 flex justify-end">
+            <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
               <div className="absolute inset-0 bg-black/20" onClick={() => setSelectedRun(null)} />
-              <div className="relative w-full max-w-lg bg-white shadow-xl overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+              <div className="relative w-full max-w-lg bg-white shadow-xl overflow-y-auto animate-in slide-in-from-right duration-200">
+                <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between z-10">
                   <div>
-                    <h3 className="font-semibold text-stone-900">Run Details</h3>
+                    <h3 id="drawer-title" className="font-semibold text-stone-900">Run Details</h3>
                     <p className="text-sm text-stone-500 font-mono">{selectedRun.id}</p>
                   </div>
-                  <button onClick={() => setSelectedRun(null)} className="p-2 hover:bg-stone-100 rounded-lg">
+                  <button 
+                    onClick={() => setSelectedRun(null)} 
+                    className="p-2 hover:bg-stone-100 rounded-lg"
+                    aria-label="Close drawer"
+                  >
                     <X size={18} className="text-stone-500" />
                   </button>
                 </div>
                 <div className="p-6 space-y-6">
+                  {/* Status and Type */}
+                  <div className="flex items-center gap-3">
+                    <RunStatusBadge status={selectedRun.status} />
+                    <TypeBadge type={selectedRun.type} />
+                    {selectedRun.retryCount > 0 && (
+                      <span className="text-xs text-stone-500">Retry #{selectedRun.retryCount}</span>
+                    )}
+                  </div>
+
+                  {/* Metadata Grid */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-stone-500 uppercase tracking-wide">Type</p>
-                      <div className="mt-1"><TypeBadge type={selectedRun.type} /></div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-stone-500 uppercase tracking-wide">Status</p>
-                      <div className="mt-1"><RunStatusBadge status={selectedRun.status} /></div>
-                    </div>
-                    <div>
                       <p className="text-xs text-stone-500 uppercase tracking-wide">Farmer</p>
-                      <p className="mt-1 text-sm text-stone-900">{selectedRun.farmerName}</p>
+                      <p className="mt-1 text-sm text-stone-900 font-medium">{selectedRun.farmerName}</p>
+                      <p className="text-xs text-stone-500">{selectedRun.farmerId}</p>
                     </div>
                     <div>
                       <p className="text-xs text-stone-500 uppercase tracking-wide">Plot ID</p>
@@ -2104,53 +2471,90 @@ function IntegrationsPage() {
                       <p className="text-xs text-stone-500 uppercase tracking-wide">Claimed By</p>
                       <p className="mt-1 text-sm text-stone-900">{selectedRun.claimedBy || '—'}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-stone-500 uppercase tracking-wide">Retry Count</p>
-                      <p className="mt-1 text-sm text-stone-900">{selectedRun.retryCount}</p>
-                    </div>
-                    {selectedRun.startedAt && (
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Started At</p>
-                        <p className="mt-1 text-sm text-stone-900">{new Date(selectedRun.startedAt).toLocaleString()}</p>
-                      </div>
-                    )}
-                    {selectedRun.completedAt && (
-                      <div>
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Completed At</p>
-                        <p className="mt-1 text-sm text-stone-900">{new Date(selectedRun.completedAt).toLocaleString()}</p>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Error Message */}
                   {selectedRun.errorMessage && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-xs text-red-600 uppercase tracking-wide font-semibold mb-1">Error Message</p>
-                      <p className="text-sm text-red-800">{selectedRun.errorMessage}</p>
+                      <div className="flex items-start gap-3">
+                        <XCircle size={18} className="text-red-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-red-800">Error</p>
+                          <p className="mt-1 text-sm text-red-700">{selectedRun.errorMessage}</p>
+                        </div>
+                      </div>
                     </div>
                   )}
+
+                  {/* Timeline */}
+                  <div>
+                    <p className="text-xs text-stone-500 uppercase tracking-wide mb-3">Timeline</p>
+                    <div className="space-y-0">
+                      {selectedRun.events.map((event, idx) => (
+                        <div key={event.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <EventIcon type={event.type} />
+                            {idx < selectedRun.events.length - 1 && (
+                              <div className="w-px h-full min-h-[24px] bg-stone-200 my-1" />
+                            )}
+                          </div>
+                          <div className="pb-4">
+                            <p className="text-sm text-stone-900">{event.message}</p>
+                            <p className="text-xs text-stone-500">
+                              {new Date(event.timestamp).toLocaleString()}
+                              {event.actor && event.actor !== 'system' && ` by ${event.actor}`}
+                            </p>
+                            {event.metadata && (
+                              <div className="mt-1 text-xs text-stone-600">
+                                {Object.entries(event.metadata).map(([k, v]) => (
+                                  <span key={k} className="mr-3">{k}: <span className="font-medium">{String(v)}</span></span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Payload */}
                   <div>
                     <p className="text-xs text-stone-500 uppercase tracking-wide mb-2">Payload</p>
                     <pre className="p-4 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-700 overflow-x-auto">
                       {JSON.stringify(selectedRun.payload, null, 2)}
                     </pre>
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2 border-t border-stone-100">
                     {selectedRun.status === 'pending' && (
-                      <Button variant="primary" className="flex-1">
+                      <Button variant="primary" className="flex-1" onClick={() => handleClaimRun(selectedRun)}>
                         <Lock size={14} />
                         Claim Run
                       </Button>
                     )}
-                    {(selectedRun.status === 'claimed' || selectedRun.status === 'stale') && (
-                      <Button variant="secondary" className="flex-1">
-                        <RefreshCw size={14} />
+                    {selectedRun.status === 'claimed' && (
+                      <Button variant="secondary" className="flex-1" onClick={() => handleReleaseRun(selectedRun)}>
+                        <Unlock size={14} />
                         Release
                       </Button>
                     )}
-                    {selectedRun.status === 'failed' && (
-                      <Button variant="primary" className="flex-1">
-                        <RefreshCw size={14} />
-                        Retry
+                    {selectedRun.status === 'stale' && (
+                      <Button variant="secondary" className="flex-1 text-orange-700 border-orange-200 hover:bg-orange-50" onClick={() => handleReleaseRun(selectedRun, true)}>
+                        <Unlock size={14} />
+                        Force Release
                       </Button>
+                    )}
+                    {selectedRun.status === 'failed' && (
+                      <Button variant="primary" className="flex-1" onClick={() => handleRetryRun(selectedRun)}>
+                        <RotateCcw size={14} />
+                        Retry Run
+                      </Button>
+                    )}
+                    {(selectedRun.status === 'complete' || selectedRun.status === 'running') && (
+                      <div className="flex-1 text-center text-sm text-stone-500 py-2">
+                        {selectedRun.status === 'running' ? 'Run is currently in progress' : 'Run completed successfully'}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2176,24 +2580,30 @@ function IntegrationsPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-stone-700">Stale Threshold (minutes)</label>
+                <label htmlFor="stale-threshold" className="text-sm font-medium text-stone-700">Stale Threshold (minutes)</label>
                 <input
+                  id="stale-threshold"
                   type="number"
                   defaultValue={30}
+                  min={5}
+                  max={120}
                   className="mt-1 w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-stone-700">Max Releases per Sweep</label>
+                <label htmlFor="max-releases" className="text-sm font-medium text-stone-700">Max Releases per Sweep</label>
                 <input
+                  id="max-releases"
                   type="number"
                   defaultValue={10}
+                  min={1}
+                  max={100}
                   className="mt-1 w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
                 />
               </div>
-              <Button variant="primary" className="w-full">
-                <RefreshCw size={14} />
-                Trigger Sweep Now
+              <Button variant="primary" className="w-full" onClick={handleTriggerSweep} disabled={isActionLoading}>
+                {isActionLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                {isActionLoading ? 'Running Sweep...' : 'Trigger Sweep Now'}
               </Button>
             </div>
           </Card>
@@ -2217,7 +2627,10 @@ function IntegrationsPage() {
                     <p className="text-xs text-stone-500">Expires in 23 days</p>
                   </div>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">Valid</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <CheckCircle size={12} />
+                  Valid
+                </span>
               </div>
               <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -2229,7 +2642,10 @@ function IntegrationsPage() {
                     <p className="text-xs text-stone-500">Expires in 45 days</p>
                   </div>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">Valid</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <CheckCircle size={12} />
+                  Valid
+                </span>
               </div>
             </div>
           </Card>
@@ -2238,25 +2654,69 @@ function IntegrationsPage() {
           <Card className="p-6 lg:col-span-2">
             <h3 className="font-semibold text-stone-900 mb-4">Last Sweep Result</h3>
             <div className="p-4 bg-stone-50 border border-stone-200 rounded-lg">
-              <div className="flex items-center gap-4 text-sm">
-                <div>
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-stone-400" />
                   <span className="text-stone-500">Executed:</span>
-                  <span className="ml-2 text-stone-900">Apr 21, 2026 at 1:30 PM</span>
+                  <span className="text-stone-900">Apr 21, 2026 at 1:30 PM</span>
                 </div>
-                <div className="w-px h-4 bg-stone-200" />
-                <div>
+                <div className="w-px h-4 bg-stone-200 hidden sm:block" />
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-emerald-500" />
                   <span className="text-stone-500">Released:</span>
-                  <span className="ml-2 text-emerald-700 font-semibold">3 runs</span>
+                  <span className="text-emerald-700 font-semibold">3 runs</span>
                 </div>
-                <div className="w-px h-4 bg-stone-200" />
-                <div>
+                <div className="w-px h-4 bg-stone-200 hidden sm:block" />
+                <div className="flex items-center gap-2">
+                  <Timer size={14} className="text-stone-400" />
                   <span className="text-stone-500">Duration:</span>
-                  <span className="ml-2 text-stone-900">1.2s</span>
+                  <span className="text-stone-900">1.2s</span>
                 </div>
               </div>
             </div>
           </Card>
+
+          {/* Sweep History */}
+          <Card className="p-6 lg:col-span-2">
+            <h3 className="font-semibold text-stone-900 mb-4">Recent Sweep History</h3>
+            <div className="space-y-2">
+              {[
+                { time: 'Apr 21, 2026 at 1:30 PM', released: 3, duration: '1.2s', status: 'success' },
+                { time: 'Apr 21, 2026 at 1:00 PM', released: 0, duration: '0.8s', status: 'success' },
+                { time: 'Apr 21, 2026 at 12:30 PM', released: 1, duration: '0.9s', status: 'success' },
+                { time: 'Apr 21, 2026 at 12:00 PM', released: 5, duration: '1.5s', status: 'success' },
+                { time: 'Apr 21, 2026 at 11:30 AM', released: 2, duration: '1.1s', status: 'success' },
+              ].map((sweep, idx) => (
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-stone-100 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
+                      <CheckCircle size={12} className="text-emerald-600" />
+                    </div>
+                    <span className="text-sm text-stone-700">{sweep.time}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-stone-500">{sweep.released} released</span>
+                    <span className="text-stone-400">{sweep.duration}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          confirmLabel={confirmModal.confirmLabel}
+          confirmVariant={confirmModal.confirmVariant}
+          isLoading={isActionLoading}
+        />
       )}
     </div>
   );
@@ -2394,6 +2854,9 @@ case 'settings': return <SettingsPage />;
           </div>
         </main>
       </div>
+      
+      {/* Toast Notifications */}
+      <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
 }
