@@ -328,3 +328,118 @@ describe('HarvestService.listDdsPackageEvidenceDocuments', () => {
     ]);
   });
 });
+
+describe('HarvestService yield-cap benchmark resolution', () => {
+  it('prefers exact geography benchmark over GLOBAL fallback', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [
+          {
+            id: 'bench_hn_1',
+            geography: 'HN',
+            source_type: 'FAOSTAT',
+            yield_upper_kg_ha: '1800',
+            seasonality_factor: '1.1000',
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = new HarvestService(pool as any);
+
+    const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'HN');
+    expect(pool.query).toHaveBeenCalledWith(expect.any(String), [
+      expect.arrayContaining(['coffee', '656', 'coffee, green']),
+      'HN',
+      'GLOBAL',
+    ]);
+
+    expect(result.source).toBe('benchmark');
+    expect(result.benchmarkId).toBe('bench_hn_1');
+    expect(result.geography).toBe('HN');
+    expect(result.sourceType).toBe('FAOSTAT');
+    expect(result.capKgPerHa).toBeCloseTo(1980, 8);
+  });
+
+  it('falls back to GLOBAL benchmark when exact geography has no active row', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [
+          {
+            id: 'bench_global_1',
+            geography: 'GLOBAL',
+            source_type: 'USDA_FAS',
+            yield_upper_kg_ha: '1600',
+            seasonality_factor: '1.0000',
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = new HarvestService(pool as any);
+
+    const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'EC');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        source: 'benchmark',
+        benchmarkId: 'bench_global_1',
+        geography: 'GLOBAL',
+        sourceType: 'USDA_FAS',
+        capKgPerHa: 1600,
+      }),
+    );
+  });
+
+  it('falls back to default cap when benchmark rows are missing', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+      }),
+    };
+    const service = new HarvestService(pool as any);
+
+    const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'PE');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        source: 'fallback',
+        benchmarkId: null,
+        geography: 'PE',
+        sourceType: null,
+        capKgPerHa: 1500,
+      }),
+    );
+  });
+
+  it('resolves benchmark when stored commodity is numeric FAOSTAT code', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [
+          {
+            id: 'bench_95_1',
+            geography: '95',
+            source_type: 'FAOSTAT',
+            yield_upper_kg_ha: '1500',
+            seasonality_factor: '1.0000',
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = new HarvestService(pool as any);
+
+    const result = await (service as any).resolveYieldCapKgPerHa('coffee', '95');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        source: 'benchmark',
+        benchmarkId: 'bench_95_1',
+        geography: '95',
+        sourceType: 'FAOSTAT',
+        capKgPerHa: 1500,
+      }),
+    );
+  });
+});

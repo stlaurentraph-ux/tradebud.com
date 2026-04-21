@@ -258,6 +258,136 @@ Verification commands:
 - `cd tracebud-backend && BENCHMARK_ADMIN_ROLE_CLAIMS="ADMIN,COMPLIANCE_MANAGER" npm run auth:benchmark-admin:claims:check`
 - `cd tracebud-backend && npm test -- --runTestsByPath src/health/health.controller.spec.ts src/integrations/yield-benchmarks.controller.spec.ts`
 
+### S1 post-closeout hardening slice 11 - benchmark-driven yield-cap enforcement in harvest runtime
+
+- Replaced hardcoded harvest yield-cap enforcement path with active benchmark lookup against `yield_benchmarks`:
+  - scope key: `commodity=coffee` + plot-linked geography (`farmer_profile.country_code`)
+  - deterministic fallback order: exact geography -> `GLOBAL` benchmark row -> default fallback cap (`1500 kg/ha`)
+- Added deterministic benchmark resolution helper in `HarvestService`:
+  - applies `yield_upper_kg_ha * seasonality_factor`
+  - fail-safe fallback on missing/invalid benchmark rows or query errors.
+- Added yield-cap analytics/audit event coverage in harvest runtime:
+  - `yield_cap_resolved`
+  - `yield_cap_fallback_used`
+  - `yield_cap_violation_detected`
+- Preserved canonical state behavior and exception semantics:
+  - harvest state transition remains unchanged (`create` succeeds or fails with explicit blocker)
+  - cap violations continue to fail closed with deterministic `BadRequestException`.
+- Updated package-level risk-density check to consume benchmark resolver (with `GLOBAL` geography fallback) instead of hardcoded constant.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts`
+- `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.controller.spec.ts`
+
+### S1 post-closeout hardening slice 12 - benchmark import draft upsert scaffold
+
+- Added internal-admin benchmark import endpoint:
+  - `POST /v1/yield-benchmarks/import`
+  - accepts `rows[]` batch payload and enforces non-empty import set.
+- Implemented deterministic import validation and state behavior:
+  - row-level canonical validation reuses existing create rules (source type, citable source reference, numeric plausibility)
+  - import path is draft-only (`active=FALSE`) upsert semantics:
+    - update matching inactive draft (`commodity + geography + source_type + source_reference`)
+    - otherwise insert a new inactive draft row.
+- Added import telemetry events for operations and recovery diagnostics:
+  - `yield_benchmark_import_started`
+  - `yield_benchmark_import_completed`
+- Added focused unit coverage for:
+  - create-only import path
+  - update-existing-draft import path.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`
+- `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts`
+
+### S1 post-closeout hardening slice 13 - source-sync adapter boundary + import-run persistence
+
+- Added source-sync ingestion contract:
+  - `POST /v1/yield-benchmarks/import/sync-source`
+  - supports `sourceType` (`USDA_FAS` or `FAOSTAT`) with optional `commodity` / `geography` filters and `dryRun`.
+- Added source-adapter boundary behavior:
+  - source endpoints are runtime-configured via `YIELD_BENCHMARKS_USDA_FAS_URL` / `YIELD_BENCHMARKS_FAOSTAT_URL`
+  - source pull maps adapter payload rows into canonical benchmark import rows before existing validation/upsert logic.
+- Added import-run diagnostics read contract:
+  - `GET /v1/yield-benchmarks/import-runs?limit=...`
+  - returns recent ingestion runs for replay/operational diagnostics.
+- Added import-run persistence baseline:
+  - new SQL migration `tracebud-backend/sql/tb_v16_012_yield_benchmark_import_runs.sql`
+  - run table tracks `source_type`, `status`, `row_count`, actor attribution, metadata/details payloads, and start/finish timestamps.
+- Added deterministic exception/recovery behavior:
+  - missing import-run table (`42P01`) fail-softs for reads (empty list) and run-tracking writes (feature continues while migration is pending)
+  - source non-2xx responses fail closed with deterministic validation error.
+- Added telemetry events for source-sync lifecycle:
+  - `yield_benchmark_sync_completed` (plus existing import started/completed events).
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`
+- `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts`
+
+### S1 post-closeout hardening slice 14 - direct FAOSTAT authenticated fetch fallback
+
+- Extended source sync behavior for `FAOSTAT`:
+  - when `YIELD_BENCHMARKS_FAOSTAT_URL` is set, existing adapter URL flow is used.
+  - when adapter URL is absent, controller now performs direct authenticated fetch against FAOSTAT API.
+- Added direct FAOSTAT runtime contract:
+  - endpoint default: `https://faostatservices.fao.org/api/v1/en/data/QCL`
+  - auth secret: `YIELD_BENCHMARKS_FAOSTAT_API_KEY` sent as `x-api-key`
+  - optional override: `YIELD_BENCHMARKS_FAOSTAT_DIRECT_URL`.
+- Added direct mapping semantics:
+  - FAOSTAT payload `value` (hg/ha) is normalized to kg/ha (`/10`) for benchmark bounds.
+  - imports are still persisted through canonical draft upsert path and existing validation rules.
+- Added focused unit coverage proving:
+  - direct fallback path is used when adapter URL is unset
+  - request includes FAOSTAT API key header
+  - normalized row is imported and tracked in run lifecycle.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/yield-benchmarks.controller.spec.ts`
+- `cd tracebud-backend && npm test -- --runTestsByPath src/harvest/harvest.service.spec.ts src/integrations/yield-benchmarks.controller.spec.ts`
+
+### S1 post-closeout hardening slice 15 - benchmark activation at scale + dual-control evidence
+
+- Completed FAOSTAT-backed benchmark seeding and activation for the selected non-re-export coffee exporter set:
+  - `21, 237, 44, 226, 101, 95, 238, 100, 170, 89, 138, 215, 48, 107, 168, 114`
+- Verified import and activation state transitions end-to-end:
+  - draft import (`active=false`) -> dual-control activation (`active=true`)
+  - second approver enforcement validated (same-user activation blocked with deterministic `403`).
+- Confirmed source-sync import-run diagnostics and per-country activation responses are persisted for operational replay/traceability.
+- Yearly refresh cadence decision recorded for FAOSTAT benchmark maintenance (aligned with FAOSTAT annual publication cadence):
+  - `import/sync-source` execution target cadence: **yearly**
+  - activation remains explicit dual-control post-review.
+
+Verification commands:
+
+- `POST /api/v1/yield-benchmarks/import/sync-source` (country-scoped, `dryRun=false`)
+- `POST /api/v1/yield-benchmarks/{id}/activate` (second approver JWT)
+- `GET /api/v1/yield-benchmarks?active=true`
+
+### S1 post-closeout hardening slice 16 - runtime benchmark-path closure (commodity alias + geography persistence)
+
+- Fixed runtime benchmark lookup mismatch in harvest enforcement:
+  - `HarvestService.resolveYieldCapKgPerHa` now resolves commodity aliases (`coffee` <-> `656` / `coffee, green`) so active FAOSTAT benchmark rows are used by harvest runtime.
+- Fixed plot creation persistence gap against geography constraints:
+  - `PlotsService.create` now writes `plot.geography` on insert (`v.geom::geography`) to satisfy canonical spatial constraint and keep `GEOGRAPHY`-first storage semantics intact.
+- Re-validated live harvest enforcement with fake fixture data:
+  - below-cap accepted
+  - near-cap accepted
+  - above-cap blocked
+  - audit now shows `yield_cap_resolved` with `sourceType=FAOSTAT` and non-null `benchmarkId` (no longer fallback).
+
+Verification commands:
+
+- `npx jest src/harvest/harvest.service.spec.ts --runInBand`
+- `npm test -- plots.service.spec.ts`
+- live checks:
+  - `POST /api/v1/plots`
+  - `POST /api/v1/harvest` (below/near/above)
+  - audit verification query for `yield_cap_resolved|yield_cap_violation_detected`.
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
