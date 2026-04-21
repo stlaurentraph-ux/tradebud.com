@@ -487,38 +487,79 @@ export class InboxService {
       throw new BadRequestException('Authenticated tenant context is required.');
     }
     await this.seedIfEmpty();
-    const rowsRes = await this.pool.query<{
-      id: string;
-      campaign_id: string;
-      title: string;
-      request_type: RequestType;
-      due_at: Date | string;
-      from_org: string;
-      sender_tenant_id: string;
-      recipient_tenant_id: string;
-      status: InboxRequestStatus;
-      created_at: Date | string;
-      updated_at: Date | string;
-    }>(
-      `
-        SELECT
-          id,
-          campaign_id,
-          title,
-          request_type,
-          due_at,
-          from_org,
-          sender_tenant_id,
-          recipient_tenant_id,
-          status,
-          created_at,
-          updated_at
-        FROM inbox_requests
-        WHERE recipient_tenant_id = $1
-        ORDER BY due_at ASC, created_at ASC
-      `,
-      [tenantId],
-    );
+    let rowsRes;
+    try {
+      rowsRes = await this.pool.query<{
+        id: string;
+        campaign_id: string;
+        title: string;
+        request_type: RequestType;
+        due_at: Date | string;
+        from_org: string;
+        sender_tenant_id: string;
+        recipient_tenant_id: string;
+        status: InboxRequestStatus;
+        created_at: Date | string;
+        updated_at: Date | string;
+      }>(
+        `
+          SELECT
+            id,
+            campaign_id,
+            title,
+            request_type,
+            due_at,
+            from_org,
+            sender_tenant_id,
+            recipient_tenant_id,
+            status,
+            created_at,
+            updated_at
+          FROM inbox_requests
+          WHERE recipient_tenant_id = $1
+          ORDER BY due_at ASC, created_at ASC
+        `,
+        [tenantId],
+      );
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        await this.ensureSchemaVerified();
+        rowsRes = await this.pool.query<{
+          id: string;
+          campaign_id: string;
+          title: string;
+          request_type: RequestType;
+          due_at: Date | string;
+          from_org: string;
+          sender_tenant_id: string;
+          recipient_tenant_id: string;
+          status: InboxRequestStatus;
+          created_at: Date | string;
+          updated_at: Date | string;
+        }>(
+          `
+            SELECT
+              id,
+              campaign_id,
+              title,
+              request_type,
+              due_at,
+              from_org,
+              sender_tenant_id,
+              recipient_tenant_id,
+              status,
+              created_at,
+              updated_at
+            FROM inbox_requests
+            WHERE recipient_tenant_id = $1
+            ORDER BY due_at ASC, created_at ASC
+          `,
+          [tenantId],
+        );
+      } else {
+        throw error;
+      }
+    }
     return rowsRes.rows.map((row) => this.mapRowToRecord(row));
   }
 
@@ -528,40 +569,83 @@ export class InboxService {
     }
     await this.seedIfEmpty();
 
-    const updatedRes = await this.pool.query<{
-      id: string;
-      campaign_id: string;
-      title: string;
-      request_type: RequestType;
-      due_at: Date | string;
-      from_org: string;
-      sender_tenant_id: string;
-      recipient_tenant_id: string;
-      status: InboxRequestStatus;
-      created_at: Date | string;
-      updated_at: Date | string;
-    }>(
-      `
-        UPDATE inbox_requests
-        SET status = 'RESPONDED', updated_at = NOW()
-        WHERE id = $1
-          AND recipient_tenant_id = $2
-          AND status <> 'RESPONDED'
-        RETURNING
-          id,
-          campaign_id,
-          title,
-          request_type,
-          due_at,
-          from_org,
-          sender_tenant_id,
-          recipient_tenant_id,
-          status,
-          created_at,
-          updated_at
-      `,
-      [id, tenantId],
-    );
+    let updatedRes;
+    try {
+      updatedRes = await this.pool.query<{
+        id: string;
+        campaign_id: string;
+        title: string;
+        request_type: RequestType;
+        due_at: Date | string;
+        from_org: string;
+        sender_tenant_id: string;
+        recipient_tenant_id: string;
+        status: InboxRequestStatus;
+        created_at: Date | string;
+        updated_at: Date | string;
+      }>(
+        `
+          UPDATE inbox_requests
+          SET status = 'RESPONDED', updated_at = NOW()
+          WHERE id = $1
+            AND recipient_tenant_id = $2
+            AND status <> 'RESPONDED'
+          RETURNING
+            id,
+            campaign_id,
+            title,
+            request_type,
+            due_at,
+            from_org,
+            sender_tenant_id,
+            recipient_tenant_id,
+            status,
+            created_at,
+            updated_at
+        `,
+        [id, tenantId],
+      );
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        await this.ensureSchemaVerified();
+        updatedRes = await this.pool.query<{
+          id: string;
+          campaign_id: string;
+          title: string;
+          request_type: RequestType;
+          due_at: Date | string;
+          from_org: string;
+          sender_tenant_id: string;
+          recipient_tenant_id: string;
+          status: InboxRequestStatus;
+          created_at: Date | string;
+          updated_at: Date | string;
+        }>(
+          `
+            UPDATE inbox_requests
+            SET status = 'RESPONDED', updated_at = NOW()
+            WHERE id = $1
+              AND recipient_tenant_id = $2
+              AND status <> 'RESPONDED'
+            RETURNING
+              id,
+              campaign_id,
+              title,
+              request_type,
+              due_at,
+              from_org,
+              sender_tenant_id,
+              recipient_tenant_id,
+              status,
+              created_at,
+              updated_at
+          `,
+          [id, tenantId],
+        );
+      } else {
+        throw error;
+      }
+    }
 
     if (updatedRes.rowCount && updatedRes.rows[0]) {
       try {
@@ -595,39 +679,81 @@ export class InboxService {
       return this.mapRowToRecord(updatedRes.rows[0]);
     }
 
-    const existingRes = await this.pool.query<{
-      id: string;
-      campaign_id: string;
-      title: string;
-      request_type: RequestType;
-      due_at: Date | string;
-      from_org: string;
-      sender_tenant_id: string;
-      recipient_tenant_id: string;
-      status: InboxRequestStatus;
-      created_at: Date | string;
-      updated_at: Date | string;
-    }>(
-      `
-        SELECT
-          id,
-          campaign_id,
-          title,
-          request_type,
-          due_at,
-          from_org,
-          sender_tenant_id,
-          recipient_tenant_id,
-          status,
-          created_at,
-          updated_at
-        FROM inbox_requests
-        WHERE id = $1
-          AND recipient_tenant_id = $2
-        LIMIT 1
-      `,
-      [id, tenantId],
-    );
+    let existingRes;
+    try {
+      existingRes = await this.pool.query<{
+        id: string;
+        campaign_id: string;
+        title: string;
+        request_type: RequestType;
+        due_at: Date | string;
+        from_org: string;
+        sender_tenant_id: string;
+        recipient_tenant_id: string;
+        status: InboxRequestStatus;
+        created_at: Date | string;
+        updated_at: Date | string;
+      }>(
+        `
+          SELECT
+            id,
+            campaign_id,
+            title,
+            request_type,
+            due_at,
+            from_org,
+            sender_tenant_id,
+            recipient_tenant_id,
+            status,
+            created_at,
+            updated_at
+          FROM inbox_requests
+          WHERE id = $1
+            AND recipient_tenant_id = $2
+          LIMIT 1
+        `,
+        [id, tenantId],
+      );
+    } catch (error: any) {
+      if (error?.code === '42P01') {
+        await this.ensureSchemaVerified();
+        existingRes = await this.pool.query<{
+          id: string;
+          campaign_id: string;
+          title: string;
+          request_type: RequestType;
+          due_at: Date | string;
+          from_org: string;
+          sender_tenant_id: string;
+          recipient_tenant_id: string;
+          status: InboxRequestStatus;
+          created_at: Date | string;
+          updated_at: Date | string;
+        }>(
+          `
+            SELECT
+              id,
+              campaign_id,
+              title,
+              request_type,
+              due_at,
+              from_org,
+              sender_tenant_id,
+              recipient_tenant_id,
+              status,
+              created_at,
+              updated_at
+            FROM inbox_requests
+            WHERE id = $1
+              AND recipient_tenant_id = $2
+            LIMIT 1
+          `,
+          [id, tenantId],
+        );
+      } else {
+        throw error;
+      }
+    }
 
     if (!existingRes.rowCount || !existingRes.rows[0]) {
       throw new NotFoundException('Request not found for tenant.');
