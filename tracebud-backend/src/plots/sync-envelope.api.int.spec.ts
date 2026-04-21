@@ -21,9 +21,15 @@ function withSearchPath(connectionString: string, targetSchema: string) {
 class TestAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<any>();
-    const tenantId = req.headers['x-tenant-id'];
-    const userId = req.headers['x-user-id'] ?? '11111111-1111-4111-8111-111111111111';
-    const email = req.headers['x-user-email'] ?? 'farmer@example.com';
+    const readHeader = (name: string): string | undefined => {
+      const raw = req.headers[name];
+      if (Array.isArray(raw)) return raw[0];
+      if (typeof raw === 'string') return raw;
+      return undefined;
+    };
+    const tenantId = readHeader('x-tenant-id');
+    const userId = readHeader('x-user-id') ?? '11111111-1111-4111-8111-111111111111';
+    const email = readHeader('x-user-email') ?? 'farmer@example.com';
     req.user = {
       id: userId,
       email,
@@ -129,6 +135,7 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(`DELETE FROM ${schema}.audit_log`);
     await pool.query(`DELETE FROM ${schema}.agent_plot_assignment`);
     await pool.query(`DELETE FROM ${schema}.plot`);
@@ -193,14 +200,15 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
     const res = await request(app.getHttpServer())
       .post(`/v1/plots/${plotId}/photos-sync`)
       .set('x-tenant-id', 'tenant_1')
-      .set('x-user-email', 'farmer@example.com')
-      .set('x-user-id', userA)
+      .set('x-user-email', 'agent+field@example.com')
+      .set('x-user-id', userB)
       .send({
         kind: 'ground_truth',
         photos: [{ uri: 'file://photo-1.jpg' }],
         note: 'evidence upload',
         hlcTimestamp: '1712524800000:000123',
         clientEventId: 'evt-evidence-ok-1',
+        assignmentId: 'assign_agent_plot_a',
       });
 
     expect(res.status).toBe(201);
@@ -264,7 +272,7 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
   it('returns deforestation decision history events from persisted audit rows', async () => {
     await pool.query(
       `
-        INSERT INTO public.audit_log (event_type, payload, user_id)
+        INSERT INTO ${schema}.audit_log (event_type, payload, user_id)
         VALUES ('plot_deforestation_decision_recorded', $1::jsonb, $2::uuid)
       `,
       [
