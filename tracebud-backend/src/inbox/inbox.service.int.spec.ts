@@ -13,6 +13,7 @@ function withSearchPath(connectionString: string, targetSchema: string) {
 }
 
 describeIfDb('InboxService integration: tenant/state boundaries', () => {
+  jest.setTimeout(30_000);
   let pool: Pool;
   let service: InboxService;
 

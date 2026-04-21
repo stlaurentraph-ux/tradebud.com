@@ -4,7 +4,7 @@ import { AuditController } from './audit.controller';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_audit_gated_entry_test';
+const schema = `tb_audit_gated_entry_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string) {
   const url = new URL(connectionString);
@@ -38,6 +38,7 @@ describeIfDb('AuditController integration: gated-entry telemetry listing', () =>
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_account (
         id UUID PRIMARY KEY,
+        role TEXT NULL,
         name TEXT NULL
       )
     `);
@@ -60,6 +61,7 @@ describeIfDb('AuditController integration: gated-entry telemetry listing', () =>
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query('DELETE FROM audit_log');
     await pool.query(
       `
