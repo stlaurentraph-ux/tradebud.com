@@ -169,7 +169,7 @@ export class WorkflowTemplatesController {
           FROM audit_log
           WHERE event_type = 'workflow_template_created'
             AND payload ->> 'tenantId' = $1
-          ORDER BY timestamp DESC
+          ORDER BY timestamp DESC, id DESC
           LIMIT $2
           OFFSET $3
         `,
@@ -214,7 +214,7 @@ export class WorkflowTemplatesController {
             AND payload ->> 'tenantId' = $1
             AND payload ->> 'templateId' = $2
             AND payload ->> 'stageId' = $3
-          ORDER BY timestamp DESC
+          ORDER BY timestamp DESC, id DESC
           LIMIT 1
         `,
         [tenantId, templateId, stageId],
@@ -303,7 +303,7 @@ export class WorkflowTemplatesController {
             AND payload ->> 'tenantId' = $1
             AND payload ->> 'templateId' = $2
             AND payload ->> 'stageId' = $3
-          ORDER BY timestamp DESC
+          ORDER BY timestamp DESC, id DESC
           LIMIT 1
         `,
         [tenantId, templateId, stageId],
