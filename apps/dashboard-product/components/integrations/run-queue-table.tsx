@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Table,
   TableBody,
@@ -45,6 +45,14 @@ interface RunQueueTableProps {
 type SortField = 'updatedAt' | 'status' | 'attemptCount' | 'nextRetryAt';
 type SortDirection = 'asc' | 'desc';
 
+interface SortHeaderProps {
+  field: SortField;
+  children: ReactNode;
+  sortField: SortField;
+  sortDirection: SortDirection;
+  onSort: (field: SortField) => void;
+}
+
 function StatusBadge({ status }: { status: RunStatus }) {
   const variants: Record<RunStatus, { variant: 'info' | 'success' | 'destructive'; label: string }> = {
     started: { variant: 'info', label: 'Started' },
@@ -87,6 +95,27 @@ function isClaimStale(claimedAt: string | null, staleMinutes = 60): boolean {
   return now - claimTime > staleMinutes * 60 * 1000;
 }
 
+function SortHeader({ field, children, sortField, sortDirection, onSort }: SortHeaderProps) {
+  const isActive = sortField === field;
+  return (
+    <button
+      onClick={() => onSort(field)}
+      className="flex items-center gap-1 hover:text-foreground transition-colors"
+    >
+      {children}
+      {isActive ? (
+        sortDirection === 'asc' ? (
+          <ArrowUp className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowDown className="h-3.5 w-3.5" />
+        )
+      ) : (
+        <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
+      )}
+    </button>
+  );
+}
+
 export function RunQueueTable({
   runs,
   onViewDetails,
@@ -127,33 +156,6 @@ export function RunQueueTable({
     }
     return sortDirection === 'asc' ? comparison : -comparison;
   });
-
-  const SortHeader = ({
-    field,
-    children,
-  }: {
-    field: SortField;
-    children: React.ReactNode;
-  }) => {
-    const isActive = sortField === field;
-    return (
-      <button
-        onClick={() => handleSort(field)}
-        className="flex items-center gap-1 hover:text-foreground transition-colors"
-      >
-        {children}
-        {isActive ? (
-          sortDirection === 'asc' ? (
-            <ArrowUp className="h-3.5 w-3.5" />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-        )}
-      </button>
-    );
-  };
 
   // Can claim if: failed, unclaimed, retry is due
   const canClaim = (run: IntegrationRun) =>
@@ -202,18 +204,18 @@ export function RunQueueTable({
               <TableHead>Questionnaire</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>
-                <SortHeader field="status">Status</SortHeader>
+                <SortHeader field="status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Status</SortHeader>
               </TableHead>
               <TableHead className="text-center">
-                <SortHeader field="attemptCount">Attempts</SortHeader>
+                <SortHeader field="attemptCount" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Attempts</SortHeader>
               </TableHead>
               <TableHead>Error Code</TableHead>
               <TableHead>
-                <SortHeader field="nextRetryAt">Next Retry</SortHeader>
+                <SortHeader field="nextRetryAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Next Retry</SortHeader>
               </TableHead>
               <TableHead>Claimed By</TableHead>
               <TableHead>
-                <SortHeader field="updatedAt">Updated</SortHeader>
+                <SortHeader field="updatedAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Updated</SortHeader>
               </TableHead>
               <TableHead className="w-[50px]">
                 <span className="sr-only">Actions</span>

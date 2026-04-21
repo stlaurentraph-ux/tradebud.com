@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -155,17 +155,10 @@ export function RunDetailsDrawer({
   onRelease,
   onRetry,
 }: RunDetailsDrawerProps) {
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-
-  useEffect(() => {
-    if (run) {
-      // TODO: Replace with actual API call
-      // GET /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs
-      setTimeline(getMockTimeline(run.id));
-    }
-  }, [run]);
-
   if (!run) return null;
+  // TODO: Replace with actual API call
+  // GET /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs
+  const timeline: TimelineEvent[] = getMockTimeline(run.id);
 
   const canClaim = run.status === 'failed' && !run.claimedByUserId;
   const canRelease = !!run.claimedByUserId;

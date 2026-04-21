@@ -16,7 +16,6 @@ import {
   ShieldAlert,
   Loader2,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
