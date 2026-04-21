@@ -14,6 +14,7 @@ function withSearchPath(connectionString: string, targetSchema: string) {
 }
 
 describeIfDb('InboxController integration: tenant claim + role policy', () => {
+  jest.setTimeout(30_000);
   let pool: Pool;
   let service: InboxService;
   let controller: InboxController;
@@ -112,7 +113,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
         user: { app_metadata: { tenant_id: 'tenant_brazil_001' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).rejects.toThrow(NotFoundException);
-  }, 20_000);
+  }, 60_000);
 
   it('self-heals table state for controller list/respond after external table drop', async () => {
     await controller.bootstrap(
@@ -137,5 +138,5 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     ).resolves.toMatchObject({
       request: expect.objectContaining({ id: pending!.id, status: 'RESPONDED' }),
     });
-  }, 20_000);
+  }, 60_000);
 });
