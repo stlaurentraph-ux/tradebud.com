@@ -26,6 +26,11 @@ export class InboxService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   private schemaCheckInFlight: Promise<void> | null = null;
 
+  private isRetriableDdlCollision(error: unknown): boolean {
+    const code = (error as { code?: string } | null)?.code;
+    return code === '23505' || code === '42P07' || code === '42710';
+  }
+
   private defaultRequests(nowIso: string): InboxRequestRecord[] {
     return [
       {
@@ -165,7 +170,8 @@ export class InboxService {
   }
 
   private async ensureSchemaWithClient(client: PoolClient): Promise<void> {
-    await client.query(
+    try {
+      await client.query(
       `
       CREATE TABLE IF NOT EXISTS inbox_requests (
         id TEXT PRIMARY KEY,
@@ -181,9 +187,15 @@ export class InboxService {
         updated_at TIMESTAMPTZ NOT NULL
       )
     `,
-    );
+      );
+    } catch (error) {
+      if (!this.isRetriableDdlCollision(error)) {
+        throw error;
+      }
+    }
 
-    await client.query(
+    try {
+      await client.query(
       `
       CREATE TABLE IF NOT EXISTS inbox_request_events (
         id BIGSERIAL PRIMARY KEY,
@@ -194,26 +206,49 @@ export class InboxService {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `,
-    );
+      );
+    } catch (error) {
+      if (!this.isRetriableDdlCollision(error)) {
+        throw error;
+      }
+    }
 
-    await client.query(
+    try {
+      await client.query(
       `
       CREATE INDEX IF NOT EXISTS idx_inbox_requests_recipient_status_due
       ON inbox_requests(recipient_tenant_id, status, due_at)
     `,
-    );
-    await client.query(
+      );
+    } catch (error) {
+      if (!this.isRetriableDdlCollision(error)) {
+        throw error;
+      }
+    }
+    try {
+      await client.query(
       `
       CREATE INDEX IF NOT EXISTS idx_inbox_requests_campaign
       ON inbox_requests(campaign_id)
     `,
-    );
-    await client.query(
+      );
+    } catch (error) {
+      if (!this.isRetriableDdlCollision(error)) {
+        throw error;
+      }
+    }
+    try {
+      await client.query(
       `
       CREATE INDEX IF NOT EXISTS idx_inbox_request_events_request_id
       ON inbox_request_events(request_id)
     `,
-    );
+      );
+    } catch (error) {
+      if (!this.isRetriableDdlCollision(error)) {
+        throw error;
+      }
+    }
   }
 
   private async ensureSchema(): Promise<void> {
