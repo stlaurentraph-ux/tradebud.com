@@ -9,14 +9,15 @@ import {
   Map, Layers, Download, Eye, Send, X, Leaf, Building2, QrCode, Lock,
   History, Filter, RefreshCw, ExternalLink, Satellite, PenTool, Edit3,
   FolderOpen, UserCheck, Landmark, FileSignature, ShieldCheck, Workflow, Database,
-  Info, CircleDot, Hexagon, Loader2, Play, Pause, CheckCircle, XCircle, Timer, Unlock, RotateCcw
+  Info, CircleDot, Hexagon, Loader2, Play, Pause, CheckCircle, XCircle, Timer, Unlock, RotateCcw,
+  ClipboardList, MessageSquare, CalendarDays, FileQuestion, LockKeyhole
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings' | 'integrations';
+type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings' | 'integrations' | 'assessments';
 type PlotStatus = 'compliant' | 'pending' | 'flagged';
 type PackageStatus = 'verified' | 'pending' | 'issue' | 'submitted';
 
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { id: 'documents', label: 'Documents', icon: FolderOpen },
   { id: 'traces', label: 'TRACES NT', icon: Globe, badge: 'EU' },
   { id: 'reports', label: 'Reports', icon: FileText },
+  { id: 'assessments', label: 'Assessments', icon: ClipboardList, badge: '4' },
   { id: 'integrations', label: 'Integrations', icon: Workflow },
 ];
 
@@ -1846,6 +1848,980 @@ function SettingsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PAGE: ASSESSMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type RequestStatus = 'sent' | 'opened' | 'in_progress' | 'submitted' | 'reviewed' | 'needs_changes' | 'cancelled';
+type RequestPathway = 'annuals' | 'rice';
+
+interface AssessmentRequest {
+  id: string;
+  title: string;
+  pathway: RequestPathway;
+  farmerUserId: string;
+  farmerName: string;
+  instructions?: string;
+  dueDate: string;
+  status: RequestStatus;
+  questionnaireDraftId?: string;
+  questionnaireLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  feedbackMessage?: string;
+  events: RequestEvent[];
+}
+
+interface RequestEvent {
+  id: string;
+  type: 'created' | 'sent' | 'opened' | 'started' | 'submitted' | 'reviewed' | 'needs_changes' | 'cancelled';
+  timestamp: string;
+  actor: string;
+  message: string;
+}
+
+// Mock assessment requests data
+const mockAssessmentRequests: AssessmentRequest[] = [
+  {
+    id: 'REQ-001',
+    title: '2026 Annual Assessment - Coffee Plot',
+    pathway: 'annuals',
+    farmerUserId: 'F-001',
+    farmerName: 'Juan Carlos Mejía',
+    instructions: 'Please complete the annual sustainability assessment for your coffee plot HN-COP-001. Include recent photos of the plot boundaries.',
+    dueDate: '2026-04-30',
+    status: 'submitted',
+    questionnaireDraftId: 'QD-001',
+    questionnaireLocked: true,
+    createdAt: '2026-04-01T10:00:00Z',
+    updatedAt: '2026-04-18T14:30:00Z',
+    submittedAt: '2026-04-18T14:30:00Z',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-04-01T10:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-04-01T10:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'opened', timestamp: '2026-04-02T08:15:00Z', actor: 'Juan Carlos Mejía', message: 'Farmer opened the request' },
+      { id: 'e4', type: 'started', timestamp: '2026-04-15T09:00:00Z', actor: 'Juan Carlos Mejía', message: 'Farmer started filling the form' },
+      { id: 'e5', type: 'submitted', timestamp: '2026-04-18T14:30:00Z', actor: 'Juan Carlos Mejía', message: 'Farmer submitted the assessment' },
+    ]
+  },
+  {
+    id: 'REQ-002',
+    title: 'Rice Sustainability Survey Q1',
+    pathway: 'rice',
+    farmerUserId: 'F-002',
+    farmerName: 'María Elena López',
+    instructions: 'Complete the quarterly rice sustainability survey including water usage metrics.',
+    dueDate: '2026-04-25',
+    status: 'in_progress',
+    questionnaireDraftId: 'QD-002',
+    questionnaireLocked: true,
+    createdAt: '2026-04-05T09:00:00Z',
+    updatedAt: '2026-04-19T11:20:00Z',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-04-05T09:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-04-05T09:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'opened', timestamp: '2026-04-06T10:30:00Z', actor: 'María Elena López', message: 'Farmer opened the request' },
+      { id: 'e4', type: 'started', timestamp: '2026-04-19T11:20:00Z', actor: 'María Elena López', message: 'Farmer started filling the form' },
+    ]
+  },
+  {
+    id: 'REQ-003',
+    title: 'Annual Cocoa Assessment',
+    pathway: 'annuals',
+    farmerUserId: 'F-003',
+    farmerName: 'Carlos Hernández',
+    instructions: 'Please complete the sustainability assessment for your cocoa operations.',
+    dueDate: '2026-05-15',
+    status: 'sent',
+    questionnaireDraftId: 'QD-003',
+    questionnaireLocked: false,
+    createdAt: '2026-04-10T14:00:00Z',
+    updatedAt: '2026-04-10T14:00:00Z',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-04-10T14:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-04-10T14:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+    ]
+  },
+  {
+    id: 'REQ-004',
+    title: 'Coffee Plot Re-assessment',
+    pathway: 'annuals',
+    farmerUserId: 'F-004',
+    farmerName: 'Ana Sofía Reyes',
+    instructions: 'Please address the issues flagged in the previous assessment and resubmit.',
+    dueDate: '2026-04-22',
+    status: 'needs_changes',
+    questionnaireDraftId: 'QD-004',
+    questionnaireLocked: true,
+    createdAt: '2026-03-15T10:00:00Z',
+    updatedAt: '2026-04-15T16:45:00Z',
+    reviewedAt: '2026-04-15T16:45:00Z',
+    reviewedBy: 'reviewer@tracebud.com',
+    feedbackMessage: 'The plot boundary photos are not clear enough. Please retake the photos with better lighting and ensure all four corners are visible.',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-03-15T10:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-03-15T10:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'opened', timestamp: '2026-03-16T08:00:00Z', actor: 'Ana Sofía Reyes', message: 'Farmer opened the request' },
+      { id: 'e4', type: 'started', timestamp: '2026-03-20T10:00:00Z', actor: 'Ana Sofía Reyes', message: 'Farmer started filling the form' },
+      { id: 'e5', type: 'submitted', timestamp: '2026-04-10T14:00:00Z', actor: 'Ana Sofía Reyes', message: 'Farmer submitted the assessment' },
+      { id: 'e6', type: 'needs_changes', timestamp: '2026-04-15T16:45:00Z', actor: 'reviewer@tracebud.com', message: 'Reviewer requested changes' },
+    ]
+  },
+  {
+    id: 'REQ-005',
+    title: '2026 Annual Assessment - Plot HN-COP-005',
+    pathway: 'annuals',
+    farmerUserId: 'F-005',
+    farmerName: 'Roberto Andrade',
+    dueDate: '2026-04-28',
+    status: 'reviewed',
+    questionnaireDraftId: 'QD-005',
+    questionnaireLocked: true,
+    createdAt: '2026-03-20T09:00:00Z',
+    updatedAt: '2026-04-20T10:30:00Z',
+    submittedAt: '2026-04-18T11:00:00Z',
+    reviewedAt: '2026-04-20T10:30:00Z',
+    reviewedBy: 'reviewer@tracebud.com',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-03-20T09:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-03-20T09:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'opened', timestamp: '2026-03-21T07:30:00Z', actor: 'Roberto Andrade', message: 'Farmer opened the request' },
+      { id: 'e4', type: 'started', timestamp: '2026-04-01T09:00:00Z', actor: 'Roberto Andrade', message: 'Farmer started filling the form' },
+      { id: 'e5', type: 'submitted', timestamp: '2026-04-18T11:00:00Z', actor: 'Roberto Andrade', message: 'Farmer submitted the assessment' },
+      { id: 'e6', type: 'reviewed', timestamp: '2026-04-20T10:30:00Z', actor: 'reviewer@tracebud.com', message: 'Assessment approved' },
+    ]
+  },
+  {
+    id: 'REQ-006',
+    title: 'Rice Cultivation Survey',
+    pathway: 'rice',
+    farmerUserId: 'F-002',
+    farmerName: 'María Elena López',
+    dueDate: '2026-05-01',
+    status: 'opened',
+    questionnaireDraftId: 'QD-006',
+    questionnaireLocked: true,
+    createdAt: '2026-04-18T11:00:00Z',
+    updatedAt: '2026-04-19T08:00:00Z',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-04-18T11:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-04-18T11:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'opened', timestamp: '2026-04-19T08:00:00Z', actor: 'María Elena López', message: 'Farmer opened the request' },
+    ]
+  },
+  {
+    id: 'REQ-007',
+    title: 'Cancelled Assessment Request',
+    pathway: 'annuals',
+    farmerUserId: 'F-003',
+    farmerName: 'Carlos Hernández',
+    dueDate: '2026-04-15',
+    status: 'cancelled',
+    questionnaireLocked: false,
+    createdAt: '2026-03-01T10:00:00Z',
+    updatedAt: '2026-03-10T14:00:00Z',
+    events: [
+      { id: 'e1', type: 'created', timestamp: '2026-03-01T10:00:00Z', actor: 'admin@tracebud.com', message: 'Assessment request created' },
+      { id: 'e2', type: 'sent', timestamp: '2026-03-01T10:01:00Z', actor: 'system', message: 'Request sent to farmer' },
+      { id: 'e3', type: 'cancelled', timestamp: '2026-03-10T14:00:00Z', actor: 'admin@tracebud.com', message: 'Request cancelled - duplicate entry' },
+    ]
+  },
+];
+
+function RequestStatusBadge({ status }: { status: RequestStatus }) {
+  const config: Record<RequestStatus, { cls: string; label: string; icon: typeof Clock }> = {
+    sent: { cls: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Sent', icon: Send },
+    opened: { cls: 'bg-sky-50 text-sky-700 border-sky-200', label: 'Opened', icon: Eye },
+    in_progress: { cls: 'bg-amber-50 text-amber-700 border-amber-200', label: 'In Progress', icon: Loader2 },
+    submitted: { cls: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Submitted', icon: CheckCircle },
+    reviewed: { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Reviewed', icon: CheckCircle2 },
+    needs_changes: { cls: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Needs Changes', icon: AlertCircle },
+    cancelled: { cls: 'bg-stone-100 text-stone-500 border-stone-200', label: 'Cancelled', icon: XCircle },
+  };
+  const { cls, label, icon: Icon } = config[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border ${cls}`}>
+      <Icon size={12} className={status === 'in_progress' ? 'animate-spin' : ''} />
+      {label}
+    </span>
+  );
+}
+
+function PathwayBadge({ pathway }: { pathway: RequestPathway }) {
+  const config: Record<RequestPathway, { cls: string; label: string }> = {
+    annuals: { cls: 'bg-emerald-50 text-emerald-700', label: 'Annuals' },
+    rice: { cls: 'bg-cyan-50 text-cyan-700', label: 'Rice' },
+  };
+  const { cls, label } = config[pathway];
+  return <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded uppercase tracking-wide ${cls}`}>{label}</span>;
+}
+
+function RequestEventIcon({ type }: { type: RequestEvent['type'] }) {
+  const icons: Record<RequestEvent['type'], { icon: typeof Clock; cls: string }> = {
+    created: { icon: Plus, cls: 'text-stone-500 bg-stone-100' },
+    sent: { icon: Send, cls: 'text-blue-600 bg-blue-50' },
+    opened: { icon: Eye, cls: 'text-sky-600 bg-sky-50' },
+    started: { icon: Play, cls: 'text-amber-600 bg-amber-50' },
+    submitted: { icon: CheckCircle, cls: 'text-purple-600 bg-purple-50' },
+    reviewed: { icon: CheckCircle2, cls: 'text-emerald-600 bg-emerald-50' },
+    needs_changes: { icon: AlertCircle, cls: 'text-orange-600 bg-orange-50' },
+    cancelled: { icon: XCircle, cls: 'text-stone-500 bg-stone-100' },
+  };
+  const { icon: Icon, cls } = icons[type];
+  return (
+    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${cls}`}>
+      <Icon size={14} />
+    </div>
+  );
+}
+
+// Send Request Modal
+function SendRequestModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSubmit: (data: Partial<AssessmentRequest>) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [pathway, setPathway] = useState<RequestPathway>('annuals');
+  const [farmerId, setFarmerId] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [questionnaireDraftId, setQuestionnaireDraftId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const farmerOptions = [
+    { id: 'F-001', name: 'Juan Carlos Mejía' },
+    { id: 'F-002', name: 'María Elena López' },
+    { id: 'F-003', name: 'Carlos Hernández' },
+    { id: 'F-004', name: 'Ana Sofía Reyes' },
+    { id: 'F-005', name: 'Roberto Andrade' },
+  ];
+
+  const selectedFarmer = farmerOptions.find(f => f.id === farmerId);
+
+  const handleSubmit = async () => {
+    if (!title || !farmerId || !dueDate) {
+      toast.error('Missing required fields', { description: 'Please fill in all required fields' });
+      return;
+    }
+    setIsSubmitting(true);
+    // TODO: POST /api/assessments - create new request
+    await new Promise(resolve => setTimeout(resolve, 800));
+    onSubmit({
+      title,
+      instructions,
+      pathway,
+      farmerUserId: farmerId,
+      farmerName: selectedFarmer?.name || '',
+      dueDate,
+      questionnaireDraftId: questionnaireDraftId || undefined,
+    });
+    setIsSubmitting(false);
+    setTitle('');
+    setInstructions('');
+    setPathway('annuals');
+    setFarmerId('');
+    setDueDate('');
+    setQuestionnaireDraftId('');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-stone-900">Send Assessment Request</h3>
+            <p className="text-sm text-stone-500">Create and send a new assessment to a farmer</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-lg">
+            <X size={18} className="text-stone-500" />
+          </button>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g., 2026 Annual Assessment - Coffee Plot"
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            />
+          </div>
+
+          {/* Farmer */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Farmer <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={farmerId}
+              onChange={e => setFarmerId(e.target.value)}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            >
+              <option value="">Select a farmer...</option>
+              {farmerOptions.map(f => (
+                <option key={f.id} value={f.id}>{f.name} ({f.id})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Pathway */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Pathway <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPathway('annuals')}
+                className={`flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  pathway === 'annuals' 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                    : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
+                }`}
+              >
+                Annuals
+              </button>
+              <button
+                type="button"
+                onClick={() => setPathway('rice')}
+                className={`flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  pathway === 'rice' 
+                    ? 'bg-cyan-50 border-cyan-200 text-cyan-700' 
+                    : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'
+                }`}
+              >
+                Rice
+              </button>
+            </div>
+          </div>
+
+          {/* Due Date */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Due Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            />
+          </div>
+
+          {/* Questionnaire Draft */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Linked Questionnaire (Optional)
+            </label>
+            <select
+              value={questionnaireDraftId}
+              onChange={e => setQuestionnaireDraftId(e.target.value)}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            >
+              <option value="">No questionnaire linked</option>
+              <option value="QD-001">Annuals Assessment v2.1 (Locked)</option>
+              <option value="QD-002">Rice Sustainability Survey (Locked)</option>
+              <option value="QD-003">Cocoa Assessment Draft (Not locked)</option>
+            </select>
+            {questionnaireDraftId === 'QD-003' && (
+              <p className="mt-1.5 text-xs text-amber-600 flex items-center gap-1">
+                <AlertTriangle size={12} />
+                This questionnaire is not locked. Farmer cannot submit until it is locked.
+              </p>
+            )}
+          </div>
+
+          {/* Instructions */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1.5">
+              Instructions (Optional)
+            </label>
+            <textarea
+              value={instructions}
+              onChange={e => setInstructions(e.target.value)}
+              placeholder="Add any specific instructions for the farmer..."
+              rows={3}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-900/20 resize-none"
+            />
+          </div>
+        </div>
+        <div className="sticky bottom-0 bg-white border-t border-stone-200 px-6 py-4 flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting || !title || !farmerId || !dueDate}>
+            {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+            Send Request
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Request Detail Drawer
+function RequestDetailDrawer({
+  request,
+  onClose,
+  onReview,
+  onCancel,
+}: {
+  request: AssessmentRequest | null;
+  onClose: () => void;
+  onReview: (requestId: string, status: 'reviewed' | 'needs_changes', feedback?: string) => void;
+  onCancel: (requestId: string) => void;
+}) {
+  const [feedbackText, setFeedbackText] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!request) return null;
+
+  const canReview = request.status === 'submitted';
+  const canCancel = !['reviewed', 'cancelled'].includes(request.status);
+
+  const handleReview = async (status: 'reviewed' | 'needs_changes') => {
+    if (status === 'needs_changes' && !feedbackText.trim()) {
+      toast.error('Feedback required', { description: 'Please provide feedback when requesting changes' });
+      return;
+    }
+    setIsSubmitting(true);
+    // TODO: PATCH /api/assessments/[id] - update status
+    await new Promise(resolve => setTimeout(resolve, 800));
+    onReview(request.id, status, feedbackText);
+    setIsSubmitting(false);
+    setFeedbackText('');
+  };
+
+  const handleCancel = async () => {
+    setIsSubmitting(true);
+    // TODO: PATCH /api/assessments/[id] - cancel
+    await new Promise(resolve => setTimeout(resolve, 800));
+    onCancel(request.id);
+    setIsSubmitting(false);
+    setShowCancelConfirm(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white shadow-xl overflow-y-auto animate-in slide-in-from-right duration-200">
+        <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h3 className="font-semibold text-stone-900">Assessment Request</h3>
+            <p className="text-sm text-stone-500 font-mono">{request.id}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-lg" aria-label="Close">
+            <X size={18} className="text-stone-500" />
+          </button>
+        </div>
+        <div className="p-6 space-y-6">
+          {/* Title & Status */}
+          <div>
+            <h4 className="text-lg font-semibold text-stone-900 mb-2">{request.title}</h4>
+            <div className="flex items-center gap-2">
+              <RequestStatusBadge status={request.status} />
+              <PathwayBadge pathway={request.pathway} />
+            </div>
+          </div>
+
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-stone-500 uppercase tracking-wide">Farmer</p>
+              <p className="mt-1 text-sm text-stone-900 font-medium">{request.farmerName}</p>
+              <p className="text-xs text-stone-500">{request.farmerUserId}</p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500 uppercase tracking-wide">Due Date</p>
+              <p className="mt-1 text-sm text-stone-900">{new Date(request.dueDate).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500 uppercase tracking-wide">Created</p>
+              <p className="mt-1 text-sm text-stone-900">{new Date(request.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-stone-500 uppercase tracking-wide">Last Updated</p>
+              <p className="mt-1 text-sm text-stone-900">{new Date(request.updatedAt).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          {/* Questionnaire Status */}
+          <div className="p-4 rounded-lg border border-stone-200 bg-stone-50">
+            <div className="flex items-start gap-3">
+              {request.questionnaireLocked ? (
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <LockKeyhole size={20} className="text-emerald-600" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <FileQuestion size={20} className="text-amber-600" />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="font-medium text-stone-900">
+                  {request.questionnaireDraftId ? `Questionnaire ${request.questionnaireDraftId}` : 'No questionnaire linked'}
+                </p>
+                {request.questionnaireDraftId && (
+                  <p className={`text-sm ${request.questionnaireLocked ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {request.questionnaireLocked ? 'Locked and ready for submission' : 'Not locked - farmer cannot submit'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          {request.instructions && (
+            <div>
+              <p className="text-xs text-stone-500 uppercase tracking-wide mb-2">Instructions</p>
+              <div className="p-4 bg-stone-50 border border-stone-200 rounded-lg">
+                <p className="text-sm text-stone-700">{request.instructions}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Feedback (if needs_changes) */}
+          {request.feedbackMessage && (
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <MessageSquare size={18} className="text-orange-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-orange-800">Reviewer Feedback</p>
+                  <p className="mt-1 text-sm text-orange-700">{request.feedbackMessage}</p>
+                  {request.reviewedBy && (
+                    <p className="mt-2 text-xs text-orange-600">By {request.reviewedBy} on {new Date(request.reviewedAt!).toLocaleDateString()}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div>
+            <p className="text-xs text-stone-500 uppercase tracking-wide mb-3">Timeline</p>
+            <div className="space-y-0">
+              {request.events.map((event, idx) => (
+                <div key={event.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <RequestEventIcon type={event.type} />
+                    {idx < request.events.length - 1 && (
+                      <div className="w-px h-full min-h-[24px] bg-stone-200 my-1" />
+                    )}
+                  </div>
+                  <div className="pb-4">
+                    <p className="text-sm text-stone-900">{event.message}</p>
+                    <p className="text-xs text-stone-500">
+                      {new Date(event.timestamp).toLocaleString()}
+                      {event.actor && event.actor !== 'system' && ` by ${event.actor}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Review Panel */}
+          {canReview && (
+            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <h4 className="font-medium text-purple-900 mb-3">Review Submission</h4>
+              {!request.questionnaireLocked && (
+                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-700 flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    Questionnaire is not locked. Cannot approve until locked.
+                  </p>
+                </div>
+              )}
+              <div className="mb-3">
+                <label className="block text-sm text-purple-700 mb-1.5">Feedback (required for changes)</label>
+                <textarea
+                  value={feedbackText}
+                  onChange={e => setFeedbackText(e.target.value)}
+                  placeholder="Provide feedback to the farmer..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-purple-200 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => handleReview('reviewed')}
+                  disabled={isSubmitting || !request.questionnaireLocked}
+                >
+                  {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                  <CheckCircle2 size={14} />
+                  Approve
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 text-orange-700 border-orange-200 hover:bg-orange-50"
+                  onClick={() => handleReview('needs_changes')}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                  <AlertCircle size={14} />
+                  Request Changes
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Cancel Action */}
+          {canCancel && (
+            <div className="pt-4 border-t border-stone-200">
+              {showCancelConfirm ? (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800 mb-3">Are you sure you want to cancel this request? This action cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" className="flex-1" onClick={() => setShowCancelConfirm(false)} disabled={isSubmitting}>
+                      Keep Request
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                      onClick={handleCancel}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                      Cancel Request
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="text-sm text-red-600 hover:text-red-700 hover:underline"
+                >
+                  Cancel this request
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssessmentsPage() {
+  const [requests, setRequests] = useState(mockAssessmentRequests);
+  const [selectedRequest, setSelectedRequest] = useState<AssessmentRequest | null>(null);
+  const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
+  const [pathwayFilter, setPathwayFilter] = useState<RequestPathway | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const filteredRequests = requests.filter(req => {
+    if (statusFilter !== 'all' && req.status !== statusFilter) return false;
+    if (pathwayFilter !== 'all' && req.pathway !== pathwayFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return req.id.toLowerCase().includes(q) || 
+             req.title.toLowerCase().includes(q) ||
+             req.farmerName.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  const stats = {
+    sent: requests.filter(r => r.status === 'sent').length,
+    in_progress: requests.filter(r => ['opened', 'in_progress'].includes(r.status)).length,
+    submitted: requests.filter(r => r.status === 'submitted').length,
+    reviewed: requests.filter(r => r.status === 'reviewed').length,
+    needs_changes: requests.filter(r => r.status === 'needs_changes').length,
+  };
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // TODO: GET /api/assessments - fetch fresh data
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+    toast.success('List refreshed', { description: `${requests.length} requests loaded` });
+  }, [requests.length]);
+
+  const handleSendRequest = useCallback((data: Partial<AssessmentRequest>) => {
+    const newRequest: AssessmentRequest = {
+      id: `REQ-${String(requests.length + 1).padStart(3, '0')}`,
+      title: data.title || '',
+      pathway: data.pathway || 'annuals',
+      farmerUserId: data.farmerUserId || '',
+      farmerName: data.farmerName || '',
+      instructions: data.instructions,
+      dueDate: data.dueDate || '',
+      status: 'sent',
+      questionnaireDraftId: data.questionnaireDraftId,
+      questionnaireLocked: data.questionnaireDraftId !== 'QD-003',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      events: [
+        { id: 'e1', type: 'created', timestamp: new Date().toISOString(), actor: 'admin@tracebud.com', message: 'Assessment request created' },
+        { id: 'e2', type: 'sent', timestamp: new Date().toISOString(), actor: 'system', message: 'Request sent to farmer' },
+      ]
+    };
+    setRequests(prev => [newRequest, ...prev]);
+    toast.success('Request sent', { description: `Assessment request sent to ${data.farmerName}` });
+  }, [requests.length]);
+
+  const handleReview = useCallback((requestId: string, status: 'reviewed' | 'needs_changes', feedback?: string) => {
+    setRequests(prev => prev.map(r => {
+      if (r.id !== requestId) return r;
+      const newEvent: RequestEvent = {
+        id: `e${r.events.length + 1}`,
+        type: status,
+        timestamp: new Date().toISOString(),
+        actor: 'reviewer@tracebud.com',
+        message: status === 'reviewed' ? 'Assessment approved' : 'Reviewer requested changes',
+      };
+      return {
+        ...r,
+        status,
+        feedbackMessage: feedback || r.feedbackMessage,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: 'reviewer@tracebud.com',
+        updatedAt: new Date().toISOString(),
+        events: [...r.events, newEvent],
+      };
+    }));
+    setSelectedRequest(null);
+    toast.success(status === 'reviewed' ? 'Assessment approved' : 'Changes requested', {
+      description: `Request ${requestId} has been ${status === 'reviewed' ? 'approved' : 'sent back for changes'}`,
+    });
+  }, []);
+
+  const handleCancel = useCallback((requestId: string) => {
+    setRequests(prev => prev.map(r => {
+      if (r.id !== requestId) return r;
+      const newEvent: RequestEvent = {
+        id: `e${r.events.length + 1}`,
+        type: 'cancelled',
+        timestamp: new Date().toISOString(),
+        actor: 'admin@tracebud.com',
+        message: 'Request cancelled',
+      };
+      return {
+        ...r,
+        status: 'cancelled',
+        updatedAt: new Date().toISOString(),
+        events: [...r.events, newEvent],
+      };
+    }));
+    setSelectedRequest(null);
+    toast.success('Request cancelled', { description: `Request ${requestId} has been cancelled` });
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-stone-900">Assessment Requests</h2>
+          <p className="text-sm text-stone-500 mt-1">Send, track, and review farmer assessments</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setShowSendModal(true)}>
+            <Plus size={14} />
+            Send Request
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('sent')}>
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Sent</p>
+          <p className="mt-1 text-2xl font-semibold text-blue-600">{stats.sent}</p>
+        </Card>
+        <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('in_progress')}>
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">In Progress</p>
+          <p className="mt-1 text-2xl font-semibold text-amber-600">{stats.in_progress}</p>
+        </Card>
+        <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('submitted')}>
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Awaiting Review</p>
+          <p className="mt-1 text-2xl font-semibold text-purple-600">{stats.submitted}</p>
+        </Card>
+        <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('reviewed')}>
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Reviewed</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-600">{stats.reviewed}</p>
+        </Card>
+        <Card className="p-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => setStatusFilter('needs_changes')}>
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Needs Changes</p>
+          <p className="mt-1 text-2xl font-semibold text-orange-600">{stats.needs_changes}</p>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-stone-400" />
+            <span className="text-sm font-medium text-stone-700">Filters:</span>
+          </div>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as RequestStatus | 'all')}
+            className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            aria-label="Filter by status"
+          >
+            <option value="all">All Statuses</option>
+            <option value="sent">Sent</option>
+            <option value="opened">Opened</option>
+            <option value="in_progress">In Progress</option>
+            <option value="submitted">Submitted</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="needs_changes">Needs Changes</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select
+            value={pathwayFilter}
+            onChange={e => setPathwayFilter(e.target.value as RequestPathway | 'all')}
+            className="px-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+            aria-label="Filter by pathway"
+          >
+            <option value="all">All Pathways</option>
+            <option value="annuals">Annuals</option>
+            <option value="rice">Rice</option>
+          </select>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              placeholder="Search requests..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-900/20 w-48"
+              aria-label="Search requests"
+            />
+          </div>
+          <div className="flex-1" />
+          {(statusFilter !== 'all' || pathwayFilter !== 'all' || searchQuery) && (
+            <button 
+              onClick={() => { setStatusFilter('all'); setPathwayFilter('all'); setSearchQuery(''); }}
+              className="text-xs text-stone-500 hover:text-stone-700 underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </Card>
+
+      {/* Requests Table */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-stone-50 border-b border-stone-100">
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Request ID</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Title</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Farmer</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Pathway</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Status</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Due Date</th>
+                <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Questionnaire</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {filteredRequests.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+                        <ClipboardList size={24} className="text-stone-400" />
+                      </div>
+                      <p className="text-sm font-medium text-stone-900">No requests found</p>
+                      <p className="text-xs text-stone-500">
+                        {searchQuery || statusFilter !== 'all' || pathwayFilter !== 'all' 
+                          ? 'Try adjusting your filters or search query' 
+                          : 'Send your first assessment request to get started'}
+                      </p>
+                      {!searchQuery && statusFilter === 'all' && pathwayFilter === 'all' && (
+                        <Button variant="primary" size="sm" className="mt-2" onClick={() => setShowSendModal(true)}>
+                          <Plus size={14} />
+                          Send Request
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredRequests.map(req => (
+                  <tr 
+                    key={req.id} 
+                    className="hover:bg-stone-50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedRequest(req)}
+                    tabIndex={0}
+                    onKeyDown={e => e.key === 'Enter' && setSelectedRequest(req)}
+                  >
+                    <td className="px-5 py-3.5 font-mono text-xs text-emerald-900 font-semibold">{req.id}</td>
+                    <td className="px-5 py-3.5 text-stone-800 max-w-[200px] truncate">{req.title}</td>
+                    <td className="px-5 py-3.5 text-stone-700">{req.farmerName}</td>
+                    <td className="px-5 py-3.5"><PathwayBadge pathway={req.pathway} /></td>
+                    <td className="px-5 py-3.5"><RequestStatusBadge status={req.status} /></td>
+                    <td className="px-5 py-3.5 text-stone-500 text-xs">{new Date(req.dueDate).toLocaleDateString()}</td>
+                    <td className="px-5 py-3.5">
+                      {req.questionnaireDraftId ? (
+                        <span className={`inline-flex items-center gap-1 text-xs ${req.questionnaireLocked ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {req.questionnaireLocked ? <LockKeyhole size={12} /> : <FileQuestion size={12} />}
+                          {req.questionnaireDraftId}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-stone-400">None</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {filteredRequests.length > 0 && (
+          <div className="px-5 py-3 border-t border-stone-100 bg-stone-50 text-xs text-stone-500">
+            Showing {filteredRequests.length} of {requests.length} requests
+          </div>
+        )}
+      </Card>
+
+      {/* Send Request Modal */}
+      <SendRequestModal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        onSubmit={handleSendRequest}
+      />
+
+      {/* Request Detail Drawer */}
+      <RequestDetailDrawer
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+        onReview={handleReview}
+        onCancel={handleCancel}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PAGE: INTEGRATIONS OPERATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2742,6 +3718,7 @@ export default function ExporterDashboard() {
       case 'traces': return <TracesPage />;
       case 'reports': return <ReportsPage />;
 case 'settings': return <SettingsPage />;
+  case 'assessments': return <AssessmentsPage />;
   case 'integrations': return <IntegrationsPage />;
   default: return <OverviewPage setPage={setPage} />;
     }
