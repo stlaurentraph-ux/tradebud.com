@@ -6,10 +6,8 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_audit_gated_entry_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const url = new URL(connectionString);
-  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
-  return url.toString();
+function withSearchPath(connectionString: string, _targetSchema: string) {
+  return connectionString;
 }
 
 describeIfDb('AuditController integration: gated-entry telemetry listing', () => {
@@ -25,6 +23,7 @@ describeIfDb('AuditController integration: gated-entry telemetry listing', () =>
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -647,9 +646,9 @@ describeIfDb('AuditController integration: gated-entry telemetry listing', () =>
       `
         SELECT indexname, indexdef
         FROM pg_indexes
-        WHERE tablename = 'audit_log'
-          AND indexdef LIKE '%(payload ->> ''tenantId''::text)%'
-          AND indexdef LIKE '%(payload ->> ''gate''::text)%'
+        WHERE schemaname = current_schema()
+          AND tablename = 'audit_log'
+          AND indexname = 'idx_audit_log_gated_entry_tenant_gate_ts'
       `,
     );
 

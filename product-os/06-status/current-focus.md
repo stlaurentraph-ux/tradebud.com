@@ -509,6 +509,8 @@
 - FEAT-009 request-to-questionnaire linkage + submit gating is now implemented as S1 slice 64: assessment requests now persist optional `questionnaire_id` linkage (`TB-V16-022`), list/get surfaces expose it, and farmer `submitted` transition now fail-closes until linked questionnaire reaches submitted-or-beyond states; next execution step is auto-linking request creation to questionnaire-draft creation flow to remove manual ID handling.
 - FEAT-009 assessment auto-linking is now implemented as S1 slice 65: request creation now auto-creates and links questionnaire drafts when no draft id is supplied, reducing manual operator coupling; next execution step is pruning redundant endpoint aliases + harmonizing migration guidance strings in assessment controller error paths.
 - FEAT-009 migration guidance cleanup + auto-link DB proof are now implemented as S1 slice 66: assessment controller migration error guidance is normalized to `TB-V16-021/TB-V16-022`, and DB-backed integration coverage now verifies auto-created questionnaire linkage persistence; next execution step is endpoint alias reduction and focused request-state API simplification.
+- FEAT-009 assessment API alias reduction is now implemented as S1 slice 67: redundant duplicate alias routes were removed to keep only canonical request endpoints, reducing contract sprawl; next execution step is publish a concise endpoint map for frontend teams and optionally add OpenAPI route-count guardrails.
+- FEAT-009 canonical endpoint map publication is now implemented as S1 slice 68: assessment workflow route contract is documented in a dedicated quality artifact; next execution step is optional OpenAPI/CI guardrail to fail on re-introduction of removed alias paths.
 
 ## Priority migration lanes (v1.6)
 

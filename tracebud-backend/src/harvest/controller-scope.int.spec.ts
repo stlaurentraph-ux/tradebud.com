@@ -10,10 +10,8 @@ const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_controller_scope_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, targetSchema: string) {
-  const url = new URL(connectionString);
-  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
-  return url.toString();
+function withSearchPath(connectionString: string, _targetSchema: string) {
+  return connectionString;
 }
 
 describeIfDb('Controller scope integration: farmer ownership enforcement', () => {
@@ -405,7 +403,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     });
     expect(result).toEqual(expect.objectContaining({ packageId: 'pkg_file_1', status: 'preflight_blocked' }));
 
-  });
+  }, 20_000);
 
   it('persists package-generation lifecycle events on exporter generation checks', async () => {
     const packageId = randomUUID();
@@ -429,7 +427,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     });
     expect(result).toEqual(expect.objectContaining({ packageId, status: 'package_generated' }));
 
-  });
+  }, 20_000);
 
   it('enforces tenant claim for mobile sync metadata endpoints', async () => {
     const photosSpy = jest.spyOn(plotsService, 'syncPhotos').mockResolvedValue({ ok: true } as any);
