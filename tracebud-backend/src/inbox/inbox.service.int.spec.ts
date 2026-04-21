@@ -4,6 +4,13 @@ import { InboxService } from './inbox.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
+const schema = `tb_inbox_service_int_test_${process.pid}_${Date.now().toString(36)}`;
+
+function withSearchPath(connectionString: string, targetSchema: string) {
+  const url = new URL(connectionString);
+  url.searchParams.set('options', `-c search_path=${targetSchema},public`);
+  return url.toString();
+}
 
 describeIfDb('InboxService integration: tenant/state boundaries', () => {
   let pool: Pool;
@@ -11,10 +18,12 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
 
   beforeAll(async () => {
     pool = new Pool({
-      connectionString: testDbUrl,
+      connectionString: withSearchPath(testDbUrl!, schema),
       ssl: { rejectUnauthorized: false },
       max: 1,
     });
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
     service = new InboxService(pool);
 
     await pool.query(`
@@ -30,14 +39,13 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   }, 20_000);
 
   afterAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
+    await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.end();
   });
 
   beforeEach(async () => {
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
     await pool.query(`DELETE FROM audit_log WHERE event_type IN ('inbox_requests_seeded', 'inbox_request_responded')`);
   });
 
@@ -79,8 +87,8 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
     expect(initial.length).toBeGreaterThan(0);
 
     // Simulate external cleanup/race condition while service continues running.
+    await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
-    await pool.query('DROP TABLE IF EXISTS public.inbox_requests CASCADE');
 
     const afterDrop = await service.list('tenant_rwanda_001');
     expect(afterDrop.length).toBeGreaterThan(0);

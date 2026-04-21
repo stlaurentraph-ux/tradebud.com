@@ -4,6 +4,7 @@ Track completed milestones/features/docs updates.
 
 ## Initial entries
 
+- FEAT-009 post-closeout hardening slice delivered: DB-backed integration spec `src/integrations/coolfarm-sai-v2.controller.int.spec.ts` now verifies scheduler wrapper token auth fail-closed behavior and persisted sweeper rollup payload (`integration_v2_stale_sweeper_executed`) including scheduler token-version lineage.
 - Release hygiene pass delivered: backend full matrix is green (`npm test`: 16/16 suites, 187 tests; `npm run test:integration`: 18/18 suites, 77 tests), reducing latent flaky-failure risk before next lane work.
 - FEAT-005 governance cleanup delivered: benchmark import/create/update now canonicalize coffee commodity + ISO-2 geography keys, with backfill migration `tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql` for existing rows.
 - FEAT-005 ops automation delivered: yearly FAOSTAT dry-run workflow added (`.github/workflows/faostat-yearly-sync-dry-run.yml`) and operational runbook published (`product-os/04-quality/faostat-yearly-sync-runbook.md`).

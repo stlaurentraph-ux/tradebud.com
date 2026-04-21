@@ -32,6 +32,15 @@
 - Blockers: none new.
 - Next step: optionally add token-version telemetry field (non-secret) to scheduler sweeper execution payload for audit-friendly rotation traceability.
 
+### 2026-04-21 (execution: FEAT-009 DB-backed scheduler wrapper integration coverage)
+- Focus: validate scheduler wrapper auth and telemetry behavior against real DB tables rather than unit-only mocks.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.int.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added isolated-schema integration spec covering missing env token fail-closed, invalid scheduler token forbidden path, and successful scheduler execution with DB assertion for `integration_v2_stale_sweeper_executed` payload including scheduler token-version lineage.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.int.spec.ts` (pass, `1 suite / 3 tests`).
+- Risks: low; coverage-only slice with no runtime behavior change.
+- Blockers: none new.
+- Next step: expand DB-backed suite to claim/retry/release path assertions for full worker lifecycle integration proof.
+
 ### 2026-04-21 (execution: release hygiene + FAOSTAT yearly ops automation + governance cleanup)
 - Focus: complete post-benchmark-slice hardening by validating full backend quality gates, automating yearly FAOSTAT workflow, and standardizing benchmark dimensions.
 - Files changed: `.github/workflows/faostat-yearly-sync-dry-run.yml`, `tracebud-backend/scripts/run-faostat-yearly-sync.mjs`, `tracebud-backend/scripts/cleanup-yield-cap-fixtures.mjs`, `tracebud-backend/package.json`, `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/sql/tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/04-quality/faostat-yearly-sync-runbook.md`, `product-os/01-roadmap/next-milestone-decision-pack.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

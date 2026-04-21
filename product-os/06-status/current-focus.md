@@ -2,6 +2,7 @@
 
 ## Work now
 
+- FEAT-009 post-closeout hardening slice complete: DB-backed integration coverage now verifies scheduler wrapper auth semantics and sweeper rollup payload persistence (`src/integrations/coolfarm-sai-v2.controller.int.spec.ts`), including scheduler token-version lineage assertions in `integration_audit_v2`.
 - Release hygiene pass complete for backend baseline:
   - `npm test` -> `16 suites / 187 tests` pass
   - `npm run test:integration` -> `18 suites / 77 tests` pass
