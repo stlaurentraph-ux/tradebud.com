@@ -12,6 +12,8 @@
     "test:watch": "jest --watch",
     "test:integration": "node scripts/run-with-root-test-db.mjs jest --runInBand --testMatch \"**/*.int.spec.ts\"",
     "test:integration:ownership": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/harvest/ownership-scope.int.spec.ts src/harvest/controller-scope.int.spec.ts src/reports/package-report-access.int.spec.ts src/inbox/inbox.controller.int.spec.ts src/audit/audit.gated-entry.int.spec.ts src/audit/audit.gated-entry-actors.api.int.spec.ts src/audit/audit.filing-activity.api.int.spec.ts src/audit/audit.chat-threads.api.int.spec.ts src/audit/audit.workflow-activity.api.int.spec.ts src/audit/audit.dashboard-summary.api.int.spec.ts src/plots/sync-envelope.api.int.spec.ts",
+    "benchmarks:faostat:yearly-sync": "node scripts/run-faostat-yearly-sync.mjs",
+    "fixtures:yield-cap:cleanup": "node scripts/cleanup-yield-cap-fixtures.mjs",
     "auth:benchmark-admin:claims:check": "node scripts/check-benchmark-admin-claims.mjs",
     "db:apply:audit-index": "node scripts/run-with-root-test-db.mjs node scripts/apply-audit-gated-entry-index.mjs",
     "db:verify:audit-index": "node scripts/run-with-root-test-db.mjs node scripts/apply-audit-gated-entry-index.mjs --verify-only",

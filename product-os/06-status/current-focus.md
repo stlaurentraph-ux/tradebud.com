@@ -2,6 +2,15 @@
 
 ## Work now
 
+- Release hygiene pass complete for backend baseline:
+  - `npm test` -> `16 suites / 187 tests` pass
+  - `npm run test:integration` -> `18 suites / 77 tests` pass
+- FEAT-005 governance cleanup complete:
+  - benchmark commodity/geography canonicalization now uses `coffee` + ISO-2 geography keys
+  - yearly FAOSTAT dry-run workflow added (`.github/workflows/faostat-yearly-sync-dry-run.yml`)
+  - yearly ops runbook added (`product-os/04-quality/faostat-yearly-sync-runbook.md`)
+- Fixture strategy decision: cleanup by default after QA runs using `npm run fixtures:yield-cap:cleanup`.
+- Next milestone decision pack published: `product-os/01-roadmap/next-milestone-decision-pack.md` (Option A FEAT-009 integrations-first vs Option B FEAT-004 compliance UX-first).
 - FEAT-009 post-closeout hardening slice complete: V2 scheduler wrapper now enforces token auth contract (`x-tracebud-scheduler-token`) backed by required backend env `COOLFARM_SAI_V2_SCHEDULER_TOKEN`, with deterministic deny behavior for missing/invalid token paths.
 - FEAT-005 post-closeout hardening slice complete: harvest runtime now resolves active FAOSTAT benchmark rows even when commodity is stored as numeric code (`656`) via commodity alias matching (`coffee` <-> `656` / `coffee, green`), with live audit evidence showing `yield_cap_resolved` + non-null benchmark IDs.
 - FEAT-005 post-closeout hardening slice complete: plot creation now persists canonical `geography` (`GEOGRAPHY`) at insert time, satisfying `plot_geography_present_check` and unblocking end-to-end live harvest enforcement validation fixtures.

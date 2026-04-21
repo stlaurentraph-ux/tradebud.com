@@ -14,6 +14,42 @@
 - Blockers: none for FEAT-005 benchmark runtime path.
 - Next step: schedule yearly FAOSTAT sync runbook execution and optional integration-test coverage for live benchmark-path API flow.
 
+### 2026-04-21 (execution: FEAT-009 scheduler token auth contract for stale sweeper trigger)
+- Focus: secure scheduler-triggered stale sweeper path with explicit non-user token contract.
+- Files changed: `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.controller.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger` now requires header `x-tracebud-scheduler-token` and backend env `COOLFARM_SAI_V2_SCHEDULER_TOKEN`; missing env yields deterministic config error, invalid/missing token yields deterministic forbidden response.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/coolfarm-sai-v2.controller.spec.ts` (pass, `1 suite / 28 tests`).
+- Risks: low-medium; secure trigger contract is now in place, but production secret rotation and scheduler secret distribution still require deployment runbook alignment.
+- Blockers: none new.
+- Next step: add scheduler secret rotation checklist entry and optional hash-based token metadata telemetry (without logging raw secret).
+
+### 2026-04-21 (execution: FEAT-009 scheduler token rotation runbook documentation)
+- Focus: complete operations guidance for secure scheduler token lifecycle management.
+- Files changed: `product-os/04-quality/p1-integration-target-decision-template.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added scheduler token contract + rotation checklist (required header/env, 90-day cadence, one-pass rotation procedure, and evidence capture fields) for V2 stale-sweeper trigger operations.
+- Verification: docs-only update; no runtime behavior changes.
+- Risks: low; operational guidance update only.
+- Blockers: none new.
+- Next step: optionally add token-version telemetry field (non-secret) to scheduler sweeper execution payload for audit-friendly rotation traceability.
+
+### 2026-04-21 (execution: release hygiene + FAOSTAT yearly ops automation + governance cleanup)
+- Focus: complete post-benchmark-slice hardening by validating full backend quality gates, automating yearly FAOSTAT workflow, and standardizing benchmark dimensions.
+- Files changed: `.github/workflows/faostat-yearly-sync-dry-run.yml`, `tracebud-backend/scripts/run-faostat-yearly-sync.mjs`, `tracebud-backend/scripts/cleanup-yield-cap-fixtures.mjs`, `tracebud-backend/package.json`, `tracebud-backend/src/integrations/yield-benchmarks.controller.ts`, `tracebud-backend/sql/tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/04-quality/faostat-yearly-sync-runbook.md`, `product-os/01-roadmap/next-milestone-decision-pack.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Ran backend full test matrix once (`unit + integration`) and recorded green baseline.
+  - Added yearly FAOSTAT dry-run automation (workflow + script) with explicit human review and dual-control activation runbook.
+  - Standardized benchmark keys toward canonical runtime format: commodity `coffee` and geography ISO-2 uppercase; added migration to backfill existing benchmark rows.
+  - Chose fixture hygiene strategy as scripted cleanup-by-default after QA runs (`npm run fixtures:yield-cap:cleanup`).
+  - Published next milestone decision pack with explicit FEAT-009 (integrations-first) vs FEAT-004 (compliance UX-first) fork.
+- Verification:
+  - `cd tracebud-backend && npm test` (pass)
+  - `cd tracebud-backend && npm run test:integration` (pass)
+- Risks:
+  - Yearly workflow depends on repository secrets (`TRACEBUD_API_BASE_URL`, `TRACEBUD_BENCHMARK_ADMIN_JWT`) and operational token rotation discipline.
+  - Geography canonicalization currently includes the active exporter-country mapping set; additional country mappings should be added as scope expands.
+- Blockers: none.
+- Next step: choose and lock the next milestone lane from decision pack, then start targeted implementation.
+
 ### 2026-04-20 (execution: FEAT-009 V2 parallel execution pack for Cool Farm + SAI)
 - Focus: convert Cool Farm + SAI implementation planning into in-repo Product OS execution management (non-Jira) while preserving V1 boundaries.
 - Files changed: `product-os/01-roadmap/coolfarm-sai-v2-parallel-execution-pack.md`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

@@ -378,6 +378,10 @@ Verification commands:
   - near-cap accepted
   - above-cap blocked
   - audit now shows `yield_cap_resolved` with `sourceType=FAOSTAT` and non-null `benchmarkId` (no longer fallback).
+- Geography governance is now standardized for future imports:
+  - canonical benchmark geography key: **ISO-2 uppercase** (for example `HN`, `BR`, `VN`)
+  - FAOSTAT numeric area codes are normalized to ISO-2 during import flows
+  - migration `tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql` backfills existing benchmark rows to canonical commodity/geography keys.
 
 Verification commands:
 

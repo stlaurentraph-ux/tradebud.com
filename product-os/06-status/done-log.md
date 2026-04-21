@@ -4,6 +4,12 @@ Track completed milestones/features/docs updates.
 
 ## Initial entries
 
+- Release hygiene pass delivered: backend full matrix is green (`npm test`: 16/16 suites, 187 tests; `npm run test:integration`: 18/18 suites, 77 tests), reducing latent flaky-failure risk before next lane work.
+- FEAT-005 governance cleanup delivered: benchmark import/create/update now canonicalize coffee commodity + ISO-2 geography keys, with backfill migration `tb_v16_017_yield_benchmarks_canonicalize_dimensions.sql` for existing rows.
+- FEAT-005 ops automation delivered: yearly FAOSTAT dry-run workflow added (`.github/workflows/faostat-yearly-sync-dry-run.yml`) and operational runbook published (`product-os/04-quality/faostat-yearly-sync-runbook.md`).
+- Fixture strategy delivered: scripted cleanup path added (`npm run fixtures:yield-cap:cleanup`) to remove fake farmer/plot/harvest fixture rows after validation runs.
+- Milestone prep delivered: next-lane decision pack published (`product-os/01-roadmap/next-milestone-decision-pack.md`) with explicit FEAT-009 vs FEAT-004 execution fork.
+- FEAT-009 ops-hardening slice delivered: scheduler token rotation checklist is now documented in `product-os/04-quality/p1-integration-target-decision-template.md` (trigger header/env contract, 90-day cadence, one-pass rotation runbook, and required rotation evidence fields).
 - FEAT-009 post-closeout hardening slice delivered: V2 scheduler wrapper now requires explicit token auth (`x-tracebud-scheduler-token`) validated against backend env `COOLFARM_SAI_V2_SCHEDULER_TOKEN`, with deterministic rejection for missing/invalid scheduler credentials.
 - FEAT-005 post-closeout hardening slice delivered: harvest benchmark resolver now maps commodity aliases (`coffee` <-> `656` / `coffee, green`), closing runtime mismatch between harvest commodity key and FAOSTAT-imported benchmark commodity values.
 - FEAT-005 post-closeout hardening slice delivered: plot creation now persists `plot.geography` (`v.geom::geography`) during insert, resolving `plot_geography_present_check` failures and restoring live fixture plot creation for end-to-end enforcement tests.

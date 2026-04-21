@@ -46,6 +46,26 @@ type SyncYieldBenchmarksBody = {
 type ImportRunStatus = 'started' | 'completed' | 'failed';
 type FaostatDataRow = Record<string, unknown>;
 
+const FAOSTAT_GEO_CODE_TO_ISO2: Record<string, string> = {
+  '21': 'BR',
+  '37': 'CF',
+  '44': 'CO',
+  '48': 'CR',
+  '89': 'GT',
+  '95': 'HN',
+  '100': 'IN',
+  '101': 'ID',
+  '107': 'CI',
+  '114': 'KE',
+  '138': 'MX',
+  '168': 'PG',
+  '170': 'PE',
+  '215': 'TZ',
+  '226': 'UG',
+  '237': 'VN',
+  '238': 'ET',
+};
+
 @ApiTags('YieldBenchmarks')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
@@ -120,8 +140,10 @@ export class YieldBenchmarksController {
   }
 
   private normalizeYieldBenchmarkImportRow(row: ImportYieldBenchmarkRow, index: number) {
-    const commodity = this.normalizeNonEmptyString(row?.commodity, `rows[${index}].commodity`);
-    const geography = this.normalizeNonEmptyString(row?.geography, `rows[${index}].geography`);
+    const commodityRaw = this.normalizeNonEmptyString(row?.commodity, `rows[${index}].commodity`);
+    const geographyRaw = this.normalizeNonEmptyString(row?.geography, `rows[${index}].geography`);
+    const commodity = this.canonicalizeBenchmarkCommodity(commodityRaw);
+    const geography = this.canonicalizeBenchmarkGeography(geographyRaw);
     const sourceType = this.normalizeNonEmptyString(
       row?.sourceType,
       `rows[${index}].sourceType`,
@@ -347,8 +369,12 @@ export class YieldBenchmarksController {
       return [];
     }
     return incomingRows.map((row) => {
-      const commodity = String(row.commodity ?? row['commodity_code'] ?? '').trim();
-      const geography = String(row.geography ?? row['country'] ?? '').trim();
+      const commodity = this.canonicalizeBenchmarkCommodity(
+        String(row.commodity ?? row['commodity_code'] ?? '').trim(),
+      );
+      const geography = this.canonicalizeBenchmarkGeography(
+        String(row.geography ?? row['country'] ?? '').trim(),
+      );
       const sourceReference = String(
         row.sourceReference ?? row['source_reference'] ?? row['source_url'] ?? url.toString(),
       ).trim();
@@ -378,7 +404,7 @@ export class YieldBenchmarksController {
     url.searchParams.set('item', (body?.commodity ?? '656').trim());
     url.searchParams.set('element', '2413');
     if (body?.geography) {
-      url.searchParams.set('area', body.geography.trim());
+      url.searchParams.set('area', this.resolveFaostatAreaFilter(body.geography.trim()));
     }
     const year = (body?.year ?? '').trim() || (new Date().getUTCFullYear() - 1).toString();
     url.searchParams.set('year', year);
@@ -409,7 +435,7 @@ export class YieldBenchmarksController {
       if (!Number.isFinite(upper) || upper <= 0) {
         continue;
       }
-      const geography = String(
+      const geographyRaw = String(
         row.area ??
           row['area'] ??
           row.area_code ??
@@ -417,7 +443,7 @@ export class YieldBenchmarksController {
           row['Area Code'] ??
           row['Area'],
       ).trim();
-      const commodity = String(
+      const commodityRaw = String(
         row.item ??
           row['item'] ??
           row.item_code ??
@@ -427,6 +453,8 @@ export class YieldBenchmarksController {
           body?.commodity ??
           '656',
       ).trim();
+      const geography = this.canonicalizeBenchmarkGeography(geographyRaw);
+      const commodity = this.canonicalizeBenchmarkCommodity(commodityRaw);
       const sourceReference = `report:faostat-qcl-item-${commodity}-area-${geography || 'all'}-year-${year}`;
       const unit = String(row.unit ?? row['Unit'] ?? '').toLowerCase();
       const upperKgHa = unit.includes('hg/ha') ? upper / 10 : upper;
@@ -497,6 +525,44 @@ export class YieldBenchmarksController {
     return token;
   }
 
+  private canonicalizeBenchmarkCommodity(value: string): string {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'coffee, green' || normalized === 'coffee' || normalized === '656') {
+      return 'coffee';
+    }
+    return value.trim();
+  }
+
+  private canonicalizeBenchmarkGeography(value: string): string {
+    const trimmed = value.trim();
+    const upper = trimmed.toUpperCase();
+    if (upper === 'GLOBAL') {
+      return 'GLOBAL';
+    }
+    const fromCode = FAOSTAT_GEO_CODE_TO_ISO2[trimmed];
+    if (fromCode) {
+      return fromCode;
+    }
+    if (/^[A-Z]{2}$/.test(upper)) {
+      return upper;
+    }
+    return trimmed;
+  }
+
+  private resolveFaostatAreaFilter(value: string): string {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+      return trimmed;
+    }
+    const upper = trimmed.toUpperCase();
+    for (const [areaCode, iso2] of Object.entries(FAOSTAT_GEO_CODE_TO_ISO2)) {
+      if (iso2 === upper) {
+        return areaCode;
+      }
+    }
+    return trimmed;
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Create yield benchmark draft',
@@ -508,8 +574,12 @@ export class YieldBenchmarksController {
     const actor = this.requireInternalBenchmarkAdmin(req);
     const actorUserId = (req?.user?.id as string | undefined) ?? null;
 
-    const commodity = this.normalizeNonEmptyString(body?.commodity, 'commodity');
-    const geography = this.normalizeNonEmptyString(body?.geography, 'geography');
+    const commodity = this.canonicalizeBenchmarkCommodity(
+      this.normalizeNonEmptyString(body?.commodity, 'commodity'),
+    );
+    const geography = this.canonicalizeBenchmarkGeography(
+      this.normalizeNonEmptyString(body?.geography, 'geography'),
+    );
     const sourceType = this.normalizeNonEmptyString(body?.sourceType, 'sourceType') as YieldSourceType;
     if (!this.sourceTypes.includes(sourceType)) {
       throw new BadRequestException(`sourceType must be one of: ${this.sourceTypes.join(', ')}`);
@@ -779,8 +849,14 @@ export class YieldBenchmarksController {
       throw new BadRequestException('Active yield benchmarks are immutable; create a new draft instead');
     }
 
-    const nextCommodity = body.commodity === undefined ? existing.commodity : this.normalizeNonEmptyString(body.commodity, 'commodity');
-    const nextGeography = body.geography === undefined ? existing.geography : this.normalizeNonEmptyString(body.geography, 'geography');
+    const nextCommodity =
+      body.commodity === undefined
+        ? existing.commodity
+        : this.canonicalizeBenchmarkCommodity(this.normalizeNonEmptyString(body.commodity, 'commodity'));
+    const nextGeography =
+      body.geography === undefined
+        ? existing.geography
+        : this.canonicalizeBenchmarkGeography(this.normalizeNonEmptyString(body.geography, 'geography'));
     const nextSourceType =
       body.sourceType === undefined
         ? existing.source_type
