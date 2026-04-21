@@ -59,17 +59,6 @@ describeIfDb('Audit assignment-export API integration: phase/status filters', ()
         payload JSONB NOT NULL DEFAULT '{}'::jsonb
       )
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.audit_log (
-        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-        timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        user_id UUID NULL,
-        device_id TEXT NULL,
-        event_type TEXT NOT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb
-      )
-    `);
-
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
       providers: [{ provide: PG_POOL, useValue: pool }],
@@ -89,9 +78,10 @@ describeIfDb('Audit assignment-export API integration: phase/status filters', ()
   });
 
   beforeEach(async () => {
+    await pool.query(`SET search_path TO ${schema},public`);
     await pool.query(
       `
-        DELETE FROM audit_log
+        DELETE FROM ${schema}.audit_log
         WHERE event_type IN (
           'plot_assignment_export_requested',
           'plot_assignment_export_succeeded',
@@ -111,7 +101,7 @@ describeIfDb('Audit assignment-export API integration: phase/status filters', ()
   it('applies combined phase/status filters through HTTP pipeline', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '11111111-1111-1111-1111-111111111111'::uuid,
@@ -138,7 +128,7 @@ describeIfDb('Audit assignment-export API integration: phase/status filters', ()
     const seeded = await pool.query<{ total: number }>(
       `
         SELECT COUNT(*)::int AS total
-        FROM audit_log
+        FROM ${schema}.audit_log
         WHERE event_type = 'plot_assignment_export_failed'
           AND payload ->> 'tenantId' = 'tenant_1'
           AND payload ->> 'status' = 'active'
@@ -172,7 +162,7 @@ describeIfDb('Audit assignment-export API integration: phase/status filters', ()
   it('exports filtered assignment activity as csv with metadata headers', async () => {
     await pool.query(
       `
-        INSERT INTO audit_log (user_id, event_type, payload)
+        INSERT INTO ${schema}.audit_log (user_id, event_type, payload)
         VALUES
           (
             '11111111-1111-1111-1111-111111111111'::uuid,

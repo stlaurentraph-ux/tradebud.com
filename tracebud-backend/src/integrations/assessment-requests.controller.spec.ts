@@ -21,6 +21,7 @@ describe('AssessmentRequestsController', () => {
   it('creates an assessment request in sent status', async () => {
     const query = jest
       .fn()
+      .mockResolvedValueOnce({ rows: [{ id: 'questionnaire-1' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: 'request-1', status: 'sent' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });
     const controller = new AssessmentRequestsController({ query } as any);
