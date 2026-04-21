@@ -196,7 +196,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -236,7 +236,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -282,7 +282,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -323,7 +323,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -386,7 +386,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -430,7 +430,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -468,7 +468,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -506,7 +506,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -548,7 +548,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
@@ -582,203 +582,11 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;
     }
-  }
-
-  @Patch(':id/reopen')
-  @ApiOperation({ summary: 'Reopen request for farmer work' })
-  async reopen(@Param('id') id: string, @Req() req: any) {
-    return this.updateStatus(id, { status: 'needs_changes' }, req);
-  }
-
-  @Patch(':id/review')
-  @ApiOperation({ summary: 'Mark review done' })
-  async review(@Param('id') id: string, @Req() req: any) {
-    return this.updateStatus(id, { status: 'reviewed' }, req);
-  }
-
-  @Patch(':id/send')
-  @ApiOperation({ summary: 'Send request again' })
-  async resend(@Param('id') id: string, @Req() req: any) {
-    return this.updateStatus(id, { status: 'sent' }, req);
-  }
-
-  @Patch(':id/progress')
-  @ApiOperation({ summary: 'Mark in progress (alias)' })
-  async progress(@Param('id') id: string, @Req() req: any) {
-    return this.markInProgress(id, req);
-  }
-
-  @Patch(':id/open')
-  @ApiOperation({ summary: 'Mark opened (alias)' })
-  async open(@Param('id') id: string, @Req() req: any) {
-    return this.markOpened(id, req);
-  }
-
-  @Patch(':id/submit')
-  @ApiOperation({ summary: 'Mark submitted (alias)' })
-  async submit(@Param('id') id: string, @Req() req: any) {
-    return this.markSubmitted(id, req);
-  }
-
-  @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Mark cancelled (alias)' })
-  async cancel(@Param('id') id: string, @Req() req: any) {
-    return this.markCancelled(id, req);
-  }
-
-  @Patch(':id/changes')
-  @ApiOperation({ summary: 'Mark needs changes (alias)' })
-  async changes(@Param('id') id: string, @Req() req: any) {
-    return this.markNeedsChanges(id, req);
-  }
-
-  @Patch(':id/approve')
-  @ApiOperation({ summary: 'Mark reviewed (alias)' })
-  async approve(@Param('id') id: string, @Req() req: any) {
-    return this.markReviewed(id, req);
-  }
-
-  @Patch(':id/reset')
-  @ApiOperation({ summary: 'Reset to sent (alias)' })
-  async reset(@Param('id') id: string, @Req() req: any) {
-    return this.markSent(id, req);
-  }
-
-  @Patch(':id/reassign')
-  @ApiOperation({ summary: 'Reassign farmer (alias)' })
-  async reassign(@Param('id') id: string, @Body() body: { farmerUserId?: string }, @Req() req: any) {
-    return this.reassignFarmer(id, body, req);
-  }
-
-  @Patch(':id/meta')
-  @ApiOperation({ summary: 'Update metadata (alias)' })
-  async meta(@Param('id') id: string, @Body() body: { metadata?: Record<string, unknown> }, @Req() req: any) {
-    return this.updateMetadata(id, body, req);
-  }
-
-  @Patch(':id/path')
-  @ApiOperation({ summary: 'Update pathway (alias)' })
-  async path(@Param('id') id: string, @Body() body: { pathway?: AssessmentPathway }, @Req() req: any) {
-    return this.updatePathway(id, body, req);
-  }
-
-  @Patch(':id/details')
-  @ApiOperation({ summary: 'Update title/instructions (alias)' })
-  async details(
-    @Param('id') id: string,
-    @Body() body: { title?: string; instructions?: string; dueAt?: string | null },
-    @Req() req: any,
-  ) {
-    return this.updateMeta(id, body, req);
-  }
-
-  @Patch(':id/refresh')
-  @ApiOperation({ summary: 'Touch updated timestamp (alias)' })
-  async refresh(@Param('id') id: string, @Req() req: any) {
-    return this.touch(id, req);
-  }
-
-  @Patch(':id/reopen-for-farmer')
-  @ApiOperation({ summary: 'Reopen for farmer (alias)' })
-  async reopenForFarmer(@Param('id') id: string, @Req() req: any) {
-    return this.reopen(id, req);
-  }
-
-  @Patch(':id/review-complete')
-  @ApiOperation({ summary: 'Mark review complete (alias)' })
-  async reviewComplete(@Param('id') id: string, @Req() req: any) {
-    return this.review(id, req);
-  }
-
-  @Patch(':id/send-again')
-  @ApiOperation({ summary: 'Send again (alias)' })
-  async sendAgain(@Param('id') id: string, @Req() req: any) {
-    return this.resend(id, req);
-  }
-
-  @Patch(':id/work')
-  @ApiOperation({ summary: 'Mark in progress (alias2)' })
-  async work(@Param('id') id: string, @Req() req: any) {
-    return this.progress(id, req);
-  }
-
-  @Patch(':id/viewed')
-  @ApiOperation({ summary: 'Mark opened (alias2)' })
-  async viewed(@Param('id') id: string, @Req() req: any) {
-    return this.open(id, req);
-  }
-
-  @Patch(':id/finalize')
-  @ApiOperation({ summary: 'Mark submitted (alias2)' })
-  async finalize(@Param('id') id: string, @Req() req: any) {
-    return this.submit(id, req);
-  }
-
-  @Patch(':id/abort')
-  @ApiOperation({ summary: 'Mark cancelled (alias2)' })
-  async abort(@Param('id') id: string, @Req() req: any) {
-    return this.cancel(id, req);
-  }
-
-  @Patch(':id/request-changes')
-  @ApiOperation({ summary: 'Mark needs changes (alias2)' })
-  async requestChanges(@Param('id') id: string, @Req() req: any) {
-    return this.changes(id, req);
-  }
-
-  @Patch(':id/approve-review')
-  @ApiOperation({ summary: 'Mark reviewed (alias2)' })
-  async approveReview(@Param('id') id: string, @Req() req: any) {
-    return this.approve(id, req);
-  }
-
-  @Patch(':id/restart')
-  @ApiOperation({ summary: 'Reset to sent (alias2)' })
-  async restart(@Param('id') id: string, @Req() req: any) {
-    return this.reset(id, req);
-  }
-
-  @Patch(':id/reassign-farmer')
-  @ApiOperation({ summary: 'Reassign farmer (alias2)' })
-  async reassignFarmerAlias(@Param('id') id: string, @Body() body: { farmerUserId?: string }, @Req() req: any) {
-    return this.reassign(id, body, req);
-  }
-
-  @Patch(':id/update-metadata')
-  @ApiOperation({ summary: 'Update metadata (alias2)' })
-  async updateMetadataAlias(
-    @Param('id') id: string,
-    @Body() body: { metadata?: Record<string, unknown> },
-    @Req() req: any,
-  ) {
-    return this.meta(id, body, req);
-  }
-
-  @Patch(':id/update-pathway')
-  @ApiOperation({ summary: 'Update pathway (alias2)' })
-  async updatePathwayAlias(@Param('id') id: string, @Body() body: { pathway?: AssessmentPathway }, @Req() req: any) {
-    return this.path(id, body, req);
-  }
-
-  @Patch(':id/update-details')
-  @ApiOperation({ summary: 'Update details (alias2)' })
-  async updateDetailsAlias(
-    @Param('id') id: string,
-    @Body() body: { title?: string; instructions?: string; dueAt?: string | null },
-    @Req() req: any,
-  ) {
-    return this.details(id, body, req);
-  }
-
-  @Patch(':id/ping')
-  @ApiOperation({ summary: 'Touch request (alias2)' })
-  async ping(@Param('id') id: string, @Req() req: any) {
-    return this.refresh(id, req);
   }
 
   @Post()
@@ -940,7 +748,7 @@ export class AssessmentRequestsController {
       const err = error as { code?: string };
       if (err?.code === '42P01') {
         throw new BadRequestException(
-          'Assessment request table is not available. Apply TB-V16-019 migration first.',
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
         );
       }
       throw error;

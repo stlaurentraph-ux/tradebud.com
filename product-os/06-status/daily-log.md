@@ -3052,6 +3052,14 @@ Append-only session log.
 - Risks: auto-created drafts currently use generated idempotency keys and minimal metadata, so downstream analytics may need additional metadata enrichment fields for stronger lineage traceability.
 - Next step: harmonize stale migration guidance strings in controller error branches (`TB-V16-019` remnants) and add integration test coverage for auto-created draft linkage persistence.
 
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 66)
+- Focus: close reliability cleanup by removing stale migration guidance text and proving auto-link behavior against a real DB schema.
+- Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.int.spec.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: replaced remaining `TB-V16-019` guidance strings with `TB-V16-021/TB-V16-022` in assessment controller error paths; added DB-backed integration case that creates assessment request without draft id and asserts linked questionnaire draft persistence and `draft` status in `integration_questionnaire_v2`.
+- Verification: `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`; `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/assessment-requests.controller.int.spec.ts`.
+- Risks: Full integration suite currently contains unrelated failing specs, so verification is intentionally path-scoped for this feature slice.
+- Next step: trim duplicate alias endpoints in assessment controller to reduce API surface and harden long-term maintainability.
+
 ### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 62)
 - Focus: implement the missing assessment handoff backbone so dashboard users can request farmer execution of SAI + Cool Farm assessments through app workflow states.
 - Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `tracebud-backend/src/integrations/integrations.module.ts`, `tracebud-backend/sql/tb_v16_021_integration_assessment_requests.sql`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

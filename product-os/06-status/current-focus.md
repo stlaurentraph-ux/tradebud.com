@@ -508,6 +508,7 @@
 - FEAT-009 assessment workflow UI wiring is now implemented as S1 slice 63: dashboard `Requests` now sends and reviews live assessment requests through API proxy routes, and offline app home now exposes assigned assessment tasks with progression actions; next execution step is request-to-questionnaire draft linkage + validation gating before farmer submission completion.
 - FEAT-009 request-to-questionnaire linkage + submit gating is now implemented as S1 slice 64: assessment requests now persist optional `questionnaire_id` linkage (`TB-V16-022`), list/get surfaces expose it, and farmer `submitted` transition now fail-closes until linked questionnaire reaches submitted-or-beyond states; next execution step is auto-linking request creation to questionnaire-draft creation flow to remove manual ID handling.
 - FEAT-009 assessment auto-linking is now implemented as S1 slice 65: request creation now auto-creates and links questionnaire drafts when no draft id is supplied, reducing manual operator coupling; next execution step is pruning redundant endpoint aliases + harmonizing migration guidance strings in assessment controller error paths.
+- FEAT-009 migration guidance cleanup + auto-link DB proof are now implemented as S1 slice 66: assessment controller migration error guidance is normalized to `TB-V16-021/TB-V16-022`, and DB-backed integration coverage now verifies auto-created questionnaire linkage persistence; next execution step is endpoint alias reduction and focused request-state API simplification.
 
 ## Priority migration lanes (v1.6)
 
