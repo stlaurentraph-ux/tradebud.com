@@ -30,6 +30,7 @@
     "openapi:governance:metrics:trend:assertions:smoke": "node scripts/openapi-governance/trend-assertions.smoke.mjs",
     "openapi:governance:metrics:presentation:check": "node scripts/openapi-governance/metrics-presentation-check.mjs",
     "openapi:governance:readme:report:assert": "node scripts/openapi-governance/readme-report-assert.mjs",
+    "openapi:governance:assessment:aliases:check": "node scripts/openapi-governance/assessment-route-alias-check.mjs",
     "openapi:governance:markdown:report:assert": "node scripts/openapi-governance/markdown-report-assert.mjs",
     "openapi:governance:artifacts:assert": "node scripts/openapi-governance/artifacts-assert.mjs",
     "openapi:governance:snapshot:registry:check": "node scripts/openapi-governance/snapshot-registry-check.mjs",

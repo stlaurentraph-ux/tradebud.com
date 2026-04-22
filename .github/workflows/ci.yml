@@ -170,6 +170,11 @@ jobs:
           set -euo pipefail
           npm run openapi:governance:check -- --report openapi-governance-codeowners-report.json | tee openapi-governance-codeowners-output.txt
 
+      - name: Enforce assessment canonical route aliases and OpenAPI parity
+        run: |
+          set -euo pipefail
+          npm run openapi:governance:assessment:aliases:check | tee openapi-governance-assessment-alias-output.txt
+
       - name: Enforce evidence-document OpenAPI/DTO enum parity
         run: |
           set -euo pipefail

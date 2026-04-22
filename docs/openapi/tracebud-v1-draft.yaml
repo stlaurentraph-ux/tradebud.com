@@ -3327,6 +3327,356 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           description: Invalid scheduler token or policy violation
+  /v1/integrations/assessments/requests:
+    post:
+      tags: [Integrations]
+      operationId: createAssessmentRequest
+      summary: Create assessment request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - farmerId
+                - pathway
+              properties:
+                title:
+                  type: string
+                instructions:
+                  type: string
+                farmerId:
+                  type: string
+                pathway:
+                  type: string
+                  enum: [annuals, rice]
+                dueDate:
+                  type: string
+                  format: date
+                questionnaireDraftId:
+                  type: string
+      responses:
+        "201":
+          description: Assessment request created
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+    get:
+      tags: [Integrations]
+      operationId: listAssessmentRequests
+      summary: List assessment requests
+      parameters:
+        - name: assignedToMe
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+      responses:
+        "200":
+          description: Tenant-scoped assessment requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}:
+    get:
+      tags: [Integrations]
+      operationId: getAssessmentRequest
+      summary: Get assessment request by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Assessment request details
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+        "404":
+          description: Assessment request not found
+  /v1/integrations/assessments/requests/{id}/status:
+    patch:
+      tags: [Integrations]
+      operationId: updateAssessmentRequestStatus
+      summary: Update assessment request status (manager)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [sent, opened, in_progress, submitted, reviewed, needs_changes, cancelled]
+      responses:
+        "200":
+          description: Assessment status updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/opened:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestOpened
+      summary: Mark assessment request as opened
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to opened
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/in-progress:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestInProgress
+      summary: Mark assessment request as in progress
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to in progress
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/submitted:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestSubmitted
+      summary: Mark assessment request as submitted
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to submitted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/reviewed:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestReviewed
+      summary: Mark assessment request as reviewed
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to reviewed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/needs-changes:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestNeedsChanges
+      summary: Mark assessment request as needs changes
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to needs changes
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/cancelled:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestCancelled
+      summary: Mark assessment request as cancelled
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to cancelled
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/sent:
+    patch:
+      tags: [Integrations]
+      operationId: markAssessmentRequestSent
+      summary: Reset assessment request to sent
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request status set to sent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/title:
+    patch:
+      tags: [Integrations]
+      operationId: updateAssessmentRequestTitle
+      summary: Update assessment request title metadata
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                instructions:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Assessment request title metadata updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/farmer:
+    patch:
+      tags: [Integrations]
+      operationId: updateAssessmentRequestFarmer
+      summary: Reassign assessment request farmer
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - farmerId
+              properties:
+                farmerId:
+                  type: string
+      responses:
+        "200":
+          description: Assessment request farmer updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/pathway:
+    patch:
+      tags: [Integrations]
+      operationId: updateAssessmentRequestPathway
+      summary: Update assessment request pathway
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pathway
+              properties:
+                pathway:
+                  type: string
+                  enum: [annuals, rice]
+      responses:
+        "200":
+          description: Assessment request pathway updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/metadata:
+    patch:
+      tags: [Integrations]
+      operationId: updateAssessmentRequestMetadata
+      summary: Replace assessment request metadata object
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - metadata
+              properties:
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Assessment request metadata updated
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/integrations/assessments/requests/{id}/touch:
+    patch:
+      tags: [Integrations]
+      operationId: touchAssessmentRequest
+      summary: Refresh assessment request updated timestamp
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Assessment request touched
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
   /v1/integrations/eudr/echo:
     get:
       tags: [Integrations]
