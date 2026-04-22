@@ -1410,6 +1410,19 @@ Verification commands:
 - Documented canonical backend + dashboard proxy routes, roles, transition semantics, and submit-gate requirements.
 - Explicitly marks alias endpoints as removed and sets canonical path usage expectation for frontend/integration consumers.
 
+### S1 post-closeout hardening slice 69 - CI guardrail for removed assessment aliases
+
+- Added automated governance guardrail to prevent route-surface regression:
+  - new script: `scripts/openapi-governance/assessment-route-alias-check.mjs`
+  - new npm command: `openapi:governance:assessment:aliases:check`
+  - new contracts CI step: `Enforce assessment canonical route aliases`.
+- Guardrail fail-closes when deprecated alias routes are detected in `assessment-requests.controller.ts`.
+- Verified guardrail passes on current canonical route set.
+
+Verification commands:
+
+- `npm run openapi:governance:assessment:aliases:check`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
