@@ -28,7 +28,7 @@ export class InboxService {
 
   private isRetriableDdlCollision(error: unknown): boolean {
     const code = (error as { code?: string } | null)?.code;
-    return code === '23505' || code === '42P07' || code === '42710' || code === '42P01';
+    return code === '23505' || code === '42P07' || code === '42710' || code === '42P01' || code === '40P01';
   }
 
   private async waitForTable(
