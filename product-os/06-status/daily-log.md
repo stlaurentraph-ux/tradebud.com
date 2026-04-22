@@ -3052,6 +3052,14 @@ Append-only session log.
 - Risks: checker currently validates controller route decorators only (not generated OpenAPI path inventory), so parity with OpenAPI publication remains a separate optional hardening.
 - Next step: optionally extend guardrail to assert canonical assessment path inventory directly against `docs/openapi/tracebud-v1-draft.yaml`.
 
+### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 70)
+- Focus: close route-doc drift by enforcing canonical assessment operation parity directly against `tracebud-v1-draft.yaml`.
+- Files changed: `scripts/openapi-governance/assessment-route-alias-check.mjs`, `docs/openapi/tracebud-v1-draft.yaml`, `package.json`, `.github/workflows/ci.yml`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: upgraded assessment guardrail to fail when canonical OpenAPI operations are missing, and to fail when deprecated alias paths are present in either controller decorators or OpenAPI paths; published canonical assessment route inventory in OpenAPI draft under integrations.
+- Verification: `npm run openapi:governance:assessment:aliases:check`; `npm run openapi:lint`.
+- Risks: newly published assessment path blocks currently use broad response payload schemas (`additionalProperties`) and should be tightened over time to reduce contract ambiguity.
+- Next step: introduce stricter schema refs for assessment request payloads/responses and add OpenAPI snapshot coverage for this path group.
+
 ### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 63)
 - Focus: wire the new assessment-request backend contract into both operator surfaces so dashboard can dispatch/review and offline app can progress farmer execution states.
 - Files changed: `apps/dashboard-product/app/api/integrations/assessments/requests/route.ts`, `apps/dashboard-product/app/api/integrations/assessments/requests/[id]/status/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/app/(tabs)/index.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

@@ -1423,6 +1423,21 @@ Verification commands:
 
 - `npm run openapi:governance:assessment:aliases:check`
 
+### S1 post-closeout hardening slice 70 - OpenAPI parity for canonical assessment routes
+
+- Extended assessment route governance guardrail to validate OpenAPI parity against canonical workflow operations.
+- Added canonical assessment request path inventory to `docs/openapi/tracebud-v1-draft.yaml` for:
+  - create/list/get
+  - manager and farmer status transitions
+  - title/farmer/pathway/metadata/touch update routes.
+- Updated contracts CI to enforce alias removal and canonical OpenAPI route coverage in one blocking check:
+  - `Enforce assessment canonical route aliases and OpenAPI parity`.
+
+Verification commands:
+
+- `npm run openapi:governance:assessment:aliases:check`
+- `npm run openapi:lint`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
