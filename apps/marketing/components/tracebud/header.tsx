@@ -9,7 +9,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const personaLinks = [
-  { label: "Farmers", href: "/farmers" },
+  { label: "Producers", href: "/farmers" },
   { label: "Exporters", href: "/exporters" },
   { label: "Importers", href: "/importers" },
   { label: "Countries", href: "/countries" },
@@ -18,7 +18,6 @@ const personaLinks = [
 const secondaryLinks = [
   { label: "Pilot", href: "/pilot" },
   { label: "How It Works", href: "/#how-it-works" },
-  { label: "Platform", href: "/#platform-architecture" },
   { label: "Pricing", href: "/pricing" },
 ];
 
@@ -102,32 +101,28 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            {!isFarmersPage ? (
-              <Button
-                variant="ghost"
-                className={`font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:text-white hover:bg-white/10"}`}
-              >
-                <span className="inline-flex items-baseline gap-1">
-                  <span>Log In</span>
-                  <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
-                </span>
-              </Button>
-            ) : null}
-            {!isFarmersPage ? (
-              <Link href="/get-started">
+            {isFarmersPage ? (
+              <Link href="/farmers#download">
                 <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                  Get Started
+                  Download App
                 </Button>
               </Link>
             ) : (
-              <Link href="/farmers#signup">
-                <Button
-                  variant="ghost"
-                  className={`font-semibold text-sm lg:text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
-                >
-                  Request access
-                </Button>
-              </Link>
+              <>
+                <Link href="/demo">
+                  <Button
+                    variant="ghost"
+                    className={`font-semibold text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
+                  >
+                    Book Demo
+                  </Button>
+                </Link>
+                <Link href="/get-started">
+                  <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
+                    Start Free Trial
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
 
@@ -182,36 +177,35 @@ export function Header() {
               </div>
               <div className="flex flex-col gap-4 mt-8 pb-8">
                 {isFarmersPage ? (
-                  <Link href="/farmers#signup" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
-                    >
-                      Request access
-                    </Button>
-                  </Link>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-xl py-6 rounded-full"
-                >
-                  <span className="inline-flex items-baseline gap-1">
-                    <span>Log In</span>
-                    <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
-                  </span>
-                </Button>
-                {!isFarmersPage ? (
-                  <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/farmers#download" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button
                       size="lg"
                       className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
                     >
-                      Get Started
+                      Download App
                     </Button>
                   </Link>
-                ) : null}
+                ) : (
+                  <>
+                    <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button
+                        size="lg"
+                        className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
+                      >
+                        Start Free Trial
+                      </Button>
+                    </Link>
+                    <Link href="/demo" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
+                      >
+                        Book 15-min Demo
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </motion.div>

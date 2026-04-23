@@ -379,9 +379,9 @@ export default function PilotPage() {
           </form>
 
           <p className="text-xs text-foreground/60 mt-6 text-center">
-            Prefer the general flows?{" "}
+            Want to start immediately instead?{" "}
             <Link href="/get-started" className="text-[var(--forest-canopy)] font-medium underline-offset-2 hover:underline">
-              Get started by profile
+              Create your free account
             </Link>
           </p>
         </div>
