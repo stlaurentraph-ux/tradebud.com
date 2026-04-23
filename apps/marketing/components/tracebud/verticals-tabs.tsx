@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 const verticals = [
   {
@@ -48,7 +47,7 @@ const verticals = [
     href: "/farmers?account=cooperative",
     image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?q=80&w=2070&auto=format&fit=crop",
     cta: "Start Free Trial",
-    ctaHref: getCreateAccountUrl("exporter"),
+    ctaHref: "/get-started?role=cooperative",
     isAppUser: false,
   },
   {
@@ -64,7 +63,7 @@ const verticals = [
     href: "/exporters",
     image: "/images/exporter-hero.jpg",
     cta: "Start Free Trial",
-    ctaHref: getCreateAccountUrl("exporter"),
+    ctaHref: "/get-started?role=exporter",
     isAppUser: false,
   },
   {
@@ -80,7 +79,7 @@ const verticals = [
     href: "/importers",
     image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=2070&auto=format&fit=crop",
     cta: "Start Free Trial",
-    ctaHref: getCreateAccountUrl("importer"),
+    ctaHref: "/get-started?role=importer",
     isAppUser: false,
   },
   {

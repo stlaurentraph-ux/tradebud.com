@@ -8,10 +8,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 const FIELD_APP_DEMO = "https://fieldapp-demo.tracebud.com";
 const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
+const DASHBOARD_URL = "https://app.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 
@@ -194,7 +194,7 @@ export default function FarmersPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
-                  href={getCreateAccountUrl("exporter")}
+                  href={`${DASHBOARD_URL}/signup?role=cooperative`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-[var(--forest-canopy)] rounded-lg text-sm font-bold hover:bg-white/90 transition-colors"
@@ -446,7 +446,7 @@ export default function FarmersPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href={getCreateAccountUrl("exporter")}
+                href={`${DASHBOARD_URL}/signup?role=cooperative`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[var(--forest-canopy)] font-semibold hover:underline inline-flex items-center gap-2"

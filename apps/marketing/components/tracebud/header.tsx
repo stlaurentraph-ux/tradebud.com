@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 const personaLinks = [
   { label: "Producers", href: "/farmers" },
@@ -118,7 +117,7 @@ export function Header() {
                     Book Demo
                   </Button>
                 </Link>
-                <Link href={getCreateAccountUrl()}>
+                <Link href="/get-started">
                   <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
                     Start Free Trial
                   </Button>
@@ -188,7 +187,7 @@ export function Header() {
                   </Link>
                 ) : (
                   <>
-                    <Link href={getCreateAccountUrl()} className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button
                         size="lg"
                         className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"

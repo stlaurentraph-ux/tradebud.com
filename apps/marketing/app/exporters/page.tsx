@@ -8,8 +8,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
 const EXPORTER_DEMO = "https://exporter-demo.tracebud.com";
 
 const features = [
@@ -98,7 +98,7 @@ export default function ExportersPage() {
                 size="lg"
                 className="bg-white hover:bg-white/90 text-[var(--mountain-clay)] font-bold px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
               >
-                <a href={getCreateAccountUrl("exporter")} target="_blank" rel="noopener noreferrer">
+                <a href={`${DASHBOARD_URL}/signup?role=exporter`} target="_blank" rel="noopener noreferrer">
                   Start free trial
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
@@ -312,7 +312,7 @@ export default function ExportersPage() {
                 size="lg"
                 className="bg-[var(--mountain-clay)] hover:bg-[var(--clay-light)] text-white font-bold px-10 py-6 text-lg rounded-full"
               >
-                <a href={getCreateAccountUrl("exporter")} target="_blank" rel="noopener noreferrer">
+                <a href={`${DASHBOARD_URL}/signup?role=exporter`} target="_blank" rel="noopener noreferrer">
                   Start free trial
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>

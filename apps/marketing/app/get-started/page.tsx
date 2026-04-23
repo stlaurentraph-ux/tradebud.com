@@ -4,8 +4,8 @@ import { ArrowRight, Building2, Factory, Leaf, Users, Smartphone, ExternalLink }
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 
@@ -20,7 +20,7 @@ const options = [
   {
     title: "Cooperative",
     description: "Coordinate member data and roll up evidence at scale.",
-    href: getCreateAccountUrl("exporter"),
+    href: `${DASHBOARD_URL}/signup?role=cooperative`,
     icon: Users,
     isApp: false,
     color: "#F59E0B",
@@ -28,7 +28,7 @@ const options = [
   {
     title: "Exporter",
     description: "Automate due diligence and batch-level workflows.",
-    href: getCreateAccountUrl("exporter"),
+    href: `${DASHBOARD_URL}/signup?role=exporter`,
     icon: Factory,
     isApp: false,
     color: "var(--mountain-clay)",
@@ -36,7 +36,7 @@ const options = [
   {
     title: "Importer / Brand",
     description: "Get upstream visibility and supplier risk signals.",
-    href: getCreateAccountUrl("importer"),
+    href: `${DASHBOARD_URL}/signup?role=importer`,
     icon: Building2,
     isApp: false,
     color: "var(--forest-canopy)",

@@ -7,8 +7,8 @@ import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 
@@ -45,7 +45,7 @@ const plans = [
       "Automated batch management & pre-export EUDR preparation",
     ],
     cta: "Start Free Trial",
-    href: getCreateAccountUrl("exporter"),
+    href: `${DASHBOARD_URL}/signup?role=exporter`,
     isApp: false,
     tier: "Tier 2",
   },
@@ -65,7 +65,7 @@ const plans = [
       "Multi-supplier risk dashboard across your sourcing network",
     ],
     cta: "Start Free Trial",
-    href: getCreateAccountUrl("importer"),
+    href: `${DASHBOARD_URL}/signup?role=importer`,
     isApp: false,
     tier: "Tier 3",
   },

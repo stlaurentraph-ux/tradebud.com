@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Video, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 const benefits = [
   "See the full platform in action",
@@ -91,7 +90,7 @@ export default function DemoPage() {
                 <p className="text-xs text-muted-foreground mb-3">
                   Get instant access. No demo needed. Start your 30-day free trial now.
                 </p>
-                <Link href={getCreateAccountUrl()}>
+                <Link href="/get-started">
                   <Button className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-5 rounded-full">
                     Start Free Trial
                   </Button>

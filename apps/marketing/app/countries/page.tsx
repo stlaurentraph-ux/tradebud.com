@@ -7,8 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
 const COUNTRY_DEMO = "https://country-demo.tracebud.com";
 
 const features = [
@@ -87,7 +87,7 @@ export default function CountriesPage() {
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
               >
                 <a
-                  href={getCreateAccountUrl("compliance_manager")}
+                  href={`${DASHBOARD_URL}/signup?role=registry`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -365,7 +365,7 @@ export default function CountriesPage() {
                 size="lg"
                 className="bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-bold px-10 py-6 text-lg rounded-full"
               >
-                <a href={getCreateAccountUrl("compliance_manager")} target="_blank" rel="noopener noreferrer">
+                <a href={`${DASHBOARD_URL}/signup?role=registry`} target="_blank" rel="noopener noreferrer">
                   Create registry account
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>

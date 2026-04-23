@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 export function Hero() {
   return (
@@ -86,7 +85,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <a href={getCreateAccountUrl()}>
+          <a href="/get-started">
             <Button
               size="lg"
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-lg rounded-full shadow-xl"

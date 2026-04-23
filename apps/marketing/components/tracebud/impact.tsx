@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Quote, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
 const testimonials = [
   {
@@ -125,7 +124,7 @@ export function Impact() {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <div className="flex flex-col sm:flex-row gap-3 md:gap-5 justify-center items-center">
-            <Link href={getCreateAccountUrl()}>
+            <Link href="/get-started">
               <Button
                 size="lg"
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 rounded-full shadow-xl w-full sm:w-auto"

@@ -5,6 +5,8 @@ import { useRef } from "react";
 import {
   Upload,
   CheckCircle2,
+  UserPlus,
+  Inbox,
   MapPin,
   Shield,
   Package,
@@ -19,6 +21,7 @@ import {
   Clock,
   Globe,
   FileText,
+  AlertCircle,
 } from "lucide-react";
 
 const steps = [

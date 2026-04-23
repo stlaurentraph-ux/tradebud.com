@@ -29,8 +29,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
-import { getCreateAccountUrl } from "@/lib/dashboard";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
 const IMPORTER_DEMO = "https://importer-demo.tracebud.com";
 
 const features = [
@@ -122,7 +122,7 @@ export default function ImportersPage() {
                   size="lg"
                   className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
                 >
-                  <a href={getCreateAccountUrl("importer")} target="_blank" rel="noopener noreferrer">
+                  <a href={`${DASHBOARD_URL}/signup?role=importer`} target="_blank" rel="noopener noreferrer">
                     Start free trial
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </a>
@@ -567,7 +567,7 @@ export default function ImportersPage() {
                 size="lg"
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-6 text-lg rounded-full"
               >
-                <a href={getCreateAccountUrl("importer")} target="_blank" rel="noopener noreferrer">
+                <a href={`${DASHBOARD_URL}/signup?role=importer`} target="_blank" rel="noopener noreferrer">
                   Start free trial
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
