@@ -116,6 +116,9 @@ export function Verticals() {
                   className={`relative group cursor-pointer rounded-3xl overflow-hidden transition-all duration-500 ${
                     isHovered ? "shadow-2xl scale-[1.02]" : "shadow-lg"
                   }`}
+                  style={{
+                    borderLeft: `4px solid ${vertical.color}`,
+                  }}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -131,7 +134,12 @@ export function Verticals() {
                       fill
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-black/30 group-hover:from-black/98 transition-all duration-500" />
+                    <div 
+                      className="absolute inset-0 transition-all duration-500"
+                      style={{
+                        background: `linear-gradient(to top, ${vertical.color}dd 0%, ${vertical.color}99 20%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.2) 100%)`,
+                      }}
+                    />
                   </div>
 
                   <div className="relative p-6 md:p-10 flex flex-col h-full min-h-[360px] md:min-h-[440px] justify-end">
@@ -177,7 +185,8 @@ export function Verticals() {
                       {vertical.features.map((feature) => (
                         <span
                           key={feature}
-                          className="px-2 md:px-3 py-1 md:py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs md:text-sm text-white/90 font-medium"
+                          className="px-2 md:px-3 py-1 md:py-1.5 backdrop-blur-sm rounded-full text-xs md:text-sm text-white font-medium"
+                          style={{ backgroundColor: `${vertical.color}44` }}
                         >
                           {feature}
                         </span>

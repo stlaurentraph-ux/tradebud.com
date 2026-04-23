@@ -50,8 +50,8 @@ export function Hero() {
           priority
           loading="eager"
         />
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/80 via-[var(--forest-canopy)]/70 to-[var(--forest-canopy)]/90" />
+        {/* Dark overlay for text readability - reduced opacity to show imagery */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/60 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/70" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
@@ -71,7 +71,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-6 text-balance leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight mb-6 text-balance leading-tight">
             Trade Freely.
             <br />
             <span className="text-[var(--data-emerald)]">Trace Easily.</span>
@@ -118,18 +118,22 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.6 }}
         >
           {!submitted ? (
-            <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-3">
+            <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-3" aria-label="Get started with EUDR compliance checklist">
+              <label htmlFor="hero-email" className="sr-only">Email address</label>
               <input
+                id="hero-email"
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                aria-required="true"
                 className="flex-1 px-5 py-3 rounded-full bg-white/10 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--data-emerald)] focus:border-transparent"
               />
               <Button
                 type="submit"
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-3 rounded-full whitespace-nowrap"
+                aria-label="Get started - Download EUDR compliance checklist"
               >
                 Get Started
               </Button>

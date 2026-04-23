@@ -158,9 +158,9 @@ export function ChainFlow() {
               </svg>
               <span className="text-sm font-medium text-[var(--forest-canopy)]">Requests</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white bg-[var(--data-emerald)]">+</div>
-              <span className="text-sm font-medium text-[var(--forest-canopy)]">Start from anywhere: request upstream or send data downstream</span>
+            <div className="flex items-center gap-2 max-w-xs sm:max-w-none">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white bg-[var(--data-emerald)] flex-shrink-0">+</div>
+              <span className="text-sm font-medium text-[var(--forest-canopy)] text-center sm:text-left">Start from anywhere: request upstream or send data downstream</span>
             </div>
           </div>
         </motion.div>

@@ -3,11 +3,8 @@
 import { motion } from "framer-motion";
 import { Play, MapPin, FileCheck, Zap, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 
 export function ProductDemo() {
-  const [isVideoOpen, setIsVideoOpen] = useState(false);
-
   const features = [
     {
       icon: MapPin,
@@ -86,23 +83,15 @@ export function ProductDemo() {
                 whileTap={{ scale: 0.95 }}
               >
                 <button
-                  onClick={() => setIsVideoOpen(true)}
                   className="flex items-center justify-center w-20 h-20 md:w-24 md:h-24 rounded-full bg-[var(--data-emerald)] hover:bg-emerald-400 shadow-2xl transition-all group-hover:scale-110"
+                  aria-label="Play product demo video"
                 >
                   <Play className="w-8 h-8 md:w-10 md:h-10 text-[var(--forest-canopy)] ml-1" fill="currentColor" />
                 </button>
               </motion.div>
             </div>
 
-            {/* Optional: External link if you have a hosted video */}
-            <div className="absolute bottom-4 right-4 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full text-xs text-white/80">
-              YouTube / Loom Link
-            </div>
           </div>
-
-          <p className="text-sm text-gray-600 text-center mt-4">
-            Replace with actual product demo video link
-          </p>
         </motion.div>
 
         {/* Features Grid */}
