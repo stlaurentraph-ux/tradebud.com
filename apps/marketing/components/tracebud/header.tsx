@@ -102,17 +102,7 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            {!isFarmersPage ? (
-              <Button
-                variant="ghost"
-                className={`font-semibold text-lg ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:text-white hover:bg-white/10"}`}
-              >
-                <span className="inline-flex items-baseline gap-1">
-                  <span>Log In</span>
-                  <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
-                </span>
-              </Button>
-            ) : null}
+            
             {!isFarmersPage ? (
               <Link href="/get-started">
                 <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
@@ -192,16 +182,7 @@ export function Header() {
                     </Button>
                   </Link>
                 ) : null}
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-xl py-6 rounded-full"
-                >
-                  <span className="inline-flex items-baseline gap-1">
-                    <span>Log In</span>
-                    <span className="text-[10px] font-medium opacity-70">(coming soon)</span>
-                  </span>
-                </Button>
+                
                 {!isFarmersPage ? (
                   <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button

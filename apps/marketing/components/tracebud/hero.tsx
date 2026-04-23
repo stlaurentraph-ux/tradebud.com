@@ -45,26 +45,49 @@ export function Hero() {
         </motion.div>
 
         <motion.p
-          className="text-xl md:text-2xl lg:text-3xl text-white/90 max-w-4xl mx-auto mb-8 leading-relaxed font-medium"
+          className="text-xl md:text-2xl lg:text-3xl text-white/90 max-w-4xl mx-auto mb-6 leading-relaxed font-medium"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          The simplest way to connect sustainable farms to global markets. We handle the complex compliance so you can focus on the harvest and the business.
+          Get EUDR-ready in weeks, not months. Farm-to-port traceability with 60-second plot verification via satellite.
         </motion.p>
 
+        {/* Quantified Value Metrics */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-5 justify-center items-center mt-14"
+          className="flex flex-wrap justify-center gap-6 md:gap-10 mb-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
-          <a href="/pilot">
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">85%</div>
+            <div className="text-sm md:text-base text-white/70">Less Documentation Time</div>
+          </div>
+          <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">60s</div>
+            <div className="text-sm md:text-base text-white/70">Plot Verification</div>
+          </div>
+          <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">6-Digit</div>
+            <div className="text-sm md:text-base text-white/70">GPS Precision</div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="flex flex-col sm:flex-row gap-5 justify-center items-center mt-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+        >
+          <a href="/get-started">
             <Button
               size="lg"
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all"
             >
-              Apply for pilot
+              Start Free Assessment
             </Button>
           </a>
           <a href="#how-it-works">
@@ -73,7 +96,7 @@ export function Hero() {
               variant="outline"
               className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-xl rounded-full"
             >
-              See how it works
+              Watch 2-min Demo
             </Button>
           </a>
         </motion.div>

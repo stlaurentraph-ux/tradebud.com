@@ -1,5 +1,6 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
+import { TrustSignals } from "@/components/tracebud/trust-signals";
 import { ProcessTimeline } from "@/components/tracebud/process-timeline";
 import { Verticals } from "@/components/tracebud/verticals";
 import { NetworkSovereignty } from "@/components/tracebud/network-sovereignty";
@@ -16,6 +17,7 @@ export default function Home() {
     <main className="min-h-screen">
       <Header />
       <Hero />
+      <TrustSignals />
       <ProcessTimeline />
       <Verticals />
       <NetworkSovereignty />
