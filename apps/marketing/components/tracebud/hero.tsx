@@ -1,11 +1,46 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, ArrowDown } from "lucide-react";
+import { Calendar, ArrowDown, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useState } from "react";
 
 export function Hero() {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) {
+      console.log("[v0] Submitting email:", email);
+      
+      // Submit to API
+      fetch("/api/checklist/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("[v0] API response:", data);
+          if (data.ok) {
+            // Trigger PDF download
+            const link = document.createElement("a");
+            link.href = "/api/checklist/download";
+            link.download = "EUDR-Compliance-Checklist.pdf";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setSubmitted(true);
+            setEmail("");
+            setTimeout(() => setSubmitted(false), 3000);
+          }
+        })
+        .catch((err) => console.error("[v0] Error:", err));
+    }
+  };
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Full-bleed background image */}
@@ -76,11 +111,46 @@ export function Hero() {
           </div>
         </motion.div>
 
+        {/* Email Capture Form */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-5 justify-center items-center mt-10"
+          className="max-w-md mx-auto mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.55 }}
+        >
+          {!submitted ? (
+            <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="flex-1 px-5 py-3 rounded-full bg-white/10 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--data-emerald)] focus:border-transparent"
+              />
+              <Button
+                type="submit"
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-3 rounded-full whitespace-nowrap"
+              >
+                Get Checklist
+              </Button>
+            </form>
+          ) : (
+            <div className="flex items-center justify-center gap-2 text-[var(--data-emerald)] font-semibold">
+              <CheckCircle2 className="w-5 h-5" />
+              <span>Check your email!</span>
+            </div>
+          )}
+          <p className="text-xs text-white/60 mt-3 text-center">
+            Get a free EUDR compliance checklist + implementation guide
+          </p>
+        </motion.div>
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
+          className="flex flex-col sm:flex-row gap-5 justify-center items-center"
         >
           <a href="/get-started">
             <Button

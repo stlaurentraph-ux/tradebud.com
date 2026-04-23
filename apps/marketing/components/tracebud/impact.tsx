@@ -128,7 +128,7 @@ export function Impact() {
               size="lg"
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 rounded-full shadow-xl w-full sm:w-auto"
             >
-              Start Mapping Today
+              See Farmer Features
               <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
             </Button>
           </Link>
@@ -138,7 +138,7 @@ export function Impact() {
               variant="outline"
               className="border-2 border-white/60 text-white hover:bg-white/10 hover:border-white px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 bg-transparent rounded-full w-full sm:w-auto"
             >
-              View Exporter Dashboard
+              Explore Exporter Tools
             </Button>
           </Link>
         </motion.div>

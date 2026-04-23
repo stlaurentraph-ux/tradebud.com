@@ -1,7 +1,7 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
-import { TrustSignals } from "@/components/tracebud/trust-signals";
 import { ProcessTimeline } from "@/components/tracebud/process-timeline";
+import { ProductDemo } from "@/components/tracebud/product-demo";
 import { Verticals } from "@/components/tracebud/verticals";
 import { NetworkSovereignty } from "@/components/tracebud/network-sovereignty";
 import { Technology } from "@/components/tracebud/technology";
@@ -11,14 +11,15 @@ import { Interoperability } from "@/components/tracebud/interoperability";
 import { EsgClimate } from "@/components/tracebud/esg-climate";
 import { Impact } from "@/components/tracebud/impact";
 import { Footer } from "@/components/tracebud/footer";
+import { ExitIntentModal } from "@/components/exit-intent-modal";
 
 export default function Home() {
   return (
     <main className="min-h-screen">
       <Header />
       <Hero />
-      <TrustSignals />
       <ProcessTimeline />
+      <ProductDemo />
       <Verticals />
       <NetworkSovereignty />
       <Technology />
@@ -28,6 +29,7 @@ export default function Home() {
       <EsgClimate />
       <Impact />
       <Footer />
+      <ExitIntentModal />
     </main>
   );
 }
