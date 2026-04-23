@@ -1,43 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, CheckCircle2 } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useState } from "react";
 
 export function Hero() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      // Submit to API
-      fetch("/api/checklist/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.ok) {
-            // Trigger PDF download
-            const link = document.createElement("a");
-            link.href = "/api/checklist/download";
-            link.download = "EUDR-Compliance-Checklist.pdf";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            setSubmitted(true);
-            setEmail("");
-            setTimeout(() => setSubmitted(false), 3000);
-          }
-        })
-        .catch((err) => console.error("Error:", err));
-    }
-  };
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Full-bleed background image */}
@@ -110,59 +78,52 @@ export function Hero() {
           </div>
         </motion.div>
 
-        {/* Email Capture Form */}
+        {/* Primary CTAs */}
         <motion.div
-          className="max-w-md mx-auto mb-8"
+          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          {!submitted ? (
-            <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-3" aria-label="Get started with EUDR compliance checklist">
-              <label htmlFor="hero-email" className="sr-only">Email address</label>
-              <input
-                id="hero-email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                aria-required="true"
-                className="flex-1 px-5 py-3 rounded-full bg-white/10 border border-white/30 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-[var(--data-emerald)] focus:border-transparent"
-              />
-              <Button
-                type="submit"
-                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-3 rounded-full whitespace-nowrap"
-                aria-label="Get started - Download EUDR compliance checklist"
-              >
-                Get Started
-              </Button>
-            </form>
-          ) : (
-            <div className="flex items-center justify-center gap-2 text-[var(--data-emerald)] font-semibold">
-              <CheckCircle2 className="w-5 h-5" />
-              <span>Check your email!</span>
-            </div>
-          )}
-          <p className="text-xs text-white/60 mt-3 text-center">
-            Free EUDR compliance checklist included
-          </p>
-        </motion.div>
-
-        <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-        >
-          <a href="#supply-chain">
+          <a href="/get-started">
+            <Button
+              size="lg"
+              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-lg rounded-full shadow-xl"
+            >
+              Start Free Trial
+            </Button>
+          </a>
+          <a href="/demo">
             <Button
               size="lg"
               variant="outline"
               className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-lg rounded-full"
             >
-              How It Works
+              Book 15-min Demo
             </Button>
+          </a>
+        </motion.div>
+
+        <motion.p
+          className="text-sm text-white/70 text-center mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.7 }}
+        >
+          30 days free. No credit card required.
+        </motion.p>
+
+        <motion.div
+          className="flex justify-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+        >
+          <a href="#supply-chain" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm font-medium">
+            <span>See how it works</span>
+            <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
           </a>
         </motion.div>
       </div>

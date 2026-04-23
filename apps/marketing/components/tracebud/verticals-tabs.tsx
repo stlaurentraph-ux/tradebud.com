@@ -30,6 +30,9 @@ const verticals = [
     color: "var(--data-emerald)",
     href: "/farmers",
     image: "/images/farmer-hero.jpg",
+    cta: "Download App",
+    ctaHref: "/farmers#download",
+    isAppUser: true,
   },
   {
     id: "cooperatives",
@@ -43,6 +46,9 @@ const verticals = [
     color: "#F59E0B",
     href: "/farmers?account=cooperative",
     image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?q=80&w=2070&auto=format&fit=crop",
+    cta: "Start Free Trial",
+    ctaHref: "/get-started?role=cooperative",
+    isAppUser: false,
   },
   {
     id: "exporters",
@@ -56,6 +62,9 @@ const verticals = [
     color: "var(--mountain-clay)",
     href: "/exporters",
     image: "/images/exporter-hero.jpg",
+    cta: "Start Free Trial",
+    ctaHref: "/get-started?role=exporter",
+    isAppUser: false,
   },
   {
     id: "importers",
@@ -69,6 +78,9 @@ const verticals = [
     color: "var(--forest-canopy)",
     href: "/importers",
     image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=2070&auto=format&fit=crop",
+    cta: "Start Free Trial",
+    ctaHref: "/get-started?role=importer",
+    isAppUser: false,
   },
   {
     id: "countries",
@@ -82,6 +94,9 @@ const verticals = [
     color: "#8B5CF6",
     href: "/countries",
     image: "/images/country-hero.jpg",
+    cta: "Contact Us",
+    ctaHref: "/countries#contact",
+    isAppUser: false,
   },
 ];
 
@@ -200,12 +215,19 @@ export function VerticalsTabs() {
                   ))}
                 </div>
 
-                <Link href={activeVertical.href}>
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-900 font-semibold hover:bg-gray-100 transition-colors">
-                    Learn More
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </Link>
+                <div className="flex flex-wrap gap-3">
+                  <Link href={activeVertical.ctaHref}>
+                    <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-gray-900 font-semibold hover:bg-gray-100 transition-colors">
+                      {activeVertical.cta}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                  <Link href={activeVertical.href}>
+                    <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors">
+                      Learn More
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           </motion.div>

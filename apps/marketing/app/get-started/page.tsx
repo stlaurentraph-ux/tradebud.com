@@ -52,10 +52,16 @@ export default function GetStartedPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Get Started
+              Start Your Free Trial
             </h1>
-            <p className="text-lg text-foreground/70 max-w-2xl mx-auto">
-              Who are you? Choose your profile and we will bring you to the right form.
+            <p className="text-lg text-foreground/70 max-w-2xl mx-auto mb-3">
+              Choose your role to get started with the right dashboard.
+            </p>
+            <p className="inline-flex items-center gap-2 text-sm font-medium text-[var(--data-emerald)] bg-[var(--data-emerald)]/10 px-4 py-2 rounded-full">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              30 days free. No credit card required.
             </p>
           </div>
 

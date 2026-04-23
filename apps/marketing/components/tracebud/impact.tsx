@@ -117,30 +117,35 @@ export function Impact() {
 
         {/* CTA */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-3 md:gap-5 justify-center items-center"
+          className="flex flex-col gap-6 items-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <Link href="/farmers">
-            <Button
-              size="lg"
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 rounded-full shadow-xl w-full sm:w-auto"
-            >
-              See Farmer Features
-              <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
-            </Button>
-          </Link>
-          <Link href="/exporters">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-white/60 text-white hover:bg-white/10 hover:border-white px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 bg-transparent rounded-full w-full sm:w-auto"
-            >
-              Explore Exporter Tools
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-5 justify-center items-center">
+            <Link href="/get-started">
+              <Button
+                size="lg"
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 rounded-full shadow-xl w-full sm:w-auto"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
+              </Button>
+            </Link>
+            <Link href="/demo">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/60 text-white hover:bg-white/10 hover:border-white px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 bg-transparent rounded-full w-full sm:w-auto"
+              >
+                Book 15-min Demo
+              </Button>
+            </Link>
+          </div>
+          <p className="text-white/70 text-sm">
+            30 days free. No credit card required.
+          </p>
         </motion.div>
       </div>
     </section>
