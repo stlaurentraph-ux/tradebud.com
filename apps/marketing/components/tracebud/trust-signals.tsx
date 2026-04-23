@@ -1,105 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Linkedin, Calendar, Github, Mail, Zap } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function TrustSignals() {
   return (
     <section className="py-20 px-6 bg-white border-t border-gray-100">
       <div className="max-w-6xl mx-auto">
-        {/* Founder Credibility Section */}
-        <motion.div
-          className="mb-20"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="text-center mb-12">
-            <p className="text-[var(--data-emerald)] font-semibold text-sm uppercase tracking-wider mb-3">Built by Domain Experts</p>
-            <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-4">
-              Why We Built Tracebud
-            </h2>
-          </div>
-
-          {/* Founder Card */}
-          <div className="max-w-3xl mx-auto bg-gradient-to-br from-[var(--forest-canopy)]/5 to-[var(--data-emerald)]/5 rounded-3xl p-8 md:p-12 border border-[var(--data-emerald)]/20">
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              {/* Credentials */}
-              <div className="flex-1">
-                <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-                  Built on Real Compliance Experience
-                </h3>
-                
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[var(--data-emerald)]/20 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Zap className="w-5 h-5 text-[var(--data-emerald)]" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[var(--forest-canopy)] mb-1">3 Years as Product Manager</h4>
-                      <p className="text-gray-600 text-sm md:text-base">
-                        Led product at a biodiversity monitoring startup. Saw firsthand how smallholder farmers struggle with environmental compliance—and how complex tech compounds the problem.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[var(--data-emerald)]/20 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Zap className="w-5 h-5 text-[var(--data-emerald)]" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[var(--forest-canopy)] mb-1">Business & Strategy</h4>
-                      <p className="text-gray-600 text-sm md:text-base">
-                        MBA with focus on sustainable agriculture. Understands both the regulatory landscape and the business realities of global supply chains.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-[var(--data-emerald)]/20 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Zap className="w-5 h-5 text-[var(--data-emerald)]" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-[var(--forest-canopy)] mb-1">Elite Athlete Discipline</h4>
-                      <p className="text-gray-600 text-sm md:text-base">
-                        Former elite athlete. The same rigor that builds championship performance drives our commitment to shipping a product that actually works.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-gray-700 italic mb-8 leading-relaxed">
-                  "I'm building Tracebud because I believe EUDR compliance doesn't have to mean paperwork chaos. Farmers and exporters deserve simple tools that just work."
-                </p>
-
-                {/* Connect CTA */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <a href="https://www.linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer">
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto border-[var(--data-emerald)] text-[var(--data-emerald)] hover:bg-[var(--data-emerald)]/5"
-                    >
-                      <Linkedin className="w-4 h-4 mr-2" />
-                      Connect on LinkedIn
-                    </Button>
-                  </a>
-                  <a href="mailto:founder@tracebud.com">
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto border-[var(--data-emerald)] text-[var(--data-emerald)] hover:bg-[var(--data-emerald)]/5"
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Say Hello
-                    </Button>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Product Reality Section */}
         <motion.div
           className="mb-16"
