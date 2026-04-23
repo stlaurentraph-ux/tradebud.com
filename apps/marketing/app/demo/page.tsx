@@ -82,6 +82,30 @@ export default function DemoPage() {
 
             {/* Right: Form */}
             <div className="bg-white border border-border rounded-2xl p-8 shadow-sm">
+              {/* Prominent "Start Immediately" option */}
+              <div className="bg-[var(--data-emerald)]/10 border border-[var(--data-emerald)]/20 rounded-xl p-5 mb-6">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  Want to explore on your own first?
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Get instant access. No demo needed. Start your 30-day free trial now.
+                </p>
+                <Link href="/get-started">
+                  <Button className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-5 rounded-full">
+                    Start Free Trial
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-3 text-muted-foreground">Or book a personalized demo</span>
+                </div>
+              </div>
+
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
@@ -173,15 +197,6 @@ export default function DemoPage() {
                   <p className="text-xs text-center text-foreground/60">
                     We&apos;ll reach out within 24 hours to confirm your slot.
                   </p>
-
-                  <div className="text-center pt-4 border-t border-border mt-6">
-                    <p className="text-sm text-foreground/60 mb-2">
-                      Want to start immediately?
-                    </p>
-                    <Link href="/get-started" className="text-[var(--forest-canopy)] font-semibold hover:underline text-sm">
-                      Create your free account
-                    </Link>
-                  </div>
                 </form>
               ) : (
                 <div className="text-center py-12">

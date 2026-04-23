@@ -248,8 +248,13 @@ export default function PricingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-16 px-6 bg-[var(--forest-canopy)]">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs text-amber-300">
-            EUDR deadline: <strong>Dec 30, 2026</strong> (large) / <strong>Jun 30, 2027</strong> (small)
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs text-amber-300">
+              EUDR deadline: <strong>Dec 30, 2026</strong> (large) / <strong>Jun 30, 2027</strong> (small)
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--data-emerald)]/30 bg-[var(--data-emerald)]/10 px-3 py-1 text-xs text-[var(--data-emerald)]">
+              Early adopters get priority support
+            </div>
           </div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -263,10 +268,37 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* Trial Clarity Banner */}
+      <section className="py-8 px-6 bg-[var(--data-emerald)]/10 border-y border-[var(--data-emerald)]/20">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
+            <div className="text-center md:text-left">
+              <h3 className="font-bold text-lg text-foreground mb-1">Free Trial includes everything</h3>
+              <p className="text-sm text-muted-foreground">Full dashboard access. All features. No restrictions.</p>
+            </div>
+            <div className="hidden md:block w-px h-12 bg-border" />
+            <div className="grid grid-cols-3 gap-6 text-center">
+              <div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">30</div>
+                <div className="text-xs text-muted-foreground">Days free</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">0</div>
+                <div className="text-xs text-muted-foreground">Credit card</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">All</div>
+                <div className="text-xs text-muted-foreground">Features</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Cards */}
-      <section className="py-16 px-6 bg-background -mt-1">
+      <section className="py-16 px-6 bg-background">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 -mt-24">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {plans.map((plan, index) => {
               const isEnterprise =
                 (plan.tier === "Tier 2" && exporterBand === "Enterprise") ||

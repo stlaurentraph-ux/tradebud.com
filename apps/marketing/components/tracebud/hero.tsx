@@ -104,14 +104,21 @@ export function Hero() {
           </a>
         </motion.div>
 
-        <motion.p
-          className="text-sm text-white/70 text-center mb-8"
+        <motion.div
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          30 days free. No credit card required.
-        </motion.p>
+          <span className="text-sm text-white/70">30 days free. No credit card required.</span>
+          <span className="hidden sm:block text-white/40">|</span>
+          <span className="inline-flex items-center gap-1.5 text-sm text-[var(--data-emerald)] font-medium">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            Early adopters get priority support
+          </span>
+        </motion.div>
 
         <motion.div
           className="flex justify-center"
