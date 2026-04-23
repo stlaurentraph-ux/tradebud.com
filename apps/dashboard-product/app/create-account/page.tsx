@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { WizardProgress } from '@/components/onboarding/wizard-progress';
+import { useAuth } from '@/lib/auth-context';
 import {
   StepCreateAccount,
   type CreateAccountData,
@@ -127,6 +128,7 @@ function getRedirectUrl(role: PrimaryRole | ''): string {
 
 export default function CreateAccountPage() {
   const router = useRouter();
+  const { registerUser } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +161,19 @@ export default function CreateAccountPage() {
     try {
       const { access_token } = await apiSignupCreateAccount(accountData);
       setAccessToken(access_token);
+
+      // Register the new user in auth context so they're authenticated on redirect
+      const newUser = {
+        id: `usr_${Date.now()}`,
+        email: accountData.email,
+        name: accountData.fullName,
+        tenant_id: `tenant_${Date.now()}`,
+        roles: ['user'],
+        active_role: 'user' as const,
+        created_at: new Date().toISOString(),
+      };
+      registerUser(newUser);
+
       setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
