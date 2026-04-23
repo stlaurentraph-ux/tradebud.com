@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, ArrowDown, CheckCircle2 } from "lucide-react";
+import { Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useState } from "react";
@@ -71,42 +71,42 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-8 text-balance leading-tight">
-            Send One Request.
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-6 text-balance leading-tight">
+            Trade Freely.
             <br />
-            <span className="text-[var(--data-emerald)]">Trace Your Entire Supply Chain.</span>
+            <span className="text-[var(--data-emerald)]">Trace Easily.</span>
           </h1>
         </motion.div>
 
         <motion.p
-          className="text-xl md:text-2xl lg:text-3xl text-white/90 max-w-4xl mx-auto mb-6 leading-relaxed font-medium"
+          className="text-lg md:text-2xl text-white/90 max-w-3xl mx-auto mb-8 leading-relaxed font-medium"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
+          transition={{ duration: 0.8, delay: 0.35 }}
         >
-          Upload your supplier contacts. Send a templated EUDR compliance request. It cascades upstream to the farmer. GPS coordinates, deforestation checks, and harvest data flow back—automatically through Tracebud.
+          EU market access made simple. Full supply chain traceability in days, not months.
         </motion.p>
 
-        {/* Quantified Value Metrics */}
+        {/* Value Metrics */}
         <motion.div
-          className="flex flex-wrap justify-center gap-6 md:gap-10 mb-4"
+          className="flex flex-wrap justify-center gap-8 md:gap-12 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">2 min</div>
-            <div className="text-sm md:text-base text-white/70">Create Account & Send Request</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Days</div>
+            <div className="text-sm md:text-base text-white/70">Not months to compliance</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">60s</div>
-            <div className="text-sm md:text-base text-white/70">Plot Verification via App</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Full Chain</div>
+            <div className="text-sm md:text-base text-white/70">Farm to port verified</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">∞</div>
-            <div className="text-sm md:text-base text-white/70">Supply Chain Depth</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Self-serve</div>
+            <div className="text-sm md:text-base text-white/70">No integration needed</div>
           </div>
         </motion.div>
 
@@ -115,7 +115,7 @@ export function Hero() {
           className="max-w-md mx-auto mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.55 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
         >
           {!submitted ? (
             <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-3">
@@ -131,7 +131,7 @@ export function Hero() {
                 type="submit"
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-3 rounded-full whitespace-nowrap"
               >
-                Get Checklist
+                Get Started
               </Button>
             </form>
           ) : (
@@ -141,45 +141,26 @@ export function Hero() {
             </div>
           )}
           <p className="text-xs text-white/60 mt-3 text-center">
-            Get a free EUDR compliance checklist + implementation guide
+            Free EUDR compliance checklist included
           </p>
         </motion.div>
 
         <motion.div
+          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="flex flex-col sm:flex-row gap-5 justify-center items-center"
+          transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <a href="/get-started">
-            <Button
-              size="lg"
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all"
-            >
-              Send Your First Request
-            </Button>
-          </a>
           <a href="#supply-chain">
             <Button
               size="lg"
               variant="outline"
-              className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-xl rounded-full"
+              className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-lg rounded-full"
             >
               How It Works
             </Button>
           </a>
         </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.a
-          href="#how-it-works"
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-        >
-          <ArrowDown className="w-8 h-8 text-white/70" />
-        </motion.a>
       </div>
     </section>
   );
