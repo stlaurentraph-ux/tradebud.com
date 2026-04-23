@@ -14,7 +14,7 @@ const NODE_R = 44
 const NODE_Y = 240
 
 const nodes = [
-  { x: 120, label: 'Farmers' },
+  { x: 120, label: 'Producers' },
   { x: 360, label: 'Cooperatives' },
   { x: 600, label: 'Exporters' },
   { x: 780, label: 'Importers/Brands' },
@@ -143,25 +143,24 @@ export function ChainFlow() {
           </svg>
 
           {/* Legend */}
-          <div className="flex justify-center gap-10 mt-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-6 sm:gap-10 items-center mt-8">
             <div className="flex items-center gap-2">
               <svg width="44" height="10" viewBox="0 0 44 10">
                 <line x1="2" y1="5" x2="34" y2="5" stroke="var(--forest-canopy)" strokeWidth="2" />
                 <polygon points="42,5 34,2 34,8" fill="var(--forest-canopy)" />
               </svg>
-              <span className="text-sm font-medium text-[var(--forest-canopy)]">Evidence flows downstream</span>
+              <span className="text-sm font-medium text-[var(--forest-canopy)]">Data</span>
             </div>
             <div className="flex items-center gap-2">
               <svg width="44" height="10" viewBox="0 0 44 10">
                 <line x1="10" y1="5" x2="42" y2="5" stroke="var(--data-emerald)" strokeWidth="2" strokeDasharray="6,3" />
                 <polygon points="2,5 10,2 10,8" fill="var(--data-emerald)" />
               </svg>
-              <span className="text-sm font-medium text-[var(--forest-canopy)]">Requests cascade upstream</span>
+              <span className="text-sm font-medium text-[var(--forest-canopy)]">Requests</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                   style={{ backgroundColor: 'var(--data-emerald)' }}>+</div>
-              <span className="text-sm font-medium text-[var(--forest-canopy)]">Can initiate requests</span>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold text-white bg-[var(--data-emerald)]">+</div>
+              <span className="text-sm font-medium text-[var(--forest-canopy)]">Start from anywhere: request upstream or send data downstream</span>
             </div>
           </div>
         </motion.div>
@@ -169,10 +168,10 @@ export function ChainFlow() {
         {/* Mobile layout */}
         <div className="md:hidden space-y-3">
           {[
-            { label: 'Farmers', desc: 'Receive request, generate plot evidence via app' },
-            { label: 'Cooperatives', desc: 'Aggregate data from members, forward to exporters' },
-            { label: 'Exporters', desc: 'Send requests to sources, compile evidence for importers' },
-            { label: 'Importers/Brands', desc: 'Request from any supplier, receive full chain evidence' },
+            { label: 'Producers', desc: 'Send data to their buyers' },
+            { label: 'Cooperatives', desc: 'Request upstream, send data downstream' },
+            { label: 'Exporters', desc: 'Request upstream, send data downstream' },
+            { label: 'Importers/Brands', desc: 'Request from any supplier' },
           ].map((actor, i) => (
             <motion.div
               key={actor.label}
