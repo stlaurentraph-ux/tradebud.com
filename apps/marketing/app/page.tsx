@@ -1,7 +1,7 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
 import { ChainFlow } from "@/components/tracebud/chain-flow";
-import { ProductDemo } from "@/components/tracebud/product-demo";
+import { WorkflowDemo } from "@/components/tracebud/workflow-demo";
 import { VerticalsTabs } from "@/components/tracebud/verticals-tabs";
 import { Comparison } from "@/components/tracebud/comparison";
 import { Impact } from "@/components/tracebud/impact";
@@ -14,8 +14,8 @@ export default function Home() {
       <Header />
       <Hero />
       <ChainFlow />
+      <WorkflowDemo />
       <VerticalsTabs />
-      <ProductDemo />
       <Comparison />
       <Impact />
       <Footer />
