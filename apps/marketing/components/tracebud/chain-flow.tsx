@@ -41,7 +41,7 @@ export function ChainFlow() {
           <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance">
             Requests flow upstream. Evidence flows back.
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto text-balance">
             Start from any point in your supply chain. Upload contacts, send a templated EUDR compliance request. It cascades upstream to the source. Evidence flows back to every downstream buyer—automatically through Tracebud.
           </p>
         </motion.div>
