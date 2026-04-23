@@ -52,7 +52,7 @@ const verticals = [
     features: ["Member plot queue", "Coop batches & DDS prep", "Exporter handoff", "Tenant-scoped roles"],
     icon: Handshake,
     featureIcon: Users,
-    color: "var(--data-emerald)",
+    color: "#F59E0B",
     href: "/farmers?account=cooperative",
     image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?q=80&w=2070&auto=format&fit=crop",
   },
@@ -76,7 +76,7 @@ const verticals = [
     features: ["Registry sync", "Cadastral integration", "National oversight", "Data sovereignty"],
     icon: Globe,
     featureIcon: Server,
-    color: "var(--data-emerald)",
+    color: "#8B5CF6",
     href: "/countries",
     image: "/images/country-hero.jpg",
   },
@@ -137,7 +137,7 @@ export function Verticals() {
                     <div 
                       className="absolute inset-0 transition-all duration-500"
                       style={{
-                        background: `linear-gradient(to top, ${vertical.color}dd 0%, ${vertical.color}99 20%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.2) 100%)`,
+                        background: `linear-gradient(to top, ${vertical.color}99 0%, ${vertical.color}66 20%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.4) 100%)`,
                       }}
                     />
                   </div>
