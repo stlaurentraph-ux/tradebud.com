@@ -12,8 +12,7 @@ import {
   Calculator, 
   MapPin, 
   ClipboardList,
-  ArrowRight,
-  Sparkles
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,8 +67,8 @@ export function EsgClimate() {
           className="text-center mb-20"
         >
           <Badge className="mb-6 bg-[var(--data-emerald)]/10 text-[var(--forest-canopy)] border-[var(--data-emerald)]/30 hover:bg-[var(--data-emerald)]/20 text-base px-5 py-2">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Coming Soon
+            <Leaf className="w-4 h-4 mr-2" />
+            ESG & Climate Module
           </Badge>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mb-6 text-balance tracking-tight">
             Corporate ESG, Climate & Biodiversity

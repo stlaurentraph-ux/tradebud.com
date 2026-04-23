@@ -1,31 +1,25 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
-import { ProcessTimeline } from "@/components/tracebud/process-timeline";
-import { Verticals } from "@/components/tracebud/verticals";
-import { NetworkSovereignty } from "@/components/tracebud/network-sovereignty";
-import { Technology } from "@/components/tracebud/technology";
+import { ChainFlow } from "@/components/tracebud/chain-flow";
+import { WorkflowDemo } from "@/components/tracebud/workflow-demo";
+import { VerticalsTabs } from "@/components/tracebud/verticals-tabs";
 import { Comparison } from "@/components/tracebud/comparison";
-import { CommodityEngine } from "@/components/tracebud/commodity-engine";
-import { Interoperability } from "@/components/tracebud/interoperability";
-import { EsgClimate } from "@/components/tracebud/esg-climate";
 import { Impact } from "@/components/tracebud/impact";
 import { Footer } from "@/components/tracebud/footer";
+import { ExitIntentModal } from "@/components/exit-intent-modal";
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main id="main-content" className="min-h-screen">
       <Header />
       <Hero />
-      <ProcessTimeline />
-      <Verticals />
-      <NetworkSovereignty />
-      <Technology />
+      <ChainFlow />
+      <WorkflowDemo />
+      <VerticalsTabs />
       <Comparison />
-      <CommodityEngine />
-      <Interoperability />
-      <EsgClimate />
       <Impact />
       <Footer />
+      <ExitIntentModal />
     </main>
   );
 }

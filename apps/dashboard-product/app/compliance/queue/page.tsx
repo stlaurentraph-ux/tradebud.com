@@ -39,35 +39,7 @@ interface QueuedPackage {
   sla_hours_remaining: number;
 }
 
-const mockComplianceIssues: ComplianceIssue[] = [
-  {
-    id: 'CI-001',
-    package_id: 'pkg_001',
-    title: 'Deforestation detected on plot P-042',
-    severity: 'BLOCKING',
-    status: 'OPEN',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    sla_hours: 24,
-  },
-  {
-    id: 'CI-002',
-    package_id: 'pkg_001',
-    title: 'FPIC consent missing for 3 farmers',
-    severity: 'BLOCKING',
-    status: 'OPEN',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    sla_hours: 24,
-  },
-  {
-    id: 'CI-003',
-    package_id: 'pkg_002',
-    title: 'Tenure verification pending',
-    severity: 'WARNING',
-    status: 'IN_PROGRESS',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    sla_hours: 48,
-  },
-];
+const mockComplianceIssues: ComplianceIssue[] = [];
 
 function mapPackagesToQueue(packages: DDSPackage[]): QueuedPackage[] {
   return packages

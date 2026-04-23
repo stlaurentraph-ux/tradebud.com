@@ -17,13 +17,17 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import type { AppRole } from '../auth/roles';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
+import { LaunchService } from '../launch/launch.service';
 
 @ApiTags('Integrations')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/integrations/eudr')
 export class EudrController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly launchService: LaunchService,
+  ) {}
 
   private readonly defaultBaseUrl = 'https://www.eudr-api.eu';
   private readonly defaultApiVersion = '2';
@@ -137,6 +141,7 @@ export class EudrController {
   })
   async echo(@Query('message') messageRaw: string | undefined, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     const role = this.requireRole(req, ['exporter', 'agent'], 'Only exporters or agents can perform EUDR connectivity checks');
     const message = (messageRaw?.trim() || 'Tracebud EUDR connectivity check').slice(0, 200);
     const actorUserId = (req?.user?.id as string | undefined) ?? null;
@@ -202,6 +207,7 @@ export class EudrController {
     @Req() req: any,
   ) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     const role = this.requireRole(req, ['exporter'], 'Only exporters can submit EUDR DDS payloads');
     const statement = body?.statement;
     const idempotencyKey = body?.idempotencyKey?.trim();
@@ -283,6 +289,7 @@ export class EudrController {
   })
   async getDdsStatus(@Query('referenceNumber') referenceNumberRaw: string | undefined, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     const role = this.requireRole(req, ['exporter', 'agent'], 'Only exporters or agents can read EUDR DDS status');
     const referenceNumber = referenceNumberRaw?.trim();
     if (!referenceNumber) {

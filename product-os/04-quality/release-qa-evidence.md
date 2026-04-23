@@ -174,6 +174,27 @@ Use this checklist to verify CODEOWNERS enforcement is active on the default bra
   - Mergeable after approval: `<YES|NO>`
   - Verified by: `<name>`
 
+## Account Creation Launch Evidence (FEAT-001)
+
+Use this checklist for account-creation commercialization slices (`/create-account`, launch signup/profile APIs).
+
+- Dashboard route/API checks:
+  - `cd apps/dashboard-product && npm run -s test -- app/create-account/page.test.tsx app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts`
+- Backend launch checks:
+  - `cd tracebud-backend && npm test -- --runTestsByPath src/launch/launch.controller.spec.ts src/launch/launch.service.spec.ts src/launch/launch.public.controller.spec.ts`
+- DB-backed launch API check:
+  - `cd tracebud-backend && npm run -s test:integration -- --runTestsByPath src/launch/launch.commercial-profile.api.int.spec.ts`
+- Contract check:
+  - `cd /Users/raphaelstl/Downloads/Tracebud website && npm run -s openapi:lint`
+- Staging onboarding proxy smoke (real boundary evidence):
+  - `cd apps/dashboard-product && DASHBOARD_BASE_URL="<dashboard_base_url>" TRACEBUD_SMOKE_BEARER_TOKEN="<tenant_token>" npm run -s qa:launch:onboarding:smoke`
+- Evidence fields to capture:
+  - create-account UI test run timestamp and result summary
+  - launch unit/integration run timestamp and result summary
+  - OpenAPI lint run timestamp and result summary
+  - applied migration reference (`TB-V16-028`) per environment
+  - onboarding proxy smoke timestamp + `GET/POST` status/payload snapshot
+
 ## Snapshot Diff Review Template
 
 Use this checklist when a feature introduces snapshot-backed UI tests and snapshot diffs appear in PRs.

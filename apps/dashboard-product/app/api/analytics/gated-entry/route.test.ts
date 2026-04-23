@@ -91,6 +91,34 @@ describe('gated-entry analytics route', () => {
     );
   });
 
+  it('supports onboarding CTA gated redirect event type', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const res = await postGatedEntryTelemetry(
+      new Request('http://localhost/api/analytics/gated-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'onboarding_cta_gated_redirect',
+          feature: 'mvp_gated',
+          gate: 'request_campaigns',
+          tenantId: 'tenant_1',
+          role: 'importer',
+          redirectedPath: '/requests',
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true, sink: 'local' });
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[telemetry] gated-entry',
+      expect.objectContaining({
+        eventType: 'onboarding_cta_gated_redirect',
+        redirectedPath: '/requests',
+      }),
+    );
+  });
+
   it('forwards telemetry to backend audit route with auth header when configured', async () => {
     process.env.TRACEBUD_BACKEND_URL = 'https://backend.tracebud.test';
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({

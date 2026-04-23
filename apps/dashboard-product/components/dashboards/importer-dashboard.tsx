@@ -30,9 +30,31 @@ interface ImporterDashboardProps {
 export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
   const pendingReview = (metrics.packages_by_status?.READY || 0) + (metrics.packages_by_status?.ON_HOLD || 0);
   const approvedPackages = (metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0);
+  const isVirginTenant = metrics.total_packages === 0 && metrics.total_plots === 0;
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-emerald-200 bg-emerald-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your importer workspace</CardTitle>
+            <CardDescription>
+              This workspace starts empty. Complete onboarding to connect exporters, review incoming DDS packages, and track compliance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/requests" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
+                Review campaign requests
+              </Link>
+              <Link href="/compliance" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
+                Open compliance queue
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Status Overview Banner */}
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="flex items-center justify-between p-6">
@@ -132,7 +154,7 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
         <Card>
           <CardHeader>
             <CardTitle>Supply Chain Traceability</CardTitle>
-            <CardDescription>Full visibility into origin data</CardDescription>
+            <CardDescription>Live metrics from your current tenant data</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
@@ -143,7 +165,7 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
                   <div className="text-sm text-muted-foreground">Verified source locations</div>
                 </div>
               </div>
-              <Badge>3 Countries</Badge>
+              <Badge>{metrics.total_plots > 0 ? 'Origin data available' : 'No origin data yet'}</Badge>
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">

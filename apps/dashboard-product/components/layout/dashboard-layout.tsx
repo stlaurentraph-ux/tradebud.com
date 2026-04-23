@@ -18,6 +18,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isPublicRoute = pathname === '/login' || pathname === '/create-account' || pathname === '/requests/intent';
 
   // Close sidebar on route change
   useEffect(() => {
@@ -38,10 +39,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login') {
+    if (!isLoading && !isAuthenticated && !isPublicRoute) {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, isLoading, isPublicRoute, router]);
 
   // Show loading state
   if (isLoading) {
@@ -56,12 +57,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   // Redirect to login if not authenticated
-  if (!isAuthenticated && pathname !== '/login') {
+  if (!isAuthenticated && !isPublicRoute) {
     return null;
   }
 
   // Login page without sidebar
-  if (pathname === '/login') {
+  if (isPublicRoute) {
     return <>{children}</>;
   }
 

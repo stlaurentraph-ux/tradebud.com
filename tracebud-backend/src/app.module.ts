@@ -9,6 +9,10 @@ import { ReportsModule } from './reports/reports.module';
 import { ChatThreadsModule } from './chat-threads/chat-threads.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { WorkflowTemplatesModule } from './workflow-templates/workflow-templates.module';
+import { LaunchModule } from './launch/launch.module';
+import { AdminModule } from './admin/admin.module';
+import { ContactsModule } from './contacts/contacts.module';
+import { RequestsModule } from './requests/requests.module';
 
 @Module({
   imports: [
@@ -25,6 +29,10 @@ import { WorkflowTemplatesModule } from './workflow-templates/workflow-templates
     ChatThreadsModule,
     IntegrationsModule,
     WorkflowTemplatesModule,
+    LaunchModule,
+    AdminModule,
+    ContactsModule,
+    RequestsModule,
   ],
 })
 export class AppModule {}

@@ -34,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 type IssueSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
 type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -57,52 +58,7 @@ interface ComplianceIssue {
 
 type LinkedEntityType = ComplianceIssue['linkedEntity']['type'];
 
-const mockIssues: ComplianceIssue[] = [
-  {
-    id: 'issue_001',
-    title: 'Missing FPIC Documentation',
-    description: 'Plot plot_003 lacks required Free Prior and Informed Consent documentation from producers',
-    severity: 'BLOCKING',
-    status: 'open',
-    owner: 'John Doe',
-    linkedEntity: {
-      type: 'plot',
-      id: 'plot_003',
-      name: 'North Field - Murundi',
-    },
-    createdAt: '2026-04-05T10:30:00Z',
-    dueDate: '2026-04-15T23:59:59Z',
-  },
-  {
-    id: 'issue_002',
-    title: 'Geometry Verification Pending',
-    description: 'Plot geometry for plot_001 requires secondary GPS verification',
-    severity: 'WARNING',
-    status: 'in_progress',
-    owner: 'Jane Smith',
-    linkedEntity: {
-      type: 'plot',
-      id: 'plot_001',
-      name: 'South Field - Ruriza',
-    },
-    createdAt: '2026-04-03T14:15:00Z',
-    dueDate: '2026-04-12T23:59:59Z',
-  },
-  {
-    id: 'issue_003',
-    title: 'Yield Benchmark Unavailable',
-    description: 'Batch batch_001 has no yield benchmark for this commodity/country combination',
-    severity: 'INFO',
-    status: 'resolved',
-    linkedEntity: {
-      type: 'batch',
-      id: 'batch_001',
-      name: 'Harvest 2026-Q1',
-    },
-    createdAt: '2026-04-01T08:00:00Z',
-    resolutionPath: 'Manual acknowledgement recorded',
-  },
-];
+const mockIssues: ComplianceIssue[] = [];
 
 export default function ComplianceIssuesPage() {
   const [issues, setIssues] = useState<ComplianceIssue[]>(mockIssues);
@@ -169,6 +125,9 @@ export default function ComplianceIssuesPage() {
 
   const handleUpdateStatus = (issueId: string, newStatus: IssueStatus) => {
     setIssues(issues.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i)));
+    if (newStatus === 'resolved' || newStatus === 'closed') {
+      markOnboardingAction('submission_reviewed');
+    }
   };
 
   const getSeverityIcon = (severity: IssueSeverity) => {

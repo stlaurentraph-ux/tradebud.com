@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -22,14 +22,16 @@ import {
   Truck,
   Leaf,
   Scale,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
+import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
+import { getCreateAccountUrl } from "@/lib/dashboard";
+
+const IMPORTER_DEMO = "https://importer-demo.tracebud.com";
 
 const features = [
   {
@@ -76,77 +78,9 @@ const supplyChainNodes = [
 ];
 
 export default function ImportersPage() {
-  const [formData, setFormData] = useState({
-    companyName: "",
-    contactName: "",
-    email: "",
-    primaryGoal: "",
-    biggestChallenge: "",
-    phone: "",
-    hqLocation: "",
-    commodities: "",
-    annualImportVolume: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
   useEffect(() => {
     document.title = "Importers | Tracebud - Full Supply Chain Visibility";
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.primaryGoal) {
-      setSubmitError("Please select your primary goal.");
-      return;
-    }
-    setIsSubmitting(true);
-    setSubmitMessage(null);
-    setSubmitError(null);
-
-    try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formType: "importer",
-          sourcePage: "/importers",
-          name: formData.contactName,
-          email: formData.email,
-          company: formData.companyName,
-          phone: formData.phone || null,
-          country: formData.hqLocation || null,
-          message: formData.biggestChallenge || null,
-          payload: formData,
-        }),
-      });
-
-      const json = await response.json();
-      if (!response.ok || !json?.ok) {
-        throw new Error(json?.error || "Unable to submit form.");
-      }
-
-      setSubmitMessage("Thanks - your request was submitted. We will contact you shortly.");
-      setFormData({
-        companyName: "",
-        contactName: "",
-        email: "",
-        primaryGoal: "",
-        biggestChallenge: "",
-        phone: "",
-        hqLocation: "",
-        commodities: "",
-        annualImportVolume: "",
-      });
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Unexpected error while submitting.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -188,12 +122,9 @@ export default function ImportersPage() {
                   size="lg"
                   className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
                 >
-                  <a
-                    href="https://importer-demo.tracebud.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Try demo dashboard
+                  <a href={getCreateAccountUrl("importer")} target="_blank" rel="noopener noreferrer">
+                    Start free trial
+                    <ExternalLink className="w-4 h-4 ml-2" />
                   </a>
                 </Button>
                 <Button
@@ -202,9 +133,14 @@ export default function ImportersPage() {
                   variant="outline"
                   className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
                 >
-                  <a href="#signup">Request quote</a>
+                  <a href={IMPORTER_DEMO} target="_blank" rel="noopener noreferrer">
+                    Try demo first
+                  </a>
                 </Button>
               </div>
+              <p className="text-white/60 text-sm mt-4">
+                30 days free. No credit card required.
+              </p>
             </motion.div>
 
             {/* Mini Dashboard Preview in Hero */}
@@ -610,167 +546,62 @@ export default function ImportersPage() {
         </div>
       </section>
 
-      {/* Sign Up Form */}
-      <section id="signup" className="py-16 md:py-24 px-4 md:px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
           <motion.div
-            className="text-center mb-8 md:mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Request Portal Access
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Start importing with full transparency
             </h2>
-            <p className="text-base md:text-xl text-foreground/70">
-              Tell us about your import operations and compliance requirements.
+            <p className="text-base md:text-xl text-foreground/70 max-w-2xl mx-auto mb-8">
+              30-day free trial with full access. Set up your importer dashboard in minutes.
             </p>
-          </motion.div>
 
-          <motion.form
-            onSubmit={handleSubmit}
-            className="bg-muted/30 rounded-2xl md:rounded-3xl p-6 md:p-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="grid sm:grid-cols-2 gap-4 md:gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Company Name *</label>
-                <Input
-                  required
-                  placeholder="Your company name"
-                  value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Contact Name *</label>
-                <Input
-                  required
-                  placeholder="Your full name"
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Business Email *</label>
-                <Input
-                  required
-                  type="email"
-                  placeholder="you@company.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Primary Goal *</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, primaryGoal: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select your top priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="supply-chain-visibility">Supply chain visibility</SelectItem>
-                    <SelectItem value="eudr-liability-readiness">EUDR liability readiness</SelectItem>
-                    <SelectItem value="csrd-reporting-support">CSRD reporting support</SelectItem>
-                    <SelectItem value="supplier-risk-screening">Supplier risk screening</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Phone Number</label>
-                <Input
-                  placeholder="+49 123 456 7890"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">HQ Location</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, hqLocation: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="germany">Germany</SelectItem>
-                    <SelectItem value="netherlands">Netherlands</SelectItem>
-                    <SelectItem value="belgium">Belgium</SelectItem>
-                    <SelectItem value="france">France</SelectItem>
-                    <SelectItem value="italy">Italy</SelectItem>
-                    <SelectItem value="spain">Spain</SelectItem>
-                    <SelectItem value="uk">United Kingdom</SelectItem>
-                    <SelectItem value="other-eu">Other EU Country</SelectItem>
-                    <SelectItem value="non-eu">Non-EU</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Annual Import Volume</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, annualImportVolume: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select volume range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="under-500">Under 500 MT</SelectItem>
-                    <SelectItem value="500-2000">500 - 2,000 MT</SelectItem>
-                    <SelectItem value="2000-10000">2,000 - 10,000 MT</SelectItem>
-                    <SelectItem value="over-10000">Over 10,000 MT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Primary Commodity</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, commodities: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select commodity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="coffee">Coffee</SelectItem>
-                    <SelectItem value="cocoa">Cocoa</SelectItem>
-                    <SelectItem value="rubber">Rubber</SelectItem>
-                    <SelectItem value="palm-oil">Palm Oil</SelectItem>
-                    <SelectItem value="soy">Soy</SelectItem>
-                    <SelectItem value="timber">Timber</SelectItem>
-                    <SelectItem value="multiple">Multiple Commodities</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-foreground mb-2">What do you need most right now? *</label>
-              <Textarea
-                required
-                placeholder="In 1-2 sentences, describe the main result you want from Tracebud."
-                rows={3}
-                value={formData.biggestChallenge}
-                onChange={(e) => setFormData({ ...formData, biggestChallenge: e.target.value })}
-                className="bg-white"
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button
-                type="submit"
+                asChild
                 size="lg"
-                disabled={isSubmitting}
-                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 md:px-12 py-5 md:py-6 text-base md:text-lg rounded-full w-full sm:w-auto"
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-6 text-lg rounded-full"
               >
-                {isSubmitting ? "Submitting..." : "Request Portal Access"}
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <a href={getCreateAccountUrl("importer")} target="_blank" rel="noopener noreferrer">
+                  Start free trial
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </a>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-[var(--forest-canopy)] text-[var(--forest-canopy)] font-bold px-10 py-6 text-lg rounded-full"
+              >
+                <a href={IMPORTER_DEMO} target="_blank" rel="noopener noreferrer">
+                  Try demo first
+                </a>
               </Button>
             </div>
-            {submitMessage ? (
-              <p className="text-emerald-700 text-sm text-center mt-4">{submitMessage}</p>
-            ) : null}
-            {submitError ? (
-              <p className="text-red-600 text-sm text-center mt-4">{submitError}</p>
-            ) : null}
-          </motion.form>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/demo"
+                className="text-foreground/60 hover:text-foreground transition-colors inline-flex items-center gap-2"
+              >
+                Need a personalized demo?
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <span className="hidden sm:inline text-foreground/30">|</span>
+              <Link
+                href="/pricing"
+                className="text-foreground/60 hover:text-foreground transition-colors inline-flex items-center gap-2"
+              >
+                View pricing
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 

@@ -43,6 +43,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TenantRole } from '@/types';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { inviteUser } from '@/lib/admin-service';
+import { useAdminData } from '@/lib/use-admin-data';
 
 interface User {
   id: string;
@@ -166,13 +169,21 @@ const STATUS_CONFIG = {
 };
 
 export default function UserManagementPage() {
+  const { users: loadedUsers, organizations } = useAdminData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | TenantRole>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<TenantRole>('exporter');
+  const [inviteOrgId, setInviteOrgId] = useState('');
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [isInviting, setIsInviting] = useState(false);
+  const users = loadedUsers.length > 0 ? loadedUsers : mockUsers;
 
   // Filter users
-  const filteredUsers = mockUsers.filter((user) => {
+  const filteredUsers = users.filter((user) => {
     if (filterRole !== 'all' && user.role !== filterRole) return false;
     if (filterStatus !== 'all' && user.status !== filterStatus) return false;
     if (searchTerm) {
@@ -188,10 +199,37 @@ export default function UserManagementPage() {
 
   // Stats
   const stats = {
-    total: mockUsers.length,
-    active: mockUsers.filter((u) => u.status === 'active').length,
-    pending: mockUsers.filter((u) => u.status === 'pending').length,
-    suspended: mockUsers.filter((u) => u.status === 'suspended').length,
+    total: users.length,
+    active: users.filter((u) => u.status === 'active').length,
+    pending: users.filter((u) => u.status === 'pending').length,
+    suspended: users.filter((u) => u.status === 'suspended').length,
+  };
+
+  const handleInvite = async () => {
+    setInviteError(null);
+    if (!inviteName.trim() || !inviteEmail.trim() || !inviteOrgId) {
+      setInviteError('Name, email, role, and organization are required.');
+      return;
+    }
+    setIsInviting(true);
+    try {
+      await inviteUser({
+        name: inviteName,
+        email: inviteEmail,
+        organisation_id: inviteOrgId,
+        role: inviteRole,
+      });
+      markOnboardingAction('team_invited');
+      setShowInviteDialog(false);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteRole('exporter');
+      setInviteOrgId('');
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : 'Failed to invite user.');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   return (
@@ -230,15 +268,28 @@ export default function UserManagementPage() {
                   <div className="space-y-4 py-4">
                     <div>
                       <Label>Email Address</Label>
-                      <Input type="email" placeholder="user@example.com" />
+                      <Input
+                        type="email"
+                        placeholder="user@example.com"
+                        value={inviteEmail}
+                        onChange={(event) => setInviteEmail(event.target.value)}
+                      />
                     </div>
                     <div>
                       <Label>Full Name</Label>
-                      <Input placeholder="John Doe" />
+                      <Input
+                        placeholder="John Doe"
+                        value={inviteName}
+                        onChange={(event) => setInviteName(event.target.value)}
+                      />
                     </div>
                     <div>
                       <Label>Role</Label>
-                      <select className="w-full px-3 py-2 border rounded-md text-sm">
+                      <select
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        value={inviteRole}
+                        onChange={(event) => setInviteRole(event.target.value as TenantRole)}
+                      >
                         <option value="exporter">Exporter</option>
                         <option value="importer">Importer</option>
                         <option value="cooperative">Cooperative</option>
@@ -248,21 +299,31 @@ export default function UserManagementPage() {
                     </div>
                     <div>
                       <Label>Organization</Label>
-                      <select className="w-full px-3 py-2 border rounded-md text-sm">
-                        <option value="cocoa-exports">Cocoa Exports Ltd</option>
-                        <option value="highland">Highland Coffee Co</option>
-                        <option value="eu-imports">EU Coffee Importers GmbH</option>
-                        <option value="rwanda-coop">Rwanda Coffee Cooperative</option>
+                      <select
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        value={inviteOrgId}
+                        onChange={(event) => setInviteOrgId(event.target.value)}
+                      >
+                        <option value="">Select organization</option>
+                        {organizations.map((organization) => (
+                          <option key={organization.id} value={organization.id}>
+                            {organization.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
+                    {inviteError ? <p className="text-sm text-destructive">{inviteError}</p> : null}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={() => setShowInviteDialog(false)}>
+                    <Button
+                      onClick={() => void handleInvite()}
+                      disabled={isInviting}
+                    >
                       <Mail className="mr-2 h-4 w-4" />
-                      Send Invitation
+                      {isInviting ? 'Sending...' : 'Send Invitation'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

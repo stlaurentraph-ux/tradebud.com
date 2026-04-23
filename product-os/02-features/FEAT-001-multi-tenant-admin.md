@@ -198,3 +198,371 @@ Done (multi-tenant admin v1 scope closed with governance and evidence gates)
 - Behavior implemented and tested
 - Feature checklist completed
 - Quality docs/logs updated
+
+## 2026-04-22 launch entitlement slice
+
+- Added tenant-scoped launch lifecycle state service/API (`/v1/launch/state`) with canonical transitions:
+  - `trial_active` -> `trial_expired`
+  - `trial_active` -> `paid_active`
+  - `suspended` fail-closed guard.
+- Trial provisioning is idempotent on first tenant access (`trial_started` event) and lifecycle evaluation auto-emits `trial_expired` when expiry boundary is crossed.
+- Added tenant-scoped onboarding progress persistence (`/v1/launch/onboarding`, `/v1/launch/onboarding/complete`) with role templates (`admin`, `field_operator`, `compliance_manager`) and immutable `onboarding_step_completed` audit events.
+
+## 2026-04-22 launch entitlement slice 2 (tenant feature packages)
+
+- Added canonical tenant feature entitlement persistence:
+  - SQL migration `tracebud-backend/sql/tb_v16_023_tenant_feature_entitlements.sql`
+  - backend schema bootstrap support in `LaunchService.ensureSchema()`
+  - keys: `dashboard_campaigns`, `dashboard_compliance`, `dashboard_reporting`, `dashboard_exports`
+  - statuses: `enabled`, `disabled`, `trial`
+- Permission and tenant boundary coverage:
+  - `requireFeatureAccess` now evaluates tenant claim -> lifecycle state -> tenant feature entitlement, and fail-closes when feature status is `disabled` or missing.
+  - Existing role-scoped controller gates remain unchanged and continue to run in addition to entitlement checks.
+- State transition behavior:
+  - Default entitlement seeding now follows launch lifecycle (`trial_active` defaults, `paid_active` upgrade normalization to `enabled`).
+  - `markPaidActive` now upgrades existing entitlement rows to `enabled` for deterministic paid conversion behavior.
+- Exception handling and recovery:
+  - Suspended/expired lifecycle states still deny feature access first.
+  - Feature-denied responses are explicit (`Feature is not enabled for this tenant`), avoiding silent fallback.
+- Analytics/event coverage:
+  - Existing immutable launch lifecycle events (`trial_started`, `trial_expired`, `upgrade_completed`) remain the source of conversion/audit telemetry for this entitlement slice.
+- Acceptance mapping:
+  - Tenant-scoped feature packaging is now persisted server-side and enforced at API guard points for campaign/compliance/export/reporting surfaces.
+  - Commercial entitlement remains separate from legal workflow role logic, preserving EUDR role clarity per workflow object.
+
+### Verification commands (slice 2 hardening)
+
+- `cd tracebud-backend && npm test -- --runTestsByPath src/launch/launch.service.spec.ts`
+
+### Test coverage added
+
+- `LaunchService.requireFeatureAccess` entitlement matrix coverage now includes:
+  - `trial_active + trial entitlement` allow
+  - `paid_active + enabled entitlement` allow
+  - `trial_expired` deny
+  - `suspended` deny
+  - `paid_active + disabled entitlement` deny
+
+## 2026-04-22 launch entitlement slice 3 (admin ops API)
+
+- Added explicit admin-scoped entitlement operations under launch controller:
+  - `GET /v1/launch/entitlements` (admin only, tenant-scoped list)
+  - `PATCH /v1/launch/entitlements` (admin only, tenant-scoped mutation)
+- Permission and tenant boundary coverage:
+  - non-admin actors fail closed with `Only admins can manage feature entitlements`.
+  - tenant scope remains signed-claim based (`tenant_id` from auth claim).
+- State transition behavior:
+  - entitlement mutation is idempotent per (`tenant_id`, `feature_key`) with canonical overwrite semantics.
+  - mutations preserve active-window behavior by resetting `effective_to` to `NULL`.
+- Exception handling and recovery:
+  - invalid mutation payloads (`feature`, `entitlementStatus`) are rejected with explicit deny semantics.
+  - lifecycle gates remain active at runtime (`trial_expired`, `suspended`) even when entitlement rows exist.
+- Analytics/event coverage:
+  - entitlement mutations append immutable `feature_entitlement_updated` audit events with actor attribution.
+- Verification commands:
+  - `cd tracebud-backend && npm test -- --runTestsByPath src/launch/launch.service.spec.ts src/launch/launch.controller.spec.ts`
+  - `cd tracebud-backend && npm run lint`
+
+## 2026-04-22 admin role/status persistence slice
+
+- Added backend-persistent user mutation operations:
+  - `PATCH /v1/admin/users/:id/role`
+  - `PATCH /v1/admin/users/:id/status`
+- Permission and tenant boundary coverage:
+  - both operations require authenticated `admin` role and signed tenant claim.
+  - updates are tenant-scoped (`WHERE tenant_id = $2 AND id = $3`) to prevent cross-tenant mutation leakage.
+- State transition behavior:
+  - role mutation normalizes to canonical single-role array (`roles = [role]`) for deterministic dashboard authorization behavior.
+  - status mutation supports canonical admin states (`ACTIVE`, `PENDING`, `SUSPENDED`) with DB-level enum-like check constraints.
+- Exception handling and recovery:
+  - missing required fields are rejected with `400` (`role is required` / `status is required`).
+  - unknown user IDs return `404` (`User not found.`) via backend `NotFoundException`.
+- Analytics/event coverage:
+  - this slice keeps existing admin mutation telemetry behavior unchanged (no new event types introduced).
+- Dashboard wiring:
+  - added API proxies `PATCH /api/admin/users/[id]/role` and `PATCH /api/admin/users/[id]/status` with auth pass-through and fail-closed backend URL checks.
+  - `apps/dashboard-product/lib/admin-service.ts` now persists `updateUserRole` and `updateUserStatus` via backend APIs instead of in-memory optimistic-only updates.
+- Verification commands:
+  - `cd apps/dashboard-product && npm run -s test -- app/admin/page.test.tsx`
+
+## 2026-04-22 importer onboarding ordering adjustment
+
+- Updated importer/compliance-manager onboarding ordering so request creation happens before compliance review/check actions.
+- State transition behavior:
+  - compliance-manager default sequence now starts with `create_first_campaign` (request creation) before compliance review states.
+  - onboarding reads continue to be template-scoped (`step_key = ANY(templateSteps)`), so legacy step rows do not override current first-step behavior.
+- Exception handling and recovery:
+  - if older rows exist for removed/reordered steps, API still returns only current template keys in current order.
+- Analytics/event coverage:
+  - existing `onboarding_step_completed` event contract remains unchanged.
+- Verification commands:
+  - `cd tracebud-backend && npm run -s build`
+  - `GET /api/v1/launch/onboarding?role=compliance_manager` returns `create_first_campaign` as first actionable step.
+
+## 2026-04-22 account creation + commercial onboarding spec (public launch conversion slice)
+
+### Goal
+
+- Reinforce commercial value perception while minimizing signup friction and reducing time-to-first-value.
+- Keep identity creation lightweight, then progressively collect business context for personalization and routing.
+
+### Canonical flow (screen by screen)
+
+1. `Create account` (step 1, required)
+   - Headline: `Start your EUDR-ready workspace in under 2 minutes`
+   - Subline: `Map plots, onboard suppliers, and generate auditable due-diligence evidence in one place.`
+   - Trust line: `No credit card required. 30-day trial.`
+   - Required fields:
+     - `Work email`
+     - `Password`
+     - `Full name`
+   - Primary CTA: `Create workspace`
+   - Secondary action: `Already have an account? Sign in`
+2. `Workspace setup` (step 2, required)
+   - Required fields:
+     - `Organization name`
+     - `Country`
+     - `Primary role` (`importer`, `exporter`, `compliance_manager`, `admin`)
+   - Primary CTA: `Continue`
+   - Secondary action: `Back`
+3. `Commercial profile` (step 3, skippable)
+   - Optional fields:
+     - `Team size`
+     - `Main commodity`
+     - `Primary objective` (`prepare_first_due_diligence_package`, `supplier_onboarding`, `risk_screening`, `audit_readiness`)
+   - Primary CTA: `Personalize my onboarding`
+   - Secondary CTA: `Skip for now`
+4. `First value checklist` (step 4, required entry point after signup)
+   - Header: `Your first compliance win`
+   - Progress UX: 4-step checklist with ETA (`~5 minutes`)
+   - Initial steps:
+     - `Create organization settings`
+     - `Invite one teammate`
+     - `Add first plot or supplier`
+     - `Run first compliance check`
+   - CTA on completion: `View compliance dashboard`
+
+### Permissions and tenant boundary
+
+- Account creation is public-entry but tenant provisioning is always claim-bound after authentication.
+- Only tenant `admin` can mutate launch entitlements or paid-state controls.
+- Role assignment at workspace setup uses canonical role list and remains tenant-scoped.
+- Any missing/invalid tenant claim in post-signup setup/checklist APIs must fail closed.
+
+### State transitions
+
+- `signup_started` -> `signup_completed`
+- `signup_completed` -> `trial_started` (`trial_active`)
+- `trial_active` -> `trial_expired` or `paid_active`
+- `signup_completed` -> `onboarding_in_progress` -> `onboarding_completed`
+- Commercial-profile completion is optional and must not block onboarding progression.
+
+### Exception handling and recovery
+
+- Duplicate email attempt returns deterministic conflict (`email already in use`) with sign-in path.
+- Invite/setup/checklist APIs fail closed on missing backend URL or auth token.
+- If commercial profile write fails, continue onboarding with non-blocking warning (`saved later` path).
+- Trial/entitlement checks continue to deny gated features when lifecycle is expired/suspended, regardless of onboarding state.
+
+### Analytics events (canonical names)
+
+- `signup_started`
+- `signup_completed`
+- `trial_started`
+- `onboarding_step_completed`
+- `onboarding_skipped` (for optional commercial profile step only)
+- `upgrade_clicked`
+- `upgrade_completed`
+- `create_workspace_value_viewed` (value-hero impression for conversion attribution)
+- `create_workspace_cta_clicked` (primary CTA click on step 1)
+
+### Acceptance mapping
+
+- Value proposition and commercial terms are visible before account submission.
+- Step 1 requests only minimum identity fields required to create an account.
+- Step 3 remains skippable without blocking checklist creation.
+- Post-signup checklist is persisted and role-personalized.
+- Trial lifecycle and entitlement gate behavior remain server-enforced and tenant-scoped.
+
+### Implementation checklist (file-by-file execution plan)
+
+#### Dashboard (`apps/dashboard-product`)
+
+- [x] Build dedicated create-account entry route (`app/create-account/page.tsx`) with value hero, trust line, and minimum required identity form.
+- [x] Add multi-step wizard state + validation (`components/auth/create-account-wizard.tsx`) for steps 1-4 and skippable commercial profile behavior.
+- [x] Keep login flow focused on auth return and link to create-account (`app/login/page.tsx`).
+- [x] Add API proxy for account creation + workspace setup (`app/api/auth/signup/route.ts`) with fail-closed backend URL/token checks.
+- [x] Add API proxy for optional commercial profile persistence (`app/api/launch/commercial-profile/route.ts`) with tenant claim requirement.
+- [ ] Extend onboarding fetch/complete wiring for first-value checklist continuity (`app/api/launch/onboarding/route.ts`, `lib/onboarding-actions.ts`).
+  - Progress: `lib/onboarding-actions.ts` now does best-effort server-side completion sync (`/api/launch/onboarding`) by role/action mapping; remaining continuity work is optional page-specific marker coverage refinement.
+- [x] Ensure role-aware post-signup redirect to checklist/dashboard (`lib/auth-context.tsx`, `components/layout/dashboard-layout.tsx`).
+- [ ] Add telemetry client helper and fire required events (`lib/analytics.ts`, create-account wizard + checklist views).
+- [x] Add UI tests: step transitions, validation errors, skippable profile, and success redirect (`app/create-account/page.test.tsx`).
+- [x] Add route tests for signup/commercial-profile proxies with pass-through/denial semantics (`app/api/auth/signup/route.test.ts`, `app/api/launch/commercial-profile/route.test.ts`).
+
+#### Backend (`tracebud-backend`)
+
+- [x] Add authenticated signup completion endpoint with tenant bootstrap contract (`src/launch/launch.public.controller.ts`, `src/launch/launch.service.ts`).
+- [x] Add tenant-scoped commercial profile persistence + read endpoint (`src/launch/launch.public.controller.ts`, `src/launch/launch.service.ts`).
+- [x] Add migration for commercial-profile storage (tenant-scoped table + indexes + timestamps) (`sql/tb_v16_028_tenant_commercial_profiles.sql`).
+- [x] Enforce explicit role/claim gates on setup/profile APIs and fail closed on missing tenant claims.
+- [x] Preserve lifecycle invariants: signup completion triggers trial provisioning idempotently without bypassing entitlement gates.
+- [x] Emit immutable audit events for profile skip/save and signup completion attribution.
+- [x] Add service/controller tests for create-account transitions, duplicate-email conflict mapping, and optional-profile skip path (`src/launch/launch.public.controller.spec.ts`, `src/launch/launch.service.spec.ts`).
+- [x] Add DB-backed integration coverage for tenant-scoped profile read/write and fail-closed deny paths.
+
+#### Quality and docs updates
+
+- [x] Extend OpenAPI draft with signup/commercial-profile endpoints and request/response examples (`docs/openapi/tracebud-v1-draft.yaml`).
+- [x] Confirm event dictionary properties for new conversion events (`product-os/04-quality/event-tracking.md`).
+- [x] Add acceptance evidence checklist rows for create-account conversion flow (`product-os/04-quality/release-qa-evidence.md`).
+
+#### Verification commands
+
+- [x] `cd apps/dashboard-product && npm run lint && npm run -s test -- app/create-account/page.test.tsx app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts`
+- [x] `cd tracebud-backend && npm run lint && npm test -- --runTestsByPath src/launch/launch.service.spec.ts src/launch/launch.controller.spec.ts src/launch/launch.public.controller.spec.ts`
+- [x] `cd tracebud-backend && npm run openapi:lint`
+
+## 2026-04-22 account creation implementation slice A (dashboard route + signup proxy)
+
+- Implemented initial execution tranche:
+  - `app/create-account/page.tsx`
+  - `components/auth/create-account-wizard.tsx`
+  - login cross-link in `app/login/page.tsx`
+  - `POST /api/auth/signup` proxy with explicit backend fail-closed behavior.
+- Permissions and tenant boundary:
+  - signup proxy requires `Authorization` for `workspace_setup` stage and returns `401` when absent.
+- Exception handling and recovery:
+  - signup proxy returns `503` when `TRACEBUD_BACKEND_URL` is missing.
+- Analytics events:
+  - create-account wizard emits `create_workspace_cta_clicked`.
+  - create-account wizard emits `create_workspace_value_viewed`.
+  - optional profile step emits `onboarding_skipped` (non-blocking path).
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/auth/signup/route.test.ts` (pass, 4 tests).
+
+## 2026-04-22 account creation implementation slice B (commercial-profile + backend signup/profile APIs)
+
+- Implemented dashboard and backend continuation tranche:
+  - dashboard proxy: `POST /api/launch/commercial-profile`
+  - backend public launch endpoints:
+    - `POST /v1/launch/signup` (`create_account` and `workspace_setup` stages)
+    - `POST /v1/launch/commercial-profile`
+  - backend persistence + migration:
+    - `tenant_commercial_profiles` support in `LaunchService.ensureSchema()`
+    - SQL migration `tracebud-backend/sql/tb_v16_028_tenant_commercial_profiles.sql`
+- Permissions and tenant boundary:
+  - workspace setup and commercial-profile writes require bearer token and valid tenant claim.
+  - create-account stage remains public but provisions tenant metadata at auth signup.
+- State transition behavior:
+  - create-account stage now provisions tenant trial state idempotently via launch service lifecycle path.
+- Exception handling and recovery:
+  - proxy and backend return explicit auth/config errors (`401`/`403`/`503`) for missing auth/token/config.
+- Analytics/event coverage:
+  - backend emits immutable `signup_completed`, `signup_workspace_setup_completed`, and `commercial_profile_saved` / `onboarding_skipped`.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts` (pass, 7 tests)
+  - `cd tracebud-backend && npm test -- --runTestsByPath src/launch/launch.controller.spec.ts src/launch/launch.service.spec.ts src/launch/launch.public.controller.spec.ts` (pass, 13 tests)
+
+## 2026-04-22 account creation implementation slice C (OpenAPI + UI tests + DB-backed integration)
+
+- Implemented contract and verification completion tranche:
+  - dashboard UI test: `apps/dashboard-product/app/create-account/page.test.tsx`
+  - backend DB-backed launch API integration: `tracebud-backend/src/launch/launch.commercial-profile.api.int.spec.ts`
+  - OpenAPI publication:
+    - tags: added `Launch`
+    - paths: `/v1/launch/signup`, `/v1/launch/commercial-profile`
+    - schemas: `LaunchSignupRequest`, `LaunchSignupResponse`, `LaunchCommercialProfileRequest`, `LaunchCommercialProfile`, `LaunchCommercialProfileResponse`
+- Exception handling and recovery:
+  - launch public controller now returns explicit `200` for signup/commercial-profile happy paths, preserving explicit `401/403` failure semantics via proxy/controller guards.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/create-account/page.test.tsx app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts` (pass, 9 tests)
+  - `cd tracebud-backend && npm run -s test:integration -- --runTestsByPath src/launch/launch.commercial-profile.api.int.spec.ts` (pass, 2 tests)
+  - `cd tracebud-backend && npm test -- --runTestsByPath src/launch/launch.controller.spec.ts src/launch/launch.service.spec.ts src/launch/launch.public.controller.spec.ts` (pass, 13 tests)
+  - `cd /Users/raphaelstl/Downloads/Tracebud website && npm run -s openapi:lint` (pass)
+
+## 2026-04-22 account creation slice D (session continuity + role-aware redirect)
+
+- Added post-signup session continuity wiring:
+  - `AuthContext` now exposes `hydrateSessionFromToken(token)` to immediately materialize in-memory auth state from signup token.
+  - create-account wizard now uses this hydrator after account creation to avoid null-auth redirect gaps.
+- Added role-aware post-signup redirect behavior:
+  - admin -> `/admin/users`
+  - importer/compliance_manager/exporter -> `/requests?openCreateCampaign=1`
+- Added role continuity update:
+  - workspace setup now applies selected commercial role into stored user session payload for immediate post-signup UX continuity.
+- Added route accessibility continuity:
+  - dashboard layout now treats `/create-account` as public route alongside `/login` and `/requests/intent`.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/create-account/page.test.tsx app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts` (pass, 9 tests)
+
+## 2026-04-22 account creation slice E (cross-page onboarding completion sync)
+
+- Added onboarding continuity hardening in shared helper:
+  - `markOnboardingAction()` now performs best-effort server sync to `/api/launch/onboarding` with derived role + canonical step key mapping.
+  - mapping includes campaign/contact/team/invited/compliance action keys to launch onboarding step keys.
+- Added helper coverage:
+  - `apps/dashboard-product/lib/onboarding-actions.test.ts` validates storage/event behavior and onboarding completion API post contract.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- lib/onboarding-actions.test.ts app/create-account/page.test.tsx app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts` (pass, 11 tests)
+
+## 2026-04-22 account creation slice F (page-level onboarding smoke tests)
+
+- Added page-level smoke assertions for first-value action flows:
+  - `app/requests/page.test.tsx` now asserts successful campaign draft flow marks onboarding actions (`campaign_created`, `contacts_uploaded`).
+  - new `app/admin/users/page.test.tsx` asserts successful invite flow marks onboarding action (`team_invited`).
+- This closes the regression gap between shared onboarding sync helper behavior and concrete page UI actions.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/requests/page.test.tsx app/admin/users/page.test.tsx lib/onboarding-actions.test.ts` (pass, 14 tests)
+
+## 2026-04-22 account creation slice G (integration-style onboarding proof path)
+
+- Added an integration-style dashboard test for one role path (importer):
+  - `app/create-account/page.test.tsx` now validates `create account -> workspace setup (importer) -> commercial skip -> dashboard redirect` and then asserts first-value action sync posts canonical onboarding completion payload.
+- Proven contract from first-value action trigger:
+  - `POST /api/launch/onboarding`
+  - `Authorization: Bearer token_1`
+  - body `{ "role": "compliance_manager", "stepKey": "create_first_campaign" }`
+- This complements slice F marker smoke tests with one full-path continuity assertion from signup flow state through onboarding completion API sync semantics.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/create-account/page.test.tsx lib/onboarding-actions.test.ts app/requests/page.test.tsx app/admin/users/page.test.tsx` (pass, 17 tests)
+
+## 2026-04-22 account creation slice H (onboarding proxy boundary verification)
+
+- Added dedicated proxy tests for `app/api/launch/onboarding/route.ts`:
+  - verifies fail-closed behavior when `TRACEBUD_BACKEND_URL` is missing (`GET` + `POST` -> 503)
+  - verifies `GET` forwards `role` query and authorization header to `/v1/launch/onboarding`
+  - verifies `POST` forwards completion payload and authorization header to `/v1/launch/onboarding/complete`
+- This closes a remaining boundary gap by asserting the exact dashboard-to-backend onboarding proxy contract that powers action sync and onboarding status reads.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/launch/onboarding/route.test.ts app/create-account/page.test.tsx app/requests/page.test.tsx app/admin/users/page.test.tsx lib/onboarding-actions.test.ts` (pass, 21 tests)
+
+## 2026-04-22 account creation slice I (staging onboarding smoke runbook automation)
+
+- Added reusable smoke script for real environment evidence capture:
+  - `apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs`
+  - validates both onboarding proxy calls with a real bearer token:
+    - `GET /api/launch/onboarding?role=<role>`
+    - `POST /api/launch/onboarding` with `{ role, stepKey }`
+  - prints status + payload snapshots for release QA evidence logging.
+- Added dashboard script entry:
+  - `qa:launch:onboarding:smoke` in `apps/dashboard-product/package.json`.
+- Updated release QA evidence checklist (`product-os/04-quality/release-qa-evidence.md`) with the exact smoke command and required evidence fields.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/launch/onboarding/route.test.ts app/create-account/page.test.tsx app/requests/page.test.tsx app/admin/users/page.test.tsx lib/onboarding-actions.test.ts` (pass, 21 tests)
+
+## 2026-04-23 account creation slice J (local dev signup bypass for QA)
+
+- Added local-only create-account bypass to unblock manual UX QA when Supabase email throttling is hit.
+- Dashboard proxy behavior:
+  - `app/api/auth/signup/route.ts` now supports `TRACEBUD_DEV_SIGNUP_BYPASS=true` (non-production only):
+    - `create_account` stage returns synthetic user/session payload with decodable JWT claims (`tenant_id`, role) for local auth hydration.
+    - `workspace_setup` stage returns local success payload without backend dependency.
+  - `app/api/launch/commercial-profile/route.ts` returns local success payload in bypass mode so step 3 is non-blocking without external auth/email services.
+- Safety gate:
+  - bypass requires explicit env flag and is disabled in `NODE_ENV=production`.
+- Test coverage added:
+  - `app/api/auth/signup/route.test.ts` verifies bypass token response.
+  - `app/api/launch/commercial-profile/route.test.ts` verifies bypass success payload.
+- Verification executed:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts app/create-account/page.test.tsx` (pass, 13 tests)

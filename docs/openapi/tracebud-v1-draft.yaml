@@ -76,6 +76,8 @@ tags:
     description: Tenant-scoped workflow template and stage transition operations.
   - name: Integrations
     description: External integration health, submission, and status operations.
+  - name: Launch
+    description: Tenant launch lifecycle, signup onboarding, and commercial profile operations.
 paths:
   /v1/organisations:
     post:
@@ -204,6 +206,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/requests/campaigns/{id}/decisions:
+    get:
+      tags: [Requests]
+      operationId: listRequestCampaignDecisions
+      summary: List request campaign decision timeline
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: decision
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, accept, refuse]
+            default: all
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Decision timeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestCampaignDecisionTimelineResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -4200,6 +4244,54 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           description: Missing tenant claim or role policy violation
+  /v1/launch/signup:
+    post:
+      tags: [Launch]
+      operationId: launchSignup
+      summary: Create account or complete workspace setup stage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchSignupRequest"
+      responses:
+        "200":
+          description: Stage processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchSignupResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/launch/commercial-profile:
+    post:
+      tags: [Launch]
+      operationId: saveLaunchCommercialProfile
+      summary: Persist optional commercial profile for onboarding personalization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchCommercialProfileRequest"
+      responses:
+        "200":
+          description: Commercial profile persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchCommercialProfileResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
 components:
   securitySchemes:
     bearerAuth:
@@ -4263,6 +4355,100 @@ components:
         id:
           type: string
           format: uuid
+    LaunchSignupRequest:
+      type: object
+      required: [stage]
+      properties:
+        stage:
+          type: string
+          enum: [create_account, workspace_setup]
+        workEmail:
+          type: string
+          format: email
+        password:
+          type: string
+        fullName:
+          type: string
+        organizationName:
+          type: string
+        country:
+          type: string
+        primaryRole:
+          type: string
+          enum: [importer, exporter, compliance_manager, admin]
+    LaunchSignupResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        userId:
+          type: string
+        tenantId:
+          type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+          nullable: true
+        ok:
+          type: boolean
+    LaunchCommercialProfileRequest:
+      type: object
+      required: [skipped, primaryRole]
+      properties:
+        skipped:
+          type: boolean
+        primaryRole:
+          type: string
+          enum: [importer, exporter, compliance_manager, admin]
+        teamSize:
+          type: string
+          nullable: true
+        mainCommodity:
+          type: string
+          nullable: true
+        primaryObjective:
+          type: string
+          nullable: true
+          enum: [prepare_first_due_diligence_package, supplier_onboarding, risk_screening, audit_readiness]
+    LaunchCommercialProfile:
+      type: object
+      required: [tenant_id, profile_skipped, updated_at]
+      properties:
+        tenant_id:
+          type: string
+        organization_name:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        primary_role:
+          type: string
+          nullable: true
+          enum: [importer, exporter, compliance_manager, admin]
+        team_size:
+          type: string
+          nullable: true
+        main_commodity:
+          type: string
+          nullable: true
+        primary_objective:
+          type: string
+          nullable: true
+          enum: [prepare_first_due_diligence_package, supplier_onboarding, risk_screening, audit_readiness]
+        profile_skipped:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+    LaunchCommercialProfileResponse:
+      type: object
+      required: [ok, profile]
+      properties:
+        ok:
+          type: boolean
+        profile:
+          $ref: "#/components/schemas/LaunchCommercialProfile"
     GatedEntryTelemetryListResponse:
       type: object
       properties:
@@ -5106,6 +5292,53 @@ components:
           $ref: "#/components/schemas/RequestCampaignStatus"
         total_targets: { type: integer }
         created_requests: { type: integer }
+    RequestCampaignDecisionRecord:
+      type: object
+      properties:
+        campaign_id: { type: string }
+        recipient_email: { type: string, format: email }
+        decision:
+          type: string
+          enum: [accept, refuse]
+        decided_at: { type: string, format: date-time }
+        source: { type: string }
+      required: [campaign_id, recipient_email, decision, decided_at, source]
+    RequestCampaignDecisionTimelineCounts:
+      type: object
+      properties:
+        all: { type: integer, minimum: 0 }
+        accept: { type: integer, minimum: 0 }
+        refuse: { type: integer, minimum: 0 }
+      required: [all, accept, refuse]
+    RequestCampaignDecisionTimelinePagination:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum: [all, accept, refuse]
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0 }
+        returned: { type: integer, minimum: 0 }
+        has_more: { type: boolean }
+      required: [decision, limit, offset, returned, has_more]
+    RequestCampaignDecisionTimelineResponse:
+      type: object
+      properties:
+        campaign_id: { type: string }
+        tenant_id: { type: string }
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        counts:
+          $ref: "#/components/schemas/RequestCampaignDecisionTimelineCounts"
+        pagination:
+          $ref: "#/components/schemas/RequestCampaignDecisionTimelinePagination"
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestCampaignDecisionRecord"
+      required: [campaign_id, tenant_id, last_synced_at, counts, pagination, decisions]
     CreatePlotRequest:
       type: object
       properties:

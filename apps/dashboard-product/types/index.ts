@@ -305,6 +305,7 @@ export interface RequestCampaign {
   target_organization_ids: string[];
   target_farmer_ids: string[];
   target_plot_ids: string[];
+  target_contact_emails?: string[];
   // Timeline
   due_at: string;
   reminder_sent_at?: string;
@@ -316,6 +317,14 @@ export interface RequestCampaign {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface RequestCampaignDecision {
+  campaign_id: string;
+  recipient_email: string;
+  decision: 'accept' | 'refuse';
+  decided_at: string;
+  source: string;
 }
 
 // ============================================================

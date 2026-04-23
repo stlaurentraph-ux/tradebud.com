@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     }
 
     const backendResponse = await fetch(
-      `${backendBase}/api/v1/integrations/assessments/requests`,
+      `${backendBase}/v1/integrations/assessments/requests`,
       {
         cache: 'no-store',
         headers: authHeader ? { Authorization: authHeader } : undefined,
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
     const body = await request.json().catch(() => ({}));
     const backendResponse = await fetch(
-      `${backendBase}/api/v1/integrations/assessments/requests`,
+      `${backendBase}/v1/integrations/assessments/requests`,
       {
         method: 'POST',
         headers: {

@@ -19,6 +19,7 @@ import type { AppRole } from '../auth/roles';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PG_POOL } from '../db/db.module';
+import { LaunchService } from '../launch/launch.service';
 
 type StartPartnerExportBody = {
   scope?: string;
@@ -69,7 +70,10 @@ const PARTNER_RETRY_SWEEP_MAX_LIMIT = 200;
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/partner-data')
 export class PartnerDataController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly launchService: LaunchService,
+  ) {}
 
   private getTenantClaim(req: any): string {
     const tenantId = req?.user?.app_metadata?.tenant_id ?? req?.user?.user_metadata?.tenant_id;
@@ -174,6 +178,7 @@ export class PartnerDataController {
   })
   async listDatasets(@Query('scope') scopeRaw: string | undefined, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     const role = this.requireRole(
       req,
       ['exporter', 'agent'],
@@ -215,6 +220,7 @@ export class PartnerDataController {
   })
   async startExport(@Body() body: StartPartnerExportBody, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     const role = this.requireRole(req, ['exporter'], 'Only exporters can start partner exports');
     const dataset = body?.dataset?.trim() ?? '';
     const scope = this.parseScope(body?.scope);
@@ -357,6 +363,7 @@ export class PartnerDataController {
     @Req() req: any,
   ) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     const role = this.requireRole(
       req,
       ['exporter', 'admin', 'compliance_manager'],
@@ -517,6 +524,7 @@ export class PartnerDataController {
   })
   async listRetryQueue(@Query('limit') limitRaw: string | undefined, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     this.requireRole(
       req,
       ['exporter', 'agent', 'admin', 'compliance_manager'],
@@ -576,6 +584,7 @@ export class PartnerDataController {
   })
   async retryExport(@Param('id') exportId: string, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     const role = this.requireRole(
       req,
       ['exporter', 'admin', 'compliance_manager'],
@@ -701,6 +710,7 @@ export class PartnerDataController {
   })
   async getRetrySummary(@Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     this.requireRole(
       req,
       ['exporter', 'agent', 'admin', 'compliance_manager'],
@@ -803,6 +813,7 @@ export class PartnerDataController {
   ) {
     this.getSchedulerTokenHeader(schedulerTokenRaw);
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     const role = this.requireRole(
       req,
       ['exporter', 'admin', 'compliance_manager'],
@@ -944,6 +955,7 @@ export class PartnerDataController {
   })
   async getExportStatus(@Param('id') exportId: string, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     this.requireRole(req, ['exporter', 'agent'], 'Only exporters or agents can view partner export status');
 
     let row: PartnerExportRow | undefined;
@@ -993,6 +1005,7 @@ export class PartnerDataController {
   })
   async getExportDownload(@Param('id') exportId: string, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     this.requireRole(req, ['exporter', 'agent'], 'Only exporters or agents can download partner exports');
 
     let row: PartnerExportRow | undefined;

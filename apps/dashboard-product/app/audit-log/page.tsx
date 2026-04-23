@@ -22,93 +22,7 @@ interface AuditLogEntry {
   ip_address: string;
 }
 
-// Mock audit log data
-const mockAuditLog: AuditLogEntry[] = [
-  {
-    id: 'a1',
-    timestamp: '2024-03-31T14:32:15Z',
-    user_email: 'juan@tracebud.com',
-    action: 'created',
-    entity_type: 'package',
-    entity_id: 'PKG-2024-001',
-    entity_name: 'Q1 2024 Export Batch',
-    ip_address: '192.168.1.100',
-  },
-  {
-    id: 'a2',
-    timestamp: '2024-03-31T13:45:22Z',
-    user_email: 'maria@cooperative.com',
-    action: 'updated',
-    entity_type: 'plot',
-    entity_id: 'PLOT-001',
-    entity_name: 'North Field A',
-    changes: {
-      deforestation_risk: { old: 'low', new: 'medium' },
-      verified: { old: 'false', new: 'true' },
-    },
-    ip_address: '203.45.67.89',
-  },
-  {
-    id: 'a3',
-    timestamp: '2024-03-31T12:15:00Z',
-    user_email: 'carlos@exporter.com',
-    action: 'uploaded',
-    entity_type: 'fpic',
-    entity_id: 'FPIC-123',
-    entity_name: 'Community Minutes - January 2024',
-    ip_address: '192.168.1.101',
-  },
-  {
-    id: 'a4',
-    timestamp: '2024-03-31T11:20:33Z',
-    user_email: 'reviewer@government.gov',
-    action: 'approved',
-    entity_type: 'compliance',
-    entity_id: 'COMP-5678',
-    entity_name: 'Zero-Risk Pre-Flight Check',
-    ip_address: '198.76.54.32',
-  },
-  {
-    id: 'a5',
-    timestamp: '2024-03-30T16:45:12Z',
-    user_email: 'juan@tracebud.com',
-    action: 'submitted',
-    entity_type: 'package',
-    entity_id: 'PKG-2024-002',
-    entity_name: 'Q1 Export Batch (Revised)',
-    ip_address: '192.168.1.100',
-  },
-  {
-    id: 'a6',
-    timestamp: '2024-03-30T15:30:00Z',
-    user_email: 'maria@cooperative.com',
-    action: 'created',
-    entity_type: 'harvest',
-    entity_id: 'HARVEST-001',
-    entity_name: 'Batch 2024-001 Harvest',
-    ip_address: '203.45.67.89',
-  },
-  {
-    id: 'a7',
-    timestamp: '2024-03-30T14:12:44Z',
-    user_email: 'carlos@exporter.com',
-    action: 'deleted',
-    entity_type: 'farmer',
-    entity_id: 'FARMER-OLD-001',
-    entity_name: 'Duplicate Farmer Record',
-    ip_address: '192.168.1.101',
-  },
-  {
-    id: 'a8',
-    timestamp: '2024-03-30T10:05:21Z',
-    user_email: 'juan@tracebud.com',
-    action: 'exported',
-    entity_type: 'package',
-    entity_id: 'PKG-2024-003',
-    entity_name: 'Q1 Compliance Report',
-    ip_address: '192.168.1.100',
-  },
-];
+const auditLogEntries: AuditLogEntry[] = [];
 
 const actionColors: Record<string, string> = {
   created: 'bg-blue-500/20 text-blue-600',
@@ -136,7 +50,7 @@ export default function AuditLogPage() {
   const [filterAction, setFilterAction] = useState<'all' | 'created' | 'updated' | 'deleted' | 'approved' | 'submitted' | 'uploaded' | 'exported'>('all');
   const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all');
 
-  const filteredLog = mockAuditLog.filter((entry) => {
+  const filteredLog = auditLogEntries.filter((entry) => {
     if (filterEntity !== 'all' && entry.entity_type !== filterEntity) return false;
     if (filterAction !== 'all' && entry.action !== filterAction) return false;
     const query = searchQuery.toLowerCase();

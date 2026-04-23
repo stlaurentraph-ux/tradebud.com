@@ -16,6 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  hydrateSessionFromToken: (token: string) => void;
   logout: () => void;
   switchRole: (role: TenantRole) => void;
   impersonateDemo: (email: string) => Promise<void>;
@@ -23,64 +24,51 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo users for different roles
-const DEMO_USERS: Record<string, User> = {
-  'exporter@tracebud.com': {
-    id: 'usr_exporter_001',
-    email: 'exporter@tracebud.com',
-    name: 'Maria Santos',
-    tenant_id: 'tenant_brazil_001',
-    roles: ['exporter'],
-    active_role: 'exporter',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-  'importer@tracebud.com': {
-    id: 'usr_importer_001',
-    email: 'importer@tracebud.com',
-    name: 'Klaus Weber',
-    tenant_id: 'tenant_germany_001',
-    roles: ['importer'],
-    active_role: 'importer',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-  'cooperative@tracebud.com': {
-    id: 'usr_coop_001',
-    email: 'cooperative@tracebud.com',
-    name: 'Jean-Pierre Nkurunziza',
-    tenant_id: 'tenant_rwanda_001',
-    roles: ['cooperative'],
-    active_role: 'cooperative',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-  'reviewer@tracebud.com': {
-    id: 'usr_reviewer_001',
-    email: 'reviewer@tracebud.com',
-    name: 'Anna Schmidt',
-    tenant_id: 'tenant_eu_001',
-    roles: ['country_reviewer'],
-    active_role: 'country_reviewer',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-  'sponsor@tracebud.com': {
-    id: 'usr_sponsor_001',
-    email: 'sponsor@tracebud.com',
-    name: 'David Thompson',
-    tenant_id: 'tenant_sponsor_001',
-    roles: ['sponsor'],
-    active_role: 'sponsor',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-  // Multi-role user
-  'admin@tracebud.com': {
-    id: 'usr_admin_001',
-    email: 'admin@tracebud.com',
-    name: 'Sophie Chen',
-    tenant_id: 'tenant_global_001',
-    roles: ['exporter', 'importer', 'country_reviewer'],
-    active_role: 'exporter',
-    created_at: '2024-01-15T00:00:00Z',
-  },
-};
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const payloadPart = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payloadPart.padEnd(Math.ceil(payloadPart.length / 4) * 4, '=');
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function mapClaimRoleToTenantRole(role: string | undefined): TenantRole {
+  if (role === 'importer') return 'importer';
+  if (role === 'cooperative') return 'cooperative';
+  if (role === 'country_reviewer' || role === 'reviewer') return 'country_reviewer';
+  if (role === 'sponsor') return 'sponsor';
+  return 'exporter';
+}
+
+function buildUserFromToken(token: string): User | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  const appMetadata = (payload.app_metadata ?? {}) as Record<string, unknown>;
+  const userMetadata = (payload.user_metadata ?? {}) as Record<string, unknown>;
+  const roleClaim =
+    (appMetadata.role as string | undefined) ??
+    (userMetadata.role as string | undefined);
+  const tenantId =
+    (appMetadata.tenant_id as string | undefined) ??
+    (userMetadata.tenant_id as string | undefined);
+  const email = (payload.email as string | undefined) ?? '';
+  const userId = (payload.sub as string | undefined) ?? '';
+  if (!tenantId || !userId || !email) return null;
+  const activeRole = mapClaimRoleToTenantRole(roleClaim);
+  return {
+    id: userId,
+    email,
+    name: email.split('@')[0] || 'Tracebud User',
+    tenant_id: tenantId,
+    roles: [activeRole],
+    active_role: activeRole,
+    created_at: new Date().toISOString(),
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -89,6 +77,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     const storedUser = sessionStorage.getItem('tracebud_user');
+    const storedToken = sessionStorage.getItem('tracebud_token');
+    if (storedToken?.startsWith('demo_token_')) {
+      sessionStorage.removeItem('tracebud_token');
+      sessionStorage.removeItem('tracebud_user');
+      startTransition(() => {
+        setUser(null);
+        setIsLoading(false);
+      });
+      return;
+    }
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser) as User;
@@ -99,32 +97,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem('tracebud_user');
       }
     }
+    if (!storedUser && storedToken) {
+      const tokenUser = buildUserFromToken(storedToken);
+      if (tokenUser) {
+        sessionStorage.setItem('tracebud_user', JSON.stringify(tokenUser));
+        startTransition(() => {
+          setUser(tokenUser);
+        });
+      }
+    }
     startTransition(() => {
       setIsLoading(false);
     });
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    void password;
     setIsLoading(true);
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const demoUser = DEMO_USERS[email.toLowerCase()];
-    if (demoUser) {
-      setUser(demoUser);
-      sessionStorage.setItem('tracebud_user', JSON.stringify(demoUser));
-      sessionStorage.setItem('tracebud_token', 'demo_token_' + demoUser.id);
-    } else {
-      throw new Error('Invalid credentials. Use a demo account.');
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      }
+      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          apikey: supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        access_token?: string;
+        error_description?: string;
+        error?: string;
+      };
+      if (!response.ok || !payload.access_token) {
+        throw new Error(payload.error_description ?? payload.error ?? 'Invalid credentials.');
+      }
+      const derivedUser = buildUserFromToken(payload.access_token);
+      if (!derivedUser) {
+        throw new Error('Authenticated user is missing required role/tenant claims.');
+      }
+      sessionStorage.setItem('tracebud_token', payload.access_token);
+      sessionStorage.setItem('tracebud_user', JSON.stringify(derivedUser));
+      setUser(derivedUser);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem('tracebud_user');
     sessionStorage.removeItem('tracebud_token');
+  }, []);
+
+  const hydrateSessionFromToken = useCallback((token: string) => {
+    const tokenUser = buildUserFromToken(token);
+    if (!tokenUser) return;
+    sessionStorage.setItem('tracebud_token', token);
+    sessionStorage.setItem('tracebud_user', JSON.stringify(tokenUser));
+    setUser(tokenUser);
   }, []);
 
   const switchRole = useCallback((role: TenantRole) => {
@@ -136,17 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const impersonateDemo = useCallback(async (email: string) => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    const demoUser = DEMO_USERS[email.toLowerCase()];
-    if (!demoUser) {
-      setIsLoading(false);
-      throw new Error('Unknown demo persona.');
-    }
-    setUser(demoUser);
-    sessionStorage.setItem('tracebud_user', JSON.stringify(demoUser));
-    sessionStorage.setItem('tracebud_token', 'demo_token_' + demoUser.id);
-    setIsLoading(false);
+    void email;
+    throw new Error('Demo impersonation is disabled.');
   }, []);
 
   return (
@@ -156,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        hydrateSessionFromToken,
         logout,
         switchRole,
         impersonateDemo,

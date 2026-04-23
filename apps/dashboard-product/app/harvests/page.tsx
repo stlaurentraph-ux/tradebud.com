@@ -35,59 +35,7 @@ interface Harvest {
   exception_status?: 'none' | 'pending' | 'approved' | 'rejected';
 }
 
-// Mock harvests data
-const mockHarvests: Harvest[] = [
-  {
-    id: 'h1',
-    batch_id: 'BATCH-2024-001',
-    plot_id: 'p1',
-    plot_name: 'North Field A',
-    plot_area_hectares: 5.2,
-    farmer_name: 'Juan Martinez',
-    weight_kg: 15600,
-    expected_yield_kg_per_ha: 3000,
-    date: '2024-03-15',
-    status: 'pass',
-  },
-  {
-    id: 'h2',
-    batch_id: 'BATCH-2024-002',
-    plot_id: 'p2',
-    plot_name: 'South Field B',
-    plot_area_hectares: 3.8,
-    farmer_name: 'Maria Gonzalez',
-    weight_kg: 14250,
-    expected_yield_kg_per_ha: 3000,
-    date: '2024-03-14',
-    status: 'warning',
-    exception_status: 'none',
-  },
-  {
-    id: 'h3',
-    batch_id: 'BATCH-2024-003',
-    plot_id: 'p3',
-    plot_name: 'East Terrace',
-    plot_area_hectares: 2.1,
-    farmer_name: 'Carlos Ruiz',
-    weight_kg: 8800,
-    expected_yield_kg_per_ha: 3000,
-    date: '2024-03-13',
-    status: 'pass',
-  },
-  {
-    id: 'h4',
-    batch_id: 'BATCH-2024-004',
-    plot_id: 'p4',
-    plot_name: 'West Ridge',
-    plot_area_hectares: 4.5,
-    farmer_name: 'Isabel Fernandez',
-    weight_kg: 18500,
-    expected_yield_kg_per_ha: 3000,
-    date: '2024-03-12',
-    status: 'blocked',
-    exception_status: 'pending',
-  },
-];
+const mockHarvests: Harvest[] = [];
 
 function getStatusBadge(status: 'pass' | 'warning' | 'blocked') {
   const config = {
@@ -128,7 +76,7 @@ export default function HarvestsPage() {
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');
 
-  const filteredHarvests = mockHarvests.filter((h) => {
+  const filteredHarvests = harvests.filter((h) => {
     if (filterStatus !== 'all' && h.status !== filterStatus) return false;
     const query = searchQuery.toLowerCase();
     return h.batch_id.toLowerCase().includes(query) || 
@@ -136,10 +84,11 @@ export default function HarvestsPage() {
            h.farmer_name.toLowerCase().includes(query);
   });
 
-  const totalBatches = mockHarvests.length;
-  const totalWeight = mockHarvests.reduce((sum, h) => sum + h.weight_kg, 0);
-  const avgYield = totalWeight / mockHarvests.reduce((sum, h) => sum + h.plot_area_hectares, 0);
-  const flaggedBatches = mockHarvests.filter((h) => h.status !== 'pass').length;
+  const totalBatches = harvests.length;
+  const totalWeight = harvests.reduce((sum, h) => sum + h.weight_kg, 0);
+  const totalArea = harvests.reduce((sum, h) => sum + h.plot_area_hectares, 0);
+  const avgYield = totalArea > 0 ? totalWeight / totalArea : 0;
+  const flaggedBatches = harvests.filter((h) => h.status !== 'pass').length;
 
   const handleRequestException = () => {
     if (!selectedHarvest) return;

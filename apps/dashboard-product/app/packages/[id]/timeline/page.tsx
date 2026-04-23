@@ -2,14 +2,13 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
-import { getPackageById } from '@/lib/mock-data';
+import { usePackageById } from '@/lib/use-packages';
 import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,113 +16,7 @@ interface TimelinePageProps {
   params: Promise<{ id: string }>;
 }
 
-// Mock timeline events for the shipment
-const getShipmentTimeline = (): TimelineEvent[] => [
-  {
-    id: 'evt-1',
-    eventType: 'creation',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
-    userName: 'Maria Rodriguez',
-    userRole: 'Exporter',
-    description: 'Shipment created',
-    metadata: { shipment_code: 'SHP-2026-001' },
-  },
-  {
-    id: 'evt-2',
-    eventType: 'document_uploaded',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 13).toISOString(),
-    userName: 'Maria Rodriguez',
-    userRole: 'Exporter',
-    description: 'Added 12 plots to shipment',
-    metadata: { plots_added: 12 },
-  },
-  {
-    id: 'evt-3',
-    eventType: 'document_uploaded',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
-    userName: 'Carlos Mendez',
-    userRole: 'Field Agent',
-    description: 'Uploaded FPIC consent documents for 8 farmers',
-    metadata: { farmers_count: 8, document_type: 'FPIC' },
-  },
-  {
-    id: 'evt-4',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-    userName: 'System',
-    description: 'Compliance check completed',
-    metadata: { checks_passed: 7, checks_total: 8, check_failed: 'Deforestation assessment pending' },
-  },
-  {
-    id: 'evt-5',
-    eventType: 'alert',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9).toISOString(),
-    userName: 'System',
-    description: 'Compliance issue created: Deforestation risk detected on Plot P-042',
-    metadata: { issue_id: 'CI-2024-015', severity: 'BLOCKING' },
-  },
-  {
-    id: 'evt-6',
-    eventType: 'document_uploaded',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    userName: 'Ana Garcia',
-    userRole: 'Compliance Manager',
-    description: 'Uploaded deforestation assessment evidence for Plot P-042',
-    metadata: { document_type: 'Evidence', plot_id: 'P-042' },
-  },
-  {
-    id: 'evt-7',
-    eventType: 'approval',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-    userName: 'Ana Garcia',
-    userRole: 'Compliance Manager',
-    description: 'Compliance issue CI-2024-015 resolved',
-    metadata: { issue_id: 'CI-2024-015', resolution: 'Evidence verified - no deforestation' },
-  },
-  {
-    id: 'evt-8',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    userName: 'Maria Rodriguez',
-    userRole: 'Exporter',
-    description: 'Status changed: DRAFT → READY',
-    metadata: { from_status: 'DRAFT', to_status: 'READY' },
-  },
-  {
-    id: 'evt-9',
-    eventType: 'approval',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    userName: 'System',
-    description: 'Pre-flight checks passed (8/8)',
-    metadata: { checks_passed: 8, checks_total: 8 },
-  },
-  {
-    id: 'evt-10',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    userName: 'Maria Rodriguez',
-    userRole: 'Exporter',
-    description: 'Status changed: READY → SEALED',
-    metadata: { from_status: 'READY', to_status: 'SEALED', liability_acknowledged: true },
-  },
-  {
-    id: 'evt-11',
-    eventType: 'submission',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    userName: 'Maria Rodriguez',
-    userRole: 'Exporter',
-    description: 'DDS submitted to TRACES NT',
-    metadata: { traces_reference: 'DDS-2026-0891', submission_time: '14:32:15 UTC' },
-  },
-  {
-    id: 'evt-12',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    userName: 'System',
-    description: 'Status changed: SEALED → SUBMITTED',
-    metadata: { from_status: 'SEALED', to_status: 'SUBMITTED' },
-  },
-];
+const timelineEvents: TimelineEvent[] = [];
 
 // State transition visualization
 const STATE_FLOW = [
@@ -136,13 +29,13 @@ const STATE_FLOW = [
 
 export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
   const { id } = use(params);
-  const pkg = getPackageById(id);
-
-  if (!pkg) {
-    notFound();
+  const { pkg, isLoading } = usePackageById(id);
+  if (isLoading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading shipment timeline...</div>;
   }
-
-  const timelineEvents = getShipmentTimeline();
+  if (!pkg) {
+    return <div className="p-6 text-sm text-muted-foreground">Shipment not found.</div>;
+  }
   const currentStateIndex = STATE_FLOW.findIndex(
     (s) => s.state.toLowerCase() === pkg.status.toLowerCase()
   );
@@ -291,7 +184,13 @@ export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
               <CardDescription>Complete chronological history of all events</CardDescription>
             </CardHeader>
             <CardContent>
-              <Timeline events={timelineEvents} />
+              {timelineEvents.length > 0 ? (
+                <Timeline events={timelineEvents} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No timeline events recorded yet for this shipment.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
