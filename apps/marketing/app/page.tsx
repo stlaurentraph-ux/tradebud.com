@@ -1,5 +1,6 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
+import { ChainFlow } from "@/components/tracebud/chain-flow";
 import { ProcessTimeline } from "@/components/tracebud/process-timeline";
 import { ProductDemo } from "@/components/tracebud/product-demo";
 import { Verticals } from "@/components/tracebud/verticals";
@@ -18,6 +19,7 @@ export default function Home() {
     <main className="min-h-screen">
       <Header />
       <Hero />
+      <ChainFlow />
       <ProcessTimeline />
       <ProductDemo />
       <Verticals />

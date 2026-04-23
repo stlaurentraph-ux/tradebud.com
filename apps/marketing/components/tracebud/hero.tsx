@@ -13,8 +13,6 @@ export function Hero() {
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      console.log("[v0] Submitting email:", email);
-      
       // Submit to API
       fetch("/api/checklist/signup", {
         method: "POST",
@@ -23,7 +21,6 @@ export function Hero() {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("[v0] API response:", data);
           if (data.ok) {
             // Trigger PDF download
             const link = document.createElement("a");
@@ -38,7 +35,7 @@ export function Hero() {
             setTimeout(() => setSubmitted(false), 3000);
           }
         })
-        .catch((err) => console.error("[v0] Error:", err));
+        .catch((err) => console.error("Error:", err));
     }
   };
   return (
@@ -75,7 +72,9 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-8 text-balance leading-tight">
-            Trade Freely. <span className="text-[var(--data-emerald)]">Trace Easily.</span>
+            Send One Request.
+            <br />
+            <span className="text-[var(--data-emerald)]">Trace Your Entire Supply Chain.</span>
           </h1>
         </motion.div>
 
@@ -85,7 +84,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Get EUDR-ready in weeks, not months. Farm-to-port traceability with 60-second plot verification via satellite.
+          Upload your supplier contacts. Send a templated EUDR compliance request. It cascades upstream to the farmer. GPS coordinates, deforestation checks, and harvest data flow back—automatically through Tracebud.
         </motion.p>
 
         {/* Quantified Value Metrics */}
@@ -96,18 +95,18 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">85%</div>
-            <div className="text-sm md:text-base text-white/70">Less Documentation Time</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">2 min</div>
+            <div className="text-sm md:text-base text-white/70">Create Account & Send Request</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
             <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">60s</div>
-            <div className="text-sm md:text-base text-white/70">Plot Verification</div>
+            <div className="text-sm md:text-base text-white/70">Plot Verification via App</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">6-Digit</div>
-            <div className="text-sm md:text-base text-white/70">GPS Precision</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">∞</div>
+            <div className="text-sm md:text-base text-white/70">Supply Chain Depth</div>
           </div>
         </motion.div>
 
@@ -157,16 +156,16 @@ export function Hero() {
               size="lg"
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-xl rounded-full shadow-xl hover:shadow-2xl transition-all"
             >
-              Start Free Assessment
+              Send Your First Request
             </Button>
           </a>
-          <a href="#how-it-works">
+          <a href="#supply-chain">
             <Button
               size="lg"
               variant="outline"
               className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-xl rounded-full"
             >
-              Watch 2-min Demo
+              How It Works
             </Button>
           </a>
         </motion.div>
