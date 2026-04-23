@@ -9,7 +9,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const personaLinks = [
-  { label: "Farmers", href: "/farmers" },
+  { label: "Producers", href: "/farmers" },
   { label: "Exporters", href: "/exporters" },
   { label: "Importers", href: "/importers" },
   { label: "Countries", href: "/countries" },
