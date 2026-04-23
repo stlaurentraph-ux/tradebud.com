@@ -12,6 +12,9 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: (key: string) => (key === 'feature' ? searchParamsState.feature : searchParamsState.gate),
   }),
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
 }));
 
 vi.mock('@/lib/auth-context', () => ({
@@ -49,6 +52,9 @@ vi.mock('@/components/dashboards/sponsor-dashboard', () => ({
 }));
 
 describe('DashboardPage gated-entry telemetry', () => {
+  const getTelemetryCalls = (fetchSpy: ReturnType<typeof vi.spyOn>) =>
+    fetchSpy.mock.calls.filter((call) => call[0] === '/api/analytics/gated-entry');
+
   beforeEach(() => {
     vi.restoreAllMocks();
     sessionStorage.clear();
@@ -66,7 +72,7 @@ describe('DashboardPage gated-entry telemetry', () => {
 
     const { rerender } = render(<DashboardPage />);
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/analytics/gated-entry',
@@ -77,7 +83,7 @@ describe('DashboardPage gated-entry telemetry', () => {
 
     rerender(<DashboardPage />);
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });
   });
 
@@ -92,7 +98,7 @@ describe('DashboardPage gated-entry telemetry', () => {
 
     render(<DashboardPage />);
     await waitFor(() => {
-      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(getTelemetryCalls(fetchSpy)).toHaveLength(0);
     });
   });
 
@@ -107,7 +113,7 @@ describe('DashboardPage gated-entry telemetry', () => {
 
     render(<DashboardPage />);
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/analytics/gated-entry',

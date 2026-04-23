@@ -14,6 +14,7 @@ import {
   MapPin,
   Filter
 } from 'lucide-react';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 // Mock report data
 const reportTypes = [
@@ -87,7 +88,12 @@ export default function ReportsPage() {
               <Calendar className="w-4 h-4 mr-2" />
               {selectedPeriod === '6months' ? 'Last 6 Months' : selectedPeriod}
             </Button>
-            <Button size="sm">
+            <Button
+              size="sm"
+              onClick={() => {
+                markOnboardingAction('insight_generated');
+              }}
+            >
               <FileText className="w-4 h-4 mr-2" />
               Generate Report
             </Button>

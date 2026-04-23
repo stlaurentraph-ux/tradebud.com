@@ -78,6 +78,21 @@ const statusColors: Record<AdminStatus, string> = {
 };
 
 type EudrSamplePreset = 'import' | 'export' | 'domestic';
+type LaunchFeatureKey =
+  | 'dashboard_campaigns'
+  | 'dashboard_compliance'
+  | 'dashboard_reporting'
+  | 'dashboard_exports';
+type FeatureEntitlementStatus = 'enabled' | 'disabled' | 'trial';
+
+interface LaunchFeatureEntitlement {
+  tenant_id: string;
+  feature_key: LaunchFeatureKey;
+  entitlement_status: FeatureEntitlementStatus;
+  effective_from: string;
+  effective_to: string | null;
+  updated_at: string;
+}
 
 const EUDR_SAMPLE_STATEMENTS: Record<EudrSamplePreset, Record<string, unknown>> = {
   import: {
@@ -161,6 +176,9 @@ export default function AdminPage() {
   } | null>(null);
   const [eudrStatusHintMessage, setEudrStatusHintMessage] = useState<string | null>(null);
   const [eudrStatusLastError, setEudrStatusLastError] = useState<EudrDdsStatusErrorContext | null>(null);
+  const [entitlements, setEntitlements] = useState<LaunchFeatureEntitlement[]>([]);
+  const [isEntitlementsLoading, setIsEntitlementsLoading] = useState(false);
+  const [isEntitlementSavingFeature, setIsEntitlementSavingFeature] = useState<LaunchFeatureKey | null>(null);
   const eudrStatusErrorFilenamePreview = eudrStatusLastError
     ? buildEudrDdsStatusErrorFilename(eudrStatusLastError.referenceNumber, EUDR_DDS_STATUS_ERROR_FILENAME_TIMESTAMP_TOKEN)
     : null;
@@ -914,6 +932,58 @@ export default function AdminPage() {
     }
   };
 
+  const loadLaunchEntitlements = async () => {
+    setIsEntitlementsLoading(true);
+    try {
+      const response = await fetch('/api/launch/entitlements', {
+        method: 'GET',
+      });
+      const payload = (await response.json().catch(() => ({ error: 'Failed to read launch entitlements.' }))) as {
+        error?: string;
+      } & LaunchFeatureEntitlement[];
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Failed to read launch entitlements.');
+      }
+      setEntitlements(Array.isArray(payload) ? payload : []);
+      toast.success('Launch entitlements loaded.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to read launch entitlements.');
+    } finally {
+      setIsEntitlementsLoading(false);
+    }
+  };
+
+  const setLaunchEntitlementStatus = async (
+    feature: LaunchFeatureKey,
+    entitlementStatus: FeatureEntitlementStatus,
+  ) => {
+    setIsEntitlementSavingFeature(feature);
+    try {
+      const response = await fetch('/api/launch/entitlements', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feature,
+          entitlementStatus,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({ error: 'Failed to update launch entitlement.' }))) as {
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Failed to update launch entitlement.');
+      }
+      await loadLaunchEntitlements();
+      toast.success(`Updated entitlement: ${feature} -> ${entitlementStatus}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update launch entitlement.');
+    } finally {
+      setIsEntitlementSavingFeature(null);
+    }
+  };
+
   const handleCopyEudrStatusPayload = async () => {
     if (!eudrStatusResult) return;
     try {
@@ -1368,6 +1438,85 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="mt-6">
+              <div className="mb-3 rounded-lg border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Launch Feature Entitlements (Admin)</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void loadLaunchEntitlements()}
+                    disabled={isEntitlementsLoading || isEntitlementSavingFeature !== null}
+                  >
+                    {isEntitlementsLoading ? 'Loading...' : 'Load entitlements'}
+                  </Button>
+                </div>
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Feature</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Updated at</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {entitlements.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-muted-foreground">
+                            No entitlement rows loaded yet. Use the Load entitlements action.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {entitlements.map((row) => (
+                        <TableRow key={row.feature_key}>
+                          <TableCell className="text-sm">{row.feature_key}</TableCell>
+                          <TableCell className="text-sm">
+                            <Badge variant="outline">{row.entitlement_status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(row.updated_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                  isEntitlementSavingFeature !== null || row.entitlement_status === 'enabled'
+                                }
+                                onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'enabled')}
+                              >
+                                Enable
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                  isEntitlementSavingFeature !== null || row.entitlement_status === 'trial'
+                                }
+                                onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'trial')}
+                              >
+                                Trial
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                  isEntitlementSavingFeature !== null || row.entitlement_status === 'disabled'
+                                }
+                                onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'disabled')}
+                              >
+                                Disable
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
               <div className="mb-3 rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <h4 className="text-sm font-medium">EUDR DDS Submit (Operator Trigger)</h4>

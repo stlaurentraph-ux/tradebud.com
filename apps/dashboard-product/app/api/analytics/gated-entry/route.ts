@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 
 type DeferredGate = 'request_campaigns' | 'annual_reporting';
 type GateFeature = 'mvp_gated';
+type GatedEntryEventType = 'dashboard_gated_entry_attempt' | 'onboarding_cta_gated_redirect';
 
 interface GatedEntryTelemetryBody {
+  eventType?: GatedEntryEventType;
   feature?: GateFeature;
   gate?: DeferredGate;
   tenantId?: string;
@@ -129,7 +131,7 @@ export async function POST(request: Request) {
   }
 
   const telemetryEvent = {
-    eventType: 'dashboard_gated_entry_attempt',
+    eventType: body.eventType ?? 'dashboard_gated_entry_attempt',
     feature: body.feature,
     gate: body.gate,
     tenantId: body.tenantId.trim(),

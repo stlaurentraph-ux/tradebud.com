@@ -6,15 +6,19 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { LaunchService } from '../launch/launch.service';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/reports')
 export class ReportsController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly launchService: LaunchService,
+  ) {}
 
-  private assertExporter(req: any) {
+  private assertExporter(req: any): string {
     const tenantId =
       req?.user?.app_metadata?.tenant_id ??
       req?.user?.user_metadata?.tenant_id;
@@ -25,6 +29,7 @@ export class ReportsController {
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can access reports');
     }
+    return tenantId;
   }
 
   @Get('plots')
@@ -40,7 +45,11 @@ export class ReportsController {
     @Req() req: any,
     @Res() res: Response,
   ) {
-    this.assertExporter(req);
+    const tenantId = this.assertExporter(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_reporting');
+    if (format === 'csv') {
+      await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
+    }
     const rowsRes = await this.pool.query(
       `
         SELECT
@@ -127,7 +136,11 @@ export class ReportsController {
     @Req() req: any,
     @Res() res: Response,
   ) {
-    this.assertExporter(req);
+    const tenantId = this.assertExporter(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_reporting');
+    if (format === 'csv') {
+      await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
+    }
     const params: any[] = [farmerId];
     const conditions = ['ht.farmer_id = $1'];
 

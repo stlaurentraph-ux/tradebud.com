@@ -13,8 +13,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Filter, ChevronRight, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from 'lucide-react';
-import { getMockPlots, getFarmerById } from '@/lib/mock-data';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/lib/auth-context';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 const riskColors = {
   low: 'text-green-400 bg-green-400/10',
@@ -38,8 +42,28 @@ const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => 
 };
 
 export default function PlotsPage() {
-  const plots = getMockPlots();
+  const { user } = useAuth();
+  const [plots, setPlots] = useState<Array<{
+    id: string;
+    name: string;
+    farmer_name?: string;
+    area_hectares: number;
+    deforestation_risk: 'low' | 'medium' | 'high' | 'unknown';
+    evidence: unknown[];
+    verified: boolean;
+  }>>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newPlot, setNewPlot] = useState({
+    name: '',
+    farmerId: '',
+    clientPlotId: '',
+    declaredAreaHa: '',
+    latitude: '',
+    longitude: '',
+  });
 
   const filteredPlots = plots.filter(
     (plot) =>
@@ -52,6 +76,62 @@ export default function PlotsPage() {
   const mediumRiskCount = plots.filter((p) => p.deforestation_risk === 'medium').length;
   const highRiskCount = plots.filter((p) => p.deforestation_risk === 'high').length;
 
+  const handleCreatePlot = async () => {
+    setCreateError(null);
+    setIsCreating(true);
+    try {
+      const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('tracebud_token') : null;
+      const payload = {
+        farmerId: newPlot.farmerId.trim(),
+        clientPlotId: newPlot.clientPlotId.trim(),
+        geometry: {
+          type: 'Point',
+          coordinates: [Number(newPlot.longitude), Number(newPlot.latitude)],
+        },
+        declaredAreaHa: Number(newPlot.declaredAreaHa),
+      };
+      const response = await fetch('/api/plots', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      const body = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? 'Failed to create plot.');
+      }
+      const createdId = body.id ?? `plot_${Date.now()}`;
+      setPlots((previous) => [
+        {
+          id: createdId,
+          name: newPlot.name.trim() || newPlot.clientPlotId.trim(),
+          area_hectares: Number(newPlot.declaredAreaHa) || 0,
+          farmer_name: user?.name ?? 'Producer',
+          deforestation_risk: 'unknown',
+          evidence: [],
+          verified: false,
+        },
+        ...previous,
+      ]);
+      markOnboardingAction('first_plot_captured');
+      setIsCreateDialogOpen(false);
+      setNewPlot({
+        name: '',
+        farmerId: '',
+        clientPlotId: '',
+        declaredAreaHa: '',
+        latitude: '',
+        longitude: '',
+      });
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Failed to create plot.');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="flex flex-col">
       <AppHeader
@@ -63,7 +143,12 @@ export default function PlotsPage() {
               <Filter className="w-4 h-4 mr-2" />
               Filters
             </Button>
-            <Button size="sm">
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsCreateDialogOpen(true);
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Plot
             </Button>
@@ -145,7 +230,6 @@ export default function PlotsPage() {
                     </TableRow>
                   ) : (
                     filteredPlots.map((plot) => {
-                      const farmer = getFarmerById(plot.farmer_id);
                       return (
                         <TableRow key={plot.id}>
                           <TableCell className="font-medium">
@@ -154,7 +238,7 @@ export default function PlotsPage() {
                               {plot.name}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{farmer?.name || 'Unknown'}</TableCell>
+                          <TableCell className="text-sm">{plot.farmer_name || 'Unknown'}</TableCell>
                           <TableCell>{plot.area_hectares.toFixed(2)}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -191,6 +275,49 @@ export default function PlotsPage() {
           </CardContent>
         </Card>
       </main>
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create plot</DialogTitle>
+            <DialogDescription>Creates a real plot record via backend `/v1/plots`.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Plot name</Label>
+              <Input value={newPlot.name} onChange={(e) => setNewPlot({ ...newPlot, name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Farmer ID (UUID)</Label>
+              <Input value={newPlot.farmerId} onChange={(e) => setNewPlot({ ...newPlot, farmerId: e.target.value })} />
+            </div>
+            <div>
+              <Label>Client Plot ID</Label>
+              <Input value={newPlot.clientPlotId} onChange={(e) => setNewPlot({ ...newPlot, clientPlotId: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label>Area (ha)</Label>
+                <Input value={newPlot.declaredAreaHa} onChange={(e) => setNewPlot({ ...newPlot, declaredAreaHa: e.target.value })} />
+              </div>
+              <div>
+                <Label>Latitude</Label>
+                <Input value={newPlot.latitude} onChange={(e) => setNewPlot({ ...newPlot, latitude: e.target.value })} />
+              </div>
+              <div>
+                <Label>Longitude</Label>
+                <Input value={newPlot.longitude} onChange={(e) => setNewPlot({ ...newPlot, longitude: e.target.value })} />
+              </div>
+            </div>
+            {createError ? <p className="text-sm text-destructive">{createError}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => void handleCreatePlot()} disabled={isCreating}>
+              {isCreating ? 'Creating...' : 'Create plot'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

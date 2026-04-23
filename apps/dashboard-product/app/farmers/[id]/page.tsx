@@ -2,7 +2,6 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
   Plus,
@@ -28,7 +27,6 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { mockFarmers } from '@/lib/mock-data';
 
 interface FarmerDetailPageProps {
   params: Promise<{ id: string }>;
@@ -58,55 +56,25 @@ interface FarmerDetail {
   updated_at: string;
 }
 
-// Mock consent grants
-const mockConsentGrants: ConsentGrant[] = [
-  {
-    id: 'consent_001',
-    type: 'data_use',
-    grantedAt: '2026-01-15T10:30:00Z',
-    status: 'active',
-    notes: 'Granted via in-person meeting at cooperative',
-  },
-  {
-    id: 'consent_002',
-    type: 'evidence_collection',
-    grantedAt: '2026-01-15T10:30:00Z',
-    status: 'active',
-  },
-  {
-    id: 'consent_003',
-    type: 'shipment_participation',
-    grantedAt: '2026-02-20T14:00:00Z',
-    revokedAt: '2026-03-10T09:15:00Z',
-    status: 'revoked',
-    notes: 'Revoked - producer exit',
-  },
-];
+const initialConsentGrants: ConsentGrant[] = [];
 
 export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
   const { id } = use(params);
-  const farmer = mockFarmers.find((f) => f.id === id);
-
-  if (!farmer) {
-    notFound();
-  }
-
   const farmerDetail: FarmerDetail = {
-    id: farmer.id,
-    name: farmer.name,
-    phone: farmer.contact_phone || '',
-    email: farmer.contact_email,
-    cooperative: farmer.cooperative_id || 'Unknown',
-    plots: farmer.plots.length,
-    verified: farmer.verified,
-    fpicSigned: farmer.fpic_signed,
-    laborCompliant: farmer.labor_compliant,
-    consentGrants: mockConsentGrants,
-    created_at: farmer.created_at,
-    updated_at: farmer.updated_at,
+    id,
+    name: 'Farmer',
+    phone: '',
+    cooperative: 'Unknown',
+    plots: 0,
+    verified: false,
+    fpicSigned: false,
+    laborCompliant: false,
+    consentGrants: initialConsentGrants,
+    created_at: '',
+    updated_at: '',
   };
 
-  const [consentGrants, setConsentGrants] = useState<ConsentGrant[]>(mockConsentGrants);
+  const [consentGrants, setConsentGrants] = useState<ConsentGrant[]>(initialConsentGrants);
   const [isAddConsentOpen, setIsAddConsentOpen] = useState(false);
   const [selectedConsentType, setSelectedConsentType] = useState<ConsentGrant['type']>('data_use');
   const [consentNotes, setConsentNotes] = useState('');
@@ -175,6 +143,12 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Info */}
           <div className="space-y-6 lg:col-span-2">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Farmer detail data is not connected to backend yet for this route. No mock profile is shown.
+              </AlertDescription>
+            </Alert>
             {/* Farmer Status Card */}
             <Card>
               <CardHeader>

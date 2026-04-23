@@ -17,6 +17,10 @@
     "auth:benchmark-admin:claims:check": "node scripts/check-benchmark-admin-claims.mjs",
     "db:apply:audit-index": "node scripts/run-with-root-test-db.mjs node scripts/apply-audit-gated-entry-index.mjs",
     "db:verify:audit-index": "node scripts/run-with-root-test-db.mjs node scripts/apply-audit-gated-entry-index.mjs --verify-only",
+    "db:apply:crm-contacts": "node scripts/run-with-root-test-db.mjs node scripts/apply-crm-contacts-migration.mjs",
+    "db:verify:crm-contacts": "node scripts/run-with-root-test-db.mjs node scripts/apply-crm-contacts-migration.mjs --verify-only",
+    "db:apply:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs",
+    "db:verify:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs --verify-only",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
@@ -33,6 +37,7 @@
     "pg": "^8.13.0",
     "postgres": "^3.4.4",
     "reflect-metadata": "^0.2.2",
+    "resend": "^6.12.2",
     "rxjs": "^7.8.1",
     "zod": "^3.24.0"
   },

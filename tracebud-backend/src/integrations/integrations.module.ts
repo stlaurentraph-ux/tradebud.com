@@ -6,9 +6,10 @@ import { EudrController } from './eudr.controller';
 import { IntegrationsController } from './integrations.controller';
 import { PartnerDataController } from './partner-data.controller';
 import { YieldBenchmarksController } from './yield-benchmarks.controller';
+import { LaunchModule } from '../launch/launch.module';
 
 @Module({
-  imports: [DbModule],
+  imports: [DbModule, LaunchModule],
   controllers: [
     IntegrationsController,
     EudrController,

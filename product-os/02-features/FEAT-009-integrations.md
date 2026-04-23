@@ -1468,3 +1468,9 @@ Done (TB-V16-009 / FEAT-009)
 - Behavior implemented and tested
 - Feature checklist completed
 - Quality docs/logs updated
+
+## 2026-04-22 launch export-gating slice
+
+- Partner export surfaces now enforce tenant trial/paywall checks before dataset listing, export start/finalize, retry operations, and artifact download.
+- EUDR integration endpoints now enforce launch entitlement checks before connectivity, submit, and status calls.
+- This closes the free-app data exfiltration path by requiring active trial/paid dashboard entitlement for high-value export/integration APIs.

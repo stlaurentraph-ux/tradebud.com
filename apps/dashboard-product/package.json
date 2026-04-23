@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --config ../../eslint.config.mjs . --max-warnings 0",
-    "test": "vitest run"
+    "test": "vitest run",
+    "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

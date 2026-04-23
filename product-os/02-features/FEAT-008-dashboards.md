@@ -219,6 +219,27 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
   - failure path renders backend error banner for operator remediation
 - Existing parse-and-enable coverage remains in place, so draft creation test flow now validates full front-end journey: parse targets -> submit -> surface result state.
 
+## 2026-04-22 launch entitlement admin UI slice
+
+- Added dashboard admin launch-entitlement operations surface in `apps/dashboard-product/app/admin/page.tsx`:
+  - tenant entitlement list load action (`Load entitlements`)
+  - per-feature status controls (`Enable`, `Trial`, `Disable`)
+  - immutable backend-managed status read/write via dashboard API proxy
+- Added dashboard API proxy route:
+  - `apps/dashboard-product/app/api/launch/entitlements/route.ts` (`GET`, `PATCH`)
+  - forwards signed Authorization header and preserves backend error payload/status semantics.
+- Permissions and boundary behavior:
+  - UI delegates enforcement to backend admin-only launch endpoints (`Only admins can manage feature entitlements`).
+  - tenant boundary remains claim-scoped through backend launch controller/service.
+- Exception handling and recovery:
+  - explicit success/failure toasts for entitlement read/write actions.
+  - idempotent reload after mutation to keep UI state authoritative with backend row state.
+- Verification commands:
+  - `cd apps/dashboard-product && npm run test -- app/admin/page.test.tsx app/api/launch/entitlements/route.test.ts`
+- Test additions:
+  - `app/api/launch/entitlements/route.test.ts` proxy passthrough coverage.
+  - `app/admin/page.test.tsx` coverage for load and mutation UI flows.
+
 ### S2 code slice 4 - bulk target payload mapping contract lock
 
 - Extended Requests page submit integration test to assert exact outbound payload shape for bulk targets:
@@ -292,3 +313,79 @@ Done (TB-V16-008 / FEAT-008)
 - Behavior implemented and tested
 - Feature checklist completed
 - Quality docs/logs updated
+
+## 2026-04-22 launch onboarding + trial UX slice
+
+- Dashboard overview now surfaces tenant launch access state (trial/expired/paid/suspended) from backend launch API.
+- Dashboard now renders autonomous onboarding checklist cards by role and persists completion state through backend onboarding endpoints.
+- Onboarding checklist completion now emits immutable tenant-scoped analytics events (`onboarding_step_completed`) to support activation funnel diagnostics.
+- Launch access handling now supports post-trial read-only UX messaging, with premium actions gated server-side.
+
+## 2026-04-22 contacts CRM + campaign target reuse slice
+
+- Added tenant-scoped Contacts CRM module (`/contacts`) with status pipeline (`new`, `invited`, `engaged`, `submitted`, `inactive`, `blocked`) and strict role-scoped access.
+- Added backend contacts API (`GET/POST /v1/contacts`, `PATCH /v1/contacts/:id/status`) with tenant isolation, explicit transition validation, and immutable audit events.
+- Added dashboard API proxies and shared contact service to keep auth/header and error semantics consistent with existing admin/request patterns.
+- Request Campaign creation modal now supports selecting saved CRM contacts, reducing repeated CSV uploads and accelerating importer onboarding activation.
+
+## 2026-04-22 contacts persistence migration + transition tests slice
+
+- Added migration `TB-V16-024` (`tracebud-backend/sql/tb_v16_024_crm_contacts.sql`) so `crm_contacts` schema is provisioned by SQL migration instead of runtime DDL in service code.
+- Removed runtime schema bootstrap logic from `ContactsService`; service now assumes migration-applied schema and focuses on tenant-scoped behavior.
+- Added targeted service tests (`src/contacts/contacts.service.spec.ts`) covering create audit emission, valid transition, invalid transition rejection, and not-found status update handling.
+- Added targeted controller tests (`src/contacts/contacts.controller.spec.ts`) covering role/tenant guardrails and payload validation for status transition endpoint.
+
+## 2026-04-22 request campaigns backend persistence slice
+
+- Added backend request campaigns module with tenant-scoped `GET/POST /v1/requests/campaigns` endpoints and role-scoped access enforcement for admin/exporter/compliance manager flows.
+- Added persistence migration `TB-V16-025` (`tracebud-backend/sql/tb_v16_025_request_campaigns.sql`) with idempotency and tenant-index support for reliable draft creation/list retrieval.
+- Updated dashboard requests API proxy to support campaign listing and removed synthetic 404 draft fallback now that backend endpoint exists.
+- Requests page now loads campaigns from backend on mount and uses local cache only as resilience fallback, so drafts survive refresh and persist server-side.
+
+## 2026-04-22 request campaigns Resend delivery slice
+
+- Request campaign drafts now persist `target_contact_emails` so send actions use explicit recipient scope instead of implicit CRM guesses.
+- Added Resend-backed outbound email dispatch on draft send transition (`DRAFT -> RUNNING`) with fail-closed configuration checks (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`).
+- `pending_count` on send now reflects successfully dispatched recipient count, aligning campaign progress and response denominator semantics with actual deliveries.
+- Added migration `TB-V16-026` to provision `request_campaigns.target_contact_emails` plus migration apply/verify utility scripts for rollout safety.
+
+## 2026-04-22 request campaign archive confirmation slice
+
+- Added tenant-scoped archive endpoint (`POST /v1/requests/campaigns/:id/archive`) that transitions campaigns to `CANCELLED` for soft-delete behavior.
+- Dashboard campaign action menu now prompts for confirmation before archive and then applies archived state in UI with success/error feedback.
+- Default campaign list behavior now excludes archived campaigns from `All Status`; archived entries remain accessible using explicit `Archived` status filter.
+
+## 2026-04-22 request campaign outbound email content refinement slice
+
+- Outbound campaign emails now use branded sender formatting (`Tracebud <hello@...>`) so inbox sender identity is explicit.
+- Subject line now includes requesting organization context (`Request from <organization>: <campaign title>`).
+- Email body now explains compliance/business continuity rationale, 1-month free Tracebud onboarding path, and importer->exporter->farmer evidence chaining expectation.
+
+## 2026-04-22 request campaign CTA email UX slice
+
+- Added recipient-facing CTA buttons in campaign emails: `Accept`, `Refuse`, and `Connect and start your compliance journey`.
+- Added explicit documentation deep-link in email body for onboarding/support path.
+- Added configurable public URL env hooks for outbound links:
+  - `TRACEBUD_DASHBOARD_PUBLIC_URL`
+  - `TRACEBUD_DOCS_PUBLIC_URL`
+
+## 2026-04-22 request campaign CTA intent capture reconciliation slice
+
+- Added CTA landing route (`/requests/intent`) that captures pre-login `accept/refuse` decision intent from email links and redirects recipients to authenticated flow.
+- Added login `next` redirect support so recipients return to `Requests` after authentication.
+- Added authenticated decision-intent reconciliation call (`POST /v1/requests/campaigns/:id/decision-intent` via dashboard proxy) and post-login operator notice in Requests UI.
+
+## 2026-04-22 onboarding optimization phase 1 slice
+
+- Added onboarding best-practice implementation baseline focused on first-value acceleration in Requests operations.
+- Added explicit `Onboarding status` dashboard card in Requests with action-validated milestones:
+  - Contacts added
+  - Campaign sent
+  - First decision received
+- Added last decision sync timestamp visibility to reduce ambiguity after recipient email CTA actions.
+- Added recipient decision timeline in campaign details, sourced from immutable decision ledger records.
+- Added backend tenant-scoped decision timeline endpoint:
+  - `GET /v1/requests/campaigns/:id/decisions`
+  - response includes `last_synced_at` and recipient-level decision events (`accept`/`refuse`, timestamp, source).
+- Added dashboard proxy route for timeline retrieval:
+  - `GET /api/requests/campaigns/:id/decisions`

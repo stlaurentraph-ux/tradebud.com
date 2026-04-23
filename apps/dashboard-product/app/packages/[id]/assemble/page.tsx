@@ -2,7 +2,6 @@
 
 import { use, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { ArrowLeft, Check, AlertCircle, ChevronRight, Lock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { getPackageById, getMockHarvests } from '@/lib/mock-data';
+import { usePackageById } from '@/lib/use-packages';
 
 interface AssemblePageProps {
   params: Promise<{ id: string }>;
@@ -20,11 +19,19 @@ type StepType = 'select_batches' | 'allocate_coverage' | 'validate_issues' | 'se
 
 export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   const { id } = use(params);
-  const pkg = getPackageById(id);
-  const harvests = getMockHarvests();
-
+  const { pkg, isLoading } = usePackageById(id);
+  const harvests: Array<{
+    id: string;
+    name: string;
+    quantity_kg: number;
+    date: string;
+    status: 'harvested' | 'pending_yield_check' | 'rejected';
+  }> = [];
+  if (isLoading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading shipment assembly...</div>;
+  }
   if (!pkg) {
-    notFound();
+    return <div className="p-6 text-sm text-muted-foreground">Shipment not found.</div>;
   }
 
   const [currentStep, setCurrentStep] = useState<StepType>('select_batches');
@@ -32,16 +39,13 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   const [liabilityAcknowledged, setLiabilityAcknowledged] = useState(false);
   const [sealConfirmed, setSealConfirmed] = useState(false);
 
-  // Mock blocking issues
-  const blockingIssues = [
-    {
-      id: 'issue_001',
-      severity: 'BLOCKING',
-      title: 'Missing FPIC documentation',
-      description: 'Plot plot_003 lacks required Free Prior and Informed Consent documentation',
-      plotId: 'plot_003',
-    },
-  ];
+  const blockingIssues: Array<{
+    id: string;
+    severity: 'BLOCKING';
+    title: string;
+    description: string;
+    plotId: string;
+  }> = [];
 
   const eligibleBatches = harvests.filter((h) => h.status === 'harvested' || h.status === 'pending_yield_check');
   const selectedBatchDetails = harvests.filter((h) => selectedBatches.includes(h.id));
@@ -141,7 +145,9 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                   {eligibleBatches.length === 0 ? (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>No eligible batches found. Create harvests first.</AlertDescription>
+                      <AlertDescription>
+                        No eligible batches found from backend harvest workflows yet.
+                      </AlertDescription>
                     </Alert>
                   ) : (
                     <div className="space-y-3">

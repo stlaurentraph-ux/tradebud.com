@@ -1,47 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Leaf, Globe, Users, Heart } from 'lucide-react';
-
-const DEMO_ACCOUNTS = [
-  {
-    email: 'exporter@tracebud.com',
-    role: 'Exporter',
-    description: 'Full access to packages, plots, farmers',
-    icon: Leaf,
-  },
-  {
-    email: 'importer@tracebud.com',
-    role: 'Importer',
-    description: 'View assigned packages and compliance',
-    icon: Globe,
-  },
-  {
-    email: 'cooperative@tracebud.com',
-    role: 'Cooperative',
-    description: 'Manage member farmers and plots',
-    icon: Users,
-  },
-  {
-    email: 'reviewer@tracebud.com',
-    role: 'Country Reviewer',
-    description: 'Review and approve submissions',
-    icon: ShieldCheck,
-  },
-  {
-    email: 'sponsor@tracebud.com',
-    role: 'Network Sponsor',
-    description: 'Monitor sponsored producer network',
-    icon: Heart,
-  },
-];
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -50,6 +16,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intent = searchParams.get('intent');
+  const recorded = searchParams.get('recorded') === '1';
+  const intentLabel =
+    intent === 'accept'
+      ? 'accept this request'
+      : intent === 'refuse'
+        ? 'refuse this request'
+        : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,23 +33,9 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('demo');
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      await login(demoEmail, 'demo');
-      router.push('/');
+      const nextPath = searchParams.get('next');
+      const safeNext = nextPath && nextPath.startsWith('/') ? nextPath : '/';
+      router.push(safeNext);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -102,8 +63,25 @@ export default function LoginPage() {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl">Sign in to your account</CardTitle>
             <CardDescription>
-              Enter your credentials or select a demo account
+              Enter your credentials to access your Tracebud workspace
             </CardDescription>
+            {intentLabel ? (
+              <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                {recorded
+                  ? (
+                    <>
+                      Your email action to <strong>{intentLabel}</strong> was recorded. Sign in to continue your
+                      compliance workflow.
+                    </>
+                  )
+                  : (
+                    <>
+                      You clicked an email action to <strong>{intentLabel}</strong>. Sign in to confirm and continue
+                      your compliance workflow.
+                    </>
+                  )}
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,40 +123,15 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
+              <p className="text-center text-sm text-muted-foreground">
+                New to Tracebud?{' '}
+                <Link href="/create-account" className="font-medium text-primary hover:underline">
+                  Create workspace
+                </Link>
+              </p>
             </form>
-
-            <div className="relative my-6">
-              <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                or use demo account
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleDemoLogin(account.email)}
-                  disabled={isLoading}
-                  className="flex w-full items-center gap-3 rounded-lg border border-border bg-secondary/50 p-3 text-left transition-colors hover:bg-secondary disabled:opacity-50"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    <account.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-foreground">{account.role}</div>
-                    <div className="text-xs text-muted-foreground">{account.description}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
           </CardContent>
         </Card>
-
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Demo mode uses mock data. No real authentication required.
-        </p>
       </div>
     </div>
   );

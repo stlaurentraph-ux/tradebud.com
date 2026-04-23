@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AdminPage from './page';
 import { renderAdminWithStatusReadFailure, renderAdminWithStatusReadSuccess, setupDownloadMocks } from './test-helpers';
 
 const { toastSuccess, toastError } = vi.hoisted(() => ({
@@ -79,6 +80,10 @@ describe('AdminPage DDS status last-error accessibility labels', () => {
   beforeEach(() => {
     toastSuccess.mockReset();
     toastError.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders export-control accessible names after status-read failure', async () => {
@@ -240,5 +245,103 @@ describe('AdminPage DDS status last-error accessibility labels', () => {
 
     expect(screen.getByRole('button', { name: 'Download JSON' })).toBeInTheDocument();
     expect(toastSuccess).toHaveBeenCalledWith('EUDR DDS status read completed (status 200).');
+  });
+
+  it('loads launch entitlements and renders feature rows', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          {
+            tenant_id: 'tenant_1',
+            feature_key: 'dashboard_exports',
+            entitlement_status: 'enabled',
+            effective_from: '2026-04-22T00:00:00.000Z',
+            effective_to: null,
+            updated_at: '2026-04-22T00:00:00.000Z',
+          },
+        ]),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Load entitlements' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('dashboard_exports')).toBeInTheDocument();
+      expect(screen.getByText('enabled')).toBeInTheDocument();
+      expect(toastSuccess).toHaveBeenCalledWith('Launch entitlements loaded.');
+    });
+  });
+
+  it('updates a launch entitlement from admin controls', async () => {
+    vi.spyOn(global, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              tenant_id: 'tenant_1',
+              feature_key: 'dashboard_exports',
+              entitlement_status: 'enabled',
+              effective_from: '2026-04-22T00:00:00.000Z',
+              effective_to: null,
+              updated_at: '2026-04-22T00:00:00.000Z',
+            },
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            tenant_id: 'tenant_1',
+            feature_key: 'dashboard_exports',
+            entitlement_status: 'disabled',
+            effective_from: '2026-04-22T00:00:00.000Z',
+            effective_to: null,
+            updated_at: '2026-04-22T01:00:00.000Z',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              tenant_id: 'tenant_1',
+              feature_key: 'dashboard_exports',
+              entitlement_status: 'disabled',
+              effective_from: '2026-04-22T00:00:00.000Z',
+              effective_to: null,
+              updated_at: '2026-04-22T01:00:00.000Z',
+            },
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    render(<AdminPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Load entitlements' }));
+    await waitFor(() => {
+      expect(screen.getByText('dashboard_exports')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
+    await waitFor(() => {
+      expect(screen.getByText('disabled')).toBeInTheDocument();
+      expect(toastSuccess).toHaveBeenCalledWith('Updated entitlement: dashboard_exports -> disabled.');
+    });
   });
 });

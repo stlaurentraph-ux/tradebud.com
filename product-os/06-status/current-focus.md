@@ -2,6 +2,19 @@
 
 ## Work now
 
+- Launch/public onboarding execution is now in stabilization mode: trial lifecycle + entitlement service is live, premium/export APIs are server-side gated, and dashboard onboarding checklist UX is wired to backend progress persistence.
+- Onboarding action-validation hardening is in progress: admin org/user/invite flows now run through backend-persistent APIs instead of in-memory dashboard data, closing a remaining mock-path for `team_invited`.
+- Onboarding action-validation hardening advanced: admin role/status mutations are now backend-persistent too (`PATCH /v1/admin/users/:id/role|status`), eliminating optimistic local-only admin mutation paths.
+- Onboarding sequencing adjusted for importer value path: compliance-manager/importer checklist now starts with `create_first_campaign` (send request first), then moves into review/check steps.
+- Onboarding CTA guard now blocks gated-route loops: step CTA checks feature gates client-side, redirects to safe overview fallback, and shows an inline notice when a route is unavailable.
+- Onboarding gated-route fallback telemetry is now instrumented (`onboarding_cta_gated_redirect`) via analytics proxy for tenant-scoped visibility into blocked CTA paths.
+- Immediate next checks:
+  - run end-to-end public-signup/trial-expiry simulations in staging,
+  - validate read-only UX at `trial_expired`,
+  - verify conversion/activation telemetry completeness (`trial_*`, `onboarding_step_completed`, `upgrade_*`).
+  - verify `onboarding_cta_gated_redirect` events appear in audit stream when onboarding CTA targets gated routes.
+  - run live dashboard importer onboarding smoke and confirm first CTA (`Open campaigns`) either lands on request workflow or shows the new gated-route fallback notice with safe redirect.
+
 - FEAT-009 post-closeout hardening slice complete: DB-backed integration coverage now verifies scheduler wrapper auth semantics and sweeper rollup payload persistence (`src/integrations/coolfarm-sai-v2.controller.int.spec.ts`), including scheduler token-version lineage assertions in `integration_audit_v2`.
 - Release hygiene pass complete for backend baseline:
   - `npm test` -> `16 suites / 187 tests` pass
@@ -513,6 +526,40 @@
 - FEAT-009 migration guidance cleanup + auto-link DB proof are now implemented as S1 slice 66: assessment controller migration error guidance is normalized to `TB-V16-021/TB-V16-022`, and DB-backed integration coverage now verifies auto-created questionnaire linkage persistence; next execution step is endpoint alias reduction and focused request-state API simplification.
 - FEAT-009 assessment API alias reduction is now implemented as S1 slice 67: redundant duplicate alias routes were removed to keep only canonical request endpoints, reducing contract sprawl; next execution step is publish a concise endpoint map for frontend teams and optionally add OpenAPI route-count guardrails.
 - FEAT-009 canonical endpoint map publication is now implemented as S1 slice 68: assessment workflow route contract is documented in a dedicated quality artifact; next execution step is optional OpenAPI/CI guardrail to fail on re-introduction of removed alias paths.
+- Launch entitlement persistence/enforcement is now implemented: `TB-V16-023` introduces tenant feature entitlement persistence and backend launch gates now enforce lifecycle + entitlement state together; next execution step is dedicated entitlement matrix test coverage (trial/paid/expired + disabled feature overrides).
+- Launch entitlement matrix test coverage is now implemented (`src/launch/launch.service.spec.ts`, `5` cases passing); next execution step is optional tenant-admin entitlement mutation API + controller tests for operational package toggles.
+- Launch entitlement admin mutation/read API is now implemented (`GET/PATCH /v1/launch/entitlements`, admin-only) with green unit coverage (`src/launch/launch.controller.spec.ts` + `src/launch/launch.service.spec.ts`); next execution step is optional dashboard admin UI/proxy for entitlement operations.
+- Launch entitlement dashboard admin UI/proxy is now implemented (`/api/launch/entitlements` + admin panel controls), with targeted dashboard tests green; next execution step is optional mutation confirmation UX + full-branch lint remediation of unrelated pre-existing dashboard warnings/errors.
+- Dashboard lint remediation is now complete for `apps/dashboard-product`; next execution step is optional onboarding checklist loading skeleton/fallback UX while `/api/launch/onboarding` is in-flight.
+- Tenant contacts CRM + request reuse is now implemented (`/contacts`, contacts backend/API proxies, request modal saved-contact selector); next execution step is migration-backed DDL + focused backend/frontend tests for contacts lifecycle behaviors.
+- Contacts migration + targeted tests are now implemented (`TB-V16-024`, contacts service/controller specs); next execution step is optional DB-backed integration coverage for contacts endpoints under migration-applied test schema.
+- Contacts apply/verify utility scripts are now implemented (`db:apply:crm-contacts`, `db:verify:crm-contacts`); next execution step is optional CI hook to run verify against migration-applied environments.
+- Contacts runtime 500 handling and migration apply are now complete; next execution step is optional CI coverage for contacts endpoints and migration verification in deployment pipelines.
+- Request campaign backend persistence and refresh durability are now implemented (`TB-V16-025`, backend requests module, dashboard backend list hydration); next execution step is optional endpoint integration tests and CI migration checks for `TB-V16-025`.
+- Campaign target-to-CRM sync is now implemented on request creation; next execution step is focused service-level tests for contact sync idempotency and status transition preservation.
+- Draft campaign editing and CRM target suggestion UX are now implemented; next execution step is adding targeted tests for `PATCH /v1/requests/campaigns/:id` and edit-flow UI assertions.
+- Resend-backed campaign invite delivery is now implemented on draft send with required env gating (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`) and persisted `target_contact_emails` targets (`TB-V16-026`); next execution step is adding requests service tests with mocked Resend delivery success/partial-failure paths.
+- Request campaign archive confirmation + soft-delete flow is now implemented (`POST /v1/requests/campaigns/:id/archive`, dashboard confirmation prompt, archived filter visibility); next execution step is optional unarchive action and dedicated archived view analytics event coverage.
+- Request campaign email-branding/content refinement is now implemented (sender display name, organization-context subject, compliance/business-continuity body copy); next execution step is replacing env-based organization label fallback with tenant/org canonical name lookup.
+- Request campaign email CTA refinement is now implemented (`Accept`, `Refuse`, `Connect and start your compliance journey`, docs link, configurable public URLs); next execution step is wiring CTA decisions to explicit backend response endpoints/events instead of URL intent params.
+- Request campaign CTA decision-intent reconciliation is now implemented (pre-login intent capture route, login `next` redirect, authenticated backend intent endpoint + proxy + in-app notice); next execution step is persisting recipient-level decision ledger/events for compliance reporting.
+- Onboarding optimization phase 1 is now in execution: Requests now includes an action-validated onboarding status card (`Contacts added`, `Campaign sent`, `First decision received`) with progress visibility and sync timestamp context.
+- Recipient decision timeline implementation is now in execution via tenant-scoped backend endpoint (`GET /v1/requests/campaigns/:id/decisions`) and dashboard proxy consumption; next execution step is adding regression tests for timeline retrieval and UI rendering states.
+- Recipient decision timeline UX hardening is now implemented with modal-level decision filters (`All`, `Accepted`, `Refused`) and incremental pagination for large response ledgers; next execution step is optional server-side pagination/filter query support if decision volumes grow.
+- Recipient decision timeline server-side pagination/filter controls are now implemented (`decision`, `limit`, `offset`) across backend endpoint + dashboard proxy + modal fetch flow; next execution step is optional API contract publication in OpenAPI and query telemetry instrumentation.
+- Recipient decision timeline OpenAPI contract publication is now complete in `docs/openapi/tracebud-v1-draft.yaml`; next execution step is optional query telemetry instrumentation for filter/pagination usage analytics.
+- Decision timeline runtime contract-parity guard is now implemented in backend unit tests; next execution step is optional integration-level schema parity assertions against live controller responses.
+- Decision timeline controller-level parity tests are now implemented; next execution step is optional integration test that exercises the guarded endpoint through Nest HTTP layer with authenticated tenant claims.
+- Decision timeline DB-backed controller integration tests are now implemented; next execution step is optional full Nest application HTTP e2e harness for guard/middleware serialization parity.
+- Decision timeline full Nest HTTP e2e parity test is now implemented; next execution step is optional negative-case coverage for invalid token and forbidden role through HTTP endpoint path.
+- Decision timeline HTTP negative-case coverage is now implemented (`Missing bearer`, `Invalid token`, `Forbidden role`); next execution step is optional rate-limit/abuse-path hardening for public decision-intent endpoint.
+- Account creation + commercial onboarding specification is now published in FEAT-001 (conversion-first 4-step journey + exact UX copy + event/acceptance updates); next execution step is implementing dashboard/backend signup and onboarding surfaces with staging validation for conversion telemetry and first-value completion rates.
+- Account creation execution checklist is now published in FEAT-001 (file-by-file dashboard/backend/OpenAPI/test plan); next execution step is implementation sprint start: `app/create-account/page.tsx` + `app/api/auth/signup/route.ts` + backend launch commercial-profile API/migration (`TB-V16-028`) with targeted tests.
+- Account creation slice A (dashboard route + signup proxy) is now implemented and tested (`app/create-account/page.tsx`, `components/auth/create-account-wizard.tsx`, `app/api/auth/signup/route.ts`); next execution step is slice B: `app/api/launch/commercial-profile/route.ts` plus backend `/v1/launch/signup` + commercial-profile persistence (`TB-V16-028`) and route/UI integration tests.
+- Account creation slice B (commercial-profile proxy + backend signup/profile APIs + migration) is now implemented and tested; next execution step is slice C: OpenAPI publication for `/v1/launch/signup` + `/v1/launch/commercial-profile`, create-account wizard UI integration tests, and DB-backed launch integration coverage for tenant-scoped profile persistence.
+- Account creation slice C (OpenAPI + UI tests + DB-backed integration) is now implemented and validated; next execution step is optional role-aware post-signup redirect/onboarding continuity wiring in auth/layout layer.
+- Account creation slice D (session continuity + role-aware redirect) is now implemented and validated; next execution step is optional onboarding action-marker wiring on first-value destination pages for full auto-validation continuity.
+- Account creation slice J (local dev signup bypass for QA) is now implemented and validated; next execution step is running manual local create-account click-through with `TRACEBUD_DEV_SIGNUP_BYPASS=true` and recording UX evidence notes.
 
 ## Priority migration lanes (v1.6)
 

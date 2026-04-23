@@ -30,3 +30,7 @@ This file indexes acceptance criteria by domain. Canonical wording stays in pill
 - Security program controls and credential exposure runbook coverage (Section 48)
 - Operational SLA monitoring and escalation compliance (Section 49)
 - Internal consistency validation completion before Phase 1 start (Section 55)
+- Launch entitlement lifecycle (trial activation, expiry, paid activation, suspended fail-closed behavior)
+- Autonomous onboarding activation (role-specific checklist persistence and first-value completion path)
+- Tenant CRM contact lifecycle (status transitions validated server-side with tenant-scoped auditability)
+- Account creation conversion UX (minimum-identity signup, value reinforcement, commercial clarity, progressive profiling without blocking first value)

@@ -97,9 +97,36 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   const blockingIssuesCount = 2;
   const yieldFailuresCount = 1;
   const ddsSubmissionQueue = shipmentStates.SEALED;
+  const isVirginTenant =
+    metrics.total_packages === 0 &&
+    metrics.total_plots === 0 &&
+    metrics.total_farmers === 0;
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-emerald-200 bg-emerald-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your new workspace</CardTitle>
+            <CardDescription>
+              No demo data is preloaded. Complete onboarding steps above to create your first campaign, import contacts, and start collecting field data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/requests">Create first campaign</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/farmers">Add first producer</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/plots">Capture first plot</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       <span className="sr-only">
         Plot compliance rate {complianceRate} percent ({metrics.compliant_plots} of {metrics.total_plots} plots).
       </span>
@@ -356,11 +383,17 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <CardDescription>Latest actions and system events</CardDescription>
         </CardHeader>
         <CardContent>
-          <Timeline 
-            events={mockRecentActivity} 
-            maxHeight={250}
-            compact
-          />
+          {isVirginTenant ? (
+            <p className="text-sm text-muted-foreground">
+              Activity will appear here once your team starts onboarding and submission workflows.
+            </p>
+          ) : (
+            <Timeline 
+              events={mockRecentActivity} 
+              maxHeight={250}
+              compact
+            />
+          )}
         </CardContent>
       </Card>
 

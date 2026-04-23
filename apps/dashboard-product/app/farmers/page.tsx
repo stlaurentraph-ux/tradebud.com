@@ -13,7 +13,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Filter, ChevronRight, User, CheckCircle, AlertCircle } from 'lucide-react';
-import { getMockFarmersWithStats } from '@/lib/mock-data';
 import Link from 'next/link';
 
 const complianceColors = {
@@ -29,7 +28,16 @@ const complianceLabels = {
 };
 
 export default function FarmersPage() {
-  const farmers = getMockFarmersWithStats();
+  const farmers: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    cooperative: string;
+    total_plots: number;
+    total_area_hectares: number;
+    fpic_signed: boolean;
+    compliance_status: 'compliant' | 'non_compliant' | 'partial';
+  }> = [];
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredFarmers = farmers.filter(

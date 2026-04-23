@@ -33,7 +33,10 @@ const FEATURE_GATE_CONFIG: readonly FeatureGateConfig[] = [
 export function isFeatureEnabled(key: FeatureGateKey): boolean {
   const gate = FEATURE_GATE_CONFIG.find((item) => item.key === key);
   if (!gate) return false;
-  const value = process.env[gate.envVar];
+  const value =
+    key === 'request_campaigns'
+      ? process.env.NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS
+      : process.env.NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING;
   if (!value) return gate.defaultEnabled;
   return value === '1' || value.toLowerCase() === 'true';
 }

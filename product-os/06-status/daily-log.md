@@ -1,3 +1,87 @@
+### 2026-04-22 (execution: onboarding gated-CTA telemetry instrumentation)
+- Focus: instrument gated onboarding CTA fallbacks so blocked-route frequency is measurable.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `product-os/04-quality/event-tracking.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added telemetry event type `onboarding_cta_gated_redirect` to gated-entry analytics POST contract.
+  - Dashboard onboarding CTA now emits this event when navigation target is feature-gated and fallback redirect is applied.
+  - Preserved existing `dashboard_gated_entry_attempt` default event behavior for all existing callers.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- app/api/analytics/gated-entry/route.test.ts app/page.test.tsx` (pass, `2 suites / 26 tests`).
+  - `ReadLints` on touched files (no lints).
+- Risks: telemetry relies on tenant/role context availability at click time; when unavailable, event is skipped by design to avoid malformed analytics writes.
+- Blockers: none.
+- Next step: optionally surface this new event in admin diagnostics event-kind filters for operator visibility without raw audit inspection.
+
+### 2026-04-22 (execution: onboarding CTA guard for gated routes)
+- Focus: prevent onboarding CTA click loops when a step route is feature-gated in the current environment.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added client-side gate check (`getDeferredGateForPath`) before onboarding CTA navigation.
+  - When target route is gated, CTA now redirects to `/` and shows a clear in-dialog notice (`route is currently gated`) instead of silently bouncing.
+  - Preserved existing onboarding progression and action-validation semantics.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- app/page.test.tsx` (pass, `1 suite / 3 tests`).
+  - `ReadLints` on `apps/dashboard-product/app/page.tsx` (no lints).
+- Risks: notice is currently dialog-local only; if users click CTA after closing dialog they still rely on global route middleware behavior.
+- Blockers: none.
+- Next step: optionally add lightweight telemetry event for `onboarding_cta_gated_redirect` to quantify how often environment gates block onboarding steps.
+
+### 2026-04-22 (execution: importer onboarding sequencing adjustment)
+- Focus: align importer onboarding with real first-value action (send request first) before compliance checks.
+- Files changed: `tracebud-backend/src/launch/launch.service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Restored `create_first_campaign` as first compliance-manager/importer onboarding step.
+  - Kept template-scoped onboarding read filter/order so stale DB rows cannot reintroduce deprecated ordering.
+- Verification:
+  - `cd tracebud-backend && npm run -s build` (pass).
+  - live endpoint check confirms importer/compliance-manager first actionable step is `create_first_campaign`.
+- Risks: if `/requests` gate is disabled in an environment, CTA can still redirect; this ordering change assumes request workflow is intended/available for importer launch flow.
+- Blockers: none.
+- Next step: optionally add frontend CTA guard/fallback for gated routes to avoid redirect loops when feature flags differ by environment.
+
+### 2026-04-22 (execution: onboarding CTA routing hardening for importer/compliance-manager path)
+- Focus: fix onboarding UX where "Open campaigns" from importer onboarding bounced back to overview due MVP route gating.
+- Files changed: `tracebud-backend/src/launch/launch.service.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Updated compliance-manager onboarding defaults to avoid gated request-campaign route in MVP.
+  - Compliance-manager step sequence is now: `create_account` -> `review_first_submission` -> `run_first_compliance_check` -> `generate_first_insight`.
+  - Preserved action-validated steps and existing event semantics; no new analytics event types introduced.
+- Verification:
+  - `cd tracebud-backend && npm run -s build` (pass).
+  - `ReadLints` on `src/launch/launch.service.ts` (no lints).
+- Risks: existing tenant rows for old step keys remain in DB history; API response now follows current template set so obsolete gated step is not returned in onboarding checklist.
+- Blockers: none.
+- Next step: run dashboard UX smoke with importer session to confirm onboarding CTA now routes only to accessible pages.
+
+### 2026-04-22 (execution: FEAT-001 onboarding hardening - backend-persistent admin role/status mutations)
+- Focus: complete admin onboarding persistence so role/status changes are backend-written and tenant-auditable.
+- Files changed: `tracebud-backend/src/admin/admin.controller.ts`, `tracebud-backend/src/admin/admin.service.ts`, `apps/dashboard-product/app/api/admin/users/[id]/role/route.ts`, `apps/dashboard-product/app/api/admin/users/[id]/status/route.ts`, `apps/dashboard-product/lib/admin-service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added backend tenant-scoped admin mutation endpoints: `PATCH /v1/admin/users/:id/role` and `PATCH /v1/admin/users/:id/status`.
+  - Enforced explicit admin role + tenant claim checks before mutations; non-matching tenant/user IDs fail closed.
+  - Converted dashboard role/status actions from in-memory cache mutation to backend API persistence via new proxy routes.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- app/admin/page.test.tsx` (pass, `1 suite / 11 tests`).
+  - `ReadLints` on touched backend/frontend files (no lints).
+- Risks: backend full build remains blocked by pre-existing launch-controller TS4053 export issues unrelated to this admin slice.
+- Blockers: none for admin mutation persistence flow.
+- Next step: run live manual admin smoke (`invite -> change role -> suspend/reactivate`) in dashboard with a real tenant token to confirm UX messaging against backend responses.
+
+### 2026-04-22 (execution: FEAT-001 onboarding hardening - backend-persistent admin invite/org flows)
+- Focus: remove remaining dashboard in-memory admin mocks so onboarding actions (`team_invited`) are validated by real backend writes.
+- Files changed: `tracebud-backend/src/admin/admin.module.ts`, `tracebud-backend/src/admin/admin.controller.ts`, `tracebud-backend/src/admin/admin.service.ts`, `tracebud-backend/src/app.module.ts`, `apps/dashboard-product/app/api/admin/organizations/route.ts`, `apps/dashboard-product/app/api/admin/users/route.ts`, `apps/dashboard-product/app/api/admin/users/invite/route.ts`, `apps/dashboard-product/lib/admin-service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added authenticated backend admin API surface (`/v1/admin/organizations`, `/v1/admin/users`, `/v1/admin/users/invite`) with explicit admin-role and tenant-claim enforcement.
+  - Persisted organizations/users to DB-backed tables (`admin_organizations`, `admin_users`) and removed dashboard in-memory seed dependency for admin operations.
+  - Added dashboard proxy routes for admin reads/writes with auth pass-through and fail-closed behavior when backend URL is missing.
+  - Rewired dashboard admin service to call backend-proxied APIs so invite/create flows are action-validated by persisted backend state.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- app/admin/page.test.tsx` (pass, `1 suite / 11 tests`).
+  - `ReadLints` on touched backend/frontend files (no lints).
+- Risks: backend full build currently fails on pre-existing launch controller type-export issues unrelated to this slice (`TS4053` in `src/launch/launch.controller.ts`).
+- Blockers: none for admin onboarding flow.
+- Next step: add backend update endpoints for user role/status so admin role/status mutations also move from optimistic client-only updates to persisted backend writes.
+
 ### 2026-04-21 (execution: FEAT-005 benchmark-path runtime closure + yearly cadence lock)
 - Focus: close the live runtime gap between activated FAOSTAT benchmarks and harvest yield-cap enforcement, then finalize ops cadence.
 - Files changed: `tracebud-backend/src/harvest/harvest.service.ts`, `tracebud-backend/src/harvest/harvest.service.spec.ts`, `tracebud-backend/src/plots/plots.service.ts`, `product-os/02-features/FEAT-005-risk-scoring.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
@@ -3028,6 +3112,142 @@ Append-only session log.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
 
+### 2026-04-22 (execution: account creation slice A - dashboard route + signup proxy)
+- Focus: implement the first code tranche of account-creation commercialization flow in dashboard app.
+- Files changed: `apps/dashboard-product/app/create-account/page.tsx`, `apps/dashboard-product/components/auth/create-account-wizard.tsx`, `apps/dashboard-product/app/login/page.tsx`, `apps/dashboard-product/app/api/auth/signup/route.ts`, `apps/dashboard-product/app/api/auth/signup/route.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added a 4-step create-account wizard UI with value reinforcement and optional commercial-profile skip path; introduced guarded `POST /api/auth/signup` proxy contract with fail-closed backend URL handling and workspace-setup auth requirement.
+- Risks: `/api/launch/commercial-profile` and backend `/v1/launch/signup` are referenced by new UI/proxy contracts but not yet implemented in this slice.
+- Blockers: None.
+- Next step: implement commercial-profile proxy + backend launch signup/commercial-profile endpoints and migration (`TB-V16-028`), then add UI integration tests.
+
+### 2026-04-22 (execution: account creation slice B - commercial profile + backend launch signup APIs)
+- Focus: complete account-creation backend contracts and tenant-scoped commercial-profile persistence.
+- Files changed: `apps/dashboard-product/app/api/launch/commercial-profile/route.ts`, `apps/dashboard-product/app/api/launch/commercial-profile/route.test.ts`, `apps/dashboard-product/components/auth/create-account-wizard.tsx`, `tracebud-backend/src/launch/launch.public.controller.ts`, `tracebud-backend/src/launch/launch.public.controller.spec.ts`, `tracebud-backend/src/launch/launch.service.ts`, `tracebud-backend/src/launch/launch.module.ts`, `tracebud-backend/sql/tb_v16_028_tenant_commercial_profiles.sql`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: implemented backend public launch endpoints for create-account/workspace-setup and commercial-profile persistence, added migration-backed tenant commercial-profile storage contract, and expanded dashboard proxy/test coverage for optional-profile path.
+- Risks: OpenAPI contract updates and DB-backed integration tests for new launch endpoints are still pending.
+- Blockers: None.
+- Next step: add OpenAPI definitions for new launch endpoints, add UI flow tests for create-account wizard, and add DB-backed integration tests for tenant-scoped commercial-profile persistence paths.
+
+### 2026-04-22 (execution: account creation slice C - OpenAPI, UI tests, DB-backed integration)
+- Focus: close contract/test gaps for account-creation launch onboarding surfaces.
+- Files changed: `apps/dashboard-product/app/create-account/page.test.tsx`, `docs/openapi/tracebud-v1-draft.yaml`, `tracebud-backend/src/launch/launch.public.controller.ts`, `tracebud-backend/src/launch/launch.commercial-profile.api.int.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: published OpenAPI tag/path/schema coverage for launch signup + commercial profile, added create-account UI behavior test coverage, and added DB-backed API integration test proving tenant-scoped commercial-profile write path and fail-closed missing-auth behavior.
+- Risks: role-aware post-signup redirect/onboarding continuity wiring is still pending in app auth/layout paths.
+- Blockers: None.
+- Next step: optionally add role-aware post-signup redirect wiring in auth/layout layer and extend onboarding continuity assertions.
+
+### 2026-04-22 (execution: account creation slice D - session continuity + role-aware redirect)
+- Focus: remove post-signup auth continuity gap and route users to role-relevant first-value destination.
+- Files changed: `apps/dashboard-product/lib/auth-context.tsx`, `apps/dashboard-product/components/auth/create-account-wizard.tsx`, `apps/dashboard-product/components/layout/dashboard-layout.tsx`, `apps/dashboard-product/app/create-account/page.test.tsx`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added auth-context token hydrator for immediate in-memory session materialization, made `/create-account` a public route in layout guard, and implemented role-aware post-signup redirect (`admin` -> users admin, others -> campaign creation flow).
+- Risks: onboarding checklist continuity through explicit onboarding action markers is still pending for complete first-step auto-validation coverage.
+- Blockers: None.
+- Next step: optionally wire onboarding action markers on role-first destination pages (`/admin/users`, `/requests`) to auto-complete first onboarding step without manual validation click.
+
+### 2026-04-22 (execution: account creation slice E - cross-page onboarding action sync)
+- Focus: ensure onboarding completions are persisted from any page where onboarding actions are performed.
+- Files changed: `apps/dashboard-product/lib/onboarding-actions.ts`, `apps/dashboard-product/lib/onboarding-actions.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: upgraded shared onboarding action helper to post canonical role+step completion payloads to `/api/launch/onboarding` whenever an onboarding action marker is set, while preserving existing sessionStorage marker + event behavior.
+- Risks: completion sync is best-effort and intentionally non-blocking; transient API failures still rely on local markers and subsequent dashboard validation pass.
+- Blockers: None.
+- Next step: optionally add page-level smoke tests around major action flows (`requests` draft create, admin invite) asserting completion sync call count when required.
+
+### 2026-04-22 (execution: account creation slice F - page-level onboarding smoke coverage)
+- Focus: add high-signal smoke tests proving major UI action flows trigger onboarding markers.
+- Files changed: `apps/dashboard-product/app/requests/page.test.tsx`, `apps/dashboard-product/app/admin/users/page.test.tsx`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: requests page success path now asserts `campaign_created` and `contacts_uploaded` marker calls; new admin users test asserts successful invite triggers `team_invited`.
+- Risks: smoke tests currently validate marker invocation and shared helper sync path separately; they do not assert end-to-end network side-effects from those pages in one combined integration test.
+- Blockers: None.
+- Next step: optional combined integration-style test for one role flow (`create account -> first action -> onboarding list reflects completion`) if we want end-to-end UI-to-API proof in a single scenario.
+
+### 2026-04-22 (execution: account creation slice G - integration-style onboarding proof path)
+- Focus: prove one continuous onboarding completion path from create-account flow into first-value completion sync payload semantics.
+- Files changed: `apps/dashboard-product/app/create-account/page.test.tsx`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: create-account test now executes importer path across steps 1-4, validates post-setup redirect target, and asserts `markOnboardingAction('campaign_created')` emits `POST /api/launch/onboarding` with role mapping `compliance_manager` and canonical step key `create_first_campaign`.
+- Risks: this remains a jsdom integration-style test with mocked network boundaries rather than a live backend e2e run.
+- Blockers: None.
+- Next step: optional backend+dashboard environment smoke run against live staging tenant to validate same payload contract under real auth/session decoding.
+
+### 2026-04-22 (execution: account creation slice H - onboarding proxy boundary verification)
+- Focus: validate dashboard onboarding proxy semantics for both status reads and completion writes.
+- Files changed: `apps/dashboard-product/app/api/launch/onboarding/route.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added dedicated route tests for onboarding proxy `GET`/`POST` fail-closed env behavior and forwarding contract (`role` query, authorization header, completion payload).
+- Risks: still test-environment verification; no live staging HTTP evidence captured yet.
+- Blockers: None.
+- Next step: run scripted staging smoke (dashboard proxy -> backend onboarding endpoints) with a temporary tenant token and capture request/response evidence in release QA artifacts.
+
+### 2026-04-22 (execution: account creation slice I - staging onboarding smoke runbook automation)
+- Focus: prepare deterministic staging evidence collection for onboarding proxy read/write contracts.
+- Files changed: `apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs`, `apps/dashboard-product/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added a token-driven smoke script (`qa:launch:onboarding:smoke`) to call both onboarding proxy endpoints and emit status/payload snapshots suitable for QA evidence logs.
+- Risks: script execution requires valid staging dashboard URL + tenant bearer token; until those are supplied, this slice provides runbook automation rather than captured live evidence.
+- Blockers: None.
+- Next step: execute the smoke command with staging credentials and paste output snapshots into `product-os/04-quality/release-qa-evidence.md`.
+
+### 2026-04-23 (execution: account creation slice J - local dev signup bypass for QA)
+- Focus: unblock manual create-account UX testing under Supabase email throttle constraints.
+- Files changed: `apps/dashboard-product/app/api/auth/signup/route.ts`, `apps/dashboard-product/app/api/launch/commercial-profile/route.ts`, `apps/dashboard-product/app/api/auth/signup/route.test.ts`, `apps/dashboard-product/app/api/launch/commercial-profile/route.test.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced `TRACEBUD_DEV_SIGNUP_BYPASS=true` (non-production only) to return synthetic local signup/workspace/profile success payloads for create-account steps 1-3 without requiring upstream Supabase signup emails.
+- Risks: bypass mode is for local QA only and should remain disabled in shared/prod environments.
+- Blockers: None.
+- Next step: set bypass flag in local dashboard env and perform manual end-to-end create-account click-through validation.
+
+### 2026-04-22 (execution: account creation implementation checklist publication)
+- Focus: convert account-creation commercial onboarding specification into an execution-ready file-by-file delivery checklist.
+- Files changed: `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added explicit dashboard/backend/OpenAPI/test task breakdown for create-account flow, including route/component targets, proxy contracts, telemetry instrumentation points, migration naming, and verification commands.
+- Risks: checklist references planned migration `TB-V16-028` and new dashboard routes not yet implemented; sequence and ownership should be confirmed before coding start.
+- Blockers: None.
+- Next step: start implementation with dashboard create-account route + signup proxy, then land backend commercial-profile API/migration in parallel.
+
+### 2026-04-22 (execution: account creation + commercial onboarding spec publication)
+- Focus: define a conversion-efficient create-account journey that reinforces commercial value while preserving low-friction signup and fast first-value.
+- Files changed: `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/04-quality/acceptance-criteria.md`, `product-os/04-quality/event-tracking.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: published a 4-step canonical flow (`Create account` -> `Workspace setup` -> optional `Commercial profile` -> `First value checklist`) with explicit copy, CTA labels, minimum required fields, skippable progressive profiling, tenant/role permission boundaries, lifecycle transitions, recovery behavior, and event taxonomy additions.
+- Risks: current slice is specification-only; UX and API implementation still require build/test evidence before production rollout.
+- Blockers: None.
+- Next step: implement the screen and API contracts in dashboard/backend, then verify event payload completeness and checklist personalization in staging.
+
+### 2026-04-22 (execution: request campaign CTA intent capture and post-login reconciliation)
+- Focus: make email `Accept/Refuse` CTA clicks survive pre-auth and resolve consistently after login.
+- Files changed: `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/requests/intent/page.tsx`, `apps/dashboard-product/app/login/page.tsx`, `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/app/api/requests/campaigns/[id]/decision-intent/route.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: CTA links now target `/requests/intent` for pre-login session capture, login now honors sanitized `next` redirect, and requests page now records decision intent through authenticated backend endpoint with user-facing confirmation notice.
+- Risks: decision intent is currently acknowledged but not yet persisted as recipient-level immutable event ledger for compliance exports.
+- Blockers: None.
+- Next step: add immutable decision-intent audit event persistence keyed by campaign + recipient to support downstream reporting and dispute resolution.
+
+### 2026-04-22 (execution: request campaign email CTA button UX)
+- Focus: improve recipient decision flow from campaign emails with clear action controls and help links.
+- Files changed: `tracebud-backend/src/requests/requests.service.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `Accept`, `Refuse`, and `Connect and start your compliance journey` button links plus docs deep-link; introduced env-configurable public URL inputs (`TRACEBUD_DASHBOARD_PUBLIC_URL`, `TRACEBUD_DOCS_PUBLIC_URL`) with safe defaults.
+- Risks: current accept/refuse links carry URL intent only and are not yet bound to dedicated backend decision endpoints; recipients still complete decisions after login within app flow.
+- Blockers: None.
+- Next step: wire CTA decision endpoints/events so accept/refuse clicks can be captured pre-auth as intent telemetry and reconciled after login.
+
+### 2026-04-22 (execution: request campaign outbound email copy/branding refinement)
+- Focus: improve recipient-facing email clarity and trust signals for campaign requests.
+- Files changed: `tracebud-backend/src/requests/requests.service.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: sender now uses branded display format (`Tracebud <...>`), subject now includes requesting organization context, and body now explains compliance/business continuity rationale with explicit 1-month free account onboarding guidance and downstream evidence-chain continuation flow.
+- Risks: organization label currently falls back to env/tenant id; canonical tenant display-name source should replace fallback in a follow-up slice.
+- Blockers: None.
+- Next step: wire sender-organization label to canonical tenant profile metadata and add localized email templates.
+
+### 2026-04-22 (execution: request campaign archive confirmation + soft-delete behavior)
+- Focus: make campaign delete/cancel action functional with explicit confirmation and archive semantics.
+- Files changed: `tracebud-backend/src/requests/requests.service.ts`, `tracebud-backend/src/requests/requests.controller.ts`, `apps/dashboard-product/app/api/requests/campaigns/[id]/archive/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added backend archive endpoint (`POST /v1/requests/campaigns/:id/archive`) setting status to `CANCELLED`; dashboard now shows confirmation prompt before archive and hides archived campaigns from default `All Status` list while preserving visibility via `Archived` filter.
+- Risks: archive is status-based (soft-delete) and currently reversible only via direct DB/API mutation, not dedicated unarchive UI.
+- Blockers: None.
+- Next step: optionally add an explicit archived-campaign tab and unarchive action if ops workflows require restoration.
+
+### 2026-04-22 (execution: request campaigns Resend email delivery)
+- Focus: enable real outbound campaign invite delivery and remove no-email send behavior for draft campaigns.
+- Files changed: `tracebud-backend/src/requests/requests.service.ts`, `tracebud-backend/sql/tb_v16_026_request_campaign_contact_targets.sql`, `tracebud-backend/scripts/apply-request-campaign-contact-targets-migration.mjs`, `tracebud-backend/package.json`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added persisted `target_contact_emails` campaign field (`TB-V16-026`), wired `sendDraft` to dispatch emails via Resend (`RESEND_API_KEY` + `RESEND_FROM_EMAIL` required), and set `pending_count` from successful recipient dispatch count.
+- Risks: partial delivery currently proceeds when at least one email succeeds; failed recipients are not yet persisted with per-recipient failure telemetry.
+- Blockers: None.
+- Next step: add requests service tests that mock Resend outcomes (full success, partial failure, full failure) and consider recipient-level delivery audit events.
+
 ### 2026-04-20 (execution: FEAT-009 S1 post-closeout hardening slice 67)
 - Focus: simplify assessment API contract by removing duplicated alias routes and keeping canonical endpoints only.
 - Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
@@ -4371,6 +4591,198 @@ Append-only session log.
 - Risks: Metrics currently summarize one fail-fixture snapshot path and selected counters; if analytics consumers require richer dimensions, payload schema will need explicit versioned expansion.
 - Blockers: None.
 - Next step: optionally add parity-metrics schema + assertion gate (similar to report schema assertion) to lock mini-metrics payload contract before broader trend consumers depend on it.
+
+### 2026-04-22 (execution: dashboard + app public launch implementation)
+- Focus: implement no-card 30-day dashboard trial lifecycle, strict server-side monetization/data-egress gates, and autonomous onboarding scaffolding for public launch.
+- Files changed: `tracebud-backend/src/launch/*`, `tracebud-backend/src/app.module.ts`, `tracebud-backend/src/harvest/*`, `tracebud-backend/src/reports/*`, `tracebud-backend/src/integrations/*`, `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/api/launch/*`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/04-quality/acceptance-criteria.md`, `product-os/04-quality/event-tracking.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`.
+- Decisions: added tenant trial state machine (`trial_active`, `trial_expired`, `paid_active`, `suspended`) with idempotent auto-provision + expiry evaluation; added tenant onboarding progress persistence and role templates; enforced server-side launch entitlement checks on premium reporting/compliance/export APIs; dashboard now surfaces trial state and role onboarding checklist with persisted completion actions.
+- Risks: trial gating currently returns generic forbidden responses (not dedicated billing error type), and dashboard onboarding/checklist is functional but intentionally lightweight UI (no contextual walkthrough overlays yet).
+- Blockers: none.
+- Next step: run staging validation for trial-expiry/read-only behavior, conversion telemetry coverage, and post-expiry upgrade UX continuity.
+
+### 2026-04-22 (execution: tenant feature entitlement persistence + enforcement)
+- Focus: upgrade launch gating from lifecycle-only checks to tenant-scoped persisted feature entitlements for dashboard module packaging.
+- Files changed: `tracebud-backend/sql/tb_v16_023_tenant_feature_entitlements.sql`, `tracebud-backend/src/launch/launch.service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added canonical table `tenant_feature_entitlements` (`feature_key`, `entitlement_status`, effective window) and enforced entitlement-aware checks in `LaunchService.requireFeatureAccess`; default trial provisioning now seeds entitlement rows and paid upgrade normalizes tenant entitlements to `enabled`.
+- Risks: entitlement lifecycle currently uses a compact status model (`enabled|disabled|trial`) without explicit scheduled/future package change jobs; future entitlement-ops workflows may need an admin mutation API and richer policy metadata.
+- Blockers: None.
+- Next step: add targeted launch-service/controller tests for entitlement denial/allow matrix across `trial_active`, `paid_active`, and `trial_expired` states, including one disabled-feature override fixture.
+
+### 2026-04-22 (execution: launch entitlement matrix test hardening)
+- Focus: add deterministic unit coverage for lifecycle + feature-entitlement gate behavior in launch service.
+- Files changed: `tracebud-backend/src/launch/launch.service.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced focused `LaunchService.requireFeatureAccess` matrix tests covering allow paths (`trial_active+trial`, `paid_active+enabled`) and deny paths (`trial_expired`, `suspended`, `disabled entitlement`) to lock intended monetization and package-gate semantics.
+- Risks: coverage is service-layer and mock-driven; controller-level matrix assertions for feature-denied responses across all gated endpoints can be added later if we need stronger HTTP-path proof.
+- Blockers: None.
+- Next step: optionally add a compact entitlement admin mutation endpoint (tenant-scoped, role-restricted) plus controller tests to support operational package toggles without direct SQL edits.
+
+### 2026-04-22 (execution: launch entitlement admin ops API)
+- Focus: add role-scoped operational endpoints so tenant feature packages can be managed without direct SQL edits.
+- Files changed: `tracebud-backend/src/launch/launch.service.ts`, `tracebud-backend/src/launch/launch.controller.ts`, `tracebud-backend/src/launch/launch.controller.spec.ts`, `tracebud-backend/src/launch/launch.service.spec.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `GET /v1/launch/entitlements` and `PATCH /v1/launch/entitlements` with strict `admin` role gate; launch service now supports listing/upserting entitlement rows and emits immutable `feature_entitlement_updated` audit events with actor metadata.
+- Risks: entitlement mutation path currently uses direct admin authority without an additional dual-control approval workflow; if enterprise governance requirements tighten, an approval queue can be layered on top.
+- Blockers: None.
+- Next step: optionally expose a dashboard admin proxy/UI for entitlement toggles so support operations do not require direct backend API tooling.
+
+### 2026-04-22 (execution: dashboard launch entitlement admin UI)
+- Focus: expose launch entitlement operations in dashboard admin so feature-package toggles are operable without direct backend API tooling.
+- Files changed: `apps/dashboard-product/app/admin/page.tsx`, `apps/dashboard-product/app/admin/page.test.tsx`, `apps/dashboard-product/app/api/launch/entitlements/route.ts`, `apps/dashboard-product/app/api/launch/entitlements/route.test.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added admin-panel entitlement table with explicit load + per-feature status mutation controls; introduced dashboard proxy route for launch entitlement GET/PATCH passthrough with auth header forwarding and backend-status preservation.
+- Risks: dashboard lint run remains blocked by pre-existing unrelated lint issues in `app/page.tsx` (`react-hooks/set-state-in-effect`) and `components/layout/app-sidebar.tsx` unused imports; entitlement slice files are clean and targeted tests pass.
+- Blockers: None for entitlement slice itself; global app lint remains branch-blocked by prior unrelated issues.
+- Next step: optionally add lightweight confirmation dialog before entitlement status mutation and/or role badge that clarifies current admin claim context.
+
+### 2026-04-22 (execution: dashboard lint stabilization pass)
+- Focus: clear remaining dashboard lint blockers so full `dashboard-product` lint gate passes after launch entitlement UI rollout.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/components/layout/app-sidebar.tsx`, `apps/dashboard-product/components/layout/app-header.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: removed effect-time state priming in dashboard page to satisfy `react-hooks/set-state-in-effect`; removed unused icon/import debris in sidebar/header to eliminate warning-only lint blockers under `--max-warnings 0`.
+- Risks: dashboard onboarding now relies on backend onboarding API response instead of temporary local defaults during initial fetch, so any backend outage can keep onboarding list empty until retry.
+- Blockers: None.
+- Next step: optionally add an explicit loading/skeleton state for onboarding checklist while launch onboarding API is in-flight to preserve perceived continuity.
+
+### 2026-04-22 (execution: tenant contacts CRM and request-campaign reuse)
+- Focus: deliver a production-data contacts workspace and connect it to request campaign creation so onboarding can reuse saved recipients.
+- Files changed: `tracebud-backend/src/contacts/*`, `tracebud-backend/src/app.module.ts`, `apps/dashboard-product/app/api/contacts/*`, `apps/dashboard-product/lib/contact-service.ts`, `apps/dashboard-product/app/contacts/page.tsx`, `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/app/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/04-quality/acceptance-criteria.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced tenant-scoped `crm_contacts` persistence with explicit status transition rules and audit-log events; added role-scoped contacts permissions/navigation and a new Contacts page; campaign modal now supports selecting existing CRM contacts.
+- Risks: contacts schema currently self-initializes from service startup path instead of migration-backed SQL artifact, so CI/prod rollout should add a dedicated migration next.
+- Blockers: None.
+- Next step: add migration-backed DDL for `crm_contacts` and targeted unit/integration coverage for contacts controller/service paths.
+
+### 2026-04-22 (execution: contacts migration-backed schema + transition tests)
+- Focus: remove runtime DDL dependency for contacts and add focused regression coverage for contact lifecycle guardrails.
+- Files changed: `tracebud-backend/sql/tb_v16_024_crm_contacts.sql`, `tracebud-backend/src/contacts/contacts.service.ts`, `tracebud-backend/src/contacts/contacts.service.spec.ts`, `tracebud-backend/src/contacts/contacts.controller.spec.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: moved `crm_contacts` provisioning to migration (`TB-V16-024`) and removed service-level schema bootstrap; added service/controller unit tests for permissions, payload validation, and status transition integrity.
+- Risks: migration must be applied in each environment before contacts endpoints are used.
+- Blockers: None.
+- Next step: optionally add DB-backed integration tests for contacts endpoints under migration-applied test DB to validate full controller->DB behavior.
+
+### 2026-04-22 (execution: crm_contacts migration utility scripts)
+- Focus: add operational scripts to apply/verify `TB-V16-024` consistently across environments.
+- Files changed: `tracebud-backend/scripts/apply-crm-contacts-migration.mjs`, `tracebud-backend/package.json`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `db:apply:crm-contacts` and `db:verify:crm-contacts` commands using the existing `run-with-root-test-db.mjs` pattern and env fallback contract (`CRM_CONTACTS_DATABASE_URL` -> `DATABASE_URL` -> `TEST_DATABASE_URL`).
+- Risks: verify fails until migration has been applied at least once in a target environment.
+- Blockers: None.
+- Next step: optionally wire these commands into CI migration checks for early drift detection.
+
+### 2026-04-22 (execution: contacts 500 error hardening + migration apply)
+- Focus: resolve dashboard Contacts load failure (`Contact request failed (status 500)`).
+- Files changed: `tracebud-backend/src/contacts/contacts.service.ts`, `tracebud-backend/src/contacts/contacts.service.spec.ts`, `apps/dashboard-product/app/api/contacts/route.ts`, `apps/dashboard-product/app/api/contacts/[id]/status/route.ts`, `apps/dashboard-product/lib/contact-service.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: backend contacts service now maps missing-table PG errors to actionable API response (`Apply TB-V16-024 migration first`) instead of opaque 500; dashboard proxy/client now surfaces role/auth/service-availability specific messages.
+- Operations: applied `TB-V16-024` against backend `DATABASE_URL` using `apply-crm-contacts-migration.mjs` so `crm_contacts` is now present.
+- Blockers: None.
+- Next step: restart backend process if currently running stale code, then retry `/contacts` and contact creation flow.
+
+### 2026-04-22 (execution: request campaign refresh persistence fix)
+- Focus: resolve campaign disappearance on refresh by implementing backend persistence instead of UI-only fallback drafts.
+- Files changed: `tracebud-backend/src/requests/requests.module.ts`, `tracebud-backend/src/requests/requests.service.ts`, `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/app.module.ts`, `tracebud-backend/sql/tb_v16_025_request_campaigns.sql`, `apps/dashboard-product/app/api/requests/campaigns/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added tenant-safe backend list/create endpoints with idempotency-key replay support; dashboard now fetches campaigns from backend on load and retains local cache only as resilience fallback.
+- Operations: applied `TB-V16-025` migration to configured backend database.
+- Risks: running backend process must be restarted to load new requests module/controller before endpoint is reachable.
+- Blockers: None.
+- Next step: restart backend + dashboard servers, create a draft, then verify it remains after hard refresh and new login.
+
+### 2026-04-22 (execution: campaign target to CRM contact sync)
+- Focus: ensure manual contacts entered during campaign creation are visible in Contacts CRM without duplicate entry.
+- Files changed: `tracebud-backend/src/requests/requests.service.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: request campaign create flow now upserts valid target emails/full names into `crm_contacts` with status progression to `invited` for `new`/`inactive` records, preserving existing engaged/submitted/blocked statuses.
+- Risks: contact sync runs after campaign insert and assumes `crm_contacts` migration (`TB-V16-024`) is present.
+- Blockers: None.
+- Next step: validate CRM contact dedupe under repeated draft edits and mixed CSV/manual target paths.
+
+### 2026-04-22 (execution: onboarding optimization phase 1 kickoff)
+- Focus: start onboarding optimization implementation with first-value activation visibility and decision observability in Requests.
+- Files changed: `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/api/requests/campaigns/[id]/decisions/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/types/index.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added tenant-scoped decision timeline API (`GET /v1/requests/campaigns/:id/decisions`) backed by immutable `request_campaign_recipient_decisions`; Requests UI now renders onboarding status card for `Contacts added`, `Campaign sent`, `First decision received` and campaign-details timeline with `last decision sync` context.
+- Permissions/tenant boundaries: timeline endpoint uses existing requests role gate (`admin`, `exporter`, `compliance_manager`) and tenant claim scoping before data retrieval.
+- State transitions: onboarding status derives directly from persisted contacts/campaign/decision counters and updates as operators move from draft-only to sent to first recipient decision.
+- Exception handling and recovery: timeline fetch fails closed to empty-state UI without blocking core campaign management workflows.
+- Analytics note: this slice consumes existing onboarding/campaign events; no new event schema introduced yet.
+- Acceptance note: phase-1 baseline now surfaces deterministic first-value progress and recipient decision visibility required for onboarding confidence.
+- Blockers: None.
+- Next step: add targeted backend/frontend tests for decision timeline endpoint and rendering states (loading, empty, populated).
+
+### 2026-04-22 (execution: onboarding phase 1.1 timeline filter + pagination)
+- Focus: improve decision observability ergonomics in campaign details by reducing timeline scan friction.
+- Files changed: `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/app/requests/page.test.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added recipient decision timeline filters (`All`, `Accepted`, `Refused`) with per-filter counts, plus incremental pagination (`Load more` in +10 batches) inside campaign details.
+- State transitions: filter changes reset visible batch size to preserve deterministic pagination behavior per selected decision view.
+- Exception handling and recovery: empty-state copy now reflects active filter context (`No recipient decisions recorded for this filter yet.`) while preserving non-blocking campaign-details rendering.
+- Analytics note: no new event schema added yet; this is a UX hardening slice over existing decision-ledger data flow.
+- Blockers: None.
+- Next step: optionally add server-side timeline pagination/filter query support if campaign decision volumes exceed client-side modal ergonomics.
+
+### 2026-04-22 (execution: onboarding phase 1.2 server-side timeline pagination/filtering)
+- Focus: make recipient decision timeline retrieval scalable for high-volume campaigns by moving filter/pagination mechanics to API query contract.
+- Files changed: `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `tracebud-backend/src/requests/requests.service.spec.ts`, `apps/dashboard-product/app/api/requests/campaigns/[id]/decisions/route.ts`, `apps/dashboard-product/app/api/requests/campaigns/[id]/decisions/route.test.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/app/requests/page.test.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: `GET /v1/requests/campaigns/:id/decisions` now accepts `decision`, `limit`, and `offset`; response now includes decision counts + pagination metadata (`has_more`) so the UI can render deterministic filter chips and incremental `Load more`.
+- Permissions/tenant boundaries: existing requests role guard and tenant claim scoping remain enforced before decision query execution.
+- State transitions: campaign details now fetches timeline on open/filter change and appends next pages using server `offset`, preserving continuity as decision ledgers grow.
+- Exception handling and recovery: timeline fetch remains fail-closed to safe empty-state rendering and does not block campaign-details visibility.
+- Verification note: targeted backend and dashboard tests updated to cover query forwarding and paginated/filtered timeline behavior.
+- Blockers: None.
+- Next step: optional OpenAPI contract update for decision timeline query/response metadata and query-usage telemetry events.
+
+### 2026-04-22 (execution: decision timeline OpenAPI contract publication)
+- Focus: publish the new decision timeline query/pagination behavior to API contract docs for QA and integration alignment.
+- Files changed: `docs/openapi/tracebud-v1-draft.yaml`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `GET /v1/requests/campaigns/{id}/decisions` OpenAPI path with query parameters (`decision`, `limit`, `offset`) and explicit response schemas for decision records, timeline counts, and pagination metadata.
+- Verification: `npm run openapi:lint` now passes with the updated contract.
+- Blockers: None.
+- Next step: optional contract-level integration tests that assert runtime response shape parity with published OpenAPI schemas.
+
+### 2026-04-22 (execution: decision timeline runtime contract-parity guard)
+- Focus: enforce API/runtime consistency by locking required decision timeline response keys in backend tests.
+- Files changed: `tracebud-backend/src/requests/requests.service.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added explicit contract-shape assertion for `RequestsService.listDecisions` covering required OpenAPI fields (`campaign_id`, `tenant_id`, `last_synced_at`, `counts`, `pagination`, `decisions`) and pagination semantics (`has_more`, `returned`).
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/requests/requests.service.spec.ts` (pass, 4/4).
+- Blockers: None.
+- Next step: optional controller/integration test to validate serialized HTTP response parity against OpenAPI contract from endpoint surface (not only service layer).
+
+### 2026-04-22 (execution: decision timeline controller parity coverage)
+- Focus: add controller-level contract checks for decision timeline endpoint input parsing and guarded forwarding.
+- Files changed: `tracebud-backend/src/requests/requests.controller.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added `RequestsController` tests for `/v1/requests/campaigns/:id/decisions` covering role denial, missing tenant denial, numeric query parsing (`limit`, `offset`), invalid query fallback to `undefined`, and response envelope pass-through parity.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/requests/requests.service.spec.ts src/requests/requests.controller.spec.ts` (pass, 8/8).
+- Blockers: None.
+- Next step: optional full Nest integration test to assert middleware/auth/guard + serialized response parity end-to-end over HTTP.
+
+### 2026-04-22 (execution: decision timeline DB-backed integration parity)
+- Focus: validate decision timeline contract against real database query execution under tenant guard behavior.
+- Files changed: `tracebud-backend/src/requests/requests.controller.int.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added integration coverage for `RequestsController.listDecisions` with ephemeral schema setup, tenant-scoped campaigns/decisions fixtures, filter+pagination query path (`decision=accept`, `limit=1`, `offset=0`), and missing-tenant denial.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/requests/requests.controller.int.spec.ts` (pass, 2/2).
+- Blockers: None.
+- Next step: optional full Nest HTTP e2e test harness to include middleware/guard wiring and serialized endpoint path verification over `supertest`.
+
+### 2026-04-22 (execution: decision timeline HTTP e2e parity)
+- Focus: validate decision timeline endpoint contract through full Nest HTTP stack (guard + controller + service + serialization) using `supertest`.
+- Files changed: `tracebud-backend/src/requests/requests.decisions.api.int.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: added HTTP integration coverage for `GET /v1/requests/campaigns/:id/decisions` including:
+  - missing bearer token rejection (`401`)
+  - tenant-scoped filtered/paginated response (`decision=accept`, `limit=1`, `offset=0`) with serialized envelope parity.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/requests/requests.decisions.api.int.spec.ts` (pass, 2/2).
+- Blockers: None.
+- Next step: optional HTTP negative-case expansion for `Invalid token` and forbidden role scenarios to complete guard-path matrix.
+
+### 2026-04-22 (execution: decision timeline HTTP negative-case matrix)
+- Focus: complete HTTP guard-path matrix for decision timeline endpoint access control outcomes.
+- Files changed: `tracebud-backend/src/requests/requests.decisions.api.int.spec.ts`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: expanded e2e coverage for `GET /v1/requests/campaigns/:id/decisions` to include:
+  - `401` when token is invalid (`Invalid token`)
+  - `403` when authenticated role is outside requests access policy.
+- Reliability note: raised test/hook timeout budget in this integration file (`jest.setTimeout(60_000)`, hook-level 20s) to avoid false negatives under slower DB/test container startup.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/requests/requests.decisions.api.int.spec.ts` (pass, 4/4).
+- Blockers: None.
+- Next step: optional abuse-path/rate-limit hardening and tests for public decision-intent endpoint (`/v1/public/requests/campaigns/decision-intent`).
+- Next step: add targeted requests service tests for target-to-contact sync behavior and status preservation edge cases.
+
+### 2026-04-22 (execution: draft edit endpoint + CRM suggested targets + contacts table UI)
+- Focus: make draft campaign actions functional and improve CRM usability for operators.
+- Files changed: `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/api/requests/campaigns/route.ts`, `apps/dashboard-product/app/requests/page.tsx`, `apps/dashboard-product/app/contacts/page.tsx`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: introduced backend `PATCH /v1/requests/campaigns/:id` restricted to editable `DRAFT` rows; wired edit-draft flow in campaign modal; pre-selected CRM suggestions (`new/invited/engaged`) when opening create/edit dialog; replaced contacts card-list layout with explicit table rows/columns + inline status control.
+- Risks: backend watch process currently shows intermittent `EADDRINUSE` during hot-restart loops if stale node process still holds port `4000`.
+- Blockers: None.
+- Next step: clear stale backend process on `4000` if needed, then validate edit draft + suggested targets + contacts table behavior in-browser.
 
 ### 2026-04-15 (execution: governance scripts quick-reference README)
 - Focus: improve operational onboarding by documenting governance script purposes and execution order next to implementation.

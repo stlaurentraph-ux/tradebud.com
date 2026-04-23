@@ -46,6 +46,10 @@ export type CommercialPermission =
   | 'requests:create'
   | 'requests:send'
   | 'requests:respond'
+  // Contacts CRM permissions
+  | 'contacts:view'
+  | 'contacts:create'
+  | 'contacts:edit'
   // Report permissions
   | 'reports:view'
   | 'reports:generate'
@@ -106,6 +110,7 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'evidence:upload',
     'requests:view',
     'requests:respond',
+    'contacts:view',
     'settings:view',
   ],
   tier_2: [
@@ -133,6 +138,9 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:view',
     'requests:create',
     'requests:send',
+    'contacts:view',
+    'contacts:create',
+    'contacts:edit',
     'harvests:view',
     'harvests:create',
     'harvests:edit',
@@ -162,7 +170,12 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'compliance:view',
     'compliance:approve',
     'requests:view',
+    'requests:create',
+    'requests:send',
     'requests:respond',
+    'contacts:view',
+    'contacts:create',
+    'contacts:edit',
     'harvests:view',
     'harvests:approve_exception',
     'evidence:view',
@@ -205,6 +218,9 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:create',
     'requests:send',
     'requests:respond',
+    'contacts:view',
+    'contacts:create',
+    'contacts:edit',
     'harvests:view',
     'harvests:create',
     'harvests:edit',
@@ -298,6 +314,7 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Farmers',
     'FPIC',
     'Requests',
+    'Contacts',
     'Compliance',
     'Role Decisions',
     'Reports',
@@ -309,6 +326,7 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Overview',
     'DDS Packages',
     'Requests',
+    'Contacts',
     'Compliance',
     'Role Decisions',
     'Reports',
@@ -321,6 +339,7 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Farmers',
     'FPIC',
     'Requests',
+    'Contacts',
     'Compliance',
   ],
   country_reviewer: [
@@ -342,6 +361,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
   { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view', mvp: true },
   { name: 'Requests', href: '/requests', icon: 'Send', permission: 'requests:view', mvp: true },
+  { name: 'Contacts', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view', mvp: true },
   { name: 'Role Decisions', href: '/role-decisions', icon: 'Scale', permission: 'roles:view_decisions', mvp: true },
   { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view', mvp: true },

@@ -17,8 +17,8 @@ export default function PackagesPage() {
   const { packages, isLoading, error } = usePackages();
   const isImporter = user?.active_role === 'importer';
 
-  // Mock shared packages (in real app, would be filtered from DB based on share_permissions)
-  const sharedPackages = packages.filter((p) => p.supplier_name !== 'Local Farm Cooperative');
+  // Shared packages should come from backend ACL/share-permissions, not local heuristics.
+  const sharedPackages = isImporter ? [] : packages;
 
   const displayedPackages = activeTab === 'shared' ? sharedPackages : packages;
 

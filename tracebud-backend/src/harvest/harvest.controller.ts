@@ -7,13 +7,17 @@ import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import { SubmitDdsPackageDto } from './dto/submit-dds-package.dto';
 import { DdsPackageEvidenceDocumentDto } from './dto/dds-package-evidence-document.dto';
+import { LaunchService } from '../launch/launch.service';
 
 @ApiTags('Harvest')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/harvest')
 export class HarvestController {
-  constructor(private readonly harvestService: HarvestService) {}
+  constructor(
+    private readonly harvestService: HarvestService,
+    private readonly launchService: LaunchService,
+  ) {}
 
   private requireTenantClaim(req: any) {
     const tenantId =
@@ -22,6 +26,16 @@ export class HarvestController {
     if (!tenantId) {
       throw new ForbiddenException('Missing tenant claim');
     }
+  }
+
+  private getTenantId(req: any): string {
+    const tenantId =
+      req?.user?.app_metadata?.tenant_id ??
+      req?.user?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim');
+    }
+    return tenantId;
   }
 
   @Post()
@@ -75,11 +89,12 @@ export class HarvestController {
 
   @Post('packages')
   async createPackage(@Body() dto: CreateDdsPackageDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can create DDS packages');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_campaigns');
     return this.harvestService.createDdsPackage(dto);
   }
 
@@ -131,11 +146,12 @@ export class HarvestController {
       'Runs deterministic blocker/warning checks for package submission readiness and returns tenant-scoped readiness status.',
   })
   async getPackageReadiness(@Param('id') id: string, @Req() req: any) {
-    this.requireTenantClaim(req);
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can evaluate DDS package readiness');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageReadiness(id);
   }
 
@@ -146,16 +162,12 @@ export class HarvestController {
       'Runs deterministic single-provider risk scoring with explainability reasons for the selected DDS package.',
   })
   async getPackageRiskScore(@Param('id') id: string, @Req() req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can evaluate DDS package risk score');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageRiskScore(id, {
       tenantId,
       userId: (req?.user?.id as string | undefined) ?? null,
@@ -172,16 +184,12 @@ export class HarvestController {
       'Combines readiness and risk checks into a deterministic pre-flight result used before filing submission lifecycle actions.',
   })
   async getPackageFilingPreflight(@Param('id') id: string, @Req() req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can evaluate filing pre-flight');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageFilingPreflight(id, {
       tenantId,
       userId: (req?.user?.id as string | undefined) ?? null,
@@ -198,11 +206,12 @@ export class HarvestController {
       'Returns a compact JSON object with lots, kg, plot areas and a TRACES-like reference field suitable for uploading or mapping into TRACES NT.',
   })
   async getPackageTracesJson(@Param('id') id: string, @Req() req: any) {
-    this.requireTenantClaim(req);
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can export TRACES JSON');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     return this.harvestService.getDdsPackageTracesJson(id);
   }
 
@@ -213,16 +222,12 @@ export class HarvestController {
       'Runs pre-flight checks and creates deterministic filing artifact metadata prior to submission.',
   })
   async generatePackage(@Param('id') id: string, @Req() req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can generate DDS package filing artifacts');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.generateDdsPackageArtifacts(id, {
       tenantId,
       userId: (req?.user?.id as string | undefined) ?? null,
@@ -234,16 +239,12 @@ export class HarvestController {
 
   @Patch('packages/:id/submit')
   async submitPackage(@Param('id') id: string, @Body() dto: SubmitDdsPackageDto, @Req() req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can submit DDS packages');
     }
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.submitDdsPackage(id, dto.idempotencyKey, {
       tenantId,
       userId: (req?.user?.id as string | undefined) ?? null,

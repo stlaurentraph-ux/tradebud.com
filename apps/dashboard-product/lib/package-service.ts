@@ -1,5 +1,5 @@
 import type { DDSPackage, ShipmentStatus } from '@/types';
-import { getPreflightResult, mockPackages } from '@/lib/mock-data';
+import { getPreflightResult } from '@/lib/mock-data';
 
 type TransitionResult = {
   ok: true;
@@ -18,7 +18,7 @@ const TRANSITIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
   ON_HOLD: ['DRAFT', 'READY'],
 };
 
-const INITIAL_PACKAGES: DDSPackage[] = mockPackages.map((pkg) => ({ ...pkg }));
+const INITIAL_PACKAGES: DDSPackage[] = [];
 
 // Local-only in-memory store to simulate API behavior.
 let localPackages: DDSPackage[] = INITIAL_PACKAGES.map((pkg) => ({ ...pkg }));

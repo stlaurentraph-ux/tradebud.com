@@ -33,117 +33,19 @@ import {
   getLegalRoleBadgeColor,
 } from '@/lib/rbac';
 import type { LegalWorkflowRole, RoleDecision } from '@/types';
-
-// Mock role decisions data
-const mockRoleDecisions: (RoleDecision & {
+const roleDecisions: (RoleDecision & {
   shipment_code: string;
   organization_name: string;
   created_at: string;
-})[] = [
-  {
-    workflow_object_id: 'ship-001',
-    workflow_object_type: 'shipment',
-    organization_id: 'org-001',
-    organization_name: 'Café Exports Colombia',
-    shipment_code: 'DDS-2024-001',
-    regulatory_profile_version: 'eudr_v1_2026',
-    determined_role: 'OPERATOR',
-    determined_workflow: 'DDS_WORKFLOW',
-    decision_path: [
-      'Product in Annex I scope: YES',
-      'First placement on EU market: YES',
-      'Valid upstream DDS exists: NO',
-      'Eligible for simplified path: NO',
-      'Result: OPERATOR',
-    ],
-    decided_at: '2024-03-15T10:30:00Z',
-    created_at: '2024-03-15T10:30:00Z',
-  },
-  {
-    workflow_object_id: 'ship-002',
-    workflow_object_type: 'shipment',
-    organization_id: 'org-002',
-    organization_name: 'Small Farm Cooperative',
-    shipment_code: 'DDS-2024-002',
-    regulatory_profile_version: 'eudr_v1_2026',
-    determined_role: 'MICRO_SMALL_PRIMARY_OPERATOR',
-    determined_workflow: 'SIMPLIFIED_DECLARATION_WORKFLOW',
-    decision_path: [
-      'Product in Annex I scope: YES',
-      'First placement on EU market: YES',
-      'Valid upstream DDS exists: NO',
-      'Eligible for simplified path: YES (MICRO size, low-risk country, self-produced)',
-      'Result: MICRO_SMALL_PRIMARY_OPERATOR',
-    ],
-    decided_at: '2024-03-14T14:20:00Z',
-    created_at: '2024-03-14T14:20:00Z',
-  },
-  {
-    workflow_object_id: 'ship-003',
-    workflow_object_type: 'shipment',
-    organization_id: 'org-003',
-    organization_name: 'EU Coffee Roasters GmbH',
-    shipment_code: 'DDS-2024-003',
-    regulatory_profile_version: 'eudr_v1_2026',
-    determined_role: 'DOWNSTREAM_OPERATOR_FIRST',
-    determined_workflow: 'DOWNSTREAM_REFERENCE_WORKFLOW',
-    decision_path: [
-      'Product in Annex I scope: YES',
-      'First placement on EU market: NO',
-      'Valid upstream DDS exists: YES (ref: EU.DDS.2024.12345)',
-      'First downstream event for this chain: YES',
-      'Result: DOWNSTREAM_OPERATOR_FIRST',
-    ],
-    decided_at: '2024-03-13T09:15:00Z',
-    created_at: '2024-03-13T09:15:00Z',
-  },
-  {
-    workflow_object_id: 'ship-004',
-    workflow_object_type: 'shipment',
-    organization_id: 'org-004',
-    organization_name: 'Artisan Coffee Brands',
-    shipment_code: 'DDS-2024-004',
-    regulatory_profile_version: 'eudr_v1_2026',
-    determined_role: 'PENDING_MANUAL_CLASSIFICATION',
-    determined_workflow: 'MANUAL_HOLD_WORKFLOW',
-    decision_path: [
-      'Product in Annex I scope: YES',
-      'First placement on EU market: NO',
-      'Valid upstream DDS exists: DISPUTED (ref: EU.DDS.2024.99999 - superseded)',
-      'HOLD: Upstream DDS reference is superseded',
-      'Result: PENDING_MANUAL_CLASSIFICATION',
-    ],
-    hold_reason: 'Upstream DDS reference EU.DDS.2024.99999 has been superseded. Manual review required to determine valid coverage.',
-    decided_at: '2024-03-12T16:45:00Z',
-    created_at: '2024-03-12T16:45:00Z',
-  },
-  {
-    workflow_object_id: 'ship-005',
-    workflow_object_type: 'shipment',
-    organization_id: 'org-005',
-    organization_name: 'Regional Distributor Ltd',
-    shipment_code: 'DDS-2024-005',
-    regulatory_profile_version: 'eudr_v1_2026',
-    determined_role: 'PENDING_MANUAL_CLASSIFICATION',
-    determined_workflow: 'MANUAL_HOLD_WORKFLOW',
-    decision_path: [
-      'Product in Annex I scope: UNCERTAIN',
-      'HOLD: Annex I product classification is unresolved',
-      'Result: PENDING_MANUAL_CLASSIFICATION',
-    ],
-    hold_reason: 'Product classification under Annex I is uncertain. Manual review required.',
-    decided_at: '2024-03-11T11:00:00Z',
-    created_at: '2024-03-11T11:00:00Z',
-  },
-];
+})[] = [];
 
 // Statistics
 const stats = {
-  total: mockRoleDecisions.length,
-  pending: mockRoleDecisions.filter((d) => d.determined_role === 'PENDING_MANUAL_CLASSIFICATION').length,
-  operator: mockRoleDecisions.filter((d) => d.determined_role === 'OPERATOR').length,
-  simplified: mockRoleDecisions.filter((d) => d.determined_role === 'MICRO_SMALL_PRIMARY_OPERATOR').length,
-  downstream: mockRoleDecisions.filter((d) =>
+  total: roleDecisions.length,
+  pending: roleDecisions.filter((d) => d.determined_role === 'PENDING_MANUAL_CLASSIFICATION').length,
+  operator: roleDecisions.filter((d) => d.determined_role === 'OPERATOR').length,
+  simplified: roleDecisions.filter((d) => d.determined_role === 'MICRO_SMALL_PRIMARY_OPERATOR').length,
+  downstream: roleDecisions.filter((d) =>
     d.determined_role === 'DOWNSTREAM_OPERATOR_FIRST' ||
     d.determined_role === 'DOWNSTREAM_OPERATOR_SUBSEQUENT'
   ).length,
@@ -152,12 +54,12 @@ const stats = {
 export default function RoleDecisionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<LegalWorkflowRole | 'all'>('all');
-  const [selectedDecision, setSelectedDecision] = useState<typeof mockRoleDecisions[0] | null>(null);
+  const [selectedDecision, setSelectedDecision] = useState<(typeof roleDecisions)[number] | null>(null);
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
   const [classificationNotes, setClassificationNotes] = useState('');
   const [selectedClassification, setSelectedClassification] = useState<LegalWorkflowRole | ''>('');
 
-  const filteredDecisions = mockRoleDecisions.filter((decision) => {
+  const filteredDecisions = roleDecisions.filter((decision) => {
     const matchesSearch =
       decision.shipment_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       decision.organization_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -379,6 +281,11 @@ export default function RoleDecisionsPage() {
           </h2>
           <Card>
             <CardContent className="p-0">
+              {resolvedDecisions.length === 0 ? (
+                <div className="p-6 text-sm text-muted-foreground">
+                  No role decisions available yet for this tenant.
+                </div>
+              ) : null}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
