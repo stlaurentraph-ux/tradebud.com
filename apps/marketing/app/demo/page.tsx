@@ -173,6 +173,15 @@ export default function DemoPage() {
                   <p className="text-xs text-center text-foreground/60">
                     We&apos;ll reach out within 24 hours to confirm your slot.
                   </p>
+
+                  <div className="text-center pt-4 border-t border-border mt-6">
+                    <p className="text-sm text-foreground/60 mb-2">
+                      Want to start immediately?
+                    </p>
+                    <Link href="/get-started" className="text-[var(--forest-canopy)] font-semibold hover:underline text-sm">
+                      Create your free account
+                    </Link>
+                  </div>
                 </form>
               ) : (
                 <div className="text-center py-12">

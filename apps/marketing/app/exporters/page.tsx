@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Zap } from "lucide-react";
+import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Zap, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
+import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
+
+const DASHBOARD_URL = "https://app.tracebud.com";
+const EXPORTER_DEMO = "https://exporter-demo.tracebud.com";
 
 const features = [
   {
@@ -52,77 +53,9 @@ const recentBatches = [
 ];
 
 export default function ExportersPage() {
-  const [formData, setFormData] = useState({
-    companyName: "",
-    contactName: "",
-    email: "",
-    primaryGoal: "",
-    biggestChallenge: "",
-    phone: "",
-    country: "",
-    commodities: "",
-    annualVolume: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
   useEffect(() => {
     document.title = "Exporters | Tracebud - Batch Aggregation & Compliance";
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.primaryGoal) {
-      setSubmitError("Please select your primary goal.");
-      return;
-    }
-    setIsSubmitting(true);
-    setSubmitMessage(null);
-    setSubmitError(null);
-
-    try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          formType: "exporter",
-          sourcePage: "/exporters",
-          name: formData.contactName,
-          email: formData.email,
-          company: formData.companyName,
-          phone: formData.phone || null,
-          country: formData.country || null,
-          message: formData.biggestChallenge || null,
-          payload: formData,
-        }),
-      });
-
-      const json = await response.json();
-      if (!response.ok || !json?.ok) {
-        throw new Error(json?.error || "Unable to submit form.");
-      }
-
-      setSubmitMessage("Thanks - your request was submitted. We will contact you shortly.");
-      setFormData({
-        companyName: "",
-        contactName: "",
-        email: "",
-        primaryGoal: "",
-        biggestChallenge: "",
-        phone: "",
-        country: "",
-        commodities: "",
-        annualVolume: "",
-      });
-    } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Unexpected error while submitting.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -160,29 +93,30 @@ export default function ExportersPage() {
               Automated Due Diligence Statements, transaction linking, and yield cap validation to prevent illicit blending.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <a
-                href="https://exporter-demo.tracebud.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto"
+              <Button
+                asChild
+                size="lg"
+                className="bg-white hover:bg-white/90 text-[var(--mountain-clay)] font-bold px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
               >
-                <Button
-                  size="lg"
-                  className="bg-white hover:bg-white/90 text-[var(--mountain-clay)] font-bold px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full"
-                >
-                  Try demo dashboard
-                </Button>
-              </a>
-              <a href="#signup" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full w-full"
-                >
-                  Request quote
-                </Button>
-              </a>
+                <a href={`${DASHBOARD_URL}/signup?role=exporter`} target="_blank" rel="noopener noreferrer">
+                  Start free trial
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </a>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-2 border-white/60 text-white hover:bg-white/10 bg-transparent px-6 md:px-10 py-4 md:py-7 text-base md:text-xl rounded-full w-full sm:w-auto"
+              >
+                <a href={EXPORTER_DEMO} target="_blank" rel="noopener noreferrer">
+                  Try demo first
+                </a>
+              </Button>
             </div>
+            <p className="text-white/60 text-sm mt-4">
+              30 days free. No credit card required.
+            </p>
           </motion.div>
         </div>
       </section>
@@ -317,8 +251,6 @@ export default function ExportersPage() {
         </div>
       </section>
 
-
-
       {/* Testimonial Section */}
       <section className="relative py-16 md:py-32">
         <div className="absolute inset-0">
@@ -359,165 +291,62 @@ export default function ExportersPage() {
         </div>
       </section>
 
-      {/* Sign Up Form */}
-      <section id="signup" className="py-16 md:py-24 px-4 md:px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 px-4 md:px-6 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
           <motion.div
-            className="text-center mb-10 md:mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 md:mb-4">
-              Get Started Today
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
+              Start exporting with confidence
             </h2>
-            <p className="text-base md:text-xl text-foreground/70">
-              Tell us about your operation and we&apos;ll set up your dashboard.
+            <p className="text-base md:text-xl text-foreground/70 max-w-2xl mx-auto mb-8">
+              30-day free trial with full access. Set up your exporter dashboard in minutes.
             </p>
-          </motion.div>
 
-          <motion.form
-            onSubmit={handleSubmit}
-            className="bg-muted/30 rounded-2xl md:rounded-3xl p-6 md:p-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Company Name *</label>
-                <Input
-                  required
-                  placeholder="Your company name"
-                  value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  className="bg-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Contact Name *</label>
-                <Input
-                  required
-                  placeholder="Your full name"
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  className="bg-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Email Address *</label>
-                <Input
-                  required
-                  type="email"
-                  placeholder="you@company.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Primary Goal *</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, primaryGoal: value })}>
-                  <SelectTrigger className="bg-white text-sm">
-                    <SelectValue placeholder="Select your top priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="automate-eudr-dds">Automate EUDR DDS</SelectItem>
-                    <SelectItem value="verify-farmer-plots">Verify farmer plots</SelectItem>
-                    <SelectItem value="reduce-compliance-risk">Reduce compliance risk</SelectItem>
-                    <SelectItem value="prepare-buyer-audits">Prepare for buyer audits</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Phone Number</label>
-                <Input
-                  placeholder="+1 234 567 8900"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="bg-white text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Country of Operation</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, country: value })}>
-                  <SelectTrigger className="bg-white text-sm">
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="honduras">Honduras</SelectItem>
-                    <SelectItem value="ivory-coast">Ivory Coast</SelectItem>
-                    <SelectItem value="uganda">Uganda</SelectItem>
-                    <SelectItem value="indonesia">Indonesia</SelectItem>
-                    <SelectItem value="brazil">Brazil</SelectItem>
-                    <SelectItem value="colombia">Colombia</SelectItem>
-                    <SelectItem value="vietnam">Vietnam</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Primary Commodity</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, commodities: value })}>
-                  <SelectTrigger className="bg-white text-sm">
-                    <SelectValue placeholder="Select commodity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="coffee">Coffee</SelectItem>
-                    <SelectItem value="cocoa">Cocoa</SelectItem>
-                    <SelectItem value="rubber">Rubber</SelectItem>
-                    <SelectItem value="palm-oil">Palm Oil</SelectItem>
-                    <SelectItem value="soy">Soy</SelectItem>
-                    <SelectItem value="multiple">Multiple Commodities</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-foreground mb-2">Annual Export Volume</label>
-                <Select onValueChange={(value) => setFormData({ ...formData, annualVolume: value })}>
-                  <SelectTrigger className="bg-white text-sm">
-                    <SelectValue placeholder="Select volume range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="under-100">Under 100 MT</SelectItem>
-                    <SelectItem value="100-500">100 - 500 MT</SelectItem>
-                    <SelectItem value="500-1000">500 - 1,000 MT</SelectItem>
-                    <SelectItem value="1000-5000">1,000 - 5,000 MT</SelectItem>
-                    <SelectItem value="over-5000">Over 5,000 MT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-foreground mb-2">What do you need most right now? *</label>
-              <Textarea
-                required
-                placeholder="In 1-2 sentences, describe the main result you want from Tracebud."
-                rows={3}
-                value={formData.biggestChallenge}
-                onChange={(e) => setFormData({ ...formData, biggestChallenge: e.target.value })}
-                className="bg-white text-sm"
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button
-                type="submit"
+                asChild
                 size="lg"
-                disabled={isSubmitting}
-                className="bg-[var(--mountain-clay)] hover:bg-[var(--clay-light)] text-white font-bold px-8 md:px-12 py-4 md:py-6 text-base md:text-lg rounded-full"
+                className="bg-[var(--mountain-clay)] hover:bg-[var(--clay-light)] text-white font-bold px-10 py-6 text-lg rounded-full"
               >
-                {isSubmitting ? "Submitting..." : "Request Dashboard Access"}
+                <a href={`${DASHBOARD_URL}/signup?role=exporter`} target="_blank" rel="noopener noreferrer">
+                  Start free trial
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </a>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-[var(--mountain-clay)] text-[var(--mountain-clay)] font-bold px-10 py-6 text-lg rounded-full"
+              >
+                <a href={EXPORTER_DEMO} target="_blank" rel="noopener noreferrer">
+                  Try demo first
+                </a>
               </Button>
             </div>
-            {submitMessage ? (
-              <p className="text-emerald-700 text-sm text-center mt-4">{submitMessage}</p>
-            ) : null}
-            {submitError ? (
-              <p className="text-red-600 text-sm text-center mt-4">{submitError}</p>
-            ) : null}
-          </motion.form>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/demo"
+                className="text-foreground/60 hover:text-foreground transition-colors inline-flex items-center gap-2"
+              >
+                Need a personalized demo?
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <span className="hidden sm:inline text-foreground/30">|</span>
+              <Link
+                href="/pricing"
+                className="text-foreground/60 hover:text-foreground transition-colors inline-flex items-center gap-2"
+              >
+                View pricing
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
