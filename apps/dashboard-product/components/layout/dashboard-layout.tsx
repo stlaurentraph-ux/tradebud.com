@@ -37,11 +37,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
+  const PUBLIC_PATHS = ['/login', '/create-account'];
+  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login') {
+    if (!isLoading && !isAuthenticated && !isPublicPath) {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, isLoading, router, isPublicPath]);
 
   // Show loading state
   if (isLoading) {
@@ -55,13 +58,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated && pathname !== '/login') {
+  // Unauthenticated guard: block access to protected routes while redirect fires
+  if (!isAuthenticated && !isPublicPath) {
     return null;
   }
 
-  // Login page without sidebar
-  if (pathname === '/login') {
+  // Public pages (login, create-account) render without sidebar
+  if (isPublicPath) {
     return <>{children}</>;
   }
 
