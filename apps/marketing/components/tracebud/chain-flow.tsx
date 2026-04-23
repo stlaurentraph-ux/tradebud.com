@@ -39,10 +39,10 @@ export function ChainFlow() {
             Decentralized Compliance Network
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance">
-            Requests flow upstream. Evidence flows back.
+            Any actor. Any direction.
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto text-balance">
-            Start from any point in your supply chain. Upload contacts, send a templated EUDR compliance request. It cascades upstream to the source. Evidence flows back to every downstream buyer—automatically through Tracebud.
+            Upload contacts. Send requests or data. Whether you&apos;re a producer, cooperative, exporter, or importer—Tracebud routes it where it needs to go. Everyone gets verified.
           </p>
         </motion.div>
 
