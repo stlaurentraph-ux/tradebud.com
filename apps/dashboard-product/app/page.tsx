@@ -111,21 +111,25 @@ const VIRGIN_DASHBOARD_METRICS: {
   total_plots: number;
   compliant_plots: number;
   total_farmers: number;
-} = {
+  incoming_requests_pending: number;
+  outgoing_requests_pending: number;
+  } = {
   total_packages: 0,
   packages_by_status: {
-    DRAFT: 0,
-    READY: 0,
-    SEALED: 0,
-    SUBMITTED: 0,
-    ACCEPTED: 0,
-    REJECTED: 0,
-    ARCHIVED: 0,
+  DRAFT: 0,
+  READY: 0,
+  SEALED: 0,
+  SUBMITTED: 0,
+  ACCEPTED: 0,
+  REJECTED: 0,
+  ARCHIVED: 0,
     ON_HOLD: 0,
   },
   total_plots: 0,
   compliant_plots: 0,
   total_farmers: 0,
+  incoming_requests_pending: 0,
+  outgoing_requests_pending: 0,
 };
 
 export default function DashboardPage() {
