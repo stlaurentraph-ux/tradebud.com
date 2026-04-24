@@ -22,6 +22,8 @@ interface CooperativeDashboardProps {
     total_plots: number;
     compliant_plots: number;
     total_farmers: number;
+    incoming_requests_pending?: number;
+    outgoing_requests_pending?: number;
   };
 }
 
@@ -30,6 +32,8 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
   const verificationRate = metrics.total_plots > 0
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
+  const incomingPending = metrics.incoming_requests_pending ?? 0;
+  const outgoingPending = metrics.outgoing_requests_pending ?? 0;
 
   return (
     <div className="space-y-6">

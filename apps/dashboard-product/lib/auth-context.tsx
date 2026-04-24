@@ -111,6 +111,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     }
+    // DEV BYPASS: Auto-login with a mock cooperative user when no session exists
+    // Remove this block when Supabase is properly configured
+    if (!storedUser && !storedToken && process.env.NODE_ENV === 'development') {
+      const devUser: User = {
+        id: 'dev-user-001',
+        email: 'dev@tracebud.local',
+        name: 'Dev User',
+        tenant_id: 'tenant-dev-001',
+        roles: ['cooperative', 'exporter', 'importer'],
+        active_role: 'cooperative',
+        created_at: new Date().toISOString(),
+      };
+      sessionStorage.setItem('tracebud_user', JSON.stringify(devUser));
+      startTransition(() => {
+        setUser(devUser);
+        setIsLoading(false);
+      });
+      return;
+    }
     startTransition(() => {
       setIsLoading(false);
     });
