@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   Plus,
@@ -48,7 +48,7 @@ interface ComplianceIssue {
   status: IssueStatus;
   owner?: string;
   linkedEntity: {
-    type: 'plot' | 'batch' | 'package' | 'farmer';
+    type: 'plot' | 'batch' | 'package' | 'farmer' | 'campaign' | 'request';
     id: string;
     name: string;
   };
@@ -121,6 +121,8 @@ export default function ComplianceIssuesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<ComplianceIssue | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [backendBlockingCount, setBackendBlockingCount] = useState<number | null>(null);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
 
   const [newIssue, setNewIssue] = useState<{
     title: string;
@@ -136,7 +138,74 @@ export default function ComplianceIssuesPage() {
     linkedEntityId: '',
   });
 
-  const blockingIssuesCount = issues.filter((i) => i.severity === 'BLOCKING' && i.status === 'open').length;
+  const localBlockingCount = issues.filter((i) => i.severity === 'BLOCKING' && i.status === 'open').length;
+  const blockingIssuesCount = isCooperative ? (backendBlockingCount ?? localBlockingCount) : localBlockingCount;
+
+  useEffect(() => {
+    if (!isCooperative) {
+      setBackendBlockingCount(null);
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/insights', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { metrics?: { blocking_issues_count?: number } }) => {
+        if (typeof payload?.metrics?.blocking_issues_count === 'number') {
+          setBackendBlockingCount(payload.metrics.blocking_issues_count);
+        }
+      })
+      .catch(() => undefined);
+  }, [isCooperative]);
+
+  useEffect(() => {
+    if (!isImporter) {
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    setIsLoadingIssues(true);
+    void fetch('/api/requests/issues', { headers, cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => [])) as Array<{
+          id: string;
+          title: string;
+          description: string;
+          severity: IssueSeverity;
+          status: IssueStatus;
+          owner?: string | null;
+          linked_entity_type: 'campaign' | 'request';
+          linked_entity_id: string;
+          linked_entity_name: string;
+          due_date?: string | null;
+          created_at: string;
+          resolution_path?: string | null;
+        }>;
+        if (!response.ok || !Array.isArray(payload)) {
+          return;
+        }
+        setIssues(
+          payload.map((item) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            severity: item.severity,
+            status: item.status,
+            owner: item.owner ?? undefined,
+            linkedEntity: {
+              type: item.linked_entity_type,
+              id: item.linked_entity_id,
+              name: item.linked_entity_name,
+            },
+            createdAt: item.created_at,
+            dueDate: item.due_date ?? undefined,
+            resolutionPath: item.resolution_path ?? undefined,
+          })),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => setIsLoadingIssues(false));
+  }, [isImporter]);
 
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -290,7 +359,7 @@ export default function ComplianceIssuesPage() {
                     </div>
                     <div>
                       <Label>Linked Entity Type</Label>
-                      <Select value={newIssue.linkedEntityType} onValueChange={(v) => setNewIssue({ ...newIssue, linkedEntityType: v as 'plot' | 'batch' | 'package' | 'farmer' })}>
+                      <Select value={newIssue.linkedEntityType} onValueChange={(v) => setNewIssue({ ...newIssue, linkedEntityType: v as LinkedEntityType })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -371,7 +440,13 @@ export default function ComplianceIssuesPage() {
         </div>
 
         {/* Issues Grid */}
-        {filteredIssues.length === 0 ? (
+        {isLoadingIssues ? (
+          <Card>
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              Loading issues...
+            </CardContent>
+          </Card>
+        ) : filteredIssues.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <CheckCircle className="mx-auto h-8 w-8 text-green-500" />

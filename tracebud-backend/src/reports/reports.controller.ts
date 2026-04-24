@@ -32,6 +32,79 @@ export class ReportsController {
     return tenantId;
   }
 
+  private assertImporterReportingAccess(req: any): string {
+    const tenantId = req?.user?.app_metadata?.tenant_id ?? req?.user?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim');
+    }
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (!['compliance_manager', 'admin', 'exporter'].includes(role)) {
+      throw new ForbiddenException('This role cannot access importer reporting summary.');
+    }
+    return tenantId;
+  }
+
+  @Get('importer-summary')
+  async importerSummary(@Req() req: any) {
+    const tenantId = this.assertImporterReportingAccess(req);
+    await this.launchService.requireFeatureAccess(tenantId, 'dashboard_reporting');
+    try {
+      const [campaignsRes, inboxRes] = await Promise.all([
+        this.pool.query<{ total: string; completed: string; in_progress: string; blocked: string }>(
+          `
+          SELECT
+            COUNT(*)::text AS total,
+            COUNT(*) FILTER (WHERE status = 'COMPLETED')::text AS completed,
+            COUNT(*) FILTER (WHERE status IN ('RUNNING', 'PARTIAL', 'QUEUED'))::text AS in_progress,
+            COUNT(*) FILTER (WHERE status = 'EXPIRED')::text AS blocked
+          FROM request_campaigns
+          WHERE tenant_id = $1
+        `,
+          [tenantId],
+        ),
+        this.pool.query<{ total: string; responded: string; pending: string; overdue: string }>(
+          `
+          SELECT
+            COUNT(*)::text AS total,
+            COUNT(*) FILTER (WHERE status = 'RESPONDED')::text AS responded,
+            COUNT(*) FILTER (WHERE status = 'PENDING')::text AS pending,
+            COUNT(*) FILTER (WHERE status = 'PENDING' AND due_at < NOW())::text AS overdue
+          FROM inbox_requests
+          WHERE recipient_tenant_id = $1
+        `,
+          [tenantId],
+        ),
+      ]);
+      const campaigns = campaignsRes.rows[0] ?? { total: '0', completed: '0', in_progress: '0', blocked: '0' };
+      const inbox = inboxRes.rows[0] ?? { total: '0', responded: '0', pending: '0', overdue: '0' };
+      return {
+        declaration_readiness_rate: Number(campaigns.total) > 0
+          ? Math.round((Number(campaigns.completed) / Number(campaigns.total)) * 100)
+          : 0,
+        compliant_evidence_records: Number(campaigns.completed) + Number(inbox.responded),
+        shipments_ytd: Number(campaigns.total),
+        reporting_snapshots: Number(campaigns.in_progress),
+        readiness_distribution: {
+          compliant: Number(campaigns.completed),
+          warnings: Number(campaigns.in_progress) + Number(inbox.pending),
+          blocked: Number(campaigns.blocked) + Number(inbox.overdue),
+        },
+      };
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        return {
+          declaration_readiness_rate: 0,
+          compliant_evidence_records: 0,
+          shipments_ytd: 0,
+          reporting_snapshots: 0,
+          readiness_distribution: { compliant: 0, warnings: 0, blocked: 0 },
+        };
+      }
+      throw error;
+    }
+  }
+
   @Get('plots')
   @ApiQuery({ name: 'farmerId', required: true })
   @ApiQuery({

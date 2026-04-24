@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,30 +62,148 @@ const INITIAL_CAMPAIGNS: ProgrammeCampaign[] = [
   },
 ];
 
+function mapBackendStatus(status: string): ProgrammeStatus {
+  switch (status) {
+    case 'DRAFT':
+      return 'Draft';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Archived';
+    case 'QUEUED':
+    case 'RUNNING':
+    case 'PARTIAL':
+    case 'EXPIRED':
+    default:
+      return 'Sent';
+  }
+}
+
+function toProgrammeCampaign(record: Record<string, unknown>): ProgrammeCampaign {
+  const targetCount =
+    (Array.isArray(record.target_organization_ids) ? record.target_organization_ids.length : 0) +
+    (Array.isArray(record.target_farmer_ids) ? record.target_farmer_ids.length : 0) +
+    (Array.isArray(record.target_plot_ids) ? record.target_plot_ids.length : 0) +
+    (Array.isArray(record.target_contact_emails) ? record.target_contact_emails.length : 0);
+
+  return {
+    id: String(record.id ?? `PROG-${Date.now()}`),
+    title: String(record.title ?? record.request_type ?? 'Programme Campaign'),
+    target: targetCount > 0 ? `${targetCount} recipients` : 'Network recipients',
+    commodity: String(record.commodity ?? 'N/A'),
+    requestedBy: String(record.created_by ?? 'Sponsor Programmes'),
+    date: String(record.created_at ?? new Date().toISOString()),
+    status: mapBackendStatus(String(record.status ?? 'RUNNING')),
+  };
+}
+
 export default function ProgrammesPage() {
   const sponsorView = useSponsorView();
   const [statusTab, setStatusTab] = useState<ProgrammeStatus>('Draft');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<ProgrammeCampaign[]>(INITIAL_CAMPAIGNS);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const filteredCampaigns = useMemo(
     () => campaigns.filter((campaign) => campaign.status === statusTab),
     [campaigns, statusTab]
   );
 
+  useEffect(() => {
+    const token = window.sessionStorage.getItem('tracebud_token');
+    setIsLoading(true);
+    fetch('/api/requests/campaigns', {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      cache: 'no-store',
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, status: response.status, payload })))
+      .then(({ ok, status, payload }) => {
+        if (!ok) {
+          setApiError(
+            typeof payload?.error === 'string'
+              ? payload.error
+              : `Unable to load programme campaigns from backend (status ${status}).`
+          );
+          return;
+        }
+        if (Array.isArray(payload)) {
+          const mapped = payload
+            .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object')
+            .map(toProgrammeCampaign);
+          if (mapped.length > 0) {
+            setCampaigns(mapped);
+          }
+        }
+      })
+      .catch(() => setApiError('Unable to load programme campaigns from backend.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   const handleWizardComplete = (result: NewRequestResult) => {
-    const campaignId = `PROG-2026-${String(campaigns.length + 1).padStart(3, '0')}`;
-    const campaign: ProgrammeCampaign = {
-      id: campaignId,
-      title: result.requestTypeLabel,
-      target: `${result.recipientCount} recipients`,
-      commodity: result.commodity,
-      requestedBy: 'Sponsor Programmes',
-      date: new Date().toISOString().slice(0, 10),
-      status: result.status,
-    };
-    setCampaigns((previous) => [campaign, ...previous]);
-    setStatusTab(result.status);
+    const token = window.sessionStorage.getItem('tracebud_token');
+    setIsSaving(true);
+    fetch('/api/requests/campaigns', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        title: result.requestTypeLabel,
+        description: `Programme campaign for ${result.commodity}`,
+        request_type: 'GENERAL_EVIDENCE',
+        status: result.status === 'Draft' ? 'DRAFT' : 'QUEUED',
+        target_organization_ids: [],
+        target_farmer_ids: [],
+        target_plot_ids: [],
+        target_contact_emails: [],
+        due_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
+        commodity: result.commodity,
+      }),
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, status: response.status, payload })))
+      .then(({ ok, status, payload }) => {
+        if (!ok) {
+          setApiError(
+            typeof payload?.error === 'string'
+              ? payload.error
+              : `Campaign saved locally only (backend status ${status}).`
+          );
+          const localFallback: ProgrammeCampaign = {
+            id: `LOCAL-${Date.now()}`,
+            title: result.requestTypeLabel,
+            target: `${result.recipientCount} recipients`,
+            commodity: result.commodity,
+            requestedBy: 'Sponsor Programmes',
+            date: new Date().toISOString(),
+            status: result.status,
+          };
+          setCampaigns((previous) => [localFallback, ...previous]);
+          setStatusTab(result.status);
+          return;
+        }
+        setApiError(null);
+        setCampaigns((previous) => [toProgrammeCampaign((payload as Record<string, unknown>) ?? {}), ...previous]);
+        setStatusTab(result.status);
+      })
+      .catch(() => {
+        setApiError('Campaign saved locally only (backend unavailable).');
+        const localFallback: ProgrammeCampaign = {
+          id: `LOCAL-${Date.now()}`,
+          title: result.requestTypeLabel,
+          target: `${result.recipientCount} recipients`,
+          commodity: result.commodity,
+          requestedBy: 'Sponsor Programmes',
+          date: new Date().toISOString(),
+          status: result.status,
+        };
+        setCampaigns((previous) => [localFallback, ...previous]);
+        setStatusTab(result.status);
+      })
+      .finally(() => setIsSaving(false));
   };
 
   return (
@@ -110,9 +228,9 @@ export default function ProgrammesPage() {
                   : 'Create and track bulk remediation or evidence requests to upstream suppliers and partner organisations.'}
               </CardDescription>
             </div>
-            <Button onClick={() => setIsWizardOpen(true)}>
+            <Button onClick={() => setIsWizardOpen(true)} disabled={isSaving}>
               <Plus className="mr-2 h-4 w-4" />
-              New Programme Campaign
+              {isSaving ? 'Saving...' : 'New Programme Campaign'}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -121,6 +239,8 @@ export default function ProgrammesPage() {
                 Emphasis: {sponsorView === 'country' ? 'Country programme' : 'Brand sponsor'}
               </Badge>
             </div>
+            {isLoading ? <p className="text-sm text-muted-foreground">Loading campaigns from backend...</p> : null}
+            {apiError ? <p className="text-sm text-amber-700">{apiError}</p> : null}
 
             <Tabs value={statusTab} onValueChange={(value) => setStatusTab(value as ProgrammeStatus)}>
               <TabsList>

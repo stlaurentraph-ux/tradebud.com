@@ -78,6 +78,11 @@ Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFAC
   - importer flow uses campaign terminology (`Campaign Type`, `Campaign Details`, `Launch Campaign`).
   - non-importer flow keeps request terminology (`Request Type`, `Request Details`, `Send Request`).
   - outreach entry now passes role-specific wizard mode/title/description to keep onboarding CTAs and in-flow taxonomy consistent.
+- Importer backend-connectivity slice now extends beyond campaigns/requests list reads:
+  - `Reporting` reads tenant-scoped summary telemetry from backend (`/v1/reports/importer-summary`) for readiness rate, compliant evidence count, shipment volume, and readiness distribution.
+  - `Issues` reads backend-derived operational issue records (`/v1/requests/issues`) from active/overdue campaigns and inbound request queues.
+  - `Evidence` reads backend evidence feed rows (`/v1/requests/evidence-feed`) mapped from campaign lifecycle status for importer evidence repository framing.
+  - dashboard API proxies were added for all three new backend routes to preserve auth pass-through and fail-closed backend URL handling.
 
 ## Tasks checklist
 

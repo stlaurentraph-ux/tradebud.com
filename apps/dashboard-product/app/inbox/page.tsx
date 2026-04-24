@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Inbox } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useInboxRequests } from '@/lib/use-requests';
 
 type InboxStatus = 'Pending' | 'In Review' | 'Fulfilled' | 'Archived';
 
@@ -21,12 +22,6 @@ type InboxRequest = {
 
 const INBOX_STATUS_TABS: InboxStatus[] = ['Pending', 'In Review', 'Fulfilled', 'Archived'];
 
-const MOCK_INBOX_REQUESTS: InboxRequest[] = [
-  { id: 'IN-2026-014', counterpartName: 'Trace EU Imports', commodity: 'Cocoa', date: '2026-04-22', status: 'Pending' },
-  { id: 'IN-2026-011', counterpartName: 'Blue Harbor Brands', commodity: 'Coffee', date: '2026-04-20', status: 'In Review' },
-  { id: 'IN-2026-006', counterpartName: 'Atlas Retail Group', commodity: 'Palm Oil', date: '2026-04-16', status: 'Fulfilled' },
-];
-
 const statusBadgeClass: Record<InboxStatus, string> = {
   Pending: 'bg-amber-500/15 text-amber-700',
   'In Review': 'bg-blue-500/15 text-blue-700',
@@ -37,10 +32,22 @@ const statusBadgeClass: Record<InboxStatus, string> = {
 export default function InboxPage() {
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
+  const { requests: backendRequests, isLoading, error } = useInboxRequests(user?.tenant_id ?? null);
   const [statusTab, setStatusTab] = useState<InboxStatus>('Pending');
+  const mappedRequests = useMemo<InboxRequest[]>(
+    () =>
+      backendRequests.map((request) => ({
+        id: request.id,
+        counterpartName: request.from_org,
+        commodity: request.request_type.replace(/_/g, ' ').toLowerCase(),
+        date: request.updated_at ?? request.created_at,
+        status: request.status === 'PENDING' ? 'Pending' : 'Fulfilled',
+      })),
+    [backendRequests],
+  );
   const filteredRequests = useMemo(
-    () => MOCK_INBOX_REQUESTS.filter((request) => request.status === statusTab),
-    [statusTab],
+    () => mappedRequests.filter((request) => request.status === statusTab),
+    [mappedRequests, statusTab],
   );
 
   return (
@@ -61,6 +68,11 @@ export default function InboxPage() {
             <CardTitle>{isImporter ? 'Inbound Requests' : 'Incoming Requests'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                {error}
+              </div>
+            ) : null}
             <Tabs value={statusTab} onValueChange={(value) => setStatusTab(value as InboxStatus)}>
               <TabsList>
                 {INBOX_STATUS_TABS.map((status) => (
@@ -71,7 +83,9 @@ export default function InboxPage() {
               </TabsList>
             </Tabs>
 
-            {filteredRequests.length === 0 ? (
+            {isLoading ? (
+              <div className="rounded-lg border p-10 text-center text-sm text-muted-foreground">Loading requests...</div>
+            ) : filteredRequests.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center">
                 <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                 <p className="font-medium text-foreground">No {statusTab.toLowerCase()} requests</p>

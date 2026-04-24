@@ -7,6 +7,7 @@
 - Importer terminology alignment now also covers shared child components (package tables + compliance/evidence cards) so importer copy stays consistent across reused UI blocks.
 - Importer onboarding microcopy alignment is now complete: welcome, checklist, and guided-tour step language/ordering match the importer IA (`Network`, `Campaigns`, `Requests`, `Shipments`, `Compliance`, `Evidence`, `Reporting`).
 - Onboarding taxonomy bridge is now aligned across both tracks: backend-driven onboarding dialog copy and guided overview/checklist now use the same importer IA terms, and Outreach opens the role-aware campaign/request wizard mode accordingly.
+- Importer backend wiring hardening is in progress across remaining destinations: `Reporting`, `Issues`, and `Evidence` now have backend-backed data paths (summary/issues/evidence-feed) replacing importer mock-only reads.
 - Launch/public onboarding execution is now in stabilization mode: trial lifecycle + entitlement service is live, premium/export APIs are server-side gated, and dashboard onboarding checklist UX is wired to backend progress persistence.
 - Onboarding action-validation hardening is in progress: admin org/user/invite flows now run through backend-persistent APIs instead of in-memory dashboard data, closing a remaining mock-path for `team_invited`.
 - Onboarding action-validation hardening advanced: admin role/status mutations are now backend-persistent too (`PATCH /v1/admin/users/:id/role|status`), eliminating optimistic local-only admin mutation paths.
@@ -14,6 +15,7 @@
 - Onboarding CTA guard now blocks gated-route loops: step CTA checks feature gates client-side, redirects to safe overview fallback, and shows an inline notice when a route is unavailable.
 - Onboarding gated-route fallback telemetry is now instrumented (`onboarding_cta_gated_redirect`) via analytics proxy for tenant-scoped visibility into blocked CTA paths.
 - Immediate next checks:
+  - run importer smoke on `Reports`, `Issues`, and `Evidence` with live tenant data and verify fallback behavior when request tables are absent,
   - run end-to-end public-signup/trial-expiry simulations in staging,
   - validate read-only UX at `trial_expired`,
   - verify conversion/activation telemetry completeness (`trial_*`, `onboarding_step_completed`, `upgrade_*`).

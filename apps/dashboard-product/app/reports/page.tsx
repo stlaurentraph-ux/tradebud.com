@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,11 +78,141 @@ const complianceDistribution = [
   { status: 'Blocked', count: 24, percentage: 6, color: 'bg-red-500' },
 ];
 
+interface ImporterSummaryPayload {
+  declaration_readiness_rate: number;
+  compliant_evidence_records: number;
+  shipments_ytd: number;
+  reporting_snapshots: number;
+  readiness_distribution: {
+    compliant: number;
+    warnings: number;
+    blocked: number;
+  };
+}
+
 export default function ReportsPage() {
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
   const isCooperative = user?.active_role === 'cooperative';
   const selectedPeriod = '6months';
+  const [cooperativeMetrics, setCooperativeMetrics] = useState({
+    total_farmers: 0,
+    members_missing_consent: 0,
+    total_plots: 0,
+    compliant_plots: 0,
+    requests_overdue: 0,
+    incoming_requests_pending: 0,
+    active_campaigns: 0,
+    blocking_issues_count: 0,
+  });
+  const [importerSummary, setImporterSummary] = useState<ImporterSummaryPayload | null>(null);
+
+  useEffect(() => {
+    if (!isCooperative) return;
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/insights', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { metrics?: Partial<typeof cooperativeMetrics> }) => {
+        if (!payload.metrics) return;
+        setCooperativeMetrics((previous) => ({ ...previous, ...payload.metrics }));
+      })
+      .catch(() => undefined);
+  }, [isCooperative]);
+
+  useEffect(() => {
+    if (!isImporter) {
+      setImporterSummary(null);
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/reports/importer-summary', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: ImporterSummaryPayload) => {
+        if (typeof payload?.declaration_readiness_rate === 'number') {
+          setImporterSummary(payload);
+        }
+      })
+      .catch(() => undefined);
+  }, [isImporter]);
+
+  const cooperativeDataCompleteness = useMemo(() => {
+    if (cooperativeMetrics.total_farmers === 0) return 0;
+    return Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          ((cooperativeMetrics.total_farmers - cooperativeMetrics.members_missing_consent) /
+            cooperativeMetrics.total_farmers) *
+            100,
+        ),
+      ),
+    );
+  }, [cooperativeMetrics.members_missing_consent, cooperativeMetrics.total_farmers]);
+
+  const cooperativePlotCoverage = useMemo(() => {
+    if (cooperativeMetrics.total_plots === 0) return 0;
+    return Math.max(
+      0,
+      Math.min(100, Math.round((cooperativeMetrics.compliant_plots / cooperativeMetrics.total_plots) * 100)),
+    );
+  }, [cooperativeMetrics.compliant_plots, cooperativeMetrics.total_plots]);
+
+  const cooperativeReadinessDistribution = useMemo(() => {
+    const compliant = cooperativeMetrics.compliant_plots;
+    const blocked = Math.min(
+      cooperativeMetrics.total_plots,
+      Math.max(0, cooperativeMetrics.blocking_issues_count),
+    );
+    const warnings = Math.max(0, cooperativeMetrics.total_plots - compliant - blocked);
+    const total = compliant + warnings + blocked;
+    if (total === 0) {
+      return [
+        { status: 'Compliant', count: 0, percentage: 0, color: 'bg-green-500' },
+        { status: 'Warnings', count: 0, percentage: 0, color: 'bg-amber-500' },
+        { status: 'Blocked', count: 0, percentage: 0, color: 'bg-red-500' },
+      ];
+    }
+    return [
+      { status: 'Compliant', count: compliant, percentage: Math.round((compliant / total) * 100), color: 'bg-green-500' },
+      { status: 'Warnings', count: warnings, percentage: Math.round((warnings / total) * 100), color: 'bg-amber-500' },
+      { status: 'Blocked', count: blocked, percentage: Math.round((blocked / total) * 100), color: 'bg-red-500' },
+    ];
+  }, [cooperativeMetrics.blocking_issues_count, cooperativeMetrics.compliant_plots, cooperativeMetrics.total_plots]);
+
+  const importerReadinessDistribution = useMemo(() => {
+    if (!importerSummary) {
+      return complianceDistribution;
+    }
+    const total = Math.max(
+      importerSummary.shipments_ytd,
+      importerSummary.readiness_distribution.compliant +
+        importerSummary.readiness_distribution.warnings +
+        importerSummary.readiness_distribution.blocked,
+    );
+    return [
+      {
+        status: 'Compliant',
+        count: importerSummary.readiness_distribution.compliant,
+        percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.compliant / total) * 100) : 0,
+        color: 'bg-green-500',
+      },
+      {
+        status: 'Warnings',
+        count: importerSummary.readiness_distribution.warnings,
+        percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.warnings / total) * 100) : 0,
+        color: 'bg-amber-500',
+      },
+      {
+        status: 'Blocked',
+        count: importerSummary.readiness_distribution.blocked,
+        percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.blocked / total) * 100) : 0,
+        color: 'bg-red-500',
+      },
+    ];
+  }, [importerSummary]);
 
   return (
     <div className="flex flex-col">
@@ -123,7 +254,13 @@ export default function ReportsPage() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{isCooperative ? '84%' : '78%'}</p>
+                  <p className="text-2xl font-bold">
+                    {isCooperative
+                      ? `${cooperativeDataCompleteness}%`
+                      : isImporter
+                        ? `${importerSummary?.declaration_readiness_rate ?? 78}%`
+                        : '78%'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {isCooperative ? 'Member Data Completeness' : isImporter ? 'Declaration Readiness Rate' : 'Compliance Rate'}
                   </p>
@@ -138,7 +275,13 @@ export default function ReportsPage() {
                   {isCooperative ? <Users className="h-5 w-5 text-green-400" /> : <ShieldCheck className="h-5 w-5 text-green-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{isCooperative ? '1,284' : '287'}</p>
+                  <p className="text-2xl font-bold">
+                    {isCooperative
+                      ? cooperativeMetrics.total_farmers
+                      : isImporter
+                        ? importerSummary?.compliant_evidence_records ?? 287
+                        : '287'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {isCooperative ? 'Active Members' : isImporter ? 'Compliant Evidence Records' : 'Compliant Plots'}
                   </p>
@@ -153,9 +296,15 @@ export default function ReportsPage() {
                   {isCooperative ? <Wallet className="h-5 w-5 text-blue-400" /> : <Package className="h-5 w-5 text-blue-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{isCooperative ? '$38.9k' : '299'}</p>
+                  <p className="text-2xl font-bold">
+                    {isCooperative
+                      ? cooperativeMetrics.active_campaigns
+                      : isImporter
+                        ? importerSummary?.shipments_ytd ?? 299
+                        : '299'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {isCooperative ? 'Premium Tracked' : isImporter ? 'Shipments (YTD)' : 'Packages (YTD)'}
+                    {isCooperative ? 'Active Campaigns' : isImporter ? 'Shipments (YTD)' : 'Packages (YTD)'}
                   </p>
                 </div>
               </div>
@@ -168,7 +317,13 @@ export default function ReportsPage() {
                   {isCooperative ? <MapPin className="h-5 w-5 text-amber-400" /> : <FileText className="h-5 w-5 text-amber-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{isCooperative ? '72%' : '12'}</p>
+                  <p className="text-2xl font-bold">
+                    {isCooperative
+                      ? `${cooperativePlotCoverage}%`
+                      : isImporter
+                        ? importerSummary?.reporting_snapshots ?? 12
+                        : '12'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {isCooperative ? 'Mapped Plot Coverage' : isImporter ? 'Reporting Snapshots' : 'Reports Generated'}
                   </p>
@@ -246,7 +401,11 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {complianceDistribution.map((item) => (
+                {(isCooperative
+                  ? cooperativeReadinessDistribution
+                  : isImporter
+                    ? importerReadinessDistribution
+                    : complianceDistribution).map((item) => (
                   <div key={item.status} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">{item.status}</span>

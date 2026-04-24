@@ -23,6 +23,9 @@ import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry
 import { useAuth } from '@/lib/auth-context';
 import { useOnboarding } from '@/lib/onboarding-context';
 import { getRoleDisplayName } from '@/lib/rbac';
+import { useHarvestPackages } from '@/lib/use-harvest-packages';
+import { useInboxRequests, useRequestCampaigns } from '@/lib/use-requests';
+import type { TimelineEvent } from '@/components/ui/timeline-row';
 import type { ShipmentStatus, TenantRole } from '@/types';
 
 const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaLabel: string; href: string }> = {
@@ -201,6 +204,9 @@ const VIRGIN_DASHBOARD_METRICS: {
   total_farmers: number;
   incoming_requests_pending: number;
   outgoing_requests_pending: number;
+  blocking_issues_count: number;
+  yield_failures_count: number;
+  recent_activity: TimelineEvent[];
   } = {
   total_packages: 0,
   packages_by_status: {
@@ -218,11 +224,18 @@ const VIRGIN_DASHBOARD_METRICS: {
   total_farmers: 0,
   incoming_requests_pending: 0,
   outgoing_requests_pending: 0,
+  blocking_issues_count: 0,
+  yield_failures_count: 0,
+  recent_activity: [],
+};
+
+type CooperativeInsightsResponse = {
+  metrics?: Partial<typeof VIRGIN_DASHBOARD_METRICS>;
 };
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { startOnboarding } = useOnboarding();
+  useOnboarding();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trialState, setTrialState] = useState<{
@@ -234,6 +247,9 @@ export default function DashboardPage() {
   const [isAutoValidatingStep, setIsAutoValidatingStep] = useState(false);
   const [onboardingNavigationNotice, setOnboardingNavigationNotice] = useState<string | null>(null);
   const [welcomeAcknowledged, setWelcomeAcknowledged] = useState(false);
+  const [cooperativeInsightsMetrics, setCooperativeInsightsMetrics] = useState<
+    Partial<typeof VIRGIN_DASHBOARD_METRICS> | null
+  >(null);
 
   const onboardingRole = useMemo(() => {
     if (!user) return 'admin';
@@ -246,6 +262,96 @@ export default function DashboardPage() {
   const userTenantId = user?.tenant_id;
   const userId = user?.id;
   const isWelcomeEntry = searchParams.get('welcome') === '1' && !welcomeAcknowledged;
+  const { packages } = useHarvestPackages(userTenantId ?? null);
+  const { pendingRequests } = useInboxRequests(userTenantId ?? null);
+  const { campaigns } = useRequestCampaigns(userTenantId ?? null);
+
+  const baseDashboardMetrics = useMemo(() => {
+    const packageCounts: Record<ShipmentStatus, number> = {
+      DRAFT: 0,
+      READY: 0,
+      SEALED: 0,
+      SUBMITTED: 0,
+      ACCEPTED: 0,
+      REJECTED: 0,
+      ARCHIVED: 0,
+      ON_HOLD: 0,
+    };
+
+    const producerIds = new Set<string>();
+    const plotIds = new Set<string>();
+    let compliantPlots = 0;
+    let blockingIssues = 0;
+    let yieldFailures = 0;
+
+    for (const pkg of packages) {
+      packageCounts[pkg.status] = (packageCounts[pkg.status] ?? 0) + 1;
+      if (pkg.compliance_status === 'BLOCKED') blockingIssues += 1;
+      if (pkg.compliance_status === 'WARNINGS') yieldFailures += 1;
+
+      for (const farmer of pkg.farmers ?? []) {
+        producerIds.add(farmer.id);
+      }
+      for (const plot of pkg.plots ?? []) {
+        plotIds.add(plot.id);
+        if (plot.verified) compliantPlots += 1;
+      }
+    }
+
+    const recentActivity: TimelineEvent[] = packages
+      .slice()
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 8)
+      .map((pkg) => ({
+        id: pkg.id,
+        eventType: 'status_change',
+        timestamp: pkg.updated_at,
+        userName: 'System',
+        description: `Shipment ${pkg.code} moved to ${pkg.status}`,
+        metadata: {
+          compliance: pkg.compliance_status,
+        },
+      }));
+
+    return {
+      total_packages: packages.length,
+      packages_by_status: packageCounts,
+      total_plots: plotIds.size,
+      compliant_plots: compliantPlots,
+      total_farmers: producerIds.size,
+      incoming_requests_pending: pendingRequests.length,
+      outgoing_requests_pending: campaigns.filter(
+        (campaign) => campaign.status === 'DRAFT' || campaign.status === 'QUEUED' || campaign.status === 'RUNNING',
+      ).length,
+      blocking_issues_count: blockingIssues,
+      yield_failures_count: yieldFailures,
+      recent_activity: recentActivity,
+    };
+  }, [packages, pendingRequests, campaigns]);
+
+  useEffect(() => {
+    if (!user || user.active_role !== 'cooperative') {
+      setCooperativeInsightsMetrics(null);
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/insights', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: CooperativeInsightsResponse) => {
+        if (!payload.metrics || Object.keys(payload.metrics).length === 0) return;
+        setCooperativeInsightsMetrics(payload.metrics);
+      })
+      .catch(() => undefined);
+  }, [user]);
+
+  const dashboardMetrics = useMemo(
+    () =>
+      user?.active_role === 'cooperative' && cooperativeInsightsMetrics
+        ? { ...baseDashboardMetrics, ...cooperativeInsightsMetrics }
+        : baseDashboardMetrics,
+    [baseDashboardMetrics, cooperativeInsightsMetrics, user?.active_role],
+  );
 
   const onboardingProgress = useMemo(() => {
     if (onboardingSteps.length === 0) return 0;
@@ -461,7 +567,7 @@ export default function DashboardPage() {
   const renderDashboard = () => {
     if (!user) return null;
 
-    const metrics = VIRGIN_DASHBOARD_METRICS;
+    const metrics = dashboardMetrics ?? VIRGIN_DASHBOARD_METRICS;
 
     switch (user.active_role) {
       case 'exporter':

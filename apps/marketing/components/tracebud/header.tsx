@@ -8,6 +8,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
+const DASHBOARD_URL = "https://app.tracebud.com";
+
 const personaLinks = [
   { label: "Producers", href: "/farmers" },
   { label: "Exporters", href: "/exporters" },
@@ -17,7 +19,7 @@ const personaLinks = [
 
 const secondaryLinks = [
   { label: "Pilot", href: "/pilot" },
-  { label: "How It Works", href: "/#how-it-works" },
+  { label: "How It Works", href: "/#supply-chain" },
   { label: "Pricing", href: "/pricing" },
 ];
 
@@ -117,6 +119,14 @@ export function Header() {
                     Book Demo
                   </Button>
                 </Link>
+                <a href={`${DASHBOARD_URL}/login`} target="_blank" rel="noopener noreferrer">
+                  <Button
+                    variant="ghost"
+                    className={`font-semibold text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
+                  >
+                    Sign in
+                  </Button>
+                </a>
                 <Link href="/get-started">
                   <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
                     Start Free Trial
@@ -187,6 +197,21 @@ export function Header() {
                   </Link>
                 ) : (
                   <>
+                    <a
+                      href={`${DASHBOARD_URL}/login`}
+                      className="w-full"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
+                      >
+                        Sign in
+                      </Button>
+                    </a>
                     <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button
                         size="lg"

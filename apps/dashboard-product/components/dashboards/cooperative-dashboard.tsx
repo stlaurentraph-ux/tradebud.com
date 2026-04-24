@@ -24,6 +24,10 @@ interface CooperativeDashboardProps {
     total_farmers: number;
     incoming_requests_pending?: number;
     outgoing_requests_pending?: number;
+    members_missing_consent?: number;
+    requests_overdue?: number;
+    portability_reviews_pending?: number;
+    blocking_issues_count?: number;
   };
 }
 
@@ -34,6 +38,10 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
     : 0;
   const incomingPending = metrics.incoming_requests_pending ?? 0;
   const outgoingPending = metrics.outgoing_requests_pending ?? 0;
+  const membersMissingConsent = metrics.members_missing_consent ?? Math.max(1, Math.ceil(metrics.total_farmers * 0.08));
+  const requestsOverdue = metrics.requests_overdue ?? 7;
+  const portabilityPending = metrics.portability_reviews_pending ?? 4;
+  const blockingIssues = metrics.blocking_issues_count ?? Math.max(0, Math.ceil(pendingPlots * 0.4));
 
   return (
     <div className="space-y-6">
@@ -91,7 +99,7 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             <AlertTriangle className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{Math.max(0, Math.ceil(pendingPlots * 0.4))}</div>
+            <div className="text-2xl font-bold text-amber-600">{blockingIssues}</div>
             <p className="text-xs text-muted-foreground mt-1">Yield appeal and evidence follow-up</p>
           </CardContent>
         </Card>
@@ -116,7 +124,7 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-lg border p-4">
             <p className="text-sm font-medium">Members missing consent</p>
-            <p className="mt-2 text-2xl font-bold text-amber-600">{Math.max(1, Math.ceil(metrics.total_farmers * 0.08))}</p>
+            <p className="mt-2 text-2xl font-bold text-amber-600">{membersMissingConsent}</p>
             <p className="mt-1 text-xs text-muted-foreground">Prioritize portability-ready consent renewals</p>
           </div>
           <div className="rounded-lg border p-4">
@@ -126,7 +134,7 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
           </div>
           <div className="rounded-lg border p-4">
             <p className="text-sm font-medium">Requests overdue</p>
-            <p className="mt-2 text-2xl font-bold">7</p>
+            <p className="mt-2 text-2xl font-bold">{requestsOverdue}</p>
             <p className="mt-1 text-xs text-muted-foreground">Inbound partner asks past SLA</p>
           </div>
         </CardContent>
@@ -148,7 +156,7 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             </Link>
             <Link href="/governance" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <span className="font-medium">Review portability queue</span>
-              <Badge variant="outline">4 pending</Badge>
+              <Badge variant="outline">{portabilityPending} pending</Badge>
             </Link>
             <Link href="/fpic" className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100">
               <div className="flex items-center gap-2">

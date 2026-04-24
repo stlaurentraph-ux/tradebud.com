@@ -27,42 +27,11 @@ interface ExporterDashboardProps {
     total_plots: number;
     compliant_plots: number;
     total_farmers: number;
+    blocking_issues_count?: number;
+    yield_failures_count?: number;
+    recent_activity?: TimelineEvent[];
   };
 }
-
-// Mock recent activity - in production this would come from the backend
-const mockRecentActivity: TimelineEvent[] = [
-  {
-    id: '1',
-    eventType: 'submission',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    userName: 'Maria Rodriguez',
-    description: 'Shipment SHP-2024-003 sealed after lineage lock',
-    metadata: { reference: 'PKG-2024-0891' },
-  },
-  {
-    id: '2',
-    eventType: 'approval',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    userName: 'System',
-    description: 'Shipment readiness checks passed for SHP-2024-002',
-    metadata: { checks_passed: '8/8' },
-  },
-  {
-    id: '3',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    userName: 'Carlos Mendez',
-    description: 'Yield warning YLD-2024-015 resolved',
-  },
-  {
-    id: '4',
-    eventType: 'document_uploaded',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    userName: 'Ana Garcia',
-    description: 'Consent document uploaded for Plot P-2024-042',
-  },
-];
 
 export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   // Canonical shipment states from spec
@@ -94,8 +63,8 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       : 0;
 
   // Spec KPIs
-  const blockingIssuesCount = 2;
-  const yieldFailuresCount = 1;
+  const blockingIssuesCount = metrics.blocking_issues_count ?? 0;
+  const yieldFailuresCount = metrics.yield_failures_count ?? 0;
   const shipmentsReadyToSeal = shipmentStates.READY;
   const isVirginTenant =
     metrics.total_packages === 0 &&
@@ -388,8 +357,8 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
               Activity will appear here once your team starts onboarding and submission workflows.
             </p>
           ) : (
-            <Timeline 
-              events={mockRecentActivity} 
+            <Timeline
+              events={metrics.recent_activity ?? []}
               maxHeight={250}
               compact
             />

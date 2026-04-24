@@ -87,7 +87,7 @@ export default function CountriesPage() {
                 className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl rounded-full shadow-2xl w-full sm:w-auto"
               >
                 <a
-                  href={`${DASHBOARD_URL}/signup?role=registry`}
+                  href={`${DASHBOARD_URL}/create-account?role=registry`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -365,7 +365,7 @@ export default function CountriesPage() {
                 size="lg"
                 className="bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-bold px-10 py-6 text-lg rounded-full"
               >
-                <a href={`${DASHBOARD_URL}/signup?role=registry`} target="_blank" rel="noopener noreferrer">
+                <a href={`${DASHBOARD_URL}/create-account?role=registry`} target="_blank" rel="noopener noreferrer">
                   Create registry account
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>

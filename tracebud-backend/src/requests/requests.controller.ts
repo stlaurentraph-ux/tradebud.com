@@ -46,6 +46,20 @@ export class RequestsController {
     return this.requestsService.list(tenantId);
   }
 
+  @Get('issues')
+  async listOperationalIssues(@Req() req: any) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.requestsService.listOperationalIssues(tenantId);
+  }
+
+  @Get('evidence-feed')
+  async listEvidenceFeed(@Req() req: any) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.requestsService.listEvidenceFeed(tenantId);
+  }
+
   @Post('campaigns')
   async create(
     @Req() req: any,

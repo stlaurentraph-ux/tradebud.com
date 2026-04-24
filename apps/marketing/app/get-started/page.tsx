@@ -20,7 +20,7 @@ const options = [
   {
     title: "Cooperative",
     description: "Coordinate member data and roll up evidence at scale.",
-    href: `${DASHBOARD_URL}/signup?role=cooperative`,
+    href: `${DASHBOARD_URL}/create-account?role=cooperative`,
     icon: Users,
     isApp: false,
     color: "#F59E0B",
@@ -28,7 +28,7 @@ const options = [
   {
     title: "Exporter",
     description: "Automate due diligence and batch-level workflows.",
-    href: `${DASHBOARD_URL}/signup?role=exporter`,
+    href: `${DASHBOARD_URL}/create-account?role=exporter`,
     icon: Factory,
     isApp: false,
     color: "var(--mountain-clay)",
@@ -36,7 +36,7 @@ const options = [
   {
     title: "Importer / Brand",
     description: "Get upstream visibility and supplier risk signals.",
-    href: `${DASHBOARD_URL}/signup?role=importer`,
+    href: `${DASHBOARD_URL}/create-account?role=importer`,
     icon: Building2,
     isApp: false,
     color: "var(--forest-canopy)",

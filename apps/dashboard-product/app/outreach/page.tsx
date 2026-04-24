@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Send } from 'lucide-react';
 import { NewRequestWizardDialog, type NewRequestResult } from '@/components/requests/wizard/new-request-wizard-dialog';
 import { useAuth } from '@/lib/auth-context';
+import { useRequestCampaigns } from '@/lib/use-requests';
 
 type OutreachStatus = 'Draft' | 'Sent' | 'Completed' | 'Archived';
 
@@ -20,12 +21,6 @@ type OutreachRequest = {
   date: string;
   status: OutreachStatus;
 };
-
-const MOCK_OUTREACH_REQUESTS: OutreachRequest[] = [
-  { id: 'OUT-2026-001', counterpartName: 'North Valley Cooperative', commodity: 'Cocoa', date: '2026-04-20', status: 'Sent' },
-  { id: 'OUT-2026-002', counterpartName: 'Green Ridge Member Union', commodity: 'Coffee', date: '2026-04-18', status: 'Draft' },
-  { id: 'OUT-2026-003', counterpartName: 'Kivu Export Group', commodity: 'Palm Oil', date: '2026-04-12', status: 'Completed' },
-];
 
 const OUTREACH_STATUS_TABS: OutreachStatus[] = ['Draft', 'Sent', 'Completed', 'Archived'];
 
@@ -39,9 +34,28 @@ const statusBadgeClass: Record<OutreachStatus, string> = {
 export default function OutreachPage() {
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
+  const { campaigns, isLoading, error, reload } = useRequestCampaigns(user?.tenant_id ?? null);
   const [statusTab, setStatusTab] = useState<OutreachStatus>('Draft');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [requests, setRequests] = useState<OutreachRequest[]>(MOCK_OUTREACH_REQUESTS);
+
+  const requests = useMemo<OutreachRequest[]>(
+    () =>
+      campaigns.map((campaign) => ({
+      id: campaign.id,
+      counterpartName: `${campaign.target_contact_emails?.length ?? 0} recipient${(campaign.target_contact_emails?.length ?? 0) === 1 ? '' : 's'}`,
+      commodity: campaign.request_type.replace(/_/g, ' ').toLowerCase(),
+      date: campaign.updated_at ?? campaign.created_at,
+      status:
+        campaign.status === 'DRAFT'
+          ? 'Draft'
+          : campaign.status === 'QUEUED' || campaign.status === 'RUNNING'
+            ? 'Sent'
+            : campaign.status === 'COMPLETED' || campaign.status === 'PARTIAL'
+              ? 'Completed'
+              : 'Archived',
+      })),
+    [campaigns],
+  );
 
   const filteredRequests = useMemo(
     () => requests.filter((request) => request.status === statusTab),
@@ -49,16 +63,8 @@ export default function OutreachPage() {
   );
 
   const handleWizardComplete = (result: NewRequestResult) => {
-    const requestId = `OUT-2026-${String(requests.length + 1).padStart(3, '0')}`;
-    const newRequest: OutreachRequest = {
-      id: requestId,
-      counterpartName: result.counterpartName,
-      commodity: result.commodity,
-      date: new Date().toISOString().slice(0, 10),
-      status: result.status,
-    };
-    setRequests((prev) => [newRequest, ...prev]);
     setStatusTab(result.status);
+    reload();
   };
 
   return (
@@ -83,6 +89,11 @@ export default function OutreachPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                {error}
+              </div>
+            ) : null}
             <Tabs value={statusTab} onValueChange={(value) => setStatusTab(value as OutreachStatus)}>
               <TabsList>
                 {OUTREACH_STATUS_TABS.map((status) => (
@@ -93,7 +104,9 @@ export default function OutreachPage() {
               </TabsList>
             </Tabs>
 
-            {filteredRequests.length === 0 ? (
+            {isLoading ? (
+              <div className="rounded-lg border p-10 text-center text-sm text-muted-foreground">Loading campaigns...</div>
+            ) : filteredRequests.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center">
                 <Send className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
                 <p className="font-medium text-foreground">

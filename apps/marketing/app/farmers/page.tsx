@@ -194,7 +194,7 @@ export default function FarmersPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
-                  href={`${DASHBOARD_URL}/signup?role=cooperative`}
+                  href={`${DASHBOARD_URL}/create-account?role=cooperative`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-[var(--forest-canopy)] rounded-lg text-sm font-bold hover:bg-white/90 transition-colors"
@@ -446,7 +446,7 @@ export default function FarmersPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href={`${DASHBOARD_URL}/signup?role=cooperative`}
+                href={`${DASHBOARD_URL}/create-account?role=cooperative`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[var(--forest-canopy)] font-semibold hover:underline inline-flex items-center gap-2"

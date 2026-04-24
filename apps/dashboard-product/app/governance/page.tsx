@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,25 @@ const premiumDecisions = [
 ];
 
 export default function GovernancePage() {
+  const [insights, setInsights] = useState({
+    total_farmers: 0,
+    portability_reviews_pending: 0,
+    active_campaigns: 0,
+    requests_overdue: 0,
+  });
+
+  useEffect(() => {
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/insights', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { metrics?: Partial<typeof insights> }) => {
+        if (!payload.metrics) return;
+        setInsights((previous) => ({ ...previous, ...payload.metrics }));
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className="flex flex-col">
       <AppHeader
@@ -27,7 +47,7 @@ export default function GovernancePage() {
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">1,284</p>
+                  <p className="text-2xl font-bold">{insights.total_farmers}</p>
                   <p className="text-xs text-muted-foreground">Active members</p>
                 </div>
               </div>
@@ -49,7 +69,7 @@ export default function GovernancePage() {
               <div className="flex items-center gap-3">
                 <Scale className="h-5 w-5 text-amber-500" />
                 <div>
-                  <p className="text-2xl font-bold">4</p>
+                  <p className="text-2xl font-bold">{insights.portability_reviews_pending}</p>
                   <p className="text-xs text-muted-foreground">Portability reviews pending</p>
                 </div>
               </div>
@@ -60,7 +80,7 @@ export default function GovernancePage() {
               <div className="flex items-center gap-3">
                 <FileCheck className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-2xl font-bold">83%</p>
+                  <p className="text-2xl font-bold">{Math.max(0, 100 - insights.requests_overdue)}%</p>
                   <p className="text-xs text-muted-foreground">Health snapshot completion</p>
                 </div>
               </div>

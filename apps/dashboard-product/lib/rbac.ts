@@ -365,7 +365,6 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   ],
   sponsor: [
     'Overview',
-    'Network',
     'Organisations',
     'Compliance Health',
     'Programmes',

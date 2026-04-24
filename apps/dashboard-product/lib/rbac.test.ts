@@ -94,7 +94,6 @@ describe('rbac navigation visibility', () => {
     const names = getVisibleNavItems(sponsor).map((item) => item.name);
 
     expect(names).toContain('Overview');
-    expect(names).toContain('Network');
     expect(names).toContain('Organisations');
     expect(names).toContain('Compliance Health');
     expect(names).toContain('Programmes');

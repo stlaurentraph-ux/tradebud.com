@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download, Filter, Calendar, User, Package, MapPin, FileText } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,8 +103,26 @@ export default function AuditLogPage() {
   const [filterEntity, setFilterEntity] = useState<'all' | 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance'>('all');
   const [filterAction, setFilterAction] = useState<'all' | 'created' | 'updated' | 'deleted' | 'approved' | 'submitted' | 'uploaded' | 'exported'>('all');
   const [dateRange, setDateRange] = useState<'all' | '7d' | '30d' | '90d'>('all');
+  const [backendEntries, setBackendEntries] = useState<AuditLogEntry[]>([]);
 
-  const filteredLog = auditLogEntries.filter((entry) => {
+  useEffect(() => {
+    if (!isCooperative) return;
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/audit-log', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { entries?: AuditLogEntry[] }) => {
+        if (Array.isArray(payload.entries)) setBackendEntries(payload.entries);
+      })
+      .catch(() => undefined);
+  }, [isCooperative]);
+
+  const baseEntries = useMemo(
+    () => (isCooperative && backendEntries.length > 0 ? backendEntries : auditLogEntries),
+    [backendEntries, isCooperative],
+  );
+
+  const filteredLog = baseEntries.filter((entry) => {
     if (filterEntity !== 'all' && entry.entity_type !== filterEntity) return false;
     if (filterAction !== 'all' && entry.action !== filterAction) return false;
     const query = searchQuery.toLowerCase();

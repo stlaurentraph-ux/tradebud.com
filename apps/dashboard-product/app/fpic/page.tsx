@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Plus,
@@ -300,8 +300,76 @@ export default function FPICRepositoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending_review' | 'renewal_due' | 'expired'>('all');
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<FPICDocument[]>(mockDocuments);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [backendSummary, setBackendSummary] = useState({
+    total: 0,
+    verified: 0,
+    pending: 0,
+    renewal_due: 0,
+    expired: 0,
+  });
 
-  const filteredDocs = mockDocuments.filter((doc) => {
+  useEffect(() => {
+    if (!isCooperative) return;
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/evidence', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { summary?: Partial<typeof backendSummary> }) => {
+        if (!payload.summary) return;
+        setBackendSummary((previous) => ({ ...previous, ...payload.summary }));
+      })
+      .catch(() => undefined);
+  }, [isCooperative]);
+
+  useEffect(() => {
+    if (!isImporter) {
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    setIsLoadingDocuments(true);
+    void fetch('/api/requests/evidence-feed', { headers, cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => [])) as Array<{
+          id: string;
+          name: string;
+          type: FPICDocument['type'];
+          farmer_or_community: string;
+          upload_date: string;
+          expiry_date: string;
+          status: FPICDocument['status'];
+          file_size_mb: number;
+          sha256_hash: string;
+          uploader_name: string;
+          uploader_org: string;
+        }>;
+        if (!response.ok || !Array.isArray(payload)) {
+          return;
+        }
+        setDocuments(
+          payload.map((item) => ({
+            ...item,
+            linked_entities: [{ type: 'shipment', id: item.id, label: item.name }],
+            review_history: [
+              {
+                id: `${item.id}_event`,
+                eventType: 'document_uploaded',
+                timestamp: item.upload_date,
+                userName: item.uploader_name,
+                description: 'Evidence record ingested from campaign workflow',
+                metadata: { source: 'request_campaigns' },
+              },
+            ],
+          })),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => setIsLoadingDocuments(false));
+  }, [isImporter]);
+
+  const filteredDocs = useMemo(() => documents.filter((doc) => {
     if (filterStatus !== 'all' && doc.status !== filterStatus) return false;
     const query = searchQuery.toLowerCase();
     return (
@@ -310,12 +378,12 @@ export default function FPICRepositoryPage() {
       docTypeLabels[doc.type].toLowerCase().includes(query) ||
       doc.sha256_hash.toLowerCase().includes(query)
     );
-  });
+  }), [documents, filterStatus, searchQuery]);
 
-  const verified = mockDocuments.filter((d) => d.status === 'verified').length;
-  const pending = mockDocuments.filter((d) => d.status === 'pending_review').length;
-  const renewalDue = mockDocuments.filter((d) => d.status === 'renewal_due').length;
-  const expired = mockDocuments.filter((d) => d.status === 'expired').length;
+  const verified = documents.filter((d) => d.status === 'verified').length;
+  const pending = documents.filter((d) => d.status === 'pending_review').length;
+  const renewalDue = documents.filter((d) => d.status === 'renewal_due').length;
+  const expired = documents.filter((d) => d.status === 'expired').length;
 
   return (
     <div className="flex flex-col">
@@ -353,7 +421,9 @@ export default function FPICRepositoryPage() {
                 <p className="text-sm text-muted-foreground">
                   {isImporter ? 'Total evidence records' : isCooperative ? 'Total evidence files' : 'Total documents'}
                 </p>
-                <p className="text-2xl font-bold mt-1">{mockDocuments.length}</p>
+                <p className="text-2xl font-bold mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.total : documents.length}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -362,7 +432,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Verified</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{verified}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.verified : verified}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -371,7 +443,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent review queue' : 'Pending review'}</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{pending}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.pending : pending}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -380,7 +454,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent renewal due' : 'Renewal due'}</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{renewalDue}</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.renewal_due : renewalDue}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -389,7 +465,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Expired</p>
-                <p className="text-2xl font-bold text-destructive mt-1">{expired}</p>
+                <p className="text-2xl font-bold text-destructive mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.expired : expired}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -438,7 +516,11 @@ export default function FPICRepositoryPage() {
 
         {/* Documents List */}
         <div className="space-y-3">
-          {filteredDocs.length === 0 ? (
+          {isLoadingDocuments ? (
+            <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
+              Loading evidence records...
+            </div>
+          ) : filteredDocs.length === 0 ? (
             <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <p className="mt-4 text-sm text-muted-foreground">

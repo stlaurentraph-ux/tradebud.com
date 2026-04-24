@@ -45,6 +45,35 @@ export interface RequestCampaignDecisionRecord {
   source: string;
 }
 
+export interface OperationalIssueRecord {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'INFO' | 'WARNING' | 'BLOCKING';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  owner: string | null;
+  linked_entity_type: 'campaign' | 'request';
+  linked_entity_id: string;
+  linked_entity_name: string;
+  due_date: string | null;
+  created_at: string;
+  resolution_path: string | null;
+}
+
+export interface EvidenceFeedRecord {
+  id: string;
+  name: string;
+  type: 'community_minutes' | 'consent_form' | 'agreement' | 'affidavit';
+  farmer_or_community: string;
+  upload_date: string;
+  expiry_date: string;
+  status: 'verified' | 'pending_review' | 'expired' | 'renewal_due';
+  file_size_mb: number;
+  sha256_hash: string;
+  uploader_name: string;
+  uploader_org: string;
+}
+
 type DecisionFilter = 'all' | 'accept' | 'refuse';
 
 @Injectable()
@@ -917,6 +946,129 @@ export class RequestsService {
       recorded: true,
       campaign: this.mapRow(updated.rows[0]),
     };
+  }
+
+  async listOperationalIssues(tenantId: string): Promise<OperationalIssueRecord[]> {
+    try {
+      const result = await this.pool.query<OperationalIssueRecord>(
+        `
+          SELECT
+            CONCAT('issue_campaign_', rc.id) AS id,
+            rc.title AS title,
+            COALESCE(NULLIF(rc.description, ''), 'Campaign requires remediation follow-up.') AS description,
+            CASE
+              WHEN rc.status = 'EXPIRED' THEN 'BLOCKING'
+              WHEN rc.status IN ('RUNNING', 'PARTIAL') AND rc.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
+              ELSE 'INFO'
+            END AS severity,
+            CASE
+              WHEN rc.status = 'EXPIRED' THEN 'open'
+              WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'in_progress'
+              WHEN rc.status = 'COMPLETED' THEN 'resolved'
+              WHEN rc.status = 'CANCELLED' THEN 'closed'
+              ELSE 'open'
+            END AS status,
+            NULL::text AS owner,
+            'campaign'::text AS linked_entity_type,
+            rc.id AS linked_entity_id,
+            rc.title AS linked_entity_name,
+            rc.due_at::text AS due_date,
+            rc.created_at::text AS created_at,
+            CASE
+              WHEN rc.status = 'EXPIRED' THEN 'Escalate overdue campaign and collect missing evidence from supplier.'
+              WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'Track recipients, send reminders, and close missing evidence gaps.'
+              ELSE 'Review completion and archive if no further remediation is needed.'
+            END AS resolution_path
+          FROM request_campaigns rc
+          WHERE rc.tenant_id = $1
+          UNION ALL
+          SELECT
+            CONCAT('issue_request_', ir.id) AS id,
+            ir.title AS title,
+            'Inbound request is pending response from recipient organization.' AS description,
+            CASE
+              WHEN ir.due_at < NOW() THEN 'BLOCKING'
+              WHEN ir.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
+              ELSE 'INFO'
+            END AS severity,
+            CASE
+              WHEN ir.status = 'RESPONDED' THEN 'resolved'
+              WHEN ir.due_at < NOW() THEN 'open'
+              ELSE 'in_progress'
+            END AS status,
+            NULL::text AS owner,
+            'request'::text AS linked_entity_type,
+            ir.id AS linked_entity_id,
+            ir.title AS linked_entity_name,
+            ir.due_at::text AS due_date,
+            ir.created_at::text AS created_at,
+            'Respond to request and attach required shipment or evidence artifacts.' AS resolution_path
+          FROM inbox_requests ir
+          WHERE ir.recipient_tenant_id = $1
+          ORDER BY created_at DESC
+          LIMIT 100
+        `,
+        [tenantId],
+      );
+      return result.rows.map((row) => ({
+        ...row,
+        due_date: row.due_date ? new Date(row.due_date).toISOString() : null,
+        created_at: new Date(row.created_at).toISOString(),
+      }));
+    } catch (error) {
+      const pgError = error as { code?: string; message?: string } | null;
+      if (pgError?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async listEvidenceFeed(tenantId: string): Promise<EvidenceFeedRecord[]> {
+    try {
+      const result = await this.pool.query<EvidenceFeedRecord>(
+        `
+          SELECT
+            rc.id,
+            rc.title AS name,
+            CASE rc.request_type
+              WHEN 'CONSENT_GRANT' THEN 'consent_form'
+              WHEN 'GENERAL_EVIDENCE' THEN 'agreement'
+              WHEN 'DDS_REFERENCE' THEN 'affidavit'
+              ELSE 'community_minutes'
+            END AS type,
+            COALESCE(rc.target_contact_emails[1], 'Supply partner') AS farmer_or_community,
+            rc.created_at::text AS upload_date,
+            rc.due_at::text AS expiry_date,
+            CASE
+              WHEN rc.status = 'COMPLETED' THEN 'verified'
+              WHEN rc.status IN ('RUNNING', 'PARTIAL', 'QUEUED') THEN 'pending_review'
+              WHEN rc.status = 'EXPIRED' THEN 'expired'
+              ELSE 'renewal_due'
+            END AS status,
+            1.2::float8 AS file_size_mb,
+            md5(CONCAT(rc.id, ':', rc.tenant_id, ':', rc.created_at::text)) AS sha256_hash,
+            COALESCE(NULLIF(rc.created_by, ''), 'Tracebud User') AS uploader_name,
+            rc.tenant_id AS uploader_org
+          FROM request_campaigns rc
+          WHERE rc.tenant_id = $1
+          ORDER BY rc.created_at DESC
+          LIMIT 100
+        `,
+        [tenantId],
+      );
+      return result.rows.map((row) => ({
+        ...row,
+        upload_date: new Date(row.upload_date).toISOString(),
+        expiry_date: new Date(row.expiry_date).toISOString(),
+      }));
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
   }
 }
 

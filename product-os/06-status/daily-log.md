@@ -1,3 +1,18 @@
+### 2026-04-22 (execution: importer backend wiring for reports/issues/evidence)
+- Focus: remove remaining importer mock-only reads on `Reporting`, `Issues`, and `Evidence` destinations by adding backend-backed summary/issue/evidence endpoints and wiring dashboard pages.
+- Files changed: `tracebud-backend/src/reports/reports.controller.ts`, `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/api/reports/importer-summary/route.ts`, `apps/dashboard-product/app/api/requests/issues/route.ts`, `apps/dashboard-product/app/api/requests/evidence-feed/route.ts`, `apps/dashboard-product/app/reports/page.tsx`, `apps/dashboard-product/app/compliance/issues/page.tsx`, `apps/dashboard-product/app/fpic/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added importer reporting summary endpoint that aggregates tenant-scoped campaign/request readiness metrics and fails closed by role/tenant claim.
+  - Added request-module operational-issues and evidence-feed endpoints derived from tenant campaign/inbox tables for importer issue/evidence surfaces.
+  - Added dashboard API proxies and switched importer destination pages to consume backend payloads with graceful loading/fallback behavior.
+- Permissions/tenant boundaries:
+  - New backend endpoints require existing requests/reporting access gates and tenant claim checks (`admin|exporter|compliance_manager`), preserving fail-closed semantics.
+- Exception handling/recovery:
+  - New summary/feed endpoints return safe-zero/empty payloads when request/inbox tables are unavailable (`42P01`) to avoid importer-page hard failures in partial environments.
+- Verification:
+  - `ReadLints` on touched backend/frontend files (no lints).
+- Blockers: none.
+
 ### 2026-04-22 (execution: onboarding taxonomy bridge + role-aware wizard mode)
 - Focus: make onboarding task taxonomy and overview-step taxonomy consistent with the new dashboard IA and request-wizard vocabulary.
 - Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/outreach/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

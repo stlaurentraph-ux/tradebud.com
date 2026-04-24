@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { WizardProgress } from '@/components/onboarding/wizard-progress';
@@ -18,6 +18,7 @@ import type { User, TenantRole } from '@/types';
 
 type Step = 1 | 2 | 3;
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
+type SupportedPrefillRole = PrimaryRole;
 
 const STEP_TITLES: Record<Step, { title: string; description: string }> = {
   1: {
@@ -78,8 +79,22 @@ function selectedRoleToTenantRole(role: PrimaryRole | ''): TenantRole {
   return 'exporter';
 }
 
+function parsePrefillRole(role: string | null): SupportedPrefillRole | '' {
+  if (
+    role === 'importer' ||
+    role === 'exporter' ||
+    role === 'cooperative' ||
+    role === 'compliance_manager' ||
+    role === 'admin'
+  ) {
+    return role;
+  }
+  return '';
+}
+
 export default function CreateAccountPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { hydrateSessionFromToken } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +117,9 @@ export default function CreateAccountPage() {
     primaryCommodity: '',
     primaryObjective: '',
   });
+
+  const prefillRole = parsePrefillRole(searchParams.get('role'));
+  const effectivePrimaryRole = workspaceData.primaryRole || prefillRole;
 
   const handleStep1 = async () => {
     setError(null);
@@ -146,7 +164,7 @@ export default function CreateAccountPage() {
           stage: 'workspace_setup',
           organizationName: workspaceData.organizationName.trim(),
           country: workspaceData.country.trim(),
-          primaryRole: toApiPrimaryRole(workspaceData.primaryRole),
+          primaryRole: toApiPrimaryRole(effectivePrimaryRole),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -155,7 +173,7 @@ export default function CreateAccountPage() {
       if (rawUser) {
         try {
           const parsed = JSON.parse(rawUser) as User;
-          const selectedRole = selectedRoleToTenantRole(workspaceData.primaryRole);
+          const selectedRole = selectedRoleToTenantRole(effectivePrimaryRole);
           const nextRoles = parsed.roles.includes(selectedRole) ? parsed.roles : [selectedRole, ...parsed.roles];
           const updatedUser: User = {
             ...parsed,
@@ -188,8 +206,8 @@ export default function CreateAccountPage() {
         },
         body: JSON.stringify({
           skipped: false,
-          primaryRole: toApiPrimaryRole(workspaceData.primaryRole),
-          teamSize: buildRoleSpecificSize(workspaceData.primaryRole, profileData),
+          primaryRole: toApiPrimaryRole(effectivePrimaryRole),
+          teamSize: buildRoleSpecificSize(effectivePrimaryRole, profileData),
           mainCommodity: profileData.primaryCommodity || null,
           primaryObjective: profileData.primaryObjective || null,
         }),
@@ -199,7 +217,7 @@ export default function CreateAccountPage() {
       }
     } finally {
       setIsSubmitting(false);
-      router.push(getRedirectUrl(workspaceData.primaryRole));
+      router.push(getRedirectUrl(effectivePrimaryRole));
     }
   };
 
@@ -242,7 +260,7 @@ export default function CreateAccountPage() {
             ) : null}
             {step === 2 ? (
               <StepWorkspaceSetup
-                data={workspaceData}
+                data={{ ...workspaceData, primaryRole: effectivePrimaryRole }}
                 onChange={setWorkspaceData}
                 onNext={handleStep2}
                 onBack={() => {
@@ -255,7 +273,7 @@ export default function CreateAccountPage() {
             ) : null}
             {step === 3 ? (
               <StepCommercialProfile
-                role={workspaceData.primaryRole}
+                role={effectivePrimaryRole}
                 data={profileData}
                 onChange={setProfileData}
                 onNext={handleStep3}

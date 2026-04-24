@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { WizardProgress } from './wizard-progress';
 import { StepRequestType, type RequestTypeData } from './step-request-type';
@@ -11,14 +11,6 @@ import { useAuth } from '@/lib/auth-context';
 
 type WizardMode = 'request' | 'campaign';
 
-const MOCK_RECIPIENTS: Recipient[] = [
-  { id: 'org-1', type: 'organization', name: 'North Valley Cooperative', country: 'Ivory Coast', commodity: 'Cocoa', complianceStatus: 'compliant' },
-  { id: 'org-2', type: 'organization', name: 'Kivu Export Group', country: 'DR Congo', commodity: 'Coffee', complianceStatus: 'pending' },
-  { id: 'farmer-1', type: 'farmer', name: 'Kofi Asante', country: 'Ghana', commodity: 'Cocoa', complianceStatus: 'compliant' },
-  { id: 'farmer-2', type: 'farmer', name: 'Maria Santos', country: 'Brazil', commodity: 'Coffee', complianceStatus: 'pending' },
-  { id: 'plot-1', type: 'plot', name: 'Plot A-001 (2.5 ha)', country: 'Ghana', commodity: 'Cocoa', complianceStatus: 'compliant', farmerName: 'Kofi Asante' },
-  { id: 'plot-2', type: 'plot', name: 'Fazenda Santos (15 ha)', country: 'Brazil', commodity: 'Coffee', complianceStatus: 'compliant', farmerName: 'Maria Santos' },
-];
 export interface NewRequestResult {
   status: 'Draft' | 'Sent';
   commodity: string;
@@ -72,12 +64,113 @@ export function NewRequestWizardDialog({
   const [recipientsData, setRecipientsData] = useState<RecipientsData>({
     selectedRecipients: [],
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [availableRecipients, setAvailableRecipients] = useState<Recipient[]>([]);
+  const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
+  const [recipientsError, setRecipientsError] = useState<string | null>(null);
 
   const resetWizard = () => {
     setStep(1);
     setRequestData({ requestType: null, commodity: '', dueDate: null, message: '' });
     setRecipientsData({ selectedRecipients: [] });
+    setSubmitError(null);
   };
+
+  useEffect(() => {
+    if (!open || !user?.tenant_id) return;
+    let cancelled = false;
+
+    const loadRecipients = async () => {
+      setIsLoadingRecipients(true);
+      setRecipientsError(null);
+
+      try {
+        const [contactsRes, plotsRes] = await Promise.all([
+          fetch('/api/contacts', { method: 'GET', headers: getAuthHeaders(), cache: 'no-store' }),
+          fetch('/api/plots', { method: 'GET', headers: getAuthHeaders(), cache: 'no-store' }),
+        ]);
+
+        const contactsBody = (await contactsRes.json().catch(() => [])) as
+          | Array<Record<string, unknown>>
+          | { data?: Array<Record<string, unknown>>; contacts?: Array<Record<string, unknown>>; error?: string };
+        const plotsBody = (await plotsRes.json().catch(() => [])) as
+          | Array<Record<string, unknown>>
+          | { data?: Array<Record<string, unknown>>; plots?: Array<Record<string, unknown>>; error?: string };
+
+        if (!contactsRes.ok && !plotsRes.ok) {
+          const contactError = !Array.isArray(contactsBody) ? contactsBody.error : undefined;
+          const plotError = !Array.isArray(plotsBody) ? plotsBody.error : undefined;
+          throw new Error(contactError ?? plotError ?? 'Unable to load recipients.');
+        }
+
+        const contacts = Array.isArray(contactsBody)
+          ? contactsBody
+          : Array.isArray(contactsBody.contacts)
+            ? contactsBody.contacts
+            : Array.isArray(contactsBody.data)
+              ? contactsBody.data
+              : [];
+        const plots = Array.isArray(plotsBody)
+          ? plotsBody
+          : Array.isArray(plotsBody.plots)
+            ? plotsBody.plots
+            : Array.isArray(plotsBody.data)
+              ? plotsBody.data
+              : [];
+
+        const contactRecipients: Recipient[] = contacts.map((item) => {
+          const id = typeof item.id === 'string' ? item.id : crypto.randomUUID();
+          const name = typeof item.full_name === 'string' ? item.full_name : 'Unknown contact';
+          const country = typeof item.country === 'string' && item.country ? item.country : 'Unknown';
+          const organization = typeof item.organization === 'string' ? item.organization : '';
+          const status = typeof item.status === 'string' ? item.status : 'new';
+          return {
+            id,
+            type: organization ? 'organization' : 'farmer',
+            name: organization || name,
+            country,
+            commodity: 'Unknown',
+            complianceStatus: status === 'submitted' || status === 'engaged' ? 'compliant' : 'pending',
+            farmerName: organization ? name : undefined,
+          };
+        });
+
+        const plotRecipients: Recipient[] = plots.map((item) => {
+          const id = typeof item.id === 'string' ? item.id : crypto.randomUUID();
+          const name = typeof item.name === 'string' ? item.name : `Plot ${id}`;
+          const farmerName = typeof item.farmer_name === 'string' ? item.farmer_name : undefined;
+          const risk = typeof item.deforestation_risk === 'string' ? item.deforestation_risk : 'unknown';
+          return {
+            id,
+            type: 'plot',
+            name,
+            country: 'Unknown',
+            commodity: 'Unknown',
+            complianceStatus: risk === 'low' ? 'compliant' : risk === 'high' ? 'non_compliant' : 'pending',
+            farmerName,
+          };
+        });
+
+        if (!cancelled) {
+          setAvailableRecipients([...contactRecipients, ...plotRecipients]);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecipientsError(error instanceof Error ? error.message : 'Unable to load recipients.');
+          setAvailableRecipients([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRecipients(false);
+        }
+      }
+    };
+
+    void loadRecipients();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user?.tenant_id]);
 
   const handleCancel = () => {
     onOpenChange(false);
@@ -92,8 +185,68 @@ export function NewRequestWizardDialog({
   const resolveRequestTypeLabel = () =>
     requestData.requestType ? requestTypeLabels[requestData.requestType] : mode === 'campaign' ? 'Programme Campaign' : 'Request';
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('tracebud_token') : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const toBackendRequestType = (requestType: RequestTypeData['requestType']) => {
+    switch (requestType) {
+      case 'documentation':
+        return 'GENERAL_EVIDENCE';
+      case 'geolocation':
+        return 'MISSING_PLOT_GEOMETRY';
+      case 'identity_verification':
+        return 'MISSING_PRODUCER_PROFILE';
+      case 'compliance_checklist':
+        return 'CONSENT_GRANT';
+      default:
+        return 'OTHER';
+    }
+  };
+
+  const toTargetEmail = (recipient: Recipient): { email: string; full_name: string } => {
+    const manualEmail = recipient.id.startsWith('manual-') ? recipient.id.replace(/^manual-/, '') : '';
+    const email = manualEmail && manualEmail.includes('@') ? manualEmail : `${recipient.id}@tracebud.local`;
+    return { email, full_name: recipient.name };
+  };
+
+  const createCampaign = async (status: 'Draft' | 'Sent') => {
+    if (!requestData.requestType) {
+      throw new Error('Select a request type before continuing.');
+    }
+    if (recipientsData.selectedRecipients.length === 0) {
+      throw new Error('Select at least one recipient before continuing.');
+    }
+
+    const payload = {
+      request_type: toBackendRequestType(requestData.requestType),
+      campaign_name: `${mode === 'campaign' ? 'Campaign' : 'Request'} - ${requestData.commodity || 'General'}`,
+      description_template: requestData.message || `Automated ${mode} from Tracebud workspace`,
+      due_date: requestData.dueDate ? requestData.dueDate.toISOString().slice(0, 10) : undefined,
+      targets: recipientsData.selectedRecipients.map(toTargetEmail),
+      status: status === 'Draft' ? 'DRAFT' : 'QUEUED',
+    };
+
+    const response = await fetch('/api/requests/campaigns', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': crypto.randomUUID(),
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      throw new Error(body.error ?? 'Failed to create campaign.');
+    }
+  };
+
   const handleSend = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    setSubmitError(null);
+    await createCampaign('Sent');
     markOnboardingAction('campaign_created');
     onComplete({
       status: 'Sent',
@@ -107,7 +260,8 @@ export function NewRequestWizardDialog({
   };
 
   const handleSaveDraft = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    setSubmitError(null);
+    await createCampaign('Draft');
     markOnboardingAction('campaign_created');
     onComplete({
       status: 'Draft',
@@ -136,6 +290,19 @@ export function NewRequestWizardDialog({
         <div className="mb-6">
           <WizardProgress currentStep={step} steps={WIZARD_STEPS} />
         </div>
+        {submitError ? (
+          <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            {submitError}
+          </div>
+        ) : null}
+        {recipientsError ? (
+          <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            {recipientsError}
+          </div>
+        ) : null}
+        {isLoadingRecipients && step === 2 ? (
+          <div className="mb-4 rounded-md border p-3 text-sm text-muted-foreground">Loading recipients...</div>
+        ) : null}
 
         {step === 1 && (
           <StepRequestType
@@ -149,7 +316,7 @@ export function NewRequestWizardDialog({
         {step === 2 && (
           <StepSelectRecipients
             data={recipientsData}
-            availableRecipients={MOCK_RECIPIENTS}
+            availableRecipients={availableRecipients}
             onChange={setRecipientsData}
             onNext={() => setStep(3)}
             onBack={() => setStep(1)}
@@ -161,8 +328,22 @@ export function NewRequestWizardDialog({
             requestData={requestData}
             recipientsData={recipientsData}
             onEditStep={setStep}
-            onSend={handleSend}
-            onSaveDraft={handleSaveDraft}
+            onSend={async () => {
+              try {
+                await handleSend();
+              } catch (error) {
+                setSubmitError(error instanceof Error ? error.message : 'Failed to submit request.');
+                throw error;
+              }
+            }}
+            onSaveDraft={async () => {
+              try {
+                await handleSaveDraft();
+              } catch (error) {
+                setSubmitError(error instanceof Error ? error.message : 'Failed to save request draft.');
+                throw error;
+              }
+            }}
             onBack={() => setStep(2)}
             mode={mode}
           />
