@@ -12,9 +12,12 @@ import {
   Package,
   ShieldCheck,
   MapPin,
-  Filter
+  Filter,
+  Wallet,
+  Users,
 } from 'lucide-react';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { useAuth } from '@/lib/auth-context';
 
 // Mock report data
 const reportTypes = [
@@ -75,13 +78,22 @@ const complianceDistribution = [
 ];
 
 export default function ReportsPage() {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
+  const isCooperative = user?.active_role === 'cooperative';
   const selectedPeriod = '6months';
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Reports & Analytics"
-        description="Generate compliance reports and view analytics"
+        title={isImporter || isCooperative ? 'Reporting' : 'Reports & Analytics'}
+        description={
+          isImporter
+            ? 'Generate annual and operational reporting snapshots with compliance traceability'
+            : isCooperative
+            ? 'Track cooperative health, premium distribution, and compliance readiness snapshots'
+            : 'Generate compliance reports and view analytics'
+        }
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -95,7 +107,7 @@ export default function ReportsPage() {
               }}
             >
               <FileText className="w-4 h-4 mr-2" />
-              Generate Report
+              {isImporter ? 'Generate Snapshot' : 'Generate Report'}
             </Button>
           </div>
         }
@@ -111,8 +123,10 @@ export default function ReportsPage() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">78%</p>
-                  <p className="text-xs text-muted-foreground">Compliance Rate</p>
+                  <p className="text-2xl font-bold">{isCooperative ? '84%' : '78%'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isCooperative ? 'Member Data Completeness' : isImporter ? 'Declaration Readiness Rate' : 'Compliance Rate'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -121,11 +135,13 @@ export default function ReportsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                  <ShieldCheck className="h-5 w-5 text-green-400" />
+                  {isCooperative ? <Users className="h-5 w-5 text-green-400" /> : <ShieldCheck className="h-5 w-5 text-green-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">287</p>
-                  <p className="text-xs text-muted-foreground">Compliant Plots</p>
+                  <p className="text-2xl font-bold">{isCooperative ? '1,284' : '287'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isCooperative ? 'Active Members' : isImporter ? 'Compliant Evidence Records' : 'Compliant Plots'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -134,11 +150,13 @@ export default function ReportsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Package className="h-5 w-5 text-blue-400" />
+                  {isCooperative ? <Wallet className="h-5 w-5 text-blue-400" /> : <Package className="h-5 w-5 text-blue-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">299</p>
-                  <p className="text-xs text-muted-foreground">Packages (YTD)</p>
+                  <p className="text-2xl font-bold">{isCooperative ? '$38.9k' : '299'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isCooperative ? 'Premium Tracked' : isImporter ? 'Shipments (YTD)' : 'Packages (YTD)'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -147,11 +165,13 @@ export default function ReportsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                  <FileText className="h-5 w-5 text-amber-400" />
+                  {isCooperative ? <MapPin className="h-5 w-5 text-amber-400" /> : <FileText className="h-5 w-5 text-amber-400" />}
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">12</p>
-                  <p className="text-xs text-muted-foreground">Reports Generated</p>
+                  <p className="text-2xl font-bold">{isCooperative ? '72%' : '12'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isCooperative ? 'Mapped Plot Coverage' : isImporter ? 'Reporting Snapshots' : 'Reports Generated'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -163,8 +183,16 @@ export default function ReportsPage() {
           {/* Submission Trends */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Submission Trends</CardTitle>
-              <CardDescription>Monthly package submission and approval rates</CardDescription>
+              <CardTitle className="text-base">
+                {isCooperative ? 'Operational Trend' : isImporter ? 'Declaration Trends' : 'Submission Trends'}
+              </CardTitle>
+              <CardDescription>
+                {isCooperative
+                  ? 'Monthly field-capture completion and governance approval cadence'
+                  : isImporter
+                    ? 'Monthly shipment declaration submissions and outcomes'
+                    : 'Monthly package submission and approval rates'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -192,11 +220,11 @@ export default function ReportsPage() {
               <div className="flex gap-4 mt-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-primary/60" />
-                  Approved
+                  {isCooperative ? 'Completed' : 'Approved'}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-amber-500/60" />
-                  Pending
+                  {isCooperative ? 'Outstanding' : 'Pending'}
                 </div>
               </div>
             </CardContent>
@@ -205,8 +233,16 @@ export default function ReportsPage() {
           {/* Compliance Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Compliance Distribution</CardTitle>
-              <CardDescription>Breakdown of plot compliance status</CardDescription>
+              <CardTitle className="text-base">
+                {isCooperative ? 'Readiness Distribution' : isImporter ? 'Readiness Distribution' : 'Compliance Distribution'}
+              </CardTitle>
+              <CardDescription>
+                {isCooperative
+                  ? 'Breakdown of cooperative readiness status'
+                  : isImporter
+                    ? 'Breakdown of shipment readiness status'
+                    : 'Breakdown of plot compliance status'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -231,7 +267,9 @@ export default function ReportsPage() {
 
         {/* Report Types */}
         <div>
-          <h2 className="text-lg font-semibold mb-4">Generate Reports</h2>
+          <h2 className="text-lg font-semibold mb-4">
+            {isCooperative ? 'Generate Cooperative Reports' : isImporter ? 'Generate Reporting Snapshots' : 'Generate Reports'}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {reportTypes.map((report) => (
               <Card key={report.id} className="hover:border-primary/50 transition-colors cursor-pointer">
@@ -255,8 +293,10 @@ export default function ReportsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Recent Reports</CardTitle>
-                <CardDescription>Previously generated reports</CardDescription>
+                <CardTitle>{isImporter ? 'Recent Snapshots' : 'Recent Reports'}</CardTitle>
+                <CardDescription>
+                  {isImporter ? 'Previously generated reporting snapshots' : 'Previously generated reports'}
+                </CardDescription>
               </div>
               <Button variant="outline" size="sm">
                 <Filter className="w-4 h-4 mr-2" />

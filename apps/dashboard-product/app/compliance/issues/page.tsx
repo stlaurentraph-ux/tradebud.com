@@ -35,6 +35,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { useAuth } from '@/lib/auth-context';
 
 type IssueSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
 type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
@@ -58,9 +59,61 @@ interface ComplianceIssue {
 
 type LinkedEntityType = ComplianceIssue['linkedEntity']['type'];
 
-const mockIssues: ComplianceIssue[] = [];
+const mockIssues: ComplianceIssue[] = process.env.NODE_ENV !== 'production' ? [
+  {
+    id: 'iss_1001',
+    title: 'Duplicate producer identity requires merge review',
+    description: 'Two member profiles share national ID and overlapping plot links.',
+    severity: 'WARNING',
+    status: 'open',
+    owner: 'Data Steward Team',
+    linkedEntity: {
+      type: 'farmer',
+      id: 'member_447',
+      name: 'Member 447 / Member 448',
+    },
+    createdAt: '2026-04-19T12:10:00.000Z',
+    dueDate: '2026-04-26T00:00:00.000Z',
+    resolutionPath: 'Run duplicate review workflow, confirm canonical member, relink plots and evidence.',
+  },
+  {
+    id: 'iss_1002',
+    title: 'Yield cap blocked on batch BATCH-2026-043',
+    description: 'Recorded intake exceeds expected biological capacity by >1.1x.',
+    severity: 'BLOCKING',
+    status: 'in_progress',
+    owner: 'Compliance Lead',
+    linkedEntity: {
+      type: 'batch',
+      id: 'BATCH-2026-043',
+      name: 'Valley Group Lot 7',
+    },
+    createdAt: '2026-04-20T09:02:00.000Z',
+    dueDate: '2026-04-24T00:00:00.000Z',
+    resolutionPath: 'Collect supporting harvest evidence and submit yield exception for committee review.',
+  },
+  {
+    id: 'iss_1003',
+    title: 'Portability export pending governance sign-off',
+    description: 'Full producer history export requested without pre-approved portability policy.',
+    severity: 'INFO',
+    status: 'open',
+    owner: 'Governance Committee',
+    linkedEntity: {
+      type: 'package',
+      id: 'PORT-2026-009',
+      name: 'Portability Request #009',
+    },
+    createdAt: '2026-04-21T14:42:00.000Z',
+    dueDate: '2026-04-28T00:00:00.000Z',
+    resolutionPath: 'Approve portability request or request member-side consent amendment.',
+  },
+] : [];
 
 export default function ComplianceIssuesPage() {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
+  const isCooperative = user?.active_role === 'cooperative';
   const [issues, setIssues] = useState<ComplianceIssue[]>(mockIssues);
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | 'all'>('all');
@@ -168,12 +221,18 @@ export default function ComplianceIssuesPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Compliance Issues"
-        subtitle="Manage and track compliance blockers"
+        title={isImporter || isCooperative ? 'Issues' : 'Compliance Issues'}
+        subtitle={
+          isImporter
+            ? 'Manage blockers, warnings, and escalations linked to shipment and declaration workflows'
+            : isCooperative
+              ? 'Resolve field, lineage, consent, portability, and premium-governance blockers'
+            : 'Manage and track compliance blockers'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
           { label: 'Compliance', href: '/compliance' },
-          { label: 'Issues' },
+          { label: isImporter ? 'Issues' : 'Issues' },
         ]}
         actions={
           <PermissionGate permission="compliance:create_issue">
@@ -181,13 +240,21 @@ export default function ComplianceIssuesPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Issue
+                  {isImporter ? 'New Exception' : isCooperative ? 'New Cooperative Issue' : 'New Issue'}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create Compliance Issue</DialogTitle>
-                  <DialogDescription>Add a new compliance issue for tracking</DialogDescription>
+                  <DialogTitle>
+                    {isImporter ? 'Create Workflow Exception' : isCooperative ? 'Create Cooperative Issue' : 'Create Compliance Issue'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {isImporter
+                      ? 'Add a new blocker or warning to track declaration remediation.'
+                      : isCooperative
+                        ? 'Track operational blockers like duplicate producers, blocked yield checks, consent gaps, portability reviews, or premium approvals.'
+                      : 'Add a new compliance issue for tracking'}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -231,7 +298,7 @@ export default function ComplianceIssuesPage() {
                           <SelectItem value="plot">Plot</SelectItem>
                           <SelectItem value="batch">Batch</SelectItem>
                           <SelectItem value="package">Package</SelectItem>
-                          <SelectItem value="farmer">Farmer</SelectItem>
+                          <SelectItem value="farmer">{isCooperative ? 'Member' : 'Farmer'}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -262,7 +329,7 @@ export default function ComplianceIssuesPage() {
           <Alert className="mb-6 border-red-500/50 bg-red-500/10">
             <AlertCircle className="h-4 w-4 text-red-500" />
             <AlertDescription className="text-red-700">
-              {blockingIssuesCount} blocking issue(s) preventing shipment sealing.
+                {blockingIssuesCount} blocking issue(s) preventing shipment sealing.
             </AlertDescription>
           </Alert>
         )}
@@ -308,7 +375,9 @@ export default function ComplianceIssuesPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <CheckCircle className="mx-auto h-8 w-8 text-green-500" />
-              <p className="mt-2 text-sm text-muted-foreground">No compliance issues found</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isImporter ? 'No workflow exceptions found' : isCooperative ? 'No cooperative issues found' : 'No compliance issues found'}
+              </p>
             </CardContent>
           </Card>
         ) : (

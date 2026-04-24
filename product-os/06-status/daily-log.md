@@ -1,3 +1,62 @@
+### 2026-04-22 (execution: importer onboarding microcopy alignment)
+- Focus: align importer onboarding narrative and step copy with the finalized importer IA and terminology.
+- Files changed: `apps/dashboard-product/lib/onboarding-config.ts`, `apps/dashboard-product/components/onboarding/onboarding-welcome-modal.tsx`, `apps/dashboard-product/components/onboarding/onboarding-checklist-card.tsx`, `apps/dashboard-product/components/onboarding/guided-tour-overlay.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Replaced importer overview-tour steps to match IA flow: `Network -> Campaigns -> Requests -> Shipments -> Compliance -> Evidence -> Reporting`.
+  - Updated importer welcome-card highlights and checklist task labels/CTA copy to remove legacy package/request phrasing drift.
+  - Added importer contextual guided-tour CTA labels for network/campaign actions.
+- Permissions/tenant boundaries:
+  - No role/tenant authorization changes; this slice updates onboarding content and labels only.
+- Exception handling/recovery:
+  - No state-machine changes; onboarding completion behavior and action keys remain deterministic.
+- Verification:
+  - `ReadLints` on touched onboarding files (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer shared-component terminology alignment)
+- Focus: remove residual package/compliance vocabulary drift in reusable UI components used by importer flows.
+- Files changed: `apps/dashboard-product/components/packages/packages-table.tsx`, `apps/dashboard-product/components/compliance/compliance-check-list.tsx`, `apps/dashboard-product/components/compliance/plot-compliance-breakdown.tsx`, `apps/dashboard-product/components/compliance/evidence-requirement.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added importer-aware wording in shared package table actions/labels (`Shipment` terminology where relevant).
+  - Added importer-aware wording in reusable compliance summary/check cards and evidence/plot breakdown cards.
+  - Kept data model and route behavior unchanged; this slice is copy/framing only.
+- Permissions/tenant boundaries:
+  - No permission changes; existing role/tenant gate behavior remains unchanged.
+- Exception handling/recovery:
+  - No state-transition changes; only display language adjusted for importer context.
+- Verification:
+  - `ReadLints` on all touched shared components (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer destination framing alignment)
+- Focus: align shared importer destination pages with Tier 3 language (`validate, complete, declare, retain, report`) after sidebar IA rollout.
+- Files changed: `apps/dashboard-product/app/packages/page.tsx`, `apps/dashboard-product/app/compliance/page.tsx`, `apps/dashboard-product/app/fpic/page.tsx`, `apps/dashboard-product/app/outreach/page.tsx`, `apps/dashboard-product/app/inbox/page.tsx`, `apps/dashboard-product/app/reports/page.tsx`, `apps/dashboard-product/app/compliance/issues/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added role-aware page framing for importer on shared routes without changing route bindings or permission gates.
+  - Importer-facing names now match sidebar IA (`Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, `Issues`) while non-importer roles retain existing labels.
+- Permissions/tenant boundaries:
+  - No auth policy changes; existing role/tenant checks remain enforced by current gates and backend contracts.
+- Exception handling/recovery:
+  - No state transition changes; this slice is presentation-only and fail-closed behavior is unchanged.
+- Verification:
+  - `ReadLints` on all touched dashboard pages (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer dashboard IA foundation alignment)
+- Focus: align importer dashboard IA to Tier 3 operating responsibilities (validate, complete, declare, retain, report).
+- Files changed: `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/components/layout/app-sidebar.tsx`, `apps/dashboard-product/app/help/page.tsx`, `apps/dashboard-product/lib/rbac.test.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Importer sidebar now uses section model `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log`.
+  - Added importer-specific nav aliases mapped to current routes (`Network=/contacts`, `Shipments=/packages`, `Evidence=/fpic`, `Campaigns=/outreach`, `Requests=/inbox`, `Reporting=/reports`, `Issues=/compliance/issues`).
+  - Added `/help` dashboard page stub so Help route resolves in-app.
+- Permissions/tenant boundaries:
+  - Existing role-scoped permission checks and route feature-gate checks remain enforced via `getVisibleNavItems` and `isRouteEnabled`.
+- Exception handling/recovery:
+  - No state-transition changes; IA slice is navigation/view-layer only and fail-closed on gated routes.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- lib/rbac.test.ts app/page.test.tsx` (expected green for touched areas).
+- Blockers: none.
+
 ### 2026-04-22 (execution: onboarding gated-CTA telemetry instrumentation)
 - Focus: instrument gated onboarding CTA fallbacks so blocked-route frequency is measurable.
 - Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `product-os/04-quality/event-tracking.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

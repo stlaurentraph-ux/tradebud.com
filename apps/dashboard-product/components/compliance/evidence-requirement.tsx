@@ -8,6 +8,7 @@ import {
   evaluateComplianceEvidenceRequirements,
   type EvidenceItem,
 } from '@/lib/compliance-doc-reason-codes';
+import { useAuth } from '@/lib/auth-context';
 
 interface EvidenceRequirementProps {
   plotId: string;
@@ -21,6 +22,8 @@ export function EvidenceRequirement({
   requiredEvidence,
   missingEvidence,
 }: EvidenceRequirementProps) {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
   const [expanded, setExpanded] = useState(true);
 
   const verifiedCount = requiredEvidence.filter((e) => e.status === 'verified').length;
@@ -50,7 +53,7 @@ export function EvidenceRequirement({
             <div>
               <CardTitle className="text-base">{plotName}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                {verifiedCount}/{requiredEvidence.length} evidence items verified
+                {verifiedCount}/{requiredEvidence.length} {isImporter ? 'evidence records verified' : 'evidence items verified'}
               </p>
               <p className="text-xs mt-1 text-muted-foreground">
                 Autonomous check: {evaluation.status === 'pass' ? 'pass' : evaluation.status}
@@ -116,7 +119,9 @@ export function EvidenceRequirement({
                   <div key={idx} className="p-3 rounded-lg border border-red-500/30 bg-red-500/10">
                     <p className="text-sm font-medium text-red-400">{item}</p>
                     <p className="text-xs text-red-300/80 mt-1">
-                      This evidence type is required to verify deforestation compliance
+                      {isImporter
+                        ? 'This evidence type is required before declaration submission'
+                        : 'This evidence type is required to verify deforestation compliance'}
                     </p>
                   </div>
                 ))}
@@ -152,7 +157,7 @@ export function EvidenceRequirement({
               Upload Evidence
             </Button>
             <Button variant="outline" size="sm">
-              View Details
+              {isImporter ? 'View Readiness Details' : 'View Details'}
             </Button>
           </div>
         </CardContent>

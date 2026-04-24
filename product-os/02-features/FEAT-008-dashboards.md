@@ -40,6 +40,41 @@ Use entity model in `MVP_PRD.md` and `PRODUCT_PRD.md`.
 
 Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFACTS.md`.
 
+### Importer IA baseline (validate, complete, declare, retain, report)
+
+- Importer dashboard navigation is now modeled as a compliance execution workspace, not a generic package list:
+  - `Overview`
+  - `Network` (`/contacts`)
+  - `Shipments` (`/packages`)
+  - `Compliance` (`/compliance`)
+  - `Evidence` (`/fpic`)
+  - `Campaigns` (`/outreach`)
+  - `Requests` (`/inbox`)
+  - `Reporting` (`/reports`)
+  - `Issues` (`/compliance/issues`)
+  - `Audit Log` (`/audit-log`)
+  - secondary: `Settings`, `Help`
+- This aligns importer IA to Tier 3 outcomes:
+  - validate role/workflow state and shipment readiness
+  - complete missing upstream references/evidence
+  - declare through DDS/downstream pathways
+  - retain evidence/reference records with auditability
+  - report via annual/operational reporting surfaces
+- Importer destination framing is now role-specific on shared routes so page headers/use language match importer responsibilities:
+  - `Shipments` (`/packages`) focuses on shipment readiness and declaration preparation.
+  - `Compliance` (`/compliance`) focuses on role decisions, reference completeness, and submit readiness.
+  - `Evidence` (`/fpic`) focuses on evidence retention and declaration defensibility.
+  - `Campaigns` (`/outreach`) and `Requests` (`/inbox`) focus on outbound collection and inbound fulfillment workflows.
+  - `Reporting` (`/reports`) and `Issues` (`/compliance/issues`) frame annual reporting + exception management.
+- Shared UI components now apply importer terminology consistently (not just route pages):
+  - package table actions/labels use shipment language for importer users.
+  - compliance summary/checklist cards use declaration-readiness language for importer users.
+  - plot/evidence breakdown cards and evidence requirement cards use importer-specific readiness wording.
+- Importer onboarding copy and sequence are now aligned to the importer IA model:
+  - overview tour steps now follow `Network -> Campaigns -> Requests -> Shipments -> Compliance -> Evidence -> Reporting`.
+  - welcome modal and checklist language now use importer terms (network/campaigns/shipment readiness/reporting snapshots).
+  - guided-tour contextual actions now use importer-relevant CTA wording.
+
 ## Tasks checklist
 
 - [x] Confirm permissions and tenant boundaries

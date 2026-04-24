@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 export type ComplianceCheckStatus = 'compliant' | 'warning' | 'failed' | 'pending';
 
@@ -47,6 +48,8 @@ const statusConfig = {
 };
 
 export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProps) {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
   const totalChecks = checks.length;
   const passedChecks = checks.filter((c) => c.status === 'compliant').length;
   const failedChecks = checks.filter((c) => c.status === 'failed').length;
@@ -59,12 +62,14 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
       {/* Compliance Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Compliance Summary</CardTitle>
+          <CardTitle className="text-lg">{isImporter ? 'Declaration Readiness Summary' : 'Compliance Summary'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Overall Compliance</p>
+              <p className="text-sm text-muted-foreground">
+                {isImporter ? 'Overall Declaration Readiness' : 'Overall Compliance'}
+              </p>
               <p className="mt-1 text-3xl font-bold">{Math.round(compliancePercentage)}%</p>
             </div>
             <div className="space-y-1 text-right">
@@ -108,7 +113,7 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
       {/* Compliance Checks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Compliance Checks</CardTitle>
+          <CardTitle className="text-lg">{isImporter ? 'Readiness Checks' : 'Compliance Checks'}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

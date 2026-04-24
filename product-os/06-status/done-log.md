@@ -4,6 +4,10 @@ Track completed milestones/features/docs updates.
 
 ## Initial entries
 
+- Importer dashboard IA foundation delivered: importer nav is now compliance-oriented (`Overview`, `Network`, `Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, `Issues`, `Audit Log`) with support surfaces (`Settings`, `Help`) and concrete route bindings for each destination.
+- Importer destination framing delivered: shared destination pages now render importer-specific header labels and contextual copy for `Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, and `Issues`, aligning language to Tier 3 decision/exception workflows.
+- Importer shared-component wording alignment delivered: reusable package/compliance/evidence components now render shipment/declaration-readiness terminology for importer users to prevent mixed vocabulary across pages.
+- Importer onboarding wording alignment delivered: onboarding config, welcome modal, checklist tasks, and guided-tour contextual actions now use importer IA language and sequence (`Network`, `Campaigns`, `Requests`, `Shipments`, `Compliance`, `Evidence`, `Reporting`).
 - Launch/public-trial foundation delivered: backend now includes tenant-scoped launch lifecycle state (`/v1/launch/state`) with idempotent `trial_started` provisioning, auto `trial_expired` transition, and paid activation path (`/v1/launch/state/upgrade`).
 - Server-side monetization/data-egress gating delivered: premium/export-heavy backend surfaces (harvest filing actions, reports CSV/export routes, partner-data exports, EUDR integration calls) now enforce launch entitlement checks and fail closed after trial expiry.
 - Autonomous onboarding baseline delivered: backend onboarding progress API (`/v1/launch/onboarding*`) plus dashboard checklist UX now provide role-based first-value guidance with immutable `onboarding_step_completed` analytics events.

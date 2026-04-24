@@ -14,8 +14,10 @@ import { AlertTriangle, CheckCircle, ChevronRight, ShieldCheck, ArrowLeft } from
 import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { usePackageEvidenceDocuments } from '@/lib/use-package-evidence-documents';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { useAuth } from '@/lib/auth-context';
 
 export default function CompliancePage() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const packageId = searchParams.get('package');
   const { data: readiness, isLoading: isReadinessLoading, error: readinessError } = usePackageReadiness(packageId);
@@ -96,11 +98,26 @@ export default function CompliancePage() {
     }
   }, [packageId, readiness]);
 
+  const isCooperative = user?.active_role === 'cooperative';
+  const isImporter = user?.active_role === 'importer';
+
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Zero-Risk Pre-Flight Check"
-        subtitle="Comprehensive compliance verification before TRACES submission"
+        title={
+          isCooperative
+            ? 'Cooperative Data Readiness Check'
+            : isImporter
+              ? 'Compliance'
+              : 'Zero-Risk Pre-Flight Check'
+        }
+        subtitle={
+          isCooperative
+            ? 'Validate member evidence and plot readiness before downstream handoff'
+            : isImporter
+              ? 'Validate role decisions, references, and declaration readiness before submission'
+              : 'Comprehensive compliance verification before TRACES submission'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
           { label: 'Compliance' },
@@ -113,14 +130,16 @@ export default function CompliancePage() {
           <Button variant="ghost" size="sm" className="mb-2" asChild>
             <Link href={backHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Package
+              {isImporter ? 'Back to Shipment' : 'Back to Package'}
             </Link>
           </Button>
         )}
         {!packageId ? (
           <Card>
             <CardContent className="p-6 text-sm text-muted-foreground">
-              Select a package from `DDS Packages` to run compliance checks.
+              {isImporter
+                ? 'Select a shipment from `Shipments` to run declaration readiness checks.'
+                : 'Select a package from `DDS Packages` to run compliance checks.'}
             </CardContent>
           </Card>
         ) : null}
@@ -132,7 +151,9 @@ export default function CompliancePage() {
                 <ShieldCheck className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Package Compliance Overview</CardTitle>
+                <CardTitle className="text-lg">
+                  {isImporter ? 'Shipment Compliance Overview' : 'Package Compliance Overview'}
+                </CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">ID: {packageId ?? 'n/a'}</p>
               </div>
             </div>
@@ -146,7 +167,7 @@ export default function CompliancePage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Plots</p>
+                <p className="text-sm text-muted-foreground">{isImporter ? 'Evidence Records' : 'Total Plots'}</p>
                 <p className="mt-1 text-2xl font-bold">{backendPlotCount}</p>
               </div>
               <div className="text-right">
@@ -223,14 +244,18 @@ export default function CompliancePage() {
                     ))
                   ) : (
                     <p className="text-sm text-emerald-700">
-                      No backend readiness reason codes reported for this package.
+                      {isImporter
+                        ? 'No backend readiness reason codes reported for this shipment.'
+                        : 'No backend readiness reason codes reported for this package.'}
                     </p>
                   )}
                 </div>
               ) : null}
               {!isReadinessLoading && !readinessError && !readiness ? (
                 <p className="text-sm text-muted-foreground">
-                  Select a package from Packages to load backend readiness diagnostics.
+                  {isImporter
+                    ? 'Select a shipment from Shipments to load backend readiness diagnostics.'
+                    : 'Select a package from Packages to load backend readiness diagnostics.'}
                 </p>
               ) : null}
             </CardContent>
@@ -303,7 +328,7 @@ export default function CompliancePage() {
                 Resolve Issues
               </Button>
               <Button variant="outline" size="lg">
-                Back to Packages
+                {isImporter ? 'Back to Shipments' : 'Back to Packages'}
               </Button>
             </>
           )}

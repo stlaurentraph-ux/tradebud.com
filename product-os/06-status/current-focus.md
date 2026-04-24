@@ -2,6 +2,10 @@
 
 ## Work now
 
+- Importer dashboard IA foundation is being aligned to Tier 3 compliance operations: sidebar/order now maps to `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log` with settings/help as support destinations.
+- Importer page framing pass is complete on shared routes: importer users now see role-appropriate destination labels and explanatory copy on `Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, and `Issues`.
+- Importer terminology alignment now also covers shared child components (package tables + compliance/evidence cards) so importer copy stays consistent across reused UI blocks.
+- Importer onboarding microcopy alignment is now complete: welcome, checklist, and guided-tour step language/ordering match the importer IA (`Network`, `Campaigns`, `Requests`, `Shipments`, `Compliance`, `Evidence`, `Reporting`).
 - Launch/public onboarding execution is now in stabilization mode: trial lifecycle + entitlement service is live, premium/export APIs are server-side gated, and dashboard onboarding checklist UX is wired to backend progress persistence.
 - Onboarding action-validation hardening is in progress: admin org/user/invite flows now run through backend-persistent APIs instead of in-memory dashboard data, closing a remaining mock-path for `team_invited`.
 - Onboarding action-validation hardening advanced: admin role/status mutations are now backend-persistent too (`PATCH /v1/admin/users/:id/role|status`), eliminating optimistic local-only admin mutation paths.
