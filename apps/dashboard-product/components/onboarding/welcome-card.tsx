@@ -47,9 +47,9 @@ export function WelcomeCard({ userName, onDismiss, onStartOnboarding, onExploreW
             {/* Feature highlights */}
             <ul className="space-y-1.5 text-sm text-muted-foreground">
               {[
-                'Submit Due Diligence Statements to TRACES NT',
-                'Manage plots, farmers, and supply chain data',
-                'Track compliance status across your supply chain',
+                'Prepare shipment-ready traceability packages',
+                'Manage plots, producers, and upstream supply data',
+                'Track blockers and readiness across your supply chain',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />

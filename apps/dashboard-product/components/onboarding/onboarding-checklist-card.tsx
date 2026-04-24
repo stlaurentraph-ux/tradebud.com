@@ -123,6 +123,8 @@ function StepRow({ step, isComplete, isActive, index }: StepRowProps) {
 export function OnboardingChecklistCard() {
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
+  const isExporter = user?.active_role === 'exporter';
+  const isSponsor = user?.active_role === 'sponsor';
   const {
     phase,
     config,
@@ -144,7 +146,32 @@ export function OnboardingChecklistCard() {
 
   const firstOverviewStepKey = config?.steps[0]?.key ?? null;
 
-  const taskList = [
+  const taskList = isSponsor ? [
+    {
+      key: 'finish_overview',
+      label: 'Finish sponsor overview',
+      description: 'Review governance KPIs, intervention alerts, and sponsor network posture.',
+      ctaHref: '/',
+      ctaLabel: 'Open overview',
+      done: firstOverviewStepKey ? Boolean(completedSteps[firstOverviewStepKey]) : phase === 'complete',
+    },
+    {
+      key: 'map_organisations',
+      label: 'Map organisations',
+      description: 'Validate member organisations and sponsor-covered scope across the governed network.',
+      ctaHref: '/organisations',
+      ctaLabel: 'Open organisations',
+      done: hasAction('contacts_uploaded'),
+    },
+    {
+      key: 'launch_programme_campaign',
+      label: 'Launch programme campaign',
+      description: 'Send your first bulk programme campaign to upstream organisations.',
+      ctaHref: '/programmes',
+      ctaLabel: 'Open programmes',
+      done: hasAction('campaign_created'),
+    },
+  ] as const : [
     {
       key: 'finish_overview',
       label: 'Finish overview',
@@ -154,23 +181,27 @@ export function OnboardingChecklistCard() {
       done: firstOverviewStepKey ? Boolean(completedSteps[firstOverviewStepKey]) : phase === 'complete',
     },
     {
-      key: 'add_contacts',
-      label: isImporter ? 'Build network' : 'Add contacts',
+      key: 'add_producers',
+      label: isImporter ? 'Build network' : isExporter ? 'Add producers' : 'Build member directory',
       description: isImporter
         ? 'Add counterpart contacts so campaign and request workflows route correctly.'
-        : 'Add partner contacts so requests route to the right recipients.',
-      ctaHref: '/contacts',
-      ctaLabel: isImporter ? 'Go to network' : 'Go to contacts',
+        : isExporter
+          ? 'Build your producer directory so traceability links and requests route correctly.'
+          : 'Create cooperative member records for consent, portability, and aggregation workflows.',
+      ctaHref: isImporter ? '/contacts' : isExporter ? '/farmers' : '/contacts',
+      ctaLabel: isImporter ? 'Go to network' : isExporter ? 'Go to producers' : 'Go to members',
       done: hasAction('contacts_uploaded'),
     },
     {
-      key: 'send_requests',
-      label: isImporter ? 'Launch campaign' : 'Send requests',
+      key: 'launch_first_workflow',
+      label: isImporter ? 'Launch campaign' : isExporter ? 'Start campaign' : 'Start a campaign',
       description: isImporter
         ? 'Start your first campaign to collect missing upstream evidence.'
-        : 'Start your first outreach request to collect data.',
+        : isExporter
+          ? 'Launch your first campaign to collect missing plot, evidence, and upstream producer data.'
+          : 'Launch your first campaign to collect missing plot geometry, evidence, and member data.',
       ctaHref: '/outreach',
-      ctaLabel: isImporter ? 'Go to campaigns' : 'Go to outreach',
+      ctaLabel: 'Go to campaigns',
       done: hasAction('campaign_created'),
     },
   ] as const;

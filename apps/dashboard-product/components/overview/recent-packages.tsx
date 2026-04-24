@@ -66,7 +66,7 @@ export function RecentPackages({ packages }: RecentPackagesProps) {
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{pkg.plots.length} plots</span>
                     <span className="text-border">-</span>
-                    <span>{pkg.farmers.length} farmers</span>
+                    <span>{pkg.farmers.length} producers</span>
                   </div>
                 </div>
                 <Badge variant="outline" className={`text-[10px] ${compliance.className} border-0`}>

@@ -103,7 +103,7 @@ describe('gated-entry analytics route', () => {
           gate: 'request_campaigns',
           tenantId: 'tenant_1',
           role: 'importer',
-          redirectedPath: '/requests',
+          redirectedPath: '/outreach',
         }),
       }),
     );
@@ -114,7 +114,7 @@ describe('gated-entry analytics route', () => {
       '[telemetry] gated-entry',
       expect.objectContaining({
         eventType: 'onboarding_cta_gated_redirect',
-        redirectedPath: '/requests',
+        redirectedPath: '/outreach',
       }),
     );
   });

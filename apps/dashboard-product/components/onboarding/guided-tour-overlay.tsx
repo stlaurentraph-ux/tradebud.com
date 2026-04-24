@@ -200,8 +200,8 @@ export function GuidedTourOverlay() {
   const isCompleted = completedSteps[step.key] ?? false;
   const isLastStep = currentStepIndex === totalSteps - 1;
   const contextualActionLabelByStep: Record<string, string> = {
-    coop_add_contact: 'Add contact',
-    coop_send_requests: 'Start new request',
+    coop_members: 'Add member',
+    coop_field_operations: 'Open field queues',
     imp_network: 'Add contact',
     imp_campaigns: 'Start campaign',
   };

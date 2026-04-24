@@ -68,7 +68,8 @@ function buildRoleSpecificSize(role: PrimaryRole | '', data: CommercialProfileDa
 
 function getRedirectUrl(role: PrimaryRole | ''): string {
   if (role === 'admin') return '/?welcome=1&entry=admin';
-  return '/?welcome=1&entry=requests';
+  if (role === 'importer' || role === 'compliance_manager') return '/?welcome=1&entry=inbox';
+  return '/?welcome=1&entry=outreach';
 }
 
 function selectedRoleToTenantRole(role: PrimaryRole | ''): TenantRole {

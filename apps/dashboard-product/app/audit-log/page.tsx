@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 interface AuditLogEntry {
   id: string;
@@ -22,7 +23,45 @@ interface AuditLogEntry {
   ip_address: string;
 }
 
-const auditLogEntries: AuditLogEntry[] = [];
+const auditLogEntries: AuditLogEntry[] = process.env.NODE_ENV !== 'production' ? [
+  {
+    id: 'log_001',
+    timestamp: '2026-04-20T08:40:00.000Z',
+    user_email: 'governance@kilimani.coop',
+    action: 'approved',
+    entity_type: 'compliance',
+    entity_id: 'premium_0182',
+    entity_name: 'Premium Distribution Decision #0182',
+    changes: {
+      status: { old: 'proposed', new: 'approved' },
+      payout_split: { old: 'pending', new: '70_cash_30_services' },
+    },
+    ip_address: '102.45.11.82',
+  },
+  {
+    id: 'log_002',
+    timestamp: '2026-04-20T10:15:00.000Z',
+    user_email: 'field.agent2@kilimani.coop',
+    action: 'uploaded',
+    entity_type: 'fpic',
+    entity_id: 'doc_002',
+    entity_name: 'Portability Release Statement - Member 812',
+    ip_address: '102.45.13.20',
+  },
+  {
+    id: 'log_003',
+    timestamp: '2026-04-21T13:55:00.000Z',
+    user_email: 'compliance.lead@kilimani.coop',
+    action: 'updated',
+    entity_type: 'harvest',
+    entity_id: 'BATCH-2026-043',
+    entity_name: 'Valley Group Lot 7',
+    changes: {
+      exception_status: { old: 'none', new: 'pending' },
+    },
+    ip_address: '102.45.14.77',
+  },
+] : [];
 
 const actionColors: Record<string, string> = {
   created: 'bg-blue-500/20 text-blue-600',
@@ -44,7 +83,22 @@ const entityIcons: Record<string, typeof Package> = {
   compliance: FileText,
 };
 
+const entityLabels: Record<'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance', string> = {
+  package: 'Package',
+  plot: 'Plot',
+  farmer: 'Farmer',
+  harvest: 'Harvest',
+  fpic: 'Evidence',
+  compliance: 'Compliance',
+};
+
 export default function AuditLogPage() {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
+  const getEntityLabel = (entity: 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance') => {
+    if (isCooperative && entity === 'farmer') return 'Member';
+    return entityLabels[entity];
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEntity, setFilterEntity] = useState<'all' | 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance'>('all');
   const [filterAction, setFilterAction] = useState<'all' | 'created' | 'updated' | 'deleted' | 'approved' | 'submitted' | 'uploaded' | 'exported'>('all');
@@ -66,7 +120,11 @@ export default function AuditLogPage() {
       <div className="flex flex-col">
         <AppHeader
           title="Audit Log"
-          subtitle="Complete activity trail for compliance and 5-year retention"
+          subtitle={
+            isCooperative
+              ? 'Immutable trail across member, consent, portability, batch, shipment, and premium-governance events'
+              : 'Complete activity trail for compliance and 5-year retention'
+          }
           breadcrumbs={[
             { label: 'Dashboard', href: '/' },
             { label: 'Audit Log' },
@@ -94,7 +152,11 @@ export default function AuditLogPage() {
               <div className="space-y-4">
                 {/* Search */}
                 <Input
-                  placeholder="Search by user, entity name, or ID..."
+                  placeholder={
+                    isCooperative
+                      ? 'Search by user, member, plot, batch, portability request, premium record, or ID...'
+                      : 'Search by user, entity name, or ID...'
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="max-w-xs"
@@ -114,7 +176,7 @@ export default function AuditLogPage() {
                           onClick={() => setFilterEntity(entity)}
                           className="capitalize"
                         >
-                          {entity}
+                          {entity === 'all' ? 'All' : getEntityLabel(entity)}
                         </Button>
                       ))}
                     </div>
@@ -188,7 +250,7 @@ export default function AuditLogPage() {
                         <Badge className={cn('capitalize', actionColors[entry.action] || 'bg-slate-500/20 text-slate-600')}>
                           {entry.action}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">{entry.entity_type}</span>
+                        <span className="text-sm text-muted-foreground">{getEntityLabel(entry.entity_type)}</span>
                       </div>
 
                       <p className="text-sm text-foreground mb-2">
@@ -234,8 +296,9 @@ export default function AuditLogPage() {
                   </p>
                   <p className="text-slate-800 mt-1">
                     All due diligence documentation and activity logs are retained securely for exactly 5 years per EUDR Section IX requirements. 
-                    This audit log captures every action performed on packages, plots, farmers, FPIC documents, and compliance checks with 
+                    This audit log captures every action performed on packages, plots, members and producers, FPIC documents, and compliance checks with 
                     user identity, timestamp, and IP address for accountability.
+                    {isCooperative ? ' Cooperative governance decisions, portability actions, and premium-approval events are included in the same immutable trail.' : ''}
                   </p>
                 </div>
               </div>

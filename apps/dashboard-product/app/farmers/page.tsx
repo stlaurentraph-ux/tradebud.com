@@ -53,8 +53,8 @@ export default function FarmersPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Farmers"
-        description="Manage farmer accounts and their plot portfolios"
+        title="Producers"
+        description="Manage producer identities, onboarding status, and linked plot portfolios"
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -63,20 +63,20 @@ export default function FarmersPage() {
             </Button>
             <Button size="sm">
               <Plus className="w-4 h-4 mr-2" />
-              Add Farmer
+              Add Producer
             </Button>
           </div>
         }
       />
 
       <main className="flex-1 p-6 space-y-6">
-        {/* Farmers Summary Cards */}
+        {/* Producers Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Total Farmers</div>
+              <div className="text-sm font-medium text-muted-foreground">Total Producers</div>
               <div className="text-3xl font-bold mt-2">{farmers.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">Active in system</p>
+              <p className="text-xs text-muted-foreground mt-2">Active in directory</p>
             </CardContent>
           </Card>
           <Card>
@@ -107,7 +107,7 @@ export default function FarmersPage() {
           <CardContent className="pt-6">
             <input
               type="text"
-              placeholder="Search by farmer name or cooperative..."
+              placeholder="Search by producer name or cooperative..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -115,10 +115,10 @@ export default function FarmersPage() {
           </CardContent>
         </Card>
 
-        {/* Farmers Table */}
+        {/* Producers Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Registered Farmers</CardTitle>
+            <CardTitle className="text-lg">Registered Producers</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border">
@@ -139,7 +139,7 @@ export default function FarmersPage() {
                   {filteredFarmers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        No farmers found
+                        No producers found
                       </TableCell>
                     </TableRow>
                   ) : (

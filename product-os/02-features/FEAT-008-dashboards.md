@@ -74,6 +74,10 @@ Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFAC
   - overview tour steps now follow `Network -> Campaigns -> Requests -> Shipments -> Compliance -> Evidence -> Reporting`.
   - welcome modal and checklist language now use importer terms (network/campaigns/shipment readiness/reporting snapshots).
   - guided-tour contextual actions now use importer-relevant CTA wording.
+- Request wizard taxonomy is now role-aware and aligned with dashboard IA:
+  - importer flow uses campaign terminology (`Campaign Type`, `Campaign Details`, `Launch Campaign`).
+  - non-importer flow keeps request terminology (`Request Type`, `Request Details`, `Send Request`).
+  - outreach entry now passes role-specific wizard mode/title/description to keep onboarding CTAs and in-flow taxonomy consistent.
 
 ## Tasks checklist
 

@@ -29,6 +29,7 @@ export type TimelineEventType =
   | 'response_received'
   | 'owner_assigned'
   | 'comment_added'
+  | 'alert'
   | 'approval'
   | 'rejection'
   | 'escalation'
@@ -41,6 +42,7 @@ const EVENT_ICONS: Record<TimelineEventType, LucideIcon> = {
   response_received: MessageSquare,
   owner_assigned: User,
   comment_added: MessageSquare,
+  alert: AlertTriangle,
   approval: CheckCircle,
   rejection: XCircle,
   escalation: AlertTriangle,
@@ -54,6 +56,7 @@ const EVENT_COLORS: Record<TimelineEventType, string> = {
   response_received: 'bg-emerald-500',
   owner_assigned: 'bg-purple-500',
   comment_added: 'bg-gray-500',
+  alert: 'bg-amber-500',
   approval: 'bg-emerald-600',
   rejection: 'bg-red-500',
   escalation: 'bg-amber-500',

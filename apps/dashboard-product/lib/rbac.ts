@@ -46,6 +46,8 @@ export type CommercialPermission =
   | 'requests:create'
   | 'requests:send'
   | 'requests:respond'
+  | 'outreach:view'
+  | 'inbox:view'
   // Contacts CRM permissions
   | 'contacts:view'
   | 'contacts:create'
@@ -138,6 +140,8 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:view',
     'requests:create',
     'requests:send',
+    'outreach:view',
+    'inbox:view',
     'contacts:view',
     'contacts:create',
     'contacts:edit',
@@ -173,6 +177,8 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:create',
     'requests:send',
     'requests:respond',
+    'outreach:view',
+    'inbox:view',
     'contacts:view',
     'contacts:create',
     'contacts:edit',
@@ -218,6 +224,8 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:create',
     'requests:send',
     'requests:respond',
+    'outreach:view',
+    'inbox:view',
     'contacts:view',
     'contacts:create',
     'contacts:edit',
@@ -289,6 +297,7 @@ const PERMISSION_MATRIX: Record<TenantRole, CommercialPermission[]> = {
     ...TIER_PERMISSION_MATRIX['tier_3'],
     'roles:manual_classify',
   ],
+  sponsor: TIER_PERMISSION_MATRIX['tier_4'],
 };
 
 // ============================================================
@@ -308,39 +317,42 @@ export interface NavItem {
 const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   exporter: [
     'Overview',
-    'DDS Packages',
-    'Harvests',
+    'Producers',
     'Plots',
-    'Farmers',
-    'FPIC',
+    'Lots & Batches',
+    'Shipments',
+    'Evidence',
+    'Campaigns',
     'Requests',
-    'Contacts',
-    'Compliance',
-    'Role Decisions',
-    'Reports',
+    'Issues',
     'Audit Log',
-    'Integrations',
-    'Admin',
   ],
   importer: [
     'Overview',
-    'DDS Packages',
-    'Requests',
-    'Contacts',
+    'Network',
+    'Shipments',
     'Compliance',
-    'Role Decisions',
-    'Reports',
+    'Evidence',
+    'Campaigns',
+    'Requests',
+    'Reporting',
+    'Issues',
     'Audit Log',
   ],
   cooperative: [
     'Overview',
-    'Harvests',
+    'Members',
     'Plots',
-    'Farmers',
-    'FPIC',
+    'Field Operations',
+    'Lots & Batches',
+    'Shipments',
+    'Evidence',
+    'Campaigns',
     'Requests',
-    'Contacts',
-    'Compliance',
+    'Governance',
+    'Reporting',
+    'Issues',
+    'Audit Log',
   ],
   country_reviewer: [
     'Overview',
@@ -351,18 +363,49 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
     'Reports',
     'Audit Log',
   ],
+  sponsor: [
+    'Overview',
+    'Network',
+    'Organisations',
+    'Compliance Health',
+    'Programmes',
+    'Reporting',
+    'Delegated Admin',
+    'Billing & Coverage',
+    'Requests',
+    'Issues',
+    'Audit Log',
+  ],
 };
 
 export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'plots:view', mvp: true },
+  { name: 'Network', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
+  { name: 'Organisations', href: '/organisations', icon: 'Building2', permission: 'farmers:view', mvp: true },
+  { name: 'Shipments', href: '/packages', icon: 'Package', permission: 'packages:view', mvp: true },
+  { name: 'Compliance Health', href: '/compliance-health', icon: 'ShieldCheck', permission: 'compliance:view', mvp: true },
+  { name: 'Evidence', href: '/fpic', icon: 'FileCheck', permission: 'evidence:view', mvp: true },
+  { name: 'Campaigns', href: '/outreach', icon: 'Send', permission: 'outreach:view', mvp: true },
+  { name: 'Programmes', href: '/programmes', icon: 'Wheat', permission: 'outreach:view', mvp: true },
+  { name: 'Requests', href: '/inbox', icon: 'Inbox', permission: 'inbox:view', mvp: true },
+  { name: 'Reporting', href: '/reports', icon: 'FileText', permission: 'reports:view', mvp: true },
+  { name: 'Delegated Admin', href: '/delegated-admin', icon: 'Scale', permission: 'admin:view', mvp: true },
+  { name: 'Billing & Coverage', href: '/billing-coverage', icon: 'Package', permission: 'packages:view', mvp: true },
+  { name: 'Issues', href: '/compliance/issues', icon: 'Shield', permission: 'compliance:view', mvp: true },
   { name: 'DDS Packages', href: '/packages', icon: 'Package', permission: 'packages:view', mvp: true },
   { name: 'Harvests', href: '/harvests', icon: 'Wheat', permission: 'harvests:view', mvp: true },
+  { name: 'Lots & Batches', href: '/harvests', icon: 'Wheat', permission: 'harvests:view', mvp: true },
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view', mvp: true },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
+  { name: 'Producers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
   { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view', mvp: true },
-  { name: 'Requests', href: '/requests', icon: 'Send', permission: 'requests:view', mvp: true },
   { name: 'Contacts', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
+  { name: 'Members', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
+  { name: 'Outreach', href: '/outreach', icon: 'Send', permission: 'outreach:view', mvp: true },
+  { name: 'Field Operations', href: '/field-operations', icon: 'MapPin', permission: 'plots:view', mvp: true },
+  { name: 'Inbox', href: '/inbox', icon: 'Inbox', permission: 'inbox:view', mvp: true },
   { name: 'Compliance', href: '/compliance', icon: 'ShieldCheck', permission: 'compliance:view', mvp: true },
+  { name: 'Governance', href: '/governance', icon: 'Scale', permission: 'settings:view', mvp: true },
   { name: 'Role Decisions', href: '/role-decisions', icon: 'Scale', permission: 'roles:view_decisions', mvp: true },
   { name: 'Reports', href: '/reports', icon: 'FileText', permission: 'reports:view', mvp: true },
   { name: 'Audit Log', href: '/audit-log', icon: 'History', permission: 'audit:view', mvp: true },
@@ -441,7 +484,10 @@ export function getPermissionsForTier(tier: CommercialTier): CommercialPermissio
 export function getVisibleNavItems(user: User | null): NavItem[] {
   if (!user) return [];
   const allowedItems = ROLE_NAV_CONFIG[user.active_role] || [];
-  return NAVIGATION_ITEMS.filter((item) => allowedItems.includes(item.name) && isRouteEnabled(item.href));
+  const navByName = new Map(NAVIGATION_ITEMS.map((item) => [item.name, item] as const));
+  return allowedItems
+    .map((name) => navByName.get(name))
+    .filter((item): item is NavItem => Boolean(item) && isRouteEnabled(item.href));
 }
 
 /**
@@ -511,6 +557,7 @@ export function getRoleBadgeColor(role: TenantRole): string {
     importer: 'bg-purple-500/20 text-purple-300',
     cooperative: 'bg-amber-500/20 text-amber-300',
     country_reviewer: 'bg-red-500/20 text-red-300',
+    sponsor: 'bg-emerald-500/20 text-emerald-300',
   };
   return colors[role] || 'bg-muted text-muted-foreground';
 }
@@ -559,6 +606,7 @@ export function canTransitionPackage(
     country_reviewer: {
       SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
     },
+    sponsor: {},
   };
 
   const allowed = transitions[user.active_role]?.[fromStatus] || [];

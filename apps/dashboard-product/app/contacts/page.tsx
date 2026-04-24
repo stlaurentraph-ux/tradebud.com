@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { createContact, listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { useAuth } from '@/lib/auth-context';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
 const CONTACT_TABLE_COLUMNS = [
@@ -22,14 +24,66 @@ const CONTACT_TABLE_COLUMNS = [
   { key: 'update_status', label: 'Update status', minWidth: 160, defaultWidth: 180 },
 ] as const;
 type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMNS)[number]['key'];
+const BULK_CONTACTS_TEMPLATE = `email,full_name,organization,country,phone
+contact1@example.com,Jane Doe,North Valley Cooperative,GH,+2335550101
+contact2@example.com,John Smith,Green Ridge Producers,CI,+22507000102`;
+
+function parseBulkContactsCsv(csv: string): Array<{
+  email: string;
+  full_name: string;
+  organization?: string | null;
+  country?: string | null;
+  phone?: string | null;
+}> {
+  const lines = csv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+  const indexOf = (keys: string[]) => keys.map((key) => header.indexOf(key)).find((idx) => idx >= 0) ?? -1;
+  const emailIdx = indexOf(['email']);
+  const nameIdx = indexOf(['full_name', 'name']);
+  const orgIdx = indexOf(['organization', 'org']);
+  const countryIdx = indexOf(['country']);
+  const phoneIdx = indexOf(['phone']);
+  if (emailIdx < 0 || nameIdx < 0) return [];
+
+  const parsed: Array<{
+    email: string;
+    full_name: string;
+    organization?: string | null;
+    country?: string | null;
+    phone?: string | null;
+  }> = [];
+
+  for (const line of lines.slice(1)) {
+    const cols = line.split(',').map((c) => c.trim());
+    const email = (cols[emailIdx] ?? '').toLowerCase();
+    const full_name = cols[nameIdx] ?? '';
+    if (!email || !full_name || !email.includes('@')) continue;
+    parsed.push({
+      email,
+      full_name,
+      organization: orgIdx >= 0 ? cols[orgIdx] || null : null,
+      country: countryIdx >= 0 ? cols[countryIdx] || null : null,
+      phone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
+    });
+  }
+  return parsed;
+}
 
 export default function ContactsPage() {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContactStatus | 'all'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [bulkCsv, setBulkCsv] = useState('');
+  const [bulkImporting, setBulkImporting] = useState(false);
   const [draft, setDraft] = useState({
     full_name: '',
     email: '',
@@ -91,11 +145,52 @@ export default function ContactsPage() {
       });
       setDraft({ full_name: '', email: '', phone: '', organization: '', country: '' });
       setIsDialogOpen(false);
+      markOnboardingAction('contacts_uploaded');
       await refreshContacts();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to create contact.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    setBulkImporting(true);
+    setError(null);
+    try {
+      const rows = parseBulkContactsCsv(bulkCsv);
+      if (rows.length === 0) {
+        throw new Error('No valid rows found. Required columns: email, full_name (or name).');
+      }
+      let importedCount = 0;
+      for (const row of rows) {
+        try {
+          await createContact(row);
+          importedCount += 1;
+        } catch {
+          // Continue import on per-row failures (e.g., duplicates)
+        }
+      }
+      if (importedCount === 0) {
+        throw new Error('No contacts were imported. Check CSV rows or duplicates.');
+      }
+      markOnboardingAction('contacts_uploaded');
+      await refreshContacts();
+      setBulkCsv('');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to import CSV contacts.');
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
+  const handleBulkCsvFileUpload = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setBulkCsv(text);
+    } catch {
+      setError('Failed to read CSV file.');
     }
   };
 
@@ -125,19 +220,26 @@ export default function ContactsPage() {
 
   return (
     <>
-      <AppHeader title="Contacts" subtitle="Tenant CRM" />
+      <AppHeader
+        title={isCooperative ? 'Members' : 'Contacts'}
+        subtitle={
+          isCooperative
+            ? 'Manage member identity, consent status, and portability readiness'
+            : 'Tenant CRM'
+        }
+      />
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <Card><CardHeader><CardTitle className="text-sm">Total Contacts</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.total}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Active Pipeline</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.active}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Blocked</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.blocked}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Total Members' : 'Total Contacts'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.total}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Active Membership' : 'Active Pipeline'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.active}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Membership Blockers' : 'Blocked'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.blocked}</CardContent></Card>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, email, org"
+            placeholder={isCooperative ? 'Search member by name, email, cooperative, or status' : 'Search by name, email, org'}
             className="max-w-sm"
           />
           <select
@@ -157,8 +259,12 @@ export default function ContactsPage() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add contact</DialogTitle>
-                  <DialogDescription>Create or upsert a contact inside your tenant CRM.</DialogDescription>
+                <DialogTitle>{isCooperative ? 'Add member' : 'Add contact'}</DialogTitle>
+                <DialogDescription>
+                  {isCooperative
+                    ? 'Create or upsert a cooperative member profile for consent and portability workflows.'
+                    : 'Create or upsert a contact inside your tenant CRM.'}
+                </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
                   <div><Label>Full name</Label><Input value={draft.full_name} onChange={(e) => setDraft((p) => ({ ...p, full_name: e.target.value }))} /></div>
@@ -178,6 +284,60 @@ export default function ContactsPage() {
           </PermissionGate>
         </div>
 
+        <PermissionGate permission="contacts:create">
+          <Card>
+            <CardHeader>
+              <CardTitle>{isCooperative ? 'Import members (CSV) or add manually' : 'Import contacts (CSV) or add manually'}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Label htmlFor="bulk-contacts-csv">Bulk contacts CSV</Label>
+              <textarea
+                id="bulk-contacts-csv"
+                value={bulkCsv}
+                onChange={(event) => setBulkCsv(event.target.value)}
+                placeholder="Paste CSV here..."
+                className="min-h-[140px] w-full rounded-md border border-border bg-background p-3 text-sm"
+              />
+              <div className="flex flex-wrap gap-2">
+                <label className="inline-flex cursor-pointer items-center rounded-md border border-input px-3 py-2 text-sm hover:bg-muted">
+                  Upload CSV file
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={(event) => {
+                      void handleBulkCsvFileUpload(event.target.files?.[0] ?? null);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <Button variant="outline" onClick={() => setBulkCsv(BULK_CONTACTS_TEMPLATE)}>
+                  Paste sample CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const blob = new Blob([BULK_CONTACTS_TEMPLATE], { type: 'text/csv;charset=utf-8' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'tracebud_contacts_template.csv';
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                  }}
+                >
+                  Download CSV template
+                </Button>
+                <Button onClick={() => void handleBulkImport()} disabled={bulkImporting || !bulkCsv.trim()}>
+                  {bulkImporting ? 'Importing...' : 'Import CSV contacts'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                You can still use the <strong>{isCooperative ? 'Add Member' : 'Add Contact'}</strong> button above for one-by-one manual entry.
+              </p>
+            </CardContent>
+          </Card>
+        </PermissionGate>
+
         {error ? (
           <Card className="border-red-300">
             <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
@@ -185,7 +345,7 @@ export default function ContactsPage() {
         ) : null}
 
         <Card>
-          <CardHeader><CardTitle>Contact list</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{isCooperative ? 'Member directory' : 'Contact list'}</CardTitle></CardHeader>
           <CardContent>
             {filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground">No contacts match your filters yet.</p>

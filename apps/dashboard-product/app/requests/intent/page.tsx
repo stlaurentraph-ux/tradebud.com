@@ -56,14 +56,14 @@ export default function RequestDecisionIntentPage() {
           }
         }
         if (cancelled) return;
-        const nextTarget = `/requests?campaign=${encodeURIComponent(campaignId)}&decision=${encodeURIComponent(decision)}${recipientEmail ? `&recipient=${encodeURIComponent(recipientEmail)}` : ''}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+        const nextTarget = `/outreach?campaign=${encodeURIComponent(campaignId)}&decision=${encodeURIComponent(decision)}${recipientEmail ? `&recipient=${encodeURIComponent(recipientEmail)}` : ''}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
         router.replace(
           `/login?next=${encodeURIComponent(nextTarget)}&intent=${encodeURIComponent(decision)}&campaign=${encodeURIComponent(campaignId)}${recordedDirectly ? '&recorded=1' : ''}`,
         );
       })();
       return;
     }
-    router.replace('/requests');
+    router.replace('/outreach');
     return () => {
       cancelled = true;
     };

@@ -136,7 +136,7 @@ describe('CreateAccountPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/?welcome=1&entry=requests');
+      expect(pushMock).toHaveBeenCalledWith('/?welcome=1&entry=inbox');
     });
 
     markOnboardingAction('campaign_created');

@@ -25,7 +25,7 @@ const metricCards = [
   },
   {
     key: 'total_farmers',
-    label: 'Active Farmers',
+    label: 'Active Producers',
     icon: Users,
     color: 'text-chart-3',
     bgColor: 'bg-chart-3/10',

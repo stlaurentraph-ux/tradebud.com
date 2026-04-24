@@ -1,3 +1,19 @@
+### 2026-04-22 (execution: onboarding taxonomy bridge + role-aware wizard mode)
+- Focus: make onboarding task taxonomy and overview-step taxonomy consistent with the new dashboard IA and request-wizard vocabulary.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/outreach/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Backend-driven onboarding dialog copy now uses importer taxonomy overrides (`network`, `campaigns`, `issues`, `compliance`, `reporting`) instead of legacy package/request phrasing.
+  - `create_first_campaign` CTA now lands on canonical campaigns route (`/outreach`) to match new IA language and routing.
+  - Outreach now passes role-aware wizard mode/labels (`campaign` for importer, `request` otherwise) so onboarding CTA intent and wizard terminology stay aligned.
+- Permissions/tenant boundaries:
+  - No permission or tenant model changes; copy and entry-mode wiring only.
+- Exception handling/recovery:
+  - No transition logic changes; existing action-validation semantics remain unchanged.
+- Verification:
+  - `ReadLints` on touched files (no lints).
+  - `npm run -s test -- app/page.test.tsx app/create-account/page.test.tsx` (pass).
+- Blockers: none.
+
 ### 2026-04-22 (execution: importer onboarding microcopy alignment)
 - Focus: align importer onboarding narrative and step copy with the finalized importer IA and terminology.
 - Files changed: `apps/dashboard-product/lib/onboarding-config.ts`, `apps/dashboard-product/components/onboarding/onboarding-welcome-modal.tsx`, `apps/dashboard-product/components/onboarding/onboarding-checklist-card.tsx`, `apps/dashboard-product/components/onboarding/guided-tour-overlay.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

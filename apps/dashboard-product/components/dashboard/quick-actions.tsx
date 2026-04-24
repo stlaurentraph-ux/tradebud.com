@@ -20,8 +20,8 @@ export function QuickActions({
   const actions = [
     {
       icon: Plus,
-      label: "New Package",
-      description: "Create a DDS package",
+      label: "New Shipment",
+      description: "Create a shipment package",
       onClick: onNewPackage,
       primary: true,
     },

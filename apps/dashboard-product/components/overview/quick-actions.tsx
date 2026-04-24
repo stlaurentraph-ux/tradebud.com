@@ -8,8 +8,8 @@ import { PermissionGate } from '@/components/common/permission-gate';
 
 const actions = [
   {
-    label: 'New Package',
-    description: 'Create a new DDS package',
+    label: 'New Shipment',
+    description: 'Create a new shipment package',
     href: '/packages/new',
     icon: Plus,
     permission: 'packages:create' as const,

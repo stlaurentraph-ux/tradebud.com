@@ -23,7 +23,7 @@ type OutreachRequest = {
 
 const MOCK_OUTREACH_REQUESTS: OutreachRequest[] = [
   { id: 'OUT-2026-001', counterpartName: 'North Valley Cooperative', commodity: 'Cocoa', date: '2026-04-20', status: 'Sent' },
-  { id: 'OUT-2026-002', counterpartName: 'Green Ridge Producers', commodity: 'Coffee', date: '2026-04-18', status: 'Draft' },
+  { id: 'OUT-2026-002', counterpartName: 'Green Ridge Member Union', commodity: 'Coffee', date: '2026-04-18', status: 'Draft' },
   { id: 'OUT-2026-003', counterpartName: 'Kivu Export Group', commodity: 'Palm Oil', date: '2026-04-12', status: 'Completed' },
 ];
 
@@ -142,6 +142,13 @@ export default function OutreachPage() {
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}
         onComplete={handleWizardComplete}
+        mode={isImporter ? 'campaign' : 'request'}
+        title={isImporter ? 'New Campaign' : 'New Request'}
+        description={
+          isImporter
+            ? 'Create a new outbound campaign to collect missing upstream evidence and references'
+            : 'Create a new request campaign for producer, plot, or evidence data'
+        }
       />
     </div>
   );

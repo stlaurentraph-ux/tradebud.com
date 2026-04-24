@@ -12,14 +12,16 @@ describe('middleware gate redirect', () => {
   });
 
   it('redirects deferred routes when gates are disabled', () => {
-    expect(getGateRedirectPath('/requests')).toBe('/');
+    expect(getGateRedirectPath('/outreach')).toBe('/');
+    expect(getGateRedirectPath('/inbox')).toBe('/');
     expect(getGateRedirectPath('/reports')).toBe('/');
     expect(getGateRedirectPath('/')).toBe(null);
   });
 
   it('redirects nested deferred routes when gates are disabled', () => {
-    expect(getGateRedirectPath('/requests/')).toBe('/');
-    expect(getGateRedirectPath('/requests/new')).toBe('/');
+    expect(getGateRedirectPath('/outreach/')).toBe('/');
+    expect(getGateRedirectPath('/outreach/new')).toBe('/');
+    expect(getGateRedirectPath('/inbox/threads')).toBe('/');
     expect(getGateRedirectPath('/reports/annual')).toBe('/');
     expect(getGateRedirectPath('/reports/export/pdf')).toBe('/');
   });
@@ -27,9 +29,11 @@ describe('middleware gate redirect', () => {
   it('allows deferred routes when gates are enabled', () => {
     vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'true');
-    expect(getGateRedirectPath('/requests')).toBe(null);
+    expect(getGateRedirectPath('/outreach')).toBe(null);
+    expect(getGateRedirectPath('/inbox')).toBe(null);
     expect(getGateRedirectPath('/reports')).toBe(null);
-    expect(getGateRedirectPath('/requests/new')).toBe(null);
+    expect(getGateRedirectPath('/outreach/new')).toBe(null);
+    expect(getGateRedirectPath('/inbox/threads')).toBe(null);
     expect(getGateRedirectPath('/reports/annual')).toBe(null);
   });
 
@@ -51,8 +55,8 @@ describe('middleware gate redirect', () => {
     expect(response.status).toBe(307);
   });
 
-  it('adds request_campaigns gate marker for requests route redirect', () => {
-    const request = makeMiddlewareRequest('https://tracebud.test/requests/new?tenant=tenant_1');
+  it('adds request_campaigns gate marker for outreach route redirect', () => {
+    const request = makeMiddlewareRequest('https://tracebud.test/outreach/new?tenant=tenant_1');
 
     const response = middleware(request);
     expect(response.headers.get('location')).toContain('/?tenant=tenant_1&feature=mvp_gated&gate=request_campaigns');

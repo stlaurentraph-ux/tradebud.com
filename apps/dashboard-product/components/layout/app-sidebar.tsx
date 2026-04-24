@@ -95,7 +95,7 @@ const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
   Reporting: 'reports',
   Organisations: 'organisations',
   'Compliance Health': 'compliance',
-  Programmes: 'outreach',
+  Programmes: 'programmes',
   'Delegated Admin': 'governance',
   'Billing & Coverage': 'packages',
   'Role Decisions': 'role-decisions',
@@ -113,6 +113,12 @@ export function AppSidebar() {
     ? (showDevRoleSwitcher ? DEV_SWITCHABLE_ROLES : user.roles)
     : [];
   const hasMultipleRoles = user && switchableRoles.length > 1;
+  const isSponsor = user?.active_role === 'sponsor';
+  const withSponsorView = (href: string) => {
+    if (!isSponsor) return href;
+    const separator = href.includes('?') ? '&' : '?';
+    return `${href}${separator}sponsorView=${sponsorView}`;
+  };
 
   return (
     <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
@@ -196,7 +202,7 @@ export function AppSidebar() {
               </DropdownMenu>
             )}
           </div>
-          {user.active_role === 'sponsor' && (
+          {isSponsor && (
             <div className="rounded-md bg-white/10 px-3 py-2">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Sponsor view</span>
               <div className="mt-2 grid grid-cols-2 gap-1">
@@ -239,7 +245,7 @@ export function AppSidebar() {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={withSponsorView(item.href)}
               data-onboarding={ONBOARDING_NAV_KEY_BY_NAME[item.name] ? `nav-${ONBOARDING_NAV_KEY_BY_NAME[item.name]}` : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
@@ -267,7 +273,7 @@ export function AppSidebar() {
               return (
                 <Link
                   key={item.name}
-                  href={item.href}
+                  href={withSponsorView(item.href)}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
                     isActive
@@ -307,7 +313,7 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <Link href="/settings">
+              <Link href={withSponsorView('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Account settings
               </Link>

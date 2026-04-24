@@ -6,8 +6,7 @@
 import type { TenantRole } from '@/types';
 import type { CommercialPermission } from '@/lib/rbac';
 
-// Maps to the 3 onboarding personas from the goal spec
-export type OnboardingPersona = 'cooperative' | 'exporter' | 'importer';
+export type OnboardingPersona = 'cooperative' | 'exporter' | 'importer' | 'sponsor';
 
 export interface OnboardingStep {
   /** Unique key used for persistence / analytics */
@@ -51,8 +50,8 @@ const COOPERATIVE_STEPS: OnboardingStep[] = [
   {
     key: 'coop_overview',
     label: 'Overview',
-    title: 'This is your dashboard overview',
-    description: 'See key metrics, pending actions, and quick links to manage your farmers and plots.',
+    title: 'Start from cooperative overview',
+    description: 'Track readiness, member coverage, blocked batches, and governance alerts from one cockpit.',
     ctaLabel: 'View overview',
     ctaHref: '/',
     targetSelector: '[data-onboarding="nav-overview"]',
@@ -60,33 +59,22 @@ const COOPERATIVE_STEPS: OnboardingStep[] = [
     icon: 'LayoutDashboard',
   },
   {
-    key: 'coop_add_contact',
-    label: 'Add contacts',
-    title: 'Register your first contacts',
-    description: 'Add cooperative member contacts so requests and evidence follow-up are routed to the right people.',
-    ctaLabel: 'Open contacts',
+    key: 'coop_members',
+    label: 'Members',
+    title: 'Build your member directory',
+    description: 'Create member profiles to anchor consent, portability, and cooperative participation records.',
+    ctaLabel: 'Open members',
     ctaHref: '/contacts',
-    targetSelector: '[data-onboarding="nav-contacts"]',
-    requiresAction: false,
+    targetSelector: '[data-onboarding="nav-farmers"]',
+    requiresAction: true,
+    actionKey: 'contacts_uploaded',
     icon: 'Users',
   },
   {
-    key: 'coop_send_requests',
-    label: 'Send requests',
-    title: 'Send requests to your member network',
-    description: 'Launch request campaigns to collect the latest plot and evidence updates from cooperative members.',
-    ctaLabel: 'Open requests',
-    ctaHref: '/outreach',
-    targetSelector: '[data-onboarding="nav-outreach"]',
-    requiresAction: false,
-    icon: 'Send',
-  },
-  {
-    key: 'coop_review_plots',
-    label: 'Review plots',
-    title: 'Review uploaded farm plots',
-    description:
-      'Farmers or field operators upload parcel boundaries via the offline app. Review data quality here, then Tracebud compliance performs final filing validation.',
+    key: 'coop_plots',
+    label: 'Plots',
+    title: 'Review member plot coverage',
+    description: 'Validate geometry quality and risk status so lots and shipments inherit reliable root-plot coverage.',
     ctaLabel: 'Open plots',
     ctaHref: '/plots',
     targetSelector: '[data-onboarding="nav-plots"]',
@@ -95,41 +83,50 @@ const COOPERATIVE_STEPS: OnboardingStep[] = [
     icon: 'MapPin',
   },
   {
-    key: 'coop_fpic',
-    label: 'FPIC',
-    title: 'Track FPIC consent evidence',
-    description: 'Use FPIC to capture and review consent artifacts before forwarding evidence downstream.',
-    ctaLabel: 'Open FPIC',
-    ctaHref: '/fpic',
-    targetSelector: '[data-onboarding="nav-fpic"]',
+    key: 'coop_field_operations',
+    label: 'Field Operations',
+    title: 'Run field remediation queues',
+    description: 'Coordinate field agents on missing consent, missing geometry, duplicate review, and sync quality tasks.',
+    ctaLabel: 'Open field operations',
+    ctaHref: '/field-operations',
+    targetSelector: '[data-onboarding="nav-outreach"]',
     requiresAction: false,
-    icon: 'FileCheck',
-    requiredPermission: 'fpic:view',
+    icon: 'MapPin',
   },
   {
-    key: 'coop_compliance',
-    label: 'Compliance',
-    title: 'Run cooperative readiness checks',
-    description: 'Review data quality and missing evidence so member submissions are ready for buyer handoff.',
-    ctaLabel: 'Open compliance',
-    ctaHref: '/compliance',
-    targetSelector: '[data-onboarding="nav-compliance"]',
-    requiresAction: true,
-    actionKey: 'compliance_check_run',
-    icon: 'ShieldCheck',
-    requiredPermission: 'compliance:view',
-  },
-  {
-    key: 'coop_sync_submission',
-    label: 'First harvest',
-    title: 'Record your first harvest batch',
-    description: 'Log a harvest record to start building the evidence chain that exporters need to file their DDS.',
-    ctaLabel: 'Open harvests',
+    key: 'coop_lots_batches',
+    label: 'Lots & Batches',
+    title: 'Record your first lot or batch',
+    description: 'Start aggregation records to run yield plausibility checks and prepare lineage-safe shipment assembly.',
+    ctaLabel: 'Open lots & batches',
     ctaHref: '/harvests',
     targetSelector: '[data-onboarding="nav-harvests"]',
     requiresAction: true,
     actionKey: 'first_submission_synced',
     icon: 'Leaf',
+  },
+  {
+    key: 'coop_shipments',
+    label: 'Shipments',
+    title: 'Prepare shipment handoff',
+    description: 'Assemble shipment lines, resolve blockers, and confirm readiness before sealing and downstream handoff.',
+    ctaLabel: 'Open shipments',
+    ctaHref: '/packages',
+    targetSelector: '[data-onboarding="nav-packages"]',
+    requiresAction: false,
+    icon: 'Package',
+  },
+  {
+    key: 'coop_governance',
+    label: 'Governance',
+    title: 'Review governance actions',
+    description: 'Track premium approvals, portability review, and cooperative health requirements in one governance workspace.',
+    ctaLabel: 'Open governance',
+    ctaHref: '/governance',
+    targetSelector: '[data-onboarding="nav-settings"]',
+    requiresAction: true,
+    actionKey: 'compliance_check_run',
+    icon: 'Scale',
   },
 ];
 
@@ -163,7 +160,7 @@ const EXPORTER_STEPS: OnboardingStep[] = [
   },
   {
     key: 'exp_campaign',
-    label: 'Create campaign',
+    label: 'Campaigns',
     title: 'Send your first data-request campaign',
     description: 'Campaigns batch-request plot geometry, harvest records, or evidence from multiple suppliers at once.',
     ctaLabel: 'Open campaigns',
@@ -175,7 +172,7 @@ const EXPORTER_STEPS: OnboardingStep[] = [
   },
   {
     key: 'exp_lots_batches',
-    label: 'Lots & batches',
+    label: 'Lots & Batches',
     title: 'Build your first aggregation batch',
     description: 'Use lots and batches to aggregate upstream inputs, run yield plausibility checks, and lock lineage.',
     ctaLabel: 'Open lots & batches',
@@ -284,14 +281,76 @@ const IMPORTER_STEPS: OnboardingStep[] = [
   },
 ];
 
+const SPONSOR_STEPS: OnboardingStep[] = [
+  {
+    key: 'sp_overview',
+    label: 'Overview',
+    title: 'Use the governance cockpit',
+    description: 'Start from the sponsor overview to monitor network activation, risk posture, and intervention alerts.',
+    ctaLabel: 'Open overview',
+    ctaHref: '/',
+    targetSelector: '[data-onboarding="nav-overview"]',
+    requiresAction: false,
+    icon: 'LayoutDashboard',
+  },
+  {
+    key: 'sp_organisations',
+    label: 'Organisations',
+    title: 'Map your governed network',
+    description: 'Review member organisations, activation status, and sponsor-funded coverage across the network.',
+    ctaLabel: 'Open organisations',
+    ctaHref: '/organisations',
+    targetSelector: '[data-onboarding="nav-organisations"]',
+    requiresAction: true,
+    actionKey: 'contacts_uploaded',
+    icon: 'Building2',
+  },
+  {
+    key: 'sp_programmes',
+    label: 'Programmes',
+    title: 'Launch your first programme campaign',
+    description: 'Create a bulk request campaign to collect missing evidence or remediation data from upstream organisations.',
+    ctaLabel: 'Open programmes',
+    ctaHref: '/programmes',
+    targetSelector: '[data-onboarding="nav-programmes"]',
+    requiresAction: true,
+    actionKey: 'campaign_created',
+    icon: 'Send',
+  },
+  {
+    key: 'sp_compliance_health',
+    label: 'Compliance Health',
+    title: 'Review network readiness',
+    description: 'Use compliance health to identify cross-network risk patterns and priority escalation clusters.',
+    ctaLabel: 'Open compliance health',
+    ctaHref: '/compliance-health',
+    targetSelector: '[data-onboarding="nav-compliance"]',
+    requiresAction: true,
+    actionKey: 'compliance_check_run',
+    icon: 'ShieldCheck',
+  },
+  {
+    key: 'sp_reporting',
+    label: 'Reporting',
+    title: 'Generate your first sponsor insight',
+    description: 'Open reporting to track programme outcomes, network performance, and governance KPIs.',
+    ctaLabel: 'Open reporting',
+    ctaHref: '/reports',
+    targetSelector: '[data-onboarding="nav-reports"]',
+    requiresAction: true,
+    actionKey: 'insight_generated',
+    icon: 'FileText',
+  },
+];
+
 // ─────────────────────────────────────────────────────────────
 // CONFIG MAP
 // ─────────────────────────────────────────────────────────────
 export const ONBOARDING_CONFIGS: Record<OnboardingPersona, OnboardingConfig> = {
   cooperative: {
     persona: 'cooperative',
-    displayName: 'Producer / Cooperative',
-    tagline: 'Coordinate members, capture plots, and respond to supply-chain requests.',
+    displayName: 'Cooperative',
+    tagline: 'Manage members, field operations, aggregation, shipments, and governance in one workspace.',
     steps: COOPERATIVE_STEPS,
   },
   exporter: {
@@ -306,12 +365,19 @@ export const ONBOARDING_CONFIGS: Record<OnboardingPersona, OnboardingConfig> = {
     tagline: 'Own the DDS filing process, review data, and meet EUDR obligations.',
     steps: IMPORTER_STEPS,
   },
+  sponsor: {
+    persona: 'sponsor',
+    displayName: 'Network Sponsor',
+    tagline: 'Govern network health, delegated admin scope, programme campaigns, and sponsored coverage.',
+    steps: SPONSOR_STEPS,
+  },
 };
 
 // Map TenantRole → OnboardingPersona
 export function tenantRoleToPersona(role: TenantRole): OnboardingPersona {
   if (role === 'cooperative') return 'cooperative';
   if (role === 'importer' || role === 'country_reviewer') return 'importer';
+  if (role === 'sponsor') return 'sponsor';
   return 'exporter';
 }
 

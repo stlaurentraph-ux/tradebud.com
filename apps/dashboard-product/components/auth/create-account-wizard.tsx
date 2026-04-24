@@ -252,8 +252,8 @@ export function CreateAccountWizard() {
 
   const getPostSignupPath = (role: PrimaryRole): string => {
     if (role === 'admin') return '/?welcome=1&entry=admin';
-    if (role === 'importer' || role === 'compliance_manager') return '/?welcome=1&entry=requests';
-    return '/?welcome=1&entry=requests';
+    if (role === 'importer' || role === 'compliance_manager') return '/?welcome=1&entry=inbox';
+    return '/?welcome=1&entry=outreach';
   };
 
   return (

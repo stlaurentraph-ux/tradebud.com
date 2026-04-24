@@ -44,7 +44,7 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Link href="/requests" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
+              <Link href="/outreach" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
                 Review campaign requests
               </Link>
               <Link href="/compliance" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">

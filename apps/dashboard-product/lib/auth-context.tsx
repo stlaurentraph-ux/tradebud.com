@@ -23,6 +23,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const DEV_SWITCHABLE_ROLES: TenantRole[] = ['cooperative', 'exporter', 'importer', 'country_reviewer', 'sponsor'];
+
+function isDevRoleOverrideEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true';
+}
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split('.');
@@ -165,11 +170,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const switchRole = useCallback((role: TenantRole) => {
-    if (user && user.roles.includes(role)) {
-      const updatedUser = { ...user, active_role: role };
-      setUser(updatedUser);
-      sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
-    }
+    if (!user) return;
+    const roleAllowed = user.roles.includes(role) || (isDevRoleOverrideEnabled() && DEV_SWITCHABLE_ROLES.includes(role));
+    if (!roleAllowed) return;
+    const mergedRoles = user.roles.includes(role) ? user.roles : [...user.roles, role];
+    const updatedUser = { ...user, roles: mergedRoles, active_role: role };
+    setUser(updatedUser);
+    sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
   }, [user]);
 
   const impersonateDemo = useCallback(async (email: string) => {

@@ -17,6 +17,7 @@ import {
   type OnboardingPersona,
   type OnboardingConfig,
 } from '@/lib/onboarding-config';
+import { hasPermission } from '@/lib/rbac';
 
 // ─────────────────────────────────────────────────────────────
 // State shape
@@ -94,6 +95,11 @@ function saveCompleted(userId: string, data: CompletedSteps): void {
   sessionStorage.setItem(getCompletedKey(userId), JSON.stringify(data));
 }
 
+function isActionCompleted(actionKey?: string): boolean {
+  if (!actionKey) return false;
+  return sessionStorage.getItem(`tracebud_onboarding_action_${actionKey}`) === '1';
+}
+
 // ─────────────────────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────────────────────
@@ -107,9 +113,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const config = useMemo<OnboardingConfig | null>(() => {
-    if (!persona) return null;
-    return ONBOARDING_CONFIGS[persona];
-  }, [persona]);
+    if (!persona || !user) return null;
+    const base = ONBOARDING_CONFIGS[persona];
+    return {
+      ...base,
+      steps: base.steps.filter((step) =>
+        step.requiredPermission ? hasPermission(user, step.requiredPermission) : true,
+      ),
+    };
+  }, [persona, user]);
 
   const [phase, setPhase] = useState<OnboardingPhase>('idle');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -222,18 +234,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const markStepComplete = useCallback(
     (stepKey: string) => {
       if (!user) return;
-      const updated = { ...completedSteps, [stepKey]: true };
-      setCompletedSteps(updated);
-      saveCompleted(user.id, updated);
-      trackOnboardingEvent({ event: 'onboarding_step_completed', persona: persona!, stepKey });
-
-      // Check if all steps done
-      if (config && config.steps.every((s) => updated[s.key])) {
-        persistPhase('complete');
-        trackOnboardingEvent({ event: 'onboarding_completed', persona: persona! });
-      }
+      setCompletedSteps((previous) => {
+        if (previous[stepKey]) return previous;
+        const updated = { ...previous, [stepKey]: true };
+        saveCompleted(user.id, updated);
+        trackOnboardingEvent({ event: 'onboarding_step_completed', persona: persona!, stepKey });
+        if (config && config.steps.every((s) => updated[s.key])) {
+          persistPhase('complete');
+          trackOnboardingEvent({ event: 'onboarding_completed', persona: persona! });
+        }
+        return updated;
+      });
     },
-    [user, completedSteps, config, persona, persistPhase],
+    [user, config, persona, persistPhase],
   );
 
   const completeCurrentStep = useCallback(() => {
@@ -242,6 +255,20 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (step) markStepComplete(step.key);
     nextStep();
   }, [config, currentStepIndex, markStepComplete, nextStep]);
+
+  useEffect(() => {
+    if (!user || !config) return;
+    const syncActionValidatedSteps = () => {
+      config.steps.forEach((step) => {
+        if (step.actionKey && isActionCompleted(step.actionKey) && !completedSteps[step.key]) {
+          markStepComplete(step.key);
+        }
+      });
+    };
+    syncActionValidatedSteps();
+    window.addEventListener('tracebud:onboarding-action', syncActionValidatedSteps);
+    return () => window.removeEventListener('tracebud:onboarding-action', syncActionValidatedSteps);
+  }, [user, config, completedSteps, markStepComplete]);
 
   const skipTour = useCallback(() => {
     if (!user) return;

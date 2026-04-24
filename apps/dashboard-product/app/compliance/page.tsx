@@ -116,7 +116,7 @@ export default function CompliancePage() {
             ? 'Validate member evidence and plot readiness before downstream handoff'
             : isImporter
               ? 'Validate role decisions, references, and declaration readiness before submission'
-              : 'Comprehensive compliance verification before TRACES submission'
+              : 'Comprehensive compliance verification before downstream handoff'
         }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
@@ -139,7 +139,7 @@ export default function CompliancePage() {
             <CardContent className="p-6 text-sm text-muted-foreground">
               {isImporter
                 ? 'Select a shipment from `Shipments` to run declaration readiness checks.'
-                : 'Select a package from `DDS Packages` to run compliance checks.'}
+                : 'Select a shipment from `Shipments` to run compliance checks.'}
             </CardContent>
           </Card>
         ) : null}
@@ -193,7 +193,7 @@ export default function CompliancePage() {
             <AlertDescription>
               <strong>Issues Detected:</strong>{' '}
               {backendIssuesCount} blocker(s) detected by backend readiness checks.
-              deforestation concerns and must be resolved before TRACES submission.
+              Deforestation concerns and evidence gaps must be resolved before shipment handoff.
             </AlertDescription>
           </Alert>
         )}
@@ -315,7 +315,7 @@ export default function CompliancePage() {
             <>
               <Button size="lg" className="flex-1">
                 <CheckCircle className="mr-2 h-4 w-4" />
-                Ready for TRACES Submission
+                Ready for Shipment Handoff
               </Button>
               <Button variant="outline" size="lg">
                 Proceed to Export

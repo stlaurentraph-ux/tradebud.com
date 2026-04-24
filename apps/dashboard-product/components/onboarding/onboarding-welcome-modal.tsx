@@ -41,7 +41,7 @@ const ROLE_CARDS: RoleCard[] = [
     persona: 'cooperative',
     icon: <Users className="h-5 w-5" />,
     highlights: [
-      'Register farmers & plots',
+      'Register producers & plots',
       'Respond to exporter requests',
       'Upload harvest evidence',
     ],

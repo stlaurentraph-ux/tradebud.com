@@ -8,6 +8,7 @@ import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
 import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
 import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
+import { OnboardingChecklistCard } from '@/components/onboarding/onboarding-checklist-card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,7 +22,7 @@ import { getDeferredGateForPath } from '@/lib/feature-gates';
 import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { useAuth } from '@/lib/auth-context';
 import { getRoleDisplayName } from '@/lib/rbac';
-import type { ShipmentStatus } from '@/types';
+import type { ShipmentStatus, TenantRole } from '@/types';
 
 const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaLabel: string; href: string }> = {
   create_account: {
@@ -34,12 +35,12 @@ const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaL
     title: 'Create your first campaign',
     description: 'Campaigns define who can submit records and keep onboarding scoped to your active workflow.',
     ctaLabel: 'Open campaigns',
-    href: '/requests?openCreateCampaign=1',
+    href: '/outreach',
   },
   upload_contacts: {
-    title: 'Upload initial contacts',
-    description: 'Add partners and operators so requests route correctly and no manual reassignment is needed later.',
-    ctaLabel: 'Open contacts',
+    title: 'Set up your member and partner directory',
+    description: 'Add members or partners early so campaigns, evidence collection, and traceability links route correctly.',
+    ctaLabel: 'Open directory',
     href: '/contacts',
   },
   invite_field_team: {
@@ -58,7 +59,7 @@ const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaL
     title: 'Join your first campaign',
     description: 'Joining a campaign links your field activity to the correct compliance process.',
     ctaLabel: 'Open campaigns',
-    href: '/requests',
+    href: '/outreach',
   },
   capture_first_plot: {
     title: 'Capture your first plot',
@@ -67,22 +68,92 @@ const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaL
     href: '/plots',
   },
   sync_first_submission: {
-    title: 'Sync your first submission',
-    description: 'Submit one complete payload so your dashboard and audit events confirm end-to-end flow.',
-    ctaLabel: 'Open harvests',
+    title: 'Build your first lot or batch',
+    description: 'Create a first aggregation record so yield plausibility checks and lineage lock can begin.',
+    ctaLabel: 'Open lots & batches',
     href: '/harvests',
   },
   review_first_submission: {
-    title: 'Review a first submission',
-    description: 'Use the compliance review queue to validate required checks and escalation paths.',
-    ctaLabel: 'Open compliance',
+    title: 'Review your first blocker',
+    description: 'Use the issues board to assign and resolve blockers before shipment sealing.',
+    ctaLabel: 'Open issues',
+    href: '/compliance/issues',
+  },
+  run_first_compliance_check: {
+    title: 'Prepare your first shipment',
+    description: 'Open the shipment workspace to assemble package lines and validate readiness before sealing.',
+    ctaLabel: 'Open shipments',
+    href: '/packages',
+  },
+};
+
+const IMPORTER_ONBOARDING_COPY_OVERRIDES: Partial<
+  Record<string, { title: string; description: string; ctaLabel: string; href: string }>
+> = {
+  create_first_campaign: {
+    title: 'Launch your first campaign',
+    description: 'Use campaigns to collect missing upstream evidence and references before declaration submission.',
+    ctaLabel: 'Open campaigns',
+    href: '/outreach',
+  },
+  upload_contacts: {
+    title: 'Build your network',
+    description: 'Add counterpart contacts so campaigns and inbound requests route to the correct teams.',
+    ctaLabel: 'Open network',
+    href: '/contacts',
+  },
+  review_first_submission: {
+    title: 'Resolve your first issue',
+    description: 'Use the issues workspace to resolve declaration blockers and warnings.',
+    ctaLabel: 'Open issues',
     href: '/compliance/issues',
   },
   run_first_compliance_check: {
     title: 'Run your first compliance check',
-    description: 'Validate controls on a live record before filing or approving production submissions.',
-    ctaLabel: 'Open role decisions',
-    href: '/role-decisions',
+    description: 'Validate shipment readiness, role decisions, and references before DDS submission.',
+    ctaLabel: 'Open compliance',
+    href: '/compliance',
+  },
+  generate_first_insight: {
+    title: 'Generate your first reporting snapshot',
+    description: 'Create a reporting snapshot for operational follow-up and annual obligations.',
+    ctaLabel: 'Open reporting',
+    href: '/reports',
+  },
+};
+
+const SPONSOR_ONBOARDING_COPY_OVERRIDES: Partial<
+  Record<string, { title: string; description: string; ctaLabel: string; href: string }>
+> = {
+  create_first_campaign: {
+    title: 'Launch your first programme campaign',
+    description: 'Use Programmes to send sponsor-scoped bulk requests to upstream organisations.',
+    ctaLabel: 'Open programmes',
+    href: '/programmes',
+  },
+  upload_contacts: {
+    title: 'Map your organisations',
+    description: 'Review governed organisations and sponsor coverage before launching interventions.',
+    ctaLabel: 'Open organisations',
+    href: '/organisations',
+  },
+  generate_first_insight: {
+    title: 'Generate your first sponsor report',
+    description: 'Open reporting to baseline network health, programme outcomes, and governance KPIs.',
+    ctaLabel: 'Open reporting',
+    href: '/reports',
+  },
+  run_first_compliance_check: {
+    title: 'Review compliance health',
+    description: 'Use compliance health to detect cross-network blockers and escalation hotspots.',
+    ctaLabel: 'Open compliance health',
+    href: '/compliance-health',
+  },
+  review_first_submission: {
+    title: 'Review network issues',
+    description: 'Use Issues to triage high-priority exceptions requiring sponsor intervention.',
+    ctaLabel: 'Open issues',
+    href: '/compliance/issues',
   },
 };
 
@@ -101,6 +172,24 @@ const ONBOARDING_STEP_ACTION_KEYS: Record<string, string | null> = {
 
 function getOnboardingActionStorageKey(actionKey: string): string {
   return `tracebud_onboarding_action_${actionKey}`;
+}
+
+function getOnboardingCopyForRole(stepKey: string, role?: TenantRole) {
+  const isImporterRole = role === 'importer' || role === 'country_reviewer';
+  if (isImporterRole && IMPORTER_ONBOARDING_COPY_OVERRIDES[stepKey]) {
+    return IMPORTER_ONBOARDING_COPY_OVERRIDES[stepKey]!;
+  }
+  if (role === 'sponsor' && SPONSOR_ONBOARDING_COPY_OVERRIDES[stepKey]) {
+    return SPONSOR_ONBOARDING_COPY_OVERRIDES[stepKey]!;
+  }
+  return (
+    ONBOARDING_COPY[stepKey] ?? {
+      title: stepKey.replaceAll('_', ' '),
+      description: 'Complete this step to continue your onboarding sequence.',
+      ctaLabel: 'Open feature',
+      href: '/',
+    }
+  );
 }
 
 const VIRGIN_DASHBOARD_METRICS: {
@@ -239,29 +328,6 @@ export default function DashboardPage() {
     setIsOnboardingDialogOpen(!dismissed);
   }, [userId, onboardingSteps, activeOnboardingStepIndex, onboardingDismissKey, isWelcomeEntry]);
 
-  const markStepCompleted = async (stepKey: string) => {
-    setOnboardingSteps((previous) =>
-      previous.map((step) => (step.step_key === stepKey ? { ...step, completed: true } : step)),
-    );
-    const token = window.sessionStorage.getItem('tracebud_token');
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-    const response = await fetch('/api/launch/onboarding', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ role: onboardingRole, stepKey }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (Array.isArray(payload) && payload.length > 0) {
-      setOnboardingSteps(payload);
-    }
-    if (onboardingDismissKey) {
-      window.sessionStorage.removeItem(onboardingDismissKey);
-    }
-  };
-
   const skipOnboardingForNow = () => {
     if (onboardingDismissKey) {
       window.sessionStorage.setItem(onboardingDismissKey, '1');
@@ -276,19 +342,16 @@ export default function DashboardPage() {
   };
 
   const currentStepCopy = activeOnboardingStep
-    ? ONBOARDING_COPY[activeOnboardingStep.step_key] ?? {
-        title: activeOnboardingStep.step_key.replaceAll('_', ' '),
-        description: 'Complete this step to continue your onboarding sequence.',
-        ctaLabel: 'Open feature',
-        href: '/',
-      }
+    ? getOnboardingCopyForRole(activeOnboardingStep.step_key, userRole)
     : null;
 
   const currentStepNumber = activeOnboardingStepIndex + 1;
 
-  const goToCurrentStepFeature = () => {
-    if (!currentStepCopy) return;
-    const gate = getDeferredGateForPath(currentStepCopy.href);
+  const getOnboardingCopyForStep = (stepKey: string) => getOnboardingCopyForRole(stepKey, userRole);
+
+  const openOnboardingStepFeature = (stepKey: string) => {
+    const stepCopy = getOnboardingCopyForStep(stepKey);
+    const gate = getDeferredGateForPath(stepCopy.href);
     if (gate) {
       setOnboardingNavigationNotice(
         `This step route is currently gated (${gate}). Redirected to dashboard overview.`,
@@ -307,7 +370,7 @@ export default function DashboardPage() {
             gate,
             tenantId: userTenantId,
             role: userRole,
-            redirectedPath: currentStepCopy.href,
+            redirectedPath: stepCopy.href,
           }),
         }).catch(() => undefined);
       }
@@ -315,8 +378,13 @@ export default function DashboardPage() {
       return;
     }
     setOnboardingNavigationNotice(null);
-    router.push(currentStepCopy.href);
+    router.push(stepCopy.href);
     setIsOnboardingDialogOpen(false);
+  };
+
+  const goToCurrentStepFeature = () => {
+    if (!activeOnboardingStep) return;
+    openOnboardingStepFeature(activeOnboardingStep.step_key);
   };
 
   const isStepActionValidated = (stepKey: string): boolean => {
@@ -330,12 +398,36 @@ export default function DashboardPage() {
 
   const syncValidatedOnboardingSteps = async () => {
     if (!userId || onboardingSteps.length === 0) return;
-    const nextStep = onboardingSteps.find((step) => !step.completed);
-    if (!nextStep) return;
-    if (!isStepActionValidated(nextStep.step_key)) return;
+    const currentStep = onboardingSteps.find((step) => !step.completed);
+    if (!currentStep) return;
+    if (!isStepActionValidated(currentStep.step_key)) return;
     setIsAutoValidatingStep(true);
     try {
-      await markStepCompleted(nextStep.step_key);
+      const token = window.sessionStorage.getItem('tracebud_token');
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      const response = await fetch('/api/launch/onboarding', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ role: onboardingRole, stepKey: currentStep.step_key }),
+      });
+      const payload = await response.json().catch(() => null);
+      const nextSteps =
+        Array.isArray(payload) && payload.length > 0
+          ? payload
+          : onboardingSteps.map((step) =>
+              step.step_key === currentStep.step_key ? { ...step, completed: true } : step,
+            );
+      setOnboardingSteps(nextSteps);
+      if (onboardingDismissKey) {
+        window.sessionStorage.removeItem(onboardingDismissKey);
+      }
+      const nextStep = nextSteps.find((step) => !step.completed);
+      if (nextStep) {
+        openOnboardingStepFeature(nextStep.step_key);
+      }
     } finally {
       setIsAutoValidatingStep(false);
     }
@@ -387,15 +479,15 @@ export default function DashboardPage() {
     
     switch (user.active_role) {
       case 'exporter':
-        return 'Manage DDS packages and TRACES submissions';
+        return 'Manage upstream aggregation, lineage integrity, and shipment readiness';
       case 'importer':
         return 'Monitor supply chain compliance status';
       case 'cooperative':
-        return 'Manage farmers and plot registrations';
+        return 'Manage members, field operations, consent, portability, and cooperative governance';
       case 'country_reviewer':
         return 'Review and verify compliance submissions';
       case 'sponsor':
-        return 'Monitor your sponsored producer network';
+        return 'Govern network health, delegated admin scope, programme outcomes, and sponsored coverage';
       default:
         return `${getRoleDisplayName(user.active_role)} Dashboard`;
     }
@@ -425,6 +517,10 @@ export default function DashboardPage() {
                   const nextQuery = nextParams.toString();
                   setWelcomeAcknowledged(true);
                   router.replace(nextQuery ? `/?${nextQuery}` : '/');
+                  if (activeOnboardingStep) {
+                    openOnboardingStepFeature(activeOnboardingStep.step_key);
+                    return;
+                  }
                   resumeOnboarding();
                 }}
               >
@@ -447,6 +543,9 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : null}
+        <div className="mb-6">
+          <OnboardingChecklistCard />
+        </div>
         {trialState ? (
           <div className="mb-4 rounded-lg border border-border bg-card p-4 text-sm">
             <div className="font-semibold">Launch Access</div>
@@ -459,40 +558,6 @@ export default function DashboardPage() {
                 Your trial has expired. Upgrade is required to continue premium workflows.
               </div>
             ) : null}
-          </div>
-        ) : null}
-        {onboardingSteps.length > 0 ? (
-          <div className="mb-6 rounded-lg border border-border bg-card p-4 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold">Autonomous onboarding</div>
-              {activeOnboardingStepIndex !== -1 ? (
-                <Button size="sm" variant="outline" onClick={resumeOnboarding}>
-                  Resume guide
-                </Button>
-              ) : (
-                <span className="text-xs font-medium text-emerald-600">Completed</span>
-              )}
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${onboardingProgress}%` }} />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Progress: {onboardingProgress}% ({onboardingSteps.filter((step) => step.completed).length}/{onboardingSteps.length})
-            </div>
-            <div className="mt-2 space-y-2">
-              {onboardingSteps.map((step) => (
-                <div key={step.step_key} className="flex items-center justify-between gap-3">
-                  <span className={step.completed ? 'text-muted-foreground line-through' : ''}>
-                    {step.step_key.replaceAll('_', ' ')}
-                  </span>
-                  {step.completed ? (
-                    <span className="text-emerald-600">Done</span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Waiting for action</span>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         ) : null}
         {renderDashboard()}

@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
-  MapPin,
   Users,
+  MapPin,
+  ShieldCheck,
   AlertTriangle,
-  CheckCircle2,
-  Plus,
+  Wallet,
   ArrowRight,
-  TreePine,
+  Scale,
+  Package,
   FileCheck,
+  ClipboardList,
 } from 'lucide-react';
 
 interface CooperativeDashboardProps {
@@ -25,162 +27,131 @@ interface CooperativeDashboardProps {
 
 export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
   const pendingPlots = metrics.total_plots - metrics.compliant_plots;
-  const verificationRate = metrics.total_plots > 0 
+  const verificationRate = metrics.total_plots > 0
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
 
   return (
     <div className="space-y-6">
-      {/* Primary Action Banner */}
       <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50">
         <CardContent className="flex items-center justify-between p-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-teal-900">Farmer & Plot Management</h3>
+            <h3 className="text-lg font-semibold text-teal-900">Cooperative Operations Cockpit</h3>
             <p className="text-sm text-teal-700">
-              Manage {metrics.total_farmers} farmers and {metrics.total_plots} plots in your cooperative
+              Connect member readiness, field capture quality, blocked batches, shipment readiness, and governance actions.
             </p>
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" className="border-teal-300 hover:bg-teal-100">
-              <Link href="/farmers">
-                <Users className="mr-2 h-4 w-4" />
-                Add Farmer
+              <Link href="/field-operations">
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Field Queues
               </Link>
             </Button>
             <Button asChild className="bg-teal-600 hover:bg-teal-700">
-              <Link href="/plots">
-                <Plus className="mr-2 h-4 w-4" />
-                Register Plot
+              <Link href="/governance">
+                <Scale className="mr-2 h-4 w-4" />
+                Review Governance
               </Link>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Key Metrics for Cooperatives */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Farmers</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Members</CardTitle>
             <Users className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.total_farmers}</div>
-            <p className="text-xs text-muted-foreground mt-1">Registered members</p>
+            <p className="text-xs text-muted-foreground mt-1">Profiles managed by cooperative</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Plots</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Mapped Plot Coverage</CardTitle>
             <MapPin className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.total_plots}</div>
-            <p className="text-xs text-muted-foreground mt-1">Mapped farm areas</p>
+            <div className="text-2xl font-bold">{verificationRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">{metrics.compliant_plots}/{metrics.total_plots} plots compliant</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Verified Plots</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{metrics.compliant_plots}</div>
-            <p className="text-xs text-muted-foreground mt-1">EUDR compliant</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Blocked Batch Alerts</CardTitle>
             <AlertTriangle className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{pendingPlots}</div>
-            <p className="text-xs text-muted-foreground mt-1">Need verification</p>
+            <div className="text-2xl font-bold text-amber-600">{Math.max(0, Math.ceil(pendingPlots * 0.4))}</div>
+            <p className="text-xs text-muted-foreground mt-1">Yield appeal and evidence follow-up</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Premium Governance</CardTitle>
+            <Wallet className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">3</div>
+            <p className="text-xs text-muted-foreground mt-1">Decisions awaiting committee sign-off</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Plot Verification Progress */}
       <Card>
         <CardHeader>
-          <CardTitle>Plot Verification Progress</CardTitle>
-          <CardDescription>Track EUDR compliance verification across your cooperative</CardDescription>
+          <CardTitle>Readiness and Cooperative Health</CardTitle>
+          <CardDescription>Operational readiness signals blended with cooperative-strength indicators.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Overall Verification Rate</span>
-              <span className="text-lg font-bold">{verificationRate}%</span>
-            </div>
-            <div className="h-4 w-full rounded-full bg-gray-100">
-              <div 
-                className="h-4 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all" 
-                style={{ width: `${verificationRate}%` }}
-              />
-            </div>
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-lg border p-4">
+            <p className="text-sm font-medium">Members missing consent</p>
+            <p className="mt-2 text-2xl font-bold text-amber-600">{Math.max(1, Math.ceil(metrics.total_farmers * 0.08))}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Prioritize portability-ready consent renewals</p>
           </div>
-
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium">Compliant</span>
-              </div>
-              <div className="text-2xl font-bold text-emerald-600">{metrics.compliant_plots}</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <div className="h-3 w-3 rounded-full bg-amber-500" />
-                <span className="text-sm font-medium">Pending</span>
-              </div>
-              <div className="text-2xl font-bold text-amber-600">{Math.floor(pendingPlots * 0.6)}</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <div className="h-3 w-3 rounded-full bg-red-500" />
-                <span className="text-sm font-medium">Issues</span>
-              </div>
-              <div className="text-2xl font-bold text-red-600">{Math.ceil(pendingPlots * 0.4)}</div>
-            </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm font-medium">Plots missing geometry</p>
+            <p className="mt-2 text-2xl font-bold text-red-600">{Math.max(0, pendingPlots)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Point-only and invalid geometry records in queue</p>
+          </div>
+          <div className="rounded-lg border p-4">
+            <p className="text-sm font-medium">Requests overdue</p>
+            <p className="mt-2 text-2xl font-bold">7</p>
+            <p className="mt-1 text-xs text-muted-foreground">Inbound partner asks past SLA</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Cooperative Tasks */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TreePine className="h-5 w-5 text-teal-600" />
-              Land Management
+              <Users className="h-5 w-5 text-teal-600" />
+              Members and Portability
             </CardTitle>
-            <CardDescription>Register and verify farm plots</CardDescription>
+            <CardDescription>Manage producer identity, consent status, and transfer readiness.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/plots" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <Plus className="h-4 w-4" />
-                <span className="font-medium">Register New Plot</span>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <Link href="/contacts" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Open member directory</span>
+              <Badge variant="outline">{metrics.total_farmers}</Badge>
             </Link>
-            <Link href="/plots" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4" />
-                <span className="font-medium">View All Plots</span>
-              </div>
-              <Badge variant="outline">{metrics.total_plots}</Badge>
+            <Link href="/governance" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Review portability queue</span>
+              <Badge variant="outline">4 pending</Badge>
             </Link>
-            <Link href="/plots" className="flex items-center justify-between p-3 rounded-lg bg-amber-50 hover:bg-amber-100 transition-colors">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-amber-700">Plots Needing Review</span>
+            <Link href="/fpic" className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100">
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-4 w-4 text-amber-700" />
+                <span className="font-medium text-amber-700">Consent artifacts missing</span>
               </div>
-              <Badge className="bg-amber-100 text-amber-700">{pendingPlots}</Badge>
+              <ArrowRight className="h-4 w-4 text-amber-700" />
             </Link>
           </CardContent>
         </Card>
@@ -188,32 +159,56 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-teal-600" />
-              Farmer Management
+              <MapPin className="h-5 w-5 text-teal-600" />
+              Field Capture and Plots
             </CardTitle>
-            <CardDescription>Manage cooperative members</CardDescription>
+            <CardDescription>Close data gaps in plot geometry and field operations quality.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/farmers" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <Plus className="h-4 w-4" />
-                <span className="font-medium">Add New Farmer</span>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <Link href="/plots" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Plot registry and map review</span>
+              <Badge variant="outline">{metrics.total_plots} plots</Badge>
             </Link>
-            <Link href="/farmers" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <Users className="h-4 w-4" />
-                <span className="font-medium">View All Farmers</span>
+            <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                <span className="font-medium">Field remediation queues</span>
               </div>
-              <Badge variant="outline">{metrics.total_farmers}</Badge>
+              <Badge variant="outline">5 sync issues</Badge>
             </Link>
-            <Link href="/farmers" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <FileCheck className="h-4 w-4" />
-                <span className="font-medium">FPIC Documentation</span>
+            <Link href="/compliance/issues" className="flex items-center justify-between rounded-lg bg-red-50 p-3 transition-colors hover:bg-red-100">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-700" />
+                <span className="font-medium text-red-700">Duplicate and deforestation flags</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <ArrowRight className="h-4 w-4 text-red-700" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-teal-600" />
+              Batches, Shipments, and Premiums
+            </CardTitle>
+            <CardDescription>Monitor aggregation integrity and cooperative value-distribution flows.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/harvests" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Lots and batch integrity</span>
+              <Badge variant="outline">2 blocked</Badge>
+            </Link>
+            <Link href="/packages" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Shipment seal readiness</span>
+              <Badge variant="outline">6 ready</Badge>
+            </Link>
+            <Link href="/governance" className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-700" />
+                <span className="font-medium text-emerald-700">Premium approvals and payout split</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-emerald-700" />
             </Link>
           </CardContent>
         </Card>

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { usePackageById } from '@/lib/use-packages';
+import { useAuth } from '@/lib/auth-context';
 
 interface AssemblePageProps {
   params: Promise<{ id: string }>;
@@ -18,6 +19,8 @@ interface AssemblePageProps {
 type StepType = 'select_batches' | 'allocate_coverage' | 'validate_issues' | 'seal_shipment';
 
 export default function AssembleShipmentPage({ params }: AssemblePageProps) {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const { id } = use(params);
   const { pkg, isLoading } = usePackageById(id);
   const harvests: Array<{
@@ -85,7 +88,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
         subtitle="4-Step Workflow"
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'DDS Packages', href: '/packages' },
+          { label: 'Shipments', href: '/packages' },
           { label: pkg.code, href: `/packages/${pkg.id}` },
           { label: 'Assemble Shipment' },
         ]}
@@ -95,7 +98,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
         <Button variant="ghost" size="sm" className="mb-6" asChild>
           <Link href={`/packages/${pkg.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Package
+            Back to Shipment
           </Link>
         </Button>
 
@@ -214,8 +217,8 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Distribute the selected batch quantity across shipment lines. 
-                    Each line tracks coverage with plots and farmers.
+                    Distribute the selected batch quantity across shipment lines.
+                    Each line tracks coverage with plots and {isCooperative ? 'members' : 'producers'}.
                   </p>
 
                   <Alert>

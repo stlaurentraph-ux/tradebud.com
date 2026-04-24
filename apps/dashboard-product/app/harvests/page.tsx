@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 interface Harvest {
   id: string;
@@ -35,7 +36,47 @@ interface Harvest {
   exception_status?: 'none' | 'pending' | 'approved' | 'rejected';
 }
 
-const mockHarvests: Harvest[] = [];
+const mockHarvests: Harvest[] = process.env.NODE_ENV !== 'production' ? [
+  {
+    id: 'harv_001',
+    batch_id: 'BATCH-2026-041',
+    plot_id: 'plot_117',
+    plot_name: 'Nyota Block A',
+    plot_area_hectares: 1.8,
+    farmer_name: 'Amina N.',
+    weight_kg: 1280,
+    expected_yield_kg_per_ha: 700,
+    date: '2026-04-18T09:30:00.000Z',
+    status: 'warning',
+    exception_status: 'pending',
+  },
+  {
+    id: 'harv_002',
+    batch_id: 'BATCH-2026-042',
+    plot_id: 'plot_241',
+    plot_name: 'Kijani Ridge',
+    plot_area_hectares: 2.3,
+    farmer_name: 'Daniel K.',
+    weight_kg: 1410,
+    expected_yield_kg_per_ha: 700,
+    date: '2026-04-19T10:15:00.000Z',
+    status: 'pass',
+    exception_status: 'none',
+  },
+  {
+    id: 'harv_003',
+    batch_id: 'BATCH-2026-043',
+    plot_id: 'plot_322',
+    plot_name: 'Valley Group Lot 7',
+    plot_area_hectares: 1.2,
+    farmer_name: 'Coop Cluster 7',
+    weight_kg: 980,
+    expected_yield_kg_per_ha: 700,
+    date: '2026-04-20T08:05:00.000Z',
+    status: 'blocked',
+    exception_status: 'none',
+  },
+] : [];
 
 function getStatusBadge(status: 'pass' | 'warning' | 'blocked') {
   const config = {
@@ -69,6 +110,8 @@ function calculateYieldCap(area: number, expectedYield: number): number {
 }
 
 export default function HarvestsPage() {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
   const [harvests, setHarvests] = useState<Harvest[]>(mockHarvests);
@@ -108,18 +151,22 @@ export default function HarvestsPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Harvests & Batches"
-        subtitle="Track Identity-Preserved harvests with yield-cap validation"
+        title="Lots & Batches"
+        subtitle={
+          isCooperative
+            ? 'Manage cooperative aggregation, lineage lock readiness, and yield appeal workflows'
+            : 'Manage aggregation inputs and batch-level yield plausibility checks'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'Harvests' },
+          { label: 'Lots & Batches' },
         ]}
         actions={
           <PermissionGate permission="harvests:create">
             <Button asChild>
               <Link href="/harvests/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Record Harvest
+                Add Batch Input
               </Link>
             </Button>
           </PermissionGate>
@@ -133,7 +180,7 @@ export default function HarvestsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Batches</p>
+                  <p className="text-sm text-muted-foreground">{isCooperative ? 'Tracked Lots & Batches' : 'Total Batches'}</p>
                   <p className="text-2xl font-bold mt-1">{totalBatches}</p>
                 </div>
                 <Truck className="h-8 w-8 text-muted-foreground/50" />
@@ -145,7 +192,7 @@ export default function HarvestsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Weight</p>
+                  <p className="text-sm text-muted-foreground">{isCooperative ? 'Aggregated Volume' : 'Total Weight'}</p>
                   <p className="text-2xl font-bold mt-1">{(totalWeight / 1000).toFixed(1)} t</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
@@ -157,7 +204,7 @@ export default function HarvestsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Avg Yield/Ha</p>
+                  <p className="text-sm text-muted-foreground">{isCooperative ? 'Avg Yield/Ha Check' : 'Avg Yield/Ha'}</p>
                   <p className="text-2xl font-bold mt-1">{avgYield.toFixed(0)} kg</p>
                 </div>
                 <MapPin className="h-8 w-8 text-muted-foreground/50" />
@@ -169,7 +216,7 @@ export default function HarvestsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Flagged Batches</p>
+                  <p className="text-sm text-muted-foreground">{isCooperative ? 'Blocked / Appeal Queues' : 'Flagged Batches'}</p>
                   <p className={cn('text-2xl font-bold mt-1', flaggedBatches > 0 ? 'text-amber-600' : 'text-emerald-600')}>
                     {flaggedBatches}
                   </p>
@@ -185,7 +232,7 @@ export default function HarvestsPage() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <Input
-                placeholder="Search by batch ID, plot, or farmer..."
+                placeholder={isCooperative ? 'Search by lot/batch ID, plot, member, or lineage issues...' : 'Search by batch ID, plot, or producer...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-xs"
@@ -208,13 +255,13 @@ export default function HarvestsPage() {
           </CardContent>
         </Card>
 
-        {/* Harvests Table */}
+        {/* Lots and Batches Table */}
         <Card>
           <CardContent className="pt-6">
             {filteredHarvests.length === 0 ? (
               <div className="py-12 text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-4 text-sm text-muted-foreground">No harvests match your filters</p>
+                <p className="mt-4 text-sm text-muted-foreground">No lots or batches match your filters</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -228,7 +275,7 @@ export default function HarvestsPage() {
                         Plot
                       </th>
                       <th className="pb-3 pr-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Farmer
+                        {isCooperative ? 'Member' : 'Producer'}
                       </th>
                       <th className="pb-3 pr-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Weight (kg)
@@ -362,12 +409,11 @@ export default function HarvestsPage() {
             <div className="flex gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-amber-900">
-                  Yield Cap Validation
-                </p>
+                <p className="font-medium text-amber-900">Yield Cap Validation</p>
                 <p className="text-amber-800 mt-1">
-                  Each harvest is cross-referenced against the plot&apos;s biological carrying capacity (plot area × expected yield). 
+                  Each lot or batch input is cross-referenced against the plot&apos;s biological carrying capacity (plot area × expected yield). 
                   Weights above capacity trigger warnings or blocks to prevent illicit blending or laundering.
+                  {isCooperative ? ' Cooperative teams can route blocked records into yield appeals before lineage lock and shipment assembly.' : ''}
                 </p>
               </div>
             </div>

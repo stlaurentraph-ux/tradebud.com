@@ -29,6 +29,7 @@ import { PermissionGate } from '@/components/common/permission-gate';
 import { BlockerCard } from '@/components/ui/blocker-card';
 import { transitionPackage } from '@/lib/package-service';
 import { usePackageById } from '@/lib/use-packages';
+import { useAuth } from '@/lib/auth-context';
 import type { ShipmentStatus } from '@/types';
 
 // Canonical shipment state machine
@@ -45,7 +46,7 @@ const STATE_TRANSITIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
 
 const BLOCKING_RULES: Record<ShipmentStatus, string[]> = {
   DRAFT: [],
-  READY: ['All plots must have deforestation assessment', 'All farmers must have FPIC consent'],
+  READY: ['All plots must have deforestation assessment', 'All associated entities must have FPIC consent'],
   SEALED: ['All compliance checks must pass', 'Liability acknowledgement required'],
   SUBMITTED: ['Cannot modify submitted shipment'],
   ACCEPTED: [],
@@ -59,6 +60,8 @@ interface PackageDetailPageProps {
 }
 
 export default function PackageDetailPage({ params }: PackageDetailPageProps) {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const { id } = use(params);
   const { pkg, isLoading, error } = usePackageById(id);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -177,7 +180,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         subtitle={pkg.supplier_name}
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'DDS Packages', href: '/packages' },
+          { label: 'Shipments', href: '/packages' },
           { label: pkg.code },
         ]}
         actions={
@@ -195,7 +198,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 <Button asChild>
                   <Link href={`/packages/${pkg.id}/submit`}>
                     <Send className="mr-2 h-4 w-4" />
-                    Submit to TRACES
+                    Submit downstream handoff
                   </Link>
                 </Button>
               </PermissionGate>
@@ -254,7 +257,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         <Button variant="ghost" size="sm" className="mb-4" asChild>
           <Link href="/packages">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Packages
+            Back to Shipments
           </Link>
         </Button>
 
@@ -342,7 +345,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     <>
                       <Separator orientation="vertical" className="h-10" />
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">TRACES Reference</span>
+                        <span className="text-xs text-muted-foreground">Downstream Reference</span>
                         <span className="text-sm font-medium text-primary">{pkg.traces_reference}</span>
                       </div>
                     </>
@@ -410,14 +413,14 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
               </CardContent>
             </Card>
 
-            {/* Farmers List */}
+            {/* Associated people list */}
             <Card className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-base font-medium">Associated Farmers</CardTitle>
+                <CardTitle className="text-base font-medium">{isCooperative ? 'Associated Members' : 'Associated Producers'}</CardTitle>
                 <PermissionGate permission="farmers:create">
                   <Button variant="outline" size="sm">
                     <Users className="mr-2 h-4 w-4" />
-                    Link Farmer
+                    {isCooperative ? 'Link Member' : 'Link Producer'}
                   </Button>
                 </PermissionGate>
               </CardHeader>
@@ -425,7 +428,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 {pkg.farmers.length === 0 ? (
                   <div className="py-8 text-center">
                     <Users className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                    <p className="mt-2 text-sm text-muted-foreground">No farmers linked yet</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{isCooperative ? 'No members linked yet' : 'No producers linked yet'}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -556,7 +559,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">{pkg.farmers.length}</p>
-                    <p className="text-xs text-muted-foreground">Farmers</p>
+                    <p className="text-xs text-muted-foreground">{isCooperative ? 'Members' : 'Producers'}</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">
@@ -587,7 +590,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
                 <p className="text-sm text-amber-900">
-                  By advancing this shipment to TRACES Ready, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations. This action cannot be undone.
+                  By advancing this shipment to handoff-ready, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations. This action cannot be undone.
                 </p>
               </div>
               <div className="flex gap-2">

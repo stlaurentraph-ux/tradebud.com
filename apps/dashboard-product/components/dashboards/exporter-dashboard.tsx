@@ -37,15 +37,15 @@ const mockRecentActivity: TimelineEvent[] = [
     eventType: 'submission',
     timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
     userName: 'Maria Rodriguez',
-    description: 'DDS Package SHP-2024-003 submitted to TRACES NT',
-    metadata: { reference: 'DDS-2024-0891' },
+    description: 'Shipment SHP-2024-003 sealed after lineage lock',
+    metadata: { reference: 'PKG-2024-0891' },
   },
   {
     id: '2',
     eventType: 'approval',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     userName: 'System',
-    description: 'Pre-flight checks passed for SHP-2024-002',
+    description: 'Shipment readiness checks passed for SHP-2024-002',
     metadata: { checks_passed: '8/8' },
   },
   {
@@ -53,14 +53,14 @@ const mockRecentActivity: TimelineEvent[] = [
     eventType: 'status_change',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
     userName: 'Carlos Mendez',
-    description: 'Compliance issue CI-2024-015 resolved',
+    description: 'Yield warning YLD-2024-015 resolved',
   },
   {
     id: '4',
     eventType: 'document_uploaded',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     userName: 'Ana Garcia',
-    description: 'FPIC consent document uploaded for Plot P-2024-042',
+    description: 'Consent document uploaded for Plot P-2024-042',
   },
 ];
 
@@ -96,7 +96,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
   // Spec KPIs
   const blockingIssuesCount = 2;
   const yieldFailuresCount = 1;
-  const ddsSubmissionQueue = shipmentStates.SEALED;
+  const shipmentsReadyToSeal = shipmentStates.READY;
   const isVirginTenant =
     metrics.total_packages === 0 &&
     metrics.total_plots === 0 &&
@@ -115,7 +115,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               <Button asChild size="sm">
-                <Link href="/requests">Create first campaign</Link>
+                <Link href="/outreach">Create first campaign</Link>
               </Button>
               <Button asChild size="sm" variant="outline">
                 <Link href="/farmers">Add first producer</Link>
@@ -133,8 +133,8 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       {/* SLA Burndown Pipeline */}
       <Card>
         <CardHeader>
-          <CardTitle>Shipment Pipeline & SLA Status</CardTitle>
-          <CardDescription>Canonical state machine with SLA burndowns</CardDescription>
+          <CardTitle>Shipment Readiness Pipeline</CardTitle>
+          <CardDescription>Track draft-to-seal progression and queue health</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -223,7 +223,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
                 <StatusChip status="SUBMITTED" />
               </div>
               <div className="mt-3 space-y-1 text-xs">
-                <p className="text-emerald-700 font-medium">Awaiting TRACES NT Response</p>
+                <p className="text-emerald-700 font-medium">Awaiting downstream acceptance response</p>
               </div>
             </div>
           </div>
@@ -250,15 +250,15 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
         <CardContent className="flex items-center justify-between p-6">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-emerald-900">Ready to submit?</h3>
+            <h3 className="text-lg font-semibold text-emerald-900">Ready to seal shipments?</h3>
             <p className="text-sm text-emerald-700">
-              You have {ddsSubmissionQueue} packages ready for TRACES NT submission
+              You have {shipmentsReadyToSeal} shipments ready for seal checks
             </p>
           </div>
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-            <Link href="/compliance">
+            <Link href="/packages">
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Run pre-flight check
+              Open shipment builder
             </Link>
           </Button>
         </CardContent>
@@ -270,7 +270,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           blockerType="COMPLIANCE_ISSUE"
           severity="BLOCKING"
           title={`Shipment sealing blocked`}
-          description={`${blockingIssuesCount} blocking compliance issues found that must be resolved before any shipments can be sealed.`}
+          description={`${blockingIssuesCount} blocking issues must be resolved before shipments can be sealed.`}
           relatedEntityLabel="Multiple shipments affected"
           slaCountdown="2 days"
           remediationAction={{
@@ -285,10 +285,10 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           blockerType="YIELD_FAILURE"
           severity="WARNING"
           title={`Yield exceptions pending`}
-          description={`${yieldFailuresCount} batch(es) failed yield checks and require exception requests or acknowledgement.`}
-          relatedEntityLabel="Harvests awaiting review"
+          description={`${yieldFailuresCount} batch(es) failed yield plausibility and require exception handling.`}
+          relatedEntityLabel="Lots & batches awaiting review"
           remediationAction={{
-            label: 'View harvests',
+            label: 'View lots & batches',
             href: '/harvests',
           }}
         />
@@ -298,13 +298,13 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total DDS packages</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active shipments</CardTitle>
             <Package className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.total_packages}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {metrics.packages_by_status?.SUBMITTED || 0} submitted to TRACES
+              {metrics.packages_by_status?.SEALED || 0} sealed and handoff-ready
             </p>
           </CardContent>
         </Card>
@@ -318,7 +318,7 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
             <div className={`text-2xl font-bold ${blockingIssuesCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
               {blockingIssuesCount}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Preventing shipment sealing</p>
+            <p className="text-xs text-muted-foreground mt-1">Preventing shipment seal</p>
           </CardContent>
         </Card>
 
@@ -331,18 +331,18 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
             <div className={`text-2xl font-bold ${yieldFailuresCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
               {yieldFailuresCount}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting exception requests</p>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting resolution or appeal</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Submission queue</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ready to seal</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{ddsSubmissionQueue}</div>
-            <p className="text-xs text-muted-foreground mt-1">Ready for TRACES NT</p>
+            <div className="text-2xl font-bold">{shipmentsReadyToSeal}</div>
+            <p className="text-xs text-muted-foreground mt-1">Shipment packages awaiting seal</p>
           </CardContent>
         </Card>
       </div>
@@ -350,8 +350,8 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       {/* Package Pipeline with StatusChip */}
       <Card>
         <CardHeader>
-          <CardTitle>DDS package pipeline</CardTitle>
-          <CardDescription>Track packages through the EUDR compliance workflow</CardDescription>
+          <CardTitle>Shipment status pipeline</CardTitle>
+          <CardDescription>Track packages across readiness, seal, and downstream states</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-5 gap-2">
@@ -400,14 +400,14 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
       {/* Quick Actions for Exporters */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/packages/new">
+          <Link href="/harvests">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
                 <Package className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Create DDS package</h4>
-                <p className="text-sm text-muted-foreground">Start a new due diligence statement</p>
+                <h4 className="font-semibold">Manage lots & batches</h4>
+                <p className="text-sm text-muted-foreground">Build lineage-safe inputs before shipment assembly</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
@@ -415,14 +415,14 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/compliance">
+          <Link href="/packages">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
                 <ShieldCheck className="h-6 w-6 text-amber-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Pre-flight check</h4>
-                <p className="text-sm text-muted-foreground">Verify compliance before TRACES</p>
+                <h4 className="font-semibold">Prepare shipments</h4>
+                <p className="text-sm text-muted-foreground">Assemble lines and validate coverage readiness</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
@@ -430,14 +430,14 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/reports">
+          <Link href="/outreach">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
                 <TrendingUp className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Export reports</h4>
-                <p className="text-sm text-muted-foreground">Generate compliance documentation</p>
+                <h4 className="font-semibold">Launch campaign</h4>
+                <p className="text-sm text-muted-foreground">Request missing producer or plot evidence at scale</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>

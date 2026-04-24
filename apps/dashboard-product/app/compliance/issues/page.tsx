@@ -62,7 +62,7 @@ type LinkedEntityType = ComplianceIssue['linkedEntity']['type'];
 const mockIssues: ComplianceIssue[] = process.env.NODE_ENV !== 'production' ? [
   {
     id: 'iss_1001',
-    title: 'Duplicate producer identity requires merge review',
+    title: 'Duplicate member identity requires merge review',
     description: 'Two member profiles share national ID and overlapping plot links.',
     severity: 'WARNING',
     status: 'open',
@@ -95,7 +95,7 @@ const mockIssues: ComplianceIssue[] = process.env.NODE_ENV !== 'production' ? [
   {
     id: 'iss_1003',
     title: 'Portability export pending governance sign-off',
-    description: 'Full producer history export requested without pre-approved portability policy.',
+    description: 'Full member history export requested without pre-approved portability policy.',
     severity: 'INFO',
     status: 'open',
     owner: 'Governance Committee',
@@ -252,7 +252,7 @@ export default function ComplianceIssuesPage() {
                     {isImporter
                       ? 'Add a new blocker or warning to track declaration remediation.'
                       : isCooperative
-                        ? 'Track operational blockers like duplicate producers, blocked yield checks, consent gaps, portability reviews, or premium approvals.'
+                        ? 'Track operational blockers like duplicate members, blocked yield checks, consent gaps, portability reviews, or premium approvals.'
                       : 'Add a new compliance issue for tracking'}
                   </DialogDescription>
                 </DialogHeader>
