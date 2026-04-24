@@ -13,6 +13,10 @@ import {
   ArrowRight,
   TreePine,
   FileCheck,
+  Inbox,
+  Send,
+  Clock,
+  FileText,
 } from 'lucide-react';
 
 interface CooperativeDashboardProps {
@@ -20,6 +24,8 @@ interface CooperativeDashboardProps {
     total_plots: number;
     compliant_plots: number;
     total_farmers: number;
+    incoming_requests_pending?: number;
+    outgoing_requests_pending?: number;
   };
 }
 
@@ -28,6 +34,8 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
   const verificationRate = metrics.total_plots > 0 
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
+  const incomingPending = metrics.incoming_requests_pending ?? 0;
+  const outgoingPending = metrics.outgoing_requests_pending ?? 0;
 
   return (
     <div className="space-y-6">
@@ -149,6 +157,84 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Request Management */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Incoming Requests from Buyers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Inbox className="h-5 w-5 text-blue-600" />
+              Incoming Requests
+            </CardTitle>
+            <CardDescription>Data requests from exporters and importers awaiting your response</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/inbox" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Inbox className="h-4 w-4" />
+                <span className="font-medium">View Inbox</span>
+              </div>
+              {incomingPending > 0 ? (
+                <Badge className="bg-blue-100 text-blue-700">{incomingPending} pending</Badge>
+              ) : (
+                <Badge variant="outline">All clear</Badge>
+              )}
+            </Link>
+            <Link href="/inbox" className="flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-700">Pending Responses</span>
+              </div>
+              <Badge className="bg-blue-100 text-blue-700">{incomingPending}</Badge>
+            </Link>
+            <p className="text-xs text-muted-foreground px-1">
+              Exporters and importers request plot data, consent forms, or harvest records from your cooperative.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Outgoing Requests to Farmers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-teal-600" />
+              Outgoing Requests
+            </CardTitle>
+            <CardDescription>Requests sent to farmers for plot mapping or legal documents</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/requests?tab=outgoing-farmers" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <Send className="h-4 w-4" />
+                <span className="font-medium">View Sent Requests</span>
+              </div>
+              {outgoingPending > 0 ? (
+                <Badge className="bg-amber-100 text-amber-700">{outgoingPending} awaiting</Badge>
+              ) : (
+                <Badge variant="outline">None pending</Badge>
+              )}
+            </Link>
+            <Link href="/requests?tab=outgoing-farmers&action=new" className="flex items-center justify-between p-3 rounded-lg bg-teal-50 hover:bg-teal-100 transition-colors">
+              <div className="flex items-center gap-3">
+                <Plus className="h-4 w-4 text-teal-600" />
+                <span className="font-medium text-teal-700">Send New Request</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-teal-600" />
+            </Link>
+            <Link href="/requests?tab=outgoing-farmers" className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <FileText className="h-4 w-4" />
+                <span className="font-medium">Request Legal Documents</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <p className="text-xs text-muted-foreground px-1">
+              Ask farmers to map their parcels via the Tracebud mobile app or upload legal ownership documents.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Cooperative Tasks */}
       <div className="grid gap-4 md:grid-cols-2">

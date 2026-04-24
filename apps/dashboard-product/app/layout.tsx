@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
+import { OnboardingProvider } from '@/lib/onboarding-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { OnboardingWelcomeModal } from '@/components/onboarding/onboarding-welcome-modal';
+import { GuidedTourOverlay } from '@/components/onboarding/guided-tour-overlay';
 import './globals.css';
 
 const geistSans = Geist({
@@ -32,7 +35,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
-          <DashboardLayout>{children}</DashboardLayout>
+          <OnboardingProvider>
+            <DashboardLayout>{children}</DashboardLayout>
+            <OnboardingWelcomeModal />
+            <GuidedTourOverlay />
+          </OnboardingProvider>
           <Toaster richColors position="top-right" />
         </AuthProvider>
       </body>
