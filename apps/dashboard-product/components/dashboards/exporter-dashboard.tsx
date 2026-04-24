@@ -104,29 +104,6 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-emerald-200 bg-emerald-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your new workspace</CardTitle>
-            <CardDescription>
-              No demo data is preloaded. Complete onboarding steps above to create your first campaign, import contacts, and start collecting field data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/requests">Create first campaign</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/farmers">Add first producer</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/plots">Capture first plot</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
       <span className="sr-only">
         Plot compliance rate {complianceRate} percent ({metrics.compliant_plots} of {metrics.total_plots} plots).
       </span>
@@ -252,13 +229,13 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-emerald-900">Ready to submit?</h3>
             <p className="text-sm text-emerald-700">
-              You have {ddsSubmissionQueue} packages ready for TRACES NT submission
+              You have {ddsSubmissionQueue} packages ready for importer compliance handoff
             </p>
           </div>
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
             <Link href="/compliance">
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Run pre-flight check
+              Run handoff pre-flight
             </Link>
           </Button>
         </CardContent>

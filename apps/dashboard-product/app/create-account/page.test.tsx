@@ -28,23 +28,24 @@ describe('CreateAccountPage', () => {
     vi.restoreAllMocks();
     pushMock.mockReset();
     hydrateSessionFromTokenMock.mockReset();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      writable: true,
+      value: vi.fn(),
+    });
     sessionStorage.clear();
   });
 
   it('renders step 1 value proposition and minimum fields', () => {
     render(<CreateAccountPage />);
-    expect(screen.getByText('Create your Tracebud workspace')).toBeInTheDocument();
+    expect(screen.getByText('Create your account')).toBeInTheDocument();
     expect(screen.getByLabelText('Work email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByLabelText('Full name')).toBeInTheDocument();
-    expect(screen.getByText(/No credit card required\. 30-day trial\./)).toBeInTheDocument();
+    expect(screen.getByText(/No credit card required/i)).toBeInTheDocument();
   });
 
   it('moves from step 1 to step 2 on successful signup', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (input) => {
-      if (input === '/api/analytics/gated-entry') {
-        return new Response(JSON.stringify({ ok: true }), { status: 202 });
-      }
       if (input === '/api/auth/signup') {
         return new Response(
           JSON.stringify({ userId: 'user_1', tenantId: 'tenant_1', accessToken: 'token_1' }),
@@ -59,7 +60,7 @@ describe('CreateAccountPage', () => {
     fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'ops@tracebud.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'supersecret' } });
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Ops User' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => {
       expect(screen.getByLabelText('Organization name')).toBeInTheDocument();
@@ -89,9 +90,6 @@ describe('CreateAccountPage', () => {
       );
     });
     const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
-      if (input === '/api/analytics/gated-entry') {
-        return new Response(JSON.stringify({ ok: true }), { status: 202 });
-      }
       if (input === '/api/auth/signup') {
         const body = JSON.parse(String(init?.body ?? '{}')) as { stage?: string };
         if (body.stage === 'create_account') {
@@ -121,14 +119,15 @@ describe('CreateAccountPage', () => {
     fireEvent.change(screen.getByLabelText('Work email'), { target: { value: 'ops@tracebud.test' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'supersecret' } });
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Ops User' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => {
       expect(screen.getByLabelText('Organization name')).toBeInTheDocument();
     });
     fireEvent.change(screen.getByLabelText('Organization name'), { target: { value: 'Tracebud Imports' } });
-    fireEvent.change(screen.getByLabelText('Country'), { target: { value: 'France' } });
-    fireEvent.change(screen.getByLabelText('Primary role'), { target: { value: 'importer' } });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Country' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'France' }));
+    fireEvent.click(screen.getByRole('button', { name: /Importer/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() => {
