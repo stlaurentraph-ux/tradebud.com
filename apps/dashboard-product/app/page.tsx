@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
+import { WelcomeCard } from '@/components/onboarding/welcome-card';
 import { ExporterDashboard } from '@/components/dashboards/exporter-dashboard';
 import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
@@ -139,6 +140,7 @@ export default function DashboardPage() {
   const [isAutoValidatingStep, setIsAutoValidatingStep] = useState(false);
   const [onboardingNavigationNotice, setOnboardingNavigationNotice] = useState<string | null>(null);
   const [welcomeAcknowledged, setWelcomeAcknowledged] = useState(false);
+  const [pendingOnboardingResume, setPendingOnboardingResume] = useState(false);
 
   const onboardingRole = useMemo(() => {
     if (!user) return 'admin';
@@ -275,6 +277,16 @@ export default function DashboardPage() {
     setIsOnboardingDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (!pendingOnboardingResume) return;
+    if (!onboardingDismissKey || onboardingSteps.length === 0) return;
+    window.sessionStorage.removeItem(onboardingDismissKey);
+    if (activeOnboardingStepIndex !== -1) {
+      setIsOnboardingDialogOpen(true);
+    }
+    setPendingOnboardingResume(false);
+  }, [pendingOnboardingResume, onboardingDismissKey, onboardingSteps.length, activeOnboardingStepIndex]);
+
   const currentStepCopy = activeOnboardingStep
     ? ONBOARDING_COPY[activeOnboardingStep.step_key] ?? {
         title: activeOnboardingStep.step_key.replaceAll('_', ' '),
@@ -410,41 +422,35 @@ export default function DashboardPage() {
 
       <div className="flex-1 p-6">
         {isWelcomeEntry ? (
-          <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm">
-            <div className="font-semibold text-emerald-900">Welcome to your new Tracebud workspace</div>
-            <div className="mt-1 text-emerald-800">
-              Your environment is ready. Take a quick look around, then start onboarding when you are ready.
-            </div>
-            <div className="mt-3 flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  const nextParams = new URLSearchParams(searchParams.toString());
-                  nextParams.delete('welcome');
-                  nextParams.delete('entry');
-                  const nextQuery = nextParams.toString();
-                  setWelcomeAcknowledged(true);
-                  router.replace(nextQuery ? `/?${nextQuery}` : '/');
-                  resumeOnboarding();
-                }}
-              >
-                Start onboarding
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const nextParams = new URLSearchParams(searchParams.toString());
-                  nextParams.delete('welcome');
-                  nextParams.delete('entry');
-                  const nextQuery = nextParams.toString();
-                  setWelcomeAcknowledged(true);
-                  router.replace(nextQuery ? `/?${nextQuery}` : '/');
-                }}
-              >
-                Explore workspace first
-              </Button>
-            </div>
+          <div className="mb-6">
+            <WelcomeCard
+              userName={user?.name}
+              onDismiss={() => {
+                const nextParams = new URLSearchParams(searchParams.toString());
+                nextParams.delete('welcome');
+                nextParams.delete('entry');
+                const nextQuery = nextParams.toString();
+                setWelcomeAcknowledged(true);
+                router.replace(nextQuery ? `/?${nextQuery}` : '/');
+              }}
+              onStartOnboarding={() => {
+                const nextParams = new URLSearchParams(searchParams.toString());
+                nextParams.delete('welcome');
+                nextParams.delete('entry');
+                const nextQuery = nextParams.toString();
+                setWelcomeAcknowledged(true);
+                setPendingOnboardingResume(true);
+                router.replace(nextQuery ? `/?${nextQuery}` : '/');
+              }}
+              onExploreWorkspace={() => {
+                const nextParams = new URLSearchParams(searchParams.toString());
+                nextParams.delete('welcome');
+                nextParams.delete('entry');
+                const nextQuery = nextParams.toString();
+                setWelcomeAcknowledged(true);
+                router.replace(nextQuery ? `/?${nextQuery}` : '/');
+              }}
+            />
           </div>
         ) : null}
         {trialState ? (

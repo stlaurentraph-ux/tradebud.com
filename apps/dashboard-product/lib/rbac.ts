@@ -120,7 +120,6 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'packages:edit',
     'packages:delete',
     'packages:seal_shipment',
-    'packages:submit_traces',
     'plots:view',
     'plots:create',
     'plots:edit',
@@ -165,6 +164,7 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     // EU Importers, Roasters & Brands - downstream workflow permissions
     'packages:view',
     'packages:approve',
+    'packages:submit_traces',
     'plots:view',
     'farmers:view',
     'compliance:view',
@@ -177,7 +177,6 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'contacts:create',
     'contacts:edit',
     'harvests:view',
-    'harvests:approve_exception',
     'evidence:view',
     'evidence:review',
     'reports:view',

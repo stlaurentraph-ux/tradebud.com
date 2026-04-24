@@ -4,6 +4,10 @@ import { EudrController } from './eudr.controller';
 describe('EudrController', () => {
   const originalEnv = process.env;
   const originalFetch = global.fetch;
+  const makeController = (pool: any) =>
+    new EudrController(pool as any, {
+      requireFeatureAccess: jest.fn().mockResolvedValue(undefined),
+    } as any);
 
   beforeEach(() => {
     process.env = { ...originalEnv };
@@ -19,14 +23,14 @@ describe('EudrController', () => {
   });
 
   it('rejects missing tenant claim', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(controller.echo(undefined, { user: { email: 'exporter+ops@tracebud.com' } })).rejects.toThrow(
       ForbiddenException,
     );
   });
 
   it('rejects farmer role for connectivity checks', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.echo(undefined, {
         user: {
@@ -40,7 +44,7 @@ describe('EudrController', () => {
 
   it('rejects when EUDR API key is not configured', async () => {
     delete process.env.EUDR_API_KEY;
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.echo(undefined, {
         user: {
@@ -60,7 +64,7 @@ describe('EudrController', () => {
       text: jest.fn().mockResolvedValue('ok'),
     } as any);
 
-    const controller = new EudrController(pool as any);
+    const controller = makeController(pool);
     const result = await controller.echo('health-check', {
       user: {
         id: 'user_1',
@@ -102,7 +106,7 @@ describe('EudrController', () => {
       status: 403,
       text: jest.fn().mockResolvedValue('forbidden'),
     } as any);
-    const controller = new EudrController({ query: jest.fn().mockResolvedValue({ rows: [] }) } as any);
+    const controller = makeController({ query: jest.fn().mockResolvedValue({ rows: [] }) });
 
     await expect(
       controller.echo(undefined, {
@@ -115,32 +119,32 @@ describe('EudrController', () => {
     ).rejects.toThrow(BadGatewayException);
   });
 
-  it('rejects DDS submit for non-exporter role', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+  it('rejects DDS submit for exporter role', async () => {
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.submitDds(
         { statement: { foo: 'bar' }, idempotencyKey: 'idem_1' },
         {
           user: {
             id: 'user_1',
-            email: 'agent+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            email: 'exporter+ops@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
           },
         },
       ),
-    ).rejects.toThrow('Only exporters can submit EUDR DDS payloads');
+    ).rejects.toThrow('Only importers/brands can submit EUDR DDS payloads');
   });
 
   it('rejects DDS submit when idempotency key is missing', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.submitDds(
         { statement: { foo: 'bar' } },
         {
           user: {
             id: 'user_1',
-            email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            email: 'importer+ops@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'compliance_manager' },
           },
         },
       ),
@@ -154,7 +158,7 @@ describe('EudrController', () => {
       status: 200,
       text: jest.fn().mockResolvedValue('ok'),
     } as any);
-    const controller = new EudrController(pool as any);
+    const controller = makeController(pool);
 
     const result = await controller.submitDds(
       {
@@ -164,8 +168,8 @@ describe('EudrController', () => {
       {
         user: {
           id: 'user_1',
-          email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          email: 'importer+ops@tracebud.com',
+          app_metadata: { tenant_id: 'tenant_1', role: 'compliance_manager' },
         },
       },
     );
@@ -206,7 +210,7 @@ describe('EudrController', () => {
       status: 409,
       text: jest.fn().mockResolvedValue('duplicate idempotency key'),
     } as any);
-    const controller = new EudrController(pool as any);
+    const controller = makeController(pool);
 
     const result = await controller.submitDds(
       {
@@ -216,8 +220,8 @@ describe('EudrController', () => {
       {
         user: {
           id: 'user_1',
-          email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          email: 'importer+ops@tracebud.com',
+          app_metadata: { tenant_id: 'tenant_1', role: 'compliance_manager' },
         },
       },
     );
@@ -244,7 +248,7 @@ describe('EudrController', () => {
       status: 500,
       text: jest.fn().mockResolvedValue('provider error'),
     } as any);
-    const controller = new EudrController({ query: jest.fn().mockResolvedValue({ rows: [] }) } as any);
+    const controller = makeController({ query: jest.fn().mockResolvedValue({ rows: [] }) });
 
     await expect(
       controller.submitDds(
@@ -255,8 +259,8 @@ describe('EudrController', () => {
         {
           user: {
             id: 'user_1',
-            email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            email: 'importer+ops@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'compliance_manager' },
           },
         },
       ),
@@ -264,7 +268,7 @@ describe('EudrController', () => {
   });
 
   it('rejects DDS status read for non-exporter/agent roles', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.getDdsStatus('TB-REF-001', {
         user: {
@@ -273,11 +277,11 @@ describe('EudrController', () => {
           app_metadata: { tenant_id: 'tenant_1' },
         },
       }),
-    ).rejects.toThrow('Only exporters or agents can read EUDR DDS status');
+    ).rejects.toThrow('Only exporters, importers/brands, agents, or admins can read EUDR DDS status');
   });
 
   it('rejects DDS status read when reference number is missing', async () => {
-    const controller = new EudrController({ query: jest.fn() } as any);
+    const controller = makeController({ query: jest.fn() });
     await expect(
       controller.getDdsStatus(undefined, {
         user: {
@@ -296,7 +300,7 @@ describe('EudrController', () => {
       status: 200,
       text: jest.fn().mockResolvedValue('{"status":"accepted"}'),
     } as any);
-    const controller = new EudrController(pool as any);
+    const controller = makeController(pool);
 
     const result = await controller.getDdsStatus('TB-REF-STATUS-001', {
       user: {
@@ -338,7 +342,7 @@ describe('EudrController', () => {
       status: 500,
       text: jest.fn().mockResolvedValue('provider error'),
     } as any);
-    const controller = new EudrController({ query: jest.fn().mockResolvedValue({ rows: [] }) } as any);
+    const controller = makeController({ query: jest.fn().mockResolvedValue({ rows: [] }) });
 
     await expect(
       controller.getDdsStatus('TB-REF-STATUS-002', {
@@ -357,7 +361,7 @@ describe('EudrController', () => {
       status: 200,
       text: jest.fn().mockResolvedValue('not-json'),
     } as any);
-    const controller = new EudrController({ query: jest.fn().mockResolvedValue({ rows: [] }) } as any);
+    const controller = makeController({ query: jest.fn().mockResolvedValue({ rows: [] }) });
 
     await expect(
       controller.getDdsStatus('TB-REF-STATUS-003', {
