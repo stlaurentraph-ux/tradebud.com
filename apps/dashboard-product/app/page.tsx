@@ -8,6 +8,7 @@ import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
 import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
 import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
+import { OnboardingChecklistCard } from '@/components/onboarding/onboarding-checklist-card';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +21,7 @@ import {
 import { getDeferredGateForPath } from '@/lib/feature-gates';
 import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { useAuth } from '@/lib/auth-context';
+import { useOnboarding } from '@/lib/onboarding-context';
 import { getRoleDisplayName } from '@/lib/rbac';
 import type { ShipmentStatus } from '@/types';
 
@@ -109,25 +111,30 @@ const VIRGIN_DASHBOARD_METRICS: {
   total_plots: number;
   compliant_plots: number;
   total_farmers: number;
-} = {
+  incoming_requests_pending: number;
+  outgoing_requests_pending: number;
+  } = {
   total_packages: 0,
   packages_by_status: {
-    DRAFT: 0,
-    READY: 0,
-    SEALED: 0,
-    SUBMITTED: 0,
-    ACCEPTED: 0,
-    REJECTED: 0,
-    ARCHIVED: 0,
+  DRAFT: 0,
+  READY: 0,
+  SEALED: 0,
+  SUBMITTED: 0,
+  ACCEPTED: 0,
+  REJECTED: 0,
+  ARCHIVED: 0,
     ON_HOLD: 0,
   },
   total_plots: 0,
   compliant_plots: 0,
   total_farmers: 0,
+  incoming_requests_pending: 0,
+  outgoing_requests_pending: 0,
 };
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { startOnboarding } = useOnboarding();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trialState, setTrialState] = useState<{
@@ -425,7 +432,7 @@ export default function DashboardPage() {
                   const nextQuery = nextParams.toString();
                   setWelcomeAcknowledged(true);
                   router.replace(nextQuery ? `/?${nextQuery}` : '/');
-                  resumeOnboarding();
+                  startOnboarding();
                 }}
               >
                 Start onboarding
@@ -461,40 +468,7 @@ export default function DashboardPage() {
             ) : null}
           </div>
         ) : null}
-        {onboardingSteps.length > 0 ? (
-          <div className="mb-6 rounded-lg border border-border bg-card p-4 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold">Autonomous onboarding</div>
-              {activeOnboardingStepIndex !== -1 ? (
-                <Button size="sm" variant="outline" onClick={resumeOnboarding}>
-                  Resume guide
-                </Button>
-              ) : (
-                <span className="text-xs font-medium text-emerald-600">Completed</span>
-              )}
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${onboardingProgress}%` }} />
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              Progress: {onboardingProgress}% ({onboardingSteps.filter((step) => step.completed).length}/{onboardingSteps.length})
-            </div>
-            <div className="mt-2 space-y-2">
-              {onboardingSteps.map((step) => (
-                <div key={step.step_key} className="flex items-center justify-between gap-3">
-                  <span className={step.completed ? 'text-muted-foreground line-through' : ''}>
-                    {step.step_key.replaceAll('_', ' ')}
-                  </span>
-                  {step.completed ? (
-                    <span className="text-emerald-600">Done</span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Waiting for action</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <OnboardingChecklistCard />
         {renderDashboard()}
       </div>
       <Dialog

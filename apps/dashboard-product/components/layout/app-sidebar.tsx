@@ -161,11 +161,16 @@ export function AppSidebar() {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = iconMap[item.icon] || LayoutDashboard;
+          // Derive a stable slug for spotlight targeting
+          const onboardingAttr = item.href === '/'
+            ? 'nav-overview'
+            : `nav-${item.href.replace(/^\//, '').replace(/\//g, '-')}`;
 
           return (
             <Link
               key={item.name}
               href={item.href}
+              data-onboarding={onboardingAttr}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
                 isActive
