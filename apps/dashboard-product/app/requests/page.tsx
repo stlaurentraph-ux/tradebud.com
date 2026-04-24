@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
+import Link from 'next/link';
 import {
   Send,
   Inbox,
@@ -610,13 +611,19 @@ export default function RequestsPage() {
             </p>
           </div>
           <PermissionGate permission="requests:create">
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
+            <div className="flex items-center gap-2">
+              <Button asChild>
+                <Link href="/requests/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  New Campaign
-                </Button>
-              </DialogTrigger>
+                  New Request
+                </Link>
+              </Button>
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    Quick Campaign
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Create Request Campaign</DialogTitle>
@@ -768,6 +775,7 @@ export default function RequestsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </PermissionGate>
         </div>
 
