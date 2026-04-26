@@ -17,7 +17,7 @@ import {
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings' | 'integrations' | 'assessments';
+type Page = 'overview' | 'packages' | 'plots' | 'farmers' | 'contacts' | 'transactions' | 'compliance' | 'documents' | 'traces' | 'reports' | 'settings' | 'integrations' | 'assessments';
 type PlotStatus = 'compliant' | 'pending' | 'flagged';
 type PackageStatus = 'verified' | 'pending' | 'issue' | 'submitted';
 
@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
   { id: 'packages', label: 'DDS Packages', icon: Package, badge: '156' },
   { id: 'plots', label: 'Plots & GIS', icon: MapPin },
   { id: 'farmers', label: 'Farmers', icon: Users },
+  { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'transactions', label: 'Transactions', icon: Truck },
   { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
@@ -1277,6 +1278,382 @@ function FarmersPage() {
 // PAGE: TRANSACTIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function ContactsPage() {
+  const [step, setStep] = useState<'select' | 'add-person' | 'add-org' | 'csv-import'>('select');
+  const [contacts, setContacts] = useState<any[]>([]);
+
+  const resetWizard = () => {
+    setStep('select');
+  };
+
+  if (step === 'select') {
+    return (
+      <div className="space-y-6">
+        <SectionHeader 
+          title="Contacts & Organizations" 
+          subtitle="Manage your network of buyers, suppliers, and partners"
+          action={
+            <Button variant="primary" onClick={() => setStep('add-person')}>
+              <Plus size={16} />
+              Add contact
+            </Button>
+          }
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setStep('add-person')}>
+            <Users size={32} className="text-emerald-700 mb-4" />
+            <h3 className="font-semibold text-stone-900 mb-2">Add Person</h3>
+            <p className="text-sm text-stone-600">Create a new contact profile with personal details</p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setStep('add-org')}>
+            <Building2 size={32} className="text-blue-700 mb-4" />
+            <h3 className="font-semibold text-stone-900 mb-2">Add Organization</h3>
+            <p className="text-sm text-stone-600">Register a new company or business entity</p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setStep('csv-import')}>
+            <Upload size={32} className="text-amber-700 mb-4" />
+            <h3 className="font-semibold text-stone-900 mb-2">Import CSV</h3>
+            <p className="text-sm text-stone-600">Bulk upload contacts or organizations from a file</p>
+          </Card>
+        </div>
+
+        {/* Contacts Table */}
+        <Card className="overflow-hidden">
+          <div className="px-5 py-4 border-b border-stone-100">
+            <h3 className="font-semibold text-stone-900">Recent Contacts</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-stone-50">
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Name</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Type</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Contact</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-semibold text-stone-400 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {contacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-stone-500">
+                      No contacts yet. Start by adding your first contact.
+                    </td>
+                  </tr>
+                ) : (
+                  contacts.map((contact, i) => (
+                    <tr key={i} className="hover:bg-stone-50 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-stone-900">{contact.name}</td>
+                      <td className="px-5 py-3.5 text-stone-600">{contact.type}</td>
+                      <td className="px-5 py-3.5 text-stone-600">{contact.email}</td>
+                      <td className="px-5 py-3.5"><StatusBadge status="verified" /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'add-person') {
+    return <AddPersonWizard onBack={resetWizard} onComplete={(data) => { setContacts([...contacts, data]); resetWizard(); }} />;
+  }
+
+  if (step === 'add-org') {
+    return <AddOrgWizard onBack={resetWizard} onComplete={(data) => { setContacts([...contacts, data]); resetWizard(); }} />;
+  }
+
+  if (step === 'csv-import') {
+    return <CSVImportWizard onBack={resetWizard} onComplete={(data) => { setContacts([...contacts, ...data]); resetWizard(); }} />;
+  }
+
+  return null;
+}
+
+function AddPersonWizard({ onBack, onComplete }: { onBack: () => void; onComplete: (data: any) => void }) {
+  const [personStep, setPersonStep] = useState(1);
+  const [data, setData] = useState({ name: '', email: '', phone: '', organization: '', jobTitle: '' });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Add Person</h2>
+          <p className="text-sm text-stone-500">Step {personStep} of 3</p>
+        </div>
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {personStep === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Basic Information</h3>
+            <input
+              type="text"
+              placeholder="Full name"
+              value={data.name}
+              onChange={(e) => setData({ ...data, name: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+            <input
+              type="email"
+              placeholder="Email address"
+              value={data.email}
+              onChange={(e) => setData({ ...data, email: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={data.phone}
+              onChange={(e) => setData({ ...data, phone: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+          </div>
+        )}
+
+        {personStep === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Organization</h3>
+            <input
+              type="text"
+              placeholder="Organization name"
+              value={data.organization}
+              onChange={(e) => setData({ ...data, organization: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+            <input
+              type="text"
+              placeholder="Job title"
+              value={data.jobTitle}
+              onChange={(e) => setData({ ...data, jobTitle: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+          </div>
+        )}
+
+        {personStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review & Confirm</h3>
+            <div className="bg-stone-50 p-4 rounded-lg space-y-2">
+              <p><span className="text-stone-600">Name:</span> <span className="font-medium text-stone-900">{data.name}</span></p>
+              <p><span className="text-stone-600">Email:</span> <span className="font-medium text-stone-900">{data.email}</span></p>
+              <p><span className="text-stone-600">Phone:</span> <span className="font-medium text-stone-900">{data.phone || '—'}</span></p>
+              <p><span className="text-stone-600">Organization:</span> <span className="font-medium text-stone-900">{data.organization || '—'}</span></p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex gap-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`h-2 flex-1 rounded-full ${i <= personStep ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            ))}
+          </div>
+          <div className="flex gap-3">
+            {personStep > 1 && (
+              <Button variant="ghost" onClick={() => setPersonStep(personStep - 1)}>Back</Button>
+            )}
+            {personStep < 3 ? (
+              <Button variant="primary" onClick={() => setPersonStep(personStep + 1)}>Next</Button>
+            ) : (
+              <Button variant="primary" onClick={() => onComplete(data)}>Add Contact</Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function AddOrgWizard({ onBack, onComplete }: { onBack: () => void; onComplete: (data: any) => void }) {
+  const [orgStep, setOrgStep] = useState(1);
+  const [data, setData] = useState({ name: '', type: 'company', email: '', website: '' });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Add Organization</h2>
+          <p className="text-sm text-stone-500">Step {orgStep} of 3</p>
+        </div>
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {orgStep === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Organization Details</h3>
+            <input
+              type="text"
+              placeholder="Organization name"
+              value={data.name}
+              onChange={(e) => setData({ ...data, name: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+            <select
+              value={data.type}
+              onChange={(e) => setData({ ...data, type: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+            >
+              <option value="company">Company</option>
+              <option value="ngo">NGO</option>
+              <option value="cooperative">Cooperative</option>
+              <option value="supplier">Supplier</option>
+            </select>
+          </div>
+        )}
+
+        {orgStep === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Contact Information</h3>
+            <input
+              type="email"
+              placeholder="Email address"
+              value={data.email}
+              onChange={(e) => setData({ ...data, email: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+            <input
+              type="url"
+              placeholder="Website"
+              value={data.website}
+              onChange={(e) => setData({ ...data, website: e.target.value })}
+              className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+            />
+          </div>
+        )}
+
+        {orgStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review & Confirm</h3>
+            <div className="bg-stone-50 p-4 rounded-lg space-y-2">
+              <p><span className="text-stone-600">Name:</span> <span className="font-medium text-stone-900">{data.name}</span></p>
+              <p><span className="text-stone-600">Type:</span> <span className="font-medium text-stone-900">{data.type}</span></p>
+              <p><span className="text-stone-600">Email:</span> <span className="font-medium text-stone-900">{data.email}</span></p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex gap-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`h-2 flex-1 rounded-full ${i <= orgStep ? 'bg-blue-700' : 'bg-stone-200'}`} />
+            ))}
+          </div>
+          <div className="flex gap-3">
+            {orgStep > 1 && (
+              <Button variant="ghost" onClick={() => setOrgStep(orgStep - 1)}>Back</Button>
+            )}
+            {orgStep < 3 ? (
+              <Button variant="primary" onClick={() => setOrgStep(orgStep + 1)}>Next</Button>
+            ) : (
+              <Button variant="primary" onClick={() => onComplete(data)}>Add Organization</Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function CSVImportWizard({ onBack, onComplete }: { onBack: () => void; onComplete: (data: any) => void }) {
+  const [csvStep, setCsvStep] = useState(1);
+  const [file, setFile] = useState<File | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Import Contacts via CSV</h2>
+          <p className="text-sm text-stone-500">Step {csvStep} of 3</p>
+        </div>
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {csvStep === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Upload CSV File</h3>
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={32} className="mx-auto text-stone-400 mb-2" />
+              <p className="text-stone-900 font-medium">Drop your CSV file here or click to browse</p>
+              <p className="text-sm text-stone-500 mt-1">Maximum file size: 10 MB</p>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+            </div>
+            {file && <p className="text-sm text-emerald-700 font-medium">✓ {file.name} selected</p>}
+          </div>
+        )}
+
+        {csvStep === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Map Columns</h3>
+            <p className="text-sm text-stone-600 mb-4">Match your CSV columns to contact fields:</p>
+            <div className="space-y-3">
+              {['Name', 'Email', 'Phone', 'Organization'].map(field => (
+                <div key={field} className="flex items-center gap-3">
+                  <label className="w-28 text-sm text-stone-600">{field}:</label>
+                  <select className="flex-1 px-3 py-2 border border-stone-200 rounded-lg text-stone-900">
+                    <option>Select column...</option>
+                    <option>Column A</option>
+                    <option>Column B</option>
+                    <option>Column C</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {csvStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review</h3>
+            <div className="bg-stone-50 p-4 rounded-lg space-y-2">
+              <p><span className="text-stone-600">File:</span> <span className="font-medium text-stone-900">{file?.name}</span></p>
+              <p><span className="text-stone-600">Estimated records:</span> <span className="font-medium text-stone-900">150 contacts</span></p>
+              <p><span className="text-stone-600">Status:</span> <span className="font-medium text-emerald-700">Ready to import</span></p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex gap-2">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`h-2 flex-1 rounded-full ${i <= csvStep ? 'bg-amber-700' : 'bg-stone-200'}`} />
+            ))}
+          </div>
+          <div className="flex gap-3">
+            {csvStep > 1 && (
+              <Button variant="ghost" onClick={() => setCsvStep(csvStep - 1)}>Back</Button>
+            )}
+            {csvStep < 3 ? (
+              <Button variant="primary" onClick={() => setCsvStep(csvStep + 1)} disabled={csvStep === 1 && !file}>Next</Button>
+            ) : (
+              <Button variant="primary" onClick={() => onComplete([])}>Import</Button>
+            )}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function TransactionsPage() {
   return (
     <div className="space-y-6">
@@ -1847,7 +2224,7 @@ function SettingsPage() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════���═════════════════════════════════════
 // PAGE: ASSESSMENTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3712,6 +4089,7 @@ export default function ExporterDashboard() {
       case 'packages': return <PackagesPage setPage={setPage} />;
       case 'plots': return <PlotsPage />;
       case 'farmers': return <FarmersPage />;
+      case 'contacts': return <ContactsPage />;
       case 'transactions': return <TransactionsPage />;
       case 'compliance': return <CompliancePage />;
       case 'documents': return <DocumentsPage />;
