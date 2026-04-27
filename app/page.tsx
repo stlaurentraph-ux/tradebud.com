@@ -416,13 +416,391 @@ function OverviewPage({ setPage }: { setPage: (p: Page) => void }) {
 // PAGE: DDS PACKAGES
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function NewPackageWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    farmer: '',
+    plot: '',
+    commodity: 'Cocoa',
+    weight: '',
+    harvestDate: '',
+    geoCoordinates: '',
+    legalDocRef: '',
+    fpicComplete: false,
+  });
+
+  const steps = [
+    { num: 1, label: 'Farmer & Plot' },
+    { num: 2, label: 'Commodity Details' },
+    { num: 3, label: 'Compliance Docs' },
+    { num: 4, label: 'Review' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">New DDS Package</h2>
+          <p className="text-sm text-stone-500">Step {step} of 4 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-2" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Select Farmer & Plot</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Farmer</label>
+              <select
+                value={data.farmer}
+                onChange={(e) => setData({ ...data, farmer: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select farmer...</option>
+                {farmers.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Plot</label>
+              <select
+                value={data.plot}
+                onChange={(e) => setData({ ...data, plot: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select plot...</option>
+                {plots.map(p => <option key={p.id} value={p.id}>{p.id} - {p.owner}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Geo-coordinates</label>
+              <input
+                type="text"
+                placeholder="-3.123456, 28.987654"
+                value={data.geoCoordinates}
+                onChange={(e) => setData({ ...data, geoCoordinates: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+              <p className="text-xs text-stone-500 mt-1">Must be at least 6 decimal places for EUDR compliance</p>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Commodity Details</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Commodity Type</label>
+              <select
+                value={data.commodity}
+                onChange={(e) => setData({ ...data, commodity: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="Cocoa">Cocoa</option>
+                <option value="Coffee">Coffee</option>
+                <option value="Palm Oil">Palm Oil</option>
+                <option value="Soy">Soy</option>
+                <option value="Rubber">Rubber</option>
+                <option value="Cattle">Cattle</option>
+                <option value="Wood">Wood</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Weight (kg)</label>
+              <input
+                type="number"
+                placeholder="Enter weight"
+                value={data.weight}
+                onChange={(e) => setData({ ...data, weight: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Harvest Date</label>
+              <input
+                type="date"
+                value={data.harvestDate}
+                onChange={(e) => setData({ ...data, harvestDate: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900">Yield Validation</p>
+                  <p className="text-xs text-amber-700 mt-1">Weight will be validated against plot size and biological yield capacity</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Compliance Documentation</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Legal Land Tenure Document Reference</label>
+              <input
+                type="text"
+                placeholder="Document ID or reference"
+                value={data.legalDocRef}
+                onChange={(e) => setData({ ...data, legalDocRef: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg">
+              <input
+                type="checkbox"
+                id="fpic"
+                checked={data.fpicComplete}
+                onChange={(e) => setData({ ...data, fpicComplete: e.target.checked })}
+                className="w-4 h-4 text-emerald-600 rounded"
+              />
+              <label htmlFor="fpic" className="text-sm text-stone-700">FPIC (Free, Prior and Informed Consent) consultation completed</label>
+            </div>
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={28} className="mx-auto text-stone-400 mb-2" />
+              <p className="text-sm text-stone-700 font-medium">Upload supporting documents</p>
+              <p className="text-xs text-stone-500 mt-1">PDF, JPG, PNG up to 10MB each</p>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review Package</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">Farmer:</span><span className="font-medium text-stone-900">{data.farmer || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Plot:</span><span className="font-medium text-stone-900 font-mono">{data.plot || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Commodity:</span><span className="font-medium text-stone-900">{data.commodity}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Weight:</span><span className="font-medium text-stone-900">{data.weight ? `${data.weight} kg` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Harvest Date:</span><span className="font-medium text-stone-900">{data.harvestDate || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">FPIC Complete:</span><span className="font-medium text-stone-900">{data.fpicComplete ? 'Yes' : 'No'}</span></div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={18} className="text-emerald-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">Ready for Submission</p>
+                  <p className="text-xs text-emerald-700 mt-1">Package meets EUDR compliance requirements</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 4 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)}>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Create Package</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ImportBatchWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [file, setFile] = useState<File | null>(null);
+  const [mappings, setMappings] = useState({
+    farmer: '', plot: '', commodity: '', weight: '', harvestDate: ''
+  });
+
+  const steps = [
+    { num: 1, label: 'Upload File' },
+    { num: 2, label: 'Map Columns' },
+    { num: 3, label: 'Validate Data' },
+    { num: 4, label: 'Import' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Import Batch</h2>
+          <p className="text-sm text-stone-500">Step {step} of 4 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-2" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Upload CSV or Excel File</h3>
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={32} className="mx-auto text-stone-400 mb-3" />
+              <p className="text-stone-900 font-medium">Drop your file here or click to browse</p>
+              <p className="text-sm text-stone-500 mt-1">CSV or Excel files up to 10MB</p>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="hidden"
+              />
+            </div>
+            {file && (
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                <span className="text-sm text-emerald-900 font-medium">{file.name}</span>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <Button variant="ghost" size="sm">
+                <Download size={14} />
+                Download template
+              </Button>
+              <Button variant="ghost" size="sm">
+                <FileText size={14} />
+                View format guide
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Map Columns to Fields</h3>
+            <p className="text-sm text-stone-600">Match your file columns to the required package fields</p>
+            <div className="space-y-3">
+              {[
+                { key: 'farmer', label: 'Farmer Name', required: true },
+                { key: 'plot', label: 'Plot ID', required: true },
+                { key: 'commodity', label: 'Commodity', required: true },
+                { key: 'weight', label: 'Weight (kg)', required: true },
+                { key: 'harvestDate', label: 'Harvest Date', required: false },
+              ].map(field => (
+                <div key={field.key} className="flex items-center gap-3">
+                  <label className="w-32 text-sm text-stone-700">
+                    {field.label}
+                    {field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  <select
+                    value={mappings[field.key as keyof typeof mappings]}
+                    onChange={(e) => setMappings({ ...mappings, [field.key]: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-stone-200 rounded-lg text-stone-900"
+                  >
+                    <option value="">Select column...</option>
+                    <option value="A">Column A (farmer_name)</option>
+                    <option value="B">Column B (plot_id)</option>
+                    <option value="C">Column C (commodity_type)</option>
+                    <option value="D">Column D (weight_kg)</option>
+                    <option value="E">Column E (harvest_date)</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Validate Data</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-emerald-900">142</p>
+                <p className="text-xs text-emerald-700">Valid Records</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-amber-900">8</p>
+                <p className="text-xs text-amber-700">Warnings</p>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <p className="text-2xl font-bold text-red-900">3</p>
+                <p className="text-xs text-red-700">Errors</p>
+              </div>
+            </div>
+            <Card className="overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-stone-50">
+                    <th className="text-left px-4 py-2 text-xs font-semibold text-stone-500">Row</th>
+                    <th className="text-left px-4 py-2 text-xs font-semibold text-stone-500">Issue</th>
+                    <th className="text-left px-4 py-2 text-xs font-semibold text-stone-500">Severity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  <tr><td className="px-4 py-2">12</td><td className="px-4 py-2 text-stone-600">Missing harvest date</td><td className="px-4 py-2"><span className="text-amber-600">Warning</span></td></tr>
+                  <tr><td className="px-4 py-2">45</td><td className="px-4 py-2 text-stone-600">Yield exceeds capacity</td><td className="px-4 py-2"><span className="text-red-600">Error</span></td></tr>
+                  <tr><td className="px-4 py-2">89</td><td className="px-4 py-2 text-stone-600">Unknown plot ID</td><td className="px-4 py-2"><span className="text-red-600">Error</span></td></tr>
+                </tbody>
+              </table>
+            </Card>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Ready to Import</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">File:</span><span className="font-medium text-stone-900">{file?.name || 'batch_import.csv'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Total Records:</span><span className="font-medium text-stone-900">153</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Will Import:</span><span className="font-medium text-emerald-700">142 records</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Will Skip:</span><span className="font-medium text-red-600">11 records</span></div>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <input type="checkbox" id="skipErrors" className="w-4 h-4 text-blue-600 rounded" defaultChecked />
+              <label htmlFor="skipErrors" className="text-sm text-blue-900">Skip records with errors and import valid ones only</label>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 4 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)} disabled={step === 1 && !file}>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Import 142 Packages</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function PackagesPage({ setPage }: { setPage: (p: Page) => void }) {
   const [search, setSearch] = useState('');
   const [selectedPkg, setSelectedPkg] = useState<typeof packages[0] | null>(null);
+  const [wizardMode, setWizardMode] = useState<'list' | 'new-package' | 'import-batch'>('list');
   const filtered = packages.filter(p => 
     p.id.toLowerCase().includes(search.toLowerCase()) ||
     p.farmer.toLowerCase().includes(search.toLowerCase())
   );
+
+  if (wizardMode === 'new-package') {
+    return <NewPackageWizard onBack={() => setWizardMode('list')} onComplete={() => setWizardMode('list')} />;
+  }
+
+  if (wizardMode === 'import-batch') {
+    return <ImportBatchWizard onBack={() => setWizardMode('list')} onComplete={() => setWizardMode('list')} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -431,11 +809,11 @@ function PackagesPage({ setPage }: { setPage: (p: Page) => void }) {
         subtitle="Manage Due Diligence Statements for EUDR compliance"
         action={
           <div className="flex gap-3">
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => setWizardMode('import-batch')}>
               <Upload size={16} />
               Import batch
             </Button>
-            <Button variant="primary">
+            <Button variant="primary" onClick={() => setWizardMode('new-package')}>
               <Plus size={16} />
               New package
             </Button>
@@ -626,9 +1004,276 @@ function PackagesPage({ setPage }: { setPage: (p: Page) => void }) {
 // PAGE: PLOTS & GIS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function RegisterPlotWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    farmer: '',
+    plotName: '',
+    captureMethod: 'polygon' as 'polygon' | 'centroid',
+    coordinates: '',
+    area: '',
+    commodity: 'Cocoa',
+    tenureType: '',
+    tenureDocRef: '',
+    photos: [] as string[],
+  });
+
+  const steps = [
+    { num: 1, label: 'Farmer & Location' },
+    { num: 2, label: 'GIS Capture' },
+    { num: 3, label: 'Land Tenure' },
+    { num: 4, label: 'Photo Vault' },
+    { num: 5, label: 'Review' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Register New Plot</h2>
+          <p className="text-sm text-stone-500">Step {step} of 5 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-2" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Farmer & Basic Information</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Assign to Farmer</label>
+              <select
+                value={data.farmer}
+                onChange={(e) => setData({ ...data, farmer: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select farmer...</option>
+                {farmers.map(f => <option key={f.id} value={f.name}>{f.name} - {f.location}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Plot Name / Reference</label>
+              <input
+                type="text"
+                placeholder="e.g., Main Farm Plot A"
+                value={data.plotName}
+                onChange={(e) => setData({ ...data, plotName: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Primary Commodity</label>
+              <select
+                value={data.commodity}
+                onChange={(e) => setData({ ...data, commodity: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="Cocoa">Cocoa</option>
+                <option value="Coffee">Coffee</option>
+                <option value="Palm Oil">Palm Oil</option>
+                <option value="Soy">Soy</option>
+                <option value="Rubber">Rubber</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">GIS Capture Method</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <Info size={18} className="text-blue-600 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium">EUDR Requirements:</p>
+                  <p>Plots under 4 hectares can use centroid point. Plots 4+ hectares require full polygon boundary.</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${data.captureMethod === 'polygon' ? 'border-emerald-600 bg-emerald-50' : 'border-stone-200 hover:border-stone-300'}`}
+                onClick={() => setData({ ...data, captureMethod: 'polygon' })}
+              >
+                <Hexagon size={24} className={data.captureMethod === 'polygon' ? 'text-emerald-700' : 'text-stone-400'} />
+                <h4 className="font-medium text-stone-900 mt-2">Polygon Boundary</h4>
+                <p className="text-xs text-stone-600 mt-1">Walk the perimeter or draw on map</p>
+              </div>
+              <div 
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${data.captureMethod === 'centroid' ? 'border-emerald-600 bg-emerald-50' : 'border-stone-200 hover:border-stone-300'}`}
+                onClick={() => setData({ ...data, captureMethod: 'centroid' })}
+              >
+                <CircleDot size={24} className={data.captureMethod === 'centroid' ? 'text-emerald-700' : 'text-stone-400'} />
+                <h4 className="font-medium text-stone-900 mt-2">Centroid Point</h4>
+                <p className="text-xs text-stone-600 mt-1">Single GPS coordinate (plots &lt; 4ha)</p>
+              </div>
+            </div>
+            
+            {/* Map Placeholder */}
+            <div className="h-48 bg-gradient-to-br from-emerald-900/5 to-emerald-900/10 rounded-lg flex items-center justify-center relative border border-stone-200">
+              <div className="text-center">
+                <Map size={32} className="text-emerald-700 mx-auto mb-2 opacity-50" />
+                <p className="text-sm text-emerald-900 font-medium">Interactive Map</p>
+                <p className="text-xs text-emerald-700">Click to capture coordinates</p>
+              </div>
+              <div className="absolute bottom-3 right-3 flex gap-2">
+                <Button variant="secondary" size="sm">
+                  <Satellite size={12} />
+                  Satellite
+                </Button>
+                <Button variant="primary" size="sm">
+                  <Navigation size={12} />
+                  Use GPS
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Coordinates (WGS84)</label>
+                <input
+                  type="text"
+                  placeholder="-3.123456, 28.987654"
+                  value={data.coordinates}
+                  onChange={(e) => setData({ ...data, coordinates: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 font-mono text-sm placeholder-stone-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Area (hectares)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="2.50"
+                  value={data.area}
+                  onChange={(e) => setData({ ...data, area: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Land Tenure Documentation</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Tenure Type</label>
+              <select
+                value={data.tenureType}
+                onChange={(e) => setData({ ...data, tenureType: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select tenure type...</option>
+                <option value="Freehold">Freehold / Title Deed</option>
+                <option value="Leasehold">Leasehold</option>
+                <option value="Customary">Customary Rights</option>
+                <option value="Communal">Communal Land</option>
+                <option value="Government">Government Concession</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Document Reference Number</label>
+              <input
+                type="text"
+                placeholder="Land title or registration number"
+                value={data.tenureDocRef}
+                onChange={(e) => setData({ ...data, tenureDocRef: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={28} className="mx-auto text-stone-400 mb-2" />
+              <p className="text-sm text-stone-700 font-medium">Upload tenure documents</p>
+              <p className="text-xs text-stone-500 mt-1">PDF, JPG, PNG up to 10MB each</p>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Photo Vault</h3>
+            <p className="text-sm text-stone-600">Upload geotagged photos of the plot for verification purposes</p>
+            
+            <div className="grid grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="aspect-square border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-stone-400 transition-colors">
+                  <Camera size={24} className="text-stone-400 mb-2" />
+                  <p className="text-xs text-stone-500">Add photo {i}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-stone-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-stone-700 mb-2">Photo Requirements:</h4>
+              <ul className="text-xs text-stone-600 space-y-1">
+                <li>- Photos must be geotagged with GPS coordinates</li>
+                <li>- Include boundary markers or reference points</li>
+                <li>- Capture all four corners for polygon plots</li>
+                <li>- Show surrounding land use context</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review Plot Registration</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">Farmer:</span><span className="font-medium text-stone-900">{data.farmer || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Plot Name:</span><span className="font-medium text-stone-900">{data.plotName || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Commodity:</span><span className="font-medium text-stone-900">{data.commodity}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Capture Type:</span><span className="font-medium text-stone-900">{data.captureMethod === 'polygon' ? 'Polygon Boundary' : 'Centroid Point'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Coordinates:</span><span className="font-medium text-stone-900 font-mono text-sm">{data.coordinates || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Area:</span><span className="font-medium text-stone-900">{data.area ? `${data.area} ha` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Tenure:</span><span className="font-medium text-stone-900">{data.tenureType || '—'}</span></div>
+            </div>
+
+            {/* Deforestation Check */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={18} className="text-emerald-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">Deforestation Analysis Pending</p>
+                  <p className="text-xs text-emerald-700 mt-1">Satellite imagery will be analyzed against Dec 31, 2020 baseline upon submission</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 5 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)}>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Register Plot</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function PlotsPage() {
   const [selectedPlot, setSelectedPlot] = useState<typeof plots[0] | null>(null);
   const [showCapture, setShowCapture] = useState(false);
+
+  if (showCapture) {
+    return <RegisterPlotWizard onBack={() => setShowCapture(false)} onComplete={() => setShowCapture(false)} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -1009,8 +1654,343 @@ function PlotsPage() {
 // PAGE: FARMERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function AddFarmerWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    name: '',
+    idNumber: '',
+    idType: 'national_id',
+    phone: '',
+    email: '',
+    region: '',
+    village: '',
+    tenureType: '',
+    tenureDocRef: '',
+    fpicComplete: false,
+    fpicDate: '',
+    laborCompliance: false,
+    noChildLabor: false,
+    fairWages: false,
+  });
+
+  const steps = [
+    { num: 1, label: 'Personal Info' },
+    { num: 2, label: 'Location' },
+    { num: 3, label: 'Land Tenure' },
+    { num: 4, label: 'FPIC Consent' },
+    { num: 5, label: 'Labor Compliance' },
+    { num: 6, label: 'Review' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Add New Farmer</h2>
+          <p className="text-sm text-stone-500">Step {step} of 6 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-1">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-1" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Personal Information</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                placeholder="Enter full legal name"
+                value={data.name}
+                onChange={(e) => setData({ ...data, name: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">ID Type</label>
+                <select
+                  value={data.idType}
+                  onChange={(e) => setData({ ...data, idType: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+                >
+                  <option value="national_id">National ID</option>
+                  <option value="passport">Passport</option>
+                  <option value="driver_license">Driver License</option>
+                  <option value="cooperative_id">Cooperative ID</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">ID Number</label>
+                <input
+                  type="text"
+                  placeholder="ID number"
+                  value={data.idNumber}
+                  onChange={(e) => setData({ ...data, idNumber: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="+504 ..."
+                  value={data.phone}
+                  onChange={(e) => setData({ ...data, phone: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Email (optional)</label>
+                <input
+                  type="email"
+                  placeholder="email@example.com"
+                  value={data.email}
+                  onChange={(e) => setData({ ...data, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Location Details</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Region / Department</label>
+              <select
+                value={data.region}
+                onChange={(e) => setData({ ...data, region: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select region...</option>
+                <option value="Copán">Copan</option>
+                <option value="Santa Bárbara">Santa Barbara</option>
+                <option value="Lempira">Lempira</option>
+                <option value="Ocotepeque">Ocotepeque</option>
+                <option value="Comayagua">Comayagua</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Village / Community</label>
+              <input
+                type="text"
+                placeholder="Enter village or community name"
+                value={data.village}
+                onChange={(e) => setData({ ...data, village: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Info size={18} className="text-blue-600 mt-0.5" />
+                <p className="text-sm text-blue-800">Location is used to determine applicable regulations and assign to local cooperatives or aggregators.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Land Tenure Documentation</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Tenure Type</label>
+              <select
+                value={data.tenureType}
+                onChange={(e) => setData({ ...data, tenureType: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select tenure type...</option>
+                <option value="Clave Catastral">Clave Catastral (Cadastral Key)</option>
+                <option value="Posesión">Productor en Posesion</option>
+                <option value="Title Deed">Formal Title Deed</option>
+                <option value="Buffer Zone Permit">Buffer Zone Permit</option>
+                <option value="Customary Rights">Customary Rights</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Document Reference</label>
+              <input
+                type="text"
+                placeholder="Document number or reference"
+                value={data.tenureDocRef}
+                onChange={(e) => setData({ ...data, tenureDocRef: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+              />
+            </div>
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={28} className="mx-auto text-stone-400 mb-2" />
+              <p className="text-sm text-stone-700 font-medium">Upload tenure document</p>
+              <p className="text-xs text-stone-500 mt-1">PDF, JPG, PNG - OCR will extract key data</p>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">FPIC - Free, Prior and Informed Consent</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="text-amber-600 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">EUDR Requirement</p>
+                  <p className="mt-1">FPIC documentation is required to demonstrate that indigenous and local communities have given consent for land use.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg">
+              <input
+                type="checkbox"
+                id="fpicComplete"
+                checked={data.fpicComplete}
+                onChange={(e) => setData({ ...data, fpicComplete: e.target.checked })}
+                className="w-4 h-4 text-emerald-600 rounded"
+              />
+              <label htmlFor="fpicComplete" className="text-sm text-stone-700">FPIC consultation has been completed and documented</label>
+            </div>
+            {data.fpicComplete && (
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Consultation Date</label>
+                <input
+                  type="date"
+                  value={data.fpicDate}
+                  onChange={(e) => setData({ ...data, fpicDate: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+                />
+              </div>
+            )}
+            <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 text-center cursor-pointer hover:border-stone-400 transition-colors">
+              <Upload size={28} className="mx-auto text-stone-400 mb-2" />
+              <p className="text-sm text-stone-700 font-medium">Upload FPIC documentation</p>
+              <p className="text-xs text-stone-500 mt-1">Meeting minutes, consent forms, signatures</p>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Labor & Social Compliance</h3>
+            <p className="text-sm text-stone-600">Confirm compliance with labor laws and social standards</p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="noChildLabor"
+                  checked={data.noChildLabor}
+                  onChange={(e) => setData({ ...data, noChildLabor: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <div>
+                  <label htmlFor="noChildLabor" className="text-sm font-medium text-stone-700">No Child Labor</label>
+                  <p className="text-xs text-stone-500">Farm does not employ children under 15 years</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="fairWages"
+                  checked={data.fairWages}
+                  onChange={(e) => setData({ ...data, fairWages: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <div>
+                  <label htmlFor="fairWages" className="text-sm font-medium text-stone-700">Fair Wages</label>
+                  <p className="text-xs text-stone-500">Workers are paid at or above minimum wage</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="laborCompliance"
+                  checked={data.laborCompliance}
+                  onChange={(e) => setData({ ...data, laborCompliance: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <div>
+                  <label htmlFor="laborCompliance" className="text-sm font-medium text-stone-700">Labor Law Compliance</label>
+                  <p className="text-xs text-stone-500">Operations comply with local labor laws</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 6 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review Farmer Registration</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">Name:</span><span className="font-medium text-stone-900">{data.name || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">ID:</span><span className="font-medium text-stone-900">{data.idNumber || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Phone:</span><span className="font-medium text-stone-900">{data.phone || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Region:</span><span className="font-medium text-stone-900">{data.region || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Village:</span><span className="font-medium text-stone-900">{data.village || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Tenure:</span><span className="font-medium text-stone-900">{data.tenureType || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">FPIC:</span><span className={`font-medium ${data.fpicComplete ? 'text-emerald-700' : 'text-amber-600'}`}>{data.fpicComplete ? 'Complete' : 'Pending'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Labor Compliance:</span><span className={`font-medium ${data.laborCompliance && data.noChildLabor && data.fairWages ? 'text-emerald-700' : 'text-amber-600'}`}>{data.laborCompliance && data.noChildLabor && data.fairWages ? 'Verified' : 'Incomplete'}</span></div>
+            </div>
+
+            {data.fpicComplete && data.laborCompliance && data.noChildLabor && data.fairWages ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 size={18} className="text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-900">Ready for Registration</p>
+                    <p className="text-xs text-emerald-700 mt-1">All compliance requirements met</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={18} className="text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-900">Incomplete Compliance</p>
+                    <p className="text-xs text-amber-700 mt-1">Some compliance items are pending - farmer can still be registered</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 6 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)}>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Register Farmer</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function FarmersPage() {
   const [selectedFarmer, setSelectedFarmer] = useState<typeof farmers[0] | null>(null);
+  const [showAddWizard, setShowAddWizard] = useState(false);
+
+  if (showAddWizard) {
+    return <AddFarmerWizard onBack={() => setShowAddWizard(false)} onComplete={() => setShowAddWizard(false)} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -1018,7 +1998,7 @@ function FarmersPage() {
         title="Farmer Registry" 
         subtitle="Manage farmer profiles, land tenure documents, and social compliance"
         action={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowAddWizard(true)}>
             <Plus size={16} />
             Add farmer
           </Button>
@@ -1654,14 +2634,314 @@ function CSVImportWizard({ onBack, onComplete }: { onBack: () => void; onComplet
   );
 }
 
+function RecordTransactionWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    package: '',
+    transactionType: 'delivery',
+    fromEntity: '',
+    toEntity: '',
+    weight: '',
+    weightUnit: 'kg',
+    transactionDate: '',
+    vehicleId: '',
+    notes: '',
+  });
+  const [yieldValidation, setYieldValidation] = useState<'pending' | 'valid' | 'exceeded'>('pending');
+
+  const steps = [
+    { num: 1, label: 'Package Selection' },
+    { num: 2, label: 'Transaction Details' },
+    { num: 3, label: 'Weight & Validation' },
+    { num: 4, label: 'Review' },
+  ];
+
+  // Simulate yield validation when weight changes
+  const validateYield = () => {
+    const weightKg = parseFloat(data.weight);
+    if (!weightKg) {
+      setYieldValidation('pending');
+      return;
+    }
+    // Simulate: if weight > 2000kg, flag as exceeded
+    setYieldValidation(weightKg > 2000 ? 'exceeded' : 'valid');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Record Transaction</h2>
+          <p className="text-sm text-stone-500">Step {step} of 4 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-2" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Select Package</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">DDS Package</label>
+              <select
+                value={data.package}
+                onChange={(e) => setData({ ...data, package: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select package...</option>
+                {packages.map(p => (
+                  <option key={p.id} value={p.id}>{p.id} - {p.farmer} ({p.commodity})</option>
+                ))}
+              </select>
+            </div>
+
+            {data.package && (
+              <div className="bg-stone-50 p-4 rounded-lg space-y-2">
+                <h4 className="text-sm font-medium text-stone-700">Package Details</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-stone-500">Farmer:</span> <span className="text-stone-900">Maria Santos</span></div>
+                  <div><span className="text-stone-500">Plot:</span> <span className="text-stone-900 font-mono">PLT-2024-001</span></div>
+                  <div><span className="text-stone-500">Commodity:</span> <span className="text-stone-900">Cocoa</span></div>
+                  <div><span className="text-stone-500">Origin Weight:</span> <span className="text-stone-900">1,250 kg</span></div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Transaction Type</label>
+              <select
+                value={data.transactionType}
+                onChange={(e) => setData({ ...data, transactionType: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="delivery">Delivery to Aggregator</option>
+                <option value="transfer">Transfer Between Warehouses</option>
+                <option value="export">Export Shipment</option>
+                <option value="processing">Processing / Transformation</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Transaction Parties</h3>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">From (Sender)</label>
+              <select
+                value={data.fromEntity}
+                onChange={(e) => setData({ ...data, fromEntity: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select sender...</option>
+                {farmers.map(f => <option key={f.id} value={f.name}>{f.name} (Farmer)</option>)}
+                <option value="Warehouse A">Warehouse A</option>
+                <option value="Processing Facility">Processing Facility</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">To (Receiver)</label>
+              <select
+                value={data.toEntity}
+                onChange={(e) => setData({ ...data, toEntity: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select receiver...</option>
+                <option value="Local Cooperative">Local Cooperative</option>
+                <option value="COOPBALAM">COOPBALAM (Aggregator)</option>
+                <option value="Export Terminal">Export Terminal</option>
+                <option value="Processing Facility">Processing Facility</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Transaction Date</label>
+                <input
+                  type="date"
+                  value={data.transactionDate}
+                  onChange={(e) => setData({ ...data, transactionDate: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Vehicle / Container ID (optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g., TRK-1234"
+                  value={data.vehicleId}
+                  onChange={(e) => setData({ ...data, vehicleId: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Weight & Yield Validation</h3>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <Scale size={18} className="text-amber-600 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">Anti-Fraud Yield Check</p>
+                  <p className="mt-1">Weight will be validated against the plot biological capacity. Exceeding the yield cap triggers an investigation flag.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Delivered Weight</label>
+                <input
+                  type="number"
+                  placeholder="Enter weight"
+                  value={data.weight}
+                  onChange={(e) => {
+                    setData({ ...data, weight: e.target.value });
+                  }}
+                  onBlur={validateYield}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Unit</label>
+                <select
+                  value={data.weightUnit}
+                  onChange={(e) => setData({ ...data, weightUnit: e.target.value })}
+                  className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+                >
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="lb">Pounds (lb)</option>
+                  <option value="mt">Metric Tons (MT)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Yield Validation Result */}
+            {data.weight && (
+              <div className={`p-4 rounded-lg border ${
+                yieldValidation === 'valid' ? 'bg-emerald-50 border-emerald-200' :
+                yieldValidation === 'exceeded' ? 'bg-red-50 border-red-200' :
+                'bg-stone-50 border-stone-200'
+              }`}>
+                <div className="flex items-center gap-3">
+                  {yieldValidation === 'valid' && <CheckCircle2 size={20} className="text-emerald-600" />}
+                  {yieldValidation === 'exceeded' && <AlertTriangle size={20} className="text-red-600" />}
+                  {yieldValidation === 'pending' && <Clock size={20} className="text-stone-400" />}
+                  <div>
+                    <p className={`font-medium ${
+                      yieldValidation === 'valid' ? 'text-emerald-900' :
+                      yieldValidation === 'exceeded' ? 'text-red-900' :
+                      'text-stone-700'
+                    }`}>
+                      {yieldValidation === 'valid' && 'Within Biological Capacity'}
+                      {yieldValidation === 'exceeded' && 'Exceeds Yield Cap - Investigation Required'}
+                      {yieldValidation === 'pending' && 'Awaiting Validation'}
+                    </p>
+                    <p className="text-xs mt-1 text-stone-600">
+                      Plot capacity: 2,000 kg | Delivered: {data.weight} {data.weightUnit}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Notes (optional)</label>
+              <textarea
+                placeholder="Any additional notes about this transaction..."
+                value={data.notes}
+                onChange={(e) => setData({ ...data, notes: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400 resize-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review Transaction</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">Package:</span><span className="font-medium text-stone-900 font-mono">{data.package || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Type:</span><span className="font-medium text-stone-900">{data.transactionType}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">From:</span><span className="font-medium text-stone-900">{data.fromEntity || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">To:</span><span className="font-medium text-stone-900">{data.toEntity || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Weight:</span><span className="font-medium text-stone-900">{data.weight ? `${data.weight} ${data.weightUnit}` : '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Date:</span><span className="font-medium text-stone-900">{data.transactionDate || '—'}</span></div>
+              <div className="flex justify-between">
+                <span className="text-stone-600">Yield Validation:</span>
+                <span className={`font-medium ${yieldValidation === 'valid' ? 'text-emerald-700' : yieldValidation === 'exceeded' ? 'text-red-600' : 'text-stone-500'}`}>
+                  {yieldValidation === 'valid' ? 'Passed' : yieldValidation === 'exceeded' ? 'Flagged' : 'Pending'}
+                </span>
+              </div>
+            </div>
+
+            {yieldValidation === 'exceeded' ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={18} className="text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-900">Yield Cap Exceeded</p>
+                    <p className="text-xs text-red-700 mt-1">This transaction will be flagged for investigation. Proceed only if you can provide additional documentation.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Shield size={18} className="text-emerald-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-900">Identity Preserved</p>
+                    <p className="text-xs text-emerald-700 mt-1">Chain of custody maintained with strict segregation - EUDR compliant</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 4 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)}>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Record Transaction</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function TransactionsPage() {
+  const [showRecordWizard, setShowRecordWizard] = useState(false);
+
+  if (showRecordWizard) {
+    return <RecordTransactionWizard onBack={() => setShowRecordWizard(false)} onComplete={() => setShowRecordWizard(false)} />;
+  }
+
   return (
     <div className="space-y-6">
       <SectionHeader 
         title="Transactions & Supply Chain" 
         subtitle="Identity Preservation (IP) tracking with yield validation"
         action={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowRecordWizard(true)}>
             <Plus size={16} />
             Record transaction
           </Button>
@@ -1926,7 +3206,7 @@ function CompliancePage() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE: DOCUMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ═════════════════��═════════════════════════════════════════════════════════════
 
 function DocumentsPage() {
   return (
