@@ -3208,14 +3208,291 @@ function CompliancePage() {
 // PAGE: DOCUMENTS
 // ═════════════════��═════════════════════════════════════════════════════════════
 
+function UploadDocumentWizard({ onBack, onComplete }: { onBack: () => void; onComplete: () => void }) {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState({
+    documentType: '',
+    relatedEntity: '',
+    entityType: 'plot' as 'plot' | 'farmer' | 'package',
+    files: [] as File[],
+    description: '',
+    language: 'es',
+    keywords: '',
+  });
+  const [ocrResults, setOcrResults] = useState<{ status: 'idle' | 'processing' | 'complete'; data?: any }>({ status: 'idle' });
+
+  const documentTypes = [
+    { value: 'land_tenure', label: 'Land Tenure Document', icon: Landmark, examples: 'Clave Catastral, Title Deed, Possession Declaration' },
+    { value: 'fpic', label: 'FPIC Consultation', icon: UserCheck, examples: 'Assembly Minutes, Consent Forms, Community Agreements' },
+    { value: 'labor', label: 'Labor Standards', icon: Scale, examples: 'ILO Forms, Working Conditions Report' },
+    { value: 'buffer_zone', label: 'Buffer Zone Permit', icon: FileSignature, examples: 'SINAPH Management Plan, Permits' },
+    { value: 'photo', label: 'Photo / Image', icon: Camera, examples: 'Ground-truth verification, Boundary markers' },
+    { value: 'risk_assessment', label: 'Risk Assessment', icon: Shield, examples: 'Due Diligence Reports, Compliance Review' },
+  ];
+
+  const steps = [
+    { num: 1, label: 'Document Type' },
+    { num: 2, label: 'Link & Upload' },
+    { num: 3, label: 'OCR Processing' },
+    { num: 4, label: 'Review & Confirm' },
+  ];
+
+  const triggerOCR = () => {
+    setOcrResults({ status: 'processing' });
+    setTimeout(() => {
+      setOcrResults({
+        status: 'complete',
+        data: {
+          extractedText: 'CLAVE CATASTRAL: HN070502030001000000\nDPARTAMENTO: Copán\nMUNICIPIO: Santa Rosa de Copán\nCHEQUEO: 0500000301\nCLASE: Terreno',
+          confidence: 92,
+          fieldsDetected: ['Cadastral Key', 'Department', 'Municipality', 'Class'],
+        }
+      });
+    }, 2000);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 rounded-lg">
+          <X size={20} className="text-stone-500" />
+        </button>
+        <div>
+          <h2 className="font-semibold text-stone-900">Upload Document</h2>
+          <p className="text-sm text-stone-500">Step {step} of 4 - {steps[step - 1].label}</p>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="flex items-center gap-2">
+        {steps.map((s, i) => (
+          <div key={s.num} className="flex items-center flex-1">
+            <div className={`h-2 flex-1 rounded-full ${step >= s.num ? 'bg-emerald-700' : 'bg-stone-200'}`} />
+            {i < steps.length - 1 && <div className="w-2" />}
+          </div>
+        ))}
+      </div>
+
+      <Card className="p-6 space-y-6">
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Select Document Type</h3>
+            <p className="text-sm text-stone-600">Choose the category that best describes this document</p>
+            
+            <div className="grid grid-cols-1 gap-3">
+              {documentTypes.map(dt => {
+                const Icon = dt.icon;
+                return (
+                  <div
+                    key={dt.value}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                      data.documentType === dt.value
+                        ? 'border-emerald-600 bg-emerald-50'
+                        : 'border-stone-200 hover:border-stone-300'
+                    }`}
+                    onClick={() => setData({ ...data, documentType: dt.value })}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Icon size={20} className={data.documentType === dt.value ? 'text-emerald-700' : 'text-stone-400'} />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-stone-900">{dt.label}</h4>
+                        <p className="text-xs text-stone-600 mt-1">{dt.examples}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Link to Entity & Upload Files</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Related To</label>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                {(['plot', 'farmer', 'package'] as const).map(et => (
+                  <button
+                    key={et}
+                    onClick={() => setData({ ...data, entityType: et })}
+                    className={`py-2 px-3 rounded-lg border-2 transition-colors text-sm font-medium ${
+                      data.entityType === et
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-900'
+                        : 'border-stone-200 text-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    {et === 'plot' ? 'Plot' : et === 'farmer' ? 'Farmer' : 'Package'}
+                  </button>
+                ))}
+              </div>
+              <select
+                value={data.relatedEntity}
+                onChange={(e) => setData({ ...data, relatedEntity: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="">Select {data.entityType}...</option>
+                {data.entityType === 'plot' && plots.map(p => <option key={p.id} value={p.id}>{p.id} - {p.owner}</option>)}
+                {data.entityType === 'farmer' && farmers.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                {data.entityType === 'package' && packages.map(p => <option key={p.id} value={p.id}>{p.id} - {p.farmer}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-3">Upload Files</label>
+              <div className="border-2 border-dashed border-stone-300 rounded-lg p-8 text-center cursor-pointer hover:border-stone-400 transition-colors">
+                <Upload size={32} className="mx-auto text-stone-400 mb-2" />
+                <p className="text-stone-900 font-medium">Drop files here or click to browse</p>
+                <p className="text-sm text-stone-500 mt-1">PDF, JPG, PNG, TIFF - up to 25MB total</p>
+                <input type="file" multiple className="hidden" />
+              </div>
+              {data.files.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {data.files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-stone-50 rounded">
+                      <FileText size={16} className="text-stone-500" />
+                      <span className="text-sm text-stone-900">{f.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Description (optional)</label>
+              <textarea
+                placeholder="Add context about this document..."
+                value={data.description}
+                onChange={(e) => setData({ ...data, description: e.target.value })}
+                rows={3}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900 placeholder-stone-400 resize-none"
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">OCR Text Recognition</h3>
+            <p className="text-sm text-stone-600">Extract structured data from documents using optical character recognition</p>
+
+            {data.documentType === 'land_tenure' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Info size={18} className="text-blue-600 mt-0.5" />
+                  <p className="text-sm text-blue-800">
+                    For land tenure documents, OCR will extract Clave Catastral (cadastral key) and other key identifiers for EUDR compliance verification.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={triggerOCR}
+              className={`w-full py-3 px-4 rounded-lg border-2 font-medium transition-colors ${
+                ocrResults.status === 'complete'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : ocrResults.status === 'processing'
+                  ? 'border-stone-200 bg-stone-50 text-stone-400 cursor-wait'
+                  : 'border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+              disabled={ocrResults.status === 'processing'}
+            >
+              {ocrResults.status === 'processing' && <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> Processing...</span>}
+              {ocrResults.status === 'idle' && <span className="flex items-center justify-center gap-2"><Eye size={16} /> Start OCR Scan</span>}
+              {ocrResults.status === 'complete' && <span className="flex items-center justify-center gap-2"><CheckCircle2 size={16} /> OCR Complete</span>}
+            </button>
+
+            {ocrResults.status === 'complete' && ocrResults.data && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <h4 className="font-medium text-emerald-900 mb-3">Extracted Data</h4>
+                <div className="bg-white rounded p-3 font-mono text-xs text-stone-700 mb-3 max-h-48 overflow-y-auto">
+                  {ocrResults.data.extractedText}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-emerald-800">
+                    <span className="font-medium">Confidence: </span>
+                    <span>{ocrResults.data.confidence}%</span>
+                  </p>
+                  <p className="text-sm text-emerald-800">
+                    <span className="font-medium">Fields Detected: </span>
+                    <span>{ocrResults.data.fieldsDetected.join(', ')}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Document Language</label>
+              <select
+                value={data.language}
+                onChange={(e) => setData({ ...data, language: e.target.value })}
+                className="w-full px-4 py-2 border border-stone-200 rounded-lg text-stone-900"
+              >
+                <option value="es">Spanish</option>
+                <option value="en">English</option>
+                <option value="pt">Portuguese</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-stone-900">Review & Confirm Upload</h3>
+            <div className="bg-stone-50 p-5 rounded-lg space-y-3">
+              <div className="flex justify-between"><span className="text-stone-600">Document Type:</span><span className="font-medium text-stone-900">{data.documentType || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Related To:</span><span className="font-medium text-stone-900">{`${data.entityType.toUpperCase()}: ${data.relatedEntity || '—'}`}</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">Files:</span><span className="font-medium text-stone-900">{data.files.length} file(s)</span></div>
+              <div className="flex justify-between"><span className="text-stone-600">OCR Status:</span><span className="font-medium text-stone-900">{ocrResults.status === 'complete' ? 'Processed' : 'Skipped'}</span></div>
+              {data.keywords && (
+                <div className="flex justify-between"><span className="text-stone-600">Keywords:</span><span className="font-medium text-stone-900">{data.keywords}</span></div>
+              )}
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Shield size={18} className="text-emerald-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">Document Secured</p>
+                  <p className="text-xs text-emerald-700 mt-1">All documents are encrypted and stored with full audit trail for compliance verification</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          {step > 1 && <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button>}
+          {step < 4 ? (
+            <Button variant="primary" onClick={() => setStep(step + 1)} disabled={
+              (step === 1 && !data.documentType) ||
+              (step === 2 && !data.relatedEntity)
+            }>Continue</Button>
+          ) : (
+            <Button variant="primary" onClick={onComplete}>Upload Document</Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function DocumentsPage() {
+  const [showUploadWizard, setShowUploadWizard] = useState(false);
+
+  if (showUploadWizard) {
+    return <UploadDocumentWizard onBack={() => setShowUploadWizard(false)} onComplete={() => setShowUploadWizard(false)} />;
+  }
+
   return (
     <div className="space-y-6">
       <SectionHeader 
         title="Document Repository" 
         subtitle="Manage land tenure, FPIC, and compliance documentation"
         action={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowUploadWizard(true)}>
             <Upload size={16} />
             Upload document
           </Button>
