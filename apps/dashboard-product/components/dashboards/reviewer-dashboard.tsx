@@ -30,9 +30,31 @@ interface ReviewerDashboardProps {
 export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
   const pendingReview = metrics.packages_by_status?.READY || 0;
   const flaggedItems = Math.ceil((metrics.total_plots - metrics.compliant_plots) * 0.3);
+  const isVirginTenant = metrics.total_packages === 0 && metrics.total_plots === 0;
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-purple-200 bg-purple-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your reviewer workspace</CardTitle>
+            <CardDescription>
+              No items are pending review yet. Once exporters submit DDS packages for verification, they will appear in your compliance review queue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link href="/compliance">Open review queue</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/plots">Browse plot registry</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Review Queue Banner */}
       <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50">
         <CardContent className="flex items-center justify-between p-6">
