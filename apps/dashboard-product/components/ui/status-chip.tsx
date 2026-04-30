@@ -2,18 +2,9 @@
 
 import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import {
-  Edit,
-  Download,
-  Clock,
-  AlertTriangle,
-  CheckCircle,
-  CheckCircle2,
-  Check,
-  X,
-  Loader2,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { STATUS_ICONS, STATUS_LABELS, type StatusType } from '@/lib/constants/status';
 
 /**
  * StatusChip - Canonical entity state indicator
@@ -81,94 +72,8 @@ const statusChipVariants = cva(
   }
 );
 
-export type StatusType =
-  | 'DRAFT'
-  | 'READY'
-  | 'SEALED'
-  | 'ARCHIVED'
-  | 'ON_HOLD'
-  | 'PENDING'
-  | 'READY_TO_SUBMIT'
-  | 'SUBMITTED'
-  | 'ACCEPTED'
-  | 'REJECTED'
-  | 'PENDING_CONFIRMATION'
-  | 'AMENDMENT_DRAFT'
-  | 'AMENDED_SUBMITTED'
-  | 'WITHDRAWAL_REQUESTED'
-  | 'WITHDRAWN'
-  | 'SUPERSEDED'
-  | 'OPEN'
-  | 'RESOLVED'
-  | 'ESCALATED'
-  | 'APPROVED'
-  | 'UNAVAILABLE'
-  | 'BLOCKED'
-  | 'IN_PROGRESS'
-  | 'SUCCESS'
-  | 'ERROR'
-  | 'WARNING'
-  | 'INFO';
-
-const STATUS_ICONS: Record<StatusType, React.ElementType> = {
-  DRAFT: Edit,
-  READY: Download,
-  SEALED: CheckCircle,
-  ARCHIVED: Check,
-  ON_HOLD: AlertTriangle,
-  PENDING: Clock,
-  READY_TO_SUBMIT: CheckCircle2,
-  SUBMITTED: Clock,
-  ACCEPTED: Check,
-  REJECTED: X,
-  PENDING_CONFIRMATION: Clock,
-  AMENDMENT_DRAFT: Edit,
-  AMENDED_SUBMITTED: Clock,
-  WITHDRAWAL_REQUESTED: AlertTriangle,
-  WITHDRAWN: X,
-  SUPERSEDED: Check,
-  OPEN: AlertTriangle,
-  RESOLVED: CheckCircle,
-  ESCALATED: AlertTriangle,
-  APPROVED: Check,
-  UNAVAILABLE: AlertTriangle,
-  BLOCKED: AlertTriangle,
-  IN_PROGRESS: Clock,
-  SUCCESS: Check,
-  ERROR: X,
-  WARNING: AlertTriangle,
-  INFO: Clock,
-};
-
-const STATUS_LABELS: Record<StatusType, string> = {
-  DRAFT: 'Draft',
-  READY: 'Ready',
-  SEALED: 'Sealed',
-  ARCHIVED: 'Archived',
-  ON_HOLD: 'On hold',
-  PENDING: 'Pending',
-  READY_TO_SUBMIT: 'Ready to submit',
-  SUBMITTED: 'Submitted',
-  ACCEPTED: 'Accepted',
-  REJECTED: 'Rejected',
-  PENDING_CONFIRMATION: 'Pending confirmation',
-  AMENDMENT_DRAFT: 'Amendment draft',
-  AMENDED_SUBMITTED: 'Amended submitted',
-  WITHDRAWAL_REQUESTED: 'Withdrawal requested',
-  WITHDRAWN: 'Withdrawn',
-  SUPERSEDED: 'Superseded',
-  OPEN: 'Open',
-  RESOLVED: 'Resolved',
-  ESCALATED: 'Escalated',
-  APPROVED: 'Approved',
-  UNAVAILABLE: 'Unavailable',
-  BLOCKED: 'Blocked',
-  IN_PROGRESS: 'In progress',
-  SUCCESS: 'Success',
-  ERROR: 'Error',
-  WARNING: 'Warning',
-  INFO: 'Info',
-};
+// Re-export StatusType for backwards compatibility
+export type { StatusType } from '@/lib/constants/status';
 
 export interface StatusChipProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>,

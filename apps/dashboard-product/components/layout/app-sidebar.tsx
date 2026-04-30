@@ -68,7 +68,7 @@ export function AppSidebar() {
   const hasMultipleRoles = user && user.roles.length > 1;
 
   return (
-    <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
+    <aside className="flex h-screen w-64 flex-col bg-sidebar">
 
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 flex-shrink-0">
