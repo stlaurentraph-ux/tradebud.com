@@ -128,7 +128,6 @@ export function useUpdateOnboarding() {
       mutate(data, false);
       return data;
     } catch (error) {
-      console.error('[v0] Error updating onboarding:', error);
       throw error;
     }
   };

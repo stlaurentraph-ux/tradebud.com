@@ -55,8 +55,8 @@ export function useOnboarding(): OnboardingContext {
           startedAt: parsed.startedAt ? new Date(parsed.startedAt) : null,
           completedAt: parsed.completedAt ? new Date(parsed.completedAt) : null,
         }));
-      } catch (e) {
-        console.error('[v0] Failed to parse onboarding state:', e);
+      } catch {
+        // Invalid stored state, reset to initial
       }
     }
     setIsHydrated(true);
