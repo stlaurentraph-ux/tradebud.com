@@ -30,7 +30,7 @@ export function AppHeader({ title, subtitle, description, breadcrumbs, actions }
       <div className="min-w-0 flex-1">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="mb-0.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+          <nav className="mb-0.5 flex flex-wrap items-center gap-1 text-xs text-muted-foreground" aria-label="Breadcrumb">
             {breadcrumbs.map((crumb, index) => (
               <span key={index} className="flex items-center gap-1">
                 {crumb.href ? (
@@ -41,7 +41,7 @@ export function AppHeader({ title, subtitle, description, breadcrumbs, actions }
                   <span className="text-foreground">{crumb.label}</span>
                 )}
                 {index < breadcrumbs.length - 1 && (
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
                 )}
               </span>
             ))}
@@ -76,11 +76,17 @@ export function AppHeader({ title, subtitle, description, breadcrumbs, actions }
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              aria-label="Notifications"
+            >
               <Bell className="h-5 w-5" />
               <Badge
                 variant="secondary"
                 className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+                aria-label="0 new notifications"
               >
                 0
               </Badge>
