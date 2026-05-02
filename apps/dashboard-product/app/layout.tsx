@@ -18,6 +18,15 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: 'Tracebud Dashboard - EUDR Compliance Platform',
   description: 'Multi-tenant dashboard for managing EUDR compliance, DDS packages, plots, and farmers.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Tracebud',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: [
       { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
@@ -32,11 +41,18 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#064E3B',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="bg-background">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Tracebud" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
           <DashboardLayout>{children}</DashboardLayout>

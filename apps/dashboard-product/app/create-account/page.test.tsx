@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
 import CreateAccountPage from './page';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
@@ -14,7 +15,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/image', () => ({
-  default: (props: any) => <img alt={props.alt} />,
+  default: (props: { alt: string }) => <img alt={props.alt} />,
 }));
 
 vi.mock('@/lib/auth-context', () => ({
