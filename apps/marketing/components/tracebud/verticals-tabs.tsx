@@ -168,6 +168,8 @@ export function VerticalsTabs() {
                 alt={activeVertical.fullTitle}
                 fill
                 className="object-cover"
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Crect fill='%23228B67' width='100%25' height='100%25'/%3E%3C/svg%3E"
               />
               <div
                 className="absolute inset-0"

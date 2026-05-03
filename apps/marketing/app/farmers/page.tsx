@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "For Producers | Tracebud",
+  description: "Smartphone app for farmers. Free forever. Offline GPS mapping, photo evidence, EUDR compliance - all in your pocket.",
+};
 import { motion } from "framer-motion";
 import { WifiOff, Camera, FileCheck, Shield, Smartphone, CheckCircle, Users, User, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";

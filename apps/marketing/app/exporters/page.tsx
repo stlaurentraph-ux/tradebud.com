@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "For Exporters | Tracebud",
+  description: "Batch aggregation, EUDR compliance, yield verification. Speed up exports with automated DDS packages and full audit trails.",
+};
 import { motion } from "framer-motion";
 import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Zap, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";

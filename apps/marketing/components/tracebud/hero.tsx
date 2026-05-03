@@ -17,6 +17,8 @@ export function Hero() {
           className="object-cover"
           priority
           loading="eager"
+          placeholder="blur"
+          blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2073 1382'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Crect fill='%23228B67' width='100%25' height='100%25'/%3E%3Crect filter='url(%23b)' fill='%231a6d53' width='100%25' height='100%25'/%3E%3C/svg%3E"
         />
         {/* Dark overlay for text readability - reduced opacity to show imagery */}
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/60 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/70" />

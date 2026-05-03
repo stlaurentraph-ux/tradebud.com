@@ -356,7 +356,7 @@ export default function CountriesPage() {
               Start modernizing your registry
             </h2>
             <p className="text-base md:text-xl text-foreground/70 max-w-2xl mx-auto mb-8">
-              30-day free trial with full access. Set up your country dashboard in minutes.
+              30-day free trial with full access. Set up your country dashboard in minutes. For complex integrations, book a consultation below.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">

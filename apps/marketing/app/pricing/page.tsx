@@ -1,6 +1,12 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing | Tracebud",
+  description: "Simple, transparent pricing. 30-day free trial, no credit card required. Pay only after trial based on organizations reviewed.",
+};
 import { motion } from "framer-motion";
 import { Check, ArrowRight, Shield, Zap, Users, Globe, ExternalLink } from "lucide-react";
 import { Header } from "@/components/tracebud/header";

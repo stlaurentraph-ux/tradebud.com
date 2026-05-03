@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "For Importers & Brands | Tracebud",
+  description: "Full supply chain visibility with zero risk. EUDR compliance, audit trails, and CSRD reporting - all in one dashboard.",
+};
 import { motion } from "framer-motion";
 import {
   Eye,
