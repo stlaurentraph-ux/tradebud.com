@@ -4,6 +4,7 @@ import { ChainFlow } from "@/components/tracebud/chain-flow";
 import { WorkflowDemo } from "@/components/tracebud/workflow-demo";
 import { VerticalsTabs } from "@/components/tracebud/verticals-tabs";
 import { Comparison } from "@/components/tracebud/comparison";
+import { FAQ } from "@/components/tracebud/faq";
 import { Impact } from "@/components/tracebud/impact";
 import { Footer } from "@/components/tracebud/footer";
 import { ExitIntentModal } from "@/components/exit-intent-modal";
@@ -17,6 +18,7 @@ export default function Home() {
       <WorkflowDemo />
       <VerticalsTabs />
       <Comparison />
+      <FAQ />
       <Impact />
       <Footer />
       <ExitIntentModal />

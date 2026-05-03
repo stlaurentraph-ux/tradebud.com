@@ -19,7 +19,6 @@ interface AuthContextType {
   logout: () => void;
   switchRole: (role: TenantRole) => void;
   impersonateDemo: (email: string) => Promise<void>;
-  registerUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -150,12 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const registerUser = useCallback((newUser: User) => {
-    setUser(newUser);
-    sessionStorage.setItem('tracebud_user', JSON.stringify(newUser));
-    sessionStorage.setItem('tracebud_token', 'user_token_' + newUser.id);
-  }, []);
-
   return (
     <AuthContext.Provider
       value={{
@@ -166,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         switchRole,
         impersonateDemo,
-        registerUser,
       }}
     >
       {children}

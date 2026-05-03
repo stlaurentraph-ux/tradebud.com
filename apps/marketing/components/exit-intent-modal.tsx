@@ -2,56 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Download } from "lucide-react";
+import { X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function ExitIntentModal() {
   const [isVisible, setIsVisible] = useState(false);
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     const handleMouseLeave = (e: MouseEvent) => {
       // Only trigger if cursor is leaving from top of document
-      if (e.clientY <= 0 && !isVisible && !submitted) {
+      if (e.clientY <= 0 && !isVisible) {
         setIsVisible(true);
       }
     };
 
     document.addEventListener("mouseleave", handleMouseLeave);
     return () => document.removeEventListener("mouseleave", handleMouseLeave);
-  }, [isVisible, submitted]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      fetch("/api/checklist/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.ok) {
-            // Trigger PDF download
-            const link = document.createElement("a");
-            link.href = "/api/checklist/download";
-            link.download = "EUDR-Compliance-Checklist.pdf";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            setSubmitted(true);
-            setTimeout(() => {
-              setIsVisible(false);
-              setSubmitted(false);
-              setEmail("");
-            }, 2000);
-          }
-        })
-        .catch((err) => console.error("[v0] Error:", err));
-    }
-  };
+  }, [isVisible]);
 
   return (
     <AnimatePresence>
@@ -78,53 +46,37 @@ export function ExitIntentModal() {
               <X className="w-5 h-5 text-gray-600" />
             </button>
 
-            {!submitted ? (
-              <>
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--data-emerald)]/10 mb-4">
-                  <Download className="w-6 h-6 text-[var(--data-emerald)]" />
-                </div>
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--data-emerald)]/10 mb-4">
+              <Zap className="w-6 h-6 text-[var(--data-emerald)]" />
+            </div>
 
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Hold on!
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Before you go, grab our free EUDR Compliance Checklist. Get the 4-phase roadmap to EUDR readiness.
-                </p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Ready to get started?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Get instant access to the full Tracebud dashboard. 30 days free, no credit card required.
+            </p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <input
-                    type="email"
-                    placeholder="Your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--data-emerald)] focus:border-transparent"
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg"
-                  >
-                    Download Checklist
-                  </Button>
-                </form>
+            <div className="space-y-3">
+              <Link href="/get-started" onClick={() => setIsVisible(false)}>
+                <Button className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg">
+                  Start Free Trial
+                </Button>
+              </Link>
 
-                <p className="text-xs text-gray-500 text-center mt-4">
-                  No spam. We&apos;ll only send EUDR updates.
-                </p>
-              </>
-            ) : (
-              <div className="text-center">
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--data-emerald)]/10 mb-4 mx-auto">
-                  <Download className="w-6 h-6 text-[var(--data-emerald)]" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Check your email!
-                </h3>
-                <p className="text-gray-600">
-                  Your EUDR Compliance Checklist is on its way.
-                </p>
-              </div>
-            )}
+              <Link href="/demo" onClick={() => setIsVisible(false)}>
+                <Button
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-900 hover:bg-gray-50 font-semibold py-3 rounded-lg"
+                >
+                  Book a Demo Instead
+                </Button>
+              </Link>
+            </div>
+
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Early adopters get priority support
+            </p>
           </motion.div>
         </motion.div>
       )}

@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { ExporterDashboard } from '@/components/dashboards/exporter-dashboard';
 import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
 import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
 import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
-import { WelcomeCard } from '@/components/onboarding/welcome-card';
 import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { mockDashboardMetrics } from '@/lib/mock-data';
 import { useAuth } from '@/lib/auth-context';
@@ -17,24 +16,6 @@ import { getRoleDisplayName } from '@/lib/rbac';
 export default function DashboardPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const router = useRouter();
-
-  // Welcome state: shown after signup redirect (?welcome=1)
-  const [showWelcome, setShowWelcome] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return searchParams.get('welcome') === '1';
-  });
-
-  // Strip the welcome param from the URL after first render without a hard reload
-  useEffect(() => {
-    if (searchParams.get('welcome') === '1') {
-      const next = new URL(window.location.href);
-      next.searchParams.delete('welcome');
-      next.searchParams.delete('entry');
-      router.replace(next.pathname + (next.search ? next.search : ''), { scroll: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const context = getGatedEntryContext(
@@ -121,13 +102,7 @@ export default function DashboardPage() {
         subtitle={getSubtitle()}
       />
 
-      <div className="flex-1 p-6 space-y-6">
-        {showWelcome && (
-          <WelcomeCard
-            userName={user?.name}
-            onDismiss={() => setShowWelcome(false)}
-          />
-        )}
+      <div className="flex-1 p-6">
         {renderDashboard()}
       </div>
     </div>
