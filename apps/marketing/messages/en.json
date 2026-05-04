@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Language",
+    "startFreeTrial": "Start Free Trial",
+    "bookDemo": "Book 15-min Demo",
+    "learnMore": "Learn More",
+    "contactUs": "Contact Us"
+  },
+  "hero": {
+    "title": "Trade Freely. Trace Easily.",
+    "subtitle": "EU market access made simple. Complete supply chain visibility from producer to importer.",
+    "cta1": "Start Free Trial",
+    "cta2": "Book 15-min Demo",
+    "trialInfo": "30 days free. No credit card required.",
+    "earlyAdopter": "Early adopters get priority support"
+  },
+  "header": {
+    "pilot": "Pilot",
+    "howItWorks": "How It Works",
+    "pricing": "Pricing"
+  },
+  "footer": {
+    "company": "Company",
+    "product": "Product",
+    "legal": "Legal"
+  }
+}

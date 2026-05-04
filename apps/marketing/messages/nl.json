@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Taal",
+    "startFreeTrial": "Gratis proefversie starten",
+    "bookDemo": "Demo reserveren",
+    "learnMore": "Meer informatie",
+    "contactUs": "Neem contact op"
+  },
+  "hero": {
+    "title": "Vrij handelen. Makkelijk traceren.",
+    "subtitle": "EU-markttoegang vereenvoudigd. Volledige inzicht in de toeleveringsketen van producent tot importeur.",
+    "cta1": "Gratis proefversie starten",
+    "cta2": "Demo reserveren",
+    "trialInfo": "30 dagen gratis. Geen creditcard vereist.",
+    "earlyAdopter": "Vroege gebruikers krijgen prioriteitsondersteuning"
+  },
+  "header": {
+    "pilot": "Pilot",
+    "howItWorks": "Hoe het werkt",
+    "pricing": "Prijzen"
+  },
+  "footer": {
+    "company": "Bedrijf",
+    "product": "Product",
+    "legal": "Juridisch"
+  }
+}

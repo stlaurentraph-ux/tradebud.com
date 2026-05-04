@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Sprache",
+    "startFreeTrial": "Kostenlose Testversion starten",
+    "bookDemo": "Demo buchen",
+    "learnMore": "Mehr erfahren",
+    "contactUs": "Kontaktieren Sie uns"
+  },
+  "hero": {
+    "title": "Handeln Sie frei. Verfolgen Sie mühelos.",
+    "subtitle": "Der EU-Marktzugang wurde vereinfacht. Vollständige Lieferkettenübersicht vom Erzeuger bis zum Importeur.",
+    "cta1": "Kostenlose Testversion starten",
+    "cta2": "Demo buchen",
+    "trialInfo": "30 Tage kostenlos. Keine Kreditkarte erforderlich.",
+    "earlyAdopter": "Frühanwender erhalten Prioritätssupport"
+  },
+  "header": {
+    "pilot": "Pilotprojekt",
+    "howItWorks": "Wie es funktioniert",
+    "pricing": "Preise"
+  },
+  "footer": {
+    "company": "Unternehmen",
+    "product": "Produkt",
+    "legal": "Rechtliches"
+  }
+}

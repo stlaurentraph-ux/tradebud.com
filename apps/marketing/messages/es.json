@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Idioma",
+    "startFreeTrial": "Comenzar prueba gratuita",
+    "bookDemo": "Reservar demostración",
+    "learnMore": "Saber más",
+    "contactUs": "Contáctenos"
+  },
+  "hero": {
+    "title": "Comercia libremente. Rastrea fácilmente.",
+    "subtitle": "El acceso al mercado de la UE simplificado. Visibilidad completa de la cadena de suministro desde el productor hasta el importador.",
+    "cta1": "Comenzar prueba gratuita",
+    "cta2": "Reservar demostración",
+    "trialInfo": "30 días gratis. Sin tarjeta de crédito requerida.",
+    "earlyAdopter": "Los primeros usuarios obtienen soporte prioritario"
+  },
+  "header": {
+    "pilot": "Piloto",
+    "howItWorks": "Cómo funciona",
+    "pricing": "Precios"
+  },
+  "footer": {
+    "company": "Empresa",
+    "product": "Producto",
+    "legal": "Legal"
+  }
+}

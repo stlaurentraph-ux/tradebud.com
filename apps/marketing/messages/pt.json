@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Idioma",
+    "startFreeTrial": "Iniciar teste gratuito",
+    "bookDemo": "Agendar demonstração",
+    "learnMore": "Saiba mais",
+    "contactUs": "Entre em contato"
+  },
+  "hero": {
+    "title": "Negocie livremente. Rastreie facilmente.",
+    "subtitle": "Acesso ao mercado da UE simplificado. Visibilidade completa da cadeia de suprimentos do produtor ao importador.",
+    "cta1": "Iniciar teste gratuito",
+    "cta2": "Agendar demonstração",
+    "trialInfo": "30 dias grátis. Nenhum cartão de crédito necessário.",
+    "earlyAdopter": "Os primeiros usuários recebem suporte prioritário"
+  },
+  "header": {
+    "pilot": "Piloto",
+    "howItWorks": "Como funciona",
+    "pricing": "Preços"
+  },
+  "footer": {
+    "company": "Empresa",
+    "product": "Produto",
+    "legal": "Jurídico"
+  }
+}

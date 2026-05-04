@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Bahasa",
+    "startFreeTrial": "Mulai uji coba gratis",
+    "bookDemo": "Pesan demo",
+    "learnMore": "Pelajari selengkapnya",
+    "contactUs": "Hubungi kami"
+  },
+  "hero": {
+    "title": "Berdagang dengan bebas. Lacak dengan mudah.",
+    "subtitle": "Akses pasar UE yang disederhanakan. Visibilitas lengkap rantai pasokan dari produsen hingga importer.",
+    "cta1": "Mulai uji coba gratis",
+    "cta2": "Pesan demo",
+    "trialInfo": "30 hari gratis. Tidak perlu kartu kredit.",
+    "earlyAdopter": "Pengguna awal mendapatkan dukungan prioritas"
+  },
+  "header": {
+    "pilot": "Pilot",
+    "howItWorks": "Cara kerjanya",
+    "pricing": "Harga"
+  },
+  "footer": {
+    "company": "Perusahaan",
+    "product": "Produk",
+    "legal": "Hukum"
+  }
+}

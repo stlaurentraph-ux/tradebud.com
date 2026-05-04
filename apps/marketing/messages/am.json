@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "ቋንቋ",
+    "startFreeTrial": "ነጻ ሙከራ ይጀምሩ",
+    "bookDemo": "ሰልፍ ይያዙ",
+    "learnMore": "ተወስኖ ይወቁ",
+    "contactUs": "ያติኩ"
+  },
+  "hero": {
+    "title": "በነፃነት ይግዙ። በቀላሉ ይከታተሉ።",
+    "subtitle": "የ EU ገበያ ተደራሽነት ቀላል ተደርጓል። ከምርት ሰሪ እስከ ትርጓሚ ድረስ ሙሉ የአቅርቦት ሰንሰለት ხሪዳ።",
+    "cta1": "ነጻ ሙከራ ይጀምሩ",
+    "cta2": "ሰልፍ ይያዙ",
+    "trialInfo": "30 ቀናት ነጻ። ምንም ካሬዲት ካርድ አይሞክርም።",
+    "earlyAdopter": "ቀደምት ተጠቃሚዎች ቅድሚያ ድጋፍ ይሰጣቸዋል"
+  },
+  "header": {
+    "pilot": "ሙከራ",
+    "howItWorks": "እንዴት ይሰራል",
+    "pricing": "ዋጋ"
+  },
+  "footer": {
+    "company": "ኩባንያ",
+    "product": "ምርት",
+    "legal": "ህጋዊ"
+  }
+}

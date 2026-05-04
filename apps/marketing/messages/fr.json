@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Langue",
+    "startFreeTrial": "Commencer l'essai gratuit",
+    "bookDemo": "Réserver une démo",
+    "learnMore": "En savoir plus",
+    "contactUs": "Nous contacter"
+  },
+  "hero": {
+    "title": "Commercez librement. Tracez facilement.",
+    "subtitle": "L'accès au marché de l'UE simplifié. Visibilité complète de la chaîne d'approvisionnement du producteur à l'importateur.",
+    "cta1": "Commencer l'essai gratuit",
+    "cta2": "Réserver une démo",
+    "trialInfo": "30 jours gratuits. Aucune carte de crédit requise.",
+    "earlyAdopter": "Les premiers utilisateurs bénéficient du support prioritaire"
+  },
+  "header": {
+    "pilot": "Projet pilote",
+    "howItWorks": "Comment ça marche",
+    "pricing": "Tarification"
+  },
+  "footer": {
+    "company": "Entreprise",
+    "product": "Produit",
+    "legal": "Mentions légales"
+  }
+}

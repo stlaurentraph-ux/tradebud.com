@@ -1,0 +1,27 @@
+{
+  "common": {
+    "language": "Ngôn ngữ",
+    "startFreeTrial": "Bắt đầu dùng thử miễn phí",
+    "bookDemo": "Đặt bản demo",
+    "learnMore": "Tìm hiểu thêm",
+    "contactUs": "Liên hệ với chúng tôi"
+  },
+  "hero": {
+    "title": "Giao dịch tự do. Theo dõi dễ dàng.",
+    "subtitle": "Truy cập thị trường EU được đơn giản hóa. Tầm nhìn đầy đủ về chuỗi cung ứng từ nhà sản xuất đến nhà nhập khẩu.",
+    "cta1": "Bắt đầu dùng thử miễn phí",
+    "cta2": "Đặt bản demo",
+    "trialInfo": "30 ngày miễn phí. Không cần thẻ tín dụng.",
+    "earlyAdopter": "Những người dùng đầu tiên nhận được hỗ trợ ưu tiên"
+  },
+  "header": {
+    "pilot": "Dự án thí điểm",
+    "howItWorks": "Cách hoạt động",
+    "pricing": "Giá"
+  },
+  "footer": {
+    "company": "Công ty",
+    "product": "Sản phẩm",
+    "legal": "Pháp lý"
+  }
+}
