@@ -1,5 +1,9 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { getMessages } from 'next-intl/server'
+import { NextIntlClientProvider } from 'next-intl'
 import { Analytics } from '@vercel/analytics/next'
+import { locales } from '@/i18n.config'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -17,19 +21,35 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }))
+}
+
+export default async function RootLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode
+  params: { locale: string }
 }>) {
+  const { locale } = await params
+  
+  if (!locales.includes(locale as any)) {
+    notFound()
+  }
+
+  const messages = await getMessages()
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="font-sans antialiased">
-        <a href="#main-content" className="skip-to-content">
-          Skip to content
-        </a>
-        {children}
-        <Analytics />
+        <NextIntlClientProvider messages={messages}>
+          <a href="#main-content" className="skip-to-content">
+            Skip to content
+          </a>
+          {children}
+          <Analytics />
+        </NextIntlClientProvider>
       </body>
     </html>
   )
