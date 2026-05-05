@@ -5,6 +5,7 @@ import { Mail, Linkedin, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const platformLinks = [
   { label: "Pilot program", href: "/pilot" },
@@ -35,6 +36,7 @@ const legalLinks = [
 ];
 
 export function Footer() {
+  const waitlist = useWaitlistDialog();
   return (
     <footer className="relative bg-[var(--forest-canopy)] text-white py-12 md:py-24 px-4 md:px-6 overflow-hidden">
       {/* Background image */}
@@ -72,20 +74,12 @@ export function Footer() {
               The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/farmers">
-                <Button
-                  size="default"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold text-sm md:text-base px-5 md:px-8 rounded-full w-full sm:w-auto"
-                >
-                  Start Mapping
-                </Button>
-              </Link>
               <Button
                 size="default"
-                variant="outline"
-                className="border-2 border-white/50 text-white hover:bg-white/10 bg-transparent font-bold text-sm md:text-base px-5 md:px-8 rounded-full"
+                onClick={() => waitlist.setOpen(true)}
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold text-sm md:text-base px-5 md:px-8 rounded-full w-full sm:w-auto"
               >
-                Contact Sales
+                Join the waitlist
               </Button>
             </div>
           </div>
@@ -186,5 +180,6 @@ export function Footer() {
         </div>
       </div>
     </footer>
+    <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
   );
 }

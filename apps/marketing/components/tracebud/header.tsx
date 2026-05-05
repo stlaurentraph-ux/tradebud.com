@@ -8,6 +8,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const personaLinks = [
   { label: "Producers", href: "/farmers" },
@@ -28,6 +29,7 @@ export function Header() {
   const isFarmersPage = pathname.includes("/farmers");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const waitlist = useWaitlistDialog();
 
   const personaLinksTranslated = [
     { label: t("personas.producers"), href: "/farmers" },
@@ -128,29 +130,12 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            {isFarmersPage ? (
-              <Link href="/farmers#download">
-                <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                  {t("cta.downloadApp")}
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/demo">
-                  <Button
-                    variant="ghost"
-                    className={`font-semibold text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
-                  >
-                    {t("cta.bookDemo")}
-                  </Button>
-                </Link>
-                <Link href="/get-started">
-                  <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                    {t("cta.startTrial")}
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Button
+              onClick={() => waitlist.setOpen(true)}
+              className={`font-bold text-base px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}
+            >
+              Join the waitlist
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -203,41 +188,20 @@ export function Header() {
                 ))}
               </div>
               <div className="flex flex-col gap-4 mt-8 pb-8">
-                {isFarmersPage ? (
-                  <Link href="/farmers#download" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button
-                      size="lg"
-                      className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
-                    >
-                      {t("cta.downloadApp")}
-                    </Button>
-                  </Link>
-                ) : (
-                  <>
-                    <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        size="lg"
-                        className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
-                      >
-                        {t("cta.startTrial")}
-                      </Button>
-                    </Link>
-                    <Link href="/demo" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
-                      >
-                        {t("cta.bookDemoFull")}
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <Button
+                  size="lg"
+                  onClick={() => { setIsMobileMenuOpen(false); waitlist.setOpen(true); }}
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
+                >
+                  Join the waitlist
+                </Button>
               </div>
             </nav>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }

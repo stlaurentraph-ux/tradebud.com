@@ -5,9 +5,11 @@ import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 export function Hero() {
   const t = useTranslations("hero");
+  const waitlist = useWaitlistDialog();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Full-bleed background image */}
@@ -82,47 +84,29 @@ export function Hero() {
           </div>
         </motion.div>
 
-        {/* Primary CTAs */}
+        {/* Primary CTA */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6"
+          className="flex flex-col items-center gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <a href="/get-started">
-            <Button
-              size="lg"
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-lg rounded-full shadow-xl"
-            >
-              {t("cta.startTrial")}
-            </Button>
-          </a>
-          <a href="/demo">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-lg rounded-full"
-            >
-              {t("cta.bookDemo")}
-            </Button>
-          </a>
-        </motion.div>
-
-        <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-        >
-          <span className="text-sm text-white/70">{t("trialInfo")}</span>
-          <span className="hidden sm:block text-white/40">|</span>
+          <Button
+            size="lg"
+            onClick={() => waitlist.setOpen(true)}
+            className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-12 py-7 text-lg rounded-full shadow-xl"
+          >
+            Join the waitlist
+          </Button>
           <span className="inline-flex items-center gap-1.5 text-sm text-[var(--data-emerald)] font-medium">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            {t("earlyAdopters")}
+            Early adopters get priority support
           </span>
         </motion.div>
+
+        <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
 
         <motion.div
           className="flex justify-center"
