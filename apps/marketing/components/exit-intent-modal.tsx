@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 export function ExitIntentModal() {
   const [isVisible, setIsVisible] = useState(false);
+  const waitlist = useWaitlistDialog();
 
   useEffect(() => {
     const handleMouseLeave = (e: MouseEvent) => {
@@ -51,27 +52,30 @@ export function ExitIntentModal() {
             </div>
 
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Ready to get started?
+              Before you go...
             </h3>
             <p className="text-gray-600 mb-6">
-              Get instant access to the full Tracebud dashboard. 30 days free, no credit card required.
+              Join our waitlist to be first notified when Tracebud launches. Early adopters get priority support and special pricing.
             </p>
 
             <div className="space-y-3">
-              <Link href="/get-started" onClick={() => setIsVisible(false)}>
-                <Button className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg">
-                  Start Free Trial
-                </Button>
-              </Link>
+              <Button
+                onClick={() => {
+                  setIsVisible(false);
+                  waitlist.setOpen(true);
+                }}
+                className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg"
+              >
+                Join the waitlist
+              </Button>
 
-              <Link href="/demo" onClick={() => setIsVisible(false)}>
-                <Button
-                  variant="outline"
-                  className="w-full border-gray-300 text-gray-900 hover:bg-gray-50 font-semibold py-3 rounded-lg"
-                >
-                  Book a Demo Instead
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                onClick={() => setIsVisible(false)}
+                className="w-full border-gray-300 text-gray-900 hover:bg-gray-50 font-semibold py-3 rounded-lg"
+              >
+                Continue browsing
+              </Button>
             </div>
 
             <p className="text-xs text-gray-500 text-center mt-4">
@@ -81,5 +85,7 @@ export function ExitIntentModal() {
         </motion.div>
       )}
     </AnimatePresence>
+
+    <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
   );
 }
