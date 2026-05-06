@@ -20,6 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const ROLES = [
+  "Cooperative",
+  "Exporter",
+  "Importer",
+  "Sponsor (brand, country, NGO)",
+  "Other",
+];
+
 const COMMODITIES = [
   "Coffee",
   "Cocoa",
@@ -96,6 +104,8 @@ export function WaitlistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [submitted, setSubmitted] = useState(false);
+  const [role, setRole] = useState("");
+  const [roleOther, setRoleOther] = useState("");
   const [commodity, setCommodity] = useState("");
   const [producerRange, setProducerRange] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,6 +115,14 @@ export function WaitlistDialog({
     e.preventDefault();
     setError(null);
 
+    if (!role) {
+      setError("Please select your role.");
+      return;
+    }
+    if (role === "Other" && !roleOther.trim()) {
+      setError("Please describe your role.");
+      return;
+    }
     if (!commodity) {
       setError("Please select a commodity.");
       return;
@@ -124,6 +142,7 @@ export function WaitlistDialog({
       first_name: (formData.get("firstName") as string).trim(),
       last_name: (formData.get("lastName") as string).trim(),
       organisation: (formData.get("organisation") as string).trim(),
+      role: role === "Other" ? roleOther.trim() : role,
       commodity,
       producer_range: producerRange,
     };
@@ -153,6 +172,8 @@ export function WaitlistDialog({
     if (!nextOpen) {
       setTimeout(() => {
         setSubmitted(false);
+        setRole("");
+        setRoleOther("");
         setCommodity("");
         setProducerRange("");
         setError(null);
@@ -233,6 +254,32 @@ export function WaitlistDialog({
                   required
                   className="h-11 rounded-xl"
                 />
+              </div>
+
+              {/* Role */}
+              <div className="flex flex-col gap-1.5">
+                <Label>Your role</Label>
+                <Select required value={role} onValueChange={(v) => { setRole(v); if (v !== "Other") setRoleOther(""); }}>
+                  <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {ROLES.map((r) => (
+                      <SelectItem key={r} value={r} className="rounded-lg">
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {role === "Other" && (
+                  <Input
+                    value={roleOther}
+                    onChange={(e) => setRoleOther(e.target.value)}
+                    placeholder="Please describe your role"
+                    className="h-11 rounded-xl mt-1"
+                    required
+                  />
+                )}
               </div>
 
               {/* Commodity */}
