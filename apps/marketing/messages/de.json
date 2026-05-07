@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Sprache",
-    "startFreeTrial": "Kostenlose Testversion starten",
-    "bookDemo": "Demo buchen",
+    "joinWaitlist": "Zur Warteliste hinzufügen",
     "learnMore": "Mehr erfahren",
     "contactUs": "Kontaktieren Sie uns"
   },
   "hero": {
-    "title": "Handeln Sie frei. Verfolgen Sie mühelos.",
-    "subtitle": "Der EU-Marktzugang wurde vereinfacht. Vollständige Lieferkettenübersicht vom Erzeuger bis zum Importeur.",
-    "cta1": "Kostenlose Testversion starten",
-    "cta2": "Demo buchen",
+    "eudrDeadline": "EUDR: 30. Dez 2026 (große/mittlere) · 30. Juni 2027 (micro/kleine)",
+    "headline1": "Handeln Sie frei.",
+    "headline2": "Verfolgen Sie mühelos.",
+    "subheadline": "EU-Marktzugang vereinfacht. Vollständige Lieferkettenverfolgung in Tagen, nicht in Monaten.",
+    "metric1": { "value": "Tage", "label": "Nicht Monate zur Einhaltung" },
+    "metric2": { "value": "Vollständige Kette", "label": "Farm bis Hafen verifiziert" },
+    "metric3": { "value": "Selbstbedienung", "label": "Keine Integration erforderlich" },
+    "cta": { "startTrial": "Zur Warteliste hinzufügen", "bookDemo": "Mehr erfahren" },
     "trialInfo": "30 Tage kostenlos. Keine Kreditkarte erforderlich.",
-    "earlyAdopter": "Frühanwender erhalten Prioritätssupport"
+    "earlyAdopters": "Frühanwender erhalten vorrangigen Support",
+    "seeHowItWorks": "Sehen Sie, wie es funktioniert"
   },
   "header": {
-    "pilot": "Pilotprojekt",
-    "howItWorks": "Wie es funktioniert",
-    "pricing": "Preise"
+    "for": "Für",
+    "personas": {
+      "producers": "Erzeuger",
+      "exporters": "Exporteure",
+      "importers": "Importeure",
+      "countries": "Länder"
+    },
+    "nav": {
+      "pilot": "Pilotprojekt",
+      "howItWorks": "Wie es funktioniert",
+      "pricing": "Preise"
+    },
+    "cta": {
+      "downloadApp": "App herunterladen",
+      "bookDemo": "Demo buchen",
+      "bookDemoFull": "Demo 15 Min buchen",
+      "startTrial": "Zur Warteliste hinzufügen"
+    }
   },
   "footer": {
-    "company": "Unternehmen",
-    "product": "Produkt",
-    "legal": "Rechtliches"
+    "startMapping": "Kartierung starten",
+    "contactSales": "Vertrieb kontaktieren",
+    "joinWaitlist": "Zur Warteliste hinzufügen"
+  },
+  "impact": {
+    "title": "Warum Tracebud funktioniert",
+    "subtitle": "Von Grund auf für Lieferkettentransparenz auf regulierten Märkten entwickelt. Einfach zu bedienen, für Skalierung entwickelt.",
+    "features": {
+      "compliance": { "title": "EUDR-konform", "description": "Entwickelt, um die Bestimmungen von Dezember 2026 zu erfüllen" },
+      "farmer": { "title": "Landwirt zuerst", "description": "Smartphone-App funktioniert offline im Feld" },
+      "tracing": { "title": "Echtzeit-Verfolgung", "description": "GPS, Fotos, Zeitstempel, unveränderliche Aufzeichnungen" },
+      "global": { "title": "Global bereit", "description": "TRACES NT-Integration und mehrsprachige Unterstützung" }
+    },
+    "useCases": "Frühe Piloten nutzen Tracebud bereits für:"
+  },
+  "compliance": {
+    "title": "Einhaltung von Vorschriften",
+    "subtitle": "Von Grund auf entwickelt, um EU-Regelungsanforderungen mit direkten Systemintegrationen zu erfüllen.",
+    "integrations": "Direkte Integrationen"
+  },
+  "faq": {
+    "title": "Häufig gestellte Fragen",
+    "whenLaunch": "Wann wird Tracebud gestartet?",
+    "whenLaunchAnswer": "Tracebud befindet sich in aktiven Pilottests. Wir melden jetzt ausgewählte Partner an. Treten Sie der Warteliste bei, um benachrichtigt zu werden.",
+    "whyCommodities": "Warum mit diesen Rohstoffen anfangen?",
+    "whoCommoditiesAnswer": "Kaffee, Kakao, Palmöl, Kautschuk, Soja, Rinder und Holz sind die wichtigsten EUDR-Rohstoffe. Wir werden je nach Nachfrage ausbauen.",
+    "howCost": "Wie viel kostet es?",
+    "howCostAnswer": "Die Preisgestaltung ist transparent und skaliert mit der Größe Ihres Betriebs. Kostenlose Testversion verfügbar. Details werden bei der Integration weitergegeben.",
+    "howLong": "Wie lange dauert die Einrichtung?",
+    "howLongAnswer": "Die meisten Genossenschaften sind innerhalb von 48 Stunden nach der Anmeldung kartiert und betriebsbereit. Ein Offline-first-Design bedeutet Null Ausfallzeit.",
+    "support": "Welcher Support ist verfügbar?",
+    "supportAnswer": "24/7-Email-Support plus vorrangiger Telefonsupport für Pilotpartner. Direkter Zugang zu unserem Compliance-Team."
   }
 }

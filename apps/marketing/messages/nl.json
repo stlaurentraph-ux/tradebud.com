@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Taal",
-    "startFreeTrial": "Gratis proefversie starten",
-    "bookDemo": "Demo reserveren",
+    "joinWaitlist": "Doe mee aan de wachtlijst",
     "learnMore": "Meer informatie",
     "contactUs": "Neem contact op"
   },
   "hero": {
-    "title": "Vrij handelen. Makkelijk traceren.",
-    "subtitle": "EU-markttoegang vereenvoudigd. Volledige inzicht in de toeleveringsketen van producent tot importeur.",
-    "cta1": "Gratis proefversie starten",
-    "cta2": "Demo reserveren",
-    "trialInfo": "30 dagen gratis. Geen creditcard vereist.",
-    "earlyAdopter": "Vroege gebruikers krijgen prioriteitsondersteuning"
+    "eudrDeadline": "EUDR: 30 dec 2026 (groot/medium) · 30 juni 2027 (micro/klein)",
+    "headline1": "Handel vrij.",
+    "headline2": "Trace gemakkelijk.",
+    "subheadline": "EU-markttoegang vereenvoudigd. Volledige traceerbaarheid van de toeleveringsketen in dagen, niet in maanden.",
+    "metric1": { "value": "Dagen", "label": "Niet maanden voor naleving" },
+    "metric2": { "value": "Volledige keten", "label": "Farm tot haven geverifieerd" },
+    "metric3": { "value": "Zelfbediening", "label": "Geen integratie nodig" },
+    "cta": { "startTrial": "Doe mee aan de wachtlijst", "bookDemo": "Meer informatie" },
+    "trialInfo": "30 dagen gratis. Geen creditcard nodig.",
+    "earlyAdopters": "Vroege gebruikers krijgen prioriteitsondersteuning",
+    "seeHowItWorks": "Zie hoe het werkt"
   },
   "header": {
-    "pilot": "Pilot",
-    "howItWorks": "Hoe het werkt",
-    "pricing": "Prijzen"
+    "for": "Voor",
+    "personas": {
+      "producers": "Producenten",
+      "exporters": "Exporteurs",
+      "importers": "Importeurs",
+      "countries": "Landen"
+    },
+    "nav": {
+      "pilot": "Pilot",
+      "howItWorks": "Hoe het werkt",
+      "pricing": "Prijzen"
+    },
+    "cta": {
+      "downloadApp": "App downloaden",
+      "bookDemo": "Demo reserveren",
+      "bookDemoFull": "Demo 15 min reserveren",
+      "startTrial": "Doe mee aan de wachtlijst"
+    }
   },
   "footer": {
-    "company": "Bedrijf",
-    "product": "Product",
-    "legal": "Juridisch"
+    "startMapping": "Begin met in kaart brengen",
+    "contactSales": "Neem contact op met verkoop",
+    "joinWaitlist": "Doe mee aan de wachtlijst"
+  },
+  "impact": {
+    "title": "Waarom Tracebud werkt",
+    "subtitle": "Gebouwd van nul af aan voor transparantie van toeleveringsketens op gereglementeerde markten. Eenvoudig in gebruik, gebouwd om te schalen.",
+    "features": {
+      "compliance": { "title": "EUDR-conform", "description": "Gebouwd om te voldoen aan de regelgeving van december 2026" },
+      "farmer": { "title": "Eerst de boer", "description": "Smartphone-app werkt offline in het veld" },
+      "tracing": { "title": "Real-time tracing", "description": "GPS, foto's, tijdstempels, onveranderlijke records" },
+      "global": { "title": "Wereldwijd klaar", "description": "TRACES NT-integratie en meertalige ondersteuning" }
+    },
+    "useCases": "Vroege pilots gebruiken Tracebud al voor:"
+  },
+  "compliance": {
+    "title": "Regelgeving",
+    "subtitle": "Gebouwd van nul af aan om aan EU-regelgeving te voldoen met directe systeemintegraties.",
+    "integrations": "Directe integraties"
+  },
+  "faq": {
+    "title": "Veelgestelde vragen",
+    "whenLaunch": "Wanneer wordt Tracebud gelanceerd?",
+    "whenLaunchAnswer": "Tracebud is in actieve pilottests. We nemen nu geselecteerde partners in. Sluit je aan bij de wachtlijst om berichten te ontvangen.",
+    "whyCommodities": "Waarom met deze goederen beginnen?",
+    "whoCommoditiesAnswer": "Koffie, cacao, palmolie, rubber, soja, rundvee en hout zijn de belangrijkste EUDR-goederen. We zullen uitbreiden op basis van vraag.",
+    "howCost": "Hoeveel kost het?",
+    "howCostAnswer": "Prijzen zijn transparant en schalen met de grootte van uw bedrijf. Gratis proefversie beschikbaar. Details gedeeld tijdens onboarding.",
+    "howLong": "Hoe lang duurt de installatie?",
+    "howLongAnswer": "De meeste coöperaties zijn binnen 48 uur na aanmelding in kaart gebracht en operationeel. Offline-first design betekent nul uitvaltijd.",
+    "support": "Welke ondersteuning is beschikbaar?",
+    "supportAnswer": "24/7 e-mailondersteuning, plus prioritaire telefonische ondersteuning voor pilotpartners. Directe toegang tot ons complianceteam."
   }
 }

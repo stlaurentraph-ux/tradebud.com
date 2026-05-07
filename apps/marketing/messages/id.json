@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Bahasa",
-    "startFreeTrial": "Mulai uji coba gratis",
-    "bookDemo": "Pesan demo",
+    "joinWaitlist": "Bergabunglah dengan daftar tunggu",
     "learnMore": "Pelajari selengkapnya",
     "contactUs": "Hubungi kami"
   },
   "hero": {
-    "title": "Berdagang dengan bebas. Lacak dengan mudah.",
-    "subtitle": "Akses pasar UE yang disederhanakan. Visibilitas lengkap rantai pasokan dari produsen hingga importer.",
-    "cta1": "Mulai uji coba gratis",
-    "cta2": "Pesan demo",
+    "eudrDeadline": "EUDR: 30 Des 2026 (besar/menengah) · 30 Juni 2027 (mikro/kecil)",
+    "headline1": "Berdagang dengan bebas.",
+    "headline2": "Lacak dengan mudah.",
+    "subheadline": "Akses pasar UE yang disederhanakan. Traceabilitas lengkap rantai pasokan dalam hari, bukan bulan.",
+    "metric1": { "value": "Hari", "label": "Bukan bulan untuk kepatuhan" },
+    "metric2": { "value": "Rantai Lengkap", "label": "Pertanian hingga pelabuhan terverifikasi" },
+    "metric3": { "value": "Layanan mandiri", "label": "Tidak perlu integrasi" },
+    "cta": { "startTrial": "Bergabunglah dengan daftar tunggu", "bookDemo": "Pelajari selengkapnya" },
     "trialInfo": "30 hari gratis. Tidak perlu kartu kredit.",
-    "earlyAdopter": "Pengguna awal mendapatkan dukungan prioritas"
+    "earlyAdopters": "Pengguna awal mendapatkan dukungan prioritas",
+    "seeHowItWorks": "Lihat cara kerjanya"
   },
   "header": {
-    "pilot": "Pilot",
-    "howItWorks": "Cara kerjanya",
-    "pricing": "Harga"
+    "for": "Untuk",
+    "personas": {
+      "producers": "Produsen",
+      "exporters": "Pengekspor",
+      "importers": "Pengimpor",
+      "countries": "Negara"
+    },
+    "nav": {
+      "pilot": "Pilot",
+      "howItWorks": "Cara kerjanya",
+      "pricing": "Harga"
+    },
+    "cta": {
+      "downloadApp": "Unduh aplikasi",
+      "bookDemo": "Pesan demo",
+      "bookDemoFull": "Pesan demo 15 menit",
+      "startTrial": "Bergabunglah dengan daftar tunggu"
+    }
   },
   "footer": {
-    "company": "Perusahaan",
-    "product": "Produk",
-    "legal": "Hukum"
+    "startMapping": "Mulai pemetaan",
+    "contactSales": "Hubungi penjualan",
+    "joinWaitlist": "Bergabunglah dengan daftar tunggu"
+  },
+  "impact": {
+    "title": "Mengapa Tracebud Bekerja",
+    "subtitle": "Dibangun dari nol untuk transparansi rantai pasokan di pasar yang diatur. Mudah digunakan, dibangun untuk diskalakan.",
+    "features": {
+      "compliance": { "title": "Kepatuhan EUDR", "description": "Dibangun untuk memenuhi peraturan Desember 2026" },
+      "farmer": { "title": "Petani Pertama", "description": "Aplikasi smartphone berfungsi offline di lapangan" },
+      "tracing": { "title": "Pelacakan Waktu Nyata", "description": "GPS, foto, stempel waktu, catatan yang tidak dapat diubah" },
+      "global": { "title": "Siap Global", "description": "Integrasi TRACES NT dan dukungan multibahasa" }
+    },
+    "useCases": "Pilot awal sudah menggunakan Tracebud untuk:"
+  },
+  "compliance": {
+    "title": "Kepatuhan Peraturan",
+    "subtitle": "Dibangun dari nol untuk memenuhi persyaratan regulasi UE dengan integrasi sistem langsung.",
+    "integrations": "Integrasi Langsung"
+  },
+  "faq": {
+    "title": "Pertanyaan yang Sering Diajukan",
+    "whenLaunch": "Kapan Tracebud akan diluncurkan?",
+    "whenLaunchAnswer": "Tracebud sedang dalam pengujian pilot aktif. Kami mendaftarkan mitra terpilih sekarang. Bergabunglah dengan daftar tunggu untuk diberitahu saat diluncurkan.",
+    "whyCommodities": "Mengapa memulai dengan komoditas ini?",
+    "whoCommoditiesAnswer": "Kopi, kakao, minyak sawit, karet, kedelai, ternak, dan kayu adalah komoditas EUDR utama. Kami akan berkembang berdasarkan permintaan.",
+    "howCost": "Berapa biayanya?",
+    "howCostAnswer": "Harga transparan dan diskalakan dengan ukuran operasi Anda. Uji coba gratis tersedia. Detail dibagikan selama onboarding.",
+    "howLong": "Berapa lama waktu yang diperlukan untuk penyiapan?",
+    "howLongAnswer": "Sebagian besar koperasi dipetakan dan beroperasi dalam 48 jam setelah pendaftaran. Desain offline-first berarti waktu henti nol.",
+    "support": "Dukungan apa yang tersedia?",
+    "supportAnswer": "Dukungan email 24/7, ditambah dukungan telepon prioritas untuk mitra pilot. Akses langsung ke tim kepatuhan kami."
   }
 }

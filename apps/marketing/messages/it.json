@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Lingua",
-    "startFreeTrial": "Inizia la prova gratuita",
-    "bookDemo": "Prenota una demo",
+    "joinWaitlist": "Iscriviti alla lista d'attesa",
     "learnMore": "Scopri di più",
     "contactUs": "Contattaci"
   },
   "hero": {
-    "title": "Commercia liberamente. Traccia facilmente.",
-    "subtitle": "L'accesso al mercato dell'UE reso semplice. Visibilità completa della catena di approvvigionamento dal produttore all'importatore.",
-    "cta1": "Inizia la prova gratuita",
-    "cta2": "Prenota una demo",
-    "trialInfo": "30 giorni gratuiti. Nessuna carta di credito richiesta.",
-    "earlyAdopter": "I primi utenti ricevono il supporto prioritario"
+    "eudrDeadline": "EUDR: 30 dic 2026 (grandi/medie) · 30 giugno 2027 (micro/piccole)",
+    "headline1": "Commercia liberamente.",
+    "headline2": "Traccia facilmente.",
+    "subheadline": "L'accesso al mercato dell'UE reso semplice. Tracciabilità completa della catena di approvvigionamento in giorni, non in mesi.",
+    "metric1": { "value": "Giorni", "label": "Non mesi per la conformità" },
+    "metric2": { "value": "Catena completa", "label": "Fattoria a porto verificato" },
+    "metric3": { "value": "Self-service", "label": "Nessuna integrazione richiesta" },
+    "cta": { "startTrial": "Iscriviti alla lista d'attesa", "bookDemo": "Scopri di più" },
+    "trialInfo": "30 giorni gratis. Nessuna carta di credito richiesta.",
+    "earlyAdopters": "I primi utenti ricevono il supporto prioritario",
+    "seeHowItWorks": "Vedi come funziona"
   },
   "header": {
-    "pilot": "Progetto pilota",
-    "howItWorks": "Come funziona",
-    "pricing": "Prezzi"
+    "for": "Per",
+    "personas": {
+      "producers": "Produttori",
+      "exporters": "Esportatori",
+      "importers": "Importatori",
+      "countries": "Paesi"
+    },
+    "nav": {
+      "pilot": "Progetto pilota",
+      "howItWorks": "Come funziona",
+      "pricing": "Prezzi"
+    },
+    "cta": {
+      "downloadApp": "Scarica l'app",
+      "bookDemo": "Prenota una demo",
+      "bookDemoFull": "Prenota demo 15 min",
+      "startTrial": "Iscriviti alla lista d'attesa"
+    }
   },
   "footer": {
-    "company": "Azienda",
-    "product": "Prodotto",
-    "legal": "Legale"
+    "startMapping": "Inizia la mappatura",
+    "contactSales": "Contatta le vendite",
+    "joinWaitlist": "Iscriviti alla lista d'attesa"
+  },
+  "impact": {
+    "title": "Perché Tracebud funziona",
+    "subtitle": "Costruito da zero per la trasparenza della catena di approvvigionamento nei mercati regolamentati. Semplice da usare, costruito per scalare.",
+    "features": {
+      "compliance": { "title": "Conformità EUDR", "description": "Costruito per rispettare i regolamenti di dicembre 2026" },
+      "farmer": { "title": "Agricoltore prima", "description": "L'app per smartphone funziona offline sul campo" },
+      "tracing": { "title": "Tracciamento in tempo reale", "description": "GPS, foto, timestamp, record immutabili" },
+      "global": { "title": "Pronto per il globo", "description": "Integrazione TRACES NT e supporto multilingue" }
+    },
+    "useCases": "I primi piloti stanno già usando Tracebud per:"
+  },
+  "compliance": {
+    "title": "Conformità normativa",
+    "subtitle": "Costruito da zero per soddisfare i requisiti normativi dell'UE con integrazioni dirette del sistema.",
+    "integrations": "Integrazioni dirette"
+  },
+  "faq": {
+    "title": "Domande frequenti",
+    "whenLaunch": "Quando verrà lanciato Tracebud?",
+    "whenLaunchAnswer": "Tracebud è in fase di test pilota attivo. Stiamo arruolando partner selezionati ora. Iscriviti alla lista d'attesa per essere notificato del lancio.",
+    "whyCommodities": "Perché iniziare con questi prodotti?",
+    "whoCommoditiesAnswer": "Caffè, cacao, olio di palma, gomma, soia, bestiame e legno sono i principali prodotti EUDR. Espanderemo in base alla domanda.",
+    "howCost": "Quanto costa?",
+    "howCostAnswer": "I prezzi sono trasparenti e si adattano alle dimensioni della tua operazione. Prova gratuita disponibile. I dettagli vengono condivisi durante l'onboarding.",
+    "howLong": "Quanto tempo richiede la configurazione?",
+    "howLongAnswer": "La maggior parte delle cooperative viene mappata e operativa entro 48 ore dall'iscrizione. Il design offline-first significa zero tempo di inattività.",
+    "support": "Quale supporto è disponibile?",
+    "supportAnswer": "Supporto email 24/7, più supporto telefonico prioritario per i partner pilota. Accesso diretto al nostro team di conformità."
   }
 }

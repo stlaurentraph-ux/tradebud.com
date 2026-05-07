@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Ngôn ngữ",
-    "startFreeTrial": "Bắt đầu dùng thử miễn phí",
-    "bookDemo": "Đặt bản demo",
+    "joinWaitlist": "Tham gia danh sách chờ",
     "learnMore": "Tìm hiểu thêm",
     "contactUs": "Liên hệ với chúng tôi"
   },
   "hero": {
-    "title": "Giao dịch tự do. Theo dõi dễ dàng.",
-    "subtitle": "Truy cập thị trường EU được đơn giản hóa. Tầm nhìn đầy đủ về chuỗi cung ứng từ nhà sản xuất đến nhà nhập khẩu.",
-    "cta1": "Bắt đầu dùng thử miễn phí",
-    "cta2": "Đặt bản demo",
+    "eudrDeadline": "EUDR: 30 tháng 12 năm 2026 (lớn/trung bình) · 30 tháng 6 năm 2027 (vi mô/nhỏ)",
+    "headline1": "Giao dịch tự do.",
+    "headline2": "Theo dõi dễ dàng.",
+    "subheadline": "Truy cập thị trường EU được đơn giản hóa. Truy xuất suất toàn bộ chuỗi cung ứng trong vài ngày, không phải hàng tháng.",
+    "metric1": { "value": "Ngày", "label": "Không phải tháng cho sự tuân thủ" },
+    "metric2": { "value": "Chuỗi toàn bộ", "label": "Trang trại đến cảng được xác minh" },
+    "metric3": { "value": "Tự phục vụ", "label": "Không cần tích hợp" },
+    "cta": { "startTrial": "Tham gia danh sách chờ", "bookDemo": "Tìm hiểu thêm" },
     "trialInfo": "30 ngày miễn phí. Không cần thẻ tín dụng.",
-    "earlyAdopter": "Những người dùng đầu tiên nhận được hỗ trợ ưu tiên"
+    "earlyAdopters": "Những người dùng sớm nhận được hỗ trợ ưu tiên",
+    "seeHowItWorks": "Xem cách hoạt động"
   },
   "header": {
-    "pilot": "Dự án thí điểm",
-    "howItWorks": "Cách hoạt động",
-    "pricing": "Giá"
+    "for": "Cho",
+    "personas": {
+      "producers": "Nhà sản xuất",
+      "exporters": "Nhà xuất khẩu",
+      "importers": "Nhà nhập khẩu",
+      "countries": "Quốc gia"
+    },
+    "nav": {
+      "pilot": "Dự án thí điểm",
+      "howItWorks": "Cách hoạt động",
+      "pricing": "Giá cả"
+    },
+    "cta": {
+      "downloadApp": "Tải xuống ứng dụng",
+      "bookDemo": "Đặt bản demo",
+      "bookDemoFull": "Đặt demo 15 phút",
+      "startTrial": "Tham gia danh sách chờ"
+    }
   },
   "footer": {
-    "company": "Công ty",
-    "product": "Sản phẩm",
-    "legal": "Pháp lý"
+    "startMapping": "Bắt đầu lập bản đồ",
+    "contactSales": "Liên hệ bộ phận bán hàng",
+    "joinWaitlist": "Tham gia danh sách chờ"
+  },
+  "impact": {
+    "title": "Tại sao Tracebud hoạt động",
+    "subtitle": "Xây dựng từ đầu để có tính minh bạch của chuỗi cung ứng trên các thị trường được quản lý. Dễ sử dụng, xây dựng để mở rộng quy mô.",
+    "features": {
+      "compliance": { "title": "Tuân thủ EUDR", "description": "Xây dựng để tuân thủ các quy định tháng 12 năm 2026" },
+      "farmer": { "title": "Nông dân trước tiên", "description": "Ứng dụng smartphone hoạt động ngoại tuyến trên cánh đồng" },
+      "tracing": { "title": "Theo dõi thời gian thực", "description": "GPS, ảnh, dấu thời gian, bản ghi không thể thay đổi" },
+      "global": { "title": "Sẵn sàng toàn cầu", "description": "Tích hợp TRACES NT và hỗ trợ đa ngôn ngữ" }
+    },
+    "useCases": "Các dự án thí điểm ban đầu đã sử dụng Tracebud cho:"
+  },
+  "compliance": {
+    "title": "Tuân thủ các quy định",
+    "subtitle": "Xây dựng từ đầu để đáp ứng các yêu cầu quy định của EU với tích hợp hệ thống trực tiếp.",
+    "integrations": "Tích hợp trực tiếp"
+  },
+  "faq": {
+    "title": "Các câu hỏi thường gặp",
+    "whenLaunch": "Khi nào Tracebud sẽ được ra mắt?",
+    "whenLaunchAnswer": "Tracebud đang trong giai đoạn thử nghiệm dự án thí điểm tích cực. Chúng tôi đang tuyển các đối tác được chọn bây giờ. Tham gia danh sách chờ để nhận thông báo khi ra mắt.",
+    "whyCommodities": "Tại sao lại bắt đầu với các hàng hóa này?",
+    "whoCommoditiesAnswer": "Cà phê, ca cao, dầu cọ, cao su, đậu tương, gia súc và gỗ là các hàng hóa EUDR chính. Chúng tôi sẽ mở rộng dựa trên nhu cầu.",
+    "howCost": "Giá bao nhiêu?",
+    "howCostAnswer": "Giá cả là minh bạch và thay đổi theo kích thước hoạt động của bạn. Có sẵn bản dùng thử miễn phí. Chi tiết được chia sẻ trong quá trình onboarding.",
+    "howLong": "Cài đặt mất bao lâu?",
+    "howLongAnswer": "Hầu hết các hợp tác xã được lập bản đồ và hoạt động trong vòng 48 giờ sau khi đăng ký. Thiết kế ngoại tuyến trước tiên có nghĩa là thời gian ngừng bằng không.",
+    "support": "Có sẵn hỗ trợ gì?",
+    "supportAnswer": "Hỗ trợ email 24/7, cộng với hỗ trợ điện thoại ưu tiên cho các đối tác dự án thí điểm. Truy cập trực tiếp vào đội tuân thủ của chúng tôi."
   }
 }

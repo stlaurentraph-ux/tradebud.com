@@ -1,27 +1,75 @@
 {
   "common": {
     "language": "Langue",
-    "startFreeTrial": "Commencer l'essai gratuit",
-    "bookDemo": "Réserver une démo",
+    "joinWaitlist": "Rejoindre la liste d'attente",
     "learnMore": "En savoir plus",
     "contactUs": "Nous contacter"
   },
   "hero": {
-    "title": "Commercez librement. Tracez facilement.",
-    "subtitle": "L'accès au marché de l'UE simplifié. Visibilité complète de la chaîne d'approvisionnement du producteur à l'importateur.",
-    "cta1": "Commencer l'essai gratuit",
-    "cta2": "Réserver une démo",
+    "eudrDeadline": "EUDR : 30 déc 2026 (grandes/moyennes) · 30 juin 2027 (micro/petites)",
+    "headline1": "Commercez librement.",
+    "headline2": "Tracez facilement.",
+    "subheadline": "L'accès au marché de l'UE simplifié. Traçabilité complète de la chaîne d'approvisionnement en jours, pas en mois.",
+    "metric1": { "value": "Jours", "label": "Pas des mois pour la conformité" },
+    "metric2": { "value": "Chaîne complète", "label": "Ferme à port vérifiée" },
+    "metric3": { "value": "Libre-service", "label": "Aucune intégration requise" },
+    "cta": { "startTrial": "Rejoindre la liste d'attente", "bookDemo": "En savoir plus" },
     "trialInfo": "30 jours gratuits. Aucune carte de crédit requise.",
-    "earlyAdopter": "Les premiers utilisateurs bénéficient du support prioritaire"
+    "earlyAdopters": "Les premiers utilisateurs bénéficient du support prioritaire",
+    "seeHowItWorks": "Voir comment ça marche"
   },
   "header": {
-    "pilot": "Projet pilote",
-    "howItWorks": "Comment ça marche",
-    "pricing": "Tarification"
+    "for": "Pour",
+    "personas": {
+      "producers": "Producteurs",
+      "exporters": "Exportateurs",
+      "importers": "Importateurs",
+      "countries": "Pays"
+    },
+    "nav": {
+      "pilot": "Pilote",
+      "howItWorks": "Comment ça marche",
+      "pricing": "Tarification"
+    },
+    "cta": {
+      "downloadApp": "Télécharger l'application",
+      "bookDemo": "Réserver une démo",
+      "bookDemoFull": "Réserver une démo de 15 min",
+      "startTrial": "Rejoindre la liste d'attente"
+    }
   },
   "footer": {
-    "company": "Entreprise",
-    "product": "Produit",
-    "legal": "Mentions légales"
+    "startMapping": "Commencer la cartographie",
+    "contactSales": "Contacter les ventes",
+    "joinWaitlist": "Rejoindre la liste d'attente"
+  },
+  "impact": {
+    "title": "Pourquoi Tracebud fonctionne",
+    "subtitle": "Construit de zéro pour la transparence de la chaîne d'approvisionnement sur les marchés réglementés. Simple d'utilisation, construit pour évoluer.",
+    "features": {
+      "compliance": { "title": "Conformité EUDR", "description": "Construit pour respecter les réglementations de décembre 2026" },
+      "farmer": { "title": "D'abord l'agriculteur", "description": "L'application smartphone fonctionne hors ligne sur le terrain" },
+      "tracing": { "title": "Traçage en temps réel", "description": "GPS, photos, horodatages, registres immuables" },
+      "global": { "title": "Prêt pour le global", "description": "Intégration TRACES NT et support multilingue" }
+    },
+    "useCases": "Les premiers pilotes utilisent déjà Tracebud pour :"
+  },
+  "compliance": {
+    "title": "Conformité réglementaire",
+    "subtitle": "Construit de zéro pour répondre aux exigences réglementaires de l'UE avec des intégrations directes du système.",
+    "integrations": "Intégrations directes"
+  },
+  "faq": {
+    "title": "Questions fréquemment posées",
+    "whenLaunch": "Quand Tracebud sera-t-il lancé ?",
+    "whenLaunchAnswer": "Tracebud est en phase de test pilote actif. Nous recrutons des partenaires sélectionnés maintenant. Rejoignez la liste d'attente pour être notifié du lancement.",
+    "whyCommodities": "Pourquoi commencer par ces produits de base ?",
+    "whoCommoditiesAnswer": "Le café, le cacao, l'huile de palme, le caoutchouc, le soja, le bétail et le bois sont les principaux produits EUDR. Nous expandrons selon la demande.",
+    "howCost": "Combien ça coûte ?",
+    "howCostAnswer": "La tarification est transparente et s'adapte à la taille de votre exploitation. Essai gratuit disponible. Détails partagés lors de l'intégration.",
+    "howLong": "Combien de temps dure la configuration ?",
+    "howLongAnswer": "La plupart des coopératives sont cartographiées et opérationnelles dans les 48 heures suivant l'inscription. Une conception hors ligne signifie zéro temps d'arrêt.",
+    "support": "Quel support est disponible ?",
+    "supportAnswer": "Support par email 24/7, plus support téléphonique prioritaire pour les partenaires pilotes. Accès direct à notre équipe de conformité."
   }
 }

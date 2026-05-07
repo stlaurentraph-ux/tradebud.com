@@ -1,27 +1,76 @@
 {
   "common": {
     "language": "ቋንቋ",
-    "startFreeTrial": "ነጻ ሙከራ ይጀምሩ",
-    "bookDemo": "ሰልፍ ይያዙ",
-    "learnMore": "ተወስኖ ይወቁ",
-    "contactUs": "ያติኩ"
+    "joinWaitlist": "ወደ ተጠበቅ ዝርዝር ይግቡ",
+    "learnMore": "ተጨማሪ ይወቁ",
+    "contactUs": "ያገኙን"
   },
   "hero": {
-    "title": "በነፃነት ይግዙ። በቀላሉ ይከታተሉ።",
-    "subtitle": "የ EU ገበያ ተደራሽነት ቀላል ተደርጓል። ከምርት ሰሪ እስከ ትርጓሚ ድረስ ሙሉ የአቅርቦት ሰንሰለት ხሪዳ።",
-    "cta1": "ነጻ ሙከራ ይጀምሩ",
-    "cta2": "ሰልፍ ይያዙ",
-    "trialInfo": "30 ቀናት ነጻ። ምንም ካሬዲት ካርድ አይሞክርም።",
-    "earlyAdopter": "ቀደምት ተጠቃሚዎች ቅድሚያ ድጋፍ ይሰጣቸዋል"
+    "eudrDeadline": "EUDR: 30 ታህሳስ 2026 (ትልቅ/መካከለኛ) · 30 ጁን 2027 (ጥቃቅን/ትንሽ)",
+    "headline1": "በነፃነት ይግዙ።",
+    "headline2": "በቀላሉ ይከታተሉ።",
+    "subheadline": "የ EU ገበያ ተደራሽነት ቀላል ተደርጓል። ከምርት ሰሪ እስከ ትርጓሚ ድረስ ሙሉ የአቅርቦት ሰንሰለት ምንዝር አይام ውስጥ።",
+    "metric1": { "value": "ዋጋ", "label": "ተቀባይነት ለወራት አይደለም" },
+    "metric2": { "value": "ሙሉ ሰንሰለት", "label": "ከሄታ እስከ ወደብ የተረጋገጠ" },
+    "metric3": { "value": "ራስ-አገልግሎት", "label": "ምንም ግቢ አያስፈልግም" },
+    "cta": { "startTrial": "ወደ ተጠበቅ ዝርዝር ይግቡ", "bookDemo": "ተጨማሪ ይወቁ" },
+    "trialInfo": "30 ቀናት ነጻ። ምንም ካሬዲት ካርድ አይቀтребуется።",
+    "earlyAdopters": "ቀደምት ተጠቃሚዎች ቅድሚያ ድጋፍ ይሰጣቸዋል",
+    "seeHowItWorks": "እንዴት እንደሚሰራ ይመልከቱ"
   },
   "header": {
-    "pilot": "ሙከራ",
-    "howItWorks": "እንዴት ይሰራል",
-    "pricing": "ዋጋ"
+    "for": "ለ",
+    "personas": {
+      "producers": "አምራቾች",
+      "exporters": "ላከወሳዎች",
+      "importers": "ከውጪ አምጪዎች",
+      "countries": "ሀገራት"
+    },
+    "nav": {
+      "pilot": "ሙከራ",
+      "howItWorks": "እንዴት ይሰራል",
+      "pricing": "ዋጋ ምልክት"
+    },
+    "cta": {
+      "downloadApp": "መተግበሪያ አውርድ",
+      "bookDemo": "ሰልፍ ይያዙ",
+      "bookDemoFull": "15 ደቂቃ ሰልፍ ይያዙ",
+      "startTrial": "ወደ ተጠበቅ ዝርዝር ይግቡ"
+    }
   },
   "footer": {
-    "company": "ኩባንያ",
-    "product": "ምርት",
-    "legal": "ህጋዊ"
+    "startMapping": "ካርታ መስራት ይጀምሩ",
+    "contactSales": "ሽያጭ ያግኙ",
+    "joinWaitlist": "ወደ ተጠበቅ ዝርዝር ይግቡ"
+  },
+  "impact": {
+    "title": "ትሬበድ ለምን ይሰራል",
+    "subtitle": "ለሚወሰን ገበያ ላይ የአቅርቦት ሰንሰለት ግልጽነት ለመስጠት ከስሪት ተፈጥሮ ተሰርቷል። ለመጠቀም ቀላል፣ ለመስፋት የተገነባ።",
+    "features": {
+      "compliance": { "title": "EUDR ተስማሚ", "description": "የታህሳስ 2026 ደንቦችን ለማሟላት የተገነባ" },
+      "farmer": { "title": "አርሶ አደር ሙሌት", "description": "ስማርት ፎን መተግበሪያ በሜዳ ላይ የተገናኘ ሳይሆን ይሰራል" },
+      "tracing": { "title": "ብክ-ጊዜ ምንዝር", "description": "GPS፣ ፎቶዎች፣ ጊዜ ምልክቶች፣ ሊቀየር የማይችሉ ሰነዶች" },
+      "global": { "title": "ዓለም ሁሉ ዋቅ", "description": "TRACES NT ግንኙነት እና ብዙ ቋንቋ ድጋፍ" }
+    },
+    "useCases": "ቀደምት ሙከራዎች ቁጥር በቁጥር Tracebud ለሚከተለውን ይጠቀማሉ:"
+  },
+  "compliance": {
+    "title": "ደንብ ማክበር",
+    "subtitle": "ለ EU ደንብ ያስፈልጋሚ ለማሟላት ዋና ስርዓት ግንኙነት ነው ከስሪት ተሰርቷል።",
+    "integrations": "ቀጥተኛ ግንኙነቶች"
+  },
+  "faq": {
+    "title": "በተደጋጋሚ የሚጠየቁ ጥያቄዎች",
+    "whenLaunch": "Tracebud መቼ ይተወጣል?",
+    "whenLaunchAnswer": "Tracebud በንቁ ሙከራ ሙከራ ውስጥ ነው። አሁን ተመረጡ አጋር ውሉ ላይ ሰፈር ያደርጋሉ። ሲተወጣ ሊሆን በማሰስ ወደ ተጠበቅ ዝርዝር ይግቡ።",
+    "whyCommodities": "ለምን በእነዚህ ሸቀቆች መጀመር?",
+    "whoCommoditiesAnswer": "ቡና፣ ካካዩ፣ የእንጆሪ ዘይት፣ ረብ፣ ማሞ፣ እንሰሳት እና እንጨት ዋና ዋና EUDR ሸቀቆች ናቸው። ፍላጎቱ ላይ ተመስርቶ እናዝናውለሙ።",
+    "howCost": "ከምን ያህል ያስወጣል?",
+    "howCostAnswer": "ዋጋ ግልፅ ነው እና ከእርስዎ ሥራ መጠን ጋር ሚዛናዊ ነው። ነጻ ሙከራ ያገኛል። ዝርዝር በመግቢያ ጊዜ ይሚጋ ይደርስ።",
+    "howLong": "ስብስቡ ምን ያህል ይወስዳል?",
+    "howLongAnswer": "አብዛኞቹ የሕብረት ስራ ቦታ ከ48 ሰዓታት ውስጥ ተስተካክለው አሁን ናቸው ሉ። የተገናኘ ሳይሆን ዲዛይን ማለት ዜሮ ተኩላ ጊዜ ነው።",
+    "support": "ምን ከስ ያገኛሉ?",
+    "supportAnswer": "24/7 ኢሜይል ድጋፍ በተጨማሪ ቅድሚያ ስልክ ድጋፍ ለሙከራ አጋር። ከነ compliance ቡድን ስለ ቀጥታ ተደራሽነት ተግቢ።"
   }
+}
 }
