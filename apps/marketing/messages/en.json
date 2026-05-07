@@ -58,5 +58,18 @@
     "title": "Regulatory Compliance",
     "subtitle": "Built from the ground up to meet EU regulatory requirements with direct system integrations.",
     "integrations": "Direct Integrations"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "whenLaunch": "When will Tracebud launch?",
+    "whenLaunchAnswer": "Tracebud is in active pilot testing. We're enrolling select partners now. Join the waitlist to be notified when we go live.",
+    "whyCommodities": "Why start with these commodities?",
+    "whoCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and wood are the primary EUDR commodities. We'll expand based on demand.",
+    "howCost": "How much does it cost?",
+    "howCostAnswer": "Pricing is transparent and scales with your operation size. Free trial available. Details shared during onboarding.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Most cooperatives are mapped and operational within 48 hours of signing up. Offline-first design means zero downtime.",
+    "support": "What support is available?",
+    "supportAnswer": "24/7 email support, plus priority phone support for pilot partners. Direct access to our compliance team."
   }
 }

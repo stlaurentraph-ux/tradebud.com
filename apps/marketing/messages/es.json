@@ -1,27 +1,76 @@
 {
   "common": {
     "language": "Idioma",
-    "startFreeTrial": "Comenzar prueba gratuita",
-    "bookDemo": "Reservar demostración",
+    "joinWaitlist": "Únete a la lista de espera",
     "learnMore": "Saber más",
     "contactUs": "Contáctenos"
   },
   "hero": {
-    "title": "Comercia libremente. Rastrea fácilmente.",
-    "subtitle": "El acceso al mercado de la UE simplificado. Visibilidad completa de la cadena de suministro desde el productor hasta el importador.",
-    "cta1": "Comenzar prueba gratuita",
-    "cta2": "Reservar demostración",
+    "eudrDeadline": "EUDR: 30 dic 2026 (grandes/medianas) · 30 jun 2027 (micro/pequeñas)",
+    "headline1": "Comercia Libremente.",
+    "headline2": "Rastrea Fácilmente.",
+    "subheadline": "El acceso al mercado de la UE simplificado. Trazabilidad completa de la cadena de suministro en días, no en meses.",
+    "metric1": { "value": "Días", "label": "No meses para cumplimiento" },
+    "metric2": { "value": "Cadena Completa", "label": "Granja a puerto verificado" },
+    "metric3": { "value": "Autoservicio", "label": "Sin integración necesaria" },
+    "cta": { "startTrial": "Únete a la lista de espera", "bookDemo": "Saber más" },
     "trialInfo": "30 días gratis. Sin tarjeta de crédito requerida.",
-    "earlyAdopter": "Los primeros usuarios obtienen soporte prioritario"
+    "earlyAdopters": "Los primeros usuarios obtienen soporte prioritario",
+    "seeHowItWorks": "Ver cómo funciona"
   },
   "header": {
-    "pilot": "Piloto",
-    "howItWorks": "Cómo funciona",
-    "pricing": "Precios"
+    "for": "Para",
+    "personas": {
+      "producers": "Productores",
+      "exporters": "Exportadores",
+      "importers": "Importadores",
+      "countries": "Países"
+    },
+    "nav": {
+      "pilot": "Piloto",
+      "howItWorks": "Cómo funciona",
+      "pricing": "Precios"
+    },
+    "cta": {
+      "downloadApp": "Descargar aplicación",
+      "bookDemo": "Reservar demostración",
+      "bookDemoFull": "Reservar demostración de 15 min",
+      "startTrial": "Únete a la lista de espera"
+    }
   },
   "footer": {
-    "company": "Empresa",
-    "product": "Producto",
-    "legal": "Legal"
+    "startMapping": "Comenzar mapeo",
+    "contactSales": "Contactar ventas",
+    "joinWaitlist": "Únete a la lista de espera"
+  },
+  "impact": {
+    "title": "Por qué funciona Tracebud",
+    "subtitle": "Construido desde cero para transparencia de cadena de suministro en mercados regulados. Simple de usar, construido para escalar.",
+    "features": {
+      "compliance": { "title": "Cumplimiento EUDR", "description": "Construido para cumplir con las regulaciones de diciembre de 2026" },
+      "farmer": { "title": "Primero el Agricultor", "description": "Aplicación de smartphone funciona sin conexión en el campo" },
+      "tracing": { "title": "Rastreo en Tiempo Real", "description": "GPS, fotos, marcas de tiempo, registros inmutables" },
+      "global": { "title": "Listo para Global", "description": "Integración TRACES NT y soporte multiidioma" }
+    },
+    "useCases": "Los Pilotos Iniciales Ya Están Usando Tracebud Para:"
+  },
+  "compliance": {
+    "title": "Cumplimiento Regulatorio",
+    "subtitle": "Construido desde cero para cumplir con los requisitos regulatorios de la UE con integraciones directas del sistema.",
+    "integrations": "Integraciones Directas"
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "whenLaunch": "¿Cuándo se lanzará Tracebud?",
+    "whenLaunchAnswer": "Tracebud está en pruebas piloto activas. Estamos inscribiendo socios seleccionados ahora. Únete a la lista de espera para ser notificado cuando se lance.",
+    "whyCommodities": "¿Por qué comenzar con estas materias primas?",
+    "whoCommoditiesAnswer": "Café, cacao, aceite de palma, caucho, soja, ganado y madera son las materias primas principales de EUDR. Expandiremos según la demanda.",
+    "howCost": "¿Cuánto cuesta?",
+    "howCostAnswer": "El precio es transparente y se escala según el tamaño de tu operación. Prueba gratuita disponible. Detalles compartidos durante la incorporación.",
+    "howLong": "¿Cuánto tiempo lleva la configuración?",
+    "howLongAnswer": "La mayoría de las cooperativas están mapeadas y operativas en 48 horas después de registrarse. El diseño sin conexión significa cero tiempo de inactividad.",
+    "support": "¿Qué soporte está disponible?",
+    "supportAnswer": "Soporte por correo electrónico 24/7, más soporte telefónico prioritario para socios piloto. Acceso directo a nuestro equipo de cumplimiento."
   }
+}
 }
