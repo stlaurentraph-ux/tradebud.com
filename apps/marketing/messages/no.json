@@ -1,0 +1,75 @@
+{
+  "common": {
+    "language": "Språk",
+    "joinWaitlist": "Bli med på ventelisten",
+    "learnMore": "Lær mer",
+    "contactUs": "Kontakt oss"
+  },
+  "hero": {
+    "eudrDeadline": "EUDR: 30 des 2026 (store/medium) · 30 juni 2027 (mikro/små)",
+    "headline1": "Handle fritt.",
+    "headline2": "Spor enkelt.",
+    "subheadline": "EU-markedstilgang forenklet. Fullstendig forsyningskjedesporing på dager, ikke måneder.",
+    "metric1": { "value": "Dager", "label": "Ikke måneder for samsvar" },
+    "metric2": { "value": "Full kjede", "label": "Gård til havn verifisert" },
+    "metric3": { "value": "Selvbetjening", "label": "Ingen integrasjon nødvendig" },
+    "cta": { "startTrial": "Bli med på ventelisten", "bookDemo": "Lær mer" },
+    "trialInfo": "30 dager gratis. Ingen kredittkort påkrevd.",
+    "earlyAdopters": "Tidlige brukere får prioritetsstøtte",
+    "seeHowItWorks": "Se hvordan det fungerer"
+  },
+  "header": {
+    "for": "For",
+    "personas": {
+      "producers": "Produsenter",
+      "exporters": "Eksportører",
+      "importers": "Importører",
+      "countries": "Land"
+    },
+    "nav": {
+      "pilot": "Pilot",
+      "howItWorks": "Hvordan det fungerer",
+      "pricing": "Priser"
+    },
+    "cta": {
+      "downloadApp": "Last ned app",
+      "bookDemo": "Bestill demo",
+      "bookDemoFull": "Bestill 15 min demo",
+      "startTrial": "Bli med på ventelisten"
+    }
+  },
+  "footer": {
+    "startMapping": "Start kartlegging",
+    "contactSales": "Kontakt salg",
+    "joinWaitlist": "Bli med på ventelisten"
+  },
+  "impact": {
+    "title": "Hvorfor Tracebud fungerer",
+    "subtitle": "Bygget fra grunnen av for gjennomsiktighet i forsyningskjeden på regulerte markeder. Enkelt å bruke, bygget for skalering.",
+    "features": {
+      "compliance": { "title": "EUDR-kompatibel", "description": "Bygget for å oppfylle desember 2026-regelverket" },
+      "farmer": { "title": "Bonde først", "description": "Smarttelefonapp fungerer offline i feltet" },
+      "tracing": { "title": "Sanntidssporing", "description": "GPS, bilder, tidsstempler, uforanderlige poster" },
+      "global": { "title": "Globalt klar", "description": "TRACES NT-integrasjon og flerspråklig støtte" }
+    },
+    "useCases": "Tidlige piloter bruker allerede Tracebud til:"
+  },
+  "compliance": {
+    "title": "Samsvar med lovgivning",
+    "subtitle": "Bygget fra grunnen av for å oppfylle EUs regulatoriske krav med direkte systemintegrasjoner.",
+    "integrations": "Direkte integrasjoner"
+  },
+  "faq": {
+    "title": "Ofte stilte spørsmål",
+    "whenLaunch": "Når blir Tracebud lansert?",
+    "whenLaunchAnswer": "Tracebud er i aktiv pilottesting. Vi melder nå utvalgte partnere. Bli med på ventelisten for å få beskjed når vi lanseres.",
+    "whyCommodities": "Hvorfor starte med disse varene?",
+    "whoCommoditiesAnswer": "Kaffe, kakao, palmeølje, gummi, soya, storfe og tre er de viktigste EUDR-varene. Vi vil utvide basert på etterspørsel.",
+    "howCost": "Hvor mye koster det?",
+    "howCostAnswer": "Prisen er gjennomsiktig og skaleres med størrelsen på operasjonen din. Gratis prøveversjon tilgjengelig. Detaljer deles under onboarding.",
+    "howLong": "Hvor lang tid tar oppsettet?",
+    "howLongAnswer": "De fleste kooperativer blir kartlagt og operasjonelle innen 48 timer etter registrering. Offline-first design betyr null nedetid.",
+    "support": "Hva slags støtte er tilgjengelig?",
+    "supportAnswer": "24/7 e-poststøtte, pluss prioritert telefonsupp for pilotpartnere. Direkte tilgang til vårt compliance-team."
+  }
+}
