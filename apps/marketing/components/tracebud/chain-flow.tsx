@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { useWaitlistDialog } from '@/components/waitlist-dialog'
 
 // Fixed 900x480 viewBox — more vertical room for arcs to breathe
 // Nodes evenly spaced at x: 120, 360, 540, 780 (inner padding)
@@ -25,6 +27,7 @@ const edge = (x: number, side: 'left' | 'right') =>
   side === 'left' ? x - NODE_R - 6 : x + NODE_R + 6
 
 export function ChainFlow() {
+  const waitlist = useWaitlistDialog();
   return (
     <section id="supply-chain" className="py-24 md:py-32 bg-white scroll-mt-20">
       <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8">
@@ -209,6 +212,22 @@ export function ChainFlow() {
           ))}
         </div>
       </div>
+
+      {/* Secondary CTA */}
+      <motion.div
+        className="flex justify-center mt-12 md:mt-16"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
+        <Button
+          onClick={() => waitlist.setOpen(true)}
+          className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-3 rounded-full text-lg"
+        >
+          Learn more
+        </Button>
+      </motion.div>
     </section>
-  )
+  );
 }

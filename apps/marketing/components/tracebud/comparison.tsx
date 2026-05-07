@@ -5,6 +5,7 @@ import { Check, FileCheck, Globe } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const complianceChecks = [
   {
@@ -59,6 +60,7 @@ const integrations = [
 ];
 
 export function Comparison() {
+  const waitlist = useWaitlistDialog();
   return (
     <section id="compliance" className="relative py-32 px-6 overflow-hidden">
       {/* Background image */}
@@ -167,15 +169,13 @@ export function Comparison() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          <Link href="/exporters">
-            <Button
-              size="lg"
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-6 md:px-10 py-5 md:py-7 text-base md:text-xl gap-2 md:gap-3 rounded-full shadow-xl w-full sm:w-auto"
-            >
-              <FileCheck className="w-5 h-5 md:w-6 md:h-6" />
-              View Compliance Dashboard
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            onClick={() => waitlist.setOpen(true)}
+            className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-lg rounded-full shadow-xl"
+          >
+            Join the waitlist
+          </Button>
         </motion.div>
       </div>
     </section>
