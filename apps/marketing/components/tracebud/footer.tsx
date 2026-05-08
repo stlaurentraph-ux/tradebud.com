@@ -26,13 +26,13 @@ const companyLinks = [
   { label: "About Us", href: "#" },
   { label: "Careers", href: "#" },
   { label: "Blog", href: "#" },
-  { label: "Contact", href: "#" },
+  { label: "Contact", href: "mailto:hello@tracebud.com" },
 ];
 
 const legalLinks = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Data Processing", href: "#" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Data Processing", href: "/privacy" },
 ];
 
 export function Footer() {
@@ -156,21 +156,25 @@ export function Footer() {
           </div>
           <div className="flex justify-center md:justify-end gap-3">
             <a
-              href="#"
+              href="mailto:hello@tracebud.com"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="Email"
             >
               <Mail className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </a>
             <a
-              href="#"
+              href="https://linkedin.com/company/tracebud"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="LinkedIn"
             >
               <Linkedin className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </a>
             <a
-              href="#"
+              href="https://twitter.com/tracebud"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="Twitter"
             >
