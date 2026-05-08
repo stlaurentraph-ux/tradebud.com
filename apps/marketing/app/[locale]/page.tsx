@@ -8,6 +8,7 @@ import { FAQ } from "@/components/tracebud/faq";
 import { Impact } from "@/components/tracebud/impact";
 import { Footer } from "@/components/tracebud/footer";
 import { ExitIntentModal } from "@/components/exit-intent-modal";
+import { FloatingMobileCTA } from "@/components/floating-mobile-cta";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
       <Impact />
       <Footer />
       <ExitIntentModal />
+      <FloatingMobileCTA />
     </main>
   );
 }

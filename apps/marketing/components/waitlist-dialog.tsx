@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -103,6 +104,7 @@ export function WaitlistDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
   const [role, setRole] = useState("");
   const [roleOther, setRoleOther] = useState("");
@@ -161,6 +163,12 @@ export function WaitlistDialog({
       }
 
       setSubmitted(true);
+      
+      // Redirect to thank-you page after 2 seconds
+      setTimeout(() => {
+        const email = (formData.get("email") as string).trim();
+        router.push(`/thank-you?email=${encodeURIComponent(email)}`);
+      }, 2000);
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
