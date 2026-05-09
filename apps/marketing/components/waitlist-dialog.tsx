@@ -117,6 +117,42 @@ export function WaitlistDialog({
     e.preventDefault();
     setError(null);
 
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    const email = (formData.get("email") as string).trim();
+    const firstName = (formData.get("firstName") as string).trim();
+    const lastName = (formData.get("lastName") as string).trim();
+    const organisation = (formData.get("organisation") as string).trim();
+
+    // Email validation
+    if (!email) {
+      setError("Email is required.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Name validation
+    if (!firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+    if (!lastName.trim()) {
+      setError("Last name is required.");
+      return;
+    }
+
+    // Organization validation
+    if (!organisation) {
+      setError("Organization is required.");
+      return;
+    }
+
+    // Role validation
     if (!role) {
       setError("Please select your role.");
       return;
@@ -125,10 +161,14 @@ export function WaitlistDialog({
       setError("Please describe your role.");
       return;
     }
+
+    // Commodity validation
     if (!commodity) {
       setError("Please select a commodity.");
       return;
     }
+
+    // Producer range validation
     if (!producerRange) {
       setError("Please select the number of producers.");
       return;
@@ -136,21 +176,17 @@ export function WaitlistDialog({
 
     setIsSubmitting(true);
 
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-
     const payload = {
-      email: (formData.get("email") as string).trim(),
-      first_name: (formData.get("firstName") as string).trim(),
-      last_name: (formData.get("lastName") as string).trim(),
-      organisation: (formData.get("organisation") as string).trim(),
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      organisation,
       role: role === "Other" ? roleOther.trim() : role,
       commodity,
       producer_range: producerRange,
     };
 
     try {
-      // Submit to API route
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,7 +202,6 @@ export function WaitlistDialog({
       
       // Redirect to thank-you page after 2 seconds
       setTimeout(() => {
-        const email = (formData.get("email") as string).trim();
         router.push(`/thank-you?email=${encodeURIComponent(email)}`);
       }, 2000);
     } catch (err: any) {

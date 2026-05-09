@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   creator: 'Tracebud',
   publisher: 'Tracebud',
   metadataBase: new URL('https://tracebud.com'),
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Tracebud',
+  },
   alternates: {
     canonical: '/',
     languages: {

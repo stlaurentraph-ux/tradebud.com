@@ -27,7 +27,6 @@ export default function DemoPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // In production, this would submit to a backend/calendar service
-    console.log("Demo request:", formData);
     setSubmitted(true);
   };
 
