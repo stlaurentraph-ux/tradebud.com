@@ -1,15 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { createContact, listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { Plus, Upload } from 'lucide-react';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
 const CONTACT_TABLE_COLUMNS = [
@@ -27,16 +27,7 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContactStatus | 'all'>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    organization: '',
-    country: '',
-  });
   const [columnWidths, setColumnWidths] = useState<Record<ContactTableColumnKey, number>>(
     CONTACT_TABLE_COLUMNS.reduce(
       (acc, column) => ({ ...acc, [column.key]: column.defaultWidth }),
@@ -77,27 +68,6 @@ export default function ContactsPage() {
       blocked: contacts.filter((contact) => contact.status === 'blocked').length,
     };
   }, [contacts]);
-
-  const handleCreate = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      await createContact({
-        full_name: draft.full_name,
-        email: draft.email,
-        phone: draft.phone || null,
-        organization: draft.organization || null,
-        country: draft.country || null,
-      });
-      setDraft({ full_name: '', email: '', phone: '', organization: '', country: '' });
-      setIsDialogOpen(false);
-      await refreshContacts();
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Failed to create contact.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleStatusChange = async (id: string, status: ContactStatus) => {
     try {
@@ -151,30 +121,20 @@ export default function ContactsPage() {
             ))}
           </select>
           <PermissionGate permission="contacts:create">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Add Contact</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add contact</DialogTitle>
-                  <DialogDescription>Create or upsert a contact inside your tenant CRM.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div><Label>Full name</Label><Input value={draft.full_name} onChange={(e) => setDraft((p) => ({ ...p, full_name: e.target.value }))} /></div>
-                  <div><Label>Email</Label><Input value={draft.email} onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))} /></div>
-                  <div><Label>Phone</Label><Input value={draft.phone} onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))} /></div>
-                  <div><Label>Organization</Label><Input value={draft.organization} onChange={(e) => setDraft((p) => ({ ...p, organization: e.target.value }))} /></div>
-                  <div><Label>Country</Label><Input value={draft.country} onChange={(e) => setDraft((p) => ({ ...p, country: e.target.value }))} placeholder="e.g. BR" /></div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCreate} disabled={saving || !draft.full_name || !draft.email}>
-                    {saving ? 'Saving...' : 'Save contact'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline">
+                <Link href="/contacts/add?mode=csv">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import CSV
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link href="/contacts/add">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Contact
+                </Link>
+              </Button>
+            </div>
           </PermissionGate>
         </div>
 
