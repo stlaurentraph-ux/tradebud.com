@@ -143,6 +143,10 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
   const atRiskOrgs = mockSponsoredOrgs.filter((org) => org.status === 'at_risk').length;
   const activeCampaigns = mockCampaigns.filter((c) => c.status === 'RUNNING').length;
   const pendingResponses = mockCampaigns.reduce((sum, c) => sum + c.responses.pending, 0);
+  const isVirginTenant = 
+    metrics.total_packages === 0 && 
+    metrics.total_plots === 0 && 
+    metrics.total_farmers === 0;
 
   const getOrgStatusColor = (status: string) => {
     switch (status) {
@@ -172,6 +176,27 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your sponsor workspace</CardTitle>
+            <CardDescription>
+              No sponsored organizations have been connected yet. Create your first data request campaign to onboard cooperatives and begin collecting compliance data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/requests">Create first campaign</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/farmers">Connect organizations</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <span className="sr-only">
         Network metrics snapshot: {metrics.total_packages} packages, {metrics.total_plots} plots (
         {metrics.compliant_plots} compliant), {metrics.total_farmers} farmers.

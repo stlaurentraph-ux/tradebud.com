@@ -28,9 +28,31 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
   const verificationRate = metrics.total_plots > 0 
     ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
     : 0;
+  const isVirginTenant = metrics.total_plots === 0 && metrics.total_farmers === 0;
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-teal-200 bg-teal-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your cooperative workspace</CardTitle>
+            <CardDescription>
+              No demo data is preloaded. Complete onboarding to register your first farmers, map plot boundaries, and begin compliance verification.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/farmers">Add first farmer</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/plots">Register first plot</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Primary Action Banner */}
       <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50">
         <CardContent className="flex items-center justify-between p-6">
