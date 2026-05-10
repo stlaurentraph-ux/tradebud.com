@@ -23,6 +23,8 @@ import {
 } from '@/features/api/postPlot';
 import { loadPendingSyncActions } from '@/features/state/persistence';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { validateHarvestKg } from '@/features/validation/validators';
+import { logError } from '@/features/errors/ErrorLogger';
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
@@ -336,7 +338,14 @@ export default function HarvestsScreen() {
                 if (!farmer || !selectedPlotId || !canRecord) return;
                 setMessage(null);
                 try {
-                  await postHarvestToBackend({ farmerId: farmer.id, plotId: selectedPlotId, kg: numericWeight });
+                  // Validate harvest weight before submission
+                  const validation = validateHarvestKg(weightInput);
+                  if (!validation.ok) {
+                    setMessage(validation.error);
+                    return;
+                  }
+
+                  await postHarvestToBackend({ farmerId: farmer.id, plotId: selectedPlotId, kg: validation.value });
                   const voucherRows = await fetchVouchersForFarmer(farmer.id);
                   setVouchers(voucherRows ?? []);
                   setWeightInput('');
@@ -345,7 +354,8 @@ export default function HarvestsScreen() {
                   setShowHarvestLogged(true);
                   setMessage(t('harvest_recorded_msg'));
                 } catch (e) {
-                  setMessage(e instanceof Error ? e.message : String(e));
+                  const error = logError(e, { context: 'harvest_submission', plotId: selectedPlotId });
+                  setMessage(error.message);
                 }
               }}
             >

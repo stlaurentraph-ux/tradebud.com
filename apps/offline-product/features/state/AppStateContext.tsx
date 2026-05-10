@@ -1,3 +1,16 @@
+/**
+ * AppStateContext (DEPRECATED - For backward compatibility only)
+ *
+ * This context is maintained for backward compatibility. New code should use:
+ * - useFarmer() for farmer profile state
+ * - usePlots() for plots state
+ *
+ * Rationale: Splitting state into separate contexts improves performance by
+ * reducing unnecessary re-renders when only one part of state changes.
+ *
+ * See STATE_MIGRATION_GUIDE.md for migration instructions.
+ */
+
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { hydrateSyncAuthFromSettings } from '@/features/api/postPlot';
 import {
@@ -9,6 +22,8 @@ import {
   persistPlots,
   saveFarmerProfilePhotoUri,
 } from './persistence';
+import { useFarmer } from './FarmerContext';
+import { usePlots } from './PlotsContext';
 
 export type Role = 'farmer';
 
@@ -226,11 +241,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * DEPRECATED: Use useFarmer() and usePlots() instead.
+ *
+ * This hook provides backward compatibility by combining both split contexts.
+ * Performance impact: Re-renders when EITHER farmer OR plots change.
+ * New code should use useFarmer() and usePlots() separately.
+ *
+ * @deprecated Use useFarmer() and usePlots() instead
+ */
 export function useAppState() {
-  const ctx = useContext(AppStateContext);
-  if (!ctx) {
-    throw new Error('useAppState must be used within AppStateProvider');
-  }
-  return ctx;
+  const { farmer, setFarmer, updateFarmerProfilePhoto } = useFarmer();
+  const { plots, addPlot, renamePlot, updatePlot, removePlot } = usePlots();
+
+  return {
+    farmer,
+    plots,
+    setFarmer,
+    updateFarmerProfilePhoto,
+    addPlot: (input: Omit<any, 'id' | 'farmerId' | 'createdAt'>) =>
+      farmer ? addPlot(input, farmer.id) : undefined,
+    renamePlot,
+    updatePlot: (plotId: string, patch: Partial<any>) => updatePlot(plotId, patch, farmer?.id),
+    removePlot: (plotId: string) => removePlot(plotId, farmer?.id),
+  };
 }
 
