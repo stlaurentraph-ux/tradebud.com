@@ -4774,7 +4774,44 @@ Append-only session log.
 - Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/requests/requests.decisions.api.int.spec.ts` (pass, 4/4).
 - Blockers: None.
 - Next step: optional abuse-path/rate-limit hardening and tests for public decision-intent endpoint (`/v1/public/requests/campaigns/decision-intent`).
+
+### 2026-04-22 (execution: tenant role ownership permission alignment)
+- Focus: align tenant dashboard permissions and role messaging with agreed ownership split (cooperative nuance preserved, importer final filing owner).
+- Files changed: `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/components/dashboards/exporter-dashboard.tsx`, `apps/dashboard-product/components/dashboards/importer-dashboard.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - moved filing submit capability to importer Tier 3 (`packages:submit_traces`)
+  - removed filing submit from exporter/cooperative Tier 2 matrix
+  - removed importer `harvests:approve_exception` access to keep harvest exception ownership upstream
+  - preserved cooperative `requests:create`/`requests:send` due member-coordination model.
+- UX alignment: updated exporter dashboard copy to readiness/handoff framing and importer dashboard identity to final compliance owner with filing-oriented CTA text.
+- Verification: `cd apps/dashboard-product && npm run test -- app/page.test.tsx` (pass, 3/3).
+- Blockers: None.
+- Next step: optional backend endpoint policy assertions to guarantee role-permission boundary parity for filing actions.
 - Next step: add targeted requests service tests for target-to-contact sync behavior and status preservation edge cases.
+
+### 2026-04-22 (execution: filing endpoint role-policy assertions)
+- Focus: harden backend role ownership boundary so filing submission fails closed outside importer/brand ownership.
+- Files changed: `tracebud-backend/src/integrations/eudr.controller.ts`, `tracebud-backend/src/integrations/eudr.controller.spec.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - switched `POST /v1/integrations/eudr/dds` role gate from exporter to importer/brand owner roles (`compliance_manager`, `admin`).
+  - expanded `GET /v1/integrations/eudr/dds/status` visibility to include importer/brand owner role while keeping exporter/agent read access.
+  - updated unit tests to assert exporter denial on filing submit and importer/brand acceptance paths.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/eudr.controller.spec.ts` (pass, 15/15).
+- Blockers: None.
+- Next step: optional HTTP integration test for `/v1/integrations/eudr/dds` role matrix (`401/403/200`) through full Nest guard stack.
+
+### 2026-04-22 (execution: filing endpoint HTTP role matrix)
+- Focus: lock importer filing ownership through full Nest auth-guard/controller HTTP path.
+- Files changed: `tracebud-backend/src/integrations/eudr.dds.api.int.spec.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added integration matrix for `POST /v1/integrations/eudr/dds`:
+    - `401` missing bearer token
+    - `403` authenticated exporter role denied
+    - `201` authenticated importer/brand owner role accepted.
+  - test harness uses real `SupabaseAuthGuard` flow via mocked Supabase client responses to validate runtime guard outcomes.
+- Verification: `cd tracebud-backend && npm run test:integration -- --runTestsByPath src/integrations/eudr.dds.api.int.spec.ts` (pass, 3/3).
+- Blockers: None.
+- Next step: optional OpenAPI operation-level role note update for `/v1/integrations/eudr/dds` ownership semantics.
 
 ### 2026-04-22 (execution: draft edit endpoint + CRM suggested targets + contacts table UI)
 - Focus: make draft campaign actions functional and improve CRM usability for operators.

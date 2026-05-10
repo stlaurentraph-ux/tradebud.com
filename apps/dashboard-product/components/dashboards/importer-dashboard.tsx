@@ -30,31 +30,9 @@ interface ImporterDashboardProps {
 export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
   const pendingReview = (metrics.packages_by_status?.READY || 0) + (metrics.packages_by_status?.ON_HOLD || 0);
   const approvedPackages = (metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0);
-  const isVirginTenant = metrics.total_packages === 0 && metrics.total_plots === 0;
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-emerald-200 bg-emerald-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your importer workspace</CardTitle>
-            <CardDescription>
-              This workspace starts empty. Complete onboarding to connect exporters, review incoming DDS packages, and track compliance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/requests" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
-                Review campaign requests
-              </Link>
-              <Link href="/compliance" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
-                Open compliance queue
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
       {/* Status Overview Banner */}
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="flex items-center justify-between p-6">
@@ -65,8 +43,8 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
             </p>
           </div>
           <Badge variant="outline" className="border-blue-300 bg-blue-100 text-blue-700">
-            <Eye className="mr-1 h-3 w-3" />
-            Read-Only Access
+            <ShieldCheck className="mr-1 h-3 w-3" />
+            Final compliance owner
           </Badge>
         </CardContent>
       </Card>
@@ -201,14 +179,14 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/compliance">
+          <Link href="/packages">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
                 <ShieldCheck className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Compliance Status</h4>
-                <p className="text-sm text-muted-foreground">Review verification results</p>
+                <h4 className="font-semibold">Prepare DDS Filing</h4>
+                <p className="text-sm text-muted-foreground">Approve and submit to EU workflow</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>

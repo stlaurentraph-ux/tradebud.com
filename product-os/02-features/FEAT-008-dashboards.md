@@ -389,3 +389,23 @@ Done (TB-V16-008 / FEAT-008)
   - response includes `last_synced_at` and recipient-level decision events (`accept`/`refuse`, timestamp, source).
 - Added dashboard proxy route for timeline retrieval:
   - `GET /api/requests/campaigns/:id/decisions`
+
+## 2026-04-22 role ownership permission alignment slice
+
+- Updated role-to-permission ownership to align filing responsibilities with tenant model:
+  - removed `packages:submit_traces` from Tier 2 exporter/cooperative matrix
+  - added `packages:submit_traces` to Tier 3 importer/brand matrix
+  - removed `harvests:approve_exception` from Tier 3 importer/brand matrix
+- Updated dashboard role messaging to match ownership semantics:
+  - Exporter dashboard copy now frames readiness as importer handoff readiness.
+  - Importer dashboard now labels tenant as final compliance owner and surfaces filing-oriented CTA copy.
+- Preserved cooperative nuance: cooperative request orchestration (`requests:create` / `requests:send`) remains enabled for member coordination.
+
+## 2026-04-22 filing endpoint server-policy assertion slice
+
+- Enforced fail-closed filing ownership at backend `POST /v1/integrations/eudr/dds`:
+  - exporters/cooperatives are now explicitly denied filing submit.
+  - importer/brand ownership is enforced through `compliance_manager`/`admin` role gate.
+- Expanded read visibility for filing status endpoint (`GET /v1/integrations/eudr/dds/status`) to include importer/brand owner role while preserving exporter/agent operator access.
+- Added/updated controller unit assertions to lock new boundary behavior and prevent future regression toward exporter-side filing submission.
+- Added HTTP integration role-matrix coverage (`401 missing token`, `403 exporter forbidden`, `201 importer/brand owner success`) to verify guard + controller behavior end-to-end on `POST /v1/integrations/eudr/dds`.
