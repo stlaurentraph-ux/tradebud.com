@@ -23,6 +23,7 @@ import {
   Scale,
   Building2,
   Check,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   History,
   Send,
   Scale,
+  Zap,
 };
 
 interface Tenant {
