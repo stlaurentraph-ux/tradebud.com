@@ -79,6 +79,81 @@
   --sidebar-muted:            rgba(255,255,255,0.55);
 }
 
+/* ── Dark Mode Theme ─────────────────────────────────────── */
+.dark {
+  /* ── Neutral UI Shell ───────────────────────────────────── */
+  --background:          #0F1419;   /* Deep charcoal canvas */
+  --foreground:          #E7E9EA;   /* Off-white text */
+
+  --card:                #16181C;
+  --card-foreground:     #E7E9EA;
+
+  --popover:             #16181C;
+  --popover-foreground:  #E7E9EA;
+
+  /* ── Brand Actions ──────────────────────────────────────── */
+  --primary:             #10B981;   /* Emerald — more visible in dark */
+  --primary-foreground:  #0F1419;
+
+  --secondary:           #1A2E26;   /* Dark emerald surface tint */
+  --secondary-foreground:#10B981;
+
+  /* ── Muted / Subtle ─────────────────────────────────────── */
+  --muted:               #1E2328;
+  --muted-foreground:    #71767B;
+
+  /* ── Accent (CTAs, badges, links) ───────────────────────── */
+  --accent:              #1A2E26;
+  --accent-foreground:   #34D399;
+
+  /* ── Destructive ────────────────────────────────────────── */
+  --destructive:         #F87171;
+  --destructive-foreground: #0F1419;
+
+  /* ── Forms ──────────────────────────────────────────────── */
+  --border:              #2F3336;
+  --input:               #1E2328;
+  --ring:                #536471;
+
+  /* ── Status / Data Colors ───────────────────────────────── */
+  --chart-1:             #34D399;   /* Emerald-400 */
+  --chart-2:             #60A5FA;   /* Blue-400 */
+  --chart-3:             #FBBF24;   /* Amber-400 */
+  --chart-4:             #F87171;   /* Red-400 */
+  --chart-5:             #D2A679;   /* Mountain Clay light */
+
+  /* ── Severity Colors (per UX_POLISH_SPECIFICATION) ──────── */
+  --severity-blocking-bg:       #450A0A;   /* red-950 */
+  --severity-blocking-text:     #FCA5A5;   /* red-300 */
+  --severity-blocking-border:   #DC2626;   /* red-600 */
+  --severity-warning-bg:        #451A03;   /* amber-950 */
+  --severity-warning-text:      #FCD34D;   /* amber-300 */
+  --severity-warning-border:    #D97706;   /* amber-600 */
+  --severity-info-bg:           #172554;   /* blue-950 */
+  --severity-info-text:         #93C5FD;   /* blue-300 */
+  --severity-info-border:       #2563EB;   /* blue-600 */
+  --severity-success-bg:        #052E16;   /* emerald-950 */
+  --severity-success-text:      #6EE7B7;   /* emerald-300 */
+  --severity-success-border:    #059669;   /* emerald-600 */
+
+  /* ── SLA Countdown Colors ───────────────────────────────── */
+  --sla-overdue:         #F87171;   /* red-400 */
+  --sla-urgent:          #FBBF24;   /* amber-400 */
+  --sla-warning:         #FACC15;   /* yellow-400 */
+  --sla-healthy:         #34D399;   /* emerald-400 */
+
+  /* ── Sidebar — Darker variant ───────────────────────────── */
+  --sidebar:                  #0A2E23;
+  --sidebar-foreground:       #E7E9EA;
+  --sidebar-border:           rgba(255,255,255,0.06);
+  --sidebar-accent:           rgba(255,255,255,0.08);
+  --sidebar-accent-foreground:#E7E9EA;
+  --sidebar-ring:             #34D399;
+  --sidebar-primary:          #34D399;
+  --sidebar-primary-foreground:#0A2E23;
+  --sidebar-muted:            rgba(255,255,255,0.45);
+}
+
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;

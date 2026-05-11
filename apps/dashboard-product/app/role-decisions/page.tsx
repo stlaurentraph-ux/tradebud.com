@@ -75,12 +75,8 @@ export default function RoleDecisionsPage() {
   );
 
   const handleManualClassify = () => {
-    // In production, this would call the API
-    console.log('[v0] Manual classification:', {
-      decision: selectedDecision,
-      newRole: selectedClassification,
-      notes: classificationNotes,
-    });
+    // In production, this would call the API with:
+    // { decision: selectedDecision, newRole: selectedClassification, notes: classificationNotes }
     setClassifyDialogOpen(false);
     setSelectedDecision(null);
     setClassificationNotes('');

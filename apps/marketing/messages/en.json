@@ -1,0 +1,75 @@
+{
+  "common": {
+    "language": "Language",
+    "joinWaitlist": "Join the waitlist",
+    "learnMore": "Learn More",
+    "contactUs": "Contact Us"
+  },
+  "hero": {
+    "eudrDeadline": "EUDR: Dec 30, 2026 (large/medium) · Jun 30, 2027 (micro/small)",
+    "headline1": "Trade Freely.",
+    "headline2": "Trace Easily.",
+    "subheadline": "EU market access made simple. Full supply chain traceability in days, not months.",
+    "metric1": { "value": "Days", "label": "Not months to compliance" },
+    "metric2": { "value": "Full Chain", "label": "Farm to port verified" },
+    "metric3": { "value": "Self-serve", "label": "No integration needed" },
+    "cta": { "startTrial": "Join the waitlist", "bookDemo": "Learn more" },
+    "trialInfo": "30 days free. No credit card required.",
+    "earlyAdopters": "Early adopters get priority support",
+    "seeHowItWorks": "See how it works"
+  },
+  "header": {
+    "for": "For",
+    "personas": {
+      "producers": "Producers",
+      "exporters": "Exporters",
+      "importers": "Importers",
+      "countries": "Countries"
+    },
+    "nav": {
+      "pilot": "Pilot",
+      "howItWorks": "How It Works",
+      "pricing": "Pricing"
+    },
+    "cta": {
+      "downloadApp": "Download App",
+      "bookDemo": "Book Demo",
+      "bookDemoFull": "Book 15-min Demo",
+      "startTrial": "Join the waitlist"
+    }
+  },
+  "footer": {
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Join the waitlist"
+  },
+  "impact": {
+    "title": "Why Tracebud Works",
+    "subtitle": "Purpose-built for supply chain transparency in regulated markets. Simple to use, built to scale.",
+    "features": {
+      "compliance": { "title": "EUDR Compliant", "description": "Built to meet December 2026 regulations" },
+      "farmer": { "title": "Farmer First", "description": "Smartphone app works offline in the field" },
+      "tracing": { "title": "Real-time Tracing", "description": "GPS, photos, timestamps, immutable records" },
+      "global": { "title": "Global Ready", "description": "TRACES NT integration and multi-language support" }
+    },
+    "useCases": "Early Pilots Are Already Using Tracebud For:"
+  },
+  "compliance": {
+    "title": "Regulatory Compliance",
+    "subtitle": "Built from the ground up to meet EU regulatory requirements with direct system integrations.",
+    "integrations": "Direct Integrations"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "whenLaunch": "When will Tracebud launch?",
+    "whenLaunchAnswer": "Tracebud is in active pilot testing. We're enrolling select partners now. Join the waitlist to be notified when we go live.",
+    "whyCommodities": "Why start with these commodities?",
+    "whoCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and wood are the primary EUDR commodities. We'll expand based on demand.",
+    "howCost": "How much does it cost?",
+    "howCostAnswer": "Pricing is transparent and scales with your operation size. Free trial available. Details shared during onboarding.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Most cooperatives are mapped and operational within 48 hours of signing up. Offline-first design means zero downtime.",
+    "support": "What support is available?",
+    "supportAnswer": "24/7 email support, plus priority phone support for pilot partners. Direct access to our compliance team."
+  }
+}

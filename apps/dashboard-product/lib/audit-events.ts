@@ -438,13 +438,14 @@ export async function emitAuditEvent<T>({
   payload,
 }: EmitAuditEventParams<T>): Promise<void> {
   // In production, this would call the audit API
-  console.log('[v0] Audit event emitted:', {
+  // Audit event data prepared for API:
+  const _auditPayload = {
     event_type,
     entity_type,
     entity_id,
     payload,
     timestamp: new Date().toISOString(),
-  });
+  };
 
   // Example API call:
   // await fetch('/api/audit-events', {

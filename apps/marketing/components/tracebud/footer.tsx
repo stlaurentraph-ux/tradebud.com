@@ -5,6 +5,7 @@ import { Mail, Linkedin, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const platformLinks = [
   { label: "Pilot program", href: "/pilot" },
@@ -25,16 +26,17 @@ const companyLinks = [
   { label: "About Us", href: "#" },
   { label: "Careers", href: "#" },
   { label: "Blog", href: "#" },
-  { label: "Contact", href: "#" },
+  { label: "Contact", href: "mailto:hello@tracebud.com" },
 ];
 
 const legalLinks = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Data Processing", href: "#" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Data Processing", href: "/privacy" },
 ];
 
 export function Footer() {
+  const waitlist = useWaitlistDialog();
   return (
     <footer className="relative bg-[var(--forest-canopy)] text-white py-12 md:py-24 px-4 md:px-6 overflow-hidden">
       {/* Background image */}
@@ -72,20 +74,12 @@ export function Footer() {
               The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Link href="/farmers">
-                <Button
-                  size="default"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold text-sm md:text-base px-5 md:px-8 rounded-full w-full sm:w-auto"
-                >
-                  Start Mapping
-                </Button>
-              </Link>
               <Button
                 size="default"
-                variant="outline"
-                className="border-2 border-white/50 text-white hover:bg-white/10 bg-transparent font-bold text-sm md:text-base px-5 md:px-8 rounded-full"
+                onClick={() => waitlist.setOpen(true)}
+                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold text-sm md:text-base px-5 md:px-8 rounded-full w-full sm:w-auto"
               >
-                Contact Sales
+                Join the waitlist
               </Button>
             </div>
           </div>
@@ -162,21 +156,25 @@ export function Footer() {
           </div>
           <div className="flex justify-center md:justify-end gap-3">
             <a
-              href="#"
+              href="mailto:hello@tracebud.com"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="Email"
             >
               <Mail className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </a>
             <a
-              href="#"
+              href="https://linkedin.com/company/tracebud"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="LinkedIn"
             >
               <Linkedin className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </a>
             <a
-              href="#"
+              href="https://twitter.com/tracebud"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
               aria-label="Twitter"
             >
@@ -186,5 +184,6 @@ export function Footer() {
         </div>
       </div>
     </footer>
+    <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
   );
 }

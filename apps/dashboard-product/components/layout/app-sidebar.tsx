@@ -121,7 +121,7 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col" style={{ backgroundColor: '#064E3B' }}>
+    <aside className="flex h-screen w-64 flex-col bg-sidebar">
 
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-5 flex-shrink-0">
@@ -180,7 +180,9 @@ export function AppSidebar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-white/60 hover:bg-white/10 hover:text-white"
+                    className="h-7 w-7 text-white/60 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    aria-label="Switch user role"
+                    title="Switch role"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
@@ -233,7 +235,7 @@ export function AppSidebar() {
       )}
 
       {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-1">
+      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Main navigation">
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
           Navigation
         </p>
@@ -251,12 +253,14 @@ export function AppSidebar() {
               key={item.name}
               href={withSponsorView(item.href)}
               data-onboarding={ONBOARDING_NAV_KEY_BY_NAME[item.name] ? `nav-${ONBOARDING_NAV_KEY_BY_NAME[item.name]}` : undefined}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
+                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
                 isActive
                   ? 'bg-white/20 text-white shadow-sm'
                   : 'text-white/75 hover:bg-white/10 hover:text-white'
               )}
+              aria-label={item.name}
             >
               <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
               {item.name}
@@ -278,12 +282,14 @@ export function AppSidebar() {
                 <Link
                   key={item.name}
                   href={withSponsorView(item.href)}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5',
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
                     isActive
                       ? 'bg-white/20 text-white shadow-sm'
                       : 'text-white/75 hover:bg-white/10 hover:text-white'
                   )}
+                  aria-label={item.name}
                 >
                   <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
                   {item.name}
@@ -298,7 +304,10 @@ export function AppSidebar() {
       <div className="flex-shrink-0 p-3 border-t border-white/10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/10">
+            <button 
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              aria-label={`User menu for ${user?.name || 'Guest'}`}
+            >
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarFallback className="bg-emerald-500 text-white text-xs font-semibold">
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -312,7 +321,7 @@ export function AppSidebar() {
                   {user?.email || 'Not logged in'}
                 </span>
               </div>
-              <ChevronDown className="h-4 w-4 flex-shrink-0 text-white/40" />
+              <ChevronDown className="h-4 w-4 flex-shrink-0 text-white/40" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

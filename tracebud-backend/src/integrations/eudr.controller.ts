@@ -208,7 +208,11 @@ export class EudrController {
   ) {
     const tenantId = this.getTenantClaim(req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
-    const role = this.requireRole(req, ['exporter'], 'Only exporters can submit EUDR DDS payloads');
+    const role = this.requireRole(
+      req,
+      ['compliance_manager', 'admin'],
+      'Only importers/brands can submit EUDR DDS payloads',
+    );
     const statement = body?.statement;
     const idempotencyKey = body?.idempotencyKey?.trim();
 
@@ -290,7 +294,11 @@ export class EudrController {
   async getDdsStatus(@Query('referenceNumber') referenceNumberRaw: string | undefined, @Req() req: any) {
     const tenantId = this.getTenantClaim(req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
-    const role = this.requireRole(req, ['exporter', 'agent'], 'Only exporters or agents can read EUDR DDS status');
+    const role = this.requireRole(
+      req,
+      ['exporter', 'agent', 'compliance_manager', 'admin'],
+      'Only exporters, importers/brands, agents, or admins can read EUDR DDS status',
+    );
     const referenceNumber = referenceNumberRaw?.trim();
     if (!referenceNumber) {
       throw new BadRequestException('referenceNumber is required');
