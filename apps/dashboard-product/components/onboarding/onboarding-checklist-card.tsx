@@ -181,18 +181,6 @@ export function OnboardingChecklistCard() {
       done: firstOverviewStepKey ? Boolean(completedSteps[firstOverviewStepKey]) : phase === 'complete',
     },
     {
-      key: 'add_producers',
-      label: isImporter ? 'Build network' : isExporter ? 'Add producers' : 'Build member directory',
-      description: isImporter
-        ? 'Add counterpart contacts so campaign and request workflows route correctly.'
-        : isExporter
-          ? 'Build your producer directory so traceability links and requests route correctly.'
-          : 'Create cooperative member records for consent, portability, and aggregation workflows.',
-      ctaHref: isImporter ? '/contacts' : isExporter ? '/farmers' : '/contacts',
-      ctaLabel: isImporter ? 'Go to network' : isExporter ? 'Go to producers' : 'Go to members',
-      done: hasAction('contacts_uploaded'),
-    },
-    {
       key: 'launch_first_workflow',
       label: isImporter ? 'Launch campaign' : isExporter ? 'Start campaign' : 'Start a campaign',
       description: isImporter
@@ -203,6 +191,18 @@ export function OnboardingChecklistCard() {
       ctaHref: '/outreach',
       ctaLabel: 'Go to campaigns',
       done: hasAction('campaign_created'),
+    },
+    {
+      key: 'add_producers',
+      label: isImporter ? 'Build network' : isExporter ? 'Add producers' : 'Build member directory',
+      description: isImporter
+        ? 'Add counterpart contacts so campaign and request workflows route correctly.'
+        : isExporter
+          ? 'Build your producer directory so traceability links and requests route correctly.'
+          : 'Create cooperative member records for consent, portability, and aggregation workflows.',
+      ctaHref: isImporter ? '/contacts' : isExporter ? '/farmers' : '/contacts',
+      ctaLabel: isImporter ? 'Go to network' : isExporter ? 'Go to producers' : 'Go to members',
+      done: hasAction('contacts_uploaded'),
     },
   ] as const;
 

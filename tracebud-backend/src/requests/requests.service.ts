@@ -1029,30 +1029,45 @@ export class RequestsService {
       const result = await this.pool.query<EvidenceFeedRecord>(
         `
           SELECT
-            rc.id,
-            rc.title AS name,
-            CASE rc.request_type
-              WHEN 'CONSENT_GRANT' THEN 'consent_form'
-              WHEN 'GENERAL_EVIDENCE' THEN 'agreement'
-              WHEN 'DDS_REFERENCE' THEN 'affidavit'
+            CONCAT('evidence_', al.id::text, '_', item.ordinality::text) AS id,
+            COALESCE(
+              NULLIF(item.value ->> 'label', ''),
+              NULLIF(item.value ->> 'name', ''),
+              CONCAT('Plot evidence ', al.id::text)
+            ) AS name,
+            CASE al.payload ->> 'kind'
+              WHEN 'fpic_repository' THEN 'consent_form'
+              WHEN 'protected_area_permit' THEN 'affidavit'
+              WHEN 'labor_evidence' THEN 'agreement'
               ELSE 'community_minutes'
             END AS type,
-            COALESCE(rc.target_contact_emails[1], 'Supply partner') AS farmer_or_community,
-            rc.created_at::text AS upload_date,
-            rc.due_at::text AS expiry_date,
+            COALESCE(
+              NULLIF(item.value ->> 'community', ''),
+              NULLIF(item.value ->> 'farmerName', ''),
+              CONCAT('Plot ', COALESCE(al.payload ->> 'plotId', 'unknown'))
+            ) AS farmer_or_community,
+            al.timestamp::text AS upload_date,
+            (al.timestamp + INTERVAL '365 days')::text AS expiry_date,
             CASE
-              WHEN rc.status = 'COMPLETED' THEN 'verified'
-              WHEN rc.status IN ('RUNNING', 'PARTIAL', 'QUEUED') THEN 'pending_review'
-              WHEN rc.status = 'EXPIRED' THEN 'expired'
-              ELSE 'renewal_due'
+              WHEN al.timestamp < NOW() - INTERVAL '365 days' THEN 'expired'
+              WHEN al.timestamp < NOW() - INTERVAL '300 days' THEN 'renewal_due'
+              ELSE 'pending_review'
             END AS status,
-            1.2::float8 AS file_size_mb,
-            md5(CONCAT(rc.id, ':', rc.tenant_id, ':', rc.created_at::text)) AS sha256_hash,
-            COALESCE(NULLIF(rc.created_by, ''), 'Tracebud User') AS uploader_name,
-            rc.tenant_id AS uploader_org
-          FROM request_campaigns rc
-          WHERE rc.tenant_id = $1
-          ORDER BY rc.created_at DESC
+            1.0::float8 AS file_size_mb,
+            md5(CONCAT(al.id::text, ':', item.value::text, ':', al.timestamp::text)) AS sha256_hash,
+            COALESCE(al.user_id::text, 'Tracebud User') AS uploader_name,
+            $1::text AS uploader_org
+          FROM audit_log al
+          LEFT JOIN LATERAL jsonb_array_elements(
+            CASE
+              WHEN jsonb_typeof(al.payload -> 'items') = 'array' THEN al.payload -> 'items'
+              ELSE '[]'::jsonb
+            END
+          ) WITH ORDINALITY AS item(value, ordinality) ON TRUE
+          WHERE al.event_type = 'plot_evidence_synced'
+            AND COALESCE(al.payload ->> 'tenantId', '') = $1
+            AND item.value IS NOT NULL
+          ORDER BY al.timestamp DESC, item.ordinality ASC
           LIMIT 100
         `,
         [tenantId],

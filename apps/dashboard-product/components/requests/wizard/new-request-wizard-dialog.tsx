@@ -118,20 +118,49 @@ export function NewRequestWizardDialog({
               ? plotsBody.data
               : [];
 
-        const contactRecipients: Recipient[] = contacts.map((item) => {
+        const organizationByName = new Map<string, Recipient>();
+        const contactEmailByName = new Map<string, string>();
+        const farmerRecipients: Recipient[] = contacts.map((item) => {
           const id = typeof item.id === 'string' ? item.id : crypto.randomUUID();
           const name = typeof item.full_name === 'string' ? item.full_name : 'Unknown contact';
+          const email =
+            typeof item.email === 'string' && item.email.includes('@') ? item.email.trim().toLowerCase() : undefined;
           const country = typeof item.country === 'string' && item.country ? item.country : 'Unknown';
-          const organization = typeof item.organization === 'string' ? item.organization : '';
-          const status = typeof item.status === 'string' ? item.status : 'new';
+          const organization = typeof item.organization === 'string' ? item.organization.trim() : '';
+          const status = typeof item.status === 'string' ? item.status.toLowerCase() : 'new';
+          const tags = Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === 'string') : [];
+          const commodity = tags.find((tag) => /^commodity:/i.test(tag))?.replace(/^commodity:/i, '').trim() || 'Unknown';
+
+          if (email && name) {
+            contactEmailByName.set(name.trim().toLowerCase(), email);
+          }
+
+          if (organization) {
+            const existingOrganization = organizationByName.get(organization);
+            if (!existingOrganization) {
+              organizationByName.set(organization, {
+                id: `org-${organization.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+                type: 'organization',
+                email,
+                name: organization,
+                country,
+                commodity,
+                complianceStatus: status === 'blocked' ? 'non_compliant' : status === 'submitted' ? 'compliant' : 'pending',
+              });
+            } else if (!existingOrganization.email && email) {
+              organizationByName.set(organization, { ...existingOrganization, email });
+            }
+          }
+
           return {
             id,
-            type: organization ? 'organization' : 'farmer',
-            name: organization || name,
+            type: 'farmer',
+            email,
+            name,
             country,
-            commodity: 'Unknown',
-            complianceStatus: status === 'submitted' || status === 'engaged' ? 'compliant' : 'pending',
-            farmerName: organization ? name : undefined,
+            commodity,
+            complianceStatus: status === 'blocked' ? 'non_compliant' : status === 'submitted' ? 'compliant' : 'pending',
+            organizationType: organization || undefined,
           };
         });
 
@@ -139,20 +168,34 @@ export function NewRequestWizardDialog({
           const id = typeof item.id === 'string' ? item.id : crypto.randomUUID();
           const name = typeof item.name === 'string' ? item.name : `Plot ${id}`;
           const farmerName = typeof item.farmer_name === 'string' ? item.farmer_name : undefined;
+          const farmerEmail = farmerName ? contactEmailByName.get(farmerName.trim().toLowerCase()) : undefined;
           const risk = typeof item.deforestation_risk === 'string' ? item.deforestation_risk : 'unknown';
+          const commodity =
+            typeof item.commodity === 'string' && item.commodity.trim()
+              ? item.commodity.trim()
+              : typeof item.crop_type === 'string' && item.crop_type.trim()
+                ? item.crop_type.trim()
+                : 'Unknown';
+          const country =
+            typeof item.country === 'string' && item.country.trim()
+              ? item.country.trim()
+              : typeof item.country_code === 'string' && item.country_code.trim()
+                ? item.country_code.trim()
+                : 'Unknown';
           return {
             id,
             type: 'plot',
+            email: farmerEmail,
             name,
-            country: 'Unknown',
-            commodity: 'Unknown',
+            country,
+            commodity,
             complianceStatus: risk === 'low' ? 'compliant' : risk === 'high' ? 'non_compliant' : 'pending',
             farmerName,
           };
         });
 
         if (!cancelled) {
-          setAvailableRecipients([...contactRecipients, ...plotRecipients]);
+          setAvailableRecipients([...organizationByName.values(), ...farmerRecipients, ...plotRecipients]);
         }
       } catch (error) {
         if (!cancelled) {
@@ -205,10 +248,15 @@ export function NewRequestWizardDialog({
     }
   };
 
-  const toTargetEmail = (recipient: Recipient): { email: string; full_name: string } => {
+  const toTargetEmail = (recipient: Recipient): { email: string; full_name: string } | null => {
+    if (recipient.email && recipient.email.includes('@')) {
+      return { email: recipient.email, full_name: recipient.name };
+    }
     const manualEmail = recipient.id.startsWith('manual-') ? recipient.id.replace(/^manual-/, '') : '';
-    const email = manualEmail && manualEmail.includes('@') ? manualEmail : `${recipient.id}@tracebud.local`;
-    return { email, full_name: recipient.name };
+    if (manualEmail && manualEmail.includes('@')) {
+      return { email: manualEmail, full_name: recipient.name };
+    }
+    return null;
   };
 
   const createCampaign = async (status: 'Draft' | 'Sent') => {
@@ -219,13 +267,23 @@ export function NewRequestWizardDialog({
       throw new Error('Select at least one recipient before continuing.');
     }
 
+    const targets = recipientsData.selectedRecipients
+      .map(toTargetEmail)
+      .filter((target): target is { email: string; full_name: string } => Boolean(target));
+    const missingEmailCount = recipientsData.selectedRecipients.length - targets.length;
+    if (missingEmailCount > 0) {
+      throw new Error(
+        `${missingEmailCount} selected recipient${missingEmailCount === 1 ? ' is' : 's are'} missing an email address.`,
+      );
+    }
+
     const payload = {
       request_type: toBackendRequestType(requestData.requestType),
       campaign_name: `${mode === 'campaign' ? 'Campaign' : 'Request'} - ${requestData.commodity || 'General'}`,
       description_template: requestData.message || `Automated ${mode} from Tracebud workspace`,
       due_date: requestData.dueDate ? requestData.dueDate.toISOString().slice(0, 10) : undefined,
-      targets: recipientsData.selectedRecipients.map(toTargetEmail),
-      status: status === 'Draft' ? 'DRAFT' : 'QUEUED',
+      targets,
+      status: 'DRAFT',
     };
 
     const response = await fetch('/api/requests/campaigns', {
@@ -238,9 +296,25 @@ export function NewRequestWizardDialog({
       body: JSON.stringify(payload),
     });
 
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    const body = (await response.json().catch(() => ({}))) as
+      | { error?: string; id?: string; campaign?: { id?: string }; data?: { id?: string } };
     if (!response.ok) {
       throw new Error(body.error ?? 'Failed to create campaign.');
+    }
+    const campaignId =
+      (typeof body.id === 'string' && body.id) ||
+      (body.campaign && typeof body.campaign.id === 'string' ? body.campaign.id : '') ||
+      (body.data && typeof body.data.id === 'string' ? body.data.id : '');
+
+    if (status === 'Sent' && campaignId) {
+      const sendResponse = await fetch(`/api/requests/campaigns/${encodeURIComponent(campaignId)}/send`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const sendBody = (await sendResponse.json().catch(() => ({}))) as { error?: string };
+      if (!sendResponse.ok) {
+        throw new Error(sendBody.error ?? 'Campaign created but failed to send.');
+      }
     }
   };
 

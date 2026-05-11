@@ -81,7 +81,7 @@ Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFAC
 - Importer backend-connectivity slice now extends beyond campaigns/requests list reads:
   - `Reporting` reads tenant-scoped summary telemetry from backend (`/v1/reports/importer-summary`) for readiness rate, compliant evidence count, shipment volume, and readiness distribution.
   - `Issues` reads backend-derived operational issue records (`/v1/requests/issues`) from active/overdue campaigns and inbound request queues.
-  - `Evidence` reads backend evidence feed rows (`/v1/requests/evidence-feed`) mapped from campaign lifecycle status for importer evidence repository framing.
+  - `Evidence` reads backend evidence feed rows (`/v1/requests/evidence-feed`) sourced from immutable `plot_evidence_synced` audit events (tenant-scoped via payload `tenantId`) for importer evidence repository framing.
   - dashboard API proxies were added for all three new backend routes to preserve auth pass-through and fail-closed backend URL handling.
 
 ## Tasks checklist

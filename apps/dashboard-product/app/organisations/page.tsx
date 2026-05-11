@@ -286,6 +286,12 @@ export default function OrganisationsPage() {
       .finally(() => setIsSaving(false));
   };
 
+  const openAddOrganisation = () => {
+    setAddMode('manual');
+    const panel = document.getElementById('add-organisation-panel');
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="flex flex-col">
       <AppHeader
@@ -296,6 +302,12 @@ export default function OrganisationsPage() {
             : 'Sponsor-scoped directory for supplier performance, funded coverage, and value-chain visibility'
         }
         breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Organisations' }]}
+        actions={
+          <Button onClick={openAddOrganisation}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add organisation
+          </Button>
+        }
       />
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-3">
@@ -370,7 +382,7 @@ export default function OrganisationsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="add-organisation-panel">
           <CardHeader>
             <CardTitle>Add Organisations</CardTitle>
             <CardDescription>Add organisations manually or import them in bulk via CSV.</CardDescription>
@@ -424,7 +436,6 @@ export default function OrganisationsPage() {
                     />
                   </div>
                 </div>
-                <Button>
                 <Button onClick={handleAddOrganisation} disabled={isSaving}>
                   <Plus className="mr-2 h-4 w-4" />
                   {isSaving ? 'Saving...' : 'Add organisation'}

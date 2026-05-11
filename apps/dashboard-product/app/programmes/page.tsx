@@ -216,10 +216,16 @@ export default function ProgrammesPage() {
             : 'Run sponsor programme campaigns and bulk requests to suppliers across the sponsored value chain'
         }
         breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Programmes' }]}
+        actions={
+          <Button onClick={() => setIsWizardOpen(true)} disabled={isSaving}>
+            <Plus className="mr-2 h-4 w-4" />
+            {isSaving ? 'Saving...' : 'New campaign'}
+          </Button>
+        }
       />
       <div className="flex-1 space-y-6 p-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <div>
               <CardTitle>Programme Campaigns</CardTitle>
               <CardDescription>
@@ -228,10 +234,6 @@ export default function ProgrammesPage() {
                   : 'Create and track bulk remediation or evidence requests to upstream suppliers and partner organisations.'}
               </CardDescription>
             </div>
-            <Button onClick={() => setIsWizardOpen(true)} disabled={isSaving}>
-              <Plus className="mr-2 h-4 w-4" />
-              {isSaving ? 'Saving...' : 'New Programme Campaign'}
-            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="mb-2">

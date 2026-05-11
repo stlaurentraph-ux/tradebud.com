@@ -332,7 +332,7 @@ export function GuidedTourOverlay() {
               </div>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
-                Complete the action on this page, then click &ldquo;Done&rdquo; to proceed.
+                Complete the action on this page, then click &ldquo;Next&rdquo; to proceed.
               </div>
             )
           ) : null}
@@ -362,7 +362,7 @@ export function GuidedTourOverlay() {
             {/* Next / Done */}
             {step.requiresAction && !isCompleted ? (
               <Button size="sm" className="text-xs" onClick={completeCurrentStep}>
-                Mark done
+                Next
               </Button>
             ) : isLastStep ? (
               <Button size="sm" className="gap-1 text-xs" onClick={completeCurrentStep}>

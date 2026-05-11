@@ -1,3 +1,34 @@
+### 2026-04-22 (execution: legacy evidence tenant backfill migration)
+- Focus: recover importer evidence-feed visibility for historical `plot_evidence_synced` audit events missing tenant metadata.
+- Files changed: `tracebud-backend/sql/tb_v16_029_backfill_evidence_tenant.sql`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added deterministic backfill lane using `request_campaigns.created_by = audit_log.user_id::text` when it resolves to exactly one tenant per audit row.
+  - Added strict singleton-tenant fallback only when launch/admin tenant registries indicate exactly one tenant in the environment.
+  - Backfill remains fail-closed: only rows with empty/missing `payload.tenantId` are updated.
+- Permissions/tenant boundaries:
+  - Migration avoids broad assignment in multi-tenant ambiguous environments by requiring unique mapping predicates.
+- Exception handling/recovery:
+  - If mapping is ambiguous/noisy, rows are left unchanged rather than forced.
+- Verification:
+  - Migration is SQL-only and wrapped in transaction (`BEGIN/COMMIT`).
+- Blockers: none.
+
+### 2026-04-22 (execution: evidence-feed source hardening to immutable evidence events)
+- Focus: replace importer evidence-feed campaign-derivation with tenant-scoped immutable evidence-event sourcing.
+- Files changed: `tracebud-backend/src/plots/plots.controller.ts`, `tracebud-backend/src/plots/plots.service.ts`, `tracebud-backend/src/requests/requests.service.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - `plot_evidence_synced` audit writes now include `tenantId` in payload at sync time.
+  - `GET /v1/requests/evidence-feed` now reads from `audit_log` evidence events (`plot_evidence_synced`) and maps item-level evidence metadata into importer feed records.
+  - Feed filtering is fail-closed by tenant payload key (`payload.tenantId`) and ignores non-item/empty evidence rows.
+- Permissions/tenant boundaries:
+  - Existing requests-access role gates remain enforced; evidence feed now depends on explicit tenant payload lineage for evidence events.
+- Exception handling/recovery:
+  - If no tenant-tagged evidence events exist, feed returns empty list; no fallback to campaign records.
+- Verification:
+  - `ReadLints` on touched backend files (no lints).
+  - `cd tracebud-backend && npm run -s build` (pass).
+- Blockers: none.
+
 ### 2026-04-22 (execution: importer backend wiring for reports/issues/evidence)
 - Focus: remove remaining importer mock-only reads on `Reporting`, `Issues`, and `Evidence` destinations by adding backend-backed summary/issue/evidence endpoints and wiring dashboard pages.
 - Files changed: `tracebud-backend/src/reports/reports.controller.ts`, `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/api/reports/importer-summary/route.ts`, `apps/dashboard-product/app/api/requests/issues/route.ts`, `apps/dashboard-product/app/api/requests/evidence-feed/route.ts`, `apps/dashboard-product/app/reports/page.tsx`, `apps/dashboard-product/app/compliance/issues/page.tsx`, `apps/dashboard-product/app/fpic/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.

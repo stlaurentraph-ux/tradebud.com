@@ -18,6 +18,7 @@ export type RecipientType = 'organization' | 'farmer' | 'plot';
 export interface Recipient {
   id: string;
   type: RecipientType;
+  email?: string;
   name: string;
   country: string;
   commodity: string;
@@ -77,6 +78,7 @@ function parseBulkRecipientsCsv(csv: string): Recipient[] {
       {
         id: `manual-${email}`,
         type: 'farmer' as const,
+        email,
         name: fullName,
         country: countryIdx >= 0 ? cols[countryIdx] || 'Unknown' : 'Unknown',
         commodity: commodityIdx >= 0 ? cols[commodityIdx] || 'Unknown' : 'Unknown',
@@ -107,6 +109,7 @@ export function StepSelectRecipients({
     country: 'All Countries',
     commodity: 'All Commodities',
     complianceStatus: 'all',
+    sendableOnly: false,
   });
 
   const getRecipientTypeLabel = (type: RecipientType, plural = true) => {
@@ -122,6 +125,7 @@ export function StepSelectRecipients({
       if (filters.country !== 'All Countries' && r.country !== filters.country) return false;
       if (filters.commodity !== 'All Commodities' && r.commodity !== filters.commodity) return false;
       if (filters.complianceStatus !== 'all' && r.complianceStatus !== filters.complianceStatus) return false;
+      if (filters.sendableOnly && !r.email) return false;
       return true;
     });
   }, [availableRecipients, activeTab, searchQuery, filters]);
@@ -151,8 +155,13 @@ export function StepSelectRecipients({
     data.selectedRecipients.forEach((r) => counts[r.type]++);
     return counts;
   }, [data.selectedRecipients]);
+  const sendableCount = useMemo(
+    () => filteredRecipients.filter((recipient) => Boolean(recipient.email && recipient.email.includes('@'))).length,
+    [filteredRecipients],
+  );
 
   const allFilteredSelected = filteredRecipients.length > 0 && filteredRecipients.every((r) => isSelected(r));
+  const selectedMissingEmailCount = data.selectedRecipients.filter((recipient) => !recipient.email).length;
   const canProceed = data.selectedRecipients.length > 0;
 
   const mergeRecipients = (incoming: Recipient[]) => {
@@ -173,6 +182,7 @@ export function StepSelectRecipients({
       {
         id: `manual-${email}`,
         type: 'farmer',
+        email,
         name: fullName,
         country: manualDraft.country.trim() || 'Unknown',
         commodity: manualDraft.commodity.trim() || 'Unknown',
@@ -231,6 +241,12 @@ export function StepSelectRecipients({
             ))}
             {data.selectedRecipients.length > 8 && <Badge variant="outline">+{data.selectedRecipients.length - 8} more</Badge>}
           </div>
+          {selectedMissingEmailCount > 0 ? (
+            <p className="mt-3 text-xs text-amber-700">
+              {selectedMissingEmailCount} selected recipient{selectedMissingEmailCount === 1 ? '' : 's'} missing email
+              address. You can continue, but those recipients cannot be delivered until email is added.
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -301,6 +317,16 @@ export function StepSelectRecipients({
                   </Select>
                 </div>
               </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Checkbox
+                  checked={filters.sendableOnly}
+                  onCheckedChange={(checked) => setFilters({ ...filters, sendableOnly: Boolean(checked) })}
+                  id="sendable-only-filter"
+                />
+                <Label htmlFor="sendable-only-filter" className="text-xs">
+                  Only show sendable recipients (with email)
+                </Label>
+              </div>
             </CollapsibleContent>
           </Collapsible>
         </div>
@@ -308,6 +334,7 @@ export function StepSelectRecipients({
         <div className="mt-3 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             {filteredRecipients.length} {getRecipientTypeLabel(activeTab, filteredRecipients.length !== 1)} found
+            {filteredRecipients.length > 0 ? ` · ${sendableCount}/${filteredRecipients.length} sendable` : ''}
           </span>
           {allFilteredSelected ? (
             <Button variant="ghost" size="sm" onClick={deselectAllFiltered} className="h-8 text-xs">Deselect all matching</Button>
@@ -440,6 +467,9 @@ function RecipientRow({ recipient, selected, onToggle }: { recipient: Recipient;
           {recipient.country} &bull; {recipient.commodity}
           {recipient.type === 'plot' && recipient.farmerName ? <> &bull; {recipient.farmerName}</> : null}
         </p>
+        {!recipient.email ? (
+          <p className="text-xs text-amber-700">No email on record (cannot send until added).</p>
+        ) : null}
       </div>
       <Badge variant="secondary" className={cn('shrink-0 text-xs', complianceColors[recipient.complianceStatus])}>
         {recipient.complianceStatus === 'non_compliant'
