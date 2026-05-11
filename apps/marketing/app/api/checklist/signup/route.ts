@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const checklistSchema = z.object({
   email: z.string().email(),
@@ -20,20 +19,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Store the lead in Supabase
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("lead_checklist_signups").insert({
-      email: parsed.data.email,
-      name: parsed.data.name || null,
-      country: parsed.data.country || null,
-      created_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      console.error("[v0] Supabase error:", error);
-      // Don't fail the API call if Supabase fails - still return success
-      // so the user sees success feedback
-    }
+    // Placeholder: In production, integrate with your email service (Brevo, SendGrid)
+    // Example: await sendChecklistEmail({ email: parsed.data.email, name: parsed.data.name })
 
     // Return success with download URL
     return NextResponse.json({
@@ -42,7 +29,6 @@ export async function POST(request: Request) {
       message: "Checklist sent to your email",
     });
   } catch (error) {
-    console.error("[v0] Checklist signup error:", error);
     return NextResponse.json(
       {
         ok: false,

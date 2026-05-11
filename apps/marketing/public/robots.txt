@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /*.json$
+Crawl-delay: 1
+
+Sitemap: https://tracebud.com/sitemap.xml
+Sitemap: https://tracebud.com/en/sitemap.xml
+Sitemap: https://tracebud.com/es/sitemap.xml
+Sitemap: https://tracebud.com/pt/sitemap.xml
+Sitemap: https://tracebud.com/fr/sitemap.xml
+Sitemap: https://tracebud.com/de/sitemap.xml
+Sitemap: https://tracebud.com/nl/sitemap.xml
+Sitemap: https://tracebud.com/it/sitemap.xml
+Sitemap: https://tracebud.com/id/sitemap.xml
+Sitemap: https://tracebud.com/vi/sitemap.xml
+Sitemap: https://tracebud.com/am/sitemap.xml
+Sitemap: https://tracebud.com/no/sitemap.xml

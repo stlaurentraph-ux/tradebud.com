@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const personaLinks = [
   { label: "Producers", href: "/farmers" },
@@ -14,6 +16,33 @@ const personaLinks = [
   { label: "Importers", href: "/importers" },
   { label: "Countries", href: "/countries" },
 ];
+
+const secondaryLinks = [
+  { label: "Pilot", href: "/pilot" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/pricing" },
+];
+
+export function Header() {
+  const t = useTranslations("header");
+  const pathname = usePathname();
+  const isFarmersPage = pathname.includes("/farmers");
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const waitlist = useWaitlistDialog();
+
+  const personaLinksTranslated = [
+    { label: t("personas.producers"), href: "/farmers" },
+    { label: t("personas.exporters"), href: "/exporters" },
+    { label: t("personas.importers"), href: "/importers" },
+    { label: t("personas.countries"), href: "/countries" },
+  ];
+
+  const secondaryLinksTranslated = [
+    { label: t("nav.pilot"), href: "/pilot" },
+    { label: t("nav.howItWorks"), href: "/#how-it-works" },
+    { label: t("nav.pricing"), href: "/pricing" },
+  ];
 
 const secondaryLinks = [
   { label: "Pilot", href: "/pilot" },
@@ -76,9 +105,9 @@ export function Header() {
             <span
               className={`font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)]/75" : "text-white/75"}`}
             >
-              For:
+              {t("nav.for")}:
             </span>
-            {personaLinks.map((link) => (
+            {personaLinksTranslated.map((link) => (
               <Link
                 key={link.label}
                 href={resolvedHref(link.href)}
@@ -88,7 +117,7 @@ export function Header() {
               </Link>
             ))}
             <div className={`h-5 w-px ${isScrolled ? "bg-[var(--forest-canopy)]/20" : "bg-white/30"}`} />
-            {secondaryLinks.map((link) => (
+            {secondaryLinksTranslated.map((link) => (
               <Link
                 key={link.label}
                 href={resolvedHref(link.href)}
@@ -101,29 +130,12 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
-            {isFarmersPage ? (
-              <Link href="/farmers#download">
-                <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                  Download App
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/demo">
-                  <Button
-                    variant="ghost"
-                    className={`font-semibold text-base rounded-full ${isScrolled ? "text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)]/10" : "text-white hover:bg-white/10"}`}
-                  >
-                    Book Demo
-                  </Button>
-                </Link>
-                <Link href="/get-started">
-                  <Button className={`font-bold text-lg px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}>
-                    Start Free Trial
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Button
+              onClick={() => waitlist.setOpen(true)}
+              className={`font-bold text-base px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}
+            >
+              Join the waitlist
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -149,10 +161,10 @@ export function Header() {
             <nav className="flex flex-col gap-6">
               <div className="border-t border-white/20 pt-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-white/70 font-semibold text-sm">For:</span>
+                  <span className="text-white/70 font-semibold text-sm">{t("nav.for")}:</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  {personaLinks.map((link) => (
+                  {personaLinksTranslated.map((link) => (
                     <Link
                       key={link.label}
                       href={resolvedHref(link.href)}
@@ -164,7 +176,7 @@ export function Header() {
                   ))}
                 </div>
                 <div className="h-px bg-white/20 mb-5" />
-                {secondaryLinks.map((link) => (
+                {secondaryLinksTranslated.map((link) => (
                   <Link
                     key={link.label}
                     href={resolvedHref(link.href)}
@@ -176,41 +188,20 @@ export function Header() {
                 ))}
               </div>
               <div className="flex flex-col gap-4 mt-8 pb-8">
-                {isFarmersPage ? (
-                  <Link href="/farmers#download" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button
-                      size="lg"
-                      className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
-                    >
-                      Download App
-                    </Button>
-                  </Link>
-                ) : (
-                  <>
-                    <Link href="/get-started" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        size="lg"
-                        className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
-                      >
-                        Start Free Trial
-                      </Button>
-                    </Link>
-                    <Link href="/demo" className="w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        className="border-2 border-white/50 text-white hover:bg-white/10 w-full bg-transparent font-bold text-lg py-6 rounded-full"
-                      >
-                        Book 15-min Demo
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <Button
+                  size="lg"
+                  onClick={() => { setIsMobileMenuOpen(false); waitlist.setOpen(true); }}
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
+                >
+                  Join the waitlist
+                </Button>
               </div>
             </nav>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }
