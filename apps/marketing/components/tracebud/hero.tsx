@@ -1,11 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 export function Hero() {
+  const t = useTranslations("hero");
+  const waitlist = useWaitlistDialog();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Full-bleed background image */}
@@ -17,6 +21,8 @@ export function Hero() {
           className="object-cover"
           priority
           loading="eager"
+          placeholder="blur"
+          blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2073 1382'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Crect fill='%23228B67' width='100%25' height='100%25'/%3E%3Crect filter='url(%23b)' fill='%231a6d53' width='100%25' height='100%25'/%3E%3C/svg%3E"
         />
         {/* Dark overlay for text readability - reduced opacity to show imagery */}
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/60 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/70" />
@@ -31,7 +37,7 @@ export function Hero() {
           className="inline-flex items-center gap-2 bg-[var(--mountain-clay)] text-white px-5 py-2.5 rounded-full text-lg font-bold mb-8"
         >
           <Calendar className="w-5 h-5" />
-          <span>EUDR: Dec 30, 2026 (large/medium) · Jun 30, 2027 (micro/small)</span>
+          <span>{t("eudrDeadline")}</span>
         </motion.div>
 
         <motion.div
@@ -40,9 +46,9 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight mb-6 text-balance leading-tight">
-            Trade Freely.
+            {t("headline1")}
             <br />
-            <span className="text-[var(--data-emerald)]">Trace Easily.</span>
+            <span className="text-[var(--data-emerald)]">{t("headline2")}</span>
           </h1>
         </motion.div>
 
@@ -52,7 +58,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.35 }}
         >
-          EU market access made simple. Full supply chain traceability in days, not months.
+          {t("subheadline")}
         </motion.p>
 
         {/* Value Metrics */}
@@ -63,55 +69,35 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Days</div>
-            <div className="text-sm md:text-base text-white/70">Not months to compliance</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric1.value")}</div>
+            <div className="text-sm md:text-base text-white/70">{t("metric1.label")}</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Full Chain</div>
-            <div className="text-sm md:text-base text-white/70">Farm to port verified</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric2.value")}</div>
+            <div className="text-sm md:text-base text-white/70">{t("metric2.label")}</div>
           </div>
           <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">Self-serve</div>
-            <div className="text-sm md:text-base text-white/70">No integration needed</div>
+            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric3.value")}</div>
+            <div className="text-sm md:text-base text-white/70">{t("metric3.label")}</div>
           </div>
         </motion.div>
 
-        {/* Primary CTAs */}
+        {/* Primary CTA */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6"
+          className="flex flex-col items-center gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <a href="/get-started">
-            <Button
-              size="lg"
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-7 text-lg rounded-full shadow-xl"
-            >
-              Start Free Trial
-            </Button>
-          </a>
-          <a href="/demo">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-2 border-white/80 text-white hover:bg-white/10 bg-transparent font-bold px-10 py-7 text-lg rounded-full"
-            >
-              Book 15-min Demo
-            </Button>
-          </a>
-        </motion.div>
-
-        <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
-        >
-          <span className="text-sm text-white/70">30 days free. No credit card required.</span>
-          <span className="hidden sm:block text-white/40">|</span>
+          <Button
+            size="lg"
+            onClick={() => waitlist.setOpen(true)}
+            className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-12 py-7 text-lg rounded-full shadow-xl"
+          >
+            Join the waitlist
+          </Button>
           <span className="inline-flex items-center gap-1.5 text-sm text-[var(--data-emerald)] font-medium">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -120,6 +106,8 @@ export function Hero() {
           </span>
         </motion.div>
 
+        <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
+
         <motion.div
           className="flex justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -127,7 +115,7 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.8 }}
         >
           <a href="#supply-chain" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm font-medium">
-            <span>See how it works</span>
+            <span>{t("seeHowItWorks")}</span>
             <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>

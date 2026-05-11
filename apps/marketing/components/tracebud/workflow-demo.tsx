@@ -515,10 +515,10 @@ function WorkflowStep({ step, index }: { step: typeof steps[0]; index: number })
         isEven ? "md:flex-row" : "md:flex-row-reverse"
       }`}
     >
-      {/* Text content */}
-      <div className={`flex-1 max-w-md ${isEven ? "md:text-right" : "md:text-left"}`}>
+      {/* Text content - simplified on mobile */}
+      <div className={`flex-1 max-w-md ${isEven ? "md:text-right" : "md:text-left"} text-center md:text-left`}>
         <div
-          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
+          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-2 md:mb-3 ${
             isEven ? "md:ml-auto" : ""
           }`}
           style={{ backgroundColor: `${step.actorColor}15`, color: step.actorColor }}
@@ -526,12 +526,12 @@ function WorkflowStep({ step, index }: { step: typeof steps[0]; index: number })
           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: step.actorColor }} />
           {step.actor}
         </div>
-        <h3 className="text-xl md:text-2xl font-bold text-[var(--forest-canopy)] mb-2">{step.title}</h3>
-        <p className="text-gray-600 leading-relaxed">{step.description}</p>
-        <div className="mt-3 text-xs text-gray-400">Step {step.id} of {steps.length}</div>
+        <h3 className="text-lg md:text-2xl font-bold text-[var(--forest-canopy)] mb-1 md:mb-2">{step.title}</h3>
+        <p className="text-sm md:text-base text-gray-600 leading-relaxed">{step.description}</p>
+        <div className="mt-2 md:mt-3 text-xs text-gray-400">Step {step.id} of {steps.length}</div>
       </div>
 
-      {/* Timeline node (desktop) */}
+      {/* Timeline node (desktop only) */}
       <div className="hidden md:flex flex-col items-center gap-2">
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg"
@@ -542,8 +542,8 @@ function WorkflowStep({ step, index }: { step: typeof steps[0]; index: number })
         {index < steps.length - 1 && <div className="w-0.5 h-12 bg-gray-200" />}
       </div>
 
-      {/* Screen mockup */}
-      <div className={`flex-1 flex ${isEven ? "justify-start" : "justify-end"} ${isMobile ? "justify-center" : ""}`}>
+      {/* Screen mockup - hidden on small screens to reduce vertical scroll */}
+      <div className={`hidden sm:flex flex-1 ${isEven ? "justify-start" : "justify-end"} ${isMobile ? "justify-center" : ""} overflow-x-auto`}>
         <ScreenContent screenType={step.screen} />
       </div>
     </motion.div>
