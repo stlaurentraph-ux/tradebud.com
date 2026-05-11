@@ -68,7 +68,7 @@ export function AppHeader({ title, subtitle, description, breadcrumbs, actions }
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search packages, plots, farmers..."
+            placeholder="Search shipments, plots, producers..."
             className="w-72 bg-white pl-9"
           />
         </div>

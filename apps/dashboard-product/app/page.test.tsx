@@ -51,6 +51,10 @@ vi.mock('@/components/dashboards/sponsor-dashboard', () => ({
   SponsorDashboard: () => <div>Sponsor Dashboard</div>,
 }));
 
+vi.mock('@/components/onboarding/onboarding-checklist-card', () => ({
+  OnboardingChecklistCard: () => <div>Onboarding Checklist</div>,
+}));
+
 describe('DashboardPage gated-entry telemetry', () => {
   const getTelemetryCalls = (fetchSpy: ReturnType<typeof vi.spyOn>) =>
     fetchSpy.mock.calls.filter((call) => call[0] === '/api/analytics/gated-entry');

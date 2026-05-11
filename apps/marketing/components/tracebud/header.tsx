@@ -1,32 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
-
-const personaLinks = [
-  { label: "Producers", href: "/farmers" },
-  { label: "Exporters", href: "/exporters" },
-  { label: "Importers", href: "/importers" },
-  { label: "Countries", href: "/countries" },
-];
-
-const secondaryLinks = [
-  { label: "Pilot", href: "/pilot" },
-  { label: "How It Works", href: "/#how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-];
 
 export function Header() {
   const t = useTranslations("header");
   const pathname = usePathname();
-  const isFarmersPage = pathname.includes("/farmers");
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const waitlist = useWaitlistDialog();
@@ -43,18 +29,6 @@ export function Header() {
     { label: t("nav.howItWorks"), href: "/#how-it-works" },
     { label: t("nav.pricing"), href: "/pricing" },
   ];
-
-const secondaryLinks = [
-  { label: "Pilot", href: "/pilot" },
-  { label: "How It Works", href: "/#how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-];
-
-export function Header() {
-  const pathname = usePathname();
-  const isFarmersPage = pathname === "/farmers";
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const resolvedHref = (href: string | undefined) => {
     if (!href) return "/";
@@ -78,40 +52,37 @@ export function Header() {
     <>
       <motion.header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? "bg-white/95 backdrop-blur-md shadow-xl border-b border-gray-100"
-            : "bg-transparent"
+          isScrolled ? "bg-white/95 backdrop-blur-md shadow-xl border-b border-gray-100" : "bg-transparent"
         }`}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative w-12 h-12 group-hover:scale-105 transition-transform">
-              <Image
-                src="/images/tracebud-logo.png"
-                alt="Tracebud"
-                fill
-                className="object-contain"
-              />
+              <Image src="/images/tracebud-logo.png" alt="Tracebud" fill className="object-contain" />
             </div>
-            <span className={`text-2xl font-bold transition-colors ${isScrolled ? "text-[var(--forest-canopy)]" : "text-white"}`}>Tracebud</span>
+            <span
+              className={`text-2xl font-bold transition-colors ${
+                isScrolled ? "text-[var(--forest-canopy)]" : "text-white"
+              }`}
+            >
+              Tracebud
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-6">
-            <span
-              className={`font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)]/75" : "text-white/75"}`}
-            >
+            <span className={`font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)]/75" : "text-white/75"}`}>
               {t("nav.for")}:
             </span>
             {personaLinksTranslated.map((link) => (
               <Link
                 key={link.label}
                 href={resolvedHref(link.href)}
-                className={`transition-colors font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}
+                className={`transition-colors font-semibold text-base ${
+                  isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"
+                }`}
               >
                 {link.label}
               </Link>
@@ -121,34 +92,36 @@ export function Header() {
               <Link
                 key={link.label}
                 href={resolvedHref(link.href)}
-                className={`transition-colors font-semibold text-base ${isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"}`}
+                className={`transition-colors font-semibold text-base ${
+                  isScrolled ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]" : "text-white/90 hover:text-[var(--data-emerald)]"
+                }`}
               >
                 {link.label}
               </Link>
             ))}
           </nav>
 
-          {/* Desktop CTA */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3">
             <Button
               onClick={() => waitlist.setOpen(true)}
-              className={`font-bold text-base px-6 rounded-full ${isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"}`}
+              className={`font-bold text-base px-6 rounded-full ${
+                isScrolled ? "bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white" : "bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)]"
+              }`}
             >
               Join the waitlist
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className={`lg:hidden p-2 ${isScrolled ? "text-[var(--forest-canopy)]" : "text-white"}`}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() => setIsMobileMenuOpen((previous) => !previous)}
+            aria-label="Toggle mobile menu"
           >
             {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
           </button>
         </div>
       </motion.header>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -187,10 +160,14 @@ export function Header() {
                   </Link>
                 ))}
               </div>
+
               <div className="flex flex-col gap-4 mt-8 pb-8">
                 <Button
                   size="lg"
-                  onClick={() => { setIsMobileMenuOpen(false); waitlist.setOpen(true); }}
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    waitlist.setOpen(true);
+                  }}
                   className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold w-full text-xl py-6 rounded-full"
                 >
                   Join the waitlist

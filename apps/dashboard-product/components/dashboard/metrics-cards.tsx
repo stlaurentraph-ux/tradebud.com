@@ -82,7 +82,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <MetricCard
-        title="Total DDS Packages"
+        title="Total Shipment Packages"
         value={data.totalPackages.toLocaleString()}
         change="+12.5%"
         changeType="positive"
@@ -94,7 +94,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         value={data.pendingPackages.toLocaleString()}
         change={data.pendingPackages > 0 ? "Requires action" : "All clear"}
         changeType={data.pendingPackages > 0 ? "negative" : "positive"}
-        subtitle="Awaiting TRACES"
+        subtitle="Awaiting downstream handoff"
         icon={<TrendingUp className="h-5 w-5" />}
       />
       <MetricCard
@@ -106,7 +106,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         icon={<MapPin className="h-5 w-5" />}
       />
       <MetricCard
-        title="Active Farmers"
+        title="Active Producers"
         value={data.totalFarmers.toLocaleString()}
         change="+5.1%"
         changeType="positive"

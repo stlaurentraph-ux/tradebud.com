@@ -8,6 +8,7 @@ import {
   Package,
   MapPin,
   Users,
+  Building2,
   FileText,
   Settings,
   HelpCircle,
@@ -20,6 +21,7 @@ import {
   FileCheck,
   History,
   Send,
+  Inbox,
   Scale,
   Zap,
 } from 'lucide-react';
@@ -40,12 +42,20 @@ import { useAuth } from '@/lib/auth-context';
 import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
 import type { TenantRole } from '@/types';
+import { useSponsorViewControls } from '@/lib/sponsor-view';
+
+const DEV_SWITCHABLE_ROLES: TenantRole[] = ['cooperative', 'exporter', 'importer', 'country_reviewer', 'sponsor'];
+
+function isDevRoleSwitcherEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true';
+}
 
 const iconMap: Record<string, typeof LayoutDashboard> = {
   LayoutDashboard,
   Package,
   MapPin,
   Users,
+  Building2,
   FileText,
   Settings,
   HelpCircle,
@@ -55,17 +65,60 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   FileCheck,
   History,
   Send,
+  Inbox,
   Scale,
   Zap,
+};
+
+const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
+  Overview: 'overview',
+  'DDS Packages': 'packages',
+  Shipments: 'packages',
+  'Lots & Batches': 'harvests',
+  Harvests: 'harvests',
+  Plots: 'plots',
+  Members: 'farmers',
+  'Field Operations': 'outreach',
+  Farmers: 'farmers',
+  Producers: 'farmers',
+  Network: 'contacts',
+  Evidence: 'fpic',
+  Outreach: 'outreach',
+  Campaigns: 'outreach',
+  Inbox: 'inbox',
+  Requests: 'inbox',
+  Contacts: 'contacts',
+  FPIC: 'fpic',
+  Compliance: 'compliance',
+  Issues: 'compliance',
+  Governance: 'settings',
+  Reporting: 'reports',
+  Organisations: 'organisations',
+  'Compliance Health': 'compliance',
+  Programmes: 'programmes',
+  'Delegated Admin': 'governance',
+  'Billing & Coverage': 'packages',
+  'Role Decisions': 'role-decisions',
 };
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, switchRole } = useAuth();
+  const { sponsorView, setSponsorView } = useSponsorViewControls();
 
   const navItems = getVisibleNavItems(user);
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
-  const hasMultipleRoles = user && user.roles.length > 1;
+  const showDevRoleSwitcher = isDevRoleSwitcherEnabled();
+  const switchableRoles = user
+    ? (showDevRoleSwitcher ? DEV_SWITCHABLE_ROLES : user.roles)
+    : [];
+  const hasMultipleRoles = user && switchableRoles.length > 1;
+  const isSponsor = user?.active_role === 'sponsor';
+  const withSponsorView = (href: string) => {
+    if (!isSponsor) return href;
+    const separator = href.includes('?') ? '&' : '?';
+    return `${href}${separator}sponsorView=${sponsorView}`;
+  };
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-sidebar">
@@ -113,7 +166,7 @@ export function AppSidebar() {
 
       {/* Role indicator */}
       {user && (
-        <div className="px-3 pb-3 flex-shrink-0">
+        <div className="px-3 pb-3 space-y-2 flex-shrink-0">
           <div className="flex items-center justify-between rounded-md bg-white/10 px-3 py-2.5">
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
@@ -141,7 +194,7 @@ export function AppSidebar() {
                     value={user.active_role}
                     onValueChange={(value) => switchRole(value as TenantRole)}
                   >
-                    {user.roles.map((role) => (
+                    {switchableRoles.map((role) => (
                       <DropdownMenuRadioItem key={role} value={role}>
                         {getRoleDisplayName(role)}
                       </DropdownMenuRadioItem>
@@ -151,6 +204,33 @@ export function AppSidebar() {
               </DropdownMenu>
             )}
           </div>
+          {isSponsor && (
+            <div className="rounded-md bg-white/10 px-3 py-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Sponsor view</span>
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSponsorView('country')}
+                  className={cn(
+                    'rounded px-2 py-1 text-xs font-medium transition-colors',
+                    sponsorView === 'country' ? 'bg-white text-emerald-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                  )}
+                >
+                  Country
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSponsorView('brand')}
+                  className={cn(
+                    'rounded px-2 py-1 text-xs font-medium transition-colors',
+                    sponsorView === 'brand' ? 'bg-white text-emerald-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                  )}
+                >
+                  Brand
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -163,11 +243,16 @@ export function AppSidebar() {
           const isActive = pathname === item.href ||
             (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = iconMap[item.icon] || LayoutDashboard;
+          // Derive a stable slug for spotlight targeting
+          const onboardingAttr = item.href === '/'
+            ? 'nav-overview'
+            : `nav-${item.href.replace(/^\//, '').replace(/\//g, '-')}`;
 
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={withSponsorView(item.href)}
+              data-onboarding={ONBOARDING_NAV_KEY_BY_NAME[item.name] ? `nav-${ONBOARDING_NAV_KEY_BY_NAME[item.name]}` : undefined}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
@@ -196,7 +281,7 @@ export function AppSidebar() {
               return (
                 <Link
                   key={item.name}
-                  href={item.href}
+                  href={withSponsorView(item.href)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
@@ -241,7 +326,7 @@ export function AppSidebar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
-              <Link href="/settings">
+              <Link href={withSponsorView('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Account settings
               </Link>

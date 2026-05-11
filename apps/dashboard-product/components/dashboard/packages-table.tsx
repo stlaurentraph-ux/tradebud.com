@@ -62,12 +62,12 @@ export function PackagesTable({
     <Card>
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg">Recent DDS Packages</CardTitle>
+          <CardTitle className="text-lg">Recent Shipment Packages</CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search packages..."
+                placeholder="Search shipment packages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pl-9"
@@ -88,8 +88,8 @@ export function PackagesTable({
           <div className="flex h-48 flex-col items-center justify-center text-center">
             <p className="text-sm text-muted-foreground">
               {searchQuery
-                ? "No packages found matching your search."
-                : "No DDS packages yet. Record harvests in the offline app to see them here."}
+                ? "No shipment packages found matching your search."
+                : "No shipment packages yet. Record upstream lots and batches to see them here."}
             </p>
           </div>
         ) : (
@@ -98,16 +98,16 @@ export function PackagesTable({
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Package ID
+                    Shipment ID
                   </th>
                   <th className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Status
                   </th>
                   <th className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    TRACES Ref
+                    Downstream Ref
                   </th>
                   <th className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Farmer
+                    Producer
                   </th>
                   <th className="pb-3 pr-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Weight
@@ -187,7 +187,7 @@ export function PackagesTable({
                                 onClick={() => onSubmitToTraces?.(pkg.id)}
                               >
                                 <ExternalLink className="mr-2 h-4 w-4" />
-                                Submit to TRACES
+                                Submit downstream handoff
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

@@ -48,7 +48,7 @@ const ROLE_OPTIONS: { value: PrimaryRole; label: string; description: string }[]
   {
     value: 'cooperative',
     label: 'Supplier / Cooperative',
-    description: 'Farmer cooperative or aggregator managing supply data',
+    description: 'Producer cooperative or aggregator managing upstream supply data',
   },
   {
     value: 'compliance_manager',

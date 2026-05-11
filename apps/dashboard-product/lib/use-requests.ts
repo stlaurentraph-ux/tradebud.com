@@ -18,6 +18,26 @@ export interface InboxRequest {
   updated_at: string;
 }
 
+export type RequestCampaignStatus =
+  | 'DRAFT'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'PARTIAL'
+  | 'EXPIRED'
+  | 'CANCELLED';
+
+export interface RequestCampaign {
+  id: string;
+  title: string;
+  request_type: string;
+  status: RequestCampaignStatus;
+  due_at: string;
+  created_at: string;
+  updated_at: string;
+  target_contact_emails?: string[];
+}
+
 function getAuthHeaders(): Record<string, string> | undefined {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
   return token ? { Authorization: `Bearer ${token}` } : undefined;
@@ -110,4 +130,75 @@ export function useInboxRequests(tenantId: string | null) {
   };
 
   return { requests, pendingRequests, respondedCount, isLoading, error, reload, respond };
+}
+
+export function useRequestCampaigns(tenantId: string | null) {
+  const [campaigns, setCampaigns] = useState<RequestCampaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  const reload = () => setReloadTick((tick) => tick + 1);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      if (!tenantId) {
+        setCampaigns([]);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/requests/campaigns', {
+          cache: 'no-store',
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+          const body = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? 'Campaign API unavailable.');
+        }
+        const body = (await response.json()) as
+          | { campaigns?: RequestCampaign[]; data?: RequestCampaign[] }
+          | RequestCampaign[];
+        const data = Array.isArray(body)
+          ? body
+          : Array.isArray(body.campaigns)
+            ? body.campaigns
+            : Array.isArray(body.data)
+              ? body.data
+              : [];
+        if (!cancelled) setCampaigns(data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load campaigns.');
+          setCampaigns([]);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, reloadTick]);
+
+  const counts = useMemo(
+    () => ({
+      draft: campaigns.filter((item) => item.status === 'DRAFT').length,
+      sent: campaigns.filter((item) => item.status === 'QUEUED' || item.status === 'RUNNING').length,
+      completed: campaigns.filter((item) => item.status === 'COMPLETED' || item.status === 'PARTIAL').length,
+      archived: campaigns.filter((item) => item.status === 'EXPIRED' || item.status === 'CANCELLED').length,
+    }),
+    [campaigns],
+  );
+
+  return { campaigns, counts, isLoading, error, reload };
 }

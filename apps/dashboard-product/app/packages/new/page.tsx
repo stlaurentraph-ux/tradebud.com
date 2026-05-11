@@ -9,9 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/lib/auth-context';
 
 export default function NewPackagePage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isExporter = user?.active_role === 'exporter';
+  const isImporter = user?.active_role === 'importer';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     supplier_name: '',
@@ -35,12 +39,16 @@ export default function NewPackagePage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Create New Package"
-        subtitle="Start a new DDS package for EUDR compliance"
+        title={isExporter || isImporter ? 'Create New Shipment' : 'Create New Package'}
+        subtitle={
+          isExporter
+            ? 'Build a shipment package for downstream handoff and sealing'
+            : 'Start a new DDS package for EUDR compliance'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'DDS Packages', href: '/packages' },
-          { label: 'New Package' },
+          { label: isExporter || isImporter ? 'Shipments' : 'DDS Packages', href: '/packages' },
+          { label: isExporter || isImporter ? 'New Shipment' : 'New Package' },
         ]}
       />
 
@@ -48,7 +56,7 @@ export default function NewPackagePage() {
         <Button variant="ghost" size="sm" className="mb-4" asChild>
           <Link href="/packages">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Packages
+            {isExporter || isImporter ? 'Back to Shipments' : 'Back to Packages'}
           </Link>
         </Button>
 
@@ -58,9 +66,11 @@ export default function NewPackagePage() {
             <div className="space-y-6 lg:col-span-2">
               <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-lg">Package Information</CardTitle>
+                  <CardTitle className="text-lg">{isExporter || isImporter ? 'Shipment Information' : 'Package Information'}</CardTitle>
                   <CardDescription>
-                    Enter the basic details for this DDS package
+                    {isExporter
+                      ? 'Enter the core details for this shipment package'
+                      : 'Enter the basic details for this DDS package'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -77,7 +87,7 @@ export default function NewPackagePage() {
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      The name of the supplier or cooperative this package is for
+                      The supplier or cooperative this shipment package references
                     </p>
                   </div>
 
@@ -138,7 +148,7 @@ export default function NewPackagePage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Plots</CardTitle>
                   <CardDescription>
-                    You can add plots after creating the package
+                    You can add plots after creating this record
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -159,13 +169,13 @@ export default function NewPackagePage() {
             <div className="space-y-6">
               <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Package Preview</CardTitle>
+                  <CardTitle className="text-base">{isExporter || isImporter ? 'Shipment Preview' : 'Package Preview'}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Package Code</p>
                     <p className="text-sm font-mono text-foreground">
-                      DDS-{formData.year}-XXX
+                      {isExporter || isImporter ? `SHP-${formData.year}-XXX` : `DDS-${formData.year}-XXX`}
                     </p>
                   </div>
                   <Separator />
@@ -203,7 +213,7 @@ export default function NewPackagePage() {
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        Create Package
+                        {isExporter || isImporter ? 'Create Shipment' : 'Create Package'}
                       </>
                     )}
                   </Button>

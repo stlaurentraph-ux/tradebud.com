@@ -26,6 +26,7 @@ import {
 import { PackageStatusBadge, ComplianceStatusBadge } from './package-status-badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import type { DDSPackage } from '@/types';
+import { useAuth } from '@/lib/auth-context';
 
 interface PackagesTableProps {
   packages: DDSPackage[];
@@ -33,6 +34,8 @@ interface PackagesTableProps {
 }
 
 export function PackagesTable({ packages, readOnly = false }: PackagesTableProps) {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'code' | 'created_at' | 'status'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -71,12 +74,12 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
     <Card className="border-border bg-card">
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg font-semibold">DDS Packages</CardTitle>
+          <CardTitle className="text-lg font-semibold">Shipment Packages</CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search packages..."
+                placeholder="Search shipments..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 bg-secondary pl-9"
@@ -99,7 +102,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                     className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     onClick={() => toggleSort('code')}
                   >
-                    Package Code
+                    {isImporter ? 'Shipment Code' : 'Package Code'}
                     <ArrowUpDown className="h-3 w-3" />
                   </button>
                 </th>
@@ -195,7 +198,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                             <DropdownMenuItem asChild>
                               <Link href={`/packages/${pkg.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                Edit Package
+                                {isImporter ? 'Edit Shipment' : 'Edit Package'}
                               </Link>
                             </DropdownMenuItem>
                           )}
@@ -213,7 +216,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                             <DropdownMenuItem asChild>
                               <Link href={`/packages/${pkg.id}/submit`}>
                                 <Send className="mr-2 h-4 w-4" />
-                                Submit to TRACES
+                                Submit downstream handoff
                               </Link>
                             </DropdownMenuItem>
                           </PermissionGate>
@@ -223,7 +226,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                           <PermissionGate permission="packages:delete">
                             <DropdownMenuItem className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Package
+                              {isImporter ? 'Delete Shipment' : 'Delete Package'}
                             </DropdownMenuItem>
                           </PermissionGate>
                         )}
@@ -237,7 +240,9 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
 
           {filteredPackages.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">No packages found</p>
+              <p className="text-sm text-muted-foreground">
+                {isImporter ? 'No shipments found' : 'No shipment packages found'}
+              </p>
             </div>
           )}
         </div>

@@ -16,6 +16,8 @@ export default function PackagesPage() {
   const [activeTab, setActiveTab] = useState<'my' | 'shared'>('my');
   const { packages, isLoading, error } = usePackages();
   const isImporter = user?.active_role === 'importer';
+  const isExporter = user?.active_role === 'exporter';
+  const isCooperative = user?.active_role === 'cooperative';
 
   // Shared packages should come from backend ACL/share-permissions, not local heuristics.
   const sharedPackages = isImporter ? [] : packages;
@@ -25,18 +27,26 @@ export default function PackagesPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="DDS Packages"
-        subtitle="Manage your Deforestation Due Diligence Statement packages"
+        title={isImporter || isExporter || isCooperative ? 'Shipments' : 'DDS Packages'}
+        subtitle={
+          isImporter
+            ? 'Validate shipment completeness, coverage, and declaration readiness'
+            : isExporter
+              ? 'Assemble shipment packages from lineage-safe upstream inputs'
+              : isCooperative
+                ? 'Prepare cooperative handoff shipments with lineage coverage, blocker checks, and premium context'
+              : 'Manage your Deforestation Due Diligence Statement packages'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'DDS Packages' },
+          { label: isImporter || isExporter || isCooperative ? 'Shipments' : 'DDS Packages' },
         ]}
         actions={
           <PermissionGate permission="packages:create">
             <Button asChild>
               <Link href="/packages/new">
                 <Plus className="mr-2 h-4 w-4" />
-                New Package
+                {isImporter || isExporter || isCooperative ? 'New Shipment' : 'New Package'}
               </Link>
             </Button>
           </PermissionGate>
@@ -63,7 +73,7 @@ export default function PackagesPage() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
             >
-              My Packages
+              {isImporter ? 'My Shipments' : 'My Packages'}
             </Button>
             <Button
               variant="ghost"
@@ -75,7 +85,7 @@ export default function PackagesPage() {
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
             >
-              Shared With Me ({sharedPackages.length})
+              {isImporter ? `Shared Shipments (${sharedPackages.length})` : `Shared With Me (${sharedPackages.length})`}
             </Button>
           </div>
         )}
@@ -83,7 +93,7 @@ export default function PackagesPage() {
         {/* Packages Table */}
         {isLoading ? (
           <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
-            Loading packages...
+            {isImporter ? 'Loading shipments...' : 'Loading packages...'}
           </div>
         ) : (
           <PackagesTable packages={displayedPackages} readOnly={activeTab === 'shared'} />

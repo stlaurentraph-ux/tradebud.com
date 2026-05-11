@@ -200,8 +200,12 @@ export class PlotsController {
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async syncEvidence(@Param('id') id: string, @Body() dto: SyncPlotEvidenceDto, @Req() req: any) {
     this.requireTenantClaim(req);
+    const tenantId =
+      req?.user?.app_metadata?.tenant_id ??
+      req?.user?.user_metadata?.tenant_id ??
+      null;
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
-    return this.plotsService.syncEvidence(id, dto, userId);
+    return this.plotsService.syncEvidence(id, dto, userId, tenantId);
   }
 
   @Post(':id/assignments')

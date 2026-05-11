@@ -1,3 +1,124 @@
+### 2026-04-22 (execution: legacy evidence tenant backfill migration)
+- Focus: recover importer evidence-feed visibility for historical `plot_evidence_synced` audit events missing tenant metadata.
+- Files changed: `tracebud-backend/sql/tb_v16_029_backfill_evidence_tenant.sql`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added deterministic backfill lane using `request_campaigns.created_by = audit_log.user_id::text` when it resolves to exactly one tenant per audit row.
+  - Added strict singleton-tenant fallback only when launch/admin tenant registries indicate exactly one tenant in the environment.
+  - Backfill remains fail-closed: only rows with empty/missing `payload.tenantId` are updated.
+- Permissions/tenant boundaries:
+  - Migration avoids broad assignment in multi-tenant ambiguous environments by requiring unique mapping predicates.
+- Exception handling/recovery:
+  - If mapping is ambiguous/noisy, rows are left unchanged rather than forced.
+- Verification:
+  - Migration is SQL-only and wrapped in transaction (`BEGIN/COMMIT`).
+- Blockers: none.
+
+### 2026-04-22 (execution: evidence-feed source hardening to immutable evidence events)
+- Focus: replace importer evidence-feed campaign-derivation with tenant-scoped immutable evidence-event sourcing.
+- Files changed: `tracebud-backend/src/plots/plots.controller.ts`, `tracebud-backend/src/plots/plots.service.ts`, `tracebud-backend/src/requests/requests.service.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - `plot_evidence_synced` audit writes now include `tenantId` in payload at sync time.
+  - `GET /v1/requests/evidence-feed` now reads from `audit_log` evidence events (`plot_evidence_synced`) and maps item-level evidence metadata into importer feed records.
+  - Feed filtering is fail-closed by tenant payload key (`payload.tenantId`) and ignores non-item/empty evidence rows.
+- Permissions/tenant boundaries:
+  - Existing requests-access role gates remain enforced; evidence feed now depends on explicit tenant payload lineage for evidence events.
+- Exception handling/recovery:
+  - If no tenant-tagged evidence events exist, feed returns empty list; no fallback to campaign records.
+- Verification:
+  - `ReadLints` on touched backend files (no lints).
+  - `cd tracebud-backend && npm run -s build` (pass).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer backend wiring for reports/issues/evidence)
+- Focus: remove remaining importer mock-only reads on `Reporting`, `Issues`, and `Evidence` destinations by adding backend-backed summary/issue/evidence endpoints and wiring dashboard pages.
+- Files changed: `tracebud-backend/src/reports/reports.controller.ts`, `tracebud-backend/src/requests/requests.controller.ts`, `tracebud-backend/src/requests/requests.service.ts`, `apps/dashboard-product/app/api/reports/importer-summary/route.ts`, `apps/dashboard-product/app/api/requests/issues/route.ts`, `apps/dashboard-product/app/api/requests/evidence-feed/route.ts`, `apps/dashboard-product/app/reports/page.tsx`, `apps/dashboard-product/app/compliance/issues/page.tsx`, `apps/dashboard-product/app/fpic/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added importer reporting summary endpoint that aggregates tenant-scoped campaign/request readiness metrics and fails closed by role/tenant claim.
+  - Added request-module operational-issues and evidence-feed endpoints derived from tenant campaign/inbox tables for importer issue/evidence surfaces.
+  - Added dashboard API proxies and switched importer destination pages to consume backend payloads with graceful loading/fallback behavior.
+- Permissions/tenant boundaries:
+  - New backend endpoints require existing requests/reporting access gates and tenant claim checks (`admin|exporter|compliance_manager`), preserving fail-closed semantics.
+- Exception handling/recovery:
+  - New summary/feed endpoints return safe-zero/empty payloads when request/inbox tables are unavailable (`42P01`) to avoid importer-page hard failures in partial environments.
+- Verification:
+  - `ReadLints` on touched backend/frontend files (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: onboarding taxonomy bridge + role-aware wizard mode)
+- Focus: make onboarding task taxonomy and overview-step taxonomy consistent with the new dashboard IA and request-wizard vocabulary.
+- Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/outreach/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Backend-driven onboarding dialog copy now uses importer taxonomy overrides (`network`, `campaigns`, `issues`, `compliance`, `reporting`) instead of legacy package/request phrasing.
+  - `create_first_campaign` CTA now lands on canonical campaigns route (`/outreach`) to match new IA language and routing.
+  - Outreach now passes role-aware wizard mode/labels (`campaign` for importer, `request` otherwise) so onboarding CTA intent and wizard terminology stay aligned.
+- Permissions/tenant boundaries:
+  - No permission or tenant model changes; copy and entry-mode wiring only.
+- Exception handling/recovery:
+  - No transition logic changes; existing action-validation semantics remain unchanged.
+- Verification:
+  - `ReadLints` on touched files (no lints).
+  - `npm run -s test -- app/page.test.tsx app/create-account/page.test.tsx` (pass).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer onboarding microcopy alignment)
+- Focus: align importer onboarding narrative and step copy with the finalized importer IA and terminology.
+- Files changed: `apps/dashboard-product/lib/onboarding-config.ts`, `apps/dashboard-product/components/onboarding/onboarding-welcome-modal.tsx`, `apps/dashboard-product/components/onboarding/onboarding-checklist-card.tsx`, `apps/dashboard-product/components/onboarding/guided-tour-overlay.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Replaced importer overview-tour steps to match IA flow: `Network -> Campaigns -> Requests -> Shipments -> Compliance -> Evidence -> Reporting`.
+  - Updated importer welcome-card highlights and checklist task labels/CTA copy to remove legacy package/request phrasing drift.
+  - Added importer contextual guided-tour CTA labels for network/campaign actions.
+- Permissions/tenant boundaries:
+  - No role/tenant authorization changes; this slice updates onboarding content and labels only.
+- Exception handling/recovery:
+  - No state-machine changes; onboarding completion behavior and action keys remain deterministic.
+- Verification:
+  - `ReadLints` on touched onboarding files (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer shared-component terminology alignment)
+- Focus: remove residual package/compliance vocabulary drift in reusable UI components used by importer flows.
+- Files changed: `apps/dashboard-product/components/packages/packages-table.tsx`, `apps/dashboard-product/components/compliance/compliance-check-list.tsx`, `apps/dashboard-product/components/compliance/plot-compliance-breakdown.tsx`, `apps/dashboard-product/components/compliance/evidence-requirement.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added importer-aware wording in shared package table actions/labels (`Shipment` terminology where relevant).
+  - Added importer-aware wording in reusable compliance summary/check cards and evidence/plot breakdown cards.
+  - Kept data model and route behavior unchanged; this slice is copy/framing only.
+- Permissions/tenant boundaries:
+  - No permission changes; existing role/tenant gate behavior remains unchanged.
+- Exception handling/recovery:
+  - No state-transition changes; only display language adjusted for importer context.
+- Verification:
+  - `ReadLints` on all touched shared components (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer destination framing alignment)
+- Focus: align shared importer destination pages with Tier 3 language (`validate, complete, declare, retain, report`) after sidebar IA rollout.
+- Files changed: `apps/dashboard-product/app/packages/page.tsx`, `apps/dashboard-product/app/compliance/page.tsx`, `apps/dashboard-product/app/fpic/page.tsx`, `apps/dashboard-product/app/outreach/page.tsx`, `apps/dashboard-product/app/inbox/page.tsx`, `apps/dashboard-product/app/reports/page.tsx`, `apps/dashboard-product/app/compliance/issues/page.tsx`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added role-aware page framing for importer on shared routes without changing route bindings or permission gates.
+  - Importer-facing names now match sidebar IA (`Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, `Issues`) while non-importer roles retain existing labels.
+- Permissions/tenant boundaries:
+  - No auth policy changes; existing role/tenant checks remain enforced by current gates and backend contracts.
+- Exception handling/recovery:
+  - No state transition changes; this slice is presentation-only and fail-closed behavior is unchanged.
+- Verification:
+  - `ReadLints` on all touched dashboard pages (no lints).
+- Blockers: none.
+
+### 2026-04-22 (execution: importer dashboard IA foundation alignment)
+- Focus: align importer dashboard IA to Tier 3 operating responsibilities (validate, complete, declare, retain, report).
+- Files changed: `apps/dashboard-product/lib/rbac.ts`, `apps/dashboard-product/components/layout/app-sidebar.tsx`, `apps/dashboard-product/app/help/page.tsx`, `apps/dashboard-product/lib/rbac.test.ts`, `product-os/02-features/FEAT-008-dashboards.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Importer sidebar now uses section model `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log`.
+  - Added importer-specific nav aliases mapped to current routes (`Network=/contacts`, `Shipments=/packages`, `Evidence=/fpic`, `Campaigns=/outreach`, `Requests=/inbox`, `Reporting=/reports`, `Issues=/compliance/issues`).
+  - Added `/help` dashboard page stub so Help route resolves in-app.
+- Permissions/tenant boundaries:
+  - Existing role-scoped permission checks and route feature-gate checks remain enforced via `getVisibleNavItems` and `isRouteEnabled`.
+- Exception handling/recovery:
+  - No state-transition changes; IA slice is navigation/view-layer only and fail-closed on gated routes.
+- Verification:
+  - `cd apps/dashboard-product && npm run -s test -- lib/rbac.test.ts app/page.test.tsx` (expected green for touched areas).
+- Blockers: none.
+
 ### 2026-04-22 (execution: onboarding gated-CTA telemetry instrumentation)
 - Focus: instrument gated onboarding CTA fallbacks so blocked-route frequency is measurable.
 - Files changed: `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/app/api/analytics/gated-entry/route.ts`, `apps/dashboard-product/app/api/analytics/gated-entry/route.test.ts`, `product-os/04-quality/event-tracking.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
