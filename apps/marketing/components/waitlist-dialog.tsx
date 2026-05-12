@@ -87,10 +87,10 @@ function SuccessState() {
       <AnimatedCheckmark />
       <div className="flex flex-col gap-2">
         <h3 className="text-2xl font-bold text-[var(--forest-canopy)]">
-          {"You're on the list."}
+          {"Application received"}
         </h3>
         <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-          {"We'll be in touch as soon as Tracebud is ready for you. Early adopters get priority support and onboarding."}
+          {"We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."}
         </p>
       </div>
     </div>
@@ -344,7 +344,7 @@ export function WaitlistDialog({
 
               {/* Number of producers */}
               <div className="flex flex-col gap-1.5">
-                <Label>Number of producers to make comply</Label>
+                <Label>How many producers need EUDR compliance?</Label>
                 <Select required value={producerRange} onValueChange={setProducerRange}>
                   <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
                     <SelectValue placeholder="Select a range" />

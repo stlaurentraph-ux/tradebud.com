@@ -56,10 +56,10 @@ export default function ThankYouPage() {
           transition={{ delay: 0.2, duration: 0.6 }}
         >
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            You&apos;re on the list!
+            Application Received
           </h1>
           <p className="text-white/80 text-lg mb-2">
-            Thank you for joining the Tracebud waitlist.
+            Thank you for your interest in Tracebud. We review every application personally.
           </p>
           {email && (
             <p className="text-[var(--data-emerald)] font-semibold">
@@ -108,8 +108,8 @@ export default function ThankYouPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-white text-lg">Go live (Q2 2025)</h3>
-              <p className="text-white/70">Full platform access with priority support for early pilots.</p>
+              <h3 className="font-semibold text-white text-lg">Platform access</h3>
+              <p className="text-white/70">Full access with priority support for pilot partners. Ahead of EUDR enforcement.</p>
             </div>
           </div>
         </motion.div>

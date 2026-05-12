@@ -2,20 +2,20 @@
   "common": {
     "language": "Language",
     "joinWaitlist": "Join the waitlist",
-    "learnMore": "Learn More",
+    "learnMore": "See how it works",
     "contactUs": "Contact Us"
   },
   "hero": {
-    "eudrDeadline": "EUDR: Dec 30, 2026 (large/medium) · Jun 30, 2027 (micro/small)",
+    "eudrDeadline": "EUDR enforcement: December 30, 2026 (large/medium) · June 30, 2027 (micro/small)",
     "headline1": "Trade Freely.",
     "headline2": "Trace Easily.",
-    "subheadline": "EU market access made simple. Full supply chain traceability in days, not months.",
-    "metric1": { "value": "Days", "label": "Not months to compliance" },
-    "metric2": { "value": "Full Chain", "label": "Farm to port verified" },
-    "metric3": { "value": "Self-serve", "label": "No integration needed" },
-    "cta": { "startTrial": "Join the waitlist", "bookDemo": "Learn more" },
-    "trialInfo": "30 days free. No credit card required.",
-    "earlyAdopters": "Early adopters get priority support",
+    "subheadline": "Without EUDR compliance, your products cannot enter the EU market. Tracebud delivers audit-ready due diligence from farm to border.",
+    "metric1": { "value": "48h", "label": "Setup to compliance" },
+    "metric2": { "value": "Farm to EU", "label": "Full chain verified" },
+    "metric3": { "value": "Offline-first", "label": "Works without connectivity" },
+    "cta": { "startTrial": "Join the waitlist", "bookDemo": "See how it works" },
+    "trialInfo": "Free for farmers. No credit card required.",
+    "earlyAdopters": "Limited pilot spots available",
     "seeHowItWorks": "See how it works"
   },
   "header": {
@@ -44,13 +44,13 @@
     "joinWaitlist": "Join the waitlist"
   },
   "impact": {
-    "title": "Why Tracebud Works",
-    "subtitle": "Purpose-built for supply chain transparency in regulated markets. Simple to use, built to scale.",
+    "title": "Proof Starts Where Connectivity Ends",
+    "subtitle": "Offline-first origin data becomes buyer-ready compliance proof. Requests move upstream. Verified evidence moves downstream.",
     "features": {
-      "compliance": { "title": "EUDR Compliant", "description": "Built to meet December 2026 regulations" },
-      "farmer": { "title": "Farmer First", "description": "Smartphone app works offline in the field" },
-      "tracing": { "title": "Real-time Tracing", "description": "GPS, photos, timestamps, immutable records" },
-      "global": { "title": "Global Ready", "description": "TRACES NT integration and multi-language support" }
+      "compliance": { "title": "EUDR Compliant", "description": "Audit-ready due diligence before December 2026" },
+      "farmer": { "title": "Farmer First", "description": "Offline app captures plot proof where connectivity ends" },
+      "tracing": { "title": "Portable Origin Proof", "description": "Reusable verified data, not another isolated dashboard" },
+      "global": { "title": "Global Ready", "description": "TRACES NT integration and 11-language support" }
     },
     "useCases": "Early Pilots Are Already Using Tracebud For:"
   },
@@ -62,14 +62,14 @@
   "faq": {
     "title": "Frequently Asked Questions",
     "whenLaunch": "When will Tracebud launch?",
-    "whenLaunchAnswer": "Tracebud is in active pilot testing. We're enrolling select partners now. Join the waitlist to be notified when we go live.",
-    "whyCommodities": "Why start with these commodities?",
-    "whoCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and wood are the primary EUDR commodities. We'll expand based on demand.",
+    "whenLaunchAnswer": "Tracebud is in active pilot testing with select cooperatives and exporters. Join the waitlist to be notified when we open access.",
+    "whyCommodities": "Which commodities does Tracebud support?",
+    "whyCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and wood—the 7 EUDR commodity categories. We start where compliance pain is immediate.",
     "howCost": "How much does it cost?",
-    "howCostAnswer": "Pricing is transparent and scales with your operation size. Free trial available. Details shared during onboarding.",
+    "howCostAnswer": "Free for farmers. Exporters and cooperatives pay per producer enrolled. EU importers pay per supplier. Volume-based DDS fees create alignment with your compliance needs.",
     "howLong": "How long does setup take?",
-    "howLongAnswer": "Most cooperatives are mapped and operational within 48 hours of signing up. Offline-first design means zero downtime.",
+    "howLongAnswer": "Most cooperatives are mapped and operational within 48 hours. Offline-first design means zero downtime during field work.",
     "support": "What support is available?",
-    "supportAnswer": "24/7 email support, plus priority phone support for pilot partners. Direct access to our compliance team."
+    "supportAnswer": "Priority onboarding for pilot partners. Direct access to our compliance team. 24/7 email support."
   }
 }
