@@ -95,3 +95,5 @@ export function Impact() {
         </motion.div>
       </div>
     </section>
+  );
+}
