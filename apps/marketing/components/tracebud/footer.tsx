@@ -38,6 +38,7 @@ const legalLinks = [
 export function Footer() {
   const waitlist = useWaitlistDialog();
   return (
+    <>
     <footer className="relative bg-[var(--forest-canopy)] text-white py-12 md:py-24 px-4 md:px-6 overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0 opacity-20">
@@ -185,5 +186,6 @@ export function Footer() {
       </div>
     </footer>
     <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
+    </>
   );
 }
