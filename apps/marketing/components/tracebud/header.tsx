@@ -44,18 +44,6 @@ export function Header() {
     { label: t("nav.pricing"), href: "/pricing" },
   ];
 
-const secondaryLinks = [
-  { label: "Pilot", href: "/pilot" },
-  { label: "How It Works", href: "/#how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-];
-
-export function Header() {
-  const pathname = usePathname();
-  const isFarmersPage = pathname === "/farmers";
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const resolvedHref = (href: string | undefined) => {
     if (!href) return "/";
     if (!href.includes("#")) return href;
