@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { notFound } from 'next/navigation'
 import { getMessages } from 'next-intl/server'
 import { NextIntlClientProvider } from 'next-intl'
 import { Analytics } from '@vercel/analytics/next'
@@ -148,14 +147,13 @@ export default async function RootLayout({
 }>) {
   const { locale } = await params
   
-  if (!locales.includes(locale as any)) {
-    notFound()
-  }
+  // Locale validation moved to [locale]/layout.tsx
+  const validLocale = locales.includes(locale as any) ? locale : 'en'
 
   const messages = await getMessages()
 
   return (
-    <html lang={locale}>
+    <html lang={validLocale}>
       <body className="font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           <a href="#main-content" className="skip-to-content">
