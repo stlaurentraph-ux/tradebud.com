@@ -8,7 +8,6 @@ import { useWaitlistDialog } from "@/components/waitlist-dialog";
 export function Impact() {
   const waitlist = useWaitlistDialog();
 
-export function Impact() {
   return (
     <section className="relative py-32 px-6 overflow-hidden bg-gradient-to-b from-[var(--forest-canopy)] to-[var(--forest-light)]">
       <div className="max-w-7xl mx-auto">
