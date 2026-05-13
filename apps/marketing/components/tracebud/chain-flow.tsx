@@ -39,13 +39,13 @@ export function ChainFlow() {
           className="text-center mb-16"
         >
           <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]">
-            Decentralized Compliance Network
+            Requests Move Upstream. Proof Moves Downstream.
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance">
-            Any actor. Any direction.
+            One Network. Any Direction.
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto text-balance">
-            Upload contacts. Send requests or data. Whether you&apos;re a producer, cooperative, exporter, or importer—Tracebud routes it where it needs to go. Everyone gets verified.
+            Producers send data directly to buyers. Importers request from suppliers upstream. Cooperatives aggregate member plots into identity-preserving batches. Full chain visibility without vendor lock-in.
           </p>
         </motion.div>
 

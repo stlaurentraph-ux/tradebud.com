@@ -20,20 +20,20 @@ export function Impact() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
-            Why Tracebud Works
+            From Offline Fields to Audit-Ready Proof
           </h2>
           <p className="text-white/90 text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-            Purpose-built for supply chain transparency in regulated markets. Simple to use, built to scale.
+            Portable origin data that works offline, gets verified offline, and moves upstream/downstream with full chain integrity.
           </p>
         </motion.div>
 
         {/* Value props */}
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-16 md:mb-20">
           {[
-            { icon: CheckCircle2, title: "EUDR Compliant", description: "Built to meet December 2026 regulations" },
-            { icon: Users, title: "Farmer First", description: "Smartphone app works offline in the field" },
-            { icon: Zap, title: "Real-time Tracing", description: "GPS, photos, timestamps, immutable records" },
-            { icon: Globe, title: "Global Ready", description: "TRACES NT integration and multi-language support" },
+            { icon: CheckCircle2, title: "EUDR Compliant", description: "Audit-ready due diligence before December 2026 enforcement" },
+            { icon: Users, title: "Farmer First", description: "Offline app captures plot proof where connectivity ends" },
+            { icon: Zap, title: "Portable Origin Proof", description: "Reusable verified data, not another isolated dashboard" },
+            { icon: Globe, title: "Global Ready", description: "TRACES NT integration and 11-language support" },
           ].map((item, index) => (
             <motion.div
               key={index}

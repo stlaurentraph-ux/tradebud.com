@@ -52,10 +52,10 @@ export function ExitIntentModal() {
             </div>
 
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Before you go...
+              Don't miss your December 2026 deadline
             </h3>
             <p className="text-gray-600 mb-6">
-              Join our waitlist to be first notified when Tracebud launches. Early adopters get priority support and special pricing.
+              Tracebud gets you audit-ready for EUDR enforcement. Join the waitlist to secure your spot in the pilot program.
             </p>
 
             <div className="space-y-3">
@@ -79,7 +79,7 @@ export function ExitIntentModal() {
             </div>
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              Early adopters get priority support
+              Limited pilot spots available for pilot partners
             </p>
           </motion.div>
         </motion.div>
