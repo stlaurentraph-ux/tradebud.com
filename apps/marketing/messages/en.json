@@ -6,13 +6,13 @@
     "contactUs": "Contact Us"
   },
   "hero": {
-    "eudrDeadline": "EUDR enforcement: December 30, 2026 (large/medium) · June 30, 2027 (micro/small)",
-    "headline1": "Trade Freely.",
-    "headline2": "Trace Easily.",
-    "subheadline": "Without EUDR compliance, your products cannot enter the EU market. Tracebud delivers audit-ready due diligence from farm to border.",
-    "metric1": { "value": "48h", "label": "Setup to compliance" },
-    "metric2": { "value": "Farm to EU", "label": "Full chain verified" },
-    "metric3": { "value": "Offline-first", "label": "Works without connectivity" },
+    "eudrDeadline": "EU requires proof of origin starting December 2026",
+    "headline1": "Your farm. Your proof.",
+    "headline2": "Works everywhere.",
+    "subheadline": "Map your plot once. That proof works for every EU buyer. By December, you need it. Start now.",
+    "metric1": { "value": "20 min", "label": "Time to map one farm" },
+    "metric2": { "value": "Forever", "label": "How long proof works" },
+    "metric3": { "value": "Offline", "label": "Works in the field" },
     "cta": { "startTrial": "Join the waitlist", "bookDemo": "See how it works" },
     "trialInfo": "Free for farmers. No credit card required.",
     "earlyAdopters": "Limited pilot spots available",
@@ -44,14 +44,21 @@
     "joinWaitlist": "Join the waitlist"
   },
   "impact": {
-    "title": "Proof Starts Where Connectivity Ends",
-    "subtitle": "Offline-first origin data becomes buyer-ready compliance proof. Requests move upstream. Verified evidence moves downstream.",
+    "title": "Map once. Prove forever.",
+    "subtitle": "Your farmer maps their plot. That proof works for every buyer, forever. No re-doing work. No asking twice.",
     "features": {
-      "compliance": { "title": "EUDR Compliant", "description": "Audit-ready due diligence before December 2026" },
-      "farmer": { "title": "Farmer First", "description": "Offline app captures plot proof where connectivity ends" },
-      "tracing": { "title": "Portable Origin Proof", "description": "Reusable verified data, not another isolated dashboard" },
-      "global": { "title": "Global Ready", "description": "TRACES NT integration and 11-language support" }
+      "compliance": { "title": "You'll be ready", "description": "When December comes, you're not scrambling. Your proof is ready." },
+      "farmer": { "title": "Farmers do it once", "description": "One walk around the field. Takes 20 minutes. Then it's done." },
+      "tracing": { "title": "Use it everywhere", "description": "Same proof works for any EU buyer. No re-mapping. No new spreadsheets." },
+      "global": { "title": "Works offline", "description": "Even in the field with no signal. Proof captures anyway." }
     },
+    "useCases": "Farmers and cooperatives are already using Tracebud to:"
+  },
+  "compliance": {
+    "title": "Why this matters in 18 months",
+    "subtitle": "Europe is requiring proof of where your crop came from. If you don't have it, you can't sell. Tracebud makes that proof portable and reusable.",
+    "integrations": "Direct connections to EU systems"
+  },
     "useCases": "Early Pilots Are Already Using Tracebud For:"
   },
   "compliance": {
@@ -60,16 +67,16 @@
     "integrations": "Direct Integrations"
   },
   "faq": {
-    "title": "Frequently Asked Questions",
-    "whenLaunch": "When will Tracebud launch?",
-    "whenLaunchAnswer": "Tracebud is in active pilot testing with select cooperatives and exporters. Join the waitlist to be notified when we open access.",
-    "whyCommodities": "Which commodities does Tracebud support?",
-    "whyCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and wood—the 7 EUDR commodity categories. We start where compliance pain is immediate.",
-    "howCost": "How much does it cost?",
-    "howCostAnswer": "Free for farmers. Exporters and cooperatives pay per producer enrolled. EU importers pay per supplier. Volume-based DDS fees create alignment with your compliance needs.",
+    "title": "Questions? We have answers.",
+    "whenLaunch": "When can I start using Tracebud?",
+    "whenLaunchAnswer": "We're testing with farmers and cooperatives now. Join the waitlist and we'll invite you when your region opens.",
+    "whyCommodities": "What crops do you support?",
+    "whyCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and timber. These are the 7 crops the EU is watching.",
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Free for farmers. Cooperatives and exporters pay based on how many farmers they manage. Importers pay based on how many suppliers they track. You only pay for what you use.",
     "howLong": "How long does setup take?",
-    "howLongAnswer": "Most cooperatives are mapped and operational within 48 hours. Offline-first design means zero downtime during field work.",
-    "support": "What support is available?",
-    "supportAnswer": "Priority onboarding for pilot partners. Direct access to our compliance team. 24/7 email support."
+    "howLongAnswer": "Once you sign up, farmers can start mapping immediately. Most cooperatives have their whole network mapped within a week. It works offline, so no downtime in the field.",
+    "support": "What if I need help?",
+    "supportAnswer": "We're here. Direct support from our team, 24/7 email, plus we do hands-on onboarding for cooperatives and exporters. You're not alone in this."
   }
 }
