@@ -1,127 +1,161 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { Calendar } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
 export function Hero() {
-  const t = useTranslations("hero");
   const waitlist = useWaitlistDialog();
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Full-bleed background image */}
-      <div className="absolute inset-0">
-        <Image
-          src="https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2073&auto=format&fit=crop"
-          alt="Lush green coffee plantation with mountains in the background"
-          fill
-          className="object-cover"
-          priority
-          loading="eager"
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2073 1382'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='20'/%3E%3C/filter%3E%3Crect fill='%23228B67' width='100%25' height='100%25'/%3E%3Crect filter='url(%23b)' fill='%231a6d53' width='100%25' height='100%25'/%3E%3C/svg%3E"
-        />
-        {/* Dark overlay for text readability - reduced opacity to show imagery */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/60 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/70" />
-      </div>
+    <>
+      {/* Hero Section */}
+      <section className="relative min-h-[90vh] flex items-center bg-[var(--warm-stone)]">
+        <div className="max-w-7xl mx-auto px-6 py-24 md:py-32">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: Text Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <p className="text-sm font-medium text-[var(--forest-canopy)] tracking-wide uppercase mb-4">
+                EUDR Compliance Made Simple
+              </p>
+              
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[var(--forest-canopy)] leading-tight mb-6 text-balance">
+                The easiest way for smallholders to stay connected to EU markets
+              </h1>
+              
+              <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl">
+                From producer onboarding and plot mapping to shipment readiness and buyer handoff, Tracebud turns origin data into usable compliance.
+              </p>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-32 text-center">
-        {/* EUDR Deadline Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 bg-[var(--mountain-clay)] text-white px-5 py-2.5 rounded-full text-lg font-bold mb-8"
-        >
-          <Calendar className="w-5 h-5" />
-          <span>{t("eudrDeadline")}</span>
-        </motion.div>
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <Button
+                  size="lg"
+                  onClick={() => waitlist.setOpen(true)}
+                  className="bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-semibold px-8 py-6 text-base rounded-full"
+                >
+                  Join the waitlist
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-[var(--forest-canopy)] text-[var(--forest-canopy)] hover:bg-[var(--forest-canopy)] hover:text-white font-semibold px-8 py-6 text-base rounded-full"
+                  asChild
+                >
+                  <a href="#how-it-works">See how it works</a>
+                </Button>
+              </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight mb-6 text-balance leading-tight">
-            {t("headline1")}
-            <br />
-            <span className="text-[var(--data-emerald)]">{t("headline2")}</span>
-          </h1>
-        </motion.div>
+              <p className="text-sm text-gray-500">
+                Free for producers. No credit card required.
+              </p>
+            </motion.div>
 
-        <motion.p
-          className="text-lg md:text-2xl text-white/90 max-w-3xl mx-auto mb-8 leading-relaxed font-medium"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.35 }}
-        >
-          {t("subheadline")}
-        </motion.p>
-
-        {/* Value Metrics */}
-        <motion.div
-          className="flex flex-wrap justify-center gap-8 md:gap-12 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-        >
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric1.value")}</div>
-            <div className="text-sm md:text-base text-white/70">{t("metric1.label")}</div>
+            {/* Right: Image */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
+                <Image
+                  src="/images/farmer-hero.jpg"
+                  alt="Farmer mapping their coffee plot with Tracebud mobile app"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              {/* Floating stat card */}
+              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <div className="text-3xl font-bold text-[var(--forest-canopy)]">20 min</div>
+                <div className="text-sm text-gray-500">to map one farm</div>
+              </div>
+            </motion.div>
           </div>
-          <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric2.value")}</div>
-            <div className="text-sm md:text-base text-white/70">{t("metric2.label")}</div>
-          </div>
-          <div className="hidden sm:block w-px bg-white/20 h-12 self-center" />
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold text-[var(--data-emerald)]">{t("metric3.value")}</div>
-            <div className="text-sm md:text-base text-white/70">{t("metric3.label")}</div>
-          </div>
-        </motion.div>
+        </div>
+      </section>
 
-        {/* Primary CTA */}
-        <motion.div
-          className="flex flex-col items-center gap-4 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          <Button
-            size="lg"
-            onClick={() => waitlist.setOpen(true)}
-            className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-12 py-7 text-lg rounded-full shadow-xl"
+      {/* Problem Section */}
+      <section className="py-24 md:py-32 bg-white">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
           >
-            Join the waitlist
-          </Button>
-          <span className="inline-flex items-center gap-1.5 text-sm text-[var(--data-emerald)] font-medium">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            Early adopters get priority support
-          </span>
-        </motion.div>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance">
+              EUDR depends on farm-level proof, but that proof is still fragmented
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Evidence arrives late. Records are not reusable. Teams end up chasing missing data just when shipments need to move. The result is more manual work, more blocked shipments, and greater risk that smallholders are left out.
+            </p>
+          </motion.div>
+        </div>
+      </section>
 
-        <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
+      {/* Solution Section */}
+      <section className="py-24 md:py-32 bg-[var(--warm-stone)]">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
+              What Tracebud changes
+            </h2>
+            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+              One shared workflow to request, collect, verify, and reuse origin proof. The process can start anywhere in the chain.
+            </p>
+          </motion.div>
 
-        <motion.div
-          className="flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-        >
-          <a href="#supply-chain" className="flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm font-medium">
-            <span>{t("seeHowItWorks")}</span>
-            <svg className="w-4 h-4 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </a>
-        </motion.div>
-      </div>
-    </section>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                number: "1",
+                title: "Create proof once",
+                description: "Producers and field teams capture GPS boundaries, photos, and consent directly from the farm. Works offline.",
+              },
+              {
+                number: "2", 
+                title: "Reuse everywhere",
+                description: "Instead of rebuilding proof for every shipment, verified data flows across workflows. Map once, use forever.",
+              },
+              {
+                number: "3",
+                title: "Ship with confidence",
+                description: "Fewer proof gaps, faster handoff, and more confidence in what can actually ship to EU markets.",
+              },
+            ].map((item, index) => (
+              <motion.div
+                key={item.number}
+                className="bg-white rounded-2xl p-8 border border-gray-100"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+              >
+                <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
+                <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
+    </>
   );
 }

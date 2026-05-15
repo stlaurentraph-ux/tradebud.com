@@ -7,61 +7,44 @@ import Image from "next/image";
 import Link from "next/link";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
-const platformLinks = [
-  { label: "Pilot program", href: "/pilot" },
-  { label: "For Farmers", href: "/farmers" },
-  { label: "For Exporters", href: "/exporters" },
-  { label: "For Importers", href: "/importers" },
-  { label: "For Countries", href: "/countries" },
-];
-
-const resourceLinks = [
-  { label: "Documentation", href: "#" },
-  { label: "API Reference", href: "#" },
-  { label: "EUDR Guide", href: "#" },
-  { label: "Case Studies", href: "#" },
-];
-
-const companyLinks = [
-  { label: "About Us", href: "#" },
-  { label: "Careers", href: "#" },
-  { label: "Blog", href: "#" },
-  { label: "Contact", href: "mailto:hello@tracebud.com" },
-];
-
-const legalLinks = [
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Data Processing", href: "/privacy" },
-];
-
 export function Footer() {
   const waitlist = useWaitlistDialog();
+
   return (
     <>
-    <footer className="relative bg-[var(--forest-canopy)] text-white py-12 md:py-24 px-4 md:px-6 overflow-hidden">
-      {/* Background image */}
-      <div className="absolute inset-0 opacity-20">
-        <Image
-          src="https://images.unsplash.com/photo-1501353163335-102e39d92607?q=80&w=2070&auto=format&fit=crop"
-          alt="Coffee plantation background"
-          fill
-          className="object-cover"
-        />
-      </div>
+      {/* CTA Section */}
+      <section className="py-24 md:py-32 bg-[var(--forest-canopy)]">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+              Ready to make compliance usable?
+            </h2>
+            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+              Join cooperatives, exporters, and importers building buyer-ready EUDR proof with Tracebud.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => waitlist.setOpen(true)}
+              className="bg-white hover:bg-gray-100 text-[var(--forest-canopy)] font-semibold px-10 py-6 text-base rounded-full"
+            >
+              Join the waitlist
+            </Button>
+          </motion.div>
+        </div>
+      </section>
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 md:gap-12 mb-12 md:mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-3 lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
-              <div className="relative w-10 h-10 md:w-14 md:h-14">
+      {/* Footer */}
+      <footer className="bg-[var(--warm-stone)] py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3">
+              <div className="relative w-10 h-10">
                 <Image
                   src="/images/tracebud-logo.png"
                   alt="Tracebud"
@@ -69,123 +52,65 @@ export function Footer() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-2xl md:text-3xl font-bold">Tracebud</span>
+              <span className="text-xl font-bold text-[var(--forest-canopy)]">Tracebud</span>
             </Link>
-            <p className="text-white/80 text-base md:text-lg mb-6 md:mb-8 max-w-md leading-relaxed">
-              The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                size="default"
-                onClick={() => waitlist.setOpen(true)}
-                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold text-sm md:text-base px-5 md:px-8 rounded-full w-full sm:w-auto"
+
+            {/* Links */}
+            <div className="flex flex-wrap gap-8">
+              <Link href="#how-it-works" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                How It Works
+              </Link>
+              <Link href="/privacy" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                Privacy
+              </Link>
+              <Link href="/terms" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                Terms
+              </Link>
+              <a href="mailto:hello@tracebud.com" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                Contact
+              </a>
+            </div>
+
+            {/* Social */}
+            <div className="flex items-center gap-4">
+              <a
+                href="mailto:hello@tracebud.com"
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-600 hover:text-[var(--forest-canopy)] hover:shadow-md transition-all"
+                aria-label="Email"
               >
-                Join the waitlist
-              </Button>
+                <Mail className="w-5 h-5" />
+              </a>
+              <a
+                href="https://linkedin.com/company/tracebud"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-600 hover:text-[var(--forest-canopy)] hover:shadow-md transition-all"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="w-5 h-5" />
+              </a>
+              <a
+                href="https://twitter.com/tracebud"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-600 hover:text-[var(--forest-canopy)] hover:shadow-md transition-all"
+                aria-label="Twitter"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
             </div>
           </div>
 
-          {/* Platform Links */}
-          <div>
-            <h4 className="font-bold text-sm md:text-lg mb-4 md:mb-6 text-white">Platform</h4>
-            <ul className="space-y-2 md:space-y-4">
-              {platformLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-white/80 hover:text-[var(--data-emerald)] transition-colors text-sm md:text-lg"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h4 className="font-bold text-sm md:text-lg mb-4 md:mb-6 text-white">Resources</h4>
-            <ul className="space-y-2 md:space-y-4">
-              {resourceLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-white/80 hover:text-[var(--data-emerald)] transition-colors text-sm md:text-lg"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div className="col-span-2 md:col-span-1">
-            <h4 className="font-bold text-sm md:text-lg mb-4 md:mb-6 text-white">Company</h4>
-            <ul className="space-y-2 md:space-y-4">
-              {companyLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-white/80 hover:text-[var(--data-emerald)] transition-colors text-sm md:text-lg"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
-
-        {/* Bottom bar */}
-        <div className="border-t border-white/20 pt-8 md:pt-10 flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/60 text-sm md:text-base text-center md:text-left">
-              {new Date().getFullYear()} Tracebud. All rights reserved.
+          {/* Bottom */}
+          <div className="pt-8 border-t border-gray-200">
+            <p className="text-sm text-gray-500 text-center">
+              &copy; {new Date().getFullYear()} Tracebud. Simpler EUDR operations. Stronger market access.
             </p>
-            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
-              {legalLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="text-white/60 hover:text-white transition-colors text-sm md:text-base"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-center md:justify-end gap-3">
-            <a
-              href="mailto:hello@tracebud.com"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              aria-label="Email"
-            >
-              <Mail className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </a>
-            <a
-              href="https://linkedin.com/company/tracebud"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </a>
-            <a
-              href="https://twitter.com/tracebud"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-              aria-label="Twitter"
-            >
-              <Twitter className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </a>
           </div>
         </div>
-      </div>
-    </footer>
-    <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
+      </footer>
+
+      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }

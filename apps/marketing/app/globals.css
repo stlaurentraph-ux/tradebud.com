@@ -4,39 +4,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0.005 155);
-  --foreground: oklch(0.15 0.03 155);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.03 155);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.03 155);
-  --primary: oklch(0.30 0.1 160);
-  --primary-foreground: oklch(0.98 0.005 155);
-  --secondary: oklch(0.35 0.08 55);
-  --secondary-foreground: oklch(0.98 0.005 155);
-  --muted: oklch(0.94 0.01 155);
-  --muted-foreground: oklch(0.35 0.03 155);
-  --accent: oklch(0.55 0.18 160);
-  --accent-foreground: oklch(0.12 0.04 155);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.88 0.02 155);
-  --input: oklch(0.92 0.01 155);
-  --ring: oklch(0.65 0.2 160);
-  --chart-1: oklch(0.35 0.1 160);
-  --chart-2: oklch(0.65 0.2 160);
-  --chart-3: oklch(0.4 0.08 55);
-  --chart-4: oklch(0.55 0.15 160);
-  --chart-5: oklch(0.5 0.1 55);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #FAFAF9;
+  --foreground: #1C1917;
+  --card: #FFFFFF;
+  --card-foreground: #1C1917;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1917;
+  --primary: #1C1917;
+  --primary-foreground: #FAFAF9;
+  --secondary: #F5F5F4;
+  --secondary-foreground: #1C1917;
+  --muted: #F5F5F4;
+  --muted-foreground: #78716C;
+  --accent: #10B981;
+  --accent-foreground: #064E3B;
+  --destructive: #EF4444;
+  --destructive-foreground: #FAFAF9;
+  --border: #E7E5E4;
+  --input: #E7E5E4;
+  --ring: #10B981;
+  --chart-1: #064E3B;
+  --chart-2: #10B981;
+  --chart-3: #78350F;
+  --chart-4: #059669;
+  --chart-5: #92400E;
+  --radius: 0.5rem;
+  --sidebar: #FAFAF9;
+  --sidebar-foreground: #1C1917;
+  --sidebar-primary: #1C1917;
+  --sidebar-primary-foreground: #FAFAF9;
+  --sidebar-accent: #F5F5F4;
+  --sidebar-accent-foreground: #1C1917;
+  --sidebar-border: #E7E5E4;
+  --sidebar-ring: #10B981;
   
   /* Tracebud Custom Colors */
   --forest-canopy: #064E3B;
@@ -44,6 +44,8 @@
   --data-emerald: #10B981;
   --forest-light: #065F46;
   --clay-light: #92400E;
+  --warm-stone: #F5F5F4;
+  --warm-stone-dark: #E7E5E4;
 }
 
 .dark {

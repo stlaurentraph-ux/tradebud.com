@@ -7,14 +7,14 @@
   },
   "hero": {
     "eudrDeadline": "EU requires proof of origin starting December 2026",
-    "headline1": "Your farm. Your proof.",
-    "headline2": "Works everywhere.",
-    "subheadline": "Map your plot once. That proof works for every EU buyer. By December, you need it. Start now.",
-    "metric1": { "value": "20 min", "label": "Time to map one farm" },
-    "metric2": { "value": "Forever", "label": "How long proof works" },
-    "metric3": { "value": "Offline", "label": "Works in the field" },
+    "headline1": "The easiest way for smallholders",
+    "headline2": "to stay connected to EU markets",
+    "subheadline": "From producer onboarding and plot mapping to shipment readiness and buyer handoff, Tracebud turns origin data into usable compliance.",
+    "metric1": { "value": "20 min", "label": "to map one farm" },
+    "metric2": { "value": "Offline", "label": "works in the field" },
+    "metric3": { "value": "Reusable", "label": "proof for any buyer" },
     "cta": { "startTrial": "Join the waitlist", "bookDemo": "See how it works" },
-    "trialInfo": "Free for farmers. No credit card required.",
+    "trialInfo": "Free for producers. No credit card required.",
     "earlyAdopters": "Limited pilot spots available",
     "seeHowItWorks": "See how it works"
   },
@@ -27,9 +27,9 @@
       "countries": "Countries"
     },
     "nav": {
-      "pilot": "Pilot",
       "howItWorks": "How It Works",
-      "pricing": "Pricing"
+      "about": "About",
+      "contact": "Contact"
     },
     "cta": {
       "downloadApp": "Download App",
@@ -43,40 +43,17 @@
     "contactSales": "Contact Sales",
     "joinWaitlist": "Join the waitlist"
   },
-  "impact": {
-    "title": "Map once. Prove forever.",
-    "subtitle": "Your farmer maps their plot. That proof works for every buyer, forever. No re-doing work. No asking twice.",
-    "features": {
-      "compliance": { "title": "You'll be ready", "description": "When December comes, you're not scrambling. Your proof is ready." },
-      "farmer": { "title": "Farmers do it once", "description": "One walk around the field. Takes 20 minutes. Then it's done." },
-      "tracing": { "title": "Use it everywhere", "description": "Same proof works for any EU buyer. No re-mapping. No new spreadsheets." },
-      "global": { "title": "Works offline", "description": "Even in the field with no signal. Proof captures anyway." }
-    },
-    "useCases": "Farmers and cooperatives are already using Tracebud to:"
-  },
-  "compliance": {
-    "title": "Why this matters in 18 months",
-    "subtitle": "Europe is requiring proof of where your crop came from. If you don't have it, you can't sell. Tracebud makes that proof portable and reusable.",
-    "integrations": "Direct connections to EU systems"
-  },
-    "useCases": "Early Pilots Are Already Using Tracebud For:"
-  },
-  "compliance": {
-    "title": "Regulatory Compliance",
-    "subtitle": "Built from the ground up to meet EU regulatory requirements with direct system integrations.",
-    "integrations": "Direct Integrations"
-  },
   "faq": {
     "title": "Questions? We have answers.",
     "whenLaunch": "When can I start using Tracebud?",
-    "whenLaunchAnswer": "We're testing with farmers and cooperatives now. Join the waitlist and we'll invite you when your region opens.",
-    "whyCommodities": "What crops do you support?",
-    "whyCommoditiesAnswer": "Coffee, cocoa, palm oil, rubber, soy, cattle, and timber. These are the 7 crops the EU is watching.",
+    "whenLaunchAnswer": "We're testing with cooperatives, exporters, and importers now. Join the waitlist and we'll reach out when we're ready for your region.",
+    "whyCommodities": "What crops does Tracebud support?",
+    "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. We're starting where smallholder complexity meets immediate buyer demand.",
     "howCost": "What does it cost?",
-    "howCostAnswer": "Free for farmers. Cooperatives and exporters pay based on how many farmers they manage. Importers pay based on how many suppliers they track. You only pay for what you use.",
+    "howCostAnswer": "Free for producers. Cooperatives, exporters, and buyers pay based on usage. We'll share pricing details when you join the waitlist.",
     "howLong": "How long does setup take?",
-    "howLongAnswer": "Once you sign up, farmers can start mapping immediately. Most cooperatives have their whole network mapped within a week. It works offline, so no downtime in the field.",
-    "support": "What if I need help?",
-    "supportAnswer": "We're here. Direct support from our team, 24/7 email, plus we do hands-on onboarding for cooperatives and exporters. You're not alone in this."
+    "howLongAnswer": "Producers can start mapping immediately with the offline app. Most cooperatives have their network mapped within a week. The dashboard is ready the moment you sign up.",
+    "support": "What support is available?",
+    "supportAnswer": "Hands-on onboarding for all customers. Direct support from our team. We're building this alongside our early users, so your feedback shapes the product."
   }
 }
