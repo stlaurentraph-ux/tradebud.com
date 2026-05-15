@@ -57,15 +57,15 @@ export function Impact() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-8">Early Pilots Are Already Using Tracebud For:</h3>
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-8">Farmers and cooperatives are already using Tracebud to:</h3>
           <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
             {[
-              "Mapping smallholder supply chains across multiple regions",
-              "Validating EUDR compliance documentation before export",
-              "Building immutable audit trails for certification bodies",
-              "Integrating batch-level data directly into TRACES NT",
-              "Connecting remote producers to verified buyers",
-              "Managing yield caps and preventing fraud",
+              "Map smallholder farms once, sell to any EU buyer forever",
+              "Get 500 farmers compliant before their buyers ask questions",
+              "Ship without scrambling for documents at the last minute",
+              "Know every shipment is clean before it leaves port",
+              "Stay competitive in the €50B EU commodity market",
+              "Sleep at night knowing compliance is handled",
             ].map((useCase, index) => (
               <div key={index} className="flex items-start gap-3 md:gap-4">
                 <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7 text-[var(--data-emerald)] shrink-0 mt-0.5" />

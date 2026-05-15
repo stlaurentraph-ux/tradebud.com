@@ -39,13 +39,13 @@ export function ChainFlow() {
           className="text-center mb-16"
         >
           <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]">
-            Requests Move Upstream. Proof Moves Downstream.
+            How proof moves
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance">
-            One Network. Any Direction.
+            Requests come. Proof goes back.
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto text-balance">
-            Producers send data directly to buyers. Importers request from suppliers upstream. Cooperatives aggregate member plots into identity-preserving batches. Full chain visibility without vendor lock-in.
+            Buyers ask for proof. Farmers map their field once. That proof moves back up the chain to every buyer who needs it. No re-doing work. No spreadsheets.
           </p>
         </motion.div>
 
