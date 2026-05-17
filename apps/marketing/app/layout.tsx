@@ -153,7 +153,7 @@ export default async function RootLayout({
   const messages = await getMessages()
 
   return (
-    <html lang={validLocale}>
+    <html lang={validLocale} className="bg-background">
       <body className="font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           <a href="#main-content" className="skip-to-content">
