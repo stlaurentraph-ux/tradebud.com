@@ -13,17 +13,20 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Exporter Dashboard — Tracebud',
-  description: 'Manage your DDS packages, plot compliance, and shipment dossiers.',
+  title: 'Tracebud — EUDR Compliance for Smallholder Coffee Supply Chains',
+  description: 'Tracebud helps cooperatives, exporters, and buyers collect farm-level proof offline, request missing data upstream, and prepare buyer-ready EUDR workflows.',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#14532d',
+  themeColor: '#0d1510',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${dmSans.variable} ${playfair.variable} bg-background`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   )
