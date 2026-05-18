@@ -6,40 +6,32 @@
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono: 'Geist Mono', monospace;
 
-  /* ─── Landing page: dark forest / earthy premium ─── */
+  /* Tracebud brand tokens */
+  --color-background:        #fafaf9; /* stone-50  */
+  --color-surface:           #ffffff;
+  --color-surface-secondary: #f5f5f4; /* stone-100 */
+  --color-border:            #e7e5e4; /* stone-200 */
+  --color-border-strong:     #d6d3d1; /* stone-300 */
 
-  /* Backgrounds */
-  --color-background:        #0d1510; /* near-black forest */
-  --color-surface:           #131f17; /* deep forest surface */
-  --color-surface-secondary: #1a2a1e; /* lifted surface */
-  --color-surface-card:      #1e2f23; /* card surface */
+  --color-foreground:        #1c1917; /* stone-900 */
+  --color-foreground-muted:  #78716c; /* stone-500 */
+  --color-foreground-faint:  #a8a29e; /* stone-400 */
 
-  /* Borders */
-  --color-border:            #253b2a; /* subtle forest border */
-  --color-border-strong:     #2f4d35; /* stronger border */
+  --color-primary:           #14532d; /* emerald-900 */
+  --color-primary-mid:       #166534; /* emerald-800 */
+  --color-primary-light:     #d1fae5; /* emerald-100 */
+  --color-primary-faint:     #f0fdf4; /* emerald-50  */
 
-  /* Foreground */
-  --color-foreground:        #f0ece4; /* warm off-white */
-  --color-foreground-muted:  #8fa893; /* muted sage */
-  --color-foreground-faint:  #536858; /* faint forest text */
+  --color-accent:            #ea580c; /* orange-600  */
+  --color-accent-hover:      #c2410c; /* orange-700  */
+  --color-accent-light:      #fff7ed; /* orange-50   */
+  --color-accent-border:     #fed7aa; /* orange-200  */
 
-  /* Primary — forest green */
-  --color-primary:           #2d6a4f; /* main green */
-  --color-primary-mid:       #40916c; /* mid green */
-  --color-primary-light:     #74c69d; /* light green accent */
-  --color-primary-faint:     #1a3a25; /* faint green bg */
+  --color-success:           #16a34a; /* green-600   */
+  --color-warning:           #d97706; /* amber-600   */
+  --color-destructive:       #dc2626; /* red-600     */
 
-  /* Accent — warm amber/earth */
-  --color-accent:            #c8a96e; /* warm gold */
-  --color-accent-hover:      #b5944f; /* darker gold */
-  --color-accent-light:      #2a2218; /* faint gold bg */
-
-  /* Status */
-  --color-success:           #52b788; /* success green */
-  --color-warning:           #e9c46a; /* amber warning */
-  --color-destructive:       #e76f51; /* coral error */
-
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 }
 
 @layer base {
@@ -50,7 +42,6 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    scroll-behavior: smooth;
   }
 
   body {
@@ -58,10 +49,5 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     line-height: 1.5;
-  }
-
-  ::selection {
-    background-color: var(--color-primary);
-    color: var(--color-foreground);
   }
 }
