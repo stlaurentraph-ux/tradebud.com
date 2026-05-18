@@ -11,22 +11,22 @@ import {
 
 function StageVisual1() {
   const actors = [
-    { label: 'Buyer', color: '#c8a96e', ring: '#c8a96e30', pos: 'top-0 left-1/2 -translate-x-1/2' },
-    { label: 'Exporter', color: '#74c69d', ring: '#74c69d30', pos: 'top-1/3 left-0' },
-    { label: 'Cooperative', color: '#74c69d', ring: '#74c69d30', pos: 'top-1/3 right-0' },
-    { label: 'Sponsor', color: '#8fa893', ring: '#8fa89330', pos: 'bottom-0 left-1/4' },
-    { label: 'Producer', color: '#8fa893', ring: '#8fa89330', pos: 'bottom-0 right-1/4' },
+    { label: 'Buyer', color: 'var(--color-accent)', ring: 'var(--color-accent-light)', pos: 'top-0 left-1/2 -translate-x-1/2' },
+    { label: 'Exporter', color: 'var(--color-primary)', ring: 'var(--color-primary-faint)', pos: 'top-1/3 left-0' },
+    { label: 'Cooperative', color: 'var(--color-primary)', ring: 'var(--color-primary-faint)', pos: 'top-1/3 right-0' },
+    { label: 'Sponsor', color: 'var(--color-foreground-muted)', ring: 'var(--color-surface-secondary)', pos: 'bottom-0 left-1/4' },
+    { label: 'Producer', color: 'var(--color-foreground-muted)', ring: 'var(--color-surface-secondary)', pos: 'bottom-0 right-1/4' },
   ];
 
   return (
-    <div className="bg-[#131f17] border border-[#253b2a] rounded-xl p-6">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-[#536858] mb-4">
+    <div className="bg-surface border border-border rounded-xl p-6">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-foreground-faint mb-4">
         Request entry points
       </div>
       <div className="relative h-48">
         {/* Center hub */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-[#1a3a25] border-2 border-[#2d6a4f] flex items-center justify-center z-10">
-          <Layers size={20} className="text-[#74c69d]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-primary-faint border-2 border-primary flex items-center justify-center z-10">
+          <Layers size={20} className="text-primary" />
         </div>
 
         {/* Actor nodes */}
@@ -34,7 +34,7 @@ function StageVisual1() {
           <div key={a.label} className={`absolute ${a.pos} flex flex-col items-center gap-1`}>
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center border"
-              style={{ background: `${a.ring}`, borderColor: a.color }}
+              style={{ background: a.ring, borderColor: a.color }}
             >
               <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
             </div>
@@ -44,53 +44,52 @@ function StageVisual1() {
 
         {/* Lines from center to actors */}
         <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 5 }}>
-          {/* Simple connecting lines */}
-          <line x1="50%" y1="50%" x2="50%" y2="8%" stroke="#2d6a4f" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-          <line x1="50%" y1="50%" x2="8%" y2="35%" stroke="#2d6a4f" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-          <line x1="50%" y1="50%" x2="92%" y2="35%" stroke="#2d6a4f" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-          <line x1="50%" y1="50%" x2="25%" y2="88%" stroke="#2d6a4f" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-          <line x1="50%" y1="50%" x2="75%" y2="88%" stroke="#2d6a4f" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+          <line x1="50%" y1="50%" x2="50%" y2="8%" stroke="var(--color-primary)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+          <line x1="50%" y1="50%" x2="8%" y2="35%" stroke="var(--color-primary)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+          <line x1="50%" y1="50%" x2="92%" y2="35%" stroke="var(--color-primary)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+          <line x1="50%" y1="50%" x2="25%" y2="88%" stroke="var(--color-primary)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+          <line x1="50%" y1="50%" x2="75%" y2="88%" stroke="var(--color-primary)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
         </svg>
       </div>
-      <p className="text-xs text-[#536858] mt-2">Any actor in the chain can open the workflow</p>
+      <p className="text-xs text-foreground-muted mt-2">Any actor in the chain can open the workflow</p>
     </div>
   );
 }
 
 function StageVisual2() {
   return (
-    <div className="bg-[#131f17] border border-[#253b2a] rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#253b2a] flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#536858]">Outreach</span>
-        <span className="text-[9px] text-[#74c69d] bg-[#1a3a25] px-2 py-0.5 rounded-full">3 sent</span>
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-foreground-faint">Outreach</span>
+        <span className="text-[9px] text-primary bg-primary-faint px-2 py-0.5 rounded-full">3 sent</span>
       </div>
       <div className="p-4 space-y-2">
         {[
-          { to: 'Santa Rosa Coop', via: 'Via cooperative', status: 'Delivered', icon: CheckCircle2, col: '#52b788' },
-          { to: 'Finca El Roble', via: 'Direct producer', status: 'Pending', icon: Clock, col: '#e9c46a' },
-          { to: 'Caficultores Norte', via: 'Via exporter', status: 'Delivered', icon: CheckCircle2, col: '#52b788' },
+          { to: 'Santa Rosa Coop', via: 'Via cooperative', status: 'Delivered', icon: CheckCircle2, col: 'text-success' },
+          { to: 'Finca El Roble', via: 'Direct producer', status: 'Pending', icon: Clock, col: 'text-warning' },
+          { to: 'Caficultores Norte', via: 'Via exporter', status: 'Delivered', icon: CheckCircle2, col: 'text-success' },
         ].map((r) => {
           const Icon = r.icon;
           return (
-            <div key={r.to} className="flex items-center gap-3 px-3 py-2.5 bg-[#1a2a1e] rounded-lg">
-              <Icon size={12} style={{ color: r.col }} className="flex-shrink-0" />
+            <div key={r.to} className="flex items-center gap-3 px-3 py-2.5 bg-surface-secondary rounded-lg">
+              <Icon size={12} className={`flex-shrink-0 ${r.col}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-[#f0ece4] truncate">{r.to}</p>
-                <p className="text-[9px] text-[#536858]">{r.via}</p>
+                <p className="text-[11px] font-medium text-foreground truncate">{r.to}</p>
+                <p className="text-[9px] text-foreground-faint">{r.via}</p>
               </div>
-              <span className="text-[9px] font-medium" style={{ color: r.col }}>{r.status}</span>
+              <span className={`text-[9px] font-medium ${r.col}`}>{r.status}</span>
             </div>
           );
         })}
       </div>
 
       <div className="px-4 pt-0 pb-4">
-        <div className="border-t border-[#253b2a] pt-3">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-[#536858] mb-2">Inbox</div>
-          <div className="flex items-center gap-3 px-3 py-2.5 bg-[#2a2218] border border-[#c8a96e]/20 rounded-lg">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#e9c46a] flex-shrink-0" />
-            <p className="text-[11px] text-[#c8a96e] flex-1">1 response awaiting review</p>
-            <ChevronRight size={10} className="text-[#c8a96e]" />
+        <div className="border-t border-border pt-3">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-foreground-faint mb-2">Inbox</div>
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-accent-light border border-accent-border rounded-lg">
+            <div className="w-1.5 h-1.5 rounded-full bg-warning flex-shrink-0" />
+            <p className="text-[11px] text-accent flex-1">1 response awaiting review</p>
+            <ChevronRight size={10} className="text-accent" />
           </div>
         </div>
       </div>
@@ -101,12 +100,12 @@ function StageVisual2() {
 function StageVisual3() {
   return (
     <div className="w-full max-w-[260px] mx-auto">
-      <div className="bg-[#0f1a12] border border-[#253b2a] rounded-[2rem] overflow-hidden p-1">
-        <div className="bg-[#0d1510] rounded-[1.75rem] overflow-hidden">
+      <div className="bg-surface border border-border rounded-[2rem] overflow-hidden p-1">
+        <div className="bg-surface-secondary rounded-[1.75rem] overflow-hidden">
           {/* Status bar */}
-          <div className="flex items-center justify-between px-5 py-3 text-[9px] text-[#536858]">
+          <div className="flex items-center justify-between px-5 py-3 text-[9px] text-foreground-faint">
             <span>9:41</span>
-            <div className="flex items-center gap-1 text-[#e9c46a]">
+            <div className="flex items-center gap-1 text-accent">
               <WifiOff size={9} />
               <span>Offline</span>
             </div>
@@ -115,21 +114,21 @@ function StageVisual3() {
           <div className="px-4 pb-6 space-y-3">
             {/* Header */}
             <div>
-              <p className="text-xs font-bold text-[#f0ece4]">Field Capture</p>
-              <p className="text-[9px] text-[#536858]">Plot survey · HN-COP-044</p>
+              <p className="text-xs font-bold text-foreground">Field Capture</p>
+              <p className="text-[9px] text-foreground-muted">Plot survey · HN-COP-044</p>
             </div>
 
             {/* Map placeholder */}
-            <div className="bg-[#1a2a1e] rounded-xl h-28 relative flex items-center justify-center overflow-hidden">
+            <div className="bg-primary-faint rounded-xl h-28 relative flex items-center justify-center overflow-hidden">
               <svg viewBox="0 0 100 80" className="w-full h-full absolute opacity-70">
-                <polygon points="15,70 30,20 65,12 85,45 75,72 25,75" fill="#2d6a4f" stroke="#74c69d" strokeWidth="2" />
-                <circle cx="48" cy="46" r="4" fill="#74c69d" />
-                <path d="M 30,20 L 65,12 L 85,45 L 75,72 L 25,75 L 15,70 Z" fill="none" stroke="#74c69d" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.4" />
+                <polygon points="15,70 30,20 65,12 85,45 75,72 25,75" fill="#14532d" stroke="#16a34a" strokeWidth="2" />
+                <circle cx="48" cy="46" r="4" fill="#16a34a" />
+                <path d="M 30,20 L 65,12 L 85,45 L 75,72 L 25,75 L 15,70 Z" fill="none" stroke="#16a34a" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.4" />
               </svg>
-              <div className="absolute top-2 left-2 bg-[#0d1510]/80 text-[#74c69d] text-[8px] px-2 py-0.5 rounded">
+              <div className="absolute top-2 left-2 bg-surface/80 text-primary text-[8px] px-2 py-0.5 rounded">
                 14.8024°N 87.9134°W
               </div>
-              <div className="absolute bottom-2 right-2 bg-[#2d6a4f] text-[8px] text-white px-2 py-0.5 rounded">
+              <div className="absolute bottom-2 right-2 bg-primary text-[8px] text-white px-2 py-0.5 rounded">
                 2.4 ha
               </div>
             </div>
@@ -145,20 +144,20 @@ function StageVisual3() {
                 const Icon = item.icon;
                 return (
                   <div key={item.label} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? 'bg-[#52b788]/20' : 'bg-[#2a2218]'}`}>
-                      <Icon size={8} className={item.done ? 'text-[#52b788]' : 'text-[#e9c46a]'} />
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? 'bg-success/20' : 'bg-accent-light'}`}>
+                      <Icon size={8} className={item.done ? 'text-success' : 'text-warning'} />
                     </div>
-                    <span className={`text-[9px] ${item.done ? 'text-[#8fa893]' : 'text-[#c8a96e]'}`}>{item.label}</span>
-                    {!item.done && <span className="ml-auto text-[8px] text-[#e9c46a]">Required</span>}
+                    <span className={`text-[9px] ${item.done ? 'text-foreground-muted' : 'text-accent'}`}>{item.label}</span>
+                    {!item.done && <span className="ml-auto text-[8px] text-warning">Required</span>}
                   </div>
                 );
               })}
             </div>
 
             {/* Sync indicator */}
-            <div className="bg-[#2a2218] border border-[#c8a96e]/20 rounded-lg px-3 py-2 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#e9c46a] animate-pulse" />
-              <span className="text-[9px] text-[#c8a96e]">Will sync when online</span>
+            <div className="bg-accent-light border border-accent-border rounded-lg px-3 py-2 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+              <span className="text-[9px] text-accent">Will sync when online</span>
             </div>
           </div>
         </div>
@@ -175,35 +174,35 @@ function StageVisual4() {
   ];
 
   return (
-    <div className="bg-[#131f17] border border-[#253b2a] rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#253b2a] flex items-center justify-between">
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <AlertTriangle size={12} className="text-[#e76f51]" />
-          <span className="text-[11px] font-semibold text-[#f0ece4]">Open Blockers</span>
+          <AlertTriangle size={12} className="text-destructive" />
+          <span className="text-[11px] font-semibold text-foreground">Open Blockers</span>
         </div>
-        <span className="text-[9px] bg-[#e76f51]/10 text-[#e76f51] border border-[#e76f51]/20 px-2 py-0.5 rounded-full">
+        <span className="text-[9px] bg-destructive/10 text-destructive border border-destructive/20 px-2 py-0.5 rounded-full">
           3 critical
         </span>
       </div>
 
       <div className="p-4 space-y-2">
         {blockers.map((b) => (
-          <div key={b.id} className={`p-3 rounded-lg border ${b.severity === 'high' ? 'bg-[#2a1810] border-[#e76f51]/20' : 'bg-[#1a2a1e] border-[#253b2a]'}`}>
+          <div key={b.id} className={`p-3 rounded-lg border ${b.severity === 'high' ? 'bg-destructive/5 border-destructive/20' : 'bg-surface-secondary border-border'}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[9px] font-mono text-[#536858]">{b.id}</span>
-                  <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded ${b.severity === 'high' ? 'bg-[#e76f51]/10 text-[#e76f51]' : 'bg-[#e9c46a]/10 text-[#e9c46a]'}`}>
+                  <span className="text-[9px] font-mono text-foreground-faint">{b.id}</span>
+                  <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded ${b.severity === 'high' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}>
                     {b.severity}
                   </span>
                 </div>
-                <p className="text-[10px] text-[#f0ece4]">{b.desc}</p>
-                <p className="text-[9px] text-[#536858] mt-0.5">{b.plot}</p>
+                <p className="text-[10px] text-foreground">{b.desc}</p>
+                <p className="text-[9px] text-foreground-faint mt-0.5">{b.plot}</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="flex items-center gap-1">
-                  <Clock size={9} className="text-[#536858]" />
-                  <span className={`text-[9px] font-semibold ${b.due === '1d' ? 'text-[#e76f51]' : 'text-[#8fa893]'}`}>{b.due}</span>
+                  <Clock size={9} className="text-foreground-faint" />
+                  <span className={`text-[9px] font-semibold ${b.due === '1d' ? 'text-destructive' : 'text-foreground-muted'}`}>{b.due}</span>
                 </div>
               </div>
             </div>
@@ -213,13 +212,13 @@ function StageVisual4() {
 
       {/* Progress */}
       <div className="px-4 pb-4">
-        <div className="bg-[#0d1510] border border-[#253b2a] rounded-lg p-3">
+        <div className="bg-surface-secondary border border-border rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-[#8fa893]">Requests resolved</span>
-            <span className="text-[10px] font-semibold text-[#f0ece4]">9 / 14</span>
+            <span className="text-[10px] text-foreground-muted">Requests resolved</span>
+            <span className="text-[10px] font-semibold text-foreground">9 / 14</span>
           </div>
-          <div className="h-1.5 bg-[#1a2a1e] rounded-full overflow-hidden">
-            <div className="h-full bg-[#40916c] rounded-full" style={{ width: '64%' }} />
+          <div className="h-1.5 bg-border rounded-full overflow-hidden">
+            <div className="h-full bg-success rounded-full" style={{ width: '64%' }} />
           </div>
         </div>
       </div>
@@ -229,14 +228,14 @@ function StageVisual4() {
 
 function StageVisual5() {
   return (
-    <div className="bg-[#131f17] border border-[#253b2a] rounded-xl overflow-hidden">
+    <div className="bg-surface border border-border rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#253b2a] flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-[#f0ece4]">Shipment SHP-2026-0189</p>
-          <p className="text-[9px] text-[#536858] mt-0.5">Honduras Washed · 18,400 kg</p>
+          <p className="text-xs font-semibold text-foreground">Shipment SHP-2026-0189</p>
+          <p className="text-[9px] text-foreground-muted mt-0.5">Honduras Washed · 18,400 kg</p>
         </div>
-        <span className="text-[9px] font-medium bg-[#52b788]/10 text-[#52b788] border border-[#52b788]/20 px-2 py-1 rounded-md">
+        <span className="text-[9px] font-medium bg-success/10 text-success border border-success/20 px-2 py-1 rounded-md">
           Ready to handoff
         </span>
       </div>
@@ -251,29 +250,29 @@ function StageVisual5() {
           { label: 'Buyer proof package built', done: true },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#52b788]/20 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 size={9} className="text-[#52b788]" />
+            <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 size={9} className="text-success" />
             </div>
-            <span className="text-[10px] text-[#8fa893]">{item.label}</span>
+            <span className="text-[10px] text-foreground-muted">{item.label}</span>
           </div>
         ))}
 
-        <div className="border-t border-[#253b2a] pt-3">
+        <div className="border-t border-border pt-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] text-[#8fa893]">Proof packages</span>
-            <span className="text-[9px] text-[#74c69d]">3 buyer-ready</span>
+            <span className="text-[10px] text-foreground-muted">Proof packages</span>
+            <span className="text-[9px] text-primary">3 buyer-ready</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {['Rainforest Alliance', 'EU Importer A', 'DDS Draft'].map((b) => (
-              <div key={b} className="bg-[#1a3a25] border border-[#2d6a4f]/40 rounded-lg p-2 text-center">
-                <Package size={10} className="text-[#74c69d] mx-auto mb-1" />
-                <p className="text-[8px] text-[#74c69d] leading-tight">{b}</p>
+              <div key={b} className="bg-primary-faint border border-primary-light rounded-lg p-2 text-center">
+                <Package size={10} className="text-primary mx-auto mb-1" />
+                <p className="text-[8px] text-primary leading-tight">{b}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <button className="w-full flex items-center justify-center gap-2 bg-[#2d6a4f] hover:bg-[#40916c] transition-colors text-[#f0ece4] text-xs font-semibold py-2.5 rounded-lg">
+        <button className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-mid transition-colors text-white text-xs font-semibold py-2.5 rounded-lg min-h-[44px]">
           <Send size={12} />
           Send to buyer
         </button>
@@ -345,14 +344,14 @@ export function ProductStory() {
   const ActiveVisual = stages[active].Visual;
 
   return (
-    <section id="how-it-works" className="py-20 px-6">
+    <section id="how-it-works" className="py-20 px-6 bg-background">
       <div className="max-w-6xl mx-auto">
         {/* Section heading */}
         <div className="text-center mb-16">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#74c69d] mb-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
             How it works
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#f0ece4] leading-tight text-balance">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight text-balance">
             From field capture to shipment readiness.
           </h2>
         </div>
@@ -376,13 +375,13 @@ export function ProductStory() {
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all flex-shrink-0 ${
                       active === i
-                        ? 'bg-[#2d6a4f] border-[#40916c] text-[#f0ece4]'
-                        : 'bg-[#131f17] border-[#253b2a] text-[#536858]'
+                        ? 'bg-primary border-primary-mid text-white'
+                        : 'bg-surface border-border text-foreground-faint'
                     }`}
                   >
                     {s.step}
                   </div>
-                  <span className={`text-sm font-medium ${active === i ? 'text-[#f0ece4]' : 'text-[#536858]'}`}>
+                  <span className={`text-sm font-medium ${active === i ? 'text-foreground' : 'text-foreground-faint'}`}>
                     {s.title.replace('.', '')}
                   </span>
                 </button>
@@ -390,15 +389,15 @@ export function ProductStory() {
             </div>
 
             {/* Active stage text (desktop only) */}
-            <div className="hidden lg:block bg-[#131f17] border border-[#253b2a] rounded-xl p-6">
+            <div className="hidden lg:block bg-surface border border-border rounded-xl p-6">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-mono text-[#536858]">Stage {stages[active].step}</span>
-                <div className="h-px flex-1 bg-[#253b2a]" />
+                <span className="text-xs font-mono text-foreground-faint">Stage {stages[active].step}</span>
+                <div className="h-px flex-1 bg-border" />
               </div>
-              <h3 className="text-xl font-bold text-[#f0ece4] mb-3 leading-tight">
+              <h3 className="text-xl font-bold text-foreground mb-3 leading-tight">
                 {stages[active].title}
               </h3>
-              <p className="text-sm text-[#8fa893] leading-relaxed">{stages[active].copy}</p>
+              <p className="text-sm text-foreground-muted leading-relaxed">{stages[active].copy}</p>
             </div>
           </div>
 
@@ -428,9 +427,9 @@ export function ProductStory() {
                 return (
                   <div key={s.step} className="flex flex-col gap-6">
                     <div>
-                      <span className="text-xs font-mono text-[#536858]">Stage {s.step}</span>
-                      <h3 className="text-xl font-bold text-[#f0ece4] mt-1 mb-2">{s.title}</h3>
-                      <p className="text-sm text-[#8fa893] leading-relaxed">{s.copy}</p>
+                      <span className="text-xs font-mono text-foreground-faint">Stage {s.step}</span>
+                      <h3 className="text-xl font-bold text-foreground mt-1 mb-2">{s.title}</h3>
+                      <p className="text-sm text-foreground-muted leading-relaxed">{s.copy}</p>
                     </div>
                     <Visual />
                   </div>
@@ -448,7 +447,7 @@ export function ProductStory() {
 
 function PillarVisual1() {
   return (
-    <div className="bg-[#0f1a12] rounded-lg p-3 border border-[#253b2a]">
+    <div className="bg-surface-secondary rounded-lg p-3 border border-border">
       {[
         { label: 'Plot polygon saved', icon: MapPin, done: true },
         { label: 'Consent form signed', icon: FileText, done: true },
@@ -457,15 +456,15 @@ function PillarVisual1() {
         const Icon = item.icon;
         return (
           <div key={item.label} className="flex items-center gap-2 py-1.5">
-            <Icon size={10} className="text-[#74c69d]" />
-            <span className="text-[10px] text-[#8fa893]">{item.label}</span>
-            <CheckCircle2 size={9} className="text-[#52b788] ml-auto" />
+            <Icon size={10} className="text-primary" />
+            <span className="text-[10px] text-foreground-muted">{item.label}</span>
+            <CheckCircle2 size={9} className="text-success ml-auto" />
           </div>
         );
       })}
-      <div className="mt-2 flex items-center gap-1.5 bg-[#2a2218] px-2 py-1.5 rounded">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#e9c46a] animate-pulse" />
-        <span className="text-[9px] text-[#c8a96e]">Offline · syncs when connected</span>
+      <div className="mt-2 flex items-center gap-1.5 bg-accent-light px-2 py-1.5 rounded">
+        <div className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+        <span className="text-[9px] text-accent">Offline · syncs when connected</span>
       </div>
     </div>
   );
@@ -473,15 +472,15 @@ function PillarVisual1() {
 
 function PillarVisual2() {
   return (
-    <div className="bg-[#0f1a12] rounded-lg p-3 border border-[#253b2a] space-y-2">
+    <div className="bg-surface-secondary rounded-lg p-3 border border-border space-y-2">
       {[
-        { org: 'Santa Rosa Coop', status: 'Responded', col: '#52b788' },
-        { org: 'Finca El Roble', status: '2 days left', col: '#e9c46a' },
-        { org: 'Caficultores', status: 'Reminder sent', col: '#8fa893' },
+        { org: 'Santa Rosa Coop', status: 'Responded', col: 'text-success' },
+        { org: 'Finca El Roble', status: '2 days left', col: 'text-warning' },
+        { org: 'Caficultores', status: 'Reminder sent', col: 'text-foreground-muted' },
       ].map((r) => (
-        <div key={r.org} className="flex items-center justify-between px-2 py-1.5 bg-[#1a2a1e] rounded">
-          <span className="text-[10px] text-[#8fa893]">{r.org}</span>
-          <span className="text-[9px] font-medium" style={{ color: r.col }}>{r.status}</span>
+        <div key={r.org} className="flex items-center justify-between px-2 py-1.5 bg-surface rounded">
+          <span className="text-[10px] text-foreground-muted">{r.org}</span>
+          <span className={`text-[9px] font-medium ${r.col}`}>{r.status}</span>
         </div>
       ))}
     </div>
@@ -490,19 +489,19 @@ function PillarVisual2() {
 
 function PillarVisual3() {
   return (
-    <div className="bg-[#0f1a12] rounded-lg p-3 border border-[#253b2a] space-y-2">
+    <div className="bg-surface-secondary rounded-lg p-3 border border-border space-y-2">
       {[
-        { label: 'Proof collected', pct: 87, color: '#52b788' },
-        { label: 'Requests closed', pct: 71, color: '#40916c' },
-        { label: 'Shipment ready', pct: 54, color: '#e9c46a' },
+        { label: 'Proof collected', pct: 87, color: 'bg-success' },
+        { label: 'Requests closed', pct: 71, color: 'bg-primary' },
+        { label: 'Shipment ready', pct: 54, color: 'bg-warning' },
       ].map((r) => (
         <div key={r.label}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-[#8fa893]">{r.label}</span>
-            <span className="text-[10px] font-semibold text-[#f0ece4]">{r.pct}%</span>
+            <span className="text-[10px] text-foreground-muted">{r.label}</span>
+            <span className="text-[10px] font-semibold text-foreground">{r.pct}%</span>
           </div>
-          <div className="h-1.5 bg-[#1a2a1e] rounded-full">
-            <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: r.color }} />
+          <div className="h-1.5 bg-border rounded-full">
+            <div className={`h-full rounded-full ${r.color}`} style={{ width: `${r.pct}%` }} />
           </div>
         </div>
       ))}
@@ -533,13 +532,13 @@ const pillars = [
 
 export function Pillars() {
   return (
-    <section className="py-20 px-6 bg-[#131f17] border-t border-[#253b2a]">
+    <section className="py-20 px-6 bg-surface-secondary border-t border-border">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-14">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#74c69d] mb-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
             The product
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#f0ece4] leading-tight text-balance">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight text-balance">
             One app for the field. One dashboard for the chain.
           </h2>
         </div>
@@ -548,12 +547,12 @@ export function Pillars() {
           {pillars.map((p) => {
             const Visual = p.Visual;
             return (
-              <div key={p.label} className="bg-[#0d1510] border border-[#253b2a] rounded-xl p-5 flex flex-col gap-4 hover:border-[#2f4d35] transition-colors">
-                <span className="text-[10px] font-mono text-[#536858]">{p.label}</span>
+              <div key={p.label} className="bg-surface border border-border rounded-xl p-5 flex flex-col gap-4 hover:border-border-strong transition-colors">
+                <span className="text-[10px] font-mono text-foreground-faint">{p.label}</span>
                 <Visual />
                 <div>
-                  <h3 className="font-semibold text-[#f0ece4] mb-1.5">{p.title}</h3>
-                  <p className="text-sm text-[#8fa893] leading-relaxed">{p.body}</p>
+                  <h3 className="font-semibold text-foreground mb-1.5">{p.title}</h3>
+                  <p className="text-sm text-foreground-muted leading-relaxed">{p.body}</p>
                 </div>
               </div>
             );
