@@ -100,32 +100,35 @@ export function Hero() {
       </section>
 
       {/* Why Tracebud Section */}
-      <section className="py-24 md:py-32 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            {/* Left: Text */}
+      <section className="relative overflow-hidden bg-white py-24 md:py-32">
+        {/* Full-bleed image on right half */}
+        <div className="absolute inset-y-0 right-0 w-1/2 hidden lg:block">
+          <Image
+            src="/images/inclusion-visual.jpg"
+            alt="Smallholder farmer using Tracebud on a smartphone"
+            fill
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
+          <div className="lg:max-w-[55%]">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance leading-tight">
                 Compliance should not be complicated to be credible.
               </h2>
-              <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
+              <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-12">
                 Most supply chains do not fail because people do not care. They fail because the process is too manual, too expensive, and too fragmented. Tracebud removes the back-and-forth so every actor can participate, even when the network is large, spread out, or under-resourced.
               </p>
             </motion.div>
 
-            {/* Right: Three Pillars */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-6"
-            >
+            <div className="space-y-5">
               {[
                 {
                   icon: Layers,
@@ -143,27 +146,51 @@ export function Hero() {
                   description: "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal.",
                 },
               ].map((pillar, index) => (
-                <div 
+                <motion.div
                   key={pillar.title}
-                  className="flex gap-5 p-6 bg-[var(--warm-stone)] rounded-2xl"
+                  initial={{ opacity: 0, x: -16 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="flex gap-5 items-start"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[var(--data-emerald)]/10 flex items-center justify-center flex-shrink-0">
-                    <pillar.icon className="w-6 h-6 text-[var(--data-emerald)]" />
+                  <div className="w-11 h-11 rounded-xl bg-[var(--forest-canopy)] flex items-center justify-center flex-shrink-0">
+                    <pillar.icon className="w-5 h-5 text-[var(--data-emerald)]" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[var(--forest-canopy)] mb-1">{pillar.title}</h3>
-                    <p className="text-gray-600">{pillar.description}</p>
+                    <h3 className="text-base font-bold text-[var(--forest-canopy)] mb-0.5">{pillar.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{pillar.description}</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </motion.div>
+            </div>
           </div>
+        </div>
+
+        {/* Mobile image fallback */}
+        <div className="lg:hidden mt-12 mx-6 relative aspect-[4/3] rounded-2xl overflow-hidden">
+          <Image
+            src="/images/inclusion-visual.jpg"
+            alt="Smallholder farmer using Tracebud on a smartphone"
+            fill
+            className="object-cover"
+          />
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="py-24 md:py-32 bg-[var(--warm-stone)]">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative overflow-hidden bg-[var(--forest-canopy)] py-24 md:py-32">
+        {/* Background image with strong overlay */}
+        <div className="absolute inset-0">
+          <Image
+            src="/images/supply-chain-flow.jpg"
+            alt="Aerial view of coffee plantation"
+            fill
+            className="object-cover opacity-20"
+          />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
           <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -171,45 +198,51 @@ export function Hero() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
               From first request to reusable proof.
             </h2>
+            <p className="text-white/60 text-lg">Four steps. No complexity.</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden border border-white/10">
             {[
               {
-                number: "1",
+                number: "01",
                 title: "Add your network",
                 description: "One contact or five hundred. Upload a CSV or add them manually.",
               },
               {
-                number: "2", 
+                number: "02",
                 title: "Send one request",
                 description: "Let it flow through the chain automatically. No chasing.",
               },
               {
-                number: "3",
+                number: "03",
                 title: "Collect origin data",
                 description: "Capture it once, then reuse it across shipments and buyers.",
               },
               {
-                number: "4",
+                number: "04",
                 title: "Stay aligned",
                 description: "Keep everyone on the same page with a shared, digital workflow.",
               },
             ].map((item, index) => (
               <motion.div
                 key={item.number}
-                className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center"
+                className="bg-[var(--forest-canopy)] p-8 flex flex-col gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
-                <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                <div className="text-[var(--data-emerald)] text-xs font-bold tracking-widest uppercase">{item.number}</div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-white/60 leading-relaxed text-sm">{item.description}</p>
+                </div>
+                <div className="mt-auto pt-4 border-t border-white/10">
+                  <div className="w-6 h-0.5 bg-[var(--data-emerald)]" />
+                </div>
               </motion.div>
             ))}
           </div>
