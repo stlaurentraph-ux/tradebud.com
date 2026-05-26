@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
@@ -227,7 +228,33 @@ export function WaitlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-border/60 bg-background p-0 sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-border/60 bg-background p-0 sm:max-w-2xl flex flex-col sm:flex-row">
+        {/* Left: Image panel — hidden on mobile */}
+        <div className="relative hidden sm:block w-[38%] flex-shrink-0 self-stretch">
+          <Image
+            src="/images/supply-chain-flow.jpg"
+            alt="Coffee plantation aerial view"
+            fill
+            className="object-cover"
+          />
+          {/* Forest overlay for text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/40 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/80" />
+          {/* Pinned content */}
+          <div className="absolute inset-0 flex flex-col justify-between p-7">
+            <p className="text-white/90 text-sm font-semibold tracking-wide uppercase">Tracebud</p>
+            <div>
+              <p className="text-white font-bold text-lg leading-snug mb-2">
+                Be ready for EUDR, without the complexity.
+              </p>
+              <p className="text-white/70 text-xs leading-relaxed">
+                Simple. Affordable. Built for every actor in the chain.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Form */}
+        <div className="flex-1 overflow-y-auto">
         {submitted ? (
           <div className="p-8">
             <SuccessState />
@@ -385,6 +412,7 @@ export function WaitlistDialog({
             </form>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
