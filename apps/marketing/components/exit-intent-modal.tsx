@@ -6,10 +6,12 @@ import { X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { useTranslations } from "next-intl";
 
 export function ExitIntentModal() {
   const [isVisible, setIsVisible] = useState(false);
   const waitlist = useWaitlistDialog();
+  const t = useTranslations("marketing");
 
   useEffect(() => {
     const alreadySeen = localStorage.getItem("exit_intent_seen");
@@ -73,10 +75,10 @@ export function ExitIntentModal() {
                 </button>
 
                 <h3 className="text-2xl font-bold text-[var(--forest-canopy)] mb-3 text-balance pr-6">
-                  Be ready for EUDR, without the complexity.
+                  {t("exitIntentModal.headline")}
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-7 text-sm">
-                  Tracebud helps your network collect, share, and reuse origin data. It&apos;s simple, affordable, and includes farmers, cooperatives, exporters, and buyers.
+                  {t("exitIntentModal.description")}
                 </p>
 
                 <div className="space-y-3">
@@ -87,7 +89,7 @@ export function ExitIntentModal() {
                     }}
                     className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg"
                   >
-                    Join the pilot
+                    {t("exitIntentModal.cta.primary")}
                   </Button>
 
                   <Button
@@ -95,12 +97,12 @@ export function ExitIntentModal() {
                     onClick={() => setIsVisible(false)}
                     className="w-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 font-medium py-3 rounded-lg"
                   >
-                    Keep browsing
+                    {t("exitIntentModal.cta.secondary")}
                   </Button>
                 </div>
 
                 <p className="text-xs text-gray-400 text-center mt-4">
-                  Limited spots for early pilot partners.
+                  {t("exitIntentModal.note")}
                 </p>
               </div>
             </motion.div>

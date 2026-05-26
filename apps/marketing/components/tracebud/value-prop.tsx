@@ -5,9 +5,11 @@ import { ArrowRight, Users, Package, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog, WaitlistDialog } from "@/components/waitlist-dialog";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export function ValueProp() {
   const waitlist = useWaitlistDialog();
+  const t = useTranslations("marketing");
 
   return (
     <>
@@ -75,13 +77,13 @@ export function ValueProp() {
               transition={{ duration: 0.6 }}
             >
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance">
-                Compliance should not leave smallholders behind.
+                {t("inclusionSection.headline")}
               </h2>
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-8">
-                Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and ready for the market.
+                {t("inclusionSection.description")}
               </p>
               <p className="text-xl md:text-2xl font-semibold text-[var(--forest-canopy)]">
-                We remove the access barriers that kept smallholders out.
+                {t("inclusionSection.punchline")}
               </p>
             </motion.div>
 
@@ -127,17 +129,17 @@ export function ValueProp() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-8 text-balance">
-              Make compliance usable for the whole chain.
+              {t("finalCtaSection.headline")}
             </h2>
             <p className="text-lg md:text-xl text-white/80 leading-relaxed mb-10 max-w-2xl mx-auto">
-              Start with the network you already have, and give every actor a way to participate.
+              {t("finalCtaSection.description")}
             </p>
             <Button
               size="lg"
               onClick={() => waitlist.setOpen(true)}
               className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-semibold px-10 py-7 text-lg rounded-full"
             >
-              Get started
+              {t("finalCtaSection.cta")}
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </motion.div>

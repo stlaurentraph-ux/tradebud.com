@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +107,7 @@ export function WaitlistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("marketing");
   const [submitted, setSubmitted] = useState(false);
   const [role, setRole] = useState("");
   const [roleOther, setRoleOther] = useState("");
@@ -263,10 +265,10 @@ export function WaitlistDialog({
           <div className="p-6 sm:p-8">
             <DialogHeader className="gap-2 pb-5">
               <DialogTitle className="text-2xl font-bold text-[var(--forest-canopy)]">
-                Join the pilot
+                {t("waitlistDialog.headline")}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                Limited spots for early pilot partners. Tell us about your network and we&apos;ll be in touch.
+                {t("waitlistDialog.description")}
               </DialogDescription>
             </DialogHeader>
 
@@ -407,7 +409,7 @@ export function WaitlistDialog({
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                No spam, ever. Unsubscribe at any time.
+                {t("waitlistDialog.note")}
               </p>
             </form>
           </div>

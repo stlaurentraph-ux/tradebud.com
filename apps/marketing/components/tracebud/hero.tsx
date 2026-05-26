@@ -5,9 +5,11 @@ import { ArrowRight, Layers, Zap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { useTranslations } from "next-intl";
 
 export function Hero() {
   const waitlist = useWaitlistDialog();
+  const t = useTranslations("marketing");
 
   return (
     <>
@@ -34,11 +36,11 @@ export function Hero() {
               transition={{ duration: 0.6 }}
             >
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-balance">
-                Traceability that works for everyone in the chain.
+                {t("hero.headline")}
               </h1>
               
               <p className="text-lg md:text-xl text-white/80 leading-relaxed mb-8 max-w-xl">
-                Tracebud makes EUDR compliance simple, self-serve, and affordable so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.
+                {t("hero.subheadline")}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -47,20 +49,20 @@ export function Hero() {
                   className="bg-white text-[var(--forest-canopy)] hover:bg-white/90 font-semibold px-8 py-6 text-base rounded-full"
                   asChild
                 >
-                  <a href="#how-it-works">See how it works</a>
+                  <a href="#how-it-works">{t("hero.cta.primary")}</a>
                 </Button>
                 <Button
                   size="lg"
                   onClick={() => waitlist.setOpen(true)}
                   className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-semibold px-8 py-6 text-base rounded-full"
                 >
-                  Talk to us
+                  {t("hero.cta.secondary")}
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
 
               <p className="text-sm text-white/60">
-                Free for producers. Built for low-connectivity, low-friction field realities. No consultants required.
+                {t("hero.supportingText")}
               </p>
             </motion.div>
 
@@ -120,10 +122,10 @@ export function Hero() {
               transition={{ duration: 0.6 }}
             >
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance leading-tight">
-                Compliance should not be complicated to be credible.
+                {t("whyTracebudSection.headline")}
               </h2>
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-12">
-                Most supply chains do not fail because people do not care. They fail because the process is too manual, too expensive, and too fragmented. Tracebud removes the back-and-forth so every actor can participate, even when the network is large, spread out, or under-resourced.
+                {t("whyTracebudSection.description")}
               </p>
             </motion.div>
 
@@ -131,22 +133,22 @@ export function Hero() {
               {[
                 {
                   icon: Layers,
-                  title: "Simple",
-                  description: "One platform. One workflow. One source of truth.",
+                  titleKey: "whyTracebudSection.pillars.simple.title",
+                  descriptionKey: "whyTracebudSection.pillars.simple.description",
                 },
                 {
                   icon: Zap,
-                  title: "Automated",
-                  description: "Requests move through the network automatically, so proof reaches the source faster.",
+                  titleKey: "whyTracebudSection.pillars.automated.title",
+                  descriptionKey: "whyTracebudSection.pillars.automated.description",
                 },
                 {
                   icon: Users,
-                  title: "Inclusive",
-                  description: "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal.",
+                  titleKey: "whyTracebudSection.pillars.inclusive.title",
+                  descriptionKey: "whyTracebudSection.pillars.inclusive.description",
                 },
               ].map((pillar, index) => (
                 <motion.div
-                  key={pillar.title}
+                  key={pillar.titleKey}
                   initial={{ opacity: 0, x: -16 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -157,8 +159,8 @@ export function Hero() {
                     <pillar.icon className="w-5 h-5 text-[var(--data-emerald)]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-[var(--forest-canopy)] mb-0.5">{pillar.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{pillar.description}</p>
+                    <h3 className="text-base font-bold text-[var(--forest-canopy)] mb-0.5">{t(pillar.titleKey)}</h3>
+                    <p className="text-gray-600 leading-relaxed">{t(pillar.descriptionKey)}</p>
                   </div>
                 </motion.div>
               ))}
@@ -198,9 +200,9 @@ export function Hero() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-              From first request to reusable proof.
+              {t("howItWorksSection.headline")}
             </h2>
-            <p className="text-white/60 text-lg">Four steps. No complexity.</p>
+            <p className="text-white/60 text-lg">{t("howItWorksSection.subtitle")}</p>
           </motion.div>
 
           {/* Step connector — desktop only */}
@@ -221,23 +223,23 @@ export function Hero() {
             {[
               {
                 number: "01",
-                title: "Add your network",
-                description: "One contact or five hundred. Upload a CSV or add them manually.",
+                titleKey: "howItWorksSection.steps.step1.title",
+                descriptionKey: "howItWorksSection.steps.step1.description",
               },
               {
                 number: "02",
-                title: "Send one request",
-                description: "Let it flow through the chain automatically. No chasing.",
+                titleKey: "howItWorksSection.steps.step2.title",
+                descriptionKey: "howItWorksSection.steps.step2.description",
               },
               {
                 number: "03",
-                title: "Collect origin data",
-                description: "Capture it once, then reuse it across shipments and buyers.",
+                titleKey: "howItWorksSection.steps.step3.title",
+                descriptionKey: "howItWorksSection.steps.step3.description",
               },
               {
                 number: "04",
-                title: "Stay aligned",
-                description: "Keep everyone on the same page with a shared, digital workflow.",
+                titleKey: "howItWorksSection.steps.step4.title",
+                descriptionKey: "howItWorksSection.steps.step4.description",
               },
             ].map((item, index) => (
               <motion.div
@@ -250,8 +252,8 @@ export function Hero() {
               >
                 <div className="lg:hidden text-[var(--data-emerald)] text-xs font-bold tracking-widest uppercase">{item.number}</div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
-                  <p className="text-white/60 leading-relaxed text-sm">{item.description}</p>
+                  <h3 className="text-xl font-bold text-white mb-2">{t(item.titleKey)}</h3>
+                  <p className="text-white/60 leading-relaxed text-sm">{t(item.descriptionKey)}</p>
                 </div>
               </motion.div>
             ))}
