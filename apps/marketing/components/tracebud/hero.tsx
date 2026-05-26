@@ -57,14 +57,15 @@ export function Hero() {
               </p>
             </motion.div>
 
-            {/* Right: Image */}
+            {/* Right: Image + App Mockup */}
             <motion.div
               className="relative"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
+              {/* Farmer Image */}
+              <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl mb-6">
                 <Image
                   src="/images/farmer-hero.jpg"
                   alt="Farmer mapping their coffee plot with Tracebud mobile app"
@@ -73,10 +74,28 @@ export function Hero() {
                   priority
                 />
               </div>
-              {/* Floating stat card */}
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <div className="text-3xl font-bold text-[var(--forest-canopy)]">20 min</div>
-                <div className="text-sm text-gray-500">to map one farm</div>
+
+              {/* App Screenshot Mockup */}
+              <div className="relative mx-auto max-w-sm">
+                {/* Phone frame */}
+                <div className="bg-black rounded-[3rem] p-3 shadow-2xl">
+                  <div className="bg-white rounded-[2.5rem] overflow-hidden aspect-[9/19]">
+                    <Image
+                      src="/images/farmer-app-homepage.png"
+                      alt="Tracebud Farmer App interface showing map and plot data"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl"></div>
+                </div>
+
+                {/* Floating stat card */}
+                <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
+                  <div className="text-2xl font-bold text-[var(--forest-canopy)]">Offline</div>
+                  <div className="text-xs text-gray-500">Works anywhere</div>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -126,29 +145,44 @@ export function Hero() {
                 number: "1",
                 title: "Create proof once",
                 description: "Producers and field teams capture GPS boundaries, photos, and consent directly from the farm. Works offline.",
+                image: "/images/step-map-plot.jpg",
               },
               {
                 number: "2", 
                 title: "Reuse everywhere",
                 description: "Instead of rebuilding proof for every shipment, verified data flows across workflows. Map once, use forever.",
+                image: "/images/feature-digital-receipts.jpg",
               },
               {
                 number: "3",
                 title: "Ship with confidence",
                 description: "Fewer proof gaps, faster handoff, and more confidence in what can actually ship to EU markets.",
+                image: "/images/step-certified.jpg",
               },
             ].map((item, index) => (
               <motion.div
                 key={item.number}
-                className="bg-white rounded-2xl p-8 border border-gray-100"
+                className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
-                <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                {/* Image */}
+                <div className="relative w-full aspect-video bg-gray-100">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                {/* Content */}
+                <div className="p-8">
+                  <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
+                  <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
+                  <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                </div>
               </motion.div>
             ))}
           </div>
