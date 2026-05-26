@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, Users, Globe, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog } from "@/components/waitlist-dialog";
+import Image from "next/image";
 
 export function Impact() {
   const waitlist = useWaitlistDialog();
@@ -11,20 +12,40 @@ export function Impact() {
   return (
     <section className="relative py-32 px-6 overflow-hidden bg-gradient-to-b from-[var(--forest-canopy)] to-[var(--forest-light)]">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          className="text-center mb-16 md:mb-20"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
-            From Offline Fields to Audit-Ready Proof
-          </h2>
-          <p className="text-white/90 text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-            Portable origin data that works offline, gets verified offline, and moves upstream/downstream with full chain integrity.
-          </p>
-        </motion.div>
+        {/* Header with image */}
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-16 md:mb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
+              From Offline Fields to Audit-Ready Proof
+            </h2>
+            <p className="text-white/90 text-xl md:text-2xl leading-relaxed">
+              Portable origin data that works offline, gets verified offline, and moves upstream/downstream with full chain integrity.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative"
+          >
+            <div className="relative aspect-[4/3] rounded-3xl overflow-hidden">
+              <Image
+                src="/images/exporter-hero.jpg"
+                alt="Supply chain compliance in action"
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)]/60 to-transparent" />
+            </div>
+          </motion.div>
+        </div>
 
         {/* Value props */}
         <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 mb-16 md:mb-20">
