@@ -1,0 +1,103 @@
+{
+  "en": {
+    "hero": {
+      "headline": "Traceability that works for everyone in the chain.",
+      "subheadline": "Tracebud makes EUDR compliance simple, self-serve, and affordable so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.",
+      "supportingText": "Free for producers. Built for low-connectivity, low-friction field realities. No consultants required.",
+      "cta": {
+        "primary": "See how it works",
+        "secondary": "Talk to us"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Compliance should not be complicated to be credible.",
+      "description": "Most supply chains do not fail because people do not care. They fail because the process is too manual, too expensive, and too fragmented. Tracebud removes the back-and-forth so every actor can participate, even when the network is large, spread out, or under-resourced.",
+      "pillars": {
+        "simple": {
+          "title": "Simple",
+          "description": "One platform. One workflow. One source of truth."
+        },
+        "automated": {
+          "title": "Automated",
+          "description": "Requests move through the network automatically, so proof reaches the source faster."
+        },
+        "inclusive": {
+          "title": "Inclusive",
+          "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "From first request to reusable proof.",
+      "subtitle": "Four steps. No complexity.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Add your network",
+          "description": "One contact or five hundred. Upload a CSV or add them manually."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Send one request",
+          "description": "Let it flow through the chain automatically. No chasing."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Collect origin data",
+          "description": "Capture it once, then reuse it across shipments and buyers."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Stay aligned",
+          "description": "Keep everyone on the same page with a shared, digital workflow."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Built for the farm, not the office.",
+        "description": "Farmers can map plots, share information, and respond from a simple mobile experience designed for real field conditions. It works offline, uses clear visuals, and keeps the process lightweight.",
+        "supportingText": "Free for producers. No training-heavy setup."
+      },
+      "dashboard": {
+        "headline": "Manage your network without the back-and-forth.",
+        "description": "Upload contacts in bulk, send one request, and let the workflow cascade through your supply chain. Track responses, reuse verified data, and keep every shipment moving with less manual follow-up.",
+        "supportingText": "Less chasing. Fewer gaps. Faster handoffs."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Compliance should not leave smallholders behind.",
+      "description": "Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and ready for the market.",
+      "punchline": "We remove the access barriers that kept smallholders out."
+    },
+    "finalCtaSection": {
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate.",
+      "cta": "Get started"
+    },
+    "exitIntentModal": {
+      "headline": "Be ready for EUDR, without the complexity.",
+      "description": "Tracebud helps your network collect, share, and reuse origin data. It's simple, affordable, and includes farmers, cooperatives, exporters, and buyers.",
+      "cta": {
+        "primary": "Join the pilot",
+        "secondary": "Keep browsing"
+      },
+      "note": "Limited spots for early pilot partners."
+    },
+    "waitlistDialog": {
+      "headline": "Join the pilot",
+      "description": "Limited spots for early pilot partners. Tell us about your network and we'll be in touch.",
+      "note": "No spam, ever. Unsubscribe at any time."
+    }
+  },
+  "fr": {},
+  "es": {},
+  "pt": {},
+  "id": {},
+  "vi": {},
+  "de": {},
+  "nl": {},
+  "it": {},
+  "am": {},
+  "no": {}
+}
