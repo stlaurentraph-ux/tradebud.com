@@ -541,7 +541,7 @@
     },
     "waitlistDialog": {
       "headline": "Tham gia chương trình thí điểm",
-      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m�����ng lưới của bạn và chúng tôi sẽ liên hệ.",
+      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m�������ng lưới của bạn và chúng tôi sẽ liên hệ.",
       "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
     }
   },
@@ -727,7 +727,277 @@
       "note": "Geen spam. Op elk moment uitschrijven."
     }
   },
-  "it": {},
-  "am": {},
-  "no": {}
+  "it": {
+    "hero": {
+      "headline": "La tracciabilità che funziona per tutta la filiera.",
+      "subheadline": "Tracebud semplifica la conformità EUDR con uno strumento semplice, autonomo e accessibile, così agricoltori, cooperative, esportatori e acquirenti possono raccogliere, condividere e riutilizzare i dati di origine senza inseguire documenti.",
+      "supportingText": "Gratis per i produttori. Pensato per le realtà sul campo, con connettività limitata e flussi semplici. Nessun consulente necessario.",
+      "cta": {
+        "primary": "Scopri come funziona",
+        "secondary": "Contattaci"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "La conformità non dovrebbe essere complicata per essere credibile.",
+      "description": "La maggior parte delle filiere non fallisce perché le persone non ci tengono. Fallisce perché il processo è troppo manuale, troppo costoso e troppo frammentato. Tracebud elimina il continuo andare avanti e indietro, così ogni attore può partecipare, anche quando la rete è grande, distribuita o con risorse limitate.",
+      "pillars": {
+        "simple": {
+          "title": "Semplice",
+          "description": "Una piattaforma. Un flusso di lavoro. Un'unica fonte di verità."
+        },
+        "automated": {
+          "title": "Automatizzato",
+          "description": "Le richieste si muovono automaticamente nella rete, così la prova arriva più velocemente alla fonte."
+        },
+        "inclusive": {
+          "title": "Inclusivo",
+          "description": "Gli agricoltori possono partecipare direttamente, anche con accesso digitale limitato, dispositivi condivisi o segnale instabile."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Dalla prima richiesta alla prova riutilizzabile.",
+      "subtitle": "Quattro passaggi. Nessuna complessità.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Aggiungi la tua rete",
+          "description": "Un contatto o cinquecento. Carica un CSV o aggiungili manualmente."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Invia una richiesta",
+          "description": "Scorre automaticamente lungo la filiera. Senza rincorrere nessuno."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Raccogli i dati di origine",
+          "description": "Registrali una volta e riutilizzali per più spedizioni e acquirenti."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Mantieni tutti allineati",
+          "description": "Tieni tutti sulla stessa pagina con un flusso di lavoro digitale condiviso."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Pensata per il campo, non per l'ufficio.",
+        "description": "Gli agricoltori possono mappare i confini, condividere informazioni e rispondere da un'esperienza mobile semplice, progettata per le condizioni reali del campo. Funziona offline, usa elementi visivi chiari e mantiene il processo leggero.",
+        "supportingText": "Gratis per i produttori. Nessuna configurazione pesante o formazione lunga."
+      },
+      "dashboard": {
+        "headline": "Gestisci la tua rete senza continui scambi.",
+        "description": "Carica i contatti in blocco, invia una richiesta e lascia che il flusso di lavoro attraversi l'intera filiera. Monitora le risposte, riutilizza i dati verificati e fai avanzare ogni spedizione con meno lavoro manuale.",
+        "supportingText": "Meno rincorse. Meno lacune. Consegne più rapide."
+      }
+    },
+    "inclusionSection": {
+      "headline": "La conformità non deve lasciare indietro i piccoli agricoltori.",
+      "description": "Le grandi aziende possono acquistare sistemi complessi. I piccoli agricoltori non dovrebbero essere esclusi perché gli strumenti sono troppo costosi, troppo tecnici o troppo lenti. Tracebud mantiene ogni attore visibile, connesso e pronto per il mercato.",
+      "punchline": "Eliminiamo le barriere di accesso che per anni hanno lasciato fuori i piccoli agricoltori."
+    },
+    "finalCtaSection": {
+      "headline": "Rendere la conformità utilizzabile per tutta la filiera.",
+      "description": "Inizia con la rete che hai già e dai a ogni attore un modo per partecipare.",
+      "cta": "Inizia"
+    },
+    "exitIntentModal": {
+      "headline": "Pronto a unirti alla lista d'attesa?",
+      "description": "Tracebud aiuta la tua rete a raccogliere, condividere e riutilizzare i dati di origine. È semplice, accessibile e inclusivo per agricoltori, cooperative, esportatori e acquirenti.",
+      "cta": {
+        "primary": "Unisciti ora",
+        "secondary": "Continua a navigare"
+      },
+      "note": "Posti limitati per i primi partner pilota."
+    },
+    "waitlistDialog": {
+      "headline": "Unisciti al programma pilota",
+      "description": "Posti limitati per i primi partner pilota. Raccontaci della tua rete e ti ricontatteremo.",
+      "note": "Niente spam. Cancellati in qualsiasi momento."
+    }
+  },
+  "am": {
+    "hero": {
+      "headline": "ለሙሉ ሰንሰለቱ የሚሰራ የመከታተያ ስርዓት።",
+      "subheadline": "Tracebud የ EUDR ተገዥነትን ቀላል፣ በራስ ለራስ የሚሰራ እና ዋጋው የሚደርስ መሳሪያ በመስጠት ገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች የምንጭ ውሂብን ሰብስበው፣ አጋርተው እና እንደገና እንዲጠቀሙ ይረዳል፣ ሰነድ ለመከታተል ሳይደክሙ።",
+      "supportingText": "ለአቅራቢዎች ነፃ። ለውስን ግንኙነት እና ለቀላል ሂደቶች የተነደፈ። ኮንሰልታንቶች አያስፈልጉም።",
+      "cta": {
+        "primary": "እንዴት እንደሚሰራ ይመልከቱ",
+        "secondary": "ያግኙን"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "ተገዥነት ታማኝ እንዲሆን ውስብስብ መሆን የለበትም።",
+      "description": "አብዛኞቹ የአቅርቦት ሰንሰለቶች ሰዎች አልሞክሩም ብለው አይወድቁም። ሂደቱ በጣም በእጅ ስለሚሰራ፣ በጣም ውድ ስለሆነ እና በጣም ተበታትኖ ስለሆነ ይወድቃሉ። Tracebud ድጋጌ ማለትን ያስወግዳል፣ ስለዚህ መረቡ ትልቅ፣ ተበታትኖ ወይም አልተደገፈም ቢሆንም ሁሉም መሳተፍ ይችላሉ።",
+      "pillars": {
+        "simple": {
+          "title": "ቀላል",
+          "description": "አንድ መድረክ። አንድ የሥራ ፍሰት። አንድ የእውነት ምንጭ።"
+        },
+        "automated": {
+          "title": "በራስ የሚሰራ",
+          "description": "ጥያቄዎች በራስ-ሰር በመረቡ ውስጥ ይንቀሳቀሳሉ፣ ስለዚህ ማስረጃው ፈጥኖ ምንጭ ይደርሳል።"
+        },
+        "inclusive": {
+          "title": "አካታች",
+          "description": "ገበሬዎች የዲጂታል መዳረሻ ውስን ቢሆንም፣ መሳሪያ ተጋር ቢጠቀሙም ወይም ምልክት ያልተረጋጋ ቢሆንም በቀጥታ መሳተፍ ይችላሉ።"
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "ከመጀመሪያው ጥያቄ እስከ እንደገና ሊጠቀም የሚችል ማስረጃ።",
+      "subtitle": "አራት ደረጃዎች። ያለ ውስብስብነት።",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "መረብዎን ያክሉ",
+          "description": "አንድ ኮንታክት ወይም 500። CSV ይስቀሉ ወይም በእጅ ያክሉ።"
+        },
+        "step2": {
+          "number": "02",
+          "title": "አንድ ጥያቄ ይላኩ",
+          "description": "በራስ-ሰር በሰንሰለቱ ውስጥ ይፈስሳል። ሰው ለመከታተል የለም።"
+        },
+        "step3": {
+          "number": "03",
+          "title": "የመነሻ ውሂብ ይሰብስቡ",
+          "description": "አንድ ጊዜ ይመዝገቡት፣ ከዚያም ለብዙ ጭነቶች እና ገዢዎች እንደገና ይጠቀሙበት።"
+        },
+        "step4": {
+          "number": "04",
+          "title": "ሁሉንም አስተካክሉ",
+          "description": "በጋራ ዲጂታል የሥራ ፍሰት ሁሉንም በአንድ መስመር ላይ ያቆዩ።"
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "ለመሬት ስራ፣ ለቢሮ አይደለም።",
+        "description": "ገበሬዎች የመሬት ድንበር ሊያስመልክቱ፣ መረጃ ሊጋሩ እና በቀላል የሞባይል ተሞክሮ ምላሽ ሊሰጡ ይችላሉ። ኦፍላይን ይሰራል፣ ግልጽ እይታዎችን ይጠቀማል እና ሂደቱን ቀላል ያደርጋል።",
+        "supportingText": "ለአቅራቢዎች ነፃ። ከባድ ማዘጋጃ ወይም ረጅም ስልጠና የለም።"
+      },
+      "dashboard": {
+        "headline": "መረብዎን ያለ ድግግሞሽ ያስተዳድሩ።",
+        "description": "ኮንታክቶችን በብዛት ይጫኑ፣ አንድ ጥያቄ ይላኩ እና የሥራ ፍሰቱ በሙሉ ሰንሰለቱ ውስጥ እንዲፈስስ ያድርጉ። ምላሾችን ይከታተሉ፣ የተረጋገጡ ውሂቦችን እንደገና ይጠቀሙ እና እያንዳንዱን ጭነት በትንሽ የእጅ ስራ ያስቀጥሉ።",
+        "supportingText": "ያነሰ መከታተል። ያነሱ ክፍተቶች። ፈጣን ማስተላለፊያ።"
+      }
+    },
+    "inclusionSection": {
+      "headline": "ተገዥነት ትንንሽ ገበሬዎችን ወደ ኋላ መተው የለበትም።",
+      "description": "ትልቅ ኩባንያዎች ውስብስብ ስርዓቶችን ሊገዙ ይችላሉ። ትንንሽ ገበሬዎች መሳሪያዎቹ በጣም ውድ፣ በጣም ቴክኒካል ወይም በጣም ዝግ ስለሆኑ መውጣት የለባቸውም። Tracebud ሁሉንም አባል ታይቶ፣ ተገናኝቶ እና ለገበያ ዝግጁ ያደርጋል።",
+      "punchline": "እኛ ለብዙ ዓመታት ትንንሽ ገበሬዎችን ውጭ ያቆዩትን የመዳረሻ መከላከያዎች እናስወግዳለን።"
+    },
+    "finalCtaSection": {
+      "headline": "ተገዥነትን ለሙሉ ሰንሰለቱ የሚጠቅም ማድረግ።",
+      "description": "አሁን ባለው መረብዎ ይጀምሩ እና ለእያንዳንዱ አባል የመሳተፊያ መንገድ ይስጡ።",
+      "cta": "ጀምር"
+    },
+    "exitIntentModal": {
+      "headline": "በመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
+      "description": "Tracebud የምንጭ ውሂብን ለመሰብሰብ፣ ለማጋራት እና እንደገና ለመጠቀም ይረዳዎታል። ለገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች ቀላል፣ ዋጋው የሚደርስ እና አካታች ነው።",
+      "cta": {
+        "primary": "አሁን ይቀላቀሉ",
+        "secondary": "መስሰስቅ ቀጥሉ"
+      },
+      "note": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች።"
+    },
+    "waitlistDialog": {
+      "headline": "የፓይለት ፕሮግራሙን ይቀላቀሉ",
+      "description": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች። ስለ መረብዎ ይንገሩን እና እናገኝዎታለን።",
+      "note": "ስፓም የለም። በማንኛውም ጊዜ ይሰርዙ።"
+    }
+  },
+  "no": {
+    "hero": {
+      "headline": "Sporbarhet som fungerer for hele kjeden.",
+      "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
+      "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
+      "cta": {
+        "primary": "Se hvordan det fungerer",
+        "secondary": "Kontakt oss"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
+      "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
+      "pillars": {
+        "simple": {
+          "title": "Enkelt",
+          "description": "Én plattform. Én arbeidsflyt. Én sannhetskilde."
+        },
+        "automated": {
+          "title": "Automatisert",
+          "description": "Forespørsler beveger seg automatisk gjennom nettverket, slik at bevis når kilden raskere."
+        },
+        "inclusive": {
+          "title": "Inkluderende",
+          "description": "Bønder kan delta direkte, selv med begrenset digital tilgang, delte enheter eller ustabilt signal."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Fra første forespørsel til gjenbrukbart bevis.",
+      "subtitle": "Fire steg. Ingen kompleksitet.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Legg til nettverket ditt",
+          "description": "Én kontakt eller fem hundre. Last opp en CSV eller legg dem til manuelt."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Send én forespørsel",
+          "description": "Den flyter automatisk gjennom kjeden. Ingen oppfølging."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Samle opprinnelsesdata",
+          "description": "Registrer det én gang, og gjenbruk det på tvers av flere forsendelser og kjøpere."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Hold alle samkjørt",
+          "description": "Hold alle på samme side med en delt digital arbeidsflyt."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Bygget for feltet, ikke kontoret.",
+        "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
+        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
+      },
+      "dashboard": {
+        "headline": "Administrer nettverket uten frem og tilbake.",
+        "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
+        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Etterlevelse skal ikke etterlate småbønder.",
+      "description": "Store selskaper kan kjøpe komplekse systemer. Småbønder bør ikke ekskluderes fordi verktøyene er for dyre, for tekniske eller for trege. Tracebud holder hver aktør synlig, koblet og klar for markedet.",
+      "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
+    },
+    "finalCtaSection": {
+      "headline": "Gjør etterlevelse brukbar for hele kjeden.",
+      "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
+      "cta": "Kom i gang"
+    },
+    "exitIntentModal": {
+      "headline": "Klar til å bli med på ventelisten?",
+      "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
+      "cta": {
+        "primary": "Bli med nå",
+        "secondary": "Fortsett å bla"
+      },
+      "note": "Begrenset antall plasser for tidlige pilotpartnere."
+    },
+    "waitlistDialog": {
+      "headline": "Bli med i pilotprogrammet",
+      "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
+      "note": "Ingen spam. Avslutt abonnementet når som helst."
+    }
+  }
 }
