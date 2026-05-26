@@ -71,18 +71,15 @@ export function Products() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="relative aspect-square max-w-md mx-auto">
-              <div className="absolute inset-0 bg-gradient-to-br from-[var(--data-emerald)]/20 to-[var(--forest-canopy)]/20 rounded-3xl" />
-              <div className="relative z-10 flex items-center justify-center h-full">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl p-3 w-64">
-                  <div className="bg-[var(--forest-canopy)] rounded-[2rem] aspect-[9/19] flex flex-col items-center justify-center text-white p-6">
-                    <MapPin className="w-12 h-12 mb-4 opacity-80" />
-                    <p className="text-center text-sm opacity-90">Walk your plot boundary</p>
-                    <div className="mt-6 w-full bg-[var(--data-emerald)] rounded-full py-3 text-center text-sm font-semibold">
-                      Start Mapping
-                    </div>
-                  </div>
-                </div>
+            <div className="relative w-[280px] mx-auto">
+              <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-gray-100">
+                <Image
+                  src="/images/farmer-app-homepage.png"
+                  alt="Tracebud Farmer App"
+                  width={320}
+                  height={693}
+                  className="w-full h-auto"
+                />
               </div>
             </div>
           </motion.div>
@@ -96,34 +93,14 @@ export function Products() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
-              <div className="absolute inset-0 bg-gradient-to-br from-[var(--warm-stone)] to-white">
-                {/* Mock Dashboard UI */}
-                <div className="p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    {["Ready to ship", "Needs action", "Pending"].map((status, i) => (
-                      <div key={i} className="bg-white rounded-xl p-4 shadow-sm">
-                        <div className="text-2xl font-bold text-[var(--forest-canopy)]">{[24, 3, 12][i]}</div>
-                        <div className="text-xs text-gray-500">{status}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle className="w-5 h-5 text-[var(--data-emerald)]" />
-                      <span className="font-medium text-sm">Shipment #2847 verified</span>
-                    </div>
-                    <div className="h-2 bg-[var(--warm-stone)] rounded-full">
-                      <div className="h-2 bg-[var(--data-emerald)] rounded-full w-4/5" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
+              <Image
+                src="/images/coop-dashboard.jpg"
+                alt="Cooperative Dashboard showing member tracking and batch management"
+                width={800}
+                height={500}
+                className="w-full h-auto"
+              />
             </div>
           </motion.div>
 
