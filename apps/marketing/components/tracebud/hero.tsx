@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Layers, Zap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -33,27 +33,15 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <p className="text-sm font-medium text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-                EUDR Compliance Made Simple
-              </p>
-              
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-balance">
-                The easiest way for smallholders to stay connected to EU markets
+                Traceability that works for everyone in the chain.
               </h1>
               
               <p className="text-lg md:text-xl text-white/80 leading-relaxed mb-8 max-w-xl">
-                From producer onboarding and plot mapping to shipment readiness and buyer handoff, Tracebud turns origin data into usable compliance.
+                Tracebud makes EUDR compliance simple, self-serve, and affordable — so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button
-                  size="lg"
-                  onClick={() => waitlist.setOpen(true)}
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-semibold px-8 py-6 text-base rounded-full"
-                >
-                  Join the waitlist
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
                 <Button
                   size="lg"
                   variant="outline"
@@ -62,10 +50,18 @@ export function Hero() {
                 >
                   <a href="#how-it-works">See how it works</a>
                 </Button>
+                <Button
+                  size="lg"
+                  onClick={() => waitlist.setOpen(true)}
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-semibold px-8 py-6 text-base rounded-full"
+                >
+                  Talk to us
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
               </div>
 
               <p className="text-sm text-white/60">
-                Free for producers. No credit card required.
+                Free for producers. Built for low-connectivity, low-friction field realities. No consultants required.
               </p>
             </motion.div>
 
@@ -103,10 +99,10 @@ export function Hero() {
         </div>
       </section>
 
-      {/* Problem Section */}
+      {/* Why Tracebud Section */}
       <section className="py-24 md:py-32 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             {/* Left: Text */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -115,54 +111,57 @@ export function Hero() {
               transition={{ duration: 0.6 }}
             >
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance">
-                EUDR depends on farm-level proof, but that proof is still fragmented
+                Compliance should not be complicated to be credible.
               </h2>
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                Evidence arrives late. Records are not reusable. Reaching hundreds of suppliers means hundreds of individual follow-ups. Teams end up chasing missing data just when shipments need to move. The result is more manual work, more blocked shipments, and greater risk that smallholders are left out.
+                Most supply chains do not fail because people do not care. They fail because the process is too manual, too expensive, and too fragmented. Tracebud removes the back-and-forth so every actor can participate, even when the network is large, spread out, or under-resourced.
               </p>
             </motion.div>
 
-            {/* Right: Visual showing fragmentation */}
+            {/* Right: Three Pillars */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
+              className="space-y-6"
             >
-              <div className="relative aspect-square max-w-md mx-auto">
-                <Image
-                  src="/images/gis-geolocation.jpg"
-                  alt="Complex supply chain mapping"
-                  fill
-                  className="object-cover rounded-3xl"
-                />
-                {/* Overlay cards showing fragmentation */}
-                <div className="absolute -top-4 -left-4 bg-white rounded-xl shadow-lg p-3 border border-red-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-xs font-medium text-gray-700">Records scattered</span>
+              {[
+                {
+                  icon: Layers,
+                  title: "Simple",
+                  description: "One platform. One workflow. One source of truth.",
+                },
+                {
+                  icon: Zap,
+                  title: "Automated",
+                  description: "Requests move through the network automatically, so proof reaches the source faster.",
+                },
+                {
+                  icon: Users,
+                  title: "Inclusive",
+                  description: "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal.",
+                },
+              ].map((pillar, index) => (
+                <div 
+                  key={pillar.title}
+                  className="flex gap-5 p-6 bg-[var(--warm-stone)] rounded-2xl"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--data-emerald)]/10 flex items-center justify-center flex-shrink-0">
+                    <pillar.icon className="w-6 h-6 text-[var(--data-emerald)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--forest-canopy)] mb-1">{pillar.title}</h3>
+                    <p className="text-gray-600">{pillar.description}</p>
                   </div>
                 </div>
-                <div className="absolute -bottom-4 -right-4 bg-white rounded-xl shadow-lg p-3 border border-amber-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-xs font-medium text-gray-700">Evidence arrives late</span>
-                  </div>
-                </div>
-                <div className="absolute top-1/2 -right-8 bg-white rounded-xl shadow-lg p-3 border border-orange-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <span className="text-xs font-medium text-gray-700">Not reusable</span>
-                  </div>
-                </div>
-              </div>
+              ))}
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Solution Section */}
+      {/* How It Works Section */}
       <section className="py-24 md:py-32 bg-[var(--warm-stone)]">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
@@ -173,57 +172,44 @@ export function Hero() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
-              What Tracebud changes
+              From first request to reusable proof.
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              One shared workflow to request, collect, verify, and reuse origin proof. Requests cascade through your network until they reach the source.
-            </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
                 number: "1",
-                title: "Create proof once",
-                description: "Producers and field teams capture GPS boundaries, photos, and consent directly from the farm. Works offline.",
-                image: "/images/feature-offline-mapping.jpg",
+                title: "Add your network",
+                description: "One contact or five hundred. Upload a CSV or add them manually.",
               },
               {
                 number: "2", 
-                title: "Reuse everywhere",
-                description: "Instead of rebuilding proof for every shipment, verified data flows across your network. One request reaches everyone. Map once, use forever.",
-                image: "/images/feature-photo-vault.jpg",
+                title: "Send one request",
+                description: "Let it flow through the chain automatically. No chasing.",
               },
               {
                 number: "3",
-                title: "Ship with confidence",
-                description: "Fewer proof gaps, faster handoff, and more confidence in what can actually ship to EU markets.",
-                image: "/images/feature-declaration.jpg",
+                title: "Collect origin data",
+                description: "Capture it once, then reuse it across shipments and buyers.",
+              },
+              {
+                number: "4",
+                title: "Stay aligned",
+                description: "Keep everyone on the same page with a shared, digital workflow.",
               },
             ].map((item, index) => (
               <motion.div
                 key={item.number}
-                className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm text-center"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                {/* Image */}
-                <div className="relative w-full aspect-video bg-gray-100">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                {/* Content */}
-                <div className="p-8">
-                  <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
-                  <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{item.description}</p>
-                </div>
+                <div className="text-5xl font-bold text-[var(--data-emerald)] mb-4">{item.number}</div>
+                <h3 className="text-xl font-bold text-[var(--forest-canopy)] mb-3">{item.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{item.description}</p>
               </motion.div>
             ))}
           </div>

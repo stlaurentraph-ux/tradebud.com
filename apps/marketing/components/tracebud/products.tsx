@@ -41,11 +41,15 @@ export function Products() {
             </div>
             
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-              An offline app for producers and field teams
+              Built for the farm, not the office.
             </h3>
             
-            <p className="text-lg text-gray-600 leading-relaxed mb-8">
-              Designed for low-connectivity environments. Icon-led flows, low-literacy assumptions, and no requirement for uninterrupted connectivity. Create usable origin proof directly from the farm.
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              Farmers can map plots, share information, and respond from a simple mobile experience designed for real field conditions. It works offline, uses clear visuals, and keeps the process lightweight.
+            </p>
+            
+            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
+              Free for producers. No training-heavy setup.
             </p>
 
             <div className="space-y-4">
@@ -216,11 +220,15 @@ export function Products() {
             </div>
             
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-              A dashboard for cooperatives, exporters, and buyers
+              Manage your network without the back-and-forth.
             </h3>
             
-            <p className="text-lg text-gray-600 leading-relaxed mb-8">
-              Upload your entire network in bulk—producers, cooperatives, exporters. Send compliance requests to hundreds of contacts at once. They forward requests down their chain until proof reaches the source. Track readiness, identify gaps, and assemble shipment proof.
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              Upload contacts in bulk, send one request, and let the workflow cascade through your supply chain. Track responses, reuse verified data, and keep every shipment moving with less manual follow-up.
+            </p>
+            
+            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
+              Less chasing. Fewer gaps. Faster handoffs.
             </p>
 
             <div className="space-y-4">
