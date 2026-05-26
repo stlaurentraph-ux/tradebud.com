@@ -363,8 +363,188 @@
       "note": "Sem spam. Cancelar subscrição em qualquer altura."
     }
   },
-  "id": {},
-  "vi": {},
+  "id": {
+    "hero": {
+      "headline": "Pelacakan yang bekerja untuk seluruh rantai.",
+      "subheadline": "Tracebud menyederhanakan kepatuhan EUDR dengan alat yang sederhana, mandiri, dan terjangkau, sehingga petani, koperasi, eksportir, dan pembeli dapat mengumpulkan, membagikan, dan menggunakan kembali data asal tanpa mengejar dokumen.",
+      "supportingText": "Gratis untuk produsen. Dibuat untuk kondisi lapangan dengan konektivitas terbatas dan alur yang sederhana. Tanpa konsultan.",
+      "cta": {
+        "primary": "Lihat cara kerjanya",
+        "secondary": "Hubungi kami"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Kepatuhan seharusnya tidak rumit agar bisa dipercaya.",
+      "description": "Sebagian besar rantai pasok tidak gagal karena orang tidak peduli. Mereka gagal karena prosesnya terlalu manual, terlalu mahal, dan terlalu terfragmentasi. Tracebud menghilangkan bolak-balik agar setiap pihak bisa ikut serta, bahkan ketika jaringannya besar, tersebar, atau kekurangan sumber daya.",
+      "pillars": {
+        "simple": {
+          "title": "Sederhana",
+          "description": "Satu platform. Satu alur kerja. Satu sumber kebenaran."
+        },
+        "automated": {
+          "title": "Otomatis",
+          "description": "Permintaan bergerak otomatis melalui jaringan, sehingga bukti sampai ke sumber lebih cepat."
+        },
+        "inclusive": {
+          "title": "Inklusif",
+          "description": "Petani dapat ikut langsung, bahkan dengan akses digital terbatas, perangkat bersama, atau sinyal yang tidak stabil."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Dari permintaan pertama hingga bukti yang dapat digunakan kembali.",
+      "subtitle": "Empat langkah. Tanpa kerumitan.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Tambahkan jaringan Anda",
+          "description": "Satu kontak atau lima ratus. Unggah CSV atau tambahkan secara manual."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Kirim satu permintaan",
+          "description": "Permintaan mengalir otomatis melalui rantai. Tanpa mengejar satu per satu."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Kumpulkan data asal",
+          "description": "Catat sekali, lalu gunakan kembali untuk beberapa pengiriman dan pembeli."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Tetap selaras",
+          "description": "Jaga semua pihak tetap pada halaman yang sama dengan alur kerja digital bersama."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Dibuat untuk lapangan, bukan untuk kantor.",
+        "description": "Petani dapat memetakan petak, berbagi informasi, dan merespons melalui pengalaman mobile yang sederhana dan dirancang untuk kondisi lapangan yang nyata. Aplikasi ini berfungsi offline, menggunakan visual yang jelas, dan menjaga proses tetap ringan.",
+        "supportingText": "Gratis untuk produsen. Tanpa penyiapan yang berat atau pelatihan yang lama."
+      },
+      "dashboard": {
+        "headline": "Kelola jaringan Anda tanpa bolak-balik.",
+        "description": "Unggah kontak secara massal, kirim satu permintaan, dan biarkan alur kerja menjalar ke seluruh rantai pasok. Lacak respons, gunakan kembali data yang telah diverifikasi, dan jaga setiap pengiriman tetap bergerak dengan lebih sedikit tindak lanjut manual.",
+        "supportingText": "Lebih sedikit mengejar. Lebih sedikit celah. Serah terima lebih cepat."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Kepatuhan tidak boleh meninggalkan petani kecil di belakang.",
+      "description": "Perusahaan besar bisa membeli sistem kompleks. Petani kecil seharusnya tidak tersingkir hanya karena alatnya terlalu mahal, terlalu teknis, atau terlalu lambat. Tracebud menjaga setiap pihak tetap terlihat, terhubung, dan siap masuk pasar.",
+      "punchline": "Kami menghapus hambatan akses yang selama ini membuat petani kecil terpinggirkan."
+    },
+    "finalCtaSection": {
+      "headline": "Membuat kepatuhan dapat digunakan untuk seluruh rantai.",
+      "description": "Mulailah dengan jaringan yang sudah Anda miliki, dan berikan setiap pihak cara untuk ikut berpartisipasi.",
+      "cta": "Mulai"
+    },
+    "exitIntentModal": {
+      "headline": "Siap bergabung ke daftar tunggu?",
+      "description": "Tracebud membantu jaringan Anda mengumpulkan, berbagi, dan menggunakan kembali data asal. Sederhana, terjangkau, dan inklusif untuk petani, koperasi, eksportir, dan pembeli.",
+      "cta": {
+        "primary": "Gabung sekarang",
+        "secondary": "Lanjutkan menjelajah"
+      },
+      "note": "Tempat terbatas untuk mitra pilot awal."
+    },
+    "waitlistDialog": {
+      "headline": "Bergabung dengan program pilot",
+      "description": "Tempat terbatas untuk mitra pilot awal. Ceritakan tentang jaringan Anda dan kami akan menghubungi Anda.",
+      "note": "Tanpa spam. Berhenti berlangganan kapan saja."
+    }
+  },
+  "vi": {
+    "hero": {
+      "headline": "Khả năng truy xuất nguồn gốc hoạt động cho toàn bộ chuỗi.",
+      "subheadline": "Tracebud giúp đơn giản hóa việc tuân thủ EUDR bằng một công cụ đơn giản, tự phục vụ và chi phí phải chăng, để nông dân, hợp tác xã, nhà xuất khẩu và người mua có thể thu thập, chia sẻ và tái sử dụng dữ liệu nguồn gốc mà không phải chạy theo giấy tờ.",
+      "supportingText": "Miễn phí cho nhà sản xuất. Được xây dựng cho thực tế ngoài đồng với kết nối hạn chế và quy trình đơn giản. Không cần tư vấn.",
+      "cta": {
+        "primary": "Xem cách hoạt động",
+        "secondary": "Liên hệ với chúng tôi"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Tuân thủ không nên phức tạp nếu muốn đáng tin.",
+      "description": "Phần lớn chuỗi cung ứng không thất bại vì mọi người không quan tâm. Chúng thất bại vì quy trình quá thủ công, quá tốn kém và quá phân mảnh. Tracebud loại bỏ việc qua lại nhiều lần để mọi bên đều có thể tham gia, ngay cả khi mạng lưới lớn, phân tán hoặc thiếu nguồn lực.",
+      "pillars": {
+        "simple": {
+          "title": "Đơn giản",
+          "description": "Một nền tảng. Một quy trình. Một nguồn sự thật."
+        },
+        "automated": {
+          "title": "Tự động hóa",
+          "description": "Yêu cầu di chuyển tự động qua mạng lưới, để bằng chứng đến nguồn nhanh hơn."
+        },
+        "inclusive": {
+          "title": "Bao trùm",
+          "description": "Nông dân có thể tham gia trực tiếp, ngay cả khi truy cập số còn hạn chế, dùng chung thiết bị hoặc tín hiệu không ổn định."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Từ yêu cầu đầu tiên đến bằng chứng có thể tái sử dụng.",
+      "subtitle": "Bốn bước. Không phức tạp.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Thêm mạng lưới của bạn",
+          "description": "Một liên hệ hoặc năm trăm. Tải lên CSV hoặc thêm thủ công."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Gửi một yêu cầu",
+          "description": "Yêu cầu tự động đi qua chuỗi. Không cần đuổi theo từng người."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Thu thập dữ liệu nguồn gốc",
+          "description": "Ghi lại một lần, sau đó tái sử dụng cho nhiều lô hàng và người mua."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Giữ mọi người đồng bộ",
+          "description": "Giữ tất cả cùng trên một trang với một quy trình số dùng chung."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Dành cho ruộng đồng, không phải văn phòng.",
+        "description": "Nông dân có thể vẽ ranh giới thửa đất, chia sẻ thông tin và phản hồi qua trải nghiệm di động đơn giản, được thiết kế cho điều kiện thực tế ngoài đồng. Ứng dụng hoạt động ngoại tuyến, dùng hình ảnh rõ ràng và giữ quy trình nhẹ nhàng.",
+        "supportingText": "Miễn phí cho nhà sản xuất. Không cần thiết lập nặng nề hay đào tạo dài."
+      },
+      "dashboard": {
+        "headline": "Quản lý mạng lưới của bạn mà không cần qua lại nhiều lần.",
+        "description": "Tải lên liên hệ hàng loạt, gửi một yêu cầu và để quy trình lan qua toàn bộ chuỗi cung ứng. Theo dõi phản hồi, tái sử dụng dữ liệu đã xác minh và giữ mọi lô hàng tiếp tục di chuyển với ít công việc thủ công hơn.",
+        "supportingText": "Ít đuổi theo hơn. Ít khoảng trống hơn. Bàn giao nhanh hơn."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Tuân thủ không nên bỏ lại nông hộ nhỏ phía sau.",
+      "description": "Doanh nghiệp lớn có thể mua hệ thống phức tạp. Nông hộ nhỏ không nên bị loại trừ chỉ vì công cụ quá đắt, quá kỹ thuật hoặc quá chậm. Tracebud giúp mọi bên đều được nhìn thấy, kết nối và sẵn sàng cho thị trường.",
+      "punchline": "Chúng tôi loại bỏ các rào cản tiếp cận từng khiến nông hộ nhỏ bị đứng ngoài."
+    },
+    "finalCtaSection": {
+      "headline": "Làm cho tuân thủ có thể sử dụng cho toàn chuỗi.",
+      "description": "Hãy bắt đầu với mạng lưới bạn đã có, và cho mọi bên một cách để tham gia.",
+      "cta": "Bắt đầu"
+    },
+    "exitIntentModal": {
+      "headline": "Sẵn sàng tham gia danh sách chờ?",
+      "description": "Tracebud giúp mạng lưới của bạn thu thập, chia sẻ và tái sử dụng dữ liệu nguồn gốc. Đơn giản, phải chăng và bao gồm nông dân, hợp tác xã, nhà xuất khẩu và người mua.",
+      "cta": {
+        "primary": "Tham gia ngay",
+        "secondary": "Tiếp tục duyệt web"
+      },
+      "note": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên."
+    },
+    "waitlistDialog": {
+      "headline": "Tham gia chương trình thí điểm",
+      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về mạng lưới của bạn và chúng tôi sẽ liên hệ.",
+      "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
+    }
+  },
   "de": {},
   "nl": {},
   "it": {},
