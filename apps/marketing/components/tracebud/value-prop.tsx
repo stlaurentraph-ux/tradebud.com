@@ -81,7 +81,7 @@ export function ValueProp() {
                 Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and ready for the market.
               </p>
               <p className="text-xl md:text-2xl font-semibold text-[var(--forest-canopy)]">
-                Same chain. Same proof. Different access barriers — solved.
+                We remove the access barriers that kept smallholders out.
               </p>
             </motion.div>
 

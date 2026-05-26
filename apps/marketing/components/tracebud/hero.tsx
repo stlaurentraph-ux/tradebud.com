@@ -38,7 +38,7 @@ export function Hero() {
               </h1>
               
               <p className="text-lg md:text-xl text-white/80 leading-relaxed mb-8 max-w-xl">
-                Tracebud makes EUDR compliance simple, self-serve, and affordable — so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.
+                Tracebud makes EUDR compliance simple, self-serve, and affordable so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">

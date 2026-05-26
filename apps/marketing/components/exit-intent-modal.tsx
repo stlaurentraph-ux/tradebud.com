@@ -76,7 +76,7 @@ export function ExitIntentModal() {
                   Be ready for EUDR, without the complexity.
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-7 text-sm">
-                  Tracebud helps your network collect, share, and reuse origin data — simply, affordably, and in a way that includes farmers, cooperatives, exporters, and buyers.
+                  Tracebud helps your network collect, share, and reuse origin data. It&apos;s simple, affordable, and includes farmers, cooperatives, exporters, and buyers.
                 </p>
 
                 <div className="space-y-3">
