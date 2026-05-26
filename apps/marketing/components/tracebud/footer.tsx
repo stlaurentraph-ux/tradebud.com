@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { Mail, Linkedin, Twitter } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -12,32 +11,6 @@ export function Footer() {
 
   return (
     <>
-      {/* CTA Section */}
-      <section className="py-24 md:py-32 bg-[var(--forest-canopy)]">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Ready to make compliance usable?
-            </h2>
-            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Join cooperatives, exporters, and importers building buyer-ready EUDR proof with Tracebud.
-            </p>
-            <Button
-              size="lg"
-              onClick={() => waitlist.setOpen(true)}
-              className="bg-white hover:bg-gray-100 text-[var(--forest-canopy)] font-semibold px-10 py-6 text-base rounded-full"
-            >
-              Join the waitlist
-            </Button>
-          </motion.div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-[var(--warm-stone)] py-12 px-6">
         <div className="max-w-7xl mx-auto">
