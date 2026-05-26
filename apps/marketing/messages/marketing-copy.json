@@ -272,7 +272,97 @@
       "note": "Sin spam. Cancelar suscripción en cualquier momento."
     }
   },
-  "pt": {},
+  "pt": {
+    "hero": {
+      "headline": "A rastreabilidade que funciona para toda a cadeia.",
+      "subheadline": "A Tracebud simplifica o cumprimento do EUDR com uma ferramenta simples, de uso autónomo e acessível, para que produtores, cooperativas, exportadores e compradores possam recolher, partilhar e reutilizar dados de origem sem correr atrás de documentos.",
+      "supportingText": "Gratuito para produtores. Criado para realidades de campo com conectividade limitada e processos simples. Sem consultores.",
+      "cta": {
+        "primary": "Ver como funciona",
+        "secondary": "Falar connosco"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "O cumprimento não devia ser complicado para ser credível.",
+      "description": "A maioria das cadeias de abastecimento não falha porque as pessoas não se importam. Falha porque o processo é demasiado manual, demasiado caro e demasiado fragmentado. A Tracebud elimina o vai e vem para que cada interveniente possa participar, mesmo quando a rede é grande, dispersa ou tem poucos recursos.",
+      "pillars": {
+        "simple": {
+          "title": "Simples",
+          "description": "Uma plataforma. Um fluxo de trabalho. Uma única fonte de verdade."
+        },
+        "automated": {
+          "title": "Automatizado",
+          "description": "Os pedidos movem-se automaticamente pela rede, para que a prova chegue mais depressa à origem."
+        },
+        "inclusive": {
+          "title": "Inclusivo",
+          "description": "Os produtores podem participar diretamente, mesmo com acesso digital limitado, dispositivos partilhados ou sinal instável."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Do primeiro pedido à prova reutilizável.",
+      "subtitle": "Quatro passos. Zero complexidade.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Adicione a sua rede",
+          "description": "Um contacto ou quinhentos. Faça upload de um CSV ou adicione manualmente."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Envie um pedido",
+          "description": "Ele circula automaticamente pela cadeia. Sem perseguição."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Recolha os dados de origem",
+          "description": "Registe-os uma vez e reutilize-os em vários envios e compradores."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Mantenha todos alinhados",
+          "description": "Mantenha toda a gente na mesma página com um fluxo de trabalho digital partilhado."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Feita para o campo, não para o escritório.",
+        "description": "Os produtores podem mapear parcelas, partilhar informação e responder numa experiência móvel simples, pensada para condições reais de campo. Funciona offline, usa elementos visuais claros e mantém o processo leve.",
+        "supportingText": "Gratuito para produtores. Sem configuração pesada nem formação demorada."
+      },
+      "dashboard": {
+        "headline": "Gira a sua rede sem idas e voltas.",
+        "description": "Importe contactos em massa, envie um pedido e deixe o fluxo de trabalho percorrer toda a cadeia de abastecimento. Acompanhe as respostas, reutilize dados verificados e mantenha cada envio em movimento com menos acompanhamento manual.",
+        "supportingText": "Menos perseguição. Menos lacunas. Transferências mais rápidas."
+      }
+    },
+    "inclusionSection": {
+      "headline": "O cumprimento não deve deixar os pequenos produtores para trás.",
+      "description": "As grandes empresas podem comprar sistemas complexos. Os pequenos produtores não devem ser excluídos porque as ferramentas são demasiado caras, demasiado técnicas ou demasiado lentas. A Tracebud mantém cada interveniente visível, ligado e pronto para o mercado.",
+      "punchline": "Eliminamos as barreiras de acesso que durante anos deixaram os pequenos produtores de fora."
+    },
+    "finalCtaSection": {
+      "headline": "Tornar o cumprimento utilizável para toda a cadeia.",
+      "description": "Comece com a rede que já tem e dê a cada interveniente uma forma de participar.",
+      "cta": "Começar"
+    },
+    "exitIntentModal": {
+      "headline": "Pronto para entrar na lista de espera?",
+      "description": "A Tracebud ajuda a sua rede a recolher, partilhar e reutilizar dados de origem. É simples, acessível e inclusivo para produtores, cooperativas, exportadores e compradores.",
+      "cta": {
+        "primary": "Entrar agora",
+        "secondary": "Continuar a navegar"
+      },
+      "note": "Lugares limitados para os primeiros parceiros piloto."
+    },
+    "waitlistDialog": {
+      "headline": "Junte-se ao programa piloto",
+      "description": "Lugares limitados para os primeiros parceiros piloto. Conte-nos sobre a sua rede e entraremos em contacto.",
+      "note": "Sem spam. Cancelar subscrição em qualquer altura."
+    }
+  },
   "id": {},
   "vi": {},
   "de": {},
