@@ -117,13 +117,13 @@ export function VerticalsTabs() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-[var(--data-emerald)] font-semibold text-sm uppercase tracking-wider mb-3">
-            Built for Everyone
+            Built for Everyone in the Chain
           </p>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
-            One Platform. Every Stakeholder.
+            What success looks like for you
           </h2>
           <p className="text-foreground/70 text-lg max-w-2xl mx-auto">
-            Same unified platform with organization-scoped roles and tailored workflows.
+            Whether you grow coffee, manage a cooperative, ship containers, or source for EU brands—Tracebud fits your workflow.
           </p>
         </motion.div>
 

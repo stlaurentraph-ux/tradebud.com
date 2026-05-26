@@ -562,14 +562,14 @@ export function WorkflowDemo() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]">
-            See It In Action
+          <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]" id="how-it-works">
+            How It Works
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-[var(--forest-canopy)] mb-4 text-balance">
-            From Request to EUDR Verified
+            It starts with a request. Ends with proof.
           </h2>
           <p className="text-gray-600 max-w-xl mx-auto">
-            Follow the complete journey as compliance requests cascade upstream—and verified evidence flows back.
+            Buyers ask for proof. Farmers map their field. That proof moves back up the chain. Everyone sees the same verified data.
           </p>
         </motion.div>
 
