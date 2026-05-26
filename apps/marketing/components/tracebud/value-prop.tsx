@@ -94,7 +94,7 @@ export function ValueProp() {
             >
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
                 <Image
-                  src="/images/farmer-portrait.jpg"
+                  src="/images/farmer-hero.jpg"
                   alt="Smallholder farmer using Tracebud"
                   fill
                   className="object-cover"
@@ -121,8 +121,8 @@ export function ValueProp() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/coffee-field.jpg"
-            alt="Coffee field at sunrise"
+            src="/images/country-hero.jpg"
+            alt="Coffee field landscape"
             fill
             className="object-cover"
           />
@@ -161,8 +161,8 @@ export function ValueProp() {
             >
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
                 <Image
-                  src="/images/coffee-processing.jpg"
-                  alt="Coffee beans and processing"
+                  src="/images/step-certified.jpg"
+                  alt="Coffee supply chain and certification"
                   fill
                   className="object-cover"
                 />
@@ -178,7 +178,7 @@ export function ValueProp() {
                       <div className="text-xs text-white/70">Commodities</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-white">Dec '26</div>
+                      <div className="text-2xl font-bold text-white">Dec &apos;26</div>
                       <div className="text-xs text-white/70">Deadline</div>
                     </div>
                   </div>

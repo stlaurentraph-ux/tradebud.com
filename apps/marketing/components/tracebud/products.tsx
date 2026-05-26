@@ -72,15 +72,13 @@ export function Products() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <div className="relative w-[280px] mx-auto">
-              <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-gray-100">
-                <Image
-                  src="/images/farmer-app-homepage.png"
-                  alt="Tracebud Farmer App"
-                  width={320}
-                  height={693}
-                  className="w-full h-auto"
-                />
-              </div>
+              <Image
+                src="/images/farmer-app-homepage.png"
+                alt="Tracebud Farmer App"
+                width={320}
+                height={693}
+                className="w-full h-auto rounded-2xl shadow-2xl"
+              />
             </div>
           </motion.div>
         </div>
@@ -95,8 +93,8 @@ export function Products() {
           >
             <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
               <Image
-                src="/images/coop-dashboard.jpg"
-                alt="Cooperative Dashboard showing member tracking and batch management"
+                src="/images/exporter-hero.jpg"
+                alt="Dashboard showing supply chain tracking and compliance management"
                 width={800}
                 height={500}
                 className="w-full h-auto"

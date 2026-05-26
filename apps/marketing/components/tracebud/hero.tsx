@@ -69,7 +69,7 @@ export function Hero() {
               </p>
             </motion.div>
 
-            {/* Right: App Screenshot (no phone frame) */}
+            {/* Right: App Screenshot - no frame at all */}
             <motion.div
               className="relative flex justify-center lg:justify-end"
               initial={{ opacity: 0, x: 20 }}
@@ -77,16 +77,13 @@ export function Hero() {
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               <div className="relative w-[280px] md:w-[320px]">
-                {/* App screenshot with subtle shadow and rounded corners */}
-                <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/20">
-                  <Image
-                    src="/images/farmer-app-homepage.png"
-                    alt="Tracebud Farmer App interface"
-                    width={320}
-                    height={693}
-                    className="w-full h-auto"
-                  />
-                </div>
+                <Image
+                  src="/images/farmer-app-homepage.png"
+                  alt="Tracebud Farmer App interface"
+                  width={320}
+                  height={693}
+                  className="w-full h-auto rounded-2xl shadow-2xl"
+                />
 
                 {/* Floating badges */}
                 <div className="absolute -left-8 top-1/4 bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
