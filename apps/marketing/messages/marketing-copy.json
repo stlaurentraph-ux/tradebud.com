@@ -541,11 +541,101 @@
     },
     "waitlistDialog": {
       "headline": "Tham gia chương trình thí điểm",
-      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về mạng lưới của bạn và chúng tôi sẽ liên hệ.",
+      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m���ng lưới của bạn và chúng tôi sẽ liên hệ.",
       "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
     }
   },
-  "de": {},
+  "de": {
+    "hero": {
+      "headline": "Rückverfolgbarkeit, die für die ganze Kette funktioniert.",
+      "subheadline": "Tracebud vereinfacht die EUDR-Compliance mit einem einfachen, selbstbedienbaren und bezahlbaren Tool, damit Landwirte, Kooperativen, Exporteure und Käufer Ursprungsdaten sammeln, teilen und wiederverwenden können, ohne Papierkram hinterherzulaufen.",
+      "supportingText": "Für Produzenten kostenlos. Entwickelt für Feldrealitäten mit begrenzter Konnektivität und einfachen Abläufen. Ohne Berater.",
+      "cta": {
+        "primary": "So funktioniert es",
+        "secondary": "Kontakt aufnehmen"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Compliance sollte nicht kompliziert sein, um glaubwürdig zu sein.",
+      "description": "Die meisten Lieferketten scheitern nicht, weil es den Menschen egal ist. Sie scheitern, weil der Prozess zu manuell, zu teuer und zu fragmentiert ist. Tracebud beseitigt das Hin und Her, damit jeder mitmachen kann, selbst wenn das Netzwerk groß, verteilt oder ressourcenarm ist.",
+      "pillars": {
+        "simple": {
+          "title": "Einfach",
+          "description": "Eine Plattform. Ein Workflow. Eine einzige Quelle der Wahrheit."
+        },
+        "automated": {
+          "title": "Automatisiert",
+          "description": "Anfragen bewegen sich automatisch durch das Netzwerk, damit der Nachweis schneller an der Quelle ankommt."
+        },
+        "inclusive": {
+          "title": "Inklusiv",
+          "description": "Landwirte können direkt teilnehmen, auch mit begrenztem digitalem Zugang, gemeinsam genutzten Geräten oder instabilem Signal."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Von der ersten Anfrage bis zum wiederverwendbaren Nachweis.",
+      "subtitle": "Vier Schritte. Keine Komplexität.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Netzwerk hinzufügen",
+          "description": "Ein Kontakt oder fünfhundert. CSV hochladen oder manuell hinzufügen."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Eine Anfrage senden",
+          "description": "Sie fließt automatisch durch die Kette. Ohne Nachfassen."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Ursprungsdaten erfassen",
+          "description": "Einmal erfassen, dann für mehrere Sendungen und Käufer wiederverwenden."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Alle auf Kurs halten",
+          "description": "Mit einem gemeinsamen digitalen Workflow bleiben alle auf derselben Seite."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Für das Feld, nicht fürs Büro.",
+        "description": "Landwirte können Flächen abgrenzen, Informationen teilen und über eine einfache mobile Erfahrung reagieren, die für reale Feldbedingungen entwickelt wurde. Sie funktioniert offline, nutzt klare visuelle Elemente und hält den Prozess leicht.",
+        "supportingText": "Für Produzenten kostenlos. Kein aufwendiges Setup, keine lange Schulung."
+      },
+      "dashboard": {
+        "headline": "Verwalten Sie Ihr Netzwerk ohne Hin und Her.",
+        "description": "Kontakte in großen Mengen hochladen, eine Anfrage senden und den Workflow durch die gesamte Lieferkette laufen lassen. Antworten verfolgen, verifizierte Daten wiederverwenden und jede Sendung mit weniger manuellem Aufwand voranbringen.",
+        "supportingText": "Weniger Nachfassen. Weniger Lücken. Schnellere Übergaben."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Compliance darf Kleinbauern nicht zurücklassen.",
+      "description": "Große Unternehmen können komplexe Systeme kaufen. Kleinbauern sollten nicht ausgeschlossen werden, nur weil die Tools zu teuer, zu technisch oder zu langsam sind. Tracebud hält jeden Akteur sichtbar, verbunden und marktfähig.",
+      "punchline": "Wir beseitigen die Zugangshürden, die Kleinbauern lange außen vor gelassen haben."
+    },
+    "finalCtaSection": {
+      "headline": "Compliance für die ganze Kette nutzbar machen.",
+      "description": "Beginnen Sie mit dem Netzwerk, das Sie bereits haben, und geben Sie jedem Akteur eine Möglichkeit mitzumachen.",
+      "cta": "Loslegen"
+    },
+    "exitIntentModal": {
+      "headline": "Bereit für EUDR, ohne die Komplexität.",
+      "description": "Tracebud hilft Ihrem Netzwerk, Ursprungsdaten zu sammeln, zu teilen und wiederzuverwenden. Einfach, erschwinglich und inklusiv für Landwirte, Kooperativen, Exporteure und Käufer.",
+      "cta": {
+        "primary": "Jetzt beitreten",
+        "secondary": "Weiter stöbern"
+      },
+      "note": "Begrenzte Plätze für frühe Pilotpartner."
+    },
+    "waitlistDialog": {
+      "headline": "Am Pilotprogramm teilnehmen",
+      "description": "Begrenzte Plätze für frühe Pilotpartner. Erzählen Sie uns von Ihrem Netzwerk und wir melden uns.",
+      "note": "Kein Spam. Jederzeit abmelden."
+    }
+  },
   "nl": {},
   "it": {},
   "am": {},
