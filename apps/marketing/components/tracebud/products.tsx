@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Smartphone, Monitor, WifiOff, MapPin, Camera, CheckCircle, Upload, Send, GitBranch } from "lucide-react";
+import { Smartphone, Monitor, WifiOff, MapPin, Camera, CheckCircle, Upload, Send, GitBranch, Eye, Package } from "lucide-react";
 import Image from "next/image";
 
 export function Products() {
@@ -192,7 +192,7 @@ export function Products() {
             </h3>
             
             <p className="text-lg text-gray-600 leading-relaxed mb-8">
-              Upload your entire network in bulk—producers, cooperatives, exporters. Send compliance requests to hundreds of contacts at once. They forward requests down their chain until proof reaches the source.
+              Upload your entire network in bulk—producers, cooperatives, exporters. Send compliance requests to hundreds of contacts at once. They forward requests down their chain until proof reaches the source. Track readiness, identify gaps, and assemble shipment proof.
             </p>
 
             <div className="space-y-4">
@@ -200,6 +200,9 @@ export function Products() {
                 { icon: Upload, text: "Bulk import contacts via CSV upload" },
                 { icon: Send, text: "Send requests to hundreds of contacts at once" },
                 { icon: GitBranch, text: "Requests cascade through your network to source" },
+                { icon: Eye, text: "Track readiness across all network members" },
+                { icon: CheckCircle, text: "Identify missing evidence instantly" },
+                { icon: Package, text: "Assemble DDS packages for shipment" },
               ].map((feature, index) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">
