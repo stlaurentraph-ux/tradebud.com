@@ -541,7 +541,7 @@
     },
     "waitlistDialog": {
       "headline": "Tham gia chương trình thí điểm",
-      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m���ng lưới của bạn và chúng tôi sẽ liên hệ.",
+      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m�����ng lưới của bạn và chúng tôi sẽ liên hệ.",
       "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
     }
   },
@@ -636,7 +636,97 @@
       "note": "Kein Spam. Jederzeit abmelden."
     }
   },
-  "nl": {},
+  "nl": {
+    "hero": {
+      "headline": "Traceerbaarheid die werkt voor de hele keten.",
+      "subheadline": "Tracebud maakt EUDR-naleving eenvoudig, zelfbediend en betaalbaar, zodat boeren, coöperaties, exporteurs en kopers oorsprongsgegevens kunnen verzamelen, delen en hergebruiken zonder achter papierwerk aan te jagen.",
+      "supportingText": "Gratis voor producenten. Gebouwd voor veldcondities met beperkte connectiviteit en eenvoudige processen. Geen consultants nodig.",
+      "cta": {
+        "primary": "Bekijk hoe het werkt",
+        "secondary": "Neem contact op"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Naleving hoeft niet ingewikkeld te zijn om geloofwaardig te zijn.",
+      "description": "De meeste toeleveringsketens falen niet omdat mensen het niet uitmaakt. Ze falen omdat het proces te handmatig, te duur en te gefragmenteerd is. Tracebud verwijdert het heen en weer zodat elke partij kan meedoen, zelfs als het netwerk groot, verspreid of weinig toegerust is.",
+      "pillars": {
+        "simple": {
+          "title": "Eenvoudig",
+          "description": "Één platform. Één workflow. Één bron van waarheid."
+        },
+        "automated": {
+          "title": "Geautomatiseerd",
+          "description": "Verzoeken bewegen automatisch door het netwerk, zodat bewijs sneller de bron bereikt."
+        },
+        "inclusive": {
+          "title": "Inclusief",
+          "description": "Boeren kunnen direct deelnemen, zelfs met beperkte digitale toegang, gedeelde apparaten of instabiel signaal."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Van het eerste verzoek tot herbruikbaar bewijs.",
+      "subtitle": "Vier stappen. Geen complexiteit.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Voeg uw netwerk toe",
+          "description": "Één contact of vijfhonderd. Upload een CSV of voeg ze handmatig toe."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Stuur één verzoek",
+          "description": "Het stroomt automatisch door de keten. Geen achtervolging."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Verzamel oorsprongsgegevens",
+          "description": "Leg ze één keer vast en hergebruik ze voor meerdere zendingen en kopers."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Blijf op één lijn",
+          "description": "Houd iedereen op dezelfde pagina met een gedeelde digitale workflow."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Gemaakt voor het veld, niet voor het kantoor.",
+        "description": "Boeren kunnen percelen in kaart brengen, informatie delen en reageren via een eenvoudige mobiele ervaring die is ontworpen voor echte veldcondities. Het werkt offline, gebruikt duidelijke visuals en houdt het proces licht.",
+        "supportingText": "Gratis voor producenten. Geen zware installatie of lange training."
+      },
+      "dashboard": {
+        "headline": "Beheer uw netwerk zonder eindeloos heen en weer.",
+        "description": "Upload contacten in bulk, stuur één verzoek en laat de workflow door de hele toeleveringsketen stromen. Volg reacties, hergebruik geverifieerde gegevens en houd elke zending in beweging met minder handmatig opvolgen.",
+        "supportingText": "Minder achtervolging. Minder hiaten. Snellere overdrachten."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Naleving mag kleine boeren niet achterlaten.",
+      "description": "Grote bedrijven kunnen complexe systemen kopen. Kleine boeren mogen niet worden uitgesloten omdat de tools te duur, te technisch of te traag zijn. Tracebud houdt elke partij zichtbaar, verbonden en klaar voor de markt.",
+      "punchline": "Wij verwijderen de toegangsdrempels die kleine boeren jarenlang buitensloten."
+    },
+    "finalCtaSection": {
+      "headline": "Naleving bruikbaar maken voor de hele keten.",
+      "description": "Begin met het netwerk dat u al heeft en geef elke partij een manier om mee te doen.",
+      "cta": "Aan de slag"
+    },
+    "exitIntentModal": {
+      "headline": "Klaar voor EUDR, zonder de complexiteit.",
+      "description": "Tracebud helpt uw netwerk oorsprongsgegevens te verzamelen, delen en hergebruiken. Eenvoudig, betaalbaar en inclusief voor boeren, coöperaties, exporteurs en kopers.",
+      "cta": {
+        "primary": "Nu aanmelden",
+        "secondary": "Verder bladeren"
+      },
+      "note": "Beperkt aantal plaatsen voor vroege pilotpartners."
+    },
+    "waitlistDialog": {
+      "headline": "Doe mee aan het pilotprogramma",
+      "description": "Beperkt aantal plaatsen voor vroege pilotpartners. Vertel ons over uw netwerk en we nemen contact op.",
+      "note": "Geen spam. Op elk moment uitschrijven."
+    }
+  },
   "it": {},
   "am": {},
   "no": {}
