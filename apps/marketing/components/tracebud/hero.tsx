@@ -44,8 +44,7 @@ export function Hero() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button
                   size="lg"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 font-semibold px-8 py-6 text-base rounded-full"
+                  className="bg-white text-[var(--forest-canopy)] hover:bg-white/90 font-semibold px-8 py-6 text-base rounded-full"
                   asChild
                 >
                   <a href="#how-it-works">See how it works</a>
