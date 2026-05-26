@@ -69,28 +69,23 @@ export function Hero() {
               </p>
             </motion.div>
 
-            {/* Right: Single Phone Mockup */}
+            {/* Right: App Screenshot (no phone frame) */}
             <motion.div
               className="relative flex justify-center lg:justify-end"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              {/* Phone frame */}
               <div className="relative w-[280px] md:w-[320px]">
-                <div className="bg-black rounded-[3rem] p-2 shadow-2xl">
-                  {/* Screen */}
-                  <div className="bg-white rounded-[2.5rem] overflow-hidden relative">
-                    <Image
-                      src="/images/farmer-app-homepage.png"
-                      alt="Tracebud Farmer App interface"
-                      width={320}
-                      height={693}
-                      className="w-full h-auto"
-                    />
-                  </div>
-                  {/* Notch */}
-                  <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-24 h-6 bg-black rounded-full" />
+                {/* App screenshot with subtle shadow and rounded corners */}
+                <div className="rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/20">
+                  <Image
+                    src="/images/farmer-app-homepage.png"
+                    alt="Tracebud Farmer App interface"
+                    width={320}
+                    height={693}
+                    className="w-full h-auto"
+                  />
                 </div>
 
                 {/* Floating badges */}
