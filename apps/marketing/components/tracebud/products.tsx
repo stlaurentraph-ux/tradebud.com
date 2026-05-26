@@ -77,7 +77,7 @@ export function Products() {
                 alt="Tracebud Farmer App"
                 width={320}
                 height={693}
-                className="w-full h-auto rounded-2xl shadow-2xl"
+                className="w-full h-auto"
               />
             </div>
           </motion.div>
@@ -91,14 +91,79 @@ export function Products() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
-              <Image
-                src="/images/exporter-hero.jpg"
-                alt="Dashboard showing supply chain tracking and compliance management"
-                width={800}
-                height={500}
-                className="w-full h-auto"
-              />
+            {/* Dashboard Mockup UI */}
+            <div className="relative w-full bg-gray-50 rounded-xl border border-gray-200 shadow-2xl overflow-hidden">
+              {/* Browser Chrome */}
+              <div className="bg-gray-100 border-b border-gray-200 px-4 py-3 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 mx-4">
+                  <div className="bg-white rounded-md px-3 py-1.5 text-xs text-gray-500 border border-gray-200">
+                    dashboard.tracebud.com
+                  </div>
+                </div>
+              </div>
+              
+              {/* Dashboard Content */}
+              <div className="p-6 bg-white">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">Compliance Overview</div>
+                    <div className="text-sm text-gray-500">Kaffa Cooperative • 247 producers</div>
+                  </div>
+                  <div className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full">
+                    87% Ready
+                  </div>
+                </div>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-emerald-50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-emerald-700">214</div>
+                    <div className="text-xs text-emerald-600">Verified</div>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-amber-700">28</div>
+                    <div className="text-xs text-amber-600">Pending</div>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-red-700">5</div>
+                    <div className="text-xs text-red-600">Action needed</div>
+                  </div>
+                </div>
+                
+                {/* Producer List Preview */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                    <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Recent Activity</div>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {[
+                      { name: "Maria Santos", status: "Verified", color: "emerald" },
+                      { name: "Jean Baptiste", status: "Verified", color: "emerald" },
+                      { name: "Amara Diallo", status: "Pending", color: "amber" },
+                    ].map((producer, i) => (
+                      <div key={i} className="px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                            {producer.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span className="text-sm text-gray-700">{producer.name}</span>
+                        </div>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          producer.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {producer.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
 

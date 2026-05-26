@@ -159,28 +159,46 @@ export function ValueProp() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="relative"
             >
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
-                <Image
-                  src="/images/step-certified.jpg"
-                  alt="Coffee supply chain and certification"
-                  fill
-                  className="object-cover"
-                />
-                {/* Overlay stats */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-2xl font-bold text-white">€50B</div>
-                      <div className="text-xs text-white/70">Market at stake</div>
+              {/* EUDR Commodities Visual Card */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                <div className="text-center mb-8">
+                  <div className="text-6xl font-bold text-white mb-2">7</div>
+                  <div className="text-white/80 text-lg">EUDR Commodity Categories</div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 mb-8">
+                  {[
+                    { name: "Coffee", active: true },
+                    { name: "Cocoa", active: false },
+                    { name: "Palm Oil", active: false },
+                    { name: "Rubber", active: false },
+                    { name: "Soy", active: false },
+                    { name: "Cattle", active: false },
+                    { name: "Timber", active: false },
+                    { name: "More...", active: false },
+                  ].map((commodity, i) => (
+                    <div 
+                      key={i} 
+                      className={`px-4 py-3 rounded-lg text-sm font-medium text-center ${
+                        commodity.active 
+                          ? 'bg-[var(--data-emerald)] text-white' 
+                          : 'bg-white/10 text-white/60'
+                      }`}
+                    >
+                      {commodity.name}
                     </div>
-                    <div>
-                      <div className="text-2xl font-bold text-white">7</div>
-                      <div className="text-xs text-white/70">Commodities</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-white">Dec &apos;26</div>
-                      <div className="text-xs text-white/70">Deadline</div>
-                    </div>
+                  ))}
+                </div>
+                
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/20">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white">€50B</div>
+                    <div className="text-xs text-white/60">EU market at stake</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white">Dec &apos;26</div>
+                    <div className="text-xs text-white/60">Full enforcement</div>
                   </div>
                 </div>
               </div>

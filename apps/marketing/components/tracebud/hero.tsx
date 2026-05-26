@@ -69,7 +69,7 @@ export function Hero() {
               </p>
             </motion.div>
 
-            {/* Right: App Screenshot - no frame at all */}
+            {/* Right: App Screenshot - clean, no background */}
             <motion.div
               className="relative flex justify-center lg:justify-end"
               initial={{ opacity: 0, x: 20 }}
@@ -82,7 +82,7 @@ export function Hero() {
                   alt="Tracebud Farmer App interface"
                   width={320}
                   height={693}
-                  className="w-full h-auto rounded-2xl shadow-2xl"
+                  className="w-full h-auto"
                 />
 
                 {/* Floating badges */}
