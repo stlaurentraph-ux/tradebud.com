@@ -203,6 +203,20 @@ export function Hero() {
             <p className="text-white/60 text-lg">Four steps. No complexity.</p>
           </motion.div>
 
+          {/* Step connector — desktop only */}
+          <div className="hidden lg:flex items-center mb-8 px-2">
+            {["01", "02", "03", "04"].map((n, i) => (
+              <div key={n} className="flex items-center flex-1 last:flex-none">
+                <div className="w-8 h-8 rounded-full bg-[var(--data-emerald)] flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-bold text-[var(--forest-canopy)]">{n}</span>
+                </div>
+                {i < 3 && (
+                  <div className="flex-1 h-px bg-gradient-to-r from-[var(--data-emerald)] to-[var(--data-emerald)]/20 mx-1" />
+                )}
+              </div>
+            ))}
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden border border-white/10">
             {[
               {
@@ -234,13 +248,10 @@ export function Hero() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className="text-[var(--data-emerald)] text-xs font-bold tracking-widest uppercase">{item.number}</div>
+                <div className="lg:hidden text-[var(--data-emerald)] text-xs font-bold tracking-widest uppercase">{item.number}</div>
                 <div>
                   <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
                   <p className="text-white/60 leading-relaxed text-sm">{item.description}</p>
-                </div>
-                <div className="mt-auto pt-4 border-t border-white/10">
-                  <div className="w-6 h-0.5 bg-[var(--data-emerald)]" />
                 </div>
               </motion.div>
             ))}
