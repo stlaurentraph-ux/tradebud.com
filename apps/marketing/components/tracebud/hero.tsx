@@ -118,7 +118,7 @@ export function Hero() {
                 EUDR depends on farm-level proof, but that proof is still fragmented
               </h2>
               <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                Evidence arrives late. Records are not reusable. Teams end up chasing missing data just when shipments need to move. The result is more manual work, more blocked shipments, and greater risk that smallholders are left out.
+                Evidence arrives late. Records are not reusable. Reaching hundreds of suppliers means hundreds of individual follow-ups. Teams end up chasing missing data just when shipments need to move. The result is more manual work, more blocked shipments, and greater risk that smallholders are left out.
               </p>
             </motion.div>
 
@@ -176,7 +176,7 @@ export function Hero() {
               What Tracebud changes
             </h2>
             <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              One shared workflow to request, collect, verify, and reuse origin proof. The process can start anywhere in the chain.
+              One shared workflow to request, collect, verify, and reuse origin proof. Requests cascade through your network until they reach the source.
             </p>
           </motion.div>
 
@@ -191,7 +191,7 @@ export function Hero() {
               {
                 number: "2", 
                 title: "Reuse everywhere",
-                description: "Instead of rebuilding proof for every shipment, verified data flows across workflows. Map once, use forever.",
+                description: "Instead of rebuilding proof for every shipment, verified data flows across your network. One request reaches everyone. Map once, use forever.",
                 image: "/images/feature-photo-vault.jpg",
               },
               {

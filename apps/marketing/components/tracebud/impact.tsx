@@ -52,7 +52,7 @@ export function Impact() {
           {[
             { icon: CheckCircle2, title: "EUDR Compliant", description: "Audit-ready due diligence before December 2026 enforcement" },
             { icon: Users, title: "Farmer First", description: "Offline app captures plot proof where connectivity ends" },
-            { icon: Zap, title: "Portable Origin Proof", description: "Reusable verified data, not another isolated dashboard" },
+            { icon: Zap, title: "Network Scale", description: "One request cascades to hundreds of suppliers automatically" },
             { icon: Globe, title: "Global Ready", description: "TRACES NT integration and 11-language support" },
           ].map((item, index) => (
             <motion.div
@@ -82,10 +82,10 @@ export function Impact() {
           <div className="grid sm:grid-cols-2 gap-6 md:gap-8">
             {[
               "Map smallholder farms once, sell to any EU buyer forever",
-              "Get 500 farmers compliant before their buyers ask questions",
+              "Get 500 farmers compliant with one bulk request",
+              "Import your whole supplier network and reach them all at once",
               "Ship without scrambling for documents at the last minute",
               "Know every shipment is clean before it leaves port",
-              "Stay competitive in the €50B EU commodity market",
               "Sleep at night knowing compliance is handled",
             ].map((useCase, index) => (
               <div key={index} className="flex items-start gap-3 md:gap-4">
