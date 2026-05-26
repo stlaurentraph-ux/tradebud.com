@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
 
@@ -11,10 +11,13 @@ export function ExitIntentModal() {
   const waitlist = useWaitlistDialog();
 
   useEffect(() => {
+    const alreadySeen = localStorage.getItem("exit_intent_seen");
+    if (alreadySeen) return;
+
     const handleMouseLeave = (e: MouseEvent) => {
-      // Only trigger if cursor is leaving from top of document
       if (e.clientY <= 0 && !isVisible) {
         setIsVisible(true);
+        localStorage.setItem("exit_intent_seen", "1");
       }
     };
 
@@ -48,15 +51,11 @@ export function ExitIntentModal() {
                 <X className="w-5 h-5 text-gray-600" />
               </button>
 
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[var(--data-emerald)]/10 mb-4">
-                <Zap className="w-6 h-6 text-[var(--data-emerald)]" />
-              </div>
-
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Don&apos;t miss your December 2026 deadline
+              <h3 className="text-2xl font-bold text-[var(--forest-canopy)] mb-3">
+                Be ready for EUDR, without the complexity.
               </h3>
-              <p className="text-gray-600 mb-6">
-                Tracebud gets you audit-ready for EUDR enforcement. Join the waitlist to secure your spot in the pilot program.
+              <p className="text-gray-600 leading-relaxed mb-6">
+                Tracebud helps your network collect, share, and reuse origin data — simply, affordably, and in a way that includes farmers, cooperatives, exporters, and buyers.
               </p>
 
               <div className="space-y-3">
@@ -67,20 +66,20 @@ export function ExitIntentModal() {
                   }}
                   className="w-full bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold py-3 rounded-lg"
                 >
-                  Join the waitlist
+                  Join the pilot
                 </Button>
 
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setIsVisible(false)}
-                  className="w-full border-gray-300 text-gray-900 hover:bg-gray-50 font-semibold py-3 rounded-lg"
+                  className="w-full text-gray-500 hover:text-gray-700 hover:bg-gray-50 font-medium py-3 rounded-lg"
                 >
-                  Continue browsing
+                  Keep browsing
                 </Button>
               </div>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
-                Limited pilot spots available for pilot partners
+              <p className="text-xs text-gray-400 text-center mt-4">
+                Limited spots for early pilot partners.
               </p>
             </motion.div>
           </motion.div>

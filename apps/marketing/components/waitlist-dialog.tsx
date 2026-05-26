@@ -236,10 +236,10 @@ export function WaitlistDialog({
           <div className="p-6 sm:p-8">
             <DialogHeader className="gap-2 pb-5">
               <DialogTitle className="text-2xl font-bold text-[var(--forest-canopy)]">
-                Join the waitlist
+                Join the pilot
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                Be among the first to access Tracebud. Early adopters receive priority support and onboarding from our team.
+                Limited spots for early pilot partners. Tell us about your network and we&apos;ll be in touch.
               </DialogDescription>
             </DialogHeader>
 
@@ -373,7 +373,7 @@ export function WaitlistDialog({
                   </>
                 ) : (
                   <>
-                    Join the waitlist
+                    Join the pilot
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
