@@ -54,49 +54,49 @@
       }
     },
     "productsSection": {
-      "eyebrow": "Two products, one workflow",
-      "title": "Built for how supply chains actually work",
+      "eyebrow": "ሁለት ምርቶች፣ አንድ የስራ ፍሰት",
+      "title": "የአቅርቦት ሰንሰለቶች በእውነት እንዴት እንደሚሰሩ ተነድፎ የተሰራ",
       "mobileApp": {
-        "label": "Mobile App",
+        "label": "የሞባይል መተግበር",
         "headline": "ለመሬት ስራ፣ ለቢሮ አይደለም።",
         "description": "ገበሬዎች የመሬት ድንበር ሊያስመልክቱ፣ መረጃ ሊጋሩ እና በቀላል የሞባይል ተሞክሮ ምላሽ ሊሰጡ ይችላሉ። ኦፍላይን ይሰራል፣ ግልጽ እይታዎችን ይጠቀማል እና ሂደቱን ቀላል ያደርጋል።",
         "supportingText": "ለአቅራቢዎች ነፃ። ከባድ ማዘጋጃ ወይም ረጅም ስልጠና የለም።",
         "features": {
-          "offline": "Works offline, syncs when connectivity returns",
-          "gps": "Walk the boundary to capture GPS polygon",
-          "photo": "Photo evidence and consent recording"
+          "offline": "ኦፍላይን ይሰራል፣ ግንኙነት ሲመለስ ይመሳሰላል",
+          "gps": "የጂፒኤስ ብዙሕ ሐንድ ለመያዝ ወሰን ይመላለሱ",
+          "photo": "የፎቶ ማስረጃ እና የስምምነት መዝገብ"
         }
       },
       "dashboard": {
-        "label": "Dashboard",
+        "label": "ዳሽቦርድ",
         "headline": "መረብዎን ያለ ድግግሞሽ ያስተዳድሩ።",
         "description": "ኮንታክቶችን በብዛት ይጫኑ፣ አንድ ጥያቄ ይላኩ እና የሥራ ፍሰቱ በሙሉ ሰንሰለቱ ውስጥ እንዲፈስስ ያድርጉ። ምላሾችን ይከታተሉ፣ የተረጋገጡ ውሂቦችን እንደገና ይጠቀሙ እና እያንዳንዱን ጭነት በትንሽ የእጅ ስራ ያስቀጥሉ።",
         "supportingText": "ያነሰ መከታተል። ያነሱ ክፍተቶች። ፈጣን ማስተላለፊያ።",
         "features": {
-          "import": "Bulk import contacts via CSV upload",
-          "bulkRequest": "Send requests to hundreds of contacts at once",
-          "cascade": "Requests cascade through your network to source",
-          "readiness": "Track readiness across all network members",
-          "evidence": "Identify missing evidence instantly",
-          "dds": "Assemble DDS packages for shipment"
+          "import": "በCSV አጅር የኮንታክት ማስመጣት",
+          "bulkRequest": "ለብዙ መቶ ኮንታክቶች በአንድ ጊዜ ጥያቄ ላክ",
+          "cascade": "ጥያቄዎች በመረቡ ውስጥ እስከ ምንጭ ይወርዳሉ",
+          "readiness": "የመረቡን ሁሉን ዝግጁነት ይከታተሉ",
+          "evidence": "የጎደሉ ማስረጃዎችን ወዲያውኑ ይለዩ",
+          "dds": "ለመላክ የDDS ጥቅሎችን ያዘጋጁ"
         }
       }
     },
     "customersSection": {
-      "headline": "Why customers use Tracebud",
-      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.",
+      "headline": "ደንበኞች Tracebud ለምን ይጠቀማሉ",
+      "description": "ያነሰ የእጅ ተከታተል። በአጠቃላይነት አበላሽነትን ይጠብቁ። በሙሉ መተማመን ይላኩ።",
       "cards": {
         "gaps": {
-          "title": "Fewer proof gaps",
-          "description": "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system."
+          "title": "ያነሱ የማስረጃ ክፍተቶች",
+          "description": "መቀላቀል፣ የማስረጃ ጥያቄዎች፣ የድርባይ ማጣራት፣ የወረድ መከታተያ እና DDS ዝግጅት በአንድ የተገናኘ ስርዓት ውስጥ።"
         },
         "provenance": {
-          "title": "Provenance preserved",
-          "description": "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files."
+          "title": "አበላሽነት የተጠበቀ",
+          "description": "የተገዥነት ማስረጃ ከእውነተኛ አቅራቢ፣ ቦታ፣ ቦታ ድርባይ እና የመላኪያ መዝገቦች ጋር የተያያዘ። የተለዩ ፋይሎች አይደሉም።"
         },
         "handoff": {
-          "title": "Faster handoff",
-          "description": "More confidence in what can actually ship. Less time chasing missing data when shipments need to move."
+          "title": "ፈጣን ማስተላለፊያ",
+          "description": "በትክክል ሊላክ የሚችለውን በተጨማሪ እምነት። መላኪያዎች ሲንቀሳቀሱ የጎደሉ ውሂብ ለመከታተል ያነሰ ጊዜ።"
         }
       }
     },
@@ -124,70 +124,70 @@
       "description": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች። ስለ መረብዎ ይንገሩን እና እናገኝዎታለን።",
       "note": "ስፓም የለም። በማንኛውም ጊዜ ይሰርዙ።",
       "sidePanel": {
-        "tagline": "Be ready for EUDR, without the complexity.",
-        "subline": "Simple. Affordable. Built for every actor in the chain."
+        "tagline": "ለEUDR ዝግጁ፣ ውስብስብነት ሳይኖር።",
+        "subline": "ቀላል። ተመጣጣኝ። በሰንሰለቱ ውስጥ ለሁሉም አካላት ተሰርቷል።"
       },
-      "submit": "Join the pilot",
-      "submitting": "Submitting...",
+      "submit": "በፓይለት ይቀላቀሉ",
+      "submitting": "በመላክ ላይ...",
       "success": {
-        "title": "Application received",
-        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+        "title": "ማመልከቻ ተቀበለን",
+        "description": "እያንዳንዱን ማመልከቻ በግል እንመለከተዋለን። የፓይለት አጋሮች ቅድሚያ ያለው መቀላቀል እና ቀጥታ መዳረሻ ወደ ተገዥነት ቡድናችን ያገኛሉ።"
       },
       "form": {
-        "firstName": "First name",
-        "lastName": "Last name",
-        "email": "Work email",
-        "organisation": "Organisation",
-        "role": "Your role",
-        "roleOther": "Please describe your role",
-        "commodity": "Main commodity",
-        "producerRange": "How many producers need EUDR compliance?",
+        "firstName": "ስም",
+        "lastName": "የአባት ስም",
+        "email": "የስራ ኢሜይል",
+        "organisation": "ድርጅት",
+        "role": "የእርስዎ ሚና",
+        "roleOther": "ሚናዎን ይግለጹ",
+        "commodity": "ዋና ምርት",
+        "producerRange": "ስንት አቅራቢዎች EUDR ተገዥነት ይፈልጋሉ?",
         "placeholders": {
-          "firstName": "Maria",
-          "lastName": "Gonzalez",
+          "firstName": "ማሪያ",
+          "lastName": "ተስፋዬ",
           "email": "maria@company.com",
-          "organisation": "Cooperative Sol Naciente",
-          "role": "Select your role",
-          "roleOther": "Please describe your role",
-          "commodity": "Select a commodity",
-          "producerRange": "Select a range"
+          "organisation": "የሶል ናሲየን ኮኦፐራቲቭ",
+          "role": "ሚናዎን ይምረጡ",
+          "roleOther": "ሚናዎን ይግለጹ",
+          "commodity": "ምርት ይምረጡ",
+          "producerRange": "ክልል ይምረጡ"
         },
         "roles": {
-          "cooperative": "Cooperative",
-          "exporter": "Exporter",
-          "importer": "Importer",
-          "sponsor": "Sponsor (brand, country, NGO)",
-          "other": "Other"
+          "cooperative": "ኮኦፐራቲቭ",
+          "exporter": "ላኪ",
+          "importer": "ገዢ",
+          "sponsor": "ስፖንሰር (ምርት ስም፣ ሀገር፣ NGO)",
+          "other": "ሌላ"
         },
         "commodities": {
-          "coffee": "Coffee",
-          "cocoa": "Cocoa",
-          "palmOil": "Palm Oil",
-          "rubber": "Rubber",
-          "soy": "Soy",
-          "cattle": "Cattle / Leather",
-          "wood": "Wood / Timber",
-          "other": "Other"
+          "coffee": "ቡና",
+          "cocoa": "ኮኮዋ",
+          "palmOil": "ዘይ ቤት",
+          "rubber": "ጎማ",
+          "soy": "ሱያ",
+          "cattle": "ከብት / ቆዳ",
+          "wood": "እንጨት / ዕንጨት",
+          "other": "ሌላ"
         },
         "producerRanges": {
-          "r1": "1 – 50 producers",
-          "r2": "51 – 200 producers",
-          "r3": "201 – 500 producers",
-          "r4": "501 – 2,000 producers",
-          "r5": "2,001 – 10,000 producers",
-          "r6": "10,000+ producers"
+          "r1": "1 – 50 አቅራቢዎች",
+          "r2": "51 – 200 አቅራቢዎች",
+          "r3": "201 – 500 አቅራቢዎች",
+          "r4": "501 – 2,000 አቅራቢዎች",
+          "r5": "2,001 – 10,000 አቅራቢዎች",
+          "r6": "10,000+ አቅራቢዎች"
         },
         "errors": {
-          "emailRequired": "Email is required.",
-          "emailInvalid": "Please enter a valid email address.",
-          "firstNameRequired": "First name is required.",
-          "lastNameRequired": "Last name is required.",
-          "organisationRequired": "Organization is required.",
-          "roleRequired": "Please select your role.",
-          "roleOtherRequired": "Please describe your role.",
-          "commodityRequired": "Please select a commodity.",
-          "producerRangeRequired": "Please select the number of producers.",
-          "generic": "Something went wrong. Please try again."
+          "emailRequired": "ኢሜይል ያስፈልጋል።",
+          "emailInvalid": "እባክዎ ትክክለኛ ኢሜይል ያስገቡ።",
+          "firstNameRequired": "ስም ያስፈልጋል።",
+          "lastNameRequired": "የአባት ስም ያስፈልጋል።",
+          "organisationRequired": "ድርጅት ያስፈልጋል።",
+          "roleRequired": "ሚናዎን ይምረጡ።",
+          "roleOtherRequired": "ሚናዎን ይግለጹ።",
+          "commodityRequired": "ምርት ይምረጡ።",
+          "producerRangeRequired": "የአቅራቢዎች ብዛት ይምረጡ።",
+          "generic": "ስህተት ተከስቷል። እባክዎ እንደገና ይሞክሩ።"
         }
       }
     }
@@ -246,7 +246,12 @@
   "footer": {
     "startMapping": "ካርታ መስራት ይጀምሩ",
     "contactSales": "ሽያጭ ያግኙ",
-    "joinWaitlist": "ወደ ተጠበቅ ዝርዝር ይግቡ"
+    "joinWaitlist": "ወደ ተጠበቅ ዝርዝር ይግቡ",
+    "howItWorks": "እንዴት እንደሚሰራ",
+    "privacy": "ግላዊነት",
+    "terms": "ውሎች",
+    "contact": "እውቂያ",
+    "tagline": "ቀላል የEUDR ሂደቶች። ጠንካራ የገበያ መዳረሻ።"
   },
   "impact": {
     "title": "ትሬበድ ለምን ይሰራል",
@@ -287,6 +292,8 @@
     "howLong": "ስብስቡ ምን ያህል ይወስዳል?",
     "howLongAnswer": "አብዛኞቹ የሕብረት ስራ ቦታ ከ48 ሰዓታት ውስጥ ተስተካክለው አሁን ናቸው ሉ። የተገናኘ ሳይሆን ዲዛይን ማለት ዜሮ ተኩላ ጊዜ ነው።",
     "support": "ምን ከስ ያገኛሉ?",
-    "supportAnswer": "24/7 ኢሜይል ድጋፍ በተጨማሪ ቅድሚያ ስልክ ድጋፍ ለሙከራ አጋር። ከነ compliance ቡድን ስለ ቀጥታ ተደራሽነት ተግቢ።"
+    "supportAnswer": "24/7 ኢሜይል ድጋፍ በተጨማሪ ቅድሚያ ስልክ ድጋፍ ለሙከራ አጋር። ከነ compliance ቡድን ስለ ቀጥታ ተደራሽነት ተግቢ።",
+    "waitlistPrompt": "ወደ የመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
+    "joinNow": "አሁን ይቀላቀሉ"
   }
 }

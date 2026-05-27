@@ -54,17 +54,17 @@
       }
     },
     "productsSection": {
-      "eyebrow": "Two products, one workflow",
-      "title": "Built for how supply chains actually work",
+      "eyebrow": "Twee producten, één workflow",
+      "title": "Gebouwd voor hoe toeleveringsketens echt werken",
       "mobileApp": {
-        "label": "Mobile App",
+        "label": "Mobiele app",
         "headline": "Gemaakt voor het veld, niet voor het kantoor.",
         "description": "Boeren kunnen percelen in kaart brengen, informatie delen en reageren via een eenvoudige mobiele ervaring die is ontworpen voor echte veldcondities. Het werkt offline, gebruikt duidelijke visuals en houdt het proces licht.",
         "supportingText": "Gratis voor producenten. Geen zware installatie of lange training.",
         "features": {
-          "offline": "Works offline, syncs when connectivity returns",
-          "gps": "Walk the boundary to capture GPS polygon",
-          "photo": "Photo evidence and consent recording"
+          "offline": "Werkt offline, synchroniseert wanneer verbinding terugkeert",
+          "gps": "Loop de grens af om GPS-polygoon vast te leggen",
+          "photo": "Fotobewijs en vastlegging van toestemming"
         }
       },
       "dashboard": {
@@ -73,30 +73,30 @@
         "description": "Upload contacten in bulk, stuur één verzoek en laat de workflow door de hele toeleveringsketen stromen. Volg reacties, hergebruik geverifieerde gegevens en houd elke zending in beweging met minder handmatig opvolgen.",
         "supportingText": "Minder achtervolging. Minder hiaten. Snellere overdrachten.",
         "features": {
-          "import": "Bulk import contacts via CSV upload",
-          "bulkRequest": "Send requests to hundreds of contacts at once",
-          "cascade": "Requests cascade through your network to source",
-          "readiness": "Track readiness across all network members",
-          "evidence": "Identify missing evidence instantly",
-          "dds": "Assemble DDS packages for shipment"
+          "import": "Bulkimport van contacten via CSV-upload",
+          "bulkRequest": "Stuur verzoeken naar honderden contacten tegelijk",
+          "cascade": "Verzoeken cascaderen door uw netwerk naar de bron",
+          "readiness": "Volg gereedheid van alle netwerkleden",
+          "evidence": "Identificeer ontbrekend bewijs direct",
+          "dds": "Stel DDS-pakketten samen voor verzending"
         }
       }
     },
     "customersSection": {
-      "headline": "Why customers use Tracebud",
-      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.",
+      "headline": "Waarom klanten Tracebud gebruiken",
+      "description": "Minder handmatige opvolging. Behoud herkomst via aggregatie. Verzend met vertrouwen.",
       "cards": {
         "gaps": {
-          "title": "Fewer proof gaps",
-          "description": "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system."
+          "title": "Minder bewijsgaten",
+          "description": "Onboarding, bewijsverzoeken, duplicaatcontroles, lineage en DDS-voorbereiding in één verbonden systeem."
         },
         "provenance": {
-          "title": "Provenance preserved",
-          "description": "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files."
+          "title": "Herkomst behouden",
+          "description": "Compliancebewijs gekoppeld aan echte producent-, perceel-, batch- en zendinggegevens. Geen losse bestanden."
         },
         "handoff": {
-          "title": "Faster handoff",
-          "description": "More confidence in what can actually ship. Less time chasing missing data when shipments need to move."
+          "title": "Snellere overdracht",
+          "description": "Meer vertrouwen in wat daadwerkelijk kan worden verzonden. Minder tijd zoeken naar ontbrekende data wanneer zendingen moeten bewegen."
         }
       }
     },
@@ -124,70 +124,70 @@
       "description": "Beperkt aantal plaatsen voor vroege pilotpartners. Vertel ons over uw netwerk en we nemen contact op.",
       "note": "Geen spam. Op elk moment uitschrijven.",
       "sidePanel": {
-        "tagline": "Be ready for EUDR, without the complexity.",
-        "subline": "Simple. Affordable. Built for every actor in the chain."
+        "tagline": "Klaar voor EUDR, zonder de complexiteit.",
+        "subline": "Eenvoudig. Betaalbaar. Voor elke schakel in de keten."
       },
-      "submit": "Join the pilot",
-      "submitting": "Submitting...",
+      "submit": "Deelnemen aan pilot",
+      "submitting": "Verzenden...",
       "success": {
-        "title": "Application received",
-        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+        "title": "Aanvraag ontvangen",
+        "description": "We beoordelen elke aanvraag persoonlijk. Pilotpartners krijgen prioritaire onboarding en directe toegang tot ons compliance-team."
       },
       "form": {
-        "firstName": "First name",
-        "lastName": "Last name",
-        "email": "Work email",
-        "organisation": "Organisation",
-        "role": "Your role",
-        "roleOther": "Please describe your role",
-        "commodity": "Main commodity",
-        "producerRange": "How many producers need EUDR compliance?",
+        "firstName": "Voornaam",
+        "lastName": "Achternaam",
+        "email": "Zakelijk e-mailadres",
+        "organisation": "Organisatie",
+        "role": "Uw rol",
+        "roleOther": "Beschrijf uw rol",
+        "commodity": "Belangrijkste grondstof",
+        "producerRange": "Hoeveel producenten hebben EUDR-naleving nodig?",
         "placeholders": {
           "firstName": "Maria",
-          "lastName": "Gonzalez",
-          "email": "maria@company.com",
-          "organisation": "Cooperative Sol Naciente",
-          "role": "Select your role",
-          "roleOther": "Please describe your role",
-          "commodity": "Select a commodity",
-          "producerRange": "Select a range"
+          "lastName": "Jansen",
+          "email": "maria@bedrijf.nl",
+          "organisation": "Coöperatie Sol Naciente",
+          "role": "Selecteer uw rol",
+          "roleOther": "Beschrijf uw rol",
+          "commodity": "Selecteer een grondstof",
+          "producerRange": "Selecteer een bereik"
         },
         "roles": {
-          "cooperative": "Cooperative",
-          "exporter": "Exporter",
-          "importer": "Importer",
-          "sponsor": "Sponsor (brand, country, NGO)",
-          "other": "Other"
+          "cooperative": "Coöperatie",
+          "exporter": "Exporteur",
+          "importer": "Importeur",
+          "sponsor": "Sponsor (merk, land, NGO)",
+          "other": "Overig"
         },
         "commodities": {
-          "coffee": "Coffee",
-          "cocoa": "Cocoa",
-          "palmOil": "Palm Oil",
+          "coffee": "Koffie",
+          "cocoa": "Cacao",
+          "palmOil": "Palmolie",
           "rubber": "Rubber",
-          "soy": "Soy",
-          "cattle": "Cattle / Leather",
-          "wood": "Wood / Timber",
-          "other": "Other"
+          "soy": "Soja",
+          "cattle": "Vee / Leer",
+          "wood": "Hout / Timmerhout",
+          "other": "Overig"
         },
         "producerRanges": {
-          "r1": "1 – 50 producers",
-          "r2": "51 – 200 producers",
-          "r3": "201 – 500 producers",
-          "r4": "501 – 2,000 producers",
-          "r5": "2,001 – 10,000 producers",
-          "r6": "10,000+ producers"
+          "r1": "1 – 50 producenten",
+          "r2": "51 – 200 producenten",
+          "r3": "201 – 500 producenten",
+          "r4": "501 – 2.000 producenten",
+          "r5": "2.001 – 10.000 producenten",
+          "r6": "10.000+ producenten"
         },
         "errors": {
-          "emailRequired": "Email is required.",
-          "emailInvalid": "Please enter a valid email address.",
-          "firstNameRequired": "First name is required.",
-          "lastNameRequired": "Last name is required.",
-          "organisationRequired": "Organization is required.",
-          "roleRequired": "Please select your role.",
-          "roleOtherRequired": "Please describe your role.",
-          "commodityRequired": "Please select a commodity.",
-          "producerRangeRequired": "Please select the number of producers.",
-          "generic": "Something went wrong. Please try again."
+          "emailRequired": "E-mail is verplicht.",
+          "emailInvalid": "Voer een geldig e-mailadres in.",
+          "firstNameRequired": "Voornaam is verplicht.",
+          "lastNameRequired": "Achternaam is verplicht.",
+          "organisationRequired": "Organisatie is verplicht.",
+          "roleRequired": "Selecteer uw rol.",
+          "roleOtherRequired": "Beschrijf uw rol.",
+          "commodityRequired": "Selecteer een grondstof.",
+          "producerRangeRequired": "Selecteer het aantal producenten.",
+          "generic": "Er is iets misgegaan. Probeer het opnieuw."
         }
       }
     }
@@ -246,7 +246,12 @@
   "footer": {
     "startMapping": "Begin met in kaart brengen",
     "contactSales": "Neem contact op met verkoop",
-    "joinWaitlist": "Doe mee aan de wachtlijst"
+    "joinWaitlist": "Doe mee aan de wachtlijst",
+    "howItWorks": "Hoe het werkt",
+    "privacy": "Privacy",
+    "terms": "Voorwaarden",
+    "contact": "Contact",
+    "tagline": "Eenvoudigere EUDR-processen. Sterkere markttoegang."
   },
   "impact": {
     "title": "Waarom Tracebud werkt",
@@ -287,6 +292,8 @@
     "howLong": "Hoe lang duurt de installatie?",
     "howLongAnswer": "De meeste coöperaties zijn binnen 48 uur na aanmelding in kaart gebracht en operationeel. Offline-first design betekent nul uitvaltijd.",
     "support": "Welke ondersteuning is beschikbaar?",
-    "supportAnswer": "24/7 e-mailondersteuning, plus prioritaire telefonische ondersteuning voor pilotpartners. Directe toegang tot ons complianceteam."
+    "supportAnswer": "24/7 e-mailondersteuning, plus prioritaire telefonische ondersteuning voor pilotpartners. Directe toegang tot ons complianceteam.",
+    "waitlistPrompt": "Klaar om op de wachtlijst te komen?",
+    "joinNow": "Nu deelnemen"
   }
 }

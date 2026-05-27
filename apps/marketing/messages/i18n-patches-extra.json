@@ -1,0 +1,1002 @@
+{
+  "de": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Zwei Produkte, ein Workflow",
+        "title": "Entwickelt für die Art, wie Lieferketten wirklich funktionieren",
+        "mobileApp": {
+          "label": "Mobil-App",
+          "features": {
+            "offline": "Funktioniert offline, synchronisiert bei wiederhergestellter Verbindung",
+            "gps": "Grenze abgehen, um GPS-Polygon zu erfassen",
+            "photo": "Fotonachweise und Einwilligungsaufzeichnung"
+          }
+        },
+        "dashboard": {
+          "label": "Dashboard",
+          "features": {
+            "import": "Massenimport von Kontakten per CSV-Upload",
+            "bulkRequest": "Anfragen an Hunderte von Kontakten gleichzeitig senden",
+            "cascade": "Anfragen kaskadieren durch Ihr Netzwerk bis zur Quelle",
+            "readiness": "Bereitschaft aller Netzwerkmitglieder verfolgen",
+            "evidence": "Fehlende Nachweise sofort erkennen",
+            "dds": "DDS-Pakete für den Versand zusammenstellen"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Warum Kunden Tracebud nutzen",
+        "description": "Weniger manuelles Nachfassen. Herkunft durch Aggregation bewahren. Mit Vertrauen versenden.",
+        "cards": {
+          "gaps": {
+            "title": "Weniger Nachweislücken",
+            "description": "Onboarding, Nachweisanfragen, Duplikatprüfungen, Lineage und DDS-Vorbereitung in einem verbundenen System."
+          },
+          "provenance": {
+            "title": "Herkunft bewahrt",
+            "description": "Compliance-Nachweise verknüpft mit echten Produzenten-, Flächen-, Chargen- und Versanddaten. Keine lose Dateien."
+          },
+          "handoff": {
+            "title": "Schnellere Übergabe",
+            "description": "Mehr Vertrauen in das, was tatsächlich versendet werden kann. Weniger Zeit mit fehlenden Daten, wenn Sendungen laufen müssen."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Bereit für EUDR, ohne die Komplexität.",
+          "subline": "Einfach. Erschwinglich. Für jeden Akteur in der Kette."
+        },
+        "submit": "Am Pilot teilnehmen",
+        "submitting": "Wird gesendet...",
+        "success": {
+          "title": "Anfrage erhalten",
+          "description": "Wir prüfen jede Anfrage persönlich. Pilotpartner erhalten priorisiertes Onboarding und direkten Zugang zu unserem Compliance-Team."
+        },
+        "form": {
+          "firstName": "Vorname",
+          "lastName": "Nachname",
+          "email": "Geschäftliche E-Mail",
+          "organisation": "Organisation",
+          "role": "Ihre Rolle",
+          "roleOther": "Bitte beschreiben Sie Ihre Rolle",
+          "commodity": "Hauptrohstoff",
+          "producerRange": "Wie viele Produzenten benötigen EUDR-Compliance?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Müller",
+            "email": "maria@unternehmen.de",
+            "organisation": "Kooperative Sol Naciente",
+            "role": "Rolle auswählen",
+            "roleOther": "Bitte beschreiben Sie Ihre Rolle",
+            "commodity": "Rohstoff auswählen",
+            "producerRange": "Bereich auswählen"
+          },
+          "roles": {
+            "cooperative": "Kooperative",
+            "exporter": "Exporteur",
+            "importer": "Importeur",
+            "sponsor": "Sponsor (Marke, Land, NGO)",
+            "other": "Sonstiges"
+          },
+          "commodities": {
+            "coffee": "Kaffee",
+            "cocoa": "Kakao",
+            "palmOil": "Palmöl",
+            "rubber": "Kautschuk",
+            "soy": "Soja",
+            "cattle": "Rinder / Leder",
+            "wood": "Holz / Holzprodukte",
+            "other": "Sonstiges"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 Produzenten",
+            "r2": "51 – 200 Produzenten",
+            "r3": "201 – 500 Produzenten",
+            "r4": "501 – 2.000 Produzenten",
+            "r5": "2.001 – 10.000 Produzenten",
+            "r6": "10.000+ Produzenten"
+          },
+          "errors": {
+            "emailRequired": "E-Mail ist erforderlich.",
+            "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+            "firstNameRequired": "Vorname ist erforderlich.",
+            "lastNameRequired": "Nachname ist erforderlich.",
+            "organisationRequired": "Organisation ist erforderlich.",
+            "roleRequired": "Bitte wählen Sie Ihre Rolle.",
+            "roleOtherRequired": "Bitte beschreiben Sie Ihre Rolle.",
+            "commodityRequired": "Bitte wählen Sie einen Rohstoff.",
+            "producerRangeRequired": "Bitte wählen Sie die Anzahl der Produzenten.",
+            "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "So funktioniert es",
+      "privacy": "Datenschutz",
+      "terms": "AGB",
+      "contact": "Kontakt",
+      "tagline": "Einfachere EUDR-Abläufe. Stärkerer Marktzugang."
+    },
+    "faq": {
+      "waitlistPrompt": "Bereit für die Warteliste?",
+      "joinNow": "Jetzt beitreten"
+    }
+  },
+  "pt": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Dois produtos, um único fluxo de trabalho",
+        "title": "Criado para a forma como as cadeias de abastecimento realmente funcionam",
+        "mobileApp": {
+          "label": "Aplicação móvel",
+          "features": {
+            "offline": "Funciona offline, sincroniza quando a ligação regressa",
+            "gps": "Percorra o limite para capturar o polígono GPS",
+            "photo": "Evidência fotográfica e registo de consentimento"
+          }
+        },
+        "dashboard": {
+          "label": "Painel de controlo",
+          "features": {
+            "import": "Importação em massa de contactos via CSV",
+            "bulkRequest": "Envie pedidos a centenas de contactos de uma vez",
+            "cascade": "Os pedidos propagam-se na sua rede até à origem",
+            "readiness": "Acompanhe a prontidão de toda a rede",
+            "evidence": "Identifique evidências em falta instantaneamente",
+            "dds": "Monte pacotes DDS para expedição"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Por que os clientes usam a Tracebud",
+        "description": "Menos acompanhamento manual. Proveniência preservada pela agregação. Envie com confiança.",
+        "cards": {
+          "gaps": {
+            "title": "Menos lacunas de prova",
+            "description": "Integração, pedidos de evidência, verificações de duplicados, linhagem e preparação DDS num único sistema ligado."
+          },
+          "provenance": {
+            "title": "Proveniência preservada",
+            "description": "Provas de conformidade ligadas a produtores, parcelas, lotes e expedições reais. Não ficheiros desligados."
+          },
+          "handoff": {
+            "title": "Transferência mais rápida",
+            "description": "Mais confiança no que pode realmente ser enviado. Menos tempo a perseguir dados em falta quando as expedições têm de avançar."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Pronto para o EUDR, sem a complexidade.",
+          "subline": "Simples. Acessível. Criado para cada interveniente da cadeia."
+        },
+        "submit": "Juntar-se ao piloto",
+        "submitting": "A enviar...",
+        "success": {
+          "title": "Pedido recebido",
+          "description": "Analisamos cada pedido pessoalmente. Os parceiros piloto recebem integração prioritária e acesso direto à nossa equipa de conformidade."
+        },
+        "form": {
+          "firstName": "Nome próprio",
+          "lastName": "Apelido",
+          "email": "E-mail profissional",
+          "organisation": "Organização",
+          "role": "O seu papel",
+          "roleOther": "Descreva o seu papel",
+          "commodity": "Matéria-prima principal",
+          "producerRange": "Quantos produtores precisam de conformidade EUDR?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Silva",
+            "email": "maria@empresa.pt",
+            "organisation": "Cooperativa Sol Naciente",
+            "role": "Selecione o seu papel",
+            "roleOther": "Descreva o seu papel",
+            "commodity": "Selecione uma matéria-prima",
+            "producerRange": "Selecione um intervalo"
+          },
+          "roles": {
+            "cooperative": "Cooperativa",
+            "exporter": "Exportador",
+            "importer": "Importador",
+            "sponsor": "Patrocinador (marca, país, ONG)",
+            "other": "Outro"
+          },
+          "commodities": {
+            "coffee": "Café",
+            "cocoa": "Cacau",
+            "palmOil": "Óleo de palma",
+            "rubber": "Borracha",
+            "soy": "Soja",
+            "cattle": "Gado / Couro",
+            "wood": "Madeira / Madeira serrada",
+            "other": "Outro"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 produtores",
+            "r2": "51 – 200 produtores",
+            "r3": "201 – 500 produtores",
+            "r4": "501 – 2.000 produtores",
+            "r5": "2.001 – 10.000 produtores",
+            "r6": "10.000+ produtores"
+          },
+          "errors": {
+            "emailRequired": "O e-mail é obrigatório.",
+            "emailInvalid": "Introduza um endereço de e-mail válido.",
+            "firstNameRequired": "O nome próprio é obrigatório.",
+            "lastNameRequired": "O apelido é obrigatório.",
+            "organisationRequired": "A organização é obrigatória.",
+            "roleRequired": "Selecione o seu papel.",
+            "roleOtherRequired": "Descreva o seu papel.",
+            "commodityRequired": "Selecione uma matéria-prima.",
+            "producerRangeRequired": "Selecione o número de produtores.",
+            "generic": "Algo correu mal. Tente novamente."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Como funciona",
+      "privacy": "Privacidade",
+      "terms": "Termos",
+      "contact": "Contacto",
+      "tagline": "Operações EUDR mais simples. Acesso ao mercado reforçado."
+    },
+    "faq": {
+      "waitlistPrompt": "Pronto para entrar na lista de espera?",
+      "joinNow": "Entrar agora"
+    }
+  },
+  "id": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Dua produk, satu alur kerja",
+        "title": "Dibangun untuk cara rantai pasok benar-benar bekerja",
+        "mobileApp": {
+          "label": "Aplikasi seluler",
+          "features": {
+            "offline": "Berfungsi offline, sinkron saat koneksi kembali",
+            "gps": "Jalan di sepanjang batas untuk menangkap poligon GPS",
+            "photo": "Bukti foto dan pencatatan persetujuan"
+          }
+        },
+        "dashboard": {
+          "label": "Dasbor",
+          "features": {
+            "import": "Impor massal kontak melalui unggahan CSV",
+            "bulkRequest": "Kirim permintaan ke ratusan kontak sekaligus",
+            "cascade": "Permintaan mengalir melalui jaringan Anda hingga sumber",
+            "readiness": "Lacak kesiapan seluruh anggota jaringan",
+            "evidence": "Identifikasi bukti yang hilang secara instan",
+            "dds": "Susun paket DDS untuk pengiriman"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Mengapa pelanggan menggunakan Tracebud",
+        "description": "Kurangi tindak lanjut manual. Jaga asal-usul melalui agregasi. Kirim dengan percaya diri.",
+        "cards": {
+          "gaps": {
+            "title": "Lebih sedikit celah bukti",
+            "description": "Onboarding, permintaan bukti, pemeriksaan duplikat, lineage, dan persiapan DDS dalam satu sistem terhubung."
+          },
+          "provenance": {
+            "title": "Asal-usul terjaga",
+            "description": "Bukti kepatuhan terkait produsen, petak, batch, dan pengiriman nyata. Bukan file terpisah."
+          },
+          "handoff": {
+            "title": "Serah terima lebih cepat",
+            "description": "Lebih percaya pada apa yang benar-benar bisa dikirim. Lebih sedikit waktu mengejar data yang hilang saat pengiriman harus bergerak."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Siap untuk EUDR, tanpa kerumitan.",
+          "subline": "Sederhana. Terjangkau. Dibangun untuk setiap pelaku dalam rantai."
+        },
+        "submit": "Gabung pilot",
+        "submitting": "Mengirim...",
+        "success": {
+          "title": "Permohonan diterima",
+          "description": "Kami meninjau setiap permohonan secara personal. Mitra pilot mendapat onboarding prioritas dan akses langsung ke tim kepatuhan kami."
+        },
+        "form": {
+          "firstName": "Nama depan",
+          "lastName": "Nama belakang",
+          "email": "Email kerja",
+          "organisation": "Organisasi",
+          "role": "Peran Anda",
+          "roleOther": "Jelaskan peran Anda",
+          "commodity": "Komoditas utama",
+          "producerRange": "Berapa produsen yang membutuhkan kepatuhan EUDR?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Santoso",
+            "email": "maria@perusahaan.com",
+            "organisation": "Koperasi Sol Naciente",
+            "role": "Pilih peran Anda",
+            "roleOther": "Jelaskan peran Anda",
+            "commodity": "Pilih komoditas",
+            "producerRange": "Pilih rentang"
+          },
+          "roles": {
+            "cooperative": "Koperasi",
+            "exporter": "Eksportir",
+            "importer": "Importir",
+            "sponsor": "Sponsor (merek, negara, LSM)",
+            "other": "Lainnya"
+          },
+          "commodities": {
+            "coffee": "Kopi",
+            "cocoa": "Kakao",
+            "palmOil": "Minyak kelapa sawit",
+            "rubber": "Karet",
+            "soy": "Kedelai",
+            "cattle": "Sapi / Kulit",
+            "wood": "Kayu / Kayu olahan",
+            "other": "Lainnya"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 produsen",
+            "r2": "51 – 200 produsen",
+            "r3": "201 – 500 produsen",
+            "r4": "501 – 2.000 produsen",
+            "r5": "2.001 – 10.000 produsen",
+            "r6": "10.000+ produsen"
+          },
+          "errors": {
+            "emailRequired": "Email wajib diisi.",
+            "emailInvalid": "Masukkan alamat email yang valid.",
+            "firstNameRequired": "Nama depan wajib diisi.",
+            "lastNameRequired": "Nama belakang wajib diisi.",
+            "organisationRequired": "Organisasi wajib diisi.",
+            "roleRequired": "Pilih peran Anda.",
+            "roleOtherRequired": "Jelaskan peran Anda.",
+            "commodityRequired": "Pilih komoditas.",
+            "producerRangeRequired": "Pilih jumlah produsen.",
+            "generic": "Terjadi kesalahan. Silakan coba lagi."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Cara kerjanya",
+      "privacy": "Privasi",
+      "terms": "Ketentuan",
+      "contact": "Kontak",
+      "tagline": "Operasi EUDR lebih sederhana. Akses pasar lebih kuat."
+    },
+    "faq": {
+      "waitlistPrompt": "Siap bergabung ke daftar tunggu?",
+      "joinNow": "Gabung sekarang"
+    }
+  },
+  "vi": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Hai sản phẩm, một quy trình",
+        "title": "Được xây dựng cho cách chuỗi cung ứng thực sự vận hành",
+        "mobileApp": {
+          "label": "Ứng dụng di động",
+          "features": {
+            "offline": "Hoạt động ngoại tuyến, đồng bộ khi có kết nối trở lại",
+            "gps": "Đi theo ranh giới để thu thập đa giác GPS",
+            "photo": "Bằng chứng ảnh và ghi nhận đồng ý"
+          }
+        },
+        "dashboard": {
+          "label": "Bảng điều khiển",
+          "features": {
+            "import": "Nhập hàng loạt danh bạ qua tải lên CSV",
+            "bulkRequest": "Gửi yêu cầu đến hàng trăm liên hệ cùng lúc",
+            "cascade": "Yêu cầu lan truyền qua mạng lưới đến nguồn",
+            "readiness": "Theo dõi mức độ sẵn sàng của toàn mạng lưới",
+            "evidence": "Xác định ngay bằng chứng còn thiếu",
+            "dds": "Lắp ráp gói DDS cho lô hàng"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Vì sao khách hàng dùng Tracebud",
+        "description": "Giảm theo dõi thủ công. Bảo toàn nguồn gốc qua tổng hợp. Giao hàng tự tin.",
+        "cards": {
+          "gaps": {
+            "title": "Ít khoảng trống bằng chứng hơn",
+            "description": "Tiếp nhận, yêu cầu bằng chứng, kiểm tra trùng lặp, dòng nguồn và chuẩn bị DDS trong một hệ thống kết nối."
+          },
+          "provenance": {
+            "title": "Nguồn gốc được bảo toàn",
+            "description": "Bằng chứng tuân thủ gắn với nhà sản xuất, thửa đất, lô và lô hàng thực tế. Không phải tệp rời rạc."
+          },
+          "handoff": {
+            "title": "Bàn giao nhanh hơn",
+            "description": "Tự tin hơn về những gì thực sự có thể giao. Ít thời gian truy tìm dữ liệu thiếu khi lô hàng phải đi."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Sẵn sàng cho EUDR, không phức tạp.",
+          "subline": "Đơn giản. Chi phí hợp lý. Cho mọi tác nhân trong chuỗi."
+        },
+        "submit": "Tham gia chương trình thí điểm",
+        "submitting": "Đang gửi...",
+        "success": {
+          "title": "Đã nhận đơn đăng ký",
+          "description": "Chúng tôi xem xét từng đơn cá nhân. Đối tác thí điểm được onboarding ưu tiên và truy cập trực tiếp đội ngũ tuân thủ."
+        },
+        "form": {
+          "firstName": "Tên",
+          "lastName": "Họ",
+          "email": "Email công việc",
+          "organisation": "Tổ chức",
+          "role": "Vai trò của bạn",
+          "roleOther": "Mô tả vai trò của bạn",
+          "commodity": "Hàng hóa chính",
+          "producerRange": "Bao nhiêu nhà sản xuất cần tuân thủ EUDR?",
+          "placeholders": {
+            "firstName": "Lan",
+            "lastName": "Nguyen",
+            "email": "lan@congty.com",
+            "organisation": "Hợp tác xã Sol Naciente",
+            "role": "Chọn vai trò",
+            "roleOther": "Mô tả vai trò",
+            "commodity": "Chọn hàng hóa",
+            "producerRange": "Chọn khoảng"
+          },
+          "roles": {
+            "cooperative": "Hợp tác xã",
+            "exporter": "Nhà xuất khẩu",
+            "importer": "Nhà nhập khẩu",
+            "sponsor": "Nhà tài trợ (thương hiệu, quốc gia, NGO)",
+            "other": "Khác"
+          },
+          "commodities": {
+            "coffee": "Cà phê",
+            "cocoa": "Ca cao",
+            "palmOil": "Dầu cọ",
+            "rubber": "Cao su",
+            "soy": "Đậu nành",
+            "cattle": "Gia súc / Da",
+            "wood": "Gỗ / Gỗ xẻ",
+            "other": "Khác"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 nhà sản xuất",
+            "r2": "51 – 200 nhà sản xuất",
+            "r3": "201 – 500 nhà sản xuất",
+            "r4": "501 – 2.000 nhà sản xuất",
+            "r5": "2.001 – 10.000 nhà sản xuất",
+            "r6": "10.000+ nhà sản xuất"
+          },
+          "errors": {
+            "emailRequired": "Email là bắt buộc.",
+            "emailInvalid": "Vui lòng nhập email hợp lệ.",
+            "firstNameRequired": "Tên là bắt buộc.",
+            "lastNameRequired": "Họ là bắt buộc.",
+            "organisationRequired": "Tổ chức là bắt buộc.",
+            "roleRequired": "Vui lòng chọn vai trò.",
+            "roleOtherRequired": "Vui lòng mô tả vai trò.",
+            "commodityRequired": "Vui lòng chọn hàng hóa.",
+            "producerRangeRequired": "Vui lòng chọn số nhà sản xuất.",
+            "generic": "Đã xảy ra lỗi. Vui lòng thử lại."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Cách hoạt động",
+      "privacy": "Quyền riêng tư",
+      "terms": "Điều khoản",
+      "contact": "Liên hệ",
+      "tagline": "Vận hành EUDR đơn giản hơn. Tiếp cận thị trường mạnh hơn."
+    },
+    "faq": {
+      "waitlistPrompt": "Sẵn sàng tham gia danh sách chờ?",
+      "joinNow": "Tham gia ngay"
+    }
+  },
+  "nl": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Twee producten, één workflow",
+        "title": "Gebouwd voor hoe toeleveringsketens echt werken",
+        "mobileApp": {
+          "label": "Mobiele app",
+          "features": {
+            "offline": "Werkt offline, synchroniseert wanneer verbinding terugkeert",
+            "gps": "Loop de grens af om GPS-polygoon vast te leggen",
+            "photo": "Fotobewijs en vastlegging van toestemming"
+          }
+        },
+        "dashboard": {
+          "label": "Dashboard",
+          "features": {
+            "import": "Bulkimport van contacten via CSV-upload",
+            "bulkRequest": "Stuur verzoeken naar honderden contacten tegelijk",
+            "cascade": "Verzoeken cascaderen door uw netwerk naar de bron",
+            "readiness": "Volg gereedheid van alle netwerkleden",
+            "evidence": "Identificeer ontbrekend bewijs direct",
+            "dds": "Stel DDS-pakketten samen voor verzending"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Waarom klanten Tracebud gebruiken",
+        "description": "Minder handmatige opvolging. Behoud herkomst via aggregatie. Verzend met vertrouwen.",
+        "cards": {
+          "gaps": {
+            "title": "Minder bewijsgaten",
+            "description": "Onboarding, bewijsverzoeken, duplicaatcontroles, lineage en DDS-voorbereiding in één verbonden systeem."
+          },
+          "provenance": {
+            "title": "Herkomst behouden",
+            "description": "Compliancebewijs gekoppeld aan echte producent-, perceel-, batch- en zendinggegevens. Geen losse bestanden."
+          },
+          "handoff": {
+            "title": "Snellere overdracht",
+            "description": "Meer vertrouwen in wat daadwerkelijk kan worden verzonden. Minder tijd zoeken naar ontbrekende data wanneer zendingen moeten bewegen."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Klaar voor EUDR, zonder de complexiteit.",
+          "subline": "Eenvoudig. Betaalbaar. Voor elke schakel in de keten."
+        },
+        "submit": "Deelnemen aan pilot",
+        "submitting": "Verzenden...",
+        "success": {
+          "title": "Aanvraag ontvangen",
+          "description": "We beoordelen elke aanvraag persoonlijk. Pilotpartners krijgen prioritaire onboarding en directe toegang tot ons compliance-team."
+        },
+        "form": {
+          "firstName": "Voornaam",
+          "lastName": "Achternaam",
+          "email": "Zakelijk e-mailadres",
+          "organisation": "Organisatie",
+          "role": "Uw rol",
+          "roleOther": "Beschrijf uw rol",
+          "commodity": "Belangrijkste grondstof",
+          "producerRange": "Hoeveel producenten hebben EUDR-naleving nodig?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Jansen",
+            "email": "maria@bedrijf.nl",
+            "organisation": "Coöperatie Sol Naciente",
+            "role": "Selecteer uw rol",
+            "roleOther": "Beschrijf uw rol",
+            "commodity": "Selecteer een grondstof",
+            "producerRange": "Selecteer een bereik"
+          },
+          "roles": {
+            "cooperative": "Coöperatie",
+            "exporter": "Exporteur",
+            "importer": "Importeur",
+            "sponsor": "Sponsor (merk, land, NGO)",
+            "other": "Overig"
+          },
+          "commodities": {
+            "coffee": "Koffie",
+            "cocoa": "Cacao",
+            "palmOil": "Palmolie",
+            "rubber": "Rubber",
+            "soy": "Soja",
+            "cattle": "Vee / Leer",
+            "wood": "Hout / Timmerhout",
+            "other": "Overig"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 producenten",
+            "r2": "51 – 200 producenten",
+            "r3": "201 – 500 producenten",
+            "r4": "501 – 2.000 producenten",
+            "r5": "2.001 – 10.000 producenten",
+            "r6": "10.000+ producenten"
+          },
+          "errors": {
+            "emailRequired": "E-mail is verplicht.",
+            "emailInvalid": "Voer een geldig e-mailadres in.",
+            "firstNameRequired": "Voornaam is verplicht.",
+            "lastNameRequired": "Achternaam is verplicht.",
+            "organisationRequired": "Organisatie is verplicht.",
+            "roleRequired": "Selecteer uw rol.",
+            "roleOtherRequired": "Beschrijf uw rol.",
+            "commodityRequired": "Selecteer een grondstof.",
+            "producerRangeRequired": "Selecteer het aantal producenten.",
+            "generic": "Er is iets misgegaan. Probeer het opnieuw."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Hoe het werkt",
+      "privacy": "Privacy",
+      "terms": "Voorwaarden",
+      "contact": "Contact",
+      "tagline": "Eenvoudigere EUDR-processen. Sterkere markttoegang."
+    },
+    "faq": {
+      "waitlistPrompt": "Klaar om op de wachtlijst te komen?",
+      "joinNow": "Nu deelnemen"
+    }
+  },
+  "it": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "Due prodotti, un unico flusso di lavoro",
+        "title": "Progettato per come funzionano davvero le catene di approvvigionamento",
+        "mobileApp": {
+          "label": "App mobile",
+          "features": {
+            "offline": "Funziona offline, si sincronizza al ritorno della connessione",
+            "gps": "Percorri il confine per acquisire il poligono GPS",
+            "photo": "Prove fotografiche e registrazione del consenso"
+          }
+        },
+        "dashboard": {
+          "label": "Dashboard",
+          "features": {
+            "import": "Importazione massiva dei contatti tramite CSV",
+            "bulkRequest": "Invia richieste a centinaia di contatti in una volta",
+            "cascade": "Le richieste si propagano nella rete fino all'origine",
+            "readiness": "Monitora la prontezza di tutta la rete",
+            "evidence": "Identifica subito le prove mancanti",
+            "dds": "Assembla pacchetti DDS per la spedizione"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Perché i clienti usano Tracebud",
+        "description": "Meno follow-up manuale. Provenienza preservata tramite aggregazione. Spedisci con fiducia.",
+        "cards": {
+          "gaps": {
+            "title": "Meno lacune nelle prove",
+            "description": "Onboarding, richieste di prove, controlli duplicati, lineage e preparazione DDS in un unico sistema connesso."
+          },
+          "provenance": {
+            "title": "Provenienza preservata",
+            "description": "Prove di conformità collegate a produttori, appezzamenti, lotti e spedizioni reali. Non file scollegati."
+          },
+          "handoff": {
+            "title": "Passaggio più rapido",
+            "description": "Più fiducia su ciò che può effettivamente essere spedito. Meno tempo a inseguire dati mancanti quando le spedizioni devono partire."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Pronti per l'EUDR, senza la complessità.",
+          "subline": "Semplice. Accessibile. Per ogni attore della catena."
+        },
+        "submit": "Partecipa al pilota",
+        "submitting": "Invio in corso...",
+        "success": {
+          "title": "Richiesta ricevuta",
+          "description": "Esaminiamo ogni richiesta personalmente. I partner pilota ricevono onboarding prioritario e accesso diretto al nostro team compliance."
+        },
+        "form": {
+          "firstName": "Nome",
+          "lastName": "Cognome",
+          "email": "Email aziendale",
+          "organisation": "Organizzazione",
+          "role": "Il tuo ruolo",
+          "roleOther": "Descrivi il tuo ruolo",
+          "commodity": "Materia prima principale",
+          "producerRange": "Quanti produttori necessitano di conformità EUDR?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Rossi",
+            "email": "maria@azienda.it",
+            "organisation": "Cooperativa Sol Naciente",
+            "role": "Seleziona il tuo ruolo",
+            "roleOther": "Descrivi il tuo ruolo",
+            "commodity": "Seleziona una materia prima",
+            "producerRange": "Seleziona un intervallo"
+          },
+          "roles": {
+            "cooperative": "Cooperativa",
+            "exporter": "Esportatore",
+            "importer": "Importatore",
+            "sponsor": "Sponsor (marchio, paese, ONG)",
+            "other": "Altro"
+          },
+          "commodities": {
+            "coffee": "Caffè",
+            "cocoa": "Cacao",
+            "palmOil": "Olio di palma",
+            "rubber": "Gomma",
+            "soy": "Soia",
+            "cattle": "Bestiame / Cuoio",
+            "wood": "Legno / Legname",
+            "other": "Altro"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 produttori",
+            "r2": "51 – 200 produttori",
+            "r3": "201 – 500 produttori",
+            "r4": "501 – 2.000 produttori",
+            "r5": "2.001 – 10.000 produttori",
+            "r6": "10.000+ produttori"
+          },
+          "errors": {
+            "emailRequired": "L'email è obbligatoria.",
+            "emailInvalid": "Inserisci un indirizzo email valido.",
+            "firstNameRequired": "Il nome è obbligatorio.",
+            "lastNameRequired": "Il cognome è obbligatorio.",
+            "organisationRequired": "L'organizzazione è obbligatoria.",
+            "roleRequired": "Seleziona il tuo ruolo.",
+            "roleOtherRequired": "Descrivi il tuo ruolo.",
+            "commodityRequired": "Seleziona una materia prima.",
+            "producerRangeRequired": "Seleziona il numero di produttori.",
+            "generic": "Qualcosa è andato storto. Riprova."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Come funziona",
+      "privacy": "Privacy",
+      "terms": "Termini",
+      "contact": "Contatto",
+      "tagline": "Operazioni EUDR più semplici. Accesso al mercato più forte."
+    },
+    "faq": {
+      "waitlistPrompt": "Pronto a unirti alla lista d'attesa?",
+      "joinNow": "Unisciti ora"
+    }
+  },
+  "am": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "ሁለት ምርቶች፣ አንድ የስራ ፍሰት",
+        "title": "የአቅርቦት ሰንሰለቶች በእውነት እንዴት እንደሚሰሩ ተነድፎ የተሰራ",
+        "mobileApp": {
+          "label": "የሞባይል መተግበር",
+          "features": {
+            "offline": "ኦፍላይን ይሰራል፣ ግንኙነት ሲመለስ ይመሳሰላል",
+            "gps": "የጂፒኤስ ብዙሕ ሐንድ ለመያዝ ወሰን ይመላለሱ",
+            "photo": "የፎቶ ማስረጃ እና የስምምነት መዝገብ"
+          }
+        },
+        "dashboard": {
+          "label": "ዳሽቦርድ",
+          "features": {
+            "import": "በCSV አጅር የኮንታክት ማስመጣት",
+            "bulkRequest": "ለብዙ መቶ ኮንታክቶች በአንድ ጊዜ ጥያቄ ላክ",
+            "cascade": "ጥያቄዎች በመረቡ ውስጥ እስከ ምንጭ ይወርዳሉ",
+            "readiness": "የመረቡን ሁሉን ዝግጁነት ይከታተሉ",
+            "evidence": "የጎደሉ ማስረጃዎችን ወዲያውኑ ይለዩ",
+            "dds": "ለመላክ የDDS ጥቅሎችን ያዘጋጁ"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "ደንበኞች Tracebud ለምን ይጠቀማሉ",
+        "description": "ያነሰ የእጅ ተከታተል። በአጠቃላይነት አበላሽነትን ይጠብቁ። በሙሉ መተማመን ይላኩ።",
+        "cards": {
+          "gaps": {
+            "title": "ያነሱ የማስረጃ ክፍተቶች",
+            "description": "መቀላቀል፣ የማስረጃ ጥያቄዎች፣ የድርባይ ማጣራት፣ የወረድ መከታተያ እና DDS ዝግጅት በአንድ የተገናኘ ስርዓት ውስጥ።"
+          },
+          "provenance": {
+            "title": "አበላሽነት የተጠበቀ",
+            "description": "የተገዥነት ማስረጃ ከእውነተኛ አቅራቢ፣ ቦታ፣ ቦታ ድርባይ እና የመላኪያ መዝገቦች ጋር የተያያዘ። የተለዩ ፋይሎች አይደሉም።"
+          },
+          "handoff": {
+            "title": "ፈጣን ማስተላለፊያ",
+            "description": "በትክክል ሊላክ የሚችለውን በተጨማሪ እምነት። መላኪያዎች ሲንቀሳቀሱ የጎደሉ ውሂብ ለመከታተል ያነሰ ጊዜ።"
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "ለEUDR ዝግጁ፣ ውስብስብነት ሳይኖር።",
+          "subline": "ቀላል። ተመጣጣኝ። በሰንሰለቱ ውስጥ ለሁሉም አካላት ተሰርቷል።"
+        },
+        "submit": "በፓይለት ይቀላቀሉ",
+        "submitting": "በመላክ ላይ...",
+        "success": {
+          "title": "ማመልከቻ ተቀበለን",
+          "description": "እያንዳንዱን ማመልከቻ በግል እንመለከተዋለን። የፓይለት አጋሮች ቅድሚያ ያለው መቀላቀል እና ቀጥታ መዳረሻ ወደ ተገዥነት ቡድናችን ያገኛሉ።"
+        },
+        "form": {
+          "firstName": "ስም",
+          "lastName": "የአባት ስም",
+          "email": "የስራ ኢሜይል",
+          "organisation": "ድርጅት",
+          "role": "የእርስዎ ሚና",
+          "roleOther": "ሚናዎን ይግለጹ",
+          "commodity": "ዋና ምርት",
+          "producerRange": "ስንት አቅራቢዎች EUDR ተገዥነት ይፈልጋሉ?",
+          "placeholders": {
+            "firstName": "ማሪያ",
+            "lastName": "ተስፋዬ",
+            "email": "maria@company.com",
+            "organisation": "የሶል ናሲየን ኮኦፐራቲቭ",
+            "role": "ሚናዎን ይምረጡ",
+            "roleOther": "ሚናዎን ይግለጹ",
+            "commodity": "ምርት ይምረጡ",
+            "producerRange": "ክልል ይምረጡ"
+          },
+          "roles": {
+            "cooperative": "ኮኦፐራቲቭ",
+            "exporter": "ላኪ",
+            "importer": "ገዢ",
+            "sponsor": "ስፖንሰር (ምርት ስም፣ ሀገር፣ NGO)",
+            "other": "ሌላ"
+          },
+          "commodities": {
+            "coffee": "ቡና",
+            "cocoa": "ኮኮዋ",
+            "palmOil": "ዘይ ቤት",
+            "rubber": "ጎማ",
+            "soy": "ሱያ",
+            "cattle": "ከብት / ቆዳ",
+            "wood": "እንጨት / ዕንጨት",
+            "other": "ሌላ"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 አቅራቢዎች",
+            "r2": "51 – 200 አቅራቢዎች",
+            "r3": "201 – 500 አቅራቢዎች",
+            "r4": "501 – 2,000 አቅራቢዎች",
+            "r5": "2,001 – 10,000 አቅራቢዎች",
+            "r6": "10,000+ አቅራቢዎች"
+          },
+          "errors": {
+            "emailRequired": "ኢሜይል ያስፈልጋል።",
+            "emailInvalid": "እባክዎ ትክክለኛ ኢሜይል ያስገቡ።",
+            "firstNameRequired": "ስም ያስፈልጋል።",
+            "lastNameRequired": "የአባት ስም ያስፈልጋል።",
+            "organisationRequired": "ድርጅት ያስፈልጋል።",
+            "roleRequired": "ሚናዎን ይምረጡ።",
+            "roleOtherRequired": "ሚናዎን ይግለጹ።",
+            "commodityRequired": "ምርት ይምረጡ።",
+            "producerRangeRequired": "የአቅራቢዎች ብዛት ይምረጡ።",
+            "generic": "ስህተት ተከስቷል። እባክዎ እንደገና ይሞክሩ።"
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "እንዴት እንደሚሰራ",
+      "privacy": "ግላዊነት",
+      "terms": "ውሎች",
+      "contact": "እውቂያ",
+      "tagline": "ቀላል የEUDR ሂደቶች። ጠንካራ የገበያ መዳረሻ።"
+    },
+    "faq": {
+      "waitlistPrompt": "ወደ የመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
+      "joinNow": "አሁን ይቀላቀሉ"
+    }
+  },
+  "no": {
+    "marketing": {
+      "productsSection": {
+        "eyebrow": "To produkter, én arbeidsflyt",
+        "title": "Bygget for hvordan forsyningskjeder faktisk fungerer",
+        "mobileApp": {
+          "label": "Mobilapp",
+          "features": {
+            "offline": "Fungerer offline, synkroniserer når tilkoblingen er tilbake",
+            "gps": "Gå langs grensen for å registrere GPS-polygon",
+            "photo": "Fotobevis og samtykkeregistrering"
+          }
+        },
+        "dashboard": {
+          "label": "Dashbord",
+          "features": {
+            "import": "Masseimport av kontakter via CSV-opplasting",
+            "bulkRequest": "Send forespørsler til hundrevis av kontakter samtidig",
+            "cascade": "Forespørsler kaskaderer gjennom nettverket til kilden",
+            "readiness": "Følg beredskap på tvers av nettverket",
+            "evidence": "Identifiser manglende bevis umiddelbart",
+            "dds": "Sett sammen DDS-pakker for forsendelse"
+          }
+        }
+      },
+      "customersSection": {
+        "headline": "Hvorfor kunder bruker Tracebud",
+        "description": "Mindre manuell oppfølging. Bevar opprinnelse gjennom aggregering. Send med trygghet.",
+        "cards": {
+          "gaps": {
+            "title": "Færre bevisgap",
+            "description": "Onboarding, bevisforespørsler, duplikatsjekker, lineage og DDS-forberedelse i ett sammenkoblet system."
+          },
+          "provenance": {
+            "title": "Opprinnelse bevart",
+            "description": "Samsvarsbevis knyttet til ekte produsent-, skifte-, batch- og forsendelsesdata. Ikke løsrevne filer."
+          },
+          "handoff": {
+            "title": "Raskere overlevering",
+            "description": "Mer tillit til hva som faktisk kan sendes. Mindre tid på å jage manglende data når forsendelser må gå."
+          }
+        }
+      },
+      "waitlistDialog": {
+        "sidePanel": {
+          "tagline": "Klar for EUDR, uten kompleksiteten.",
+          "subline": "Enkelt. Rimelig. Bygget for alle aktører i kjeden."
+        },
+        "submit": "Bli med i piloten",
+        "submitting": "Sender...",
+        "success": {
+          "title": "Søknad mottatt",
+          "description": "Vi vurderer hver søknad personlig. Pilotpartnere får prioritert onboarding og direkte tilgang til compliance-teamet vårt."
+        },
+        "form": {
+          "firstName": "Fornavn",
+          "lastName": "Etternavn",
+          "email": "Jobb-e-post",
+          "organisation": "Organisasjon",
+          "role": "Din rolle",
+          "roleOther": "Beskriv rollen din",
+          "commodity": "Hovedråvare",
+          "producerRange": "Hvor mange produsenter trenger EUDR-samsvar?",
+          "placeholders": {
+            "firstName": "Maria",
+            "lastName": "Hansen",
+            "email": "maria@firma.no",
+            "organisation": "Kooperativ Sol Naciente",
+            "role": "Velg din rolle",
+            "roleOther": "Beskriv rollen din",
+            "commodity": "Velg en råvare",
+            "producerRange": "Velg et intervall"
+          },
+          "roles": {
+            "cooperative": "Kooperativ",
+            "exporter": "Eksportør",
+            "importer": "Importør",
+            "sponsor": "Sponsor (merkevare, land, NGO)",
+            "other": "Annet"
+          },
+          "commodities": {
+            "coffee": "Kaffe",
+            "cocoa": "Kakao",
+            "palmOil": "Palmolje",
+            "rubber": "Gummi",
+            "soy": "Soya",
+            "cattle": "Fe / Lær",
+            "wood": "Tre / Tømmer",
+            "other": "Annet"
+          },
+          "producerRanges": {
+            "r1": "1 – 50 produsenter",
+            "r2": "51 – 200 produsenter",
+            "r3": "201 – 500 produsenter",
+            "r4": "501 – 2 000 produsenter",
+            "r5": "2 001 – 10 000 produsenter",
+            "r6": "10 000+ produsenter"
+          },
+          "errors": {
+            "emailRequired": "E-post er påkrevd.",
+            "emailInvalid": "Oppgi en gyldig e-postadresse.",
+            "firstNameRequired": "Fornavn er påkrevd.",
+            "lastNameRequired": "Etternavn er påkrevd.",
+            "organisationRequired": "Organisasjon er påkrevd.",
+            "roleRequired": "Velg din rolle.",
+            "roleOtherRequired": "Beskriv rollen din.",
+            "commodityRequired": "Velg en råvare.",
+            "producerRangeRequired": "Velg antall produsenter.",
+            "generic": "Noe gikk galt. Prøv igjen."
+          }
+        }
+      }
+    },
+    "footer": {
+      "howItWorks": "Slik fungerer det",
+      "privacy": "Personvern",
+      "terms": "Vilkår",
+      "contact": "Kontakt",
+      "tagline": "Enklere EUDR-prosesser. Sterkere markedstilgang."
+    },
+    "faq": {
+      "waitlistPrompt": "Klar for å bli med på ventelisten?",
+      "joinNow": "Bli med nå"
+    }
+  }
+}

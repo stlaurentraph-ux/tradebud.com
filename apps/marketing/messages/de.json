@@ -54,17 +54,17 @@
       }
     },
     "productsSection": {
-      "eyebrow": "Two products, one workflow",
-      "title": "Built for how supply chains actually work",
+      "eyebrow": "Zwei Produkte, ein Workflow",
+      "title": "Entwickelt für die Art, wie Lieferketten wirklich funktionieren",
       "mobileApp": {
-        "label": "Mobile App",
+        "label": "Mobil-App",
         "headline": "Für das Feld, nicht fürs Büro.",
         "description": "Landwirte können Flächen abgrenzen, Informationen teilen und über eine einfache mobile Erfahrung reagieren, die für reale Feldbedingungen entwickelt wurde. Sie funktioniert offline, nutzt klare visuelle Elemente und hält den Prozess leicht.",
         "supportingText": "Für Produzenten kostenlos. Kein aufwendiges Setup, keine lange Schulung.",
         "features": {
-          "offline": "Works offline, syncs when connectivity returns",
-          "gps": "Walk the boundary to capture GPS polygon",
-          "photo": "Photo evidence and consent recording"
+          "offline": "Funktioniert offline, synchronisiert bei wiederhergestellter Verbindung",
+          "gps": "Grenze abgehen, um GPS-Polygon zu erfassen",
+          "photo": "Fotonachweise und Einwilligungsaufzeichnung"
         }
       },
       "dashboard": {
@@ -73,30 +73,30 @@
         "description": "Kontakte in großen Mengen hochladen, eine Anfrage senden und den Workflow durch die gesamte Lieferkette laufen lassen. Antworten verfolgen, verifizierte Daten wiederverwenden und jede Sendung mit weniger manuellem Aufwand voranbringen.",
         "supportingText": "Weniger Nachfassen. Weniger Lücken. Schnellere Übergaben.",
         "features": {
-          "import": "Bulk import contacts via CSV upload",
-          "bulkRequest": "Send requests to hundreds of contacts at once",
-          "cascade": "Requests cascade through your network to source",
-          "readiness": "Track readiness across all network members",
-          "evidence": "Identify missing evidence instantly",
-          "dds": "Assemble DDS packages for shipment"
+          "import": "Massenimport von Kontakten per CSV-Upload",
+          "bulkRequest": "Anfragen an Hunderte von Kontakten gleichzeitig senden",
+          "cascade": "Anfragen kaskadieren durch Ihr Netzwerk bis zur Quelle",
+          "readiness": "Bereitschaft aller Netzwerkmitglieder verfolgen",
+          "evidence": "Fehlende Nachweise sofort erkennen",
+          "dds": "DDS-Pakete für den Versand zusammenstellen"
         }
       }
     },
     "customersSection": {
-      "headline": "Why customers use Tracebud",
-      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.",
+      "headline": "Warum Kunden Tracebud nutzen",
+      "description": "Weniger manuelles Nachfassen. Herkunft durch Aggregation bewahren. Mit Vertrauen versenden.",
       "cards": {
         "gaps": {
-          "title": "Fewer proof gaps",
-          "description": "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system."
+          "title": "Weniger Nachweislücken",
+          "description": "Onboarding, Nachweisanfragen, Duplikatprüfungen, Lineage und DDS-Vorbereitung in einem verbundenen System."
         },
         "provenance": {
-          "title": "Provenance preserved",
-          "description": "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files."
+          "title": "Herkunft bewahrt",
+          "description": "Compliance-Nachweise verknüpft mit echten Produzenten-, Flächen-, Chargen- und Versanddaten. Keine lose Dateien."
         },
         "handoff": {
-          "title": "Faster handoff",
-          "description": "More confidence in what can actually ship. Less time chasing missing data when shipments need to move."
+          "title": "Schnellere Übergabe",
+          "description": "Mehr Vertrauen in das, was tatsächlich versendet werden kann. Weniger Zeit mit fehlenden Daten, wenn Sendungen laufen müssen."
         }
       }
     },
@@ -124,70 +124,70 @@
       "description": "Begrenzte Plätze für frühe Pilotpartner. Erzählen Sie uns von Ihrem Netzwerk und wir melden uns.",
       "note": "Kein Spam. Jederzeit abmelden.",
       "sidePanel": {
-        "tagline": "Be ready for EUDR, without the complexity.",
-        "subline": "Simple. Affordable. Built for every actor in the chain."
+        "tagline": "Bereit für EUDR, ohne die Komplexität.",
+        "subline": "Einfach. Erschwinglich. Für jeden Akteur in der Kette."
       },
-      "submit": "Join the pilot",
-      "submitting": "Submitting...",
+      "submit": "Am Pilot teilnehmen",
+      "submitting": "Wird gesendet...",
       "success": {
-        "title": "Application received",
-        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+        "title": "Anfrage erhalten",
+        "description": "Wir prüfen jede Anfrage persönlich. Pilotpartner erhalten priorisiertes Onboarding und direkten Zugang zu unserem Compliance-Team."
       },
       "form": {
-        "firstName": "First name",
-        "lastName": "Last name",
-        "email": "Work email",
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "email": "Geschäftliche E-Mail",
         "organisation": "Organisation",
-        "role": "Your role",
-        "roleOther": "Please describe your role",
-        "commodity": "Main commodity",
-        "producerRange": "How many producers need EUDR compliance?",
+        "role": "Ihre Rolle",
+        "roleOther": "Bitte beschreiben Sie Ihre Rolle",
+        "commodity": "Hauptrohstoff",
+        "producerRange": "Wie viele Produzenten benötigen EUDR-Compliance?",
         "placeholders": {
           "firstName": "Maria",
-          "lastName": "Gonzalez",
-          "email": "maria@company.com",
-          "organisation": "Cooperative Sol Naciente",
-          "role": "Select your role",
-          "roleOther": "Please describe your role",
-          "commodity": "Select a commodity",
-          "producerRange": "Select a range"
+          "lastName": "Müller",
+          "email": "maria@unternehmen.de",
+          "organisation": "Kooperative Sol Naciente",
+          "role": "Rolle auswählen",
+          "roleOther": "Bitte beschreiben Sie Ihre Rolle",
+          "commodity": "Rohstoff auswählen",
+          "producerRange": "Bereich auswählen"
         },
         "roles": {
-          "cooperative": "Cooperative",
-          "exporter": "Exporter",
-          "importer": "Importer",
-          "sponsor": "Sponsor (brand, country, NGO)",
-          "other": "Other"
+          "cooperative": "Kooperative",
+          "exporter": "Exporteur",
+          "importer": "Importeur",
+          "sponsor": "Sponsor (Marke, Land, NGO)",
+          "other": "Sonstiges"
         },
         "commodities": {
-          "coffee": "Coffee",
-          "cocoa": "Cocoa",
-          "palmOil": "Palm Oil",
-          "rubber": "Rubber",
-          "soy": "Soy",
-          "cattle": "Cattle / Leather",
-          "wood": "Wood / Timber",
-          "other": "Other"
+          "coffee": "Kaffee",
+          "cocoa": "Kakao",
+          "palmOil": "Palmöl",
+          "rubber": "Kautschuk",
+          "soy": "Soja",
+          "cattle": "Rinder / Leder",
+          "wood": "Holz / Holzprodukte",
+          "other": "Sonstiges"
         },
         "producerRanges": {
-          "r1": "1 – 50 producers",
-          "r2": "51 – 200 producers",
-          "r3": "201 – 500 producers",
-          "r4": "501 – 2,000 producers",
-          "r5": "2,001 – 10,000 producers",
-          "r6": "10,000+ producers"
+          "r1": "1 – 50 Produzenten",
+          "r2": "51 – 200 Produzenten",
+          "r3": "201 – 500 Produzenten",
+          "r4": "501 – 2.000 Produzenten",
+          "r5": "2.001 – 10.000 Produzenten",
+          "r6": "10.000+ Produzenten"
         },
         "errors": {
-          "emailRequired": "Email is required.",
-          "emailInvalid": "Please enter a valid email address.",
-          "firstNameRequired": "First name is required.",
-          "lastNameRequired": "Last name is required.",
-          "organisationRequired": "Organization is required.",
-          "roleRequired": "Please select your role.",
-          "roleOtherRequired": "Please describe your role.",
-          "commodityRequired": "Please select a commodity.",
-          "producerRangeRequired": "Please select the number of producers.",
-          "generic": "Something went wrong. Please try again."
+          "emailRequired": "E-Mail ist erforderlich.",
+          "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+          "firstNameRequired": "Vorname ist erforderlich.",
+          "lastNameRequired": "Nachname ist erforderlich.",
+          "organisationRequired": "Organisation ist erforderlich.",
+          "roleRequired": "Bitte wählen Sie Ihre Rolle.",
+          "roleOtherRequired": "Bitte beschreiben Sie Ihre Rolle.",
+          "commodityRequired": "Bitte wählen Sie einen Rohstoff.",
+          "producerRangeRequired": "Bitte wählen Sie die Anzahl der Produzenten.",
+          "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
         }
       }
     }
@@ -246,7 +246,12 @@
   "footer": {
     "startMapping": "Kartierung starten",
     "contactSales": "Vertrieb kontaktieren",
-    "joinWaitlist": "Zur Warteliste hinzufügen"
+    "joinWaitlist": "Zur Warteliste hinzufügen",
+    "howItWorks": "So funktioniert es",
+    "privacy": "Datenschutz",
+    "terms": "AGB",
+    "contact": "Kontakt",
+    "tagline": "Einfachere EUDR-Abläufe. Stärkerer Marktzugang."
   },
   "impact": {
     "title": "Warum Tracebud funktioniert",
@@ -287,6 +292,8 @@
     "howLong": "Wie lange dauert die Einrichtung?",
     "howLongAnswer": "Die meisten Genossenschaften sind innerhalb von 48 Stunden nach der Anmeldung kartiert und betriebsbereit. Ein Offline-first-Design bedeutet Null Ausfallzeit.",
     "support": "Welcher Support ist verfügbar?",
-    "supportAnswer": "24/7-Email-Support plus vorrangiger Telefonsupport für Pilotpartner. Direkter Zugang zu unserem Compliance-Team."
+    "supportAnswer": "24/7-Email-Support plus vorrangiger Telefonsupport für Pilotpartner. Direkter Zugang zu unserem Compliance-Team.",
+    "waitlistPrompt": "Bereit für die Warteliste?",
+    "joinNow": "Jetzt beitreten"
   }
 }
