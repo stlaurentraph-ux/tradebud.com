@@ -130,9 +130,9 @@
       "countries": "Land"
     },
     "nav": {
-      "pilot": "Pilot",
       "howItWorks": "Hvordan det fungerer",
-      "pricing": "Priser"
+      "whyTracebud": "Hvorfor Tracebud",
+      "faq": "FAQ"
     },
     "cta": {
       "downloadApp": "Last ned app",
