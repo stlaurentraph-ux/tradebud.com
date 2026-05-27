@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { getMessages } from 'next-intl/server'
 import { NextIntlClientProvider } from 'next-intl'
 import { Analytics } from '@vercel/analytics/next'
-import { locales } from '@/i18n.config'
+import { isLocale, locales } from '@/i18n.config'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -148,13 +148,21 @@ export default async function RootLayout({
   const { locale } = await params
   
   // Locale validation moved to [locale]/layout.tsx
-  const validLocale = locales.includes(locale as any) ? locale : 'en'
+  const validLocale = isLocale(locale) ? locale : 'en'
 
   const messages = await getMessages()
 
   return (
     <html lang={validLocale} className="bg-background">
       <body className="font-sans antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
         <NextIntlClientProvider messages={messages}>
           <a href="#main-content" className="skip-to-content">
             Skip to content

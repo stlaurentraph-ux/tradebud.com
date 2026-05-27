@@ -1,19 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Share2, Calendar, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function ThankYouPage() {
-  const [email, setEmail] = useState('');
-
-  useEffect(() => {
-    // Get email from URL params
-    const params = new URLSearchParams(window.location.search);
-    setEmail(params.get('email') || '');
-  }, []);
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') || '';
 
   const handleShare = (platform: string) => {
     const text = encodeURIComponent('I just joined Tracebud to access EU markets with full supply chain traceability. Join me!');

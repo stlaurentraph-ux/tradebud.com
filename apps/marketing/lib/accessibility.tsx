@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 /**
  * Accessibility utility functions and constants
  */
@@ -52,7 +54,7 @@ export const a11yLabels = {
 /**
  * Add ARIA-live region for dynamic content updates
  */
-export function AriaLive({ children, polite = true }: { children: React.ReactNode; polite?: boolean }) {
+export function AriaLive({ children, polite = true }: { children: ReactNode; polite?: boolean }) {
   return (
     <div
       aria-live={polite ? 'polite' : 'assertive'}
@@ -67,7 +69,7 @@ export function AriaLive({ children, polite = true }: { children: React.ReactNod
 /**
  * Generate screen-reader friendly heading structure
  */
-export function HeadingWithSkipLink({ level = 1, children }: { level?: 1 | 2 | 3 | 4 | 5 | 6; children: React.ReactNode }) {
+export function HeadingWithSkipLink({ level = 1, children }: { level?: 1 | 2 | 3 | 4 | 5 | 6; children: ReactNode }) {
   const Tag = `h${level}` as const
   return <Tag>{children}</Tag>
 }

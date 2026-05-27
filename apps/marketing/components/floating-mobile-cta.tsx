@@ -8,15 +8,11 @@ import { ChevronUp } from 'lucide-react';
 
 export function FloatingMobileCTA() {
   const [isVisible, setIsVisible] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const waitlist = useWaitlistDialog();
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show after scrolling 300px
-      const scrollTop = window.scrollY;
-      setScrolled(scrollTop > 300);
-      setIsVisible(scrollTop > 300);
+      setIsVisible(window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);

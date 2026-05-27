@@ -5,8 +5,6 @@ import { useRef } from "react";
 import {
   Upload,
   CheckCircle2,
-  UserPlus,
-  Inbox,
   MapPin,
   Shield,
   Package,
@@ -15,13 +13,9 @@ import {
   User,
   WifiOff,
   Home,
-  TreeDeciduous,
-  Scale,
-  Settings,
   Clock,
   Globe,
   FileText,
-  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -136,21 +130,6 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       <div className="flex h-[260px]">{children}</div>
-    </div>
-  );
-}
-
-// Phone frame matching the actual offline app
-function PhoneFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative w-[180px] mx-auto">
-      <div className="bg-slate-900 rounded-[2rem] p-1.5 shadow-xl">
-        <div className="bg-slate-950 rounded-[1.75rem] overflow-hidden relative">
-          {/* Dynamic Island */}
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-14 h-4 bg-black rounded-full z-20" />
-          <div className="bg-stone-50 min-h-[340px] flex flex-col">{children}</div>
-        </div>
-      </div>
     </div>
   );
 }

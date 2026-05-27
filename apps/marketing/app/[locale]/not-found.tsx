@@ -1,13 +1,10 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Home, ArrowRight } from 'lucide-react'
 
 export default function NotFound() {
-  const t = useTranslations('common')
-
   return (
     <div className="min-h-screen flex items-center justify-center px-6 py-12 bg-gradient-to-br from-[var(--forest-canopy)] to-[var(--forest-light)]">
       <div className="max-w-md text-center">

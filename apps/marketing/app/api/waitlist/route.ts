@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     // Example: await sendWaitlistConfirmation({ email, first_name, organisation })
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }
