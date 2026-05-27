@@ -117,10 +117,9 @@ export function Header() {
             onClick={() => setIsMobileMenuOpen((previous) => !previous)}
             aria-label="Toggle mobile menu"
           >
-            {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
-      </motion.header>
 
       <AnimatePresence>
         {isMobileMenuOpen && (
@@ -153,8 +152,8 @@ export function Header() {
                   <Link
                     key={link.label}
                     href={resolvedHref(link.href)}
-                    className="block text-base font-semibold text-white hover:text-[var(--data-emerald)] transition-colors mb-2"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="block text-base font-semibold text-white hover:text-[var(--data-emerald)] py-2"
                   >
                     {link.label}
                   </Link>
@@ -177,6 +176,7 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+      </motion.header>
 
       <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>

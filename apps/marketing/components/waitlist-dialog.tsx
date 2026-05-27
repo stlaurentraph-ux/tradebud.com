@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -87,10 +89,10 @@ function SuccessState() {
       <AnimatedCheckmark />
       <div className="flex flex-col gap-2">
         <h3 className="text-2xl font-bold text-[var(--forest-canopy)]">
-          {"You're on the list."}
+          {"Application received"}
         </h3>
         <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-          {"We'll be in touch as soon as Tracebud is ready for you. Early adopters get priority support and onboarding."}
+          {"We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."}
         </p>
       </div>
     </div>
@@ -105,6 +107,7 @@ export function WaitlistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("marketing");
   const [submitted, setSubmitted] = useState(false);
   const [role, setRole] = useState("");
   const [roleOther, setRoleOther] = useState("");
@@ -227,7 +230,33 @@ export function WaitlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-border/60 bg-background p-0 sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-border/60 bg-background p-0 sm:max-w-2xl flex flex-col sm:flex-row">
+        {/* Left: Image panel — hidden on mobile */}
+        <div className="relative hidden sm:block w-[38%] flex-shrink-0 self-stretch">
+          <Image
+            src="/images/supply-chain-flow.jpg"
+            alt="Coffee plantation aerial view"
+            fill
+            className="object-cover"
+          />
+          {/* Forest overlay for text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/40 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/80" />
+          {/* Pinned content */}
+          <div className="absolute inset-0 flex flex-col justify-between p-7">
+            <p className="text-white/90 text-sm font-semibold tracking-wide uppercase">Tracebud</p>
+            <div>
+              <p className="text-white font-bold text-lg leading-snug mb-2">
+                Be ready for EUDR, without the complexity.
+              </p>
+              <p className="text-white/70 text-xs leading-relaxed">
+                Simple. Affordable. Built for every actor in the chain.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Form */}
+        <div className="flex-1 overflow-y-auto">
         {submitted ? (
           <div className="p-8">
             <SuccessState />
@@ -236,10 +265,10 @@ export function WaitlistDialog({
           <div className="p-6 sm:p-8">
             <DialogHeader className="gap-2 pb-5">
               <DialogTitle className="text-2xl font-bold text-[var(--forest-canopy)]">
-                Join the waitlist
+                {t("waitlistDialog.headline")}
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                Be among the first to access Tracebud. Early adopters receive priority support and onboarding from our team.
+                {t("waitlistDialog.description")}
               </DialogDescription>
             </DialogHeader>
 
@@ -344,7 +373,7 @@ export function WaitlistDialog({
 
               {/* Number of producers */}
               <div className="flex flex-col gap-1.5">
-                <Label>Number of producers to make comply</Label>
+                <Label>How many producers need EUDR compliance?</Label>
                 <Select required value={producerRange} onValueChange={setProducerRange}>
                   <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
                     <SelectValue placeholder="Select a range" />
@@ -373,18 +402,19 @@ export function WaitlistDialog({
                   </>
                 ) : (
                   <>
-                    Join the waitlist
+                    Join the pilot
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </>
                 )}
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                No spam, ever. Unsubscribe at any time.
+                {t("waitlistDialog.note")}
               </p>
             </form>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

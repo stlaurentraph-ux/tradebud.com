@@ -1,4 +1,95 @@
 {
+  "marketing": {
+    "hero": {
+      "headline": "La tracciabilità che funziona per tutta la filiera.",
+      "subheadline": "Tracebud semplifica la conformità EUDR con uno strumento semplice, autonomo e accessibile, così agricoltori, cooperative, esportatori e acquirenti possono raccogliere, condividere e riutilizzare i dati di origine senza inseguire documenti.",
+      "supportingText": "Gratis per i produttori. Pensato per le realtà sul campo, con connettività limitata e flussi semplici. Nessun consulente necessario.",
+      "cta": {
+        "primary": "Scopri come funziona",
+        "secondary": "Contattaci"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "La conformità non dovrebbe essere complicata per essere credibile.",
+      "description": "La maggior parte delle filiere non fallisce perché le persone non ci tengono. Fallisce perché il processo è troppo manuale, troppo costoso e troppo frammentato. Tracebud elimina il continuo andare avanti e indietro, così ogni attore può partecipare, anche quando la rete è grande, distribuita o con risorse limitate.",
+      "pillars": {
+        "simple": {
+          "title": "Semplice",
+          "description": "Una piattaforma. Un flusso di lavoro. Un'unica fonte di verità."
+        },
+        "automated": {
+          "title": "Automatizzato",
+          "description": "Le richieste si muovono automaticamente nella rete, così la prova arriva più velocemente alla fonte."
+        },
+        "inclusive": {
+          "title": "Inclusivo",
+          "description": "Gli agricoltori possono partecipare direttamente, anche con accesso digitale limitato, dispositivi condivisi o segnale instabile."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Dalla prima richiesta alla prova riutilizzabile.",
+      "subtitle": "Quattro passaggi. Nessuna complessità.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Aggiungi la tua rete",
+          "description": "Un contatto o cinquecento. Carica un CSV o aggiungili manualmente."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Invia una richiesta",
+          "description": "Scorre automaticamente lungo la filiera. Senza rincorrere nessuno."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Raccogli i dati di origine",
+          "description": "Registrali una volta e riutilizzali per più spedizioni e acquirenti."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Mantieni tutti allineati",
+          "description": "Tieni tutti sulla stessa pagina con un flusso di lavoro digitale condiviso."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Pensata per il campo, non per l'ufficio.",
+        "description": "Gli agricoltori possono mappare i confini, condividere informazioni e rispondere da un'esperienza mobile semplice, progettata per le condizioni reali del campo. Funziona offline, usa elementi visivi chiari e mantiene il processo leggero.",
+        "supportingText": "Gratis per i produttori. Nessuna configurazione pesante o formazione lunga."
+      },
+      "dashboard": {
+        "headline": "Gestisci la tua rete senza continui scambi.",
+        "description": "Carica i contatti in blocco, invia una richiesta e lascia che il flusso di lavoro attraversi l'intera filiera. Monitora le risposte, riutilizza i dati verificati e fai avanzare ogni spedizione con meno lavoro manuale.",
+        "supportingText": "Meno rincorse. Meno lacune. Consegne più rapide."
+      }
+    },
+    "inclusionSection": {
+      "headline": "La conformità non deve lasciare indietro i piccoli agricoltori.",
+      "description": "Le grandi aziende possono acquistare sistemi complessi. I piccoli agricoltori non dovrebbero essere esclusi perché gli strumenti sono troppo costosi, troppo tecnici o troppo lenti. Tracebud mantiene ogni attore visibile, connesso e pronto per il mercato.",
+      "punchline": "Eliminiamo le barriere di accesso che per anni hanno lasciato fuori i piccoli agricoltori."
+    },
+    "finalCtaSection": {
+      "headline": "Rendere la conformità utilizzabile per tutta la filiera.",
+      "description": "Inizia con la rete che hai già e dai a ogni attore un modo per partecipare.",
+      "cta": "Inizia"
+    },
+    "exitIntentModal": {
+      "headline": "Pronto a unirti alla lista d'attesa?",
+      "description": "Tracebud aiuta la tua rete a raccogliere, condividere e riutilizzare i dati di origine. È semplice, accessibile e inclusivo per agricoltori, cooperative, esportatori e acquirenti.",
+      "cta": {
+        "primary": "Unisciti ora",
+        "secondary": "Continua a navigare"
+      },
+      "note": "Posti limitati per i primi partner pilota."
+    },
+    "waitlistDialog": {
+      "headline": "Unisciti al programma pilota",
+      "description": "Posti limitati per i primi partner pilota. Raccontaci della tua rete e ti ricontatteremo.",
+      "note": "Niente spam. Cancellati in qualsiasi momento."
+    }
+  },
   "common": {
     "language": "Lingua",
     "joinWaitlist": "Iscriviti alla lista d'attesa",
@@ -10,10 +101,22 @@
     "headline1": "Commercia liberamente.",
     "headline2": "Traccia facilmente.",
     "subheadline": "L'accesso al mercato dell'UE reso semplice. Tracciabilità completa della catena di approvvigionamento in giorni, non in mesi.",
-    "metric1": { "value": "Giorni", "label": "Non mesi per la conformità" },
-    "metric2": { "value": "Catena completa", "label": "Fattoria a porto verificato" },
-    "metric3": { "value": "Self-service", "label": "Nessuna integrazione richiesta" },
-    "cta": { "startTrial": "Iscriviti alla lista d'attesa", "bookDemo": "Scopri di più" },
+    "metric1": {
+      "value": "Giorni",
+      "label": "Non mesi per la conformità"
+    },
+    "metric2": {
+      "value": "Catena completa",
+      "label": "Fattoria a porto verificato"
+    },
+    "metric3": {
+      "value": "Self-service",
+      "label": "Nessuna integrazione richiesta"
+    },
+    "cta": {
+      "startTrial": "Iscriviti alla lista d'attesa",
+      "bookDemo": "Scopri di più"
+    },
     "trialInfo": "30 giorni gratis. Nessuna carta di credito richiesta.",
     "earlyAdopters": "I primi utenti ricevono il supporto prioritario",
     "seeHowItWorks": "Vedi come funziona"
@@ -47,10 +150,22 @@
     "title": "Perché Tracebud funziona",
     "subtitle": "Costruito da zero per la trasparenza della catena di approvvigionamento nei mercati regolamentati. Semplice da usare, costruito per scalare.",
     "features": {
-      "compliance": { "title": "Conformità EUDR", "description": "Costruito per rispettare i regolamenti di dicembre 2026" },
-      "farmer": { "title": "Agricoltore prima", "description": "L'app per smartphone funziona offline sul campo" },
-      "tracing": { "title": "Tracciamento in tempo reale", "description": "GPS, foto, timestamp, record immutabili" },
-      "global": { "title": "Pronto per il globo", "description": "Integrazione TRACES NT e supporto multilingue" }
+      "compliance": {
+        "title": "Conformità EUDR",
+        "description": "Costruito per rispettare i regolamenti di dicembre 2026"
+      },
+      "farmer": {
+        "title": "Agricoltore prima",
+        "description": "L'app per smartphone funziona offline sul campo"
+      },
+      "tracing": {
+        "title": "Tracciamento in tempo reale",
+        "description": "GPS, foto, timestamp, record immutabili"
+      },
+      "global": {
+        "title": "Pronto per il globo",
+        "description": "Integrazione TRACES NT e supporto multilingue"
+      }
     },
     "useCases": "I primi piloti stanno già usando Tracebud per:"
   },

@@ -9,7 +9,7 @@ import { useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const faqItems = [
   { key: "whenLaunch", question: "whenLaunch", answer: "whenLaunchAnswer" },
-  { key: "whyCommodities", question: "whyCommodities", answer: "whoCommoditiesAnswer" },
+  { key: "whyCommodities", question: "whyCommodities", answer: "whyCommoditiesAnswer" },
   { key: "howCost", question: "howCost", answer: "howCostAnswer" },
   { key: "howLong", question: "howLong", answer: "howLongAnswer" },
   { key: "support", question: "support", answer: "supportAnswer" },

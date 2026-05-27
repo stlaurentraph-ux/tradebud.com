@@ -83,10 +83,10 @@ export function Comparison() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight">
-            Regulatory Compliance
+            Proof Starts Where Connectivity Ends
           </h2>
           <p className="text-white/90 text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-            Built from the ground up to meet EU regulatory requirements with direct system integrations.
+            Offline-first origin data becomes buyer-ready compliance proof. Direct EUDR, CSRD, and ILO integrations turn field work into audit-ready evidence.
           </p>
         </motion.div>
 

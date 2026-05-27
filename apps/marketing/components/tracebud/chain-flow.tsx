@@ -39,13 +39,13 @@ export function ChainFlow() {
           className="text-center mb-16"
         >
           <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]">
-            Decentralized Compliance Network
+            How proof moves
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance">
-            Any actor. Any direction.
+            Requests come. Proof goes back.
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto text-balance">
-            Upload contacts. Send requests or data. Whether you&apos;re a producer, cooperative, exporter, or importer—Tracebud routes it where it needs to go. Everyone gets verified.
+            Buyers ask for proof. Farmers map their field once. That proof moves back up the chain to every buyer who needs it. No re-doing work. No spreadsheets.
           </p>
         </motion.div>
 

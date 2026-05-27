@@ -23,70 +23,71 @@ import {
   FileText,
   AlertCircle,
 } from "lucide-react";
+import Image from "next/image";
 
 const steps = [
   {
     id: 1,
-    actor: "Importer",
+    actor: "You (Importer/Buyer)",
     actorColor: "#3B82F6",
-    title: "Sign Up & Access Dashboard",
-    description: "Create your account in minutes. Your compliance command center awaits.",
+    title: "Ask for proof",
+    description: "You need proof your suppliers are compliant. Send one request to your whole supply chain.",
     screen: "dashboard-empty",
   },
   {
     id: 2,
-    actor: "Importer",
-    actorColor: "#3B82F6",
-    title: "Upload Suppliers & Send Requests",
-    description: "Import your supplier CSV. Send templated EUDR compliance requests with one click.",
+    actor: "Your Exporters",
+    actorColor: "#D97706",
+    title: "Forward to farmers",
+    description: "They get your request and forward it upstream to the farmers they work with.",
     screen: "csv-upload",
   },
   {
     id: 3,
-    actor: "Exporter",
-    actorColor: "#D97706",
-    title: "Receive & Forward Upstream",
-    description: "Request lands in your inbox. Review and forward to your cooperative partners.",
+    actor: "Cooperatives",
+    actorColor: "#059669",
+    title: "Organize their members",
+    description: "The cooperative receives it and asks their 500 farmers to map their plots.",
     screen: "inbox-exporter",
   },
   {
     id: 4,
-    actor: "Cooperative",
-    actorColor: "#059669",
-    title: "Assign to Producers",
-    description: "Break down the request. Assign evidence collection tasks to member farmers.",
-    screen: "inbox-coop",
-  },
-  {
-    id: 5,
-    actor: "Producer",
+    actor: "Farmers",
     actorColor: "#064E3B",
-    title: "Walk Plot & Capture Evidence",
-    description: "Download the app (works offline). Walk your boundary to capture GPS polygon + photos.",
+    title: "Map once. Done.",
+    description: "Each farmer walks their field boundary, takes photos. Takes 20 minutes. Works offline.",
     screen: "mobile-app",
   },
   {
-    id: 6,
-    actor: "Cooperative",
+    id: 5,
+    actor: "Proof Moves Back Up",
     actorColor: "#059669",
-    title: "Evidence Verified Automatically",
-    description: "Evidence rolls up from all members. Satellite deforestation check runs automatically.",
+    title: "Proof rolls up automatically",
+    description: "All 500 farmer proofs roll up into one verified package. No spreadsheets. No manual work.",
     screen: "coop-dashboard",
   },
   {
-    id: 7,
-    actor: "Exporter",
+    id: 6,
+    actor: "Your Exporters",
     actorColor: "#D97706",
-    title: "Package Ready to Ship",
-    description: "Complete evidence chain with full audit trail. Identity-preserving batch ready.",
+    title: "Ready to ship",
+    description: "Exporters bundle it into buyer-ready documents. No questions. No delays.",
     screen: "exporter-dashboard",
   },
   {
-    id: 8,
-    actor: "Importer",
+    id: 7,
+    actor: "You Approve",
     actorColor: "#3B82F6",
-    title: "EUDR Verified & Ready",
-    description: "Full DDS package received. Complete chain verified. Submit to EU with confidence.",
+    title: "Proof arrives",
+    description: "You see full upstream proof. Audit-ready. No surprises.",
+    screen: "importer-verified",
+  },
+  {
+    id: 8,
+    actor: "You ship",
+    actorColor: "#059669",
+    title: "Customs approves",
+    description: "You send to EU customs. They see proof. They approve. You move product.",
     screen: "importer-verified",
   },
 ];
@@ -289,80 +290,30 @@ function InboxCoopScreen() {
   );
 }
 
-// Screen: Mobile App (Producer)
+// Screen: Mobile App (Producer) - using real screenshot
 function MobileAppScreen() {
   return (
-    <PhoneFrame>
-      {/* Status bar */}
-      <div className="bg-emerald-700 pt-6 pb-1 px-3 flex items-center justify-between">
-        <span className="text-white text-[9px] font-medium">9:41</span>
-        <div className="flex items-center gap-1 bg-amber-500/30 px-1.5 py-0.5 rounded-full">
-          <WifiOff className="w-2.5 h-2.5 text-amber-300" />
-          <span className="text-amber-300 text-[8px] font-semibold">Offline</span>
-        </div>
-      </div>
-      {/* Header */}
-      <div className="bg-emerald-700 px-3 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-            <User className="w-3 h-3 text-white" />
-          </div>
-          <div>
-            <p className="text-white text-[9px] font-semibold">Maria Santos</p>
-            <p className="text-emerald-200 text-[8px]">Honduras</p>
+    <div className="relative w-[180px] mx-auto">
+      <div className="bg-slate-900 rounded-[2rem] p-1.5 shadow-xl">
+        <div className="bg-slate-950 rounded-[1.75rem] overflow-hidden relative">
+          {/* Dynamic Island */}
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 w-14 h-4 bg-black rounded-full z-20" />
+          <div className="relative h-[340px]">
+            <Image
+              src="/images/farmer-app-homepage.png"
+              alt="Tracebud Farmer App"
+              fill
+              className="object-cover object-top"
+            />
           </div>
         </div>
       </div>
-      {/* Content */}
-      <div className="flex-1 p-2.5 bg-stone-50">
-        <div className="bg-white rounded-lg border border-gray-200 p-2 mb-2">
-          <p className="text-[9px] font-semibold text-gray-900 mb-1">Recording Boundary</p>
-          <div className="h-20 bg-emerald-50 rounded relative overflow-hidden">
-            <svg className="w-full h-full" viewBox="0 0 160 80">
-              <polygon
-                points="20,60 50,15 110,20 140,55 100,70 40,68"
-                fill="rgba(16, 185, 129, 0.2)"
-                stroke="#10B981"
-                strokeWidth="2"
-              />
-              {[[20,60], [50,15], [110,20], [140,55], [100,70], [40,68]].map(([x, y], i) => (
-                <circle key={i} cx={x} cy={y} r="4" fill="#10B981" />
-              ))}
-            </svg>
-            <div className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[7px] px-1 py-0.5 rounded font-medium">
-              6 waypoints
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-1.5">
-          <button className="flex-1 bg-red-500 text-white text-[9px] font-medium py-1.5 rounded-lg flex items-center justify-center gap-1">
-            <div className="w-2 h-2 bg-white rounded-sm" />
-            Stop
-          </button>
-          <button className="flex-1 bg-emerald-600 text-white text-[9px] font-medium py-1.5 rounded-lg">
-            Add Photo
-          </button>
-        </div>
+      {/* Offline badge */}
+      <div className="absolute -right-2 top-8 bg-amber-500 text-white text-[8px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+        <WifiOff className="w-2.5 h-2.5" />
+        Offline
       </div>
-      {/* Tab bar */}
-      <div className="bg-white border-t border-gray-200 px-2 pb-4 pt-1.5">
-        <div className="flex justify-around">
-          {[
-            { icon: Home, label: "Home", active: false },
-            { icon: TreeDeciduous, label: "Plots", active: true },
-            { icon: Scale, label: "Harvests", active: false },
-            { icon: Settings, label: "Settings", active: false },
-          ].map((tab) => (
-            <div key={tab.label} className="flex flex-col items-center gap-0.5">
-              <tab.icon className={`w-4 h-4 ${tab.active ? "text-emerald-600" : "text-gray-400"}`} />
-              <span className={`text-[7px] ${tab.active ? "text-emerald-600 font-medium" : "text-gray-400"}`}>
-                {tab.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </PhoneFrame>
+    </div>
   );
 }
 
@@ -562,11 +513,11 @@ export function WorkflowDemo() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]">
+          <div className="text-sm font-semibold tracking-widest uppercase mb-3 text-[var(--data-emerald)]" id="how-it-works">
             See It In Action
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-[var(--forest-canopy)] mb-4 text-balance">
-            From Request to EUDR Verified
+            Built for how supply chains actually work
           </h2>
           <p className="text-gray-600 max-w-xl mx-auto">
             Follow the complete journey as compliance requests cascade upstream—and verified evidence flows back.

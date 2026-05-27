@@ -72,7 +72,22 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-foreground mb-4">Security of Data</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-4">Your Data Ownership</h2>
+            <p className="text-muted-foreground text-lg leading-relaxed mb-4">
+              This is simple: your data is yours. Always.
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+              <li><strong>Farmers own their farm data.</strong> The plots, photos, and GPS coordinates you map belong to you. You can download it anytime, in any format.</li>
+              <li><strong>Cooperatives own member data.</strong> Tracebud is a tool you use to organize and manage it. If you leave, you take the data with you.</li>
+              <li><strong>Exporters own shipment records.</strong> Your batch data, DDS documents, and compliance records stay yours. We never sell it, rent it, or share it with anyone else.</li>
+              <li><strong>Importers own supplier records.</strong> Your upstream visibility and audit trails are confidential. Your competitors never see them.</li>
+            </ul>
+            <p className="text-muted-foreground text-lg leading-relaxed mt-4">
+              We are not a data broker. Tracebud makes money when you use it. Not when we sell data. You can trust that.
+            </p>
+          </section>
+
+          <section>
             <p className="text-muted-foreground text-lg leading-relaxed">
               The security of your data is important to us, but remember that no method of transmission over the Internet or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your Personal Data, we cannot guarantee its absolute security.
             </p>
