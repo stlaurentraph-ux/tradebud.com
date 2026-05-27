@@ -1,50 +1,55 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Mail, Linkedin, Twitter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { locales, type Locale } from "@/i18n.config";
+
+function isHomePath(pathname: string) {
+  if (pathname === "/") return true;
+  const segment = pathname.split("/").filter(Boolean)[0];
+  return segment !== undefined && locales.includes(segment as Locale) && pathname.split("/").filter(Boolean).length === 1;
+}
 
 export function Footer() {
+  const t = useTranslations("footer");
+  const locale = useLocale();
+  const pathname = usePathname();
+  const homePath = `/${locale}`;
   const waitlist = useWaitlistDialog();
+
+  const resolvedHref = (hash: string) => (isHomePath(pathname) ? hash : `${homePath}${hash}`);
 
   return (
     <>
-      {/* Footer */}
       <footer className="bg-[var(--warm-stone)] py-12 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3">
+            <Link href={homePath} className="flex items-center gap-3">
               <div className="relative w-10 h-10">
-                <Image
-                  src="/images/tracebud-logo.png"
-                  alt="Tracebud"
-                  fill
-                  className="object-contain"
-                />
+                <Image src="/images/tracebud-logo.png" alt="Tracebud" fill className="object-contain" />
               </div>
               <span className="text-xl font-bold text-[var(--forest-canopy)]">Tracebud</span>
             </Link>
 
-            {/* Links */}
             <div className="flex flex-wrap gap-8">
-              <Link href="#how-it-works" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
-                How It Works
+              <Link href={resolvedHref("#how-it-works")} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                {t("howItWorks")}
               </Link>
-              <Link href="/privacy" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
-                Privacy
+              <Link href={`/${locale}/privacy`} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                {t("privacy")}
               </Link>
-              <Link href="/terms" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
-                Terms
+              <Link href={`/${locale}/terms`} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                {t("terms")}
               </Link>
               <a href="mailto:hello@tracebud.com" className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
-                Contact
+                {t("contact")}
               </a>
             </div>
 
-            {/* Social */}
             <div className="flex items-center gap-4">
               <a
                 href="mailto:hello@tracebud.com"
@@ -74,10 +79,9 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Bottom */}
           <div className="pt-8 border-t border-gray-200">
             <p className="text-sm text-gray-500 text-center">
-              &copy; {new Date().getFullYear()} Tracebud. Simpler EUDR operations. Stronger market access.
+              &copy; {new Date().getFullYear()} Tracebud. {t("tagline")}
             </p>
           </div>
         </div>
