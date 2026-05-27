@@ -57,7 +57,7 @@ export function PlotsTable({ plots }: PlotsTableProps) {
                 <TableHead>Plot Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Area (ha)</TableHead>
-                <TableHead>Farmer</TableHead>
+                <TableHead>Producer</TableHead>
                 <TableHead>Deforestation Risk</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Assessment</TableHead>

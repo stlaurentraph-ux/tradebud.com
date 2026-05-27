@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 interface Plot {
   id: string;
@@ -18,20 +19,30 @@ interface PlotComplianceBreakdownProps {
 }
 
 export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps) {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
   const compliantPlots = plots.filter((p) => p.status === 'compliant');
   const nonCompliantPlots = plots.filter((p) => p.status === 'non_compliant');
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Plot-by-Plot Compliance Analysis</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">Detailed deforestation assessment for all plots</p>
+        <CardTitle className="text-lg">
+          {isImporter ? 'Evidence-by-Evidence Readiness Analysis' : 'Plot-by-Plot Compliance Analysis'}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isImporter
+            ? 'Detailed readiness assessment for all linked evidence records'
+            : 'Detailed deforestation assessment for all plots'}
+        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="border rounded-lg p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Plots</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {isImporter ? 'Total Records' : 'Total Plots'}
+            </p>
             <p className="text-2xl font-bold mt-1">{plots.length}</p>
           </div>
           <div className="border rounded-lg p-4 border-green-500/30 bg-green-500/10">
@@ -46,7 +57,7 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
 
         {/* Plot List */}
         <div>
-          <h4 className="font-medium mb-3">Plot Details</h4>
+          <h4 className="font-medium mb-3">{isImporter ? 'Evidence Details' : 'Plot Details'}</h4>
           <div className="space-y-2">
             {plots.map((plot) => {
               const isCompliant = plot.status === 'compliant';
@@ -101,7 +112,7 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
               ))}
             </ul>
             <Button variant="outline" size="sm" className="mt-3">
-              View Evidence Details
+              {isImporter ? 'View Exception Details' : 'View Evidence Details'}
             </Button>
           </div>
         )}
@@ -109,9 +120,13 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
         {/* Ready for Submission Message */}
         {compliantPlots.length === plots.length && plots.length > 0 && (
           <div className="border-l-4 border-green-500 bg-green-500/10 p-4 rounded">
-            <h4 className="font-medium text-green-400 mb-1">All Plots Verified</h4>
+            <h4 className="font-medium text-green-400 mb-1">
+              {isImporter ? 'All Records Ready' : 'All Plots Verified'}
+            </h4>
             <p className="text-sm text-green-300">
-              This package is ready for TRACES submission. Proceed to the next step to submit your DDS to the government portal.
+              {isImporter
+                ? 'This shipment is ready for declaration submission. Proceed to submit your DDS to the government portal.'
+                : 'This package is ready for TRACES submission. Proceed to the next step to submit your DDS to the government portal.'}
             </p>
           </div>
         )}

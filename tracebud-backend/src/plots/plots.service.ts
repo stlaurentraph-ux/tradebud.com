@@ -517,7 +517,12 @@ export class PlotsService {
     return { ok: true };
   }
 
-  async syncEvidence(plotId: string, dto: SyncPlotEvidenceDto, userId: string | undefined) {
+  async syncEvidence(
+    plotId: string,
+    dto: SyncPlotEvidenceDto,
+    userId: string | undefined,
+    tenantId?: string | null,
+  ) {
     const existing = await this.pool.query(
       `
         SELECT id
@@ -543,6 +548,7 @@ export class PlotsService {
         'plot_evidence_synced',
         JSON.stringify({
           plotId,
+          tenantId: tenantId ?? null,
           kind: dto.kind,
           reason: dto.reason,
           note: dto.note ?? null,

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { useAuth } from '@/lib/auth-context';
 import { Plus, Upload } from 'lucide-react';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
@@ -22,8 +23,9 @@ const CONTACT_TABLE_COLUMNS = [
   { key: 'update_status', label: 'Update status', minWidth: 160, defaultWidth: 180 },
 ] as const;
 type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMNS)[number]['key'];
-
 export default function ContactsPage() {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContactStatus | 'all'>('all');
@@ -95,19 +97,26 @@ export default function ContactsPage() {
 
   return (
     <>
-      <AppHeader title="Contacts" subtitle="Tenant CRM" />
+      <AppHeader
+        title={isCooperative ? 'Members' : 'Contacts'}
+        subtitle={
+          isCooperative
+            ? 'Manage member identity, consent status, and portability readiness'
+            : 'Tenant CRM'
+        }
+      />
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <Card><CardHeader><CardTitle className="text-sm">Total Contacts</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.total}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Active Pipeline</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.active}</CardContent></Card>
-          <Card><CardHeader><CardTitle className="text-sm">Blocked</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.blocked}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Total Members' : 'Total Contacts'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.total}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Active Membership' : 'Active Pipeline'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.active}</CardContent></Card>
+          <Card><CardHeader><CardTitle className="text-sm">{isCooperative ? 'Membership Blockers' : 'Blocked'}</CardTitle></CardHeader><CardContent className="text-2xl font-bold">{stats.blocked}</CardContent></Card>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name, email, org"
+            placeholder={isCooperative ? 'Search member by name, email, cooperative, or status' : 'Search by name, email, org'}
             className="max-w-sm"
           />
           <select
@@ -145,7 +154,7 @@ export default function ContactsPage() {
         ) : null}
 
         <Card>
-          <CardHeader><CardTitle>Contact list</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{isCooperative ? 'Member directory' : 'Contact list'}</CardTitle></CardHeader>
           <CardContent>
             {filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground">No contacts match your filters yet.</p>

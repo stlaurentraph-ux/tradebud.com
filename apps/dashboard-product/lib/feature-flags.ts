@@ -91,7 +91,7 @@ const FEATURE_CONFIG: Record<FeatureFlag, FeatureConfig> = {
     enabled: true,
     release: 'mvp',
     description: 'Cross-org evidence request campaigns',
-    gatedRoutes: ['/requests'],
+    gatedRoutes: ['/outreach', '/inbox'],
   },
 
   mvp_yield_checks: {

@@ -43,6 +43,7 @@ const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => 
 
 export default function PlotsPage() {
   const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const [plots, setPlots] = useState<Array<{
     id: string;
     name: string;
@@ -108,7 +109,7 @@ export default function PlotsPage() {
           id: createdId,
           name: newPlot.name.trim() || newPlot.clientPlotId.trim(),
           area_hectares: Number(newPlot.declaredAreaHa) || 0,
-          farmer_name: user?.name ?? 'Producer',
+          farmer_name: user?.name ?? (isCooperative ? 'Member' : 'Producer'),
           deforestation_risk: 'unknown',
           evidence: [],
           verified: false,
@@ -136,7 +137,11 @@ export default function PlotsPage() {
     <div className="flex flex-col">
       <AppHeader
         title="Plots"
-        description="Manage plot inventory and deforestation risk assessments"
+        description={
+          isCooperative
+            ? 'Track member plot coverage, geometry quality, and compliance risk with field-capture overlays'
+            : 'Manage plot inventory and deforestation risk assessments'
+        }
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
@@ -168,23 +173,23 @@ export default function PlotsPage() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Low Risk</div>
+              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Mapped & Low Risk' : 'Low Risk'}</div>
               <div className="text-3xl font-bold text-green-400 mt-2">{lowRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">Ready for compliance</p>
+              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Ready for batch lineage inclusion' : 'Ready for compliance'}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Medium Risk</div>
+              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Needs Field Review' : 'Medium Risk'}</div>
               <div className="text-3xl font-bold text-amber-400 mt-2">{mediumRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">Requires review</p>
+              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Geometry/legal checks pending' : 'Requires review'}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">High Risk</div>
+              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Blocked / High Risk' : 'High Risk'}</div>
               <div className="text-3xl font-bold text-red-400 mt-2">{highRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">Action needed</p>
+              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Escalate to issues and appeals' : 'Action needed'}</p>
             </CardContent>
           </Card>
         </div>
@@ -194,7 +199,7 @@ export default function PlotsPage() {
           <CardContent className="pt-6">
             <input
               type="text"
-              placeholder="Search by plot name or ID..."
+              placeholder={isCooperative ? 'Search by plot name, ID, or member-linked records...' : 'Search by plot name or ID...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -205,7 +210,7 @@ export default function PlotsPage() {
         {/* Plots Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Plot Inventory</CardTitle>
+            <CardTitle className="text-lg">{isCooperative ? 'Plot Registry and Capture Quality' : 'Plot Inventory'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border">
@@ -213,7 +218,7 @@ export default function PlotsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Plot Name</TableHead>
-                    <TableHead>Farmer</TableHead>
+                    <TableHead>{isCooperative ? 'Member' : 'Producer'}</TableHead>
                     <TableHead>Area (ha)</TableHead>
                     <TableHead>Deforestation Risk</TableHead>
                     <TableHead>Evidence</TableHead>
@@ -287,7 +292,7 @@ export default function PlotsPage() {
               <Input value={newPlot.name} onChange={(e) => setNewPlot({ ...newPlot, name: e.target.value })} />
             </div>
             <div>
-              <Label>Farmer ID (UUID)</Label>
+              <Label>{isCooperative ? 'Member ID (UUID)' : 'Producer ID (UUID)'}</Label>
               <Input value={newPlot.farmerId} onChange={(e) => setNewPlot({ ...newPlot, farmerId: e.target.value })} />
             </div>
             <div>

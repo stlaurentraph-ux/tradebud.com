@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Plus,
@@ -24,6 +24,7 @@ import { PermissionGate } from '@/components/common/permission-gate';
 import { StatusChip } from '@/components/ui/status-chip';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 interface FPICDocument {
   id: string;
@@ -46,7 +47,70 @@ interface FPICDocument {
   review_history: TimelineEvent[];
 }
 
-const mockDocuments: FPICDocument[] = [];
+const mockDocuments: FPICDocument[] = process.env.NODE_ENV !== 'production' ? [
+  {
+    id: 'doc_001',
+    name: 'Member Consent Renewal - Amina N.',
+    type: 'consent_form',
+    farmer_or_community: 'Amina N.',
+    upload_date: '2026-04-18T11:00:00.000Z',
+    expiry_date: '2027-04-18T00:00:00.000Z',
+    status: 'verified',
+    file_size_mb: 1.3,
+    sha256_hash: 'f3c2b4a99172f6cc8c10f52f9fd3bf054dd1b1a47d8827ca63a557884f59b8a3',
+    uploader_name: 'Grace M.',
+    uploader_org: 'Kilimani Cooperative',
+    linked_entities: [
+      { type: 'farmer', id: 'member_447', label: 'Amina N.' },
+      { type: 'plot', id: 'plot_117', label: 'Nyota Block A' },
+    ],
+    review_history: [
+      {
+        id: 'ev1',
+        eventType: 'document_uploaded',
+        timestamp: '2026-04-18T11:00:00.000Z',
+        userName: 'Grace M.',
+        description: 'Consent form uploaded',
+        metadata: { source: 'field_tablet' },
+      },
+      {
+        id: 'ev2',
+        eventType: 'approval',
+        timestamp: '2026-04-18T14:25:00.000Z',
+        userName: 'Compliance Desk',
+        description: 'Consent verification approved',
+        metadata: { verification: 'signature_and_id_match' },
+      },
+    ],
+  },
+  {
+    id: 'doc_002',
+    name: 'Portability Release Statement - Member 812',
+    type: 'agreement',
+    farmer_or_community: 'Member 812',
+    upload_date: '2026-04-20T09:30:00.000Z',
+    expiry_date: '2026-10-20T00:00:00.000Z',
+    status: 'pending_review',
+    file_size_mb: 2.1,
+    sha256_hash: '4a8267e1138f22fe6458f8e7f87f732f43da5d6f3fcb5e5156d3f53a8b1a1dc4',
+    uploader_name: 'Field Agent Team 2',
+    uploader_org: 'Kilimani Cooperative',
+    linked_entities: [
+      { type: 'farmer', id: 'member_812', label: 'Member 812' },
+      { type: 'shipment', id: 'PORT-2026-009', label: 'Portability Request #009' },
+    ],
+    review_history: [
+      {
+        id: 'ev3',
+        eventType: 'document_uploaded',
+        timestamp: '2026-04-20T09:30:00.000Z',
+        userName: 'Field Agent Team 2',
+        description: 'Portability release uploaded',
+        metadata: { campaign: 'portability_drive_q2' },
+      },
+    ],
+  },
+] : [];
 
 const docTypeLabels: Record<FPICDocument['type'], string> = {
   'community_minutes': 'Community Minutes',
@@ -230,11 +294,82 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
 }
 
 export default function FPICRepositoryPage() {
+  const { user } = useAuth();
+  const isImporter = user?.active_role === 'importer';
+  const isCooperative = user?.active_role === 'cooperative';
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending_review' | 'renewal_due' | 'expired'>('all');
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<FPICDocument[]>(mockDocuments);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [backendSummary, setBackendSummary] = useState({
+    total: 0,
+    verified: 0,
+    pending: 0,
+    renewal_due: 0,
+    expired: 0,
+  });
 
-  const filteredDocs = mockDocuments.filter((doc) => {
+  useEffect(() => {
+    if (!isCooperative) return;
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    void fetch('/api/cooperative/evidence', { headers, cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: { summary?: Partial<typeof backendSummary> }) => {
+        if (!payload.summary) return;
+        setBackendSummary((previous) => ({ ...previous, ...payload.summary }));
+      })
+      .catch(() => undefined);
+  }, [isCooperative]);
+
+  useEffect(() => {
+    if (!isImporter) {
+      return;
+    }
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    setIsLoadingDocuments(true);
+    void fetch('/api/requests/evidence-feed', { headers, cache: 'no-store' })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => [])) as Array<{
+          id: string;
+          name: string;
+          type: FPICDocument['type'];
+          farmer_or_community: string;
+          upload_date: string;
+          expiry_date: string;
+          status: FPICDocument['status'];
+          file_size_mb: number;
+          sha256_hash: string;
+          uploader_name: string;
+          uploader_org: string;
+        }>;
+        if (!response.ok || !Array.isArray(payload)) {
+          return;
+        }
+        setDocuments(
+          payload.map((item) => ({
+            ...item,
+            linked_entities: [{ type: 'shipment', id: item.id, label: item.name }],
+            review_history: [
+              {
+                id: `${item.id}_event`,
+                eventType: 'document_uploaded',
+                timestamp: item.upload_date,
+                userName: item.uploader_name,
+                description: 'Evidence record ingested from campaign workflow',
+                metadata: { source: 'request_campaigns' },
+              },
+            ],
+          })),
+        );
+      })
+      .catch(() => undefined)
+      .finally(() => setIsLoadingDocuments(false));
+  }, [isImporter]);
+
+  const filteredDocs = useMemo(() => documents.filter((doc) => {
     if (filterStatus !== 'all' && doc.status !== filterStatus) return false;
     const query = searchQuery.toLowerCase();
     return (
@@ -243,28 +378,34 @@ export default function FPICRepositoryPage() {
       docTypeLabels[doc.type].toLowerCase().includes(query) ||
       doc.sha256_hash.toLowerCase().includes(query)
     );
-  });
+  }), [documents, filterStatus, searchQuery]);
 
-  const verified = mockDocuments.filter((d) => d.status === 'verified').length;
-  const pending = mockDocuments.filter((d) => d.status === 'pending_review').length;
-  const renewalDue = mockDocuments.filter((d) => d.status === 'renewal_due').length;
-  const expired = mockDocuments.filter((d) => d.status === 'expired').length;
+  const verified = documents.filter((d) => d.status === 'verified').length;
+  const pending = documents.filter((d) => d.status === 'pending_review').length;
+  const renewalDue = documents.filter((d) => d.status === 'renewal_due').length;
+  const expired = documents.filter((d) => d.status === 'expired').length;
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="FPIC Repository"
-        subtitle="Manage Free Prior Informed Consent documents with full provenance chain"
+        title={isImporter ? 'Evidence' : 'FPIC Repository'}
+        subtitle={
+          isImporter
+            ? 'Review, complete, and retain evidence for shipment and declaration defensibility'
+            : isCooperative
+            ? 'Manage consent, portability, and cooperative evidence with full provenance chain'
+            : 'Manage Free Prior Informed Consent documents with full provenance chain'
+        }
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'FPIC Repository' },
+          { label: isImporter ? 'Evidence' : isCooperative ? 'Evidence' : 'FPIC Repository' },
         ]}
         actions={
           <PermissionGate permission="fpic:upload">
             <Button asChild>
               <Link href="/fpic/upload">
                 <Plus className="mr-2 h-4 w-4" />
-                Upload document
+                {isImporter ? 'Upload evidence' : 'Upload document'}
               </Link>
             </Button>
           </PermissionGate>
@@ -277,8 +418,12 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Total documents</p>
-                <p className="text-2xl font-bold mt-1">{mockDocuments.length}</p>
+                <p className="text-sm text-muted-foreground">
+                  {isImporter ? 'Total evidence records' : isCooperative ? 'Total evidence files' : 'Total documents'}
+                </p>
+                <p className="text-2xl font-bold mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.total : documents.length}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -287,7 +432,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Verified</p>
-                <p className="text-2xl font-bold text-emerald-600 mt-1">{verified}</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.verified : verified}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -295,8 +442,10 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Pending review</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{pending}</p>
+                <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent review queue' : 'Pending review'}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.pending : pending}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -304,8 +453,10 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Renewal due</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{renewalDue}</p>
+                <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent renewal due' : 'Renewal due'}</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.renewal_due : renewalDue}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -314,7 +465,9 @@ export default function FPICRepositoryPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Expired</p>
-                <p className="text-2xl font-bold text-destructive mt-1">{expired}</p>
+                <p className="text-2xl font-bold text-destructive mt-1">
+                  {isCooperative && backendSummary.total > 0 ? backendSummary.expired : expired}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -325,7 +478,13 @@ export default function FPICRepositoryPage() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <Input
-                placeholder="Search by name, farmer, community, or hash..."
+                placeholder={
+                  isImporter
+                    ? 'Search by evidence title, shipment reference, partner, or hash...'
+                    : isCooperative
+                      ? 'Search by member, plot, shipment, consent artifact, or hash...'
+                      : 'Search by name, farmer, community, or hash...'
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-md"
@@ -357,10 +516,16 @@ export default function FPICRepositoryPage() {
 
         {/* Documents List */}
         <div className="space-y-3">
-          {filteredDocs.length === 0 ? (
+          {isLoadingDocuments ? (
+            <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
+              Loading evidence records...
+            </div>
+          ) : filteredDocs.length === 0 ? (
             <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <p className="mt-4 text-sm text-muted-foreground">No documents match your filters</p>
+              <p className="mt-4 text-sm text-muted-foreground">
+                {isImporter ? 'No evidence records match your filters' : 'No documents match your filters'}
+              </p>
             </div>
           ) : (
             filteredDocs.map((doc) => (
@@ -381,12 +546,13 @@ export default function FPICRepositoryPage() {
               <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900">
-                  Provenance chain and audit trail
+                  {isImporter ? 'Evidence provenance and audit trail' : 'Provenance chain and audit trail'}
                 </p>
                 <p className="text-blue-800 mt-1">
-                  Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp, 
-                  and linked entities form an immutable provenance chain. Click any document to expand its full 
-                  audit history. All records are retained for 5 years per EUDR requirements.
+                  Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp,
+                  and linked entities form an immutable provenance chain. Click any document to expand its full
+                  audit history. {isCooperative ? 'Consent and portability artifacts are retained and traceable across member transfers. ' : ''}
+                  All records are retained for 5 years per EUDR requirements.
                 </p>
               </div>
             </div>

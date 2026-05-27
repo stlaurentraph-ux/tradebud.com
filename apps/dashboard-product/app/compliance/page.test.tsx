@@ -62,6 +62,14 @@ vi.mock('@/lib/use-package-evidence-documents', () => ({
   }),
 }));
 
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({
+    user: {
+      active_role: 'cooperative',
+    },
+  }),
+}));
+
 describe('CompliancePage backend readiness diagnostics', () => {
   it('renders backend reason-code remediation details', () => {
     render(<CompliancePage />);

@@ -44,7 +44,8 @@ Compliance
   └─ Audit Log (/audit-log)
 
 Requests
-  └─ Campaigns (/requests)
+  └─ Outreach (/outreach)
+  └─ Inbox (/inbox)
   └─ Role Decisions (/role-decisions)
 
 Reporting
@@ -216,15 +217,15 @@ Pre-submit button shows:
 ---
 
 ### Screen 6: Request Campaigns
-**Files**: `/requests` (list), `/requests/[id]` (detail), `/requests/new` (create)
+**Files**: `/outreach` (list), `/outreach/[id]` (detail), `/outreach/new` (create), `/inbox` (received requests)
 **Canonical States**: DRAFT, QUEUED, RUNNING, COMPLETED, PARTIAL, EXPIRED, CANCELLED
 
-**Campaign List** (`/requests`):
+**Campaign List** (`/outreach`):
 - Columns: Campaign ID | Type | Targets | Status (StatusChip) | Created | Owner | Progress
 - Filters: Status, Type, Owner, Date
 - Bulk actions: Cancel, Export (role-gated for ADMIN)
 
-**Campaign Detail** (`/requests/[id]`):
+**Campaign Detail** (`/outreach/[id]`):
 - Header: Status | Created | Owner | Sent On | Response Deadline
 - Tabs: Overview | Targets | Responses | Timeline
 - Overview:

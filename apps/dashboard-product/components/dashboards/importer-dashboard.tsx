@@ -28,11 +28,34 @@ interface ImporterDashboardProps {
 }
 
 export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
+  const isVirginTenant =
+    metrics.total_packages === 0 &&
+    metrics.total_plots === 0;
   const pendingReview = (metrics.packages_by_status?.READY || 0) + (metrics.packages_by_status?.ON_HOLD || 0);
   const approvedPackages = (metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0);
 
   return (
     <div className="space-y-6">
+      {isVirginTenant ? (
+        <Card className="border-emerald-200 bg-emerald-50/40">
+          <CardHeader>
+            <CardTitle>Welcome to your importer workspace</CardTitle>
+            <CardDescription>
+              This workspace starts empty. Complete onboarding to connect exporters, review incoming DDS packages, and track compliance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/outreach" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
+                Review campaign requests
+              </Link>
+              <Link href="/compliance" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
+                Open compliance queue
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       {/* Status Overview Banner */}
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="flex items-center justify-between p-6">

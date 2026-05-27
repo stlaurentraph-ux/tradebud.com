@@ -51,7 +51,7 @@
 | `/admin` | Refactor | MVP | Org Admin | organisations, users, roles, billing | N/A | GET/PATCH /orgs/{id}, GET/POST /orgs/{id}/users, GET /orgs/{id}/billing |
 | `/reports` | Defer | V1+ | Importer, Trader, Risk Reviewer | dds_records, shipments (aggregate) | N/A | GET /reports/shipment-summary |
 | `/sponsor-admin` | **New (Release 2+)** | V1+ | Sponsor Admin, Network Admin | organisations, data_visibility_policies, delegated_admin_actions | N/A | N/A |
-| `/requests` | **New (Release 2+)** | V1+ | All roles | requests, request_campaigns, request_campaign_targets | request status: OPEN → IN_PROGRESS → FULFILLED/EXPIRED/CANCELLED; campaign status: DRAFT → QUEUED → RUNNING → COMPLETED/PARTIAL/CANCELLED | N/A |
+| `/outreach` + `/inbox` | **New (Release 2+)** | V1+ | All roles | requests, request_campaigns, request_campaign_targets | request status: OPEN → IN_PROGRESS → FULFILLED/EXPIRED/CANCELLED; campaign status: DRAFT → QUEUED → RUNNING → COMPLETED/PARTIAL/CANCELLED | N/A |
 
 ---
 
@@ -389,7 +389,7 @@ IF is_sponsor_org:
 | Screen | Route | Reason for Post-MVP | Feature Flag |
 |--------|-------|-------------------|--------------|
 | API_DIRECT Submission | `/compliance/api-direct` | API direct submission not in MVP scope | `FEATURE_API_DIRECT_SUBMISSION` |
-| Request Campaigns | `/requests` | Request campaign workflows deferred | `FEATURE_REQUEST_CAMPAIGNS` |
+| Request Campaigns | `/outreach`, `/inbox` | Request campaign workflows deferred | `FEATURE_REQUEST_CAMPAIGNS` |
 | Sponsor Governance | `/sponsor-admin` | Sponsor governance post-MVP | `FEATURE_SPONSOR_GOVERNANCE` |
 | Deforestation Risk | `/compliance/risk-screening` | Deforestation automation post-MVP | `FEATURE_DEFORESTATION_ENGINE` |
 | Simplified Declarations | `/declarations` | Simplified path deferred to Release 2 | `FEATURE_SIMPLIFIED_DECLARATIONS` |

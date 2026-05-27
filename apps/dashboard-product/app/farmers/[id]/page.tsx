@@ -62,7 +62,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
   const { id } = use(params);
   const farmerDetail: FarmerDetail = {
     id,
-    name: 'Farmer',
+    name: 'Producer',
     phone: '',
     cooperative: 'Unknown',
     plots: 0,
@@ -127,7 +127,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         subtitle={`ID: ${farmerDetail.id}`}
         breadcrumbs={[
           { label: 'Dashboard', href: '/' },
-          { label: 'Farmers', href: '/farmers' },
+          { label: 'Producers', href: '/farmers' },
           { label: farmerDetail.name },
         ]}
       />
@@ -136,7 +136,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         <Button variant="ghost" size="sm" className="mb-6" asChild>
           <Link href="/farmers">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Farmers
+            Back to Producers
           </Link>
         </Button>
 
@@ -146,10 +146,10 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Farmer detail data is not connected to backend yet for this route. No mock profile is shown.
+                Producer detail data is not connected to backend yet for this route. No mock profile is shown.
               </AlertDescription>
             </Alert>
-            {/* Farmer Status Card */}
+            {/* Producer Status Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Producer Information</CardTitle>

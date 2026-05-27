@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 // Canonical shipment states per spec
 type ShipmentStatus = 'DRAFT' | 'READY' | 'SEALED' | 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'ARCHIVED' | 'ON_HOLD';
@@ -60,6 +61,8 @@ const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon
 };
 
 export default function ShipmentsPage() {
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | ShipmentStatus>('all');
   const [selectedOrg, setSelectedOrg] = useState<'all' | string>('all');
@@ -104,7 +107,7 @@ export default function ShipmentsPage() {
       <div className="flex flex-col">
         <AppHeader
           title="Shipments"
-          subtitle="Manage DDS shipments and TRACES submissions"
+          subtitle="Manage shipment assembly, readiness, and downstream handoff"
           breadcrumbs={[
             { label: 'Dashboard', href: '/' },
             { label: 'Operations' },
@@ -259,7 +262,7 @@ export default function ShipmentsPage() {
                             <td className="py-4 pr-4 text-sm text-muted-foreground">{shipment.org_name}</td>
                             <td className="py-4 pr-4 text-sm">{shipment.owner}</td>
                             <td className="py-4 pr-4 text-sm text-muted-foreground">
-                              {shipment.plots_count} plots / {shipment.farmers_count} farmers
+                              {shipment.plots_count} plots / {shipment.farmers_count} {isCooperative ? 'members' : 'producers'}
                             </td>
                             <td className="py-4 pr-4 text-sm text-muted-foreground">
                               {new Date(shipment.modified_at).toLocaleDateString()}
