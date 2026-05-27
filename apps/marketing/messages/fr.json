@@ -1,4 +1,95 @@
 {
+  "marketing": {
+    "hero": {
+      "headline": "La traçabilité qui fonctionne pour toute la chaîne.",
+      "subheadline": "Tracebud simplifie la mise en conformité EUDR grâce à un outil simple, autonome et abordable, afin que les producteurs, coopératives, exportateurs et acheteurs puissent collecter, partager et réutiliser les données d'origine sans courir après les documents.",
+      "supportingText": "Gratuit pour les producteurs. Conçu pour les réalités du terrain, avec une connexion limitée et des processus simples. Sans consultants.",
+      "cta": {
+        "primary": "Voir comment ça marche",
+        "secondary": "Nous contacter"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "La conformité ne devrait pas être compliquée pour être crédible.",
+      "description": "La plupart des chaînes d'approvisionnement ne échouent pas parce que les acteurs ne s'en soucient pas. Elles échouent parce que le processus est trop manuel, trop coûteux et trop fragmenté. Tracebud élimine les allers-retours pour que chaque acteur puisse participer, même lorsque le réseau est vaste, dispersé ou sous-doté en ressources.",
+      "pillars": {
+        "simple": {
+          "title": "Simple",
+          "description": "Une plateforme. Un workflow. Une seule source de vérité."
+        },
+        "automated": {
+          "title": "Automatisé",
+          "description": "Les demandes circulent automatiquement dans le réseau, pour que la preuve remonte plus vite à la source."
+        },
+        "inclusive": {
+          "title": "Inclusif",
+          "description": "Les producteurs peuvent participer directement, même avec un accès numérique limité, des appareils partagés ou un signal instable."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "De la première demande à la preuve réutilisable.",
+      "subtitle": "Quatre étapes. Zéro complexité.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Ajouter votre réseau",
+          "description": "Un contact ou cinq cents. Importez un CSV ou ajoutez-les manuellement."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Envoyer une seule demande",
+          "description": "Elle circule automatiquement dans la chaîne. Sans relances."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Collecter les données d'origine",
+          "description": "Enregistrez-les une fois, puis réutilisez-les pour plusieurs expéditions et acheteurs."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Rester aligné",
+          "description": "Gardez tout le monde sur la même longueur d'onde avec un workflow numérique partagé."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Conçue pour le terrain, pas pour le bureau.",
+        "description": "Les producteurs peuvent cartographier leurs parcelles, partager des informations et répondre depuis une expérience mobile simple, pensée pour les conditions réelles du terrain. Elle fonctionne hors ligne, utilise des visuels clairs et reste légère.",
+        "supportingText": "Gratuit pour les producteurs. Configuration simple, sans formation lourde."
+      },
+      "dashboard": {
+        "headline": "Gérez votre réseau sans échanges interminables.",
+        "description": "Importez des contacts en masse, envoyez une seule demande et laissez le workflow circuler dans toute la chaîne d'approvisionnement. Suivez les réponses, réutilisez les données vérifiées et faites avancer chaque expédition avec moins de suivi manuel.",
+        "supportingText": "Moins de relances. Moins de lacunes. Des transferts plus rapides."
+      }
+    },
+    "inclusionSection": {
+      "headline": "La conformité ne doit pas laisser les petits producteurs de côté.",
+      "description": "Les grandes entreprises peuvent acheter des systèmes complexes. Les petits producteurs ne devraient pas être exclus parce que les outils sont trop chers, trop techniques ou trop lents. Tracebud permet à chaque acteur d'être visible, connecté et prêt pour le marché.",
+      "punchline": "Nous supprimons les barrières d'accès qui ont longtemps tenu les petits producteurs à l'écart."
+    },
+    "finalCtaSection": {
+      "headline": "Rendre la conformité utilisable pour toute la chaîne.",
+      "description": "Commencez avec le réseau que vous avez déjà, et donnez à chaque acteur la possibilité de participer.",
+      "cta": "Commencer"
+    },
+    "exitIntentModal": {
+      "headline": "Prêt à rejoindre la liste d'attente ?",
+      "description": "Tracebud aide votre réseau à collecter, partager et réutiliser les données d'origine. C'est simple, abordable et inclusif pour les producteurs, coopératives, exportateurs et acheteurs.",
+      "cta": {
+        "primary": "Rejoindre maintenant",
+        "secondary": "Continuer la navigation"
+      },
+      "note": "Places limitées pour les premiers partenaires pilotes."
+    },
+    "waitlistDialog": {
+      "headline": "Rejoindre le programme pilote",
+      "description": "Places limitées pour les premiers partenaires pilotes. Parlez-nous de votre réseau et nous vous recontacterons.",
+      "note": "Pas de spam. Désinscription possible à tout moment."
+    }
+  },
   "common": {
     "language": "Langue",
     "joinWaitlist": "Rejoindre la liste d'attente",

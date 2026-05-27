@@ -1,4 +1,95 @@
 {
+  "marketing": {
+    "hero": {
+      "headline": "Pelacakan yang bekerja untuk seluruh rantai.",
+      "subheadline": "Tracebud menyederhanakan kepatuhan EUDR dengan alat yang sederhana, mandiri, dan terjangkau, sehingga petani, koperasi, eksportir, dan pembeli dapat mengumpulkan, membagikan, dan menggunakan kembali data asal tanpa mengejar dokumen.",
+      "supportingText": "Gratis untuk produsen. Dibuat untuk kondisi lapangan dengan konektivitas terbatas dan alur yang sederhana. Tanpa konsultan.",
+      "cta": {
+        "primary": "Lihat cara kerjanya",
+        "secondary": "Hubungi kami"
+      }
+    },
+    "whyTracebudSection": {
+      "headline": "Kepatuhan seharusnya tidak rumit agar bisa dipercaya.",
+      "description": "Sebagian besar rantai pasok tidak gagal karena orang tidak peduli. Mereka gagal karena prosesnya terlalu manual, terlalu mahal, dan terlalu terfragmentasi. Tracebud menghilangkan bolak-balik agar setiap pihak bisa ikut serta, bahkan ketika jaringannya besar, tersebar, atau kekurangan sumber daya.",
+      "pillars": {
+        "simple": {
+          "title": "Sederhana",
+          "description": "Satu platform. Satu alur kerja. Satu sumber kebenaran."
+        },
+        "automated": {
+          "title": "Otomatis",
+          "description": "Permintaan bergerak otomatis melalui jaringan, sehingga bukti sampai ke sumber lebih cepat."
+        },
+        "inclusive": {
+          "title": "Inklusif",
+          "description": "Petani dapat ikut langsung, bahkan dengan akses digital terbatas, perangkat bersama, atau sinyal yang tidak stabil."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Dari permintaan pertama hingga bukti yang dapat digunakan kembali.",
+      "subtitle": "Empat langkah. Tanpa kerumitan.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Tambahkan jaringan Anda",
+          "description": "Satu kontak atau lima ratus. Unggah CSV atau tambahkan secara manual."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Kirim satu permintaan",
+          "description": "Permintaan mengalir otomatis melalui rantai. Tanpa mengejar satu per satu."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Kumpulkan data asal",
+          "description": "Catat sekali, lalu gunakan kembali untuk beberapa pengiriman dan pembeli."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Tetap selaras",
+          "description": "Jaga semua pihak tetap pada halaman yang sama dengan alur kerja digital bersama."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Dibuat untuk lapangan, bukan untuk kantor.",
+        "description": "Petani dapat memetakan petak, berbagi informasi, dan merespons melalui pengalaman mobile yang sederhana dan dirancang untuk kondisi lapangan yang nyata. Aplikasi ini berfungsi offline, menggunakan visual yang jelas, dan menjaga proses tetap ringan.",
+        "supportingText": "Gratis untuk produsen. Tanpa penyiapan yang berat atau pelatihan yang lama."
+      },
+      "dashboard": {
+        "headline": "Kelola jaringan Anda tanpa bolak-balik.",
+        "description": "Unggah kontak secara massal, kirim satu permintaan, dan biarkan alur kerja menjalar ke seluruh rantai pasok. Lacak respons, gunakan kembali data yang telah diverifikasi, dan jaga setiap pengiriman tetap bergerak dengan lebih sedikit tindak lanjut manual.",
+        "supportingText": "Lebih sedikit mengejar. Lebih sedikit celah. Serah terima lebih cepat."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Kepatuhan tidak boleh meninggalkan petani kecil di belakang.",
+      "description": "Perusahaan besar bisa membeli sistem kompleks. Petani kecil seharusnya tidak tersingkir hanya karena alatnya terlalu mahal, terlalu teknis, atau terlalu lambat. Tracebud menjaga setiap pihak tetap terlihat, terhubung, dan siap masuk pasar.",
+      "punchline": "Kami menghapus hambatan akses yang selama ini membuat petani kecil terpinggirkan."
+    },
+    "finalCtaSection": {
+      "headline": "Membuat kepatuhan dapat digunakan untuk seluruh rantai.",
+      "description": "Mulailah dengan jaringan yang sudah Anda miliki, dan berikan setiap pihak cara untuk ikut berpartisipasi.",
+      "cta": "Mulai"
+    },
+    "exitIntentModal": {
+      "headline": "Siap bergabung ke daftar tunggu?",
+      "description": "Tracebud membantu jaringan Anda mengumpulkan, berbagi, dan menggunakan kembali data asal. Sederhana, terjangkau, dan inklusif untuk petani, koperasi, eksportir, dan pembeli.",
+      "cta": {
+        "primary": "Gabung sekarang",
+        "secondary": "Lanjutkan menjelajah"
+      },
+      "note": "Tempat terbatas untuk mitra pilot awal."
+    },
+    "waitlistDialog": {
+      "headline": "Bergabung dengan program pilot",
+      "description": "Tempat terbatas untuk mitra pilot awal. Ceritakan tentang jaringan Anda dan kami akan menghubungi Anda.",
+      "note": "Tanpa spam. Berhenti berlangganan kapan saja."
+    }
+  },
   "common": {
     "language": "Bahasa",
     "joinWaitlist": "Bergabunglah dengan daftar tunggu",
@@ -10,10 +101,22 @@
     "headline1": "Berdagang dengan bebas.",
     "headline2": "Lacak dengan mudah.",
     "subheadline": "Akses pasar UE yang disederhanakan. Traceabilitas lengkap rantai pasokan dalam hari, bukan bulan.",
-    "metric1": { "value": "Hari", "label": "Bukan bulan untuk kepatuhan" },
-    "metric2": { "value": "Rantai Lengkap", "label": "Pertanian hingga pelabuhan terverifikasi" },
-    "metric3": { "value": "Layanan mandiri", "label": "Tidak perlu integrasi" },
-    "cta": { "startTrial": "Bergabunglah dengan daftar tunggu", "bookDemo": "Pelajari selengkapnya" },
+    "metric1": {
+      "value": "Hari",
+      "label": "Bukan bulan untuk kepatuhan"
+    },
+    "metric2": {
+      "value": "Rantai Lengkap",
+      "label": "Pertanian hingga pelabuhan terverifikasi"
+    },
+    "metric3": {
+      "value": "Layanan mandiri",
+      "label": "Tidak perlu integrasi"
+    },
+    "cta": {
+      "startTrial": "Bergabunglah dengan daftar tunggu",
+      "bookDemo": "Pelajari selengkapnya"
+    },
     "trialInfo": "30 hari gratis. Tidak perlu kartu kredit.",
     "earlyAdopters": "Pengguna awal mendapatkan dukungan prioritas",
     "seeHowItWorks": "Lihat cara kerjanya"
@@ -47,10 +150,22 @@
     "title": "Mengapa Tracebud Bekerja",
     "subtitle": "Dibangun dari nol untuk transparansi rantai pasokan di pasar yang diatur. Mudah digunakan, dibangun untuk diskalakan.",
     "features": {
-      "compliance": { "title": "Kepatuhan EUDR", "description": "Dibangun untuk memenuhi peraturan Desember 2026" },
-      "farmer": { "title": "Petani Pertama", "description": "Aplikasi smartphone berfungsi offline di lapangan" },
-      "tracing": { "title": "Pelacakan Waktu Nyata", "description": "GPS, foto, stempel waktu, catatan yang tidak dapat diubah" },
-      "global": { "title": "Siap Global", "description": "Integrasi TRACES NT dan dukungan multibahasa" }
+      "compliance": {
+        "title": "Kepatuhan EUDR",
+        "description": "Dibangun untuk memenuhi peraturan Desember 2026"
+      },
+      "farmer": {
+        "title": "Petani Pertama",
+        "description": "Aplikasi smartphone berfungsi offline di lapangan"
+      },
+      "tracing": {
+        "title": "Pelacakan Waktu Nyata",
+        "description": "GPS, foto, stempel waktu, catatan yang tidak dapat diubah"
+      },
+      "global": {
+        "title": "Siap Global",
+        "description": "Integrasi TRACES NT dan dukungan multibahasa"
+      }
     },
     "useCases": "Pilot awal sudah menggunakan Tracebud untuk:"
   },
