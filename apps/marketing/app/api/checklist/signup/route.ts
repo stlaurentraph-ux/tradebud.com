@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       downloadUrl: "/api/checklist/download",
       message: "Checklist sent to your email",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         ok: false,

@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { motion } from "framer-motion";
 import { WifiOff, Camera, FileCheck, Shield, Smartphone, CheckCircle, Users, User, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
