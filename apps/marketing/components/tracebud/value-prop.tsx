@@ -14,7 +14,7 @@ export function ValueProp() {
   return (
     <>
       {/* Why Customers Use It */}
-      <section className="py-24 md:py-32 bg-[var(--forest-canopy)]">
+      <section id="why-tracebud" className="scroll-mt-20 py-24 md:py-32 bg-[var(--forest-canopy)]">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             className="text-center mb-16"

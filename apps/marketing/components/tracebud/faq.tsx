@@ -21,7 +21,7 @@ export function FAQ() {
   const waitlist = useWaitlistDialog();
 
   return (
-    <section className="py-20 px-6 bg-background">
+    <section id="faq" className="scroll-mt-20 py-20 px-6 bg-background">
       <div className="max-w-4xl mx-auto">
         <motion.div
           className="text-center mb-16"

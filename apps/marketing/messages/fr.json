@@ -118,9 +118,9 @@
       "countries": "Pays"
     },
     "nav": {
-      "pilot": "Pilote",
       "howItWorks": "Comment ça marche",
-      "pricing": "Tarification"
+      "whyTracebud": "Pourquoi Tracebud",
+      "faq": "FAQ"
     },
     "cta": {
       "downloadApp": "Télécharger l'application",

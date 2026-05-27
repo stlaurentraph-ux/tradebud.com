@@ -6,7 +6,7 @@ import Image from "next/image";
 
 export function Products() {
   return (
-    <section id="how-it-works" className="py-24 md:py-32 bg-white">
+    <section id="how-it-works" className="scroll-mt-20 py-24 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         {/* Section Header */}
         <motion.div
