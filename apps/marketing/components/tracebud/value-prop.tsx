@@ -10,6 +10,13 @@ import { useTranslations } from "next-intl";
 export function ValueProp() {
   const waitlist = useWaitlistDialog();
   const t = useTranslations("marketing");
+  const tCustomers = useTranslations("marketing.customersSection");
+
+  const customerCards = [
+    { icon: Package, title: tCustomers("cards.gaps.title"), description: tCustomers("cards.gaps.description") },
+    { icon: Shield, title: tCustomers("cards.provenance.title"), description: tCustomers("cards.provenance.description") },
+    { icon: Users, title: tCustomers("cards.handoff.title"), description: tCustomers("cards.handoff.description") },
+  ];
 
   return (
     <>
@@ -24,31 +31,15 @@ export function ValueProp() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-              Why customers use Tracebud
+              {tCustomers("headline")}
             </h2>
             <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto">
-              Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.
+              {tCustomers("description")}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Package,
-                title: "Fewer proof gaps",
-                description: "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system.",
-              },
-              {
-                icon: Shield,
-                title: "Provenance preserved",
-                description: "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files.",
-              },
-              {
-                icon: Users,
-                title: "Faster handoff",
-                description: "More confidence in what can actually ship. Less time chasing missing data when shipments need to move.",
-              },
-            ].map((item, index) => (
+            {customerCards.map((item, index) => (
               <motion.div
                 key={item.title}
                 className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/10"

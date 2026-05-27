@@ -59,7 +59,7 @@ export function ExitIntentModal() {
                 {/* Badge pinned to bottom */}
                 <div className="absolute bottom-5 left-5 right-5">
                   <p className="text-white text-xs font-medium leading-snug opacity-90">
-                    Free for producers. Built for real field conditions.
+                    {t("hero.supportingText")}
                   </p>
                 </div>
               </div>

@@ -54,15 +54,50 @@
       }
     },
     "productsSection": {
+      "eyebrow": "Two products, one workflow",
+      "title": "Built for how supply chains actually work",
       "mobileApp": {
+        "label": "Mobile App",
         "headline": "Feita para o campo, não para o escritório.",
         "description": "Os produtores podem mapear parcelas, partilhar informação e responder numa experiência móvel simples, pensada para condições reais de campo. Funciona offline, usa elementos visuais claros e mantém o processo leve.",
-        "supportingText": "Gratuito para produtores. Sem configuração pesada nem formação demorada."
+        "supportingText": "Gratuito para produtores. Sem configuração pesada nem formação demorada.",
+        "features": {
+          "offline": "Works offline, syncs when connectivity returns",
+          "gps": "Walk the boundary to capture GPS polygon",
+          "photo": "Photo evidence and consent recording"
+        }
       },
       "dashboard": {
+        "label": "Dashboard",
         "headline": "Gira a sua rede sem idas e voltas.",
         "description": "Importe contactos em massa, envie um pedido e deixe o fluxo de trabalho percorrer toda a cadeia de abastecimento. Acompanhe as respostas, reutilize dados verificados e mantenha cada envio em movimento com menos acompanhamento manual.",
-        "supportingText": "Menos perseguição. Menos lacunas. Transferências mais rápidas."
+        "supportingText": "Menos perseguição. Menos lacunas. Transferências mais rápidas.",
+        "features": {
+          "import": "Bulk import contacts via CSV upload",
+          "bulkRequest": "Send requests to hundreds of contacts at once",
+          "cascade": "Requests cascade through your network to source",
+          "readiness": "Track readiness across all network members",
+          "evidence": "Identify missing evidence instantly",
+          "dds": "Assemble DDS packages for shipment"
+        }
+      }
+    },
+    "customersSection": {
+      "headline": "Why customers use Tracebud",
+      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.",
+      "cards": {
+        "gaps": {
+          "title": "Fewer proof gaps",
+          "description": "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system."
+        },
+        "provenance": {
+          "title": "Provenance preserved",
+          "description": "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files."
+        },
+        "handoff": {
+          "title": "Faster handoff",
+          "description": "More confidence in what can actually ship. Less time chasing missing data when shipments need to move."
+        }
       }
     },
     "inclusionSection": {
@@ -87,7 +122,74 @@
     "waitlistDialog": {
       "headline": "Junte-se ao programa piloto",
       "description": "Lugares limitados para os primeiros parceiros piloto. Conte-nos sobre a sua rede e entraremos em contacto.",
-      "note": "Sem spam. Cancelar subscrição em qualquer altura."
+      "note": "Sem spam. Cancelar subscrição em qualquer altura.",
+      "sidePanel": {
+        "tagline": "Be ready for EUDR, without the complexity.",
+        "subline": "Simple. Affordable. Built for every actor in the chain."
+      },
+      "submit": "Join the pilot",
+      "submitting": "Submitting...",
+      "success": {
+        "title": "Application received",
+        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+      },
+      "form": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
+        "placeholders": {
+          "firstName": "Maria",
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
+        },
+        "roles": {
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
+        },
+        "commodities": {
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
+          "rubber": "Rubber",
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
+        },
+        "producerRanges": {
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
+        },
+        "errors": {
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
+        }
+      }
     }
   },
   "common": {
@@ -101,10 +203,22 @@
     "headline1": "Negocie Livremente.",
     "headline2": "Rastreie Facilmente.",
     "subheadline": "Acesso ao mercado da UE simplificado. Rastreabilidade completa da cadeia de suprimentos em dias, não em meses.",
-    "metric1": { "value": "Dias", "label": "Não meses para conformidade" },
-    "metric2": { "value": "Cadeia Completa", "label": "Fazenda a porto verificado" },
-    "metric3": { "value": "Autosserviço", "label": "Sem integração necessária" },
-    "cta": { "startTrial": "Juntar-se à lista de espera", "bookDemo": "Saiba mais" },
+    "metric1": {
+      "value": "Dias",
+      "label": "Não meses para conformidade"
+    },
+    "metric2": {
+      "value": "Cadeia Completa",
+      "label": "Fazenda a porto verificado"
+    },
+    "metric3": {
+      "value": "Autosserviço",
+      "label": "Sem integração necessária"
+    },
+    "cta": {
+      "startTrial": "Juntar-se à lista de espera",
+      "bookDemo": "Saiba mais"
+    },
     "trialInfo": "30 dias grátis. Nenhum cartão de crédito necessário.",
     "earlyAdopters": "Os primeiros usuários recebem suporte prioritário",
     "seeHowItWorks": "Veja como funciona"
@@ -138,10 +252,22 @@
     "title": "Por que o Tracebud funciona",
     "subtitle": "Construído do zero para transparência de cadeia de suprimentos em mercados regulados. Simples de usar, construído para escalar.",
     "features": {
-      "compliance": { "title": "Conformidade EUDR", "description": "Construído para atender aos regulamentos de dezembro de 2026" },
-      "farmer": { "title": "Primeiro o Produtor", "description": "Aplicativo smartphone funciona offline no campo" },
-      "tracing": { "title": "Rastreamento em Tempo Real", "description": "GPS, fotos, carimbos de tempo, registros imutáveis" },
-      "global": { "title": "Pronto para Global", "description": "Integração TRACES NT e suporte multilíngue" }
+      "compliance": {
+        "title": "Conformidade EUDR",
+        "description": "Construído para atender aos regulamentos de dezembro de 2026"
+      },
+      "farmer": {
+        "title": "Primeiro o Produtor",
+        "description": "Aplicativo smartphone funciona offline no campo"
+      },
+      "tracing": {
+        "title": "Rastreamento em Tempo Real",
+        "description": "GPS, fotos, carimbos de tempo, registros imutáveis"
+      },
+      "global": {
+        "title": "Pronto para Global",
+        "description": "Integração TRACES NT e suporte multilíngue"
+      }
     },
     "useCases": "Os Pilotos Iniciais Já Estão Usando o Tracebud Para:"
   },
@@ -163,5 +289,4 @@
     "support": "Qual suporte está disponível?",
     "supportAnswer": "Suporte por email 24/7, mais suporte telefônico prioritário para parceiros piloto. Acesso direto à nossa equipe de conformidade."
   }
-}
 }

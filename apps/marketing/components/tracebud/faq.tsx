@@ -96,13 +96,13 @@ export function FAQ() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-foreground font-semibold mb-4">
-            Ready to join the waitlist?
+            {t("waitlistPrompt")}
           </p>
           <Button
             onClick={() => waitlist.setOpen(true)}
             className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-3 rounded-full"
           >
-            Join now
+            {t("joinNow")}
           </Button>
         </motion.div>
       </div>
