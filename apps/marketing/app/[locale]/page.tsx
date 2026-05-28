@@ -1,6 +1,10 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
 import { Products } from "@/components/tracebud/products";
+import { BuiltForRealities } from "@/components/tracebud/built-for-realities";
+import { TrustAndData } from "@/components/tracebud/trust-and-data";
+import { WhoItIsFor } from "@/components/tracebud/who-it-is-for";
+import { RegenerativeFarming } from "@/components/tracebud/regenerative-farming";
 import { ValueProp } from "@/components/tracebud/value-prop";
 import { FAQ } from "@/components/tracebud/faq";
 import { Footer } from "@/components/tracebud/footer";
@@ -13,6 +17,10 @@ export default function Home() {
       <Header />
       <Hero />
       <Products />
+      <BuiltForRealities />
+      <TrustAndData />
+      <WhoItIsFor />
+      <RegenerativeFarming />
       <ValueProp />
       <FAQ />
       <Footer />

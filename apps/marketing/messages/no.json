@@ -1,94 +1,161 @@
 {
   "marketing": {
-      "hero": {
-        "headline": "Sporbarhet som fungerer for hele kjeden.",
-        "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
-        "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
-        "cta": {
-          "primary": "Se hvordan det fungerer",
-          "secondary": "Kontakt oss"
-        }
-      },
-      "whyTracebudSection": {
-        "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
-        "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
-        "pillars": {
-          "simple": {
-            "title": "Enkelt",
-            "description": "Én plattform. Én arbeidsflyt. Én sannhetskilde."
-          },
-          "automated": {
-            "title": "Automatisert",
-            "description": "Forespørsler beveger seg automatisk gjennom nettverket, slik at bevis når kilden raskere."
-          },
-          "inclusive": {
-            "title": "Inkluderende",
-            "description": "Bønder kan delta direkte, selv med begrenset digital tilgang, delte enheter eller ustabilt signal."
-          }
-        }
-      },
-      "howItWorksSection": {
-        "headline": "Fra første forespørsel til gjenbrukbart bevis.",
-        "subtitle": "Fire steg. Ingen kompleksitet.",
-        "steps": {
-          "step1": {
-            "number": "01",
-            "title": "Legg til nettverket ditt",
-            "description": "Én kontakt eller fem hundre. Last opp en CSV eller legg dem til manuelt."
-          },
-          "step2": {
-            "number": "02",
-            "title": "Send én forespørsel",
-            "description": "Den flyter automatisk gjennom kjeden. Ingen oppfølging."
-          },
-          "step3": {
-            "number": "03",
-            "title": "Samle opprinnelsesdata",
-            "description": "Registrer det én gang, og gjenbruk det på tvers av flere forsendelser og kjøpere."
-          },
-          "step4": {
-            "number": "04",
-            "title": "Hold alle samkjørt",
-            "description": "Hold alle på samme side med en delt digital arbeidsflyt."
-          }
-        }
-      },
-      "productsSection": {
-        "mobileApp": {
-          "headline": "Bygget for feltet, ikke kontoret.",
-          "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
-          "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
-        },
-        "dashboard": {
-          "headline": "Administrer nettverket uten frem og tilbake.",
-          "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
-          "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
-        }
-      },
-      "inclusionSection": {
-        "headline": "Etterlevelse skal ikke etterlate småbønder.",
-        "description": "Store selskaper kan kjøpe komplekse systemer. Småbønder bør ikke ekskluderes fordi verktøyene er for dyre, for tekniske eller for trege. Tracebud holder hver aktør synlig, koblet og klar for markedet.",
-        "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
-      },
-      "finalCtaSection": {
-        "headline": "Gjør etterlevelse brukbar for hele kjeden.",
-        "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
-        "cta": "Kom i gang"
-      },
-      "exitIntentModal": {
-        "headline": "Klar til å bli med på ventelisten?",
-        "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
-        "cta": {
-          "primary": "Bli med nå",
-          "secondary": "Fortsett å bla"
-        },
-        "note": "Begrenset antall plasser for tidlige pilotpartnere."
-      },
-      "waitlistDialog": {
-        "headline": "Bli med i pilotprogrammet",
-        "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
-        "note": "Ingen spam. Avslutt abonnementet når som helst."
+    "hero": {
+      "headline": "Sporbarhet som fungerer for hele kjeden.",
+      "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
+      "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
+      "cta": {
+        "primary": "Se hvordan det fungerer",
+        "secondary": "Kontakt oss"
       }
+    },
+    "whyTracebudSection": {
+      "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
+      "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
+      "pillars": {
+        "simple": {
+          "title": "Enkelt",
+          "description": "Én plattform. Én arbeidsflyt. Én sannhetskilde."
+        },
+        "automated": {
+          "title": "Automatisert",
+          "description": "Forespørsler beveger seg automatisk gjennom nettverket, slik at bevis når kilden raskere."
+        },
+        "inclusive": {
+          "title": "Inkluderende",
+          "description": "Bønder kan delta direkte, selv med begrenset digital tilgang, delte enheter eller ustabilt signal."
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "Fra første forespørsel til gjenbrukbart bevis.",
+      "subtitle": "Fire steg. Ingen kompleksitet.",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "Legg til nettverket ditt",
+          "description": "Én kontakt eller fem hundre. Last opp en CSV eller legg dem til manuelt."
+        },
+        "step2": {
+          "number": "02",
+          "title": "Send én forespørsel",
+          "description": "Den flyter automatisk gjennom kjeden. Ingen oppfølging."
+        },
+        "step3": {
+          "number": "03",
+          "title": "Samle opprinnelsesdata",
+          "description": "Registrer det én gang, og gjenbruk det på tvers av flere forsendelser og kjøpere."
+        },
+        "step4": {
+          "number": "04",
+          "title": "Hold alle samkjørt",
+          "description": "Hold alle på samme side med en delt digital arbeidsflyt."
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "Bygget for feltet, ikke kontoret.",
+        "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
+        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
+      },
+      "dashboard": {
+        "headline": "Administrer nettverket uten frem og tilbake.",
+        "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
+        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
+      }
+    },
+    "inclusionSection": {
+      "headline": "Etterlevelse skal ikke etterlate småbønder.",
+      "description": "Store selskaper kan kjøpe komplekse systemer. Småbønder bør ikke ekskluderes fordi verktøyene er for dyre, for tekniske eller for trege. Tracebud holder hver aktør synlig, koblet og klar for markedet.",
+      "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
+    },
+    "finalCtaSection": {
+      "headline": "Gjør etterlevelse brukbar for hele kjeden.",
+      "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
+      "cta": "Kom i gang"
+    },
+    "exitIntentModal": {
+      "headline": "Klar til å bli med på ventelisten?",
+      "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
+      "cta": {
+        "primary": "Bli med nå",
+        "secondary": "Fortsett å bla"
+      },
+      "note": "Begrenset antall plasser for tidlige pilotpartnere."
+    },
+    "waitlistDialog": {
+      "headline": "Bli med i pilotprogrammet",
+      "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
+      "note": "Ingen spam. Avslutt abonnementet når som helst."
+    },
+    "builtForRealitiesSection": {
+      "headline": "Built for real operations",
+      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
+      "thatMeans": "That means:",
+      "features": {
+        "offline": {
+          "title": "Offline capture in the field",
+          "description": "Work without connectivity and sync when ready."
+        },
+        "roleBasedAccess": {
+          "title": "Role-based access",
+          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
+        },
+        "consentBased": {
+          "title": "Consent-based data sharing",
+          "description": "Organizations control who accesses their data."
+        },
+        "auditLogs": {
+          "title": "Audit logs and retention",
+          "description": "Full compliance records for regulatory requirements."
+        },
+        "reusableData": {
+          "title": "Reusable origin data",
+          "description": "Capture once, reuse across shipments and counterparties."
+        },
+        "csvUpload": {
+          "title": "CSV upload and workflows",
+          "description": "Simple data import and automated request flows."
+        }
+      }
+    },
+    "trustAndDataSection": {
+      "headline": "Compliance data should stay clear, controlled, and auditable.",
+      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
+      "goal": {
+        "title": "The goal",
+        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
+      }
+    },
+    "whoItIsForSection": {
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "personas": {
+        "producers": {
+          "title": "Producers",
+          "description": "Who need a simple way to share farm and plot data."
+        },
+        "cooperatives": {
+          "title": "Cooperatives",
+          "description": "That manage many members and many requests."
+        },
+        "exporters": {
+          "title": "Exporters",
+          "description": "That need reliable shipment evidence."
+        },
+        "buyers": {
+          "title": "Buyers",
+          "description": "That want cleaner upstream data and fewer missing records."
+        }
+      }
+    },
+    "regenerativeFarmingSection": {
+      "label": "Supporting change",
+      "headline": "Supporting regenerative farming, not just compliance.",
+      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
+      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
+    }
   },
   "common": {
     "language": "Språk",
@@ -186,96 +253,5 @@
     "howLongAnswer": "De fleste kooperativer blir kartlagt og operasjonelle innen 48 timer etter registrering. Offline-first design betyr null nedetid.",
     "support": "Hva slags støtte er tilgjengelig?",
     "supportAnswer": "24/7 e-poststøtte, pluss prioritert telefonsupp for pilotpartnere. Direkte tilgang til vårt compliance-team."
-  },
-  "marketing": {
-    "hero": {
-      "headline": "Sporbarhet som fungerer for hele kjeden.",
-      "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
-      "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
-      "cta": {
-        "primary": "Se hvordan det fungerer",
-        "secondary": "Kontakt oss"
-      }
-    },
-    "whyTracebudSection": {
-      "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
-      "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
-      "pillars": {
-        "simple": {
-          "title": "Enkelt",
-          "description": "Én plattform. Én arbeidsflyt. Én sannhetskilde."
-        },
-        "automated": {
-          "title": "Automatisert",
-          "description": "Forespørsler beveger seg automatisk gjennom nettverket, slik at bevis når kilden raskere."
-        },
-        "inclusive": {
-          "title": "Inkluderende",
-          "description": "Bønder kan delta direkte, selv med begrenset digital tilgang, delte enheter eller ustabilt signal."
-        }
-      }
-    },
-    "howItWorksSection": {
-      "headline": "Fra første forespørsel til gjenbrukbart bevis.",
-      "subtitle": "Fire steg. Ingen kompleksitet.",
-      "steps": {
-        "step1": {
-          "number": "01",
-          "title": "Legg til nettverket ditt",
-          "description": "Én kontakt eller fem hundre. Last opp en CSV eller legg dem til manuelt."
-        },
-        "step2": {
-          "number": "02",
-          "title": "Send én forespørsel",
-          "description": "Den flyter automatisk gjennom kjeden. Ingen oppfølging."
-        },
-        "step3": {
-          "number": "03",
-          "title": "Samle opprinnelsesdata",
-          "description": "Registrer det én gang, og gjenbruk det på tvers av flere forsendelser og kjøpere."
-        },
-        "step4": {
-          "number": "04",
-          "title": "Hold alle samkjørt",
-          "description": "Hold alle på samme side med en delt digital arbeidsflyt."
-        }
-      }
-    },
-    "productsSection": {
-      "mobileApp": {
-        "headline": "Bygget for feltet, ikke kontoret.",
-        "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
-        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
-      },
-      "dashboard": {
-        "headline": "Administrer nettverket uten frem og tilbake.",
-        "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
-        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
-      }
-    },
-    "inclusionSection": {
-      "headline": "Etterlevelse skal ikke etterlate småbønder.",
-      "description": "Store selskaper kan kjøpe komplekse systemer. Småbønder bør ikke ekskluderes fordi verktøyene er for dyre, for tekniske eller for trege. Tracebud holder hver aktør synlig, koblet og klar for markedet.",
-      "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
-    },
-    "finalCtaSection": {
-      "headline": "Gjør etterlevelse brukbar for hele kjeden.",
-      "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
-      "cta": "Kom i gang"
-    },
-    "exitIntentModal": {
-      "headline": "Klar til å bli med på ventelisten?",
-      "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
-      "cta": {
-        "primary": "Bli med nå",
-        "secondary": "Fortsett å bla"
-      },
-      "note": "Begrenset antall plasser for tidlige pilotpartnere."
-    },
-    "waitlistDialog": {
-      "headline": "Bli med i pilotprogrammet",
-      "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
-      "note": "Ingen spam. Avslutt abonnementet når som helst."
-    }
   }
 }

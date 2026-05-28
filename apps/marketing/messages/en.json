@@ -94,6 +94,73 @@
       "headline": "Join the pilot",
       "description": "Limited spots for early pilot partners. Tell us about your network and we'll be in touch.",
       "note": "No spam, ever. Unsubscribe at any time."
+    },
+    "builtForRealitiesSection": {
+      "headline": "Built for real operations",
+      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
+      "thatMeans": "That means:",
+      "features": {
+        "offline": {
+          "title": "Offline capture in the field",
+          "description": "Work without connectivity and sync when ready."
+        },
+        "roleBasedAccess": {
+          "title": "Role-based access",
+          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
+        },
+        "consentBased": {
+          "title": "Consent-based data sharing",
+          "description": "Organizations control who accesses their data."
+        },
+        "auditLogs": {
+          "title": "Audit logs and retention",
+          "description": "Full compliance records for regulatory requirements."
+        },
+        "reusableData": {
+          "title": "Reusable origin data",
+          "description": "Capture once, reuse across shipments and counterparties."
+        },
+        "csvUpload": {
+          "title": "CSV upload and workflows",
+          "description": "Simple data import and automated request flows."
+        }
+      }
+    },
+    "trustAndDataSection": {
+      "headline": "Compliance data should stay clear, controlled, and auditable.",
+      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
+      "goal": {
+        "title": "The goal",
+        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
+      }
+    },
+    "whoItIsForSection": {
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "personas": {
+        "producers": {
+          "title": "Producers",
+          "description": "Who need a simple way to share farm and plot data."
+        },
+        "cooperatives": {
+          "title": "Cooperatives",
+          "description": "That manage many members and many requests."
+        },
+        "exporters": {
+          "title": "Exporters",
+          "description": "That need reliable shipment evidence."
+        },
+        "buyers": {
+          "title": "Buyers",
+          "description": "That want cleaner upstream data and fewer missing records."
+        }
+      }
+    },
+    "regenerativeFarmingSection": {
+      "label": "Supporting change",
+      "headline": "Supporting regenerative farming, not just compliance.",
+      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
+      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
     }
   },
   "hero": {
@@ -101,10 +168,22 @@
     "headline1": "The easiest way for smallholders",
     "headline2": "to stay connected to EU markets",
     "subheadline": "From producer onboarding and plot mapping to shipment readiness and buyer handoff, Tracebud turns origin data into usable compliance.",
-    "metric1": { "value": "20 min", "label": "to map one farm" },
-    "metric2": { "value": "Offline", "label": "works in the field" },
-    "metric3": { "value": "Reusable", "label": "proof for any buyer" },
-    "cta": { "startTrial": "Join the waitlist", "bookDemo": "See how it works" },
+    "metric1": {
+      "value": "20 min",
+      "label": "to map one farm"
+    },
+    "metric2": {
+      "value": "Offline",
+      "label": "works in the field"
+    },
+    "metric3": {
+      "value": "Reusable",
+      "label": "proof for any buyer"
+    },
+    "cta": {
+      "startTrial": "Join the waitlist",
+      "bookDemo": "See how it works"
+    },
     "trialInfo": "Free for producers. No credit card required.",
     "earlyAdopters": "Limited pilot spots available",
     "seeHowItWorks": "See how it works"

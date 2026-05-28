@@ -101,10 +101,22 @@
     "headline1": "Commercez librement.",
     "headline2": "Tracez facilement.",
     "subheadline": "L'accès au marché de l'UE simplifié. Traçabilité complète de la chaîne d'approvisionnement en jours, pas en mois.",
-    "metric1": { "value": "Jours", "label": "Pas des mois pour la conformité" },
-    "metric2": { "value": "Chaîne complète", "label": "Ferme à port vérifiée" },
-    "metric3": { "value": "Libre-service", "label": "Aucune intégration requise" },
-    "cta": { "startTrial": "Rejoindre la liste d'attente", "bookDemo": "En savoir plus" },
+    "metric1": {
+      "value": "Jours",
+      "label": "Pas des mois pour la conformité"
+    },
+    "metric2": {
+      "value": "Chaîne complète",
+      "label": "Ferme à port vérifiée"
+    },
+    "metric3": {
+      "value": "Libre-service",
+      "label": "Aucune intégration requise"
+    },
+    "cta": {
+      "startTrial": "Rejoindre la liste d'attente",
+      "bookDemo": "En savoir plus"
+    },
     "trialInfo": "30 jours gratuits. Aucune carte de crédit requise.",
     "earlyAdopters": "Les premiers utilisateurs bénéficient du support prioritaire",
     "seeHowItWorks": "Voir comment ça marche"
@@ -138,10 +150,22 @@
     "title": "Pourquoi Tracebud fonctionne",
     "subtitle": "Construit de zéro pour la transparence de la chaîne d'approvisionnement sur les marchés réglementés. Simple d'utilisation, construit pour évoluer.",
     "features": {
-      "compliance": { "title": "Conformité EUDR", "description": "Construit pour respecter les réglementations de décembre 2026" },
-      "farmer": { "title": "D'abord l'agriculteur", "description": "L'application smartphone fonctionne hors ligne sur le terrain" },
-      "tracing": { "title": "Traçage en temps réel", "description": "GPS, photos, horodatages, registres immuables" },
-      "global": { "title": "Prêt pour le global", "description": "Intégration TRACES NT et support multilingue" }
+      "compliance": {
+        "title": "Conformité EUDR",
+        "description": "Construit pour respecter les réglementations de décembre 2026"
+      },
+      "farmer": {
+        "title": "D'abord l'agriculteur",
+        "description": "L'application smartphone fonctionne hors ligne sur le terrain"
+      },
+      "tracing": {
+        "title": "Traçage en temps réel",
+        "description": "GPS, photos, horodatages, registres immuables"
+      },
+      "global": {
+        "title": "Prêt pour le global",
+        "description": "Intégration TRACES NT et support multilingue"
+      }
     },
     "useCases": "Les premiers pilotes utilisent déjà Tracebud pour :"
   },

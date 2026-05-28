@@ -1,94 +1,161 @@
 {
   "marketing": {
-      "hero": {
-        "headline": "ለሙሉ ሰንሰለቱ የሚሰራ የመከታተያ ስርዓት።",
-        "subheadline": "Tracebud የ EUDR ተገዥነትን ቀላል፣ በራስ ለራስ የሚሰራ እና ዋጋው የሚደርስ መሳሪያ በመስጠት ገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች የምንጭ ውሂብን ሰብስበው፣ አጋርተው እና እንደገና እንዲጠቀሙ ይረዳል፣ ሰነድ ለመከታተል ሳይደክሙ።",
-        "supportingText": "ለአቅራቢዎች ነፃ። ለውስን ግንኙነት እና ለቀላል ሂደቶች የተነደፈ። ኮንሰልታንቶች አያስፈልጉም።",
-        "cta": {
-          "primary": "እንዴት እንደሚሰራ ይመልከቱ",
-          "secondary": "ያግኙን"
-        }
-      },
-      "whyTracebudSection": {
-        "headline": "ተገዥነት ታማኝ እንዲሆን ውስብስብ መሆን የለበትም።",
-        "description": "አብዛኞቹ የአቅርቦት ሰንሰለቶች ሰዎች አልሞክሩም ብለው አይወድቁም። ሂደቱ በጣም በእጅ ስለሚሰራ፣ በጣም ውድ ስለሆነ እና በጣም ተበታትኖ ስለሆነ ይወድቃሉ። Tracebud ድጋጌ ማለትን ያስወግዳል፣ ስለዚህ መረቡ ትልቅ፣ ተበታትኖ ወይም አልተደገፈም ቢሆንም ሁሉም መሳተፍ ይችላሉ።",
-        "pillars": {
-          "simple": {
-            "title": "ቀላል",
-            "description": "አንድ መድረክ። አንድ የሥራ ፍሰት። አንድ የእውነት ምንጭ።"
-          },
-          "automated": {
-            "title": "በራስ የሚሰራ",
-            "description": "ጥያቄዎች በራስ-ሰር በመረቡ ውስጥ ይንቀሳቀሳሉ፣ ስለዚህ ማስረጃው ፈጥኖ ምንጭ ይደርሳል።"
-          },
-          "inclusive": {
-            "title": "አካታች",
-            "description": "ገበሬዎች የዲጂታል መዳረሻ ውስን ቢሆንም፣ መሳሪያ ተጋር ቢጠቀሙም ወይም ምልክት ያልተረጋጋ ቢሆንም በቀጥታ መሳተፍ ይችላሉ።"
-          }
-        }
-      },
-      "howItWorksSection": {
-        "headline": "ከመጀመሪያው ጥያቄ እስከ እንደገና ሊጠቀም የሚችል ማስረጃ።",
-        "subtitle": "አራት ደረጃዎች። ያለ ውስብስብነት።",
-        "steps": {
-          "step1": {
-            "number": "01",
-            "title": "መረብዎን ያክሉ",
-            "description": "አንድ ኮንታክት ወይም 500። CSV ይስቀሉ ወይም በእጅ ያክሉ።"
-          },
-          "step2": {
-            "number": "02",
-            "title": "አንድ ጥያቄ ይላኩ",
-            "description": "በራስ-ሰር በሰንሰለቱ ውስጥ ይፈስሳል። ሰው ለመከታተል የለም።"
-          },
-          "step3": {
-            "number": "03",
-            "title": "የመነሻ ውሂብ ይሰብስቡ",
-            "description": "አንድ ጊዜ ይመዝገቡት፣ ከዚያም ለብዙ ጭነቶች እና ገዢዎች እንደገና ይጠቀሙበት።"
-          },
-          "step4": {
-            "number": "04",
-            "title": "ሁሉንም አስተካክሉ",
-            "description": "በጋራ ዲጂታል የሥራ ፍሰት ሁሉንም በአንድ መስመር ላይ ያቆዩ።"
-          }
-        }
-      },
-      "productsSection": {
-        "mobileApp": {
-          "headline": "ለመሬት ስራ፣ ለቢሮ አይደለም።",
-          "description": "ገበሬዎች የመሬት ድንበር ሊያስመልክቱ፣ መረጃ ሊጋሩ እና በቀላል የሞባይል ተሞክሮ ምላሽ ሊሰጡ ይችላሉ። ኦፍላይን ይሰራል፣ ግልጽ እይታዎችን ይጠቀማል እና ሂደቱን ቀላል ያደርጋል።",
-          "supportingText": "ለአቅራቢዎች ነፃ። ከባድ ማዘጋጃ ወይም ረጅም ስልጠና የለም።"
-        },
-        "dashboard": {
-          "headline": "መረብዎን ያለ ድግግሞሽ ያስተዳድሩ።",
-          "description": "ኮንታክቶችን በብዛት ይጫኑ፣ አንድ ጥያቄ ይላኩ እና የሥራ ፍሰቱ በሙሉ ሰንሰለቱ ውስጥ እንዲፈስስ ያድርጉ። ምላሾችን ይከታተሉ፣ የተረጋገጡ ውሂቦችን እንደገና ይጠቀሙ እና እያንዳንዱን ጭነት በትንሽ የእጅ ስራ ያስቀጥሉ።",
-          "supportingText": "ያነሰ መከታተል። ያነሱ ክፍተቶች። ፈጣን ማስተላለፊያ።"
-        }
-      },
-      "inclusionSection": {
-        "headline": "ተገዥነት ትንንሽ ገበሬዎችን ወደ ኋላ መተው የለበትም።",
-        "description": "ትልቅ ኩባንያዎች ውስብስብ ስርዓቶችን ሊገዙ ይችላሉ። ትንንሽ ገበሬዎች መሳሪያዎቹ በጣም ውድ፣ በጣም ቴክኒካል ወይም በጣም ዝግ ስለሆኑ መውጣት የለባቸውም። Tracebud ሁሉንም አባል ታይቶ፣ ተገናኝቶ እና ለገበያ ዝግጁ ያደርጋል።",
-        "punchline": "እኛ ለብዙ ዓመታት ትንንሽ ገበሬዎችን ውጭ ያቆዩትን የመዳረሻ መከላከያዎች እናስወግዳለን።"
-      },
-      "finalCtaSection": {
-        "headline": "ተገዥነትን ለሙሉ ሰንሰለቱ የሚጠቅም ማድረግ።",
-        "description": "አሁን ባለው መረብዎ ይጀምሩ እና ለእያንዳንዱ አባል የመሳተፊያ መንገድ ይስጡ።",
-        "cta": "ጀምር"
-      },
-      "exitIntentModal": {
-        "headline": "በመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
-        "description": "Tracebud የምንጭ ውሂብን ለመሰብሰብ፣ ለማጋራት እና እንደገና ለመጠቀም ይረዳዎታል። ለገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች ቀላል፣ ዋጋው የሚደርስ እና አካታች ነው።",
-        "cta": {
-          "primary": "አሁን ይቀላቀሉ",
-          "secondary": "መስሰስቅ ቀጥሉ"
-        },
-        "note": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች።"
-      },
-      "waitlistDialog": {
-        "headline": "የፓይለት ፕሮግራሙን ይቀላቀሉ",
-        "description": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች። ስለ መረብዎ ይንገሩን እና እናገኝዎታለን።",
-        "note": "ስፓም የለም። በማንኛውም ጊዜ ይሰርዙ።"
+    "hero": {
+      "headline": "ለሙሉ ሰንሰለቱ የሚሰራ የመከታተያ ስርዓት።",
+      "subheadline": "Tracebud የ EUDR ተገዥነትን ቀላል፣ በራስ ለራስ የሚሰራ እና ዋጋው የሚደርስ መሳሪያ በመስጠት ገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች የምንጭ ውሂብን ሰብስበው፣ አጋርተው እና እንደገና እንዲጠቀሙ ይረዳል፣ ሰነድ ለመከታተል ሳይደክሙ።",
+      "supportingText": "ለአቅራቢዎች ነፃ። ለውስን ግንኙነት እና ለቀላል ሂደቶች የተነደፈ። ኮንሰልታንቶች አያስፈልጉም።",
+      "cta": {
+        "primary": "እንዴት እንደሚሰራ ይመልከቱ",
+        "secondary": "ያግኙን"
       }
+    },
+    "whyTracebudSection": {
+      "headline": "ተገዥነት ታማኝ እንዲሆን ውስብስብ መሆን የለበትም።",
+      "description": "አብዛኞቹ የአቅርቦት ሰንሰለቶች ሰዎች አልሞክሩም ብለው አይወድቁም። ሂደቱ በጣም በእጅ ስለሚሰራ፣ በጣም ውድ ስለሆነ እና በጣም ተበታትኖ ስለሆነ ይወድቃሉ። Tracebud ድጋጌ ማለትን ያስወግዳል፣ ስለዚህ መረቡ ትልቅ፣ ተበታትኖ ወይም አልተደገፈም ቢሆንም ሁሉም መሳተፍ ይችላሉ።",
+      "pillars": {
+        "simple": {
+          "title": "ቀላል",
+          "description": "አንድ መድረክ። አንድ የሥራ ፍሰት። አንድ የእውነት ምንጭ።"
+        },
+        "automated": {
+          "title": "በራስ የሚሰራ",
+          "description": "ጥያቄዎች በራስ-ሰር በመረቡ ውስጥ ይንቀሳቀሳሉ፣ ስለዚህ ማስረጃው ፈጥኖ ምንጭ ይደርሳል።"
+        },
+        "inclusive": {
+          "title": "አካታች",
+          "description": "ገበሬዎች የዲጂታል መዳረሻ ውስን ቢሆንም፣ መሳሪያ ተጋር ቢጠቀሙም ወይም ምልክት ያልተረጋጋ ቢሆንም በቀጥታ መሳተፍ ይችላሉ።"
+        }
+      }
+    },
+    "howItWorksSection": {
+      "headline": "ከመጀመሪያው ጥያቄ እስከ እንደገና ሊጠቀም የሚችል ማስረጃ።",
+      "subtitle": "አራት ደረጃዎች። ያለ ውስብስብነት።",
+      "steps": {
+        "step1": {
+          "number": "01",
+          "title": "መረብዎን ያክሉ",
+          "description": "አንድ ኮንታክት ወይም 500። CSV ይስቀሉ ወይም በእጅ ያክሉ።"
+        },
+        "step2": {
+          "number": "02",
+          "title": "አንድ ጥያቄ ይላኩ",
+          "description": "በራስ-ሰር በሰንሰለቱ ውስጥ ይፈስሳል። ሰው ለመከታተል የለም።"
+        },
+        "step3": {
+          "number": "03",
+          "title": "የመነሻ ውሂብ ይሰብስቡ",
+          "description": "አንድ ጊዜ ይመዝገቡት፣ ከዚያም ለብዙ ጭነቶች እና ገዢዎች እንደገና ይጠቀሙበት።"
+        },
+        "step4": {
+          "number": "04",
+          "title": "ሁሉንም አስተካክሉ",
+          "description": "በጋራ ዲጂታል የሥራ ፍሰት ሁሉንም በአንድ መስመር ላይ ያቆዩ።"
+        }
+      }
+    },
+    "productsSection": {
+      "mobileApp": {
+        "headline": "ለመሬት ስራ፣ ለቢሮ አይደለም።",
+        "description": "ገበሬዎች የመሬት ድንበር ሊያስመልክቱ፣ መረጃ ሊጋሩ እና በቀላል የሞባይል ተሞክሮ ምላሽ ሊሰጡ ይችላሉ። ኦፍላይን ይሰራል፣ ግልጽ እይታዎችን ይጠቀማል እና ሂደቱን ቀላል ያደርጋል።",
+        "supportingText": "ለአቅራቢዎች ነፃ። ከባድ ማዘጋጃ ወይም ረጅም ስልጠና የለም።"
+      },
+      "dashboard": {
+        "headline": "መረብዎን ያለ ድግግሞሽ ያስተዳድሩ።",
+        "description": "ኮንታክቶችን በብዛት ይጫኑ፣ አንድ ጥያቄ ይላኩ እና የሥራ ፍሰቱ በሙሉ ሰንሰለቱ ውስጥ እንዲፈስስ ያድርጉ። ምላሾችን ይከታተሉ፣ የተረጋገጡ ውሂቦችን እንደገና ይጠቀሙ እና እያንዳንዱን ጭነት በትንሽ የእጅ ስራ ያስቀጥሉ።",
+        "supportingText": "ያነሰ መከታተል። ያነሱ ክፍተቶች። ፈጣን ማስተላለፊያ።"
+      }
+    },
+    "inclusionSection": {
+      "headline": "ተገዥነት ትንንሽ ገበሬዎችን ወደ ኋላ መተው የለበትም።",
+      "description": "ትልቅ ኩባንያዎች ውስብስብ ስርዓቶችን ሊገዙ ይችላሉ። ትንንሽ ገበሬዎች መሳሪያዎቹ በጣም ውድ፣ በጣም ቴክኒካል ወይም በጣም ዝግ ስለሆኑ መውጣት የለባቸውም። Tracebud ሁሉንም አባል ታይቶ፣ ተገናኝቶ እና ለገበያ ዝግጁ ያደርጋል።",
+      "punchline": "እኛ ለብዙ ዓመታት ትንንሽ ገበሬዎችን ውጭ ያቆዩትን የመዳረሻ መከላከያዎች እናስወግዳለን።"
+    },
+    "finalCtaSection": {
+      "headline": "ተገዥነትን ለሙሉ ሰንሰለቱ የሚጠቅም ማድረግ።",
+      "description": "አሁን ባለው መረብዎ ይጀምሩ እና ለእያንዳንዱ አባል የመሳተፊያ መንገድ ይስጡ።",
+      "cta": "ጀምር"
+    },
+    "exitIntentModal": {
+      "headline": "በመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
+      "description": "Tracebud የምንጭ ውሂብን ለመሰብሰብ፣ ለማጋራት እና እንደገና ለመጠቀም ይረዳዎታል። ለገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች ቀላል፣ ዋጋው የሚደርስ እና አካታች ነው።",
+      "cta": {
+        "primary": "አሁን ይቀላቀሉ",
+        "secondary": "መስሰስቅ ቀጥሉ"
+      },
+      "note": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች።"
+    },
+    "waitlistDialog": {
+      "headline": "የፓይለት ፕሮግራሙን ይቀላቀሉ",
+      "description": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች። ስለ መረብዎ ይንገሩን እና እናገኝዎታለን።",
+      "note": "ስፓም የለም። በማንኛውም ጊዜ ይሰርዙ።"
+    },
+    "builtForRealitiesSection": {
+      "headline": "Built for real operations",
+      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
+      "thatMeans": "That means:",
+      "features": {
+        "offline": {
+          "title": "Offline capture in the field",
+          "description": "Work without connectivity and sync when ready."
+        },
+        "roleBasedAccess": {
+          "title": "Role-based access",
+          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
+        },
+        "consentBased": {
+          "title": "Consent-based data sharing",
+          "description": "Organizations control who accesses their data."
+        },
+        "auditLogs": {
+          "title": "Audit logs and retention",
+          "description": "Full compliance records for regulatory requirements."
+        },
+        "reusableData": {
+          "title": "Reusable origin data",
+          "description": "Capture once, reuse across shipments and counterparties."
+        },
+        "csvUpload": {
+          "title": "CSV upload and workflows",
+          "description": "Simple data import and automated request flows."
+        }
+      }
+    },
+    "trustAndDataSection": {
+      "headline": "Compliance data should stay clear, controlled, and auditable.",
+      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
+      "goal": {
+        "title": "The goal",
+        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
+      }
+    },
+    "whoItIsForSection": {
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "personas": {
+        "producers": {
+          "title": "Producers",
+          "description": "Who need a simple way to share farm and plot data."
+        },
+        "cooperatives": {
+          "title": "Cooperatives",
+          "description": "That manage many members and many requests."
+        },
+        "exporters": {
+          "title": "Exporters",
+          "description": "That need reliable shipment evidence."
+        },
+        "buyers": {
+          "title": "Buyers",
+          "description": "That want cleaner upstream data and fewer missing records."
+        }
+      }
+    },
+    "regenerativeFarmingSection": {
+      "label": "Supporting change",
+      "headline": "Supporting regenerative farming, not just compliance.",
+      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
+      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
+    }
   },
   "common": {
     "language": "ቋንቋ",
@@ -101,10 +168,22 @@
     "headline1": "በነፃነት ይግዙ።",
     "headline2": "በቀላሉ ይከታተሉ።",
     "subheadline": "የ EU ገበያ ተደራሽነት ቀላል ተደርጓል። ከምርት ሰሪ እስከ ትርጓሚ ድረስ ሙሉ የአቅርቦት ሰንሰለት ምንዝር አይام ውስጥ።",
-    "metric1": { "value": "ዋጋ", "label": "ተቀባይነት ለወራት አይደለም" },
-    "metric2": { "value": "ሙሉ ሰንሰለት", "label": "ከሄታ እስከ ወደብ የተረጋገጠ" },
-    "metric3": { "value": "ራስ-አገልግሎት", "label": "ምንም ግቢ አያስፈልግም" },
-    "cta": { "startTrial": "ወደ ተጠበቅ ዝርዝር ይግቡ", "bookDemo": "ተጨማሪ ይወቁ" },
+    "metric1": {
+      "value": "ዋጋ",
+      "label": "ተቀባይነት ለወራት አይደለም"
+    },
+    "metric2": {
+      "value": "ሙሉ ሰንሰለት",
+      "label": "ከሄታ እስከ ወደብ የተረጋገጠ"
+    },
+    "metric3": {
+      "value": "ራስ-አገልግሎት",
+      "label": "ምንም ግቢ አያስፈልግም"
+    },
+    "cta": {
+      "startTrial": "ወደ ተጠበቅ ዝርዝር ይግቡ",
+      "bookDemo": "ተጨማሪ ይወቁ"
+    },
     "trialInfo": "30 ቀናት ነጻ። ምንም ካሬዲት ካርድ አይቀтребуется።",
     "earlyAdopters": "ቀደምት ተጠቃሚዎች ቅድሚያ ድጋፍ ይሰጣቸዋል",
     "seeHowItWorks": "እንዴት እንደሚሰራ ይመልከቱ"
@@ -138,10 +217,22 @@
     "title": "ትሬበድ ለምን ይሰራል",
     "subtitle": "ለሚወሰን ገበያ ላይ የአቅርቦት ሰንሰለት ግልጽነት ለመስጠት ከስሪት ተፈጥሮ ተሰርቷል። ለመጠቀም ቀላል፣ ለመስፋት የተገነባ።",
     "features": {
-      "compliance": { "title": "EUDR ተስማሚ", "description": "የታህሳስ 2026 ደንቦችን ለማሟላት የተገነባ" },
-      "farmer": { "title": "አርሶ አደር ሙሌት", "description": "ስማርት ፎን መተግበሪያ በሜዳ ላይ የተገናኘ ሳይሆን ይሰራል" },
-      "tracing": { "title": "ብክ-ጊዜ ምንዝር", "description": "GPS፣ ፎቶዎች፣ ጊዜ ምልክቶች፣ ሊቀየር የማይችሉ ሰነዶች" },
-      "global": { "title": "ዓለም ሁሉ ዋቅ", "description": "TRACES NT ግንኙነት እና ብዙ ቋንቋ ድጋፍ" }
+      "compliance": {
+        "title": "EUDR ተስማሚ",
+        "description": "የታህሳስ 2026 ደንቦችን ለማሟላት የተገነባ"
+      },
+      "farmer": {
+        "title": "አርሶ አደር ሙሌት",
+        "description": "ስማርት ፎን መተግበሪያ በሜዳ ላይ የተገናኘ ሳይሆን ይሰራል"
+      },
+      "tracing": {
+        "title": "ብክ-ጊዜ ምንዝር",
+        "description": "GPS፣ ፎቶዎች፣ ጊዜ ምልክቶች፣ ሊቀየር የማይችሉ ሰነዶች"
+      },
+      "global": {
+        "title": "ዓለም ሁሉ ዋቅ",
+        "description": "TRACES NT ግንኙነት እና ብዙ ቋንቋ ድጋፍ"
+      }
     },
     "useCases": "ቀደምት ሙከራዎች ቁጥር በቁጥር Tracebud ለሚከተለውን ይጠቀማሉ:"
   },
@@ -161,7 +252,6 @@
     "howLong": "ስብስቡ ምን ያህል ይወስዳል?",
     "howLongAnswer": "አብዛኞቹ የሕብረት ስራ ቦታ ከ48 ሰዓታት ውስጥ ተስተካክለው አሁን ናቸው ሉ። የተገናኘ ሳይሆን ዲዛይን ማለት ዜሮ ተኩላ ጊዜ ነው።",
     "support": "ምን ከስ ያገኛሉ?",
-    "supportAnswer": "24/7 ኢሜይል ድጋፍ በተጨማሪ ቅድሚያ ስልክ ድጋፍ ለሙከራ አጋር። ከነ compliance ቡድን ስለ ቀጥታ ተደራሽነት ተግቢ።"
+    "supportAnswer": "24/7 ኢሜ��ል ድጋፍ በተጨማሪ ቅድሚያ ስልክ ድጋፍ ለሙከራ አጋር። ከነ compliance ቡድን ስለ ቀጥታ ተደራሽነት ተግቢ።"
   }
-}
 }
