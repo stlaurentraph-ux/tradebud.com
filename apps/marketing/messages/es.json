@@ -88,6 +88,34 @@
       "headline": "Únete al programa piloto",
       "description": "Places limitadas para los primeros socios piloto. Cuéntanos sobre tu red y nos pondremos en contacto.",
       "note": "Sin spam. Cancelar suscripción en cualquier momento."
+    },
+    "pricingSection": {
+      "label": "Precios",
+      "headline": "Precios mensuales simples según el tamaño de la red.",
+      "description": "Un precio. Sin tarifas por usuario. Los productores son gratuitos.",
+      "popularBadge": "Más popular",
+      "footerNote": "Los envíos adicionales se facturan por separado. Los productores son gratuitos.",
+      "cta": "Comenzar",
+      "table": {
+        "plan": "Plan",
+        "managedScale": "Escala gestionada",
+        "shipments": "Envíos incluidos / mes",
+        "monthlyBase": "Base mensual"
+      },
+      "plans": {
+        "starter": {
+          "name": "Starter"
+        },
+        "growth": {
+          "name": "Crecimiento"
+        },
+        "scale": {
+          "name": "Escala"
+        },
+        "enterprise": {
+          "name": "Empresa"
+        }
+      }
     }
   },
   "common": {

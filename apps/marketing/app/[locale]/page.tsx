@@ -5,6 +5,7 @@ import { BuiltForRealities } from "@/components/tracebud/built-for-realities";
 import { TrustAndData } from "@/components/tracebud/trust-and-data";
 import { WhoItIsFor } from "@/components/tracebud/who-it-is-for";
 import { RegenerativeFarming } from "@/components/tracebud/regenerative-farming";
+import { Pricing } from "@/components/tracebud/pricing";
 import { ValueProp } from "@/components/tracebud/value-prop";
 import { FAQ } from "@/components/tracebud/faq";
 import { Footer } from "@/components/tracebud/footer";
@@ -21,6 +22,7 @@ export default function Home() {
       <TrustAndData />
       <WhoItIsFor />
       <RegenerativeFarming />
+      <Pricing />
       <ValueProp />
       <FAQ />
       <Footer />

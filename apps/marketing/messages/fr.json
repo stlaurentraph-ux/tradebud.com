@@ -88,6 +88,34 @@
       "headline": "Rejoindre le programme pilote",
       "description": "Places limitées pour les premiers partenaires pilotes. Parlez-nous de votre réseau et nous vous recontacterons.",
       "note": "Pas de spam. Désinscription possible à tout moment."
+    },
+    "pricingSection": {
+      "label": "Tarifs",
+      "headline": "Tarification mensuelle simple selon la taille du réseau.",
+      "description": "Un prix. Sans frais par utilisateur. Gratuit pour les producteurs.",
+      "popularBadge": "Le plus populaire",
+      "footerNote": "Les expéditions supplémentaires sont facturées séparément. Gratuit pour les producteurs.",
+      "cta": "Commencer",
+      "table": {
+        "plan": "Plan",
+        "managedScale": "Taille gérée",
+        "shipments": "Expéditions incluses / mois",
+        "monthlyBase": "Base mensuelle"
+      },
+      "plans": {
+        "starter": {
+          "name": "Starter"
+        },
+        "growth": {
+          "name": "Croissance"
+        },
+        "scale": {
+          "name": "Échelle"
+        },
+        "enterprise": {
+          "name": "Entreprise"
+        }
+      }
     }
   },
   "common": {

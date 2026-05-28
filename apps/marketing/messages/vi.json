@@ -155,6 +155,34 @@
       "headline": "Supporting regenerative farming, not just compliance.",
       "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
       "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
+    },
+    "pricingSection": {
+      "label": "Giá cả",
+      "headline": "Giá hàng tháng đơn giản theo quy mô mạng lưới.",
+      "description": "Một mức giá. Không tính phí theo người dùng. Nhà sản xuất miễn phí.",
+      "popularBadge": "Phổ biến nhất",
+      "footerNote": "Các lô hàng bổ sung được tính phí riêng. Nhà sản xuất miễn phí.",
+      "cta": "Bắt đầu",
+      "table": {
+        "plan": "Gói",
+        "managedScale": "Quy mô quản lý",
+        "shipments": "Lô hàng được bao gồm / tháng",
+        "monthlyBase": "Cơ sở hàng tháng"
+      },
+      "plans": {
+        "starter": {
+          "name": "Khởi đầu"
+        },
+        "growth": {
+          "name": "Tăng trưởng"
+        },
+        "scale": {
+          "name": "Quy mô"
+        },
+        "enterprise": {
+          "name": "Doanh nghiệp"
+        }
+      }
     }
   },
   "common": {
