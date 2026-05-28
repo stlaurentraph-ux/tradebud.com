@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { Smartphone, Monitor, WifiOff, MapPin, Camera, CheckCircle, Upload, Send, GitBranch, Eye, Package } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export function Products() {
+  const t = useTranslations("marketing");
   return (
     <section id="how-it-works" className="py-24 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6">
@@ -41,15 +43,15 @@ export function Products() {
             </div>
             
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-              Built for the farm, not the office.
+              {t("productsSection.mobileApp.headline")}
             </h3>
             
             <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              Farmers can map plots, share information, and respond from a simple mobile experience designed for real field conditions. It works offline, uses clear visuals, and keeps the process lightweight.
+              {t("productsSection.mobileApp.description")}
             </p>
             
             <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
-              Free for producers. No training-heavy setup.
+              {t("productsSection.mobileApp.supportingText")}
             </p>
 
             <div className="space-y-4">
@@ -220,15 +222,15 @@ export function Products() {
             </div>
             
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-              Manage your network without the back-and-forth.
+              {t("productsSection.dashboard.headline")}
             </h3>
             
             <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              Upload contacts in bulk, send one request, and let the workflow cascade through your supply chain. Track responses, reuse verified data, and keep every shipment moving with less manual follow-up.
+              {t("productsSection.dashboard.description")}
             </p>
             
             <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
-              Less chasing. Fewer gaps. Faster handoffs.
+              {t("productsSection.dashboard.supportingText")}
             </p>
 
             <div className="space-y-4">
