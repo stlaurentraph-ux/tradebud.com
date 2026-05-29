@@ -203,16 +203,22 @@
     "integrations": "Integraciones Directas"
   },
   "faq": {
-    "title": "Preguntas Frecuentes",
-    "whenLaunch": "¿Cuándo se lanzará Tracebud?",
-    "whenLaunchAnswer": "Tracebud está en pruebas piloto activas. Estamos inscribiendo socios seleccionados ahora. Únete a la lista de espera para ser notificado cuando se lance.",
-    "whyCommodities": "¿Por qué comenzar con estas materias primas?",
-    "whoCommoditiesAnswer": "Café, cacao, aceite de palma, caucho, soja, ganado y madera son las materias primas principales de EUDR. Expandiremos según la demanda.",
-    "howCost": "¿Cuánto cuesta?",
-    "howCostAnswer": "El precio es transparente y se escala según el tamaño de tu operación. Prueba gratuita disponible. Detalles compartidos durante la incorporación.",
-    "howLong": "¿Cuánto tiempo lleva la configuración?",
-    "howLongAnswer": "La mayoría de las cooperativas están mapeadas y operativas en 48 horas después de registrarse. El diseño sin conexión significa cero tiempo de inactividad.",
-    "support": "¿Qué soporte está disponible?",
-    "supportAnswer": "Soporte por correo electrónico 24/7, más soporte telefónico prioritario para socios piloto. Acceso directo a nuestro equipo de cumplimiento."
+    "title": "¿Preguntas? Tenemos respuestas.",
+    "whenLaunch": "¿Cuándo puedo empezar a usar Tracebud?",
+    "whenLaunchAnswer": "Estamos probando con cooperativas, exportadores e importadores ahora. Únete a la lista de espera y nos pondremos en contacto cuando estemos listos para tu región.",
+    "whyCommodities": "¿Qué cultivos admite Tracebud?",
+    "whyCommoditiesAnswer": "Café primero, luego las otras seis materias primas EUDR: cacao, aceite de palma, caucho, soja, ganado y madera. Comenzamos donde la complejidad de los pequeños productores se encuentra con la demanda inmediata de los compradores.",
+    "howLong": "¿Cuánto tiempo tarda la configuración?",
+    "howLongAnswer": "Los productores pueden comenzar a mapear inmediatamente con la aplicación sin conexión. La mayoría de las cooperativas tienen su red mapeada dentro de una semana. El panel está listo en el momento en que te registres.",
+    "offlineCapability": "¿Funciona sin internet?",
+    "offlineCapabilityAnswer": "Sí. La aplicación móvil funciona completamente sin conexión. Los productores mapean parcelas, comparten información y responden solicitudes sin conexión. Los datos se sincronizan automáticamente una vez en línea.",
+    "dataControl": "¿Quién puede ver mis datos?",
+    "dataControlAnswer": "Tú tienes el control. Los productores eligen qué organizaciones comparten sus datos. Las organizaciones pueden gestionar permisos en su equipo. Todo se registra con un registro de auditoría completo para cumplimiento.",
+    "regenerativeFarming": "¿Puedo rastrear prácticas regenerativas?",
+    "regenerativeFarmingAnswer": "Sí. Tracebud te permite rastrear y verificar prácticas agrícolas a lo largo del tiempo. Eso facilita documentar el progreso, apoyar transiciones y conectar mejores datos con mejores incentivos para la agricultura regenerativa.",
+    "whoItIsFor": "¿Es solo para productores?",
+    "whoItIsForAnswer": "No. Tracebud ayuda a cooperativas a gestionar muchos miembros, exportadores a reunir pruebas confiables de envío e importadores a obtener datos más limpios. Todos en la cadena pueden participar, incluso con acceso digital limitado.",
+    "support": "¿Qué apoyo está disponible?",
+    "supportAnswer": "Incorporación práctica para todos los clientes. Soporte directo de nuestro equipo. Estamos construyendo esto junto a nuestros primeros usuarios, así que tu retroalimentación forma el producto."
   }
 }

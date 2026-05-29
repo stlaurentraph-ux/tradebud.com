@@ -247,10 +247,16 @@
     "whenLaunchAnswer": "We're testing with cooperatives, exporters, and importers now. Join the waitlist and we'll reach out when we're ready for your region.",
     "whyCommodities": "What crops does Tracebud support?",
     "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. We're starting where smallholder complexity meets immediate buyer demand.",
-    "howCost": "What does it cost?",
-    "howCostAnswer": "Free for producers. Cooperatives, exporters, and buyers pay based on usage. We'll share pricing details when you join the waitlist.",
     "howLong": "How long does setup take?",
     "howLongAnswer": "Producers can start mapping immediately with the offline app. Most cooperatives have their network mapped within a week. The dashboard is ready the moment you sign up.",
+    "offlineCapability": "Does it work without internet?",
+    "offlineCapabilityAnswer": "Yes. The mobile app works completely offline. Producers map plots, share information, and respond to requests without a connection. Data syncs automatically once back online.",
+    "dataControl": "Who can see my data?",
+    "dataControlAnswer": "You stay in control. Producers choose which organizations they share data with. Organizations can manage permissions across their team. Everything is logged with a full audit trail for compliance.",
+    "regenerativeFarming": "Can I track regenerative practices?",
+    "regenerativeFarmingAnswer": "Yes. Tracebud lets you track and verify farm practices over time. That makes it easier to document progress, support transitions, and connect better data with better incentives for regenerative farming.",
+    "whoItIsFor": "Is this just for producers?",
+    "whoItIsForAnswer": "No. Tracebud helps cooperatives manage many members, exporters gather reliable shipment evidence, and buyers get cleaner upstream data. Everyone in the chain can participate, even with limited digital access.",
     "support": "What support is available?",
     "supportAnswer": "Hands-on onboarding for all customers. Direct support from our team. We're building this alongside our early users, so your feedback shapes the product."
   }

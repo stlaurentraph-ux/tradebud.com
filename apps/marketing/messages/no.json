@@ -270,16 +270,22 @@
     "integrations": "Direkte integrasjoner"
   },
   "faq": {
-    "title": "Ofte stilte spørsmål",
-    "whenLaunch": "Når blir Tracebud lansert?",
-    "whenLaunchAnswer": "Tracebud er i aktiv pilottesting. Vi melder nå utvalgte partnere. Bli med på ventelisten for å få beskjed når vi lanseres.",
-    "whyCommodities": "Hvorfor starte med disse varene?",
-    "whoCommoditiesAnswer": "Kaffe, kakao, palmeølje, gummi, soya, storfe og tre er de viktigste EUDR-varene. Vi vil utvide basert på etterspørsel.",
-    "howCost": "Hvor mye koster det?",
-    "howCostAnswer": "Prisen er gjennomsiktig og skaleres med størrelsen på operasjonen din. Gratis prøveversjon tilgjengelig. Detaljer deles under onboarding.",
+    "title": "Spørsmål? Vi har svar.",
+    "whenLaunch": "Når kan jeg begynne å bruke Tracebud?",
+    "whenLaunchAnswer": "Vi tester nå med kooperativer, eksportører og importører. Bli med på ventelisten og vi kontakter deg når vi er klar for din region.",
+    "whyCommodities": "Hvilke avlinger støtter Tracebud?",
+    "whyCommoditiesAnswer": "Kaffe først, deretter de andre seks EUDR-varene: kakao, palmeølje, gummi, soya, husdyr og trelast. Vi starter der kompleksiteten ved småbønder møter umiddelbar kjøperbehov.",
     "howLong": "Hvor lang tid tar oppsettet?",
-    "howLongAnswer": "De fleste kooperativer blir kartlagt og operasjonelle innen 48 timer etter registrering. Offline-first design betyr null nedetid.",
-    "support": "Hva slags støtte er tilgjengelig?",
-    "supportAnswer": "24/7 e-poststøtte, pluss prioritert telefonsupp for pilotpartnere. Direkte tilgang til vårt compliance-team."
+    "howLongAnswer": "Produsenter kan begynne å kartlegge umiddelbart med appen uten nett. De fleste kooperativer har sitt nettverk kartlagt innen en uke. Instrumentbordet er klart når du registrerer deg.",
+    "offlineCapability": "Fungerer det uten internett?",
+    "offlineCapabilityAnswer": "Ja. Mobilappen fungerer helt uten nett. Produsenter kartlegger tomter, deler informasjon og reagerer på forespørsler uten tilkobling. Data synkroniseres automatisk når du er tilbake på nett.",
+    "dataControl": "Hvem kan se dataene mine?",
+    "dataControlAnswer": "Du beholder kontrollen. Produsenter velger hvilke organisasjoner som deler dataene sine. Organisasjoner kan administrere tillatelser på sitt lag. Alt blir registrert med en fullstendig revisjonsspor for samsvar.",
+    "regenerativeFarming": "Kan jeg spore regenerativ praksis?",
+    "regenerativeFarmingAnswer": "Ja. Tracebud lar deg spore og verifisere jordbrukspraksis over tid. Det gjør det lettere å dokumentere fremgang, støtte overganger og koble bedre data med bedre insentiver for regenerativt jordbruk.",
+    "whoItIsFor": "Er dette bare for produsenter?",
+    "whoItIsForAnswer": "Nei. Tracebud hjelper kooperativer med å administrere mange medlemmer, eksportører med å samle pålitelig leveringsbevis og importører med å få renere oppstrømsdata. Alle i kjeden kan delta, selv med begrenset digital tilgang.",
+    "support": "Hvilken støtte er tilgjengelig?",
+    "supportAnswer": "Praktisk onboarding for alle kunder. Direkte støtte fra vårt team. Vi bygger dette sammen med våre tidlige brukere, så din tilbakemelding former produktet."
   }
 }

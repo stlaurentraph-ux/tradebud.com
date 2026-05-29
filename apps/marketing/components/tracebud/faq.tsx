@@ -10,8 +10,11 @@ import { useWaitlistDialog } from "@/components/waitlist-dialog";
 const faqItems = [
   { key: "whenLaunch", question: "whenLaunch", answer: "whenLaunchAnswer" },
   { key: "whyCommodities", question: "whyCommodities", answer: "whyCommoditiesAnswer" },
-  { key: "howCost", question: "howCost", answer: "howCostAnswer" },
   { key: "howLong", question: "howLong", answer: "howLongAnswer" },
+  { key: "offlineCapability", question: "offlineCapability", answer: "offlineCapabilityAnswer" },
+  { key: "dataControl", question: "dataControl", answer: "dataControlAnswer" },
+  { key: "regenerativeFarming", question: "regenerativeFarming", answer: "regenerativeFarmingAnswer" },
+  { key: "whoItIsFor", question: "whoItIsFor", answer: "whoItIsForAnswer" },
   { key: "support", question: "support", answer: "supportAnswer" },
 ];
 

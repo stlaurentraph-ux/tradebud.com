@@ -270,16 +270,22 @@
     "integrations": "Tích hợp trực tiếp"
   },
   "faq": {
-    "title": "Các câu hỏi thường gặp",
-    "whenLaunch": "Khi nào Tracebud sẽ được ra mắt?",
-    "whenLaunchAnswer": "Tracebud đang trong giai đoạn thử nghiệm dự án thí điểm tích cực. Chúng tôi đang tuyển các đối tác được chọn bây giờ. Tham gia danh sách chờ để nhận thông báo khi ra mắt.",
-    "whyCommodities": "Tại sao lại bắt đầu với các hàng hóa này?",
-    "whoCommoditiesAnswer": "Cà phê, ca cao, dầu cọ, cao su, đậu tương, gia súc và gỗ là các hàng hóa EUDR chính. Chúng tôi sẽ mở rộng dựa trên nhu cầu.",
-    "howCost": "Giá bao nhiêu?",
-    "howCostAnswer": "Giá cả là minh bạch và thay đổi theo kích thước hoạt động của bạn. Có sẵn bản dùng thử miễn phí. Chi tiết được chia sẻ trong quá trình onboarding.",
-    "howLong": "Cài đặt mất bao lâu?",
-    "howLongAnswer": "Hầu hết các hợp tác xã được lập bản đồ và hoạt động trong vòng 48 giờ sau khi đăng ký. Thiết kế ngoại tuyến trước tiên có nghĩa là thời gian ngừng bằng không.",
-    "support": "Có sẵn hỗ trợ gì?",
-    "supportAnswer": "Hỗ trợ email 24/7, cộng với hỗ trợ điện thoại ưu tiên cho các đối tác dự án thí điểm. Truy cập trực tiếp vào đội tuân thủ của chúng tôi."
+    "title": "Có câu hỏi? Chúng tôi có câu trả lời.",
+    "whenLaunch": "Khi nào tôi có thể bắt đầu sử dụng Tracebud?",
+    "whenLaunchAnswer": "Chúng tôi đang kiểm tra với các hợp tác xã, nhà xuất khẩu và nhà nhập khẩu ngay bây giờ. Tham gia danh sách chờ và chúng tôi sẽ liên hệ với bạn khi sẵn sàng cho khu vực của bạn.",
+    "whyCommodities": "Tracebud hỗ trợ những loại cây trồng nào?",
+    "whyCommoditiesAnswer": "Cà phê trước tiên, sau đó là sáu hàng hóa EUDR khác: ca cao, dầu cọ, cao su, đậu tương, gia súc và gỗ. Chúng tôi bắt đầu từ nơi độ phức tạp của nông dân nhỏ gặp nhu cầu ngay lập tức của người mua.",
+    "howLong": "Thiết lập mất bao lâu?",
+    "howLongAnswer": "Nhà sản xuất có thể bắt đầu lập bản đồ ngay lập tức với ứng dụng ngoại tuyến. Hầu hết các hợp tác xã có mạng của họ được lập bản đồ trong vòng một tuần. Dashboard sẵn sàng khi bạn đăng ký.",
+    "offlineCapability": "Có hoạt động mà không có internet không?",
+    "offlineCapabilityAnswer": "Có. Ứng dụng di động hoạt động hoàn toàn ngoại tuyến. Nhà sản xuất lập bản đồ các thửa ruộng, chia sẻ thông tin và phản hồi các yêu cầu mà không có kết nối. Dữ liệu đồng bộ hóa tự động khi quay lại trực tuyến.",
+    "dataControl": "Ai có thể xem dữ liệu của tôi?",
+    "dataControlAnswer": "Bạn giữ quyền kiểm soát. Nhà sản xuất chọn tổ chức nào chia sẻ dữ liệu của họ. Các tổ chức có thể quản lý quyền trong nhóm của họ. Mọi thứ được ghi lại với bản ghi kiểm toán đầy đủ để tuân thủ.",
+    "regenerativeFarming": "Tôi có thể theo dõi các thực tiễn tái sinh không?",
+    "regenerativeFarmingAnswer": "Có. Tracebud cho phép bạn theo dõi và xác minh các thực tiễn nông nghiệp theo thời gian. Điều đó giúp dễ dàng hơn trong việc ghi lại tiến trình, hỗ trợ chuyển đổi và kết nối dữ liệu tốt hơn với các khuyến khích tốt hơn cho nông nghiệp tái sinh.",
+    "whoItIsFor": "Cái này chỉ dành cho nhà sản xuất?",
+    "whoItIsForAnswer": "Không. Tracebud giúp hợp tác xã quản lý nhiều thành viên, nhà xuất khẩu thu thập bằng chứng vận chuyển đáng tin cậy và nhà nhập khẩu nhận dữ liệu sạch hơn. Mọi người trong chuỗi có thể tham gia, ngay cả khi truy cập kỹ thuật số bị hạn chế.",
+    "support": "Hỗ trợ gì có sẵn?",
+    "supportAnswer": "Onboarding thực tế cho tất cả khách hàng. Hỗ trợ trực tiếp từ đội của chúng tôi. Chúng tôi đang xây dựng điều này cùng với những người dùng ban đầu của chúng tôi, vì vậy phản hồi của bạn định hình sản phẩm."
   }
 }

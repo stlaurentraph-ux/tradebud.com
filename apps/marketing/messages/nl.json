@@ -270,16 +270,22 @@
     "integrations": "Directe integraties"
   },
   "faq": {
-    "title": "Veelgestelde vragen",
-    "whenLaunch": "Wanneer wordt Tracebud gelanceerd?",
-    "whenLaunchAnswer": "Tracebud is in actieve pilottests. We nemen nu geselecteerde partners in. Sluit je aan bij de wachtlijst om berichten te ontvangen.",
-    "whyCommodities": "Waarom met deze goederen beginnen?",
-    "whoCommoditiesAnswer": "Koffie, cacao, palmolie, rubber, soja, rundvee en hout zijn de belangrijkste EUDR-goederen. We zullen uitbreiden op basis van vraag.",
-    "howCost": "Hoeveel kost het?",
-    "howCostAnswer": "Prijzen zijn transparant en schalen met de grootte van uw bedrijf. Gratis proefversie beschikbaar. Details gedeeld tijdens onboarding.",
-    "howLong": "Hoe lang duurt de installatie?",
-    "howLongAnswer": "De meeste coöperaties zijn binnen 48 uur na aanmelding in kaart gebracht en operationeel. Offline-first design betekent nul uitvaltijd.",
+    "title": "Vragen? Wij hebben antwoorden.",
+    "whenLaunch": "Wanneer kan ik Tracebud gaan gebruiken?",
+    "whenLaunchAnswer": "We testen momenteel met coöperatieven, exporteurs en importeurs. Schrijf je in voor de wachtlijst en we nemen contact op wanneer we klaar zijn voor jouw regio.",
+    "whyCommodities": "Welke gewassen ondersteunt Tracebud?",
+    "whyCommoditiesAnswer": "Eerst koffie, dan de andere zes EUDR-grondstoffen: cacao, palmolie, rubber, soja, rundvee en hout. We beginnen waar de complexiteit van kleine boeren aansluit op de directe vraag van kopers.",
+    "howLong": "Hoe lang duurt het opzetten?",
+    "howLongAnswer": "Boeren kunnen direct beginnen met in kaart brengen met de offline app. De meeste coöperatieven hebben hun netwerk binnen een week in kaart gebracht. Het dashboard is klaar zodra je je aanmeldt.",
+    "offlineCapability": "Werkt het zonder internet?",
+    "offlineCapabilityAnswer": "Ja. De mobiele app werkt volledig offline. Boeren brengen percelen in kaart, delen informatie en reageren op verzoeken zonder verbinding. Gegevens worden automatisch gesynchroniseerd zodra je weer online bent.",
+    "dataControl": "Wie kan mijn gegevens zien?",
+    "dataControlAnswer": "Je behoudt de controle. Boeren kiezen welke organisaties hun gegevens delen. Organisaties kunnen machtigingen in hun team beheren. Alles wordt geregistreerd met een volledig auditspoor voor naleving.",
+    "regenerativeFarming": "Kan ik regeneratieve praktijken volgen?",
+    "regenerativeFarmingAnswer": "Ja. Met Tracebud kunt u boerenpraktijken in de loop der tijd volgen en verifiëren. Dit maakt het gemakkelijker om voortgang te documenteren, overgangen te ondersteunen en betere gegevens aan betere prikkels voor regeneratieve landbouw te koppelen.",
+    "whoItIsFor": "Is dit alleen voor boeren?",
+    "whoItIsForAnswer": "Nee. Tracebud helpt coöperatieven veel leden te beheren, exporteurs betrouwbare verzendbewijzen te verzamelen en importeurs schonere upstream-gegevens te krijgen. Iedereen in de keten kan deelnemen, ook met beperkte digitale toegang.",
     "support": "Welke ondersteuning is beschikbaar?",
-    "supportAnswer": "24/7 e-mailondersteuning, plus prioritaire telefonische ondersteuning voor pilotpartners. Directe toegang tot ons complianceteam."
+    "supportAnswer": "Praktische onboarding voor alle klanten. Directe ondersteuning van ons team. We bouwen dit samen met onze eerste gebruikers, dus uw feedback vormt het product."
   }
 }

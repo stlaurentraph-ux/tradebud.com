@@ -203,16 +203,22 @@
     "integrations": "Intégrations directes"
   },
   "faq": {
-    "title": "Questions fréquemment posées",
-    "whenLaunch": "Quand Tracebud sera-t-il lancé ?",
-    "whenLaunchAnswer": "Tracebud est en phase de test pilote actif. Nous recrutons des partenaires sélectionnés maintenant. Rejoignez la liste d'attente pour être notifié du lancement.",
-    "whyCommodities": "Pourquoi commencer par ces produits de base ?",
-    "whoCommoditiesAnswer": "Le café, le cacao, l'huile de palme, le caoutchouc, le soja, le bétail et le bois sont les principaux produits EUDR. Nous expandrons selon la demande.",
-    "howCost": "Combien ça coûte ?",
-    "howCostAnswer": "La tarification est transparente et s'adapte à la taille de votre exploitation. Essai gratuit disponible. Détails partagés lors de l'intégration.",
-    "howLong": "Combien de temps dure la configuration ?",
-    "howLongAnswer": "La plupart des coopératives sont cartographiées et opérationnelles dans les 48 heures suivant l'inscription. Une conception hors ligne signifie zéro temps d'arrêt.",
+    "title": "Des questions ? Nous avons les réponses.",
+    "whenLaunch": "Quand puis-je commencer à utiliser Tracebud ?",
+    "whenLaunchAnswer": "Nous testons actuellement avec des coopératives, des exportateurs et des importateurs. Rejoignez la liste d'attente et nous vous contacterons quand nous serons prêts pour votre région.",
+    "whyCommodities": "Quelles cultures Tracebud supporte-t-il ?",
+    "whyCommoditiesAnswer": "D'abord le café, puis les six autres produits EUDR : cacao, huile de palme, caoutchouc, soja, bétail et bois. Nous commençons où la complexité des petits exploitants rencontre la demande immédiate des acheteurs.",
+    "howLong": "Combien de temps prend la configuration ?",
+    "howLongAnswer": "Les producteurs peuvent commencer à cartographier immédiatement avec l'application hors ligne. La plupart des coopératives ont leur réseau cartographié en une semaine. Le tableau de bord est prêt dès que vous vous inscrivez.",
+    "offlineCapability": "Fonctionne-t-il sans internet ?",
+    "offlineCapabilityAnswer": "Oui. L'application mobile fonctionne complètement hors ligne. Les producteurs cartographient les parcelles, partagent les informations et répondent aux demandes sans connexion. Les données se synchronisent automatiquement une fois de retour en ligne.",
+    "dataControl": "Qui peut voir mes données ?",
+    "dataControlAnswer": "Vous gardez le contrôle. Les producteurs choisissent les organisations avec lesquelles ils partagent les données. Les organisations peuvent gérer les permissions dans leur équipe. Tout est enregistré avec une piste d'audit complète pour la conformité.",
+    "regenerativeFarming": "Puis-je suivre les pratiques régénératives ?",
+    "regenerativeFarmingAnswer": "Oui. Tracebud vous permet de suivre et de vérifier les pratiques agricoles au fil du temps. Cela facilite la documentation des progrès, le soutien des transitions et la connexion de meilleures données avec de meilleures incitations pour l'agriculture régénérée.",
+    "whoItIsFor": "Est-ce juste pour les producteurs ?",
+    "whoItIsForAnswer": "Non. Tracebud aide les coopératives à gérer de nombreux membres, les exportateurs à rassembler des preuves d'expédition fiables et les acheteurs à obtenir des données en amont plus propres. Tout le monde dans la chaîne peut participer, même avec un accès numérique limité.",
     "support": "Quel support est disponible ?",
-    "supportAnswer": "Support par email 24/7, plus support téléphonique prioritaire pour les partenaires pilotes. Accès direct à notre équipe de conformité."
+    "supportAnswer": "Intégration pratique pour tous les clients. Support direct de notre équipe. Nous construisons cela aux côtés de nos premiers utilisateurs, donc vos commentaires façonnent le produit."
   }
 }

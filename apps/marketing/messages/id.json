@@ -270,16 +270,22 @@
     "integrations": "Integrasi Langsung"
   },
   "faq": {
-    "title": "Pertanyaan yang Sering Diajukan",
-    "whenLaunch": "Kapan Tracebud akan diluncurkan?",
-    "whenLaunchAnswer": "Tracebud sedang dalam pengujian pilot aktif. Kami mendaftarkan mitra terpilih sekarang. Bergabunglah dengan daftar tunggu untuk diberitahu saat diluncurkan.",
-    "whyCommodities": "Mengapa memulai dengan komoditas ini?",
-    "whoCommoditiesAnswer": "Kopi, kakao, minyak sawit, karet, kedelai, ternak, dan kayu adalah komoditas EUDR utama. Kami akan berkembang berdasarkan permintaan.",
-    "howCost": "Berapa biayanya?",
-    "howCostAnswer": "Harga transparan dan diskalakan dengan ukuran operasi Anda. Uji coba gratis tersedia. Detail dibagikan selama onboarding.",
-    "howLong": "Berapa lama waktu yang diperlukan untuk penyiapan?",
-    "howLongAnswer": "Sebagian besar koperasi dipetakan dan beroperasi dalam 48 jam setelah pendaftaran. Desain offline-first berarti waktu henti nol.",
+    "title": "Pertanyaan? Kami punya jawabannya.",
+    "whenLaunch": "Kapan saya bisa mulai menggunakan Tracebud?",
+    "whenLaunchAnswer": "Kami sedang menguji dengan koperasi, eksportir, dan importir sekarang. Bergabunglah dengan daftar tunggu dan kami akan menghubungi Anda ketika siap untuk wilayah Anda.",
+    "whyCommodities": "Tanaman apa yang didukung Tracebud?",
+    "whyCommoditiesAnswer": "Kopi terlebih dahulu, kemudian enam komoditas EUDR lainnya: kakao, minyak sawit, karet, kedelai, ternak, dan kayu. Kami memulai di mana kompleksitas petani kecil bertemu permintaan pembeli segera.",
+    "howLong": "Berapa lama waktu setup?",
+    "howLongAnswer": "Produsen dapat langsung mulai memetakan dengan aplikasi offline. Sebagian besar koperasi memiliki jaringan mereka dipetakan dalam seminggu. Dashboard siap pada saat Anda mendaftar.",
+    "offlineCapability": "Apakah berfungsi tanpa internet?",
+    "offlineCapabilityAnswer": "Ya. Aplikasi seluler berfungsi sepenuhnya offline. Produsen memetakan plot, berbagi informasi, dan merespons permintaan tanpa koneksi. Data disinkronkan otomatis setelah kembali online.",
+    "dataControl": "Siapa yang dapat melihat data saya?",
+    "dataControlAnswer": "Anda tetap mengendalikan. Produsen memilih organisasi mana yang berbagi data mereka. Organisasi dapat mengelola izin di tim mereka. Semuanya dicatat dengan jejak audit lengkap untuk kepatuhan.",
+    "regenerativeFarming": "Bisakah saya melacak praktik regeneratif?",
+    "regenerativeFarmingAnswer": "Ya. Tracebud memungkinkan Anda melacak dan memverifikasi praktik pertanian seiring waktu. Itu membuat lebih mudah untuk mendokumentasikan kemajuan, mendukung transisi, dan menghubungkan data lebih baik dengan insentif lebih baik untuk pertanian regeneratif.",
+    "whoItIsFor": "Apakah ini hanya untuk produsen?",
+    "whoItIsForAnswer": "Tidak. Tracebud membantu koperasi mengelola banyak anggota, eksportir mengumpulkan bukti pengiriman yang dapat diandalkan, dan importir mendapatkan data yang lebih bersih. Semua orang dalam rantai dapat berpartisipasi, bahkan dengan akses digital terbatas.",
     "support": "Dukungan apa yang tersedia?",
-    "supportAnswer": "Dukungan email 24/7, ditambah dukungan telepon prioritas untuk mitra pilot. Akses langsung ke tim kepatuhan kami."
+    "supportAnswer": "Onboarding praktis untuk semua pelanggan. Dukungan langsung dari tim kami. Kami membangun ini bersama pengguna awal kami, jadi umpan balik Anda membentuk produk."
   }
 }

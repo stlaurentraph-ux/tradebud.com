@@ -270,16 +270,22 @@
     "integrations": "Direkte Integrationen"
   },
   "faq": {
-    "title": "Häufig gestellte Fragen",
-    "whenLaunch": "Wann wird Tracebud gestartet?",
-    "whenLaunchAnswer": "Tracebud befindet sich in aktiven Pilottests. Wir melden jetzt ausgewählte Partner an. Treten Sie der Warteliste bei, um benachrichtigt zu werden.",
-    "whyCommodities": "Warum mit diesen Rohstoffen anfangen?",
-    "whoCommoditiesAnswer": "Kaffee, Kakao, Palmöl, Kautschuk, Soja, Rinder und Holz sind die wichtigsten EUDR-Rohstoffe. Wir werden je nach Nachfrage ausbauen.",
-    "howCost": "Wie viel kostet es?",
-    "howCostAnswer": "Die Preisgestaltung ist transparent und skaliert mit der Größe Ihres Betriebs. Kostenlose Testversion verfügbar. Details werden bei der Integration weitergegeben.",
+    "title": "Fragen? Wir haben Antworten.",
+    "whenLaunch": "Wann kann ich Tracebud nutzen?",
+    "whenLaunchAnswer": "Wir testen derzeit mit Genossenschaften, Exporteuren und Importeuren. Treten Sie der Warteliste bei und wir melden uns, wenn wir für Ihre Region bereit sind.",
+    "whyCommodities": "Welche Kulturpflanzen unterstützt Tracebud?",
+    "whyCommoditiesAnswer": "Kaffee zuerst, dann die anderen sechs EUDR-Rohstoffe: Kakao, Palmöl, Kautschuk, Soja, Rinder und Holz. Wir beginnen dort, wo die Komplexität kleiner Produzenten auf die sofortige Nachfrage von Käufern trifft.",
     "howLong": "Wie lange dauert die Einrichtung?",
-    "howLongAnswer": "Die meisten Genossenschaften sind innerhalb von 48 Stunden nach der Anmeldung kartiert und betriebsbereit. Ein Offline-first-Design bedeutet Null Ausfallzeit.",
+    "howLongAnswer": "Produzenten können sofort mit der Offline-App mit dem Kartieren beginnen. Die meisten Genossenschaften haben ihr Netzwerk innerhalb einer Woche kartiert. Das Dashboard ist sofort einsatzbereit.",
+    "offlineCapability": "Funktioniert es ohne Internet?",
+    "offlineCapabilityAnswer": "Ja. Die mobile App funktioniert komplett offline. Produzenten kartieren Parzellen, teilen Informationen und beantworten Anfragen ohne Verbindung. Daten werden automatisch synchronisiert, sobald Sie wieder online sind.",
+    "dataControl": "Wer kann meine Daten sehen?",
+    "dataControlAnswer": "Sie behalten die Kontrolle. Produzenten wählen, welche Organisationen ihre Daten erhalten. Organisationen können Berechtigungen in ihrem Team verwalten. Alles wird mit einem vollständigen Audit-Trail zur Compliance protokolliert.",
+    "regenerativeFarming": "Kann ich regenerative Praktiken verfolgen?",
+    "regenerativeFarmingAnswer": "Ja. Tracebud ermöglicht es Ihnen, Anbaumethoden im Laufe der Zeit zu verfolgen und zu überprüfen. Dies erleichtert die Dokumentation von Fortschritten, die Unterstützung von Übergängen und die Verbindung besserer Daten mit besseren Anreizen für regenerative Landwirtschaft.",
+    "whoItIsFor": "Ist das nur für Produzenten?",
+    "whoItIsForAnswer": "Nein. Tracebud hilft Genossenschaften, viele Mitglieder zu verwalten, Exporteuren, zuverlässige Versandnachweise zu sammeln, und Käufern, saubere Upstream-Daten zu erhalten. Alle in der Kette können teilnehmen, auch mit eingeschränktem digitalem Zugang.",
     "support": "Welcher Support ist verfügbar?",
-    "supportAnswer": "24/7-Email-Support plus vorrangiger Telefonsupport für Pilotpartner. Direkter Zugang zu unserem Compliance-Team."
+    "supportAnswer": "Praktisches Onboarding für alle Kunden. Direkter Support von unserem Team. Wir bauen dies zusammen mit unseren frühen Benutzern auf, daher prägt Ihr Feedback das Produkt."
   }
 }
