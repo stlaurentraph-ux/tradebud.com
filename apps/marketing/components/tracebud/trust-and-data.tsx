@@ -13,7 +13,7 @@ export function TrustAndData() {
       {/* Background decorative image */}
       <div className="absolute inset-0 opacity-10">
         <Image
-          src="/images/supply-chain-flow.jpg"
+          src="/images/gis-geolocation.jpg"
           alt=""
           fill
           className="object-cover"

@@ -34,7 +34,7 @@ export function RegenerativeFarming() {
             >
               <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
                 <Image
-                  src="/images/farmer-hero.jpg"
+                  src="/images/step-map-plot.jpg"
                   alt="Regenerative coffee farming practices"
                   fill
                   className="object-cover"

@@ -126,8 +126,8 @@ export function ValueProp() {
             >
               <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
                 <Image
-                  src="/images/farmer-hero.jpg"
-                  alt="Smallholder farmer using Tracebud"
+                  src="/images/exporter-hero.jpg"
+                  alt="Coffee exporter preparing shipment"
                   fill
                   className="object-cover"
                 />

@@ -105,8 +105,8 @@ export function Hero() {
         {/* Full-bleed image on right half */}
         <div className="absolute inset-y-0 right-0 w-1/2 hidden lg:block">
           <Image
-            src="/images/inclusion-visual.jpg"
-            alt="Smallholder farmer using Tracebud on a smartphone"
+            src="/images/step-photos.jpg"
+            alt="Farmer documenting coffee harvest"
             fill
             className="object-cover"
           />
@@ -171,8 +171,8 @@ export function Hero() {
         {/* Mobile image fallback */}
         <div className="lg:hidden mt-12 mx-6 relative aspect-[4/3] rounded-2xl overflow-hidden">
           <Image
-            src="/images/inclusion-visual.jpg"
-            alt="Smallholder farmer using Tracebud on a smartphone"
+            src="/images/step-photos.jpg"
+            alt="Farmer documenting coffee harvest"
             fill
             className="object-cover"
           />
