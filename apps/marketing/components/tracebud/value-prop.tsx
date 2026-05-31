@@ -126,8 +126,8 @@ export function ValueProp() {
             >
               <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
                 <Image
-                  src="/images/exporter-hero.jpg"
-                  alt="Coffee exporter preparing shipment"
+                  src="/images/inclusion-visual.jpg"
+                  alt="Diverse supply chain participants"
                   fill
                   className="object-cover"
                 />
@@ -162,8 +162,8 @@ export function ValueProp() {
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/country-hero.jpg"
-            alt="Agricultural landscape"
+            src="/images/exporter-hero.jpg"
+            alt="Agricultural supply chain in action"
             fill
             className="object-cover"
           />
