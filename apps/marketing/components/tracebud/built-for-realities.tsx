@@ -102,8 +102,8 @@ export function BuiltForRealities() {
           >
             <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
               <Image
-                src="/images/step-photos.jpg"
-                alt="Farmer using Tracebud mobile app in the field"
+                src="/images/aerial-farm-jungle.png"
+                alt="Aerial view of farm fields surrounded by jungle"
                 fill
                 className="object-cover"
               />
