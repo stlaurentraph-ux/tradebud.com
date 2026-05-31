@@ -102,8 +102,8 @@ export function BuiltForRealities() {
           >
             <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl">
               <Image
-                src="/images/aerial-farm-jungle.png"
-                alt="Aerial view of farm fields surrounded by jungle"
+                src="/images/farm-fields-jungle.png"
+                alt="Aerial view of large farm with multiple fields in the jungle"
                 fill
                 className="object-cover"
               />
