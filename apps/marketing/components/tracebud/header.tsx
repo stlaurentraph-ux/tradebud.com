@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X, Globe } from "lucide-react";
-import Link from "next/link";
+import Link from "next-intl/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -25,10 +25,14 @@ export function Header() {
     { label: "Pricing", href: "/#pricing" },
   ];
 
-  const getLocalizedHref = (href: string, targetLocale: string) => {
-    // Remove current locale from path and add new one
+  const getLocalizedHref = (targetLocale: string) => {
+    // For language switching, just navigate to root with new locale
+    if (pathname === "/" || pathname === "") {
+      return "/";
+    }
+    // Remove locale prefix and reconstruct without it - let Link handle locale prefixing
     const pathWithoutLocale = pathname.replace(`/${locale}`, "");
-    return `/${targetLocale}${pathWithoutLocale}`;
+    return pathWithoutLocale || "/";
   };
 
   useEffect(() => {
@@ -105,7 +109,8 @@ export function Header() {
                     {locales.map((loc) => (
                       <Link
                         key={loc}
-                        href={getLocalizedHref(pathname, loc)}
+                        href={getLocalizedHref(loc)}
+                        locale={loc}
                         className={`block px-4 py-2 text-sm font-semibold transition-colors ${
                           locale === loc
                             ? "bg-[var(--forest-canopy)]/10 text-[var(--forest-canopy)]"
@@ -169,7 +174,8 @@ export function Header() {
                     {locales.map((loc) => (
                       <Link
                         key={loc}
-                        href={getLocalizedHref(pathname, loc)}
+                        href={getLocalizedHref(loc)}
+                        locale={loc}
                         className={`px-3 py-2 rounded text-sm font-semibold transition-colors ${
                           locale === loc
                             ? "bg-[var(--data-emerald)] text-[var(--forest-canopy)]"
