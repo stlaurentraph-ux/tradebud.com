@@ -28,15 +28,9 @@ export function Header() {
   ];
 
   const switchLocale = (targetLocale: string) => {
-    // Get the path without the current locale prefix
-    const segments = pathname.split('/').filter(Boolean);
-    // Check if first segment is a locale
-    if (locales.includes(segments[0])) {
-      segments[0] = targetLocale;
-    } else {
-      segments.unshift(targetLocale);
-    }
-    const newPath = '/' + segments.join('/');
+    // pathname from usePathname() in next-intl doesn't include the locale prefix
+    // So we need to construct the full path with the new locale
+    const newPath = `/${targetLocale}${pathname}`;
     router.push(newPath);
     setIsLanguageOpen(false);
   };
