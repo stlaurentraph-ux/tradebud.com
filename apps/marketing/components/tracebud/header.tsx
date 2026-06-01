@@ -2,18 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useLocale, usePathname } from "next-intl/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Globe } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { locales, localeNames } from "@/i18n.config";
 
 export function Header() {
   const t = useTranslations("header");
+  const locale = useLocale();
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const waitlist = useWaitlistDialog();
+
+  const navLinks = [
+    { label: "How it works", href: "/#how-it-works" },
+    { label: "Pricing", href: "/#pricing" },
+  ];
+
+  const getLocalizedHref = (href: string, targetLocale: string) => {
+    // Remove current locale from path and add new one
+    const pathWithoutLocale = pathname.replace(`/${locale}`, "");
+    return `/${targetLocale}${pathWithoutLocale}`;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,7 +63,64 @@ export function Header() {
             </span>
           </Link>
 
+          <nav className="hidden lg:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`font-semibold transition-colors ${
+                  isScrolled
+                    ? "text-[var(--forest-canopy)] hover:text-[var(--data-emerald)]"
+                    : "text-white/90 hover:text-[var(--data-emerald)]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
           <div className="hidden lg:flex items-center gap-4">
+            <div className="relative">
+              <button
+                onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  isScrolled
+                    ? "text-[var(--forest-canopy)] hover:bg-gray-100"
+                    : "text-white/90 hover:bg-white/10"
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="font-semibold text-sm">{locale.toUpperCase()}</span>
+              </button>
+
+              <AnimatePresence>
+                {isLanguageOpen && (
+                  <motion.div
+                    className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-48 z-50"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {locales.map((loc) => (
+                      <Link
+                        key={loc}
+                        href={getLocalizedHref(pathname, loc)}
+                        className={`block px-4 py-2 text-sm font-semibold transition-colors ${
+                          locale === loc
+                            ? "bg-[var(--forest-canopy)]/10 text-[var(--forest-canopy)]"
+                            : "text-[var(--forest-canopy)] hover:bg-gray-100"
+                        }`}
+                        onClick={() => setIsLanguageOpen(false)}
+                      >
+                        {localeNames[loc as keyof typeof localeNames]}
+                      </Link>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <Button
               onClick={() => waitlist.setOpen(true)}
               className={`font-bold px-6 rounded-full ${
@@ -77,7 +150,40 @@ export function Header() {
               transition={{ duration: 0.3 }}
             >
               <nav className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4 pb-8">
+                <div className="flex flex-col gap-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className="text-base font-semibold text-white hover:text-[var(--data-emerald)] transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+
+                <div className="border-t border-white/20 pt-4">
+                  <p className="text-sm font-semibold text-white/70 mb-3">Language</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {locales.map((loc) => (
+                      <Link
+                        key={loc}
+                        href={getLocalizedHref(pathname, loc)}
+                        className={`px-3 py-2 rounded text-sm font-semibold transition-colors ${
+                          locale === loc
+                            ? "bg-[var(--data-emerald)] text-[var(--forest-canopy)]"
+                            : "text-white hover:bg-white/10"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {localeNames[loc as keyof typeof localeNames]}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 mt-8 pb-8">
                   <Button
                     size="lg"
                     onClick={() => {
