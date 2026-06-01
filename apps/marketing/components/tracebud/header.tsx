@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X, Globe } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -19,7 +18,6 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const router = useRouter();
   const waitlist = useWaitlistDialog();
 
   const navLinks = [
@@ -35,8 +33,8 @@ export function Header() {
     }
     // Add target locale to the path
     const newPath = `/${targetLocale}${pathWithoutLocale}`;
-    router.push(newPath);
-    setIsLanguageOpen(false);
+    // Use window.location for full page reload to trigger next-intl locale change
+    window.location.href = newPath;
   };
 
   useEffect(() => {
