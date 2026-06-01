@@ -159,9 +159,9 @@
     "pricingSection": {
       "label": "Preise",
       "headline": "Einfache Monatspreise nach Netzwerkgröße.",
-      "description": "Ein Preis. Keine Gebühren pro Nutzer. Produzenten bleiben kostenlos.",
+      "description": "Ein Preis. Keine Gebühren pro Nutzer",
       "popularBadge": "Am beliebtesten",
-      "footerNote": "Zusätzliche Sendungen werden separat berechnet. Produzenten bleiben kostenlos.",
+      "footerNote": "Zusätzliche Sendungen werden separat berechnet",
       "cta": "Loslegen",
       "table": {
         "plan": "Plan",

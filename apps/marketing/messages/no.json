@@ -159,9 +159,9 @@
     "pricingSection": {
       "label": "Priser",
       "headline": "Enkle månedlige priser etter nettverksstørrelse.",
-      "description": "Én pris. Ingen per-bruker-avgifter. Produsenter er gratis.",
+      "description": "Én pris. Ingen per-bruker-avgifter",
       "popularBadge": "Mest populær",
-      "footerNote": "Ekstra forsendelser faktureres separat. Produsenter er gratis.",
+      "footerNote": "Ekstra forsendelser faktureres separat",
       "cta": "Kom i gang",
       "table": {
         "plan": "Plan",

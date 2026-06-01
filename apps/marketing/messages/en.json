@@ -165,9 +165,9 @@
     "pricingSection": {
       "label": "Pricing",
       "headline": "Simple monthly pricing by network size.",
-      "description": "One price. No per-seat fees. Producers stay free.",
+      "description": "One price. No per-seat fees.",
       "popularBadge": "Most popular",
-      "footerNote": "Extra shipments are billed separately. Producers stay free.",
+      "footerNote": "Extra shipments are billed separately.",
       "cta": "Get started",
       "table": {
         "plan": "Plan",

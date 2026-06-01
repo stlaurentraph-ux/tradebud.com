@@ -159,9 +159,9 @@
     "pricingSection": {
       "label": "Prijzen",
       "headline": "Eenvoudige maandelijkse prijzen op basis van netwerkgrootte.",
-      "description": "Één prijs. Geen kosten per gebruiker. Producers blijven gratis.",
+      "description": "Één prijs. Geen kosten per gebruiker",
       "popularBadge": "Meest populair",
-      "footerNote": "Extra verzendingen worden apart gefactureerd. Producers blijven gratis.",
+      "footerNote": "Extra verzendingen worden apart gefactureerd",
       "cta": "Aan de slag",
       "table": {
         "plan": "Plan",

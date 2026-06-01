@@ -159,9 +159,9 @@
     "pricingSection": {
       "label": "Harga",
       "headline": "Harga bulanan sederhana berdasarkan ukuran jaringan.",
-      "description": "Satu harga. Tanpa biaya per pengguna. Produsen tetap gratis.",
+      "description": "Satu harga. Tanpa biaya per pengguna",
       "popularBadge": "Paling populer",
-      "footerNote": "Pengiriman tambahan ditagih secara terpisah. Produsen tetap gratis.",
+      "footerNote": "Pengiriman tambahan ditagih secara terpisah",
       "cta": "Mulai",
       "table": {
         "plan": "Paket",

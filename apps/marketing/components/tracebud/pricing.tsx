@@ -126,12 +126,6 @@ export function Pricing() {
                     {plan.shipments} {t("pricingSection.table.shipments").toLowerCase()}
                   </span>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Check className={`w-5 h-5 mt-0.5 shrink-0 ${plan.highlight ? "text-[var(--data-emerald)]" : "text-[var(--data-emerald)]"}`} />
-                  <span className={`text-sm ${plan.highlight ? "text-white/80" : "text-gray-600"}`}>
-                    Producers stay free
-                  </span>
-                </div>
               </div>
 
               {/* CTA Button */}

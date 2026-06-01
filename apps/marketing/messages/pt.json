@@ -92,9 +92,9 @@
     "pricingSection": {
       "label": "Preços",
       "headline": "Preços mensais simples por tamanho da rede.",
-      "description": "Um preço. Sem taxas por utilizador. Produtores grátis.",
+      "description": "Um preço. Sem taxas por utilizador",
       "popularBadge": "Mais popular",
-      "footerNote": "Envios adicionais são faturados separadamente. Produtores ficam grátis.",
+      "footerNote": "Envios adicionais são faturados separadamente",
       "cta": "Começar",
       "table": {
         "plan": "Plano",
