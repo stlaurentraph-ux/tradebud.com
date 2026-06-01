@@ -5,7 +5,8 @@ import { useTranslations, useLocale } from "next-intl";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X, Globe } from "lucide-react";
-import Link from "next-intl/link";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -18,6 +19,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const router = useRouter();
   const waitlist = useWaitlistDialog();
 
   const navLinks = [
@@ -25,14 +27,18 @@ export function Header() {
     { label: "Pricing", href: "/#pricing" },
   ];
 
-  const getLocalizedHref = (targetLocale: string) => {
-    // For language switching, just navigate to root with new locale
-    if (pathname === "/" || pathname === "") {
-      return "/";
+  const switchLocale = (targetLocale: string) => {
+    // Get the path without the current locale prefix
+    const segments = pathname.split('/').filter(Boolean);
+    // Check if first segment is a locale
+    if (locales.includes(segments[0])) {
+      segments[0] = targetLocale;
+    } else {
+      segments.unshift(targetLocale);
     }
-    // Remove locale prefix and reconstruct without it - let Link handle locale prefixing
-    const pathWithoutLocale = pathname.replace(`/${locale}`, "");
-    return pathWithoutLocale || "/";
+    const newPath = '/' + segments.join('/');
+    router.push(newPath);
+    setIsLanguageOpen(false);
   };
 
   useEffect(() => {
@@ -107,19 +113,17 @@ export function Header() {
                     transition={{ duration: 0.2 }}
                   >
                     {locales.map((loc) => (
-                      <Link
+                      <button
                         key={loc}
-                        href={getLocalizedHref(loc)}
-                        locale={loc}
-                        className={`block px-4 py-2 text-sm font-semibold transition-colors ${
+                        onClick={() => switchLocale(loc)}
+                        className={`block w-full text-left px-4 py-2 text-sm font-semibold transition-colors ${
                           locale === loc
                             ? "bg-[var(--forest-canopy)]/10 text-[var(--forest-canopy)]"
                             : "text-[var(--forest-canopy)] hover:bg-gray-100"
                         }`}
-                        onClick={() => setIsLanguageOpen(false)}
                       >
                         {localeNames[loc as keyof typeof localeNames]}
-                      </Link>
+                      </button>
                     ))}
                   </motion.div>
                 )}
@@ -172,19 +176,20 @@ export function Header() {
                   <p className="text-sm font-semibold text-white/70 mb-3">Language</p>
                   <div className="grid grid-cols-2 gap-2">
                     {locales.map((loc) => (
-                      <Link
+                      <button
                         key={loc}
-                        href={getLocalizedHref(loc)}
-                        locale={loc}
-                        className={`px-3 py-2 rounded text-sm font-semibold transition-colors ${
+                        onClick={() => {
+                          switchLocale(loc);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`px-3 py-2 rounded text-left text-sm font-semibold transition-colors ${
                           locale === loc
                             ? "bg-[var(--data-emerald)] text-[var(--forest-canopy)]"
                             : "text-white hover:bg-white/10"
                         }`}
-                        onClick={() => setIsMobileMenuOpen(false)}
                       >
                         {localeNames[loc as keyof typeof localeNames]}
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </div>
