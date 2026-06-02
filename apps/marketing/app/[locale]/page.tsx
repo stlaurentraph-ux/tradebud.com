@@ -16,7 +16,6 @@ export default function Home() {
       <Header />
       <Hero />
       <Products />
-      <BuiltForRealities />
       <WhoItIsFor />
       <Pricing />
       <ValueProp />

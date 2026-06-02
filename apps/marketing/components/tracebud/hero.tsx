@@ -64,6 +64,20 @@ export function Hero() {
               <p className="text-sm text-white/60">
                 {t("hero.supportingText")}
               </p>
+
+              {/* KPI Badges */}
+              <div className="flex flex-wrap gap-4 mt-8 pt-8 border-t border-white/10">
+                {[
+                  { stat: "60%", label: "less manual work" },
+                  { stat: "100%", label: "audit ready" },
+                  { stat: "3x", label: "faster export" },
+                ].map((kpi) => (
+                  <div key={kpi.label} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10">
+                    <span className="text-xl font-bold text-[var(--data-emerald)]">{kpi.stat}</span>
+                    <span className="text-sm text-white/70 ml-2">{kpi.label}</span>
+                  </div>
+                ))}
+              </div>
             </motion.div>
 
             {/* Right: App Screenshot - clean, no background */}
