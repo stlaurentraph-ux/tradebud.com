@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Smartphone, Monitor, WifiOff, MapPin, Camera, CheckCircle, Upload, Send, GitBranch, Eye, Package, Wifi, Users, Lock, FileText, Database } from "lucide-react";
+import { Smartphone, Monitor, WifiOff, MapPin, Camera, CheckCircle, Upload, Send, GitBranch, Eye, Package } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
@@ -251,86 +251,6 @@ export function Products() {
               ))}
             </div>
           </motion.div>
-        </div>
-
-        {/* Built for Real Operations */}
-        <div className="mt-32 pt-20 border-t border-gray-200">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            {/* Left: Image */}
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                <Image
-                  src="/images/gis-geolocation.jpg"
-                  alt="Aerial view of large farm with multiple fields surrounded by jungle"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)]/30 via-transparent to-transparent" />
-              </div>
-              
-              {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--data-emerald)]/10 flex items-center justify-center">
-                    <Wifi className="w-5 h-5 text-[var(--data-emerald)]" />
-                  </div>
-                  <div>
-                    <div className="text-xl font-bold text-[var(--forest-canopy)]">100%</div>
-                    <div className="text-xs text-gray-500">Offline capable</div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right: Content */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <p className="text-sm font-semibold text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-                Real-world ready
-              </p>
-              <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-                {t("builtForRealitiesSection.headline")}
-              </h3>
-              <p className="text-lg text-gray-600 leading-relaxed mb-8">
-                {t("builtForRealitiesSection.description")}
-              </p>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  { icon: Wifi, keyPrefix: "builtForRealitiesSection.features.offline" },
-                  { icon: Users, keyPrefix: "builtForRealitiesSection.features.roleBasedAccess" },
-                  { icon: Lock, keyPrefix: "builtForRealitiesSection.features.consentBased" },
-                  { icon: FileText, keyPrefix: "builtForRealitiesSection.features.auditLogs" },
-                  { icon: Database, keyPrefix: "builtForRealitiesSection.features.reusableData" },
-                  { icon: Upload, keyPrefix: "builtForRealitiesSection.features.csvUpload" },
-                ].map((feature) => (
-                  <div key={feature.keyPrefix} className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">
-                      <feature.icon className="w-4 h-4 text-[var(--forest-canopy)]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-[var(--forest-canopy)]">
-                        {t(`${feature.keyPrefix}.title`)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {t(`${feature.keyPrefix}.description`)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
         </div>
       </div>
     </section>
