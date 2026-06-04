@@ -111,14 +111,14 @@ export const mockSponsorActivity: TimelineEvent[] = [
   },
   {
     id: '3',
-    eventType: 'warning',
+    eventType: 'alert',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
     userName: 'Sustainable Palm Network',
     description: 'Compliance rate dropped below 75% threshold',
   },
   {
     id: '4',
-    eventType: 'user_created',
+    eventType: 'system_event',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     userName: 'Amazon Forest Guardians',
     description: 'Onboarded 12 new farmers to the platform',

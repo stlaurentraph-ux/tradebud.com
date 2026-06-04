@@ -173,7 +173,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                           <div className="flex-1">
                             <div className="font-medium text-sm">{batch.name}</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {batch.quantity_kg.toLocaleString()} kg • {batch.yield_check_status}
+                              {batch.quantity_kg.toLocaleString()} kg • {batch.status}
                             </div>
                           </div>
                           <div className="text-right">

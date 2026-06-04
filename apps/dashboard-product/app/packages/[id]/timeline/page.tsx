@@ -52,7 +52,7 @@ export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
             { label: pkg.code, href: `/packages/${id}` },
             { label: 'Timeline' },
           ]}
-          action={
+          actions={
             <Button variant="outline" asChild>
               <Link href={`/packages/${id}`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />

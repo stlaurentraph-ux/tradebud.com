@@ -63,6 +63,7 @@ const roleLabels: Record<TenantRole, string> = {
   importer: 'Importer',
   cooperative: 'Cooperative',
   country_reviewer: 'Country Reviewer',
+  sponsor: 'Sponsor',
 };
 
 const orgTypeLabels: Record<AdminOrgType, string> = {

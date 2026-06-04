@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, Play, ShieldCheck } from 'lucide-react';
 import { usePackages } from '@/lib/use-packages';
 import { useAdminData } from '@/lib/use-admin-data';
-import { resetDemoWorkspace, seedGoldenPathWorkspace } from '@/lib/demo-bootstrap';
+import { resetDemoWorkspace, seedFirstCustomerWorkspace } from '@/lib/demo-bootstrap';
 import { emitAuditEvent } from '@/lib/audit-events';
 import { toast } from 'sonner';
 
@@ -97,7 +97,9 @@ export default function DemoReadinessPage() {
                 variant="outline"
                 disabled={isMutating}
                 onClick={() => {
-                  void runBootstrapAction('seed_golden_path', seedGoldenPathWorkspace);
+                  void runBootstrapAction('seed_golden_path', async () => {
+                    seedFirstCustomerWorkspace();
+                  });
                 }}
               >
                 {isMutating ? 'Working...' : 'Seed Golden Path'}
@@ -107,7 +109,9 @@ export default function DemoReadinessPage() {
                 variant="outline"
                 disabled={isMutating}
                 onClick={() => {
-                  void runBootstrapAction('reset_demo_workspace', resetDemoWorkspace);
+                  void runBootstrapAction('reset_demo_workspace', async () => {
+                    resetDemoWorkspace();
+                  });
                 }}
               >
                 {isMutating ? 'Working...' : 'Reset Demo'}

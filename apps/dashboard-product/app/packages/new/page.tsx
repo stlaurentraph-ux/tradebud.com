@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,7 +44,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { TenantRole } from '@/types';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
-import { inviteUser } from '@/lib/admin-service';
+import { inviteUser, type AdminUser } from '@/lib/admin-service';
 import { useAdminData } from '@/lib/use-admin-data';
 
 interface User {
@@ -150,6 +150,24 @@ const ROLE_LABELS: Record<TenantRole, string> = {
   sponsor: 'Network Sponsor',
 };
 
+function toDisplayUser(user: AdminUser, orgName: string): User {
+  const statusMap: Record<AdminUser['status'], User['status']> = {
+    ACTIVE: 'active',
+    PENDING: 'pending',
+    SUSPENDED: 'suspended',
+  };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.roles[0] ?? 'exporter',
+    org: orgName,
+    status: statusMap[user.status],
+    lastLogin: user.last_login_at ?? '-',
+    createdAt: user.invited_at,
+  };
+}
+
 const STATUS_CONFIG = {
   active: {
     label: 'Active',
@@ -180,7 +198,14 @@ export default function UserManagementPage() {
   const [inviteOrgId, setInviteOrgId] = useState('');
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
-  const users = loadedUsers.length > 0 ? loadedUsers : mockUsers;
+  const users = useMemo(() => {
+    if (loadedUsers.length === 0) return mockUsers;
+    return loadedUsers.map((user) => {
+      const orgName =
+        organizations.find((org) => org.id === user.organisation_id)?.name ?? user.organisation_id;
+      return toDisplayUser(user, orgName);
+    });
+  }, [loadedUsers, organizations]);
 
   // Filter users
   const filteredUsers = users.filter((user) => {
@@ -243,7 +268,7 @@ export default function UserManagementPage() {
             { label: 'Admin', href: '/admin' },
             { label: 'User Management' },
           ]}
-          action={
+          actions={
             <div className="flex gap-2">
               <Button variant="outline" asChild>
                 <Link href="/admin">

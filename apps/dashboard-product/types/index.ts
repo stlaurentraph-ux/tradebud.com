@@ -519,3 +519,77 @@ export interface DashboardMetrics {
   pending_role_decisions?: number;
   open_request_campaigns?: number;
 }
+
+// Founder OS / CRM (dashboard-internal)
+export interface ContentCalendarItem {
+  id: string;
+  channel: string;
+  pillar?: string | null;
+  format?: string | null;
+  hook?: string | null;
+  scheduled_at?: string | null;
+  status?: string;
+  review_status?: string;
+  owner?: string;
+  content_ideas?: { id: string; title: string } | null;
+}
+
+export interface ContentTask {
+  id: string;
+  task_type: string;
+  due_date?: string | null;
+  notes?: string | null;
+  status: 'open' | 'in_progress' | 'done' | 'missed';
+  content_calendar_id?: string | null;
+  content_calendar?: {
+    id: string;
+    channel?: string | null;
+    pillar?: string | null;
+    scheduled_at?: string | null;
+  } | null;
+}
+
+export interface Prospect {
+  id: string;
+  name: string;
+  company?: string | null;
+  stage?: string | null;
+  priority?: string | null;
+  email?: string | null;
+  source?: string | null;
+  notes?: string | null;
+}
+
+export interface OutreachTemplate {
+  id: string;
+  name: string;
+  channel?: string | null;
+  body?: string | null;
+  content?: string | null;
+  stage?: string | null;
+}
+
+export interface OutreachActivity {
+  id: string;
+  prospect_id?: string | null;
+  template_id?: string | null;
+  status?: string | null;
+  scheduled_at?: string | null;
+  created_at?: string | null;
+  content?: string | null;
+  activity_type?: string | null;
+  channel?: string | null;
+}
+
+export interface DailyAction {
+  id: string;
+  title?: string;
+  action_type?: string;
+  action_date?: string;
+  due_date?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  reason?: string | null;
+  completed?: boolean;
+  prospects?: { name?: string; company?: string | null } | null;
+}

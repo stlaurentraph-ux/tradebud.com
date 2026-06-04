@@ -55,7 +55,7 @@ export default function CrmTemplatesPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      void navigator.clipboard.writeText(template.content);
+                      void navigator.clipboard.writeText(template.content ?? '');
                     }}
                   >
                     Copy

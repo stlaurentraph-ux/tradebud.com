@@ -36,7 +36,7 @@ export default function FounderOsHomePage() {
   const outreachStreak = useMemo(() => {
     const completedByDate = new Map<string, number>();
     for (const action of actionHistory) {
-      if (!action.completed) continue;
+      if (!action.completed || !action.action_date) continue;
       completedByDate.set(action.action_date, (completedByDate.get(action.action_date) ?? 0) + 1);
     }
     let streak = 0;
@@ -86,6 +86,7 @@ export default function FounderOsHomePage() {
     return item.channel === 'linkedin_post' && date >= weekStart && date < weekEnd;
   }).length;
   const exchangesThisWeek = activities.filter((activity) => {
+    if (!activity.created_at) return false;
     const date = new Date(activity.created_at);
     return date >= weekStart && date < weekEnd;
   }).length;
