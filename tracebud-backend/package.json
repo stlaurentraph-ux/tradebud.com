@@ -21,12 +21,17 @@
     "db:verify:crm-contacts": "node scripts/run-with-root-test-db.mjs node scripts/apply-crm-contacts-migration.mjs --verify-only",
     "db:apply:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs",
     "db:verify:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs --verify-only",
+    "db:apply:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs",
+    "db:verify:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs --verify-only",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "check:deploy-health": "node scripts/check-deploy-health.mjs",
+    "railway:preflight:local": "node scripts/railway-local-preflight.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
@@ -43,7 +48,6 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
-    "@nestjs/config": "^4.0.3",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@types/express": "^4.17.21",

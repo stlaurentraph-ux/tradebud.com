@@ -32,12 +32,12 @@ Owner: product + engineering leads
 4) TB-V16-003 staging migration lane - complete
 - `GEOGRAPHY` migration execution and verification evidence are captured (`plot.geography` present, backfill missing `0`, GiST index present).
 
-### Blocked now (external dependency)
+### Completed (external dependency closed)
 
-1) Supabase/PostGIS owner remediation lane (`spatial_ref_sys`) - pending privileged operator
-- Run `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_runbook.sql` with owner/superuser privileges.
-- Run `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_verify.sql` and capture PASS/FAIL outputs.
-- Update ticket metadata from `pending_ticket / TBD` to real support ticket ID for project `uzsktajlnofosxeqwdwl`.
+1) Supabase/PostGIS + RLS remediation lane - complete on `uzsktajlnofosxeqwdwl`
+- PostGIS relocated to `extensions` by Supabase Support (Clément).
+- TB-V16-030 applied live; verify pass `14/14`.
+- One-shot remediation pack scripts removed from repo; SQL migrations + `db:verify:rls-phase3` retained.
 
 ## Current cycle checkpoint notes (2026-04-20)
 

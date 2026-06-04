@@ -16,7 +16,7 @@ import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
 import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import type { AppRole } from '../auth/roles';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PG_POOL } from '../db/db.module';
 import { LaunchService } from '../launch/launch.service';
@@ -76,9 +76,9 @@ export class PartnerDataController {
   ) {}
 
   private getTenantClaim(req: any): string {
-    const tenantId = req?.user?.app_metadata?.tenant_id ?? req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     return tenantId;
   }

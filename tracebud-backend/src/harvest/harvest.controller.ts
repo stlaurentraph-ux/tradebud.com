@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -20,20 +20,16 @@ export class HarvestController {
   ) {}
 
   private requireTenantClaim(req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
   }
 
   private getTenantId(req: any): string {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     return tenantId;
   }

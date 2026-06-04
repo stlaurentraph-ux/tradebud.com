@@ -240,3 +240,16 @@ When a feature introduces snapshot-backed UI tests:
    - `product-os/06-status/current-focus.md`
    - `product-os/06-status/done-log.md`
    - `product-os/06-status/daily-log.md`
+
+## Supabase RLS Remediation Evidence (TB-V16-030)
+
+Live project `uzsktajlnofosxeqwdwl` (2026-06): PostGIS relocated to `extensions` by Supabase Support; TB-V16-030 applied (14/14 policies pass). Re-verify after DB resets:
+
+- Apply TB-V16-030 (new env / branch only):
+  - `cd tracebud-backend && npm run db:apply:rls-phase3`
+- Verify TB-V16-030:
+  - `cd tracebud-backend && npm run db:verify:rls-phase3`
+- PostGIS check (SQL): `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_verify.sql`
+- Evidence to capture:
+  - Security Advisor export (no ERROR/WARN on tenant tables)
+  - verify command output / timestamps

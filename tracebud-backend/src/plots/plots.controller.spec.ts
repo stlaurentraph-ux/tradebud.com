@@ -79,7 +79,7 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.listByFarmer('farmer_other', {
-        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -93,7 +93,7 @@ describe('PlotsController scope boundaries', () => {
       controller.updateMetadata(
         'plot_1',
         { reason: 'fix name' } as any,
-        { user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -139,7 +139,7 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
-        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -153,19 +153,19 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
-        user: { id: 'user_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
-        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual({ ok: true });
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
-        user: { id: 'user_2', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_2', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } },
       }),
     ).resolves.toEqual({ ok: true });
   });
@@ -180,7 +180,7 @@ describe('PlotsController scope boundaries', () => {
         'plot_1',
         { kind: 'ground_truth', photos: [], assignmentId: 'assign_1' } as any,
         {
-          user: { id: 'user_2', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+          user: { id: 'user_2', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } },
         },
       ),
     ).rejects.toThrow(ForbiddenException);
@@ -194,7 +194,7 @@ describe('PlotsController scope boundaries', () => {
       controller.createAssignment(
         'plot_1',
         { assignmentId: 'assign_1', agentUserId: 'agent_1' } as any,
-        { user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -223,7 +223,7 @@ describe('PlotsController scope boundaries', () => {
       controller.createAssignment(
         'plot_1',
         { assignmentId: 'assign_1', agentUserId: 'agent_1' } as any,
-        { user: { id: 'user_1', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: 'user_1', email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } } },
       ),
     ).resolves.toEqual(expect.objectContaining({ assignmentId: 'assign_1', status: 'active' }));
 
@@ -231,7 +231,7 @@ describe('PlotsController scope boundaries', () => {
       controller.completeAssignment(
         'assign_1',
         { reason: 'work complete' } as any,
-        { user: { id: 'user_2', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: 'user_2', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       ),
     ).resolves.toEqual(expect.objectContaining({ assignmentId: 'assign_1', status: 'completed' }));
 
@@ -239,7 +239,7 @@ describe('PlotsController scope boundaries', () => {
       controller.cancelAssignment(
         'assign_2',
         { reason: 'replanned' } as any,
-        { user: { id: 'user_2', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: 'user_2', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       ),
     ).resolves.toEqual(expect.objectContaining({ assignmentId: 'assign_2', status: 'cancelled' }));
   });
@@ -259,13 +259,13 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.listAssignments('plot_1', undefined, undefined, undefined, undefined, undefined, undefined, {
-        user: { id: 'farmer_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'farmer_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       controller.listAssignments('plot_1', 'active', '14', 'agent_1', '10', '0', undefined, {
-        user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual(
       expect.objectContaining({
@@ -314,7 +314,7 @@ describe('PlotsController scope boundaries', () => {
       '10',
       '0',
       'csv',
-      { user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       { setHeader },
     );
     expect(typeof result).toBe('string');
@@ -346,7 +346,7 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, undefined, {
-        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -376,7 +376,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     const result = await controller.geometryHistory('plot_1', '25', '50', 'asc', undefined, undefined, {
-      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
 
     expect(service.isPlotOwnedByUser).toHaveBeenCalledWith('plot_1', 'user_1');
@@ -400,7 +400,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     await controller.geometryHistory('plot_1', undefined, undefined, undefined, 'strict', undefined, {
-      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
 
     expect(service.getGeometryHistory).toHaveBeenCalledWith('plot_1', 100, 0, 'desc', 'strict', false);
@@ -422,7 +422,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     await controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, 'true', {
-      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
 
     expect(service.getGeometryHistory).toHaveBeenCalledWith('plot_1', 100, 0, 'desc', 'balanced', true);
@@ -463,7 +463,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     const result = await controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, undefined, {
-      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
 
     expect(result.items[0]).toEqual(
@@ -496,7 +496,7 @@ describe('PlotsController scope boundaries', () => {
 
     await expect(
       controller.runDeforestationDecision('plot_1', '2020-12-31', {
-        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -512,7 +512,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     const result = await controller.runDeforestationDecision('plot_1', '2020-12-31', {
-      user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
 
     expect(service.runDeforestationDecision).toHaveBeenCalledWith('plot_1', 'exp_1', '2020-12-31');

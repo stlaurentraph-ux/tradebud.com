@@ -34,7 +34,7 @@ describe('ChatThreadsController tenant enforcement and contracts', () => {
       controller.createThread(
         { recordId: 'record_1', message: 'hello thread', idempotencyKey: 'idem-thread-1' } as any,
         {
-          user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+          user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
         },
       ),
     ).resolves.toEqual(expect.objectContaining({ threadId: 'thread_1' }));
@@ -53,7 +53,7 @@ describe('ChatThreadsController tenant enforcement and contracts', () => {
         'thread_1',
         { message: 'follow-up', idempotencyKey: 'idem-msg-1' } as any,
         {
-          user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+          user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } },
         },
       ),
     ).resolves.toEqual(expect.objectContaining({ threadId: 'thread_1' }));
@@ -70,7 +70,7 @@ describe('ChatThreadsController tenant enforcement and contracts', () => {
     const controller = new ChatThreadsController(service as unknown as ChatThreadsService);
     await expect(
       controller.resolveThread('thread_1', {
-        user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual(expect.objectContaining({ status: 'resolved' }));
     expect(service.resolveThread).toHaveBeenCalledWith(

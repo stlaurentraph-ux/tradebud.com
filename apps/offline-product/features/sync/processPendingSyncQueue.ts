@@ -37,6 +37,22 @@ export type ProcessPendingSyncQueueResult = {
 
 export type PendingSyncAttemptScope = 'all' | 'retrying_only' | 'first_attempt_only';
 
+const BASE_BACKOFF_MS = 5000;
+const MAX_BACKOFF_MS = 5 * 60 * 1000;
+
+function computeBackoffMs(attempts: number): number {
+  if (attempts <= 0) return 0;
+  return Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * 2 ** (attempts - 1));
+}
+
+function isEligibleForRetry(row: PendingSyncAction, nowMs: number): boolean {
+  const attempts = row.attempts ?? 0;
+  if (attempts <= 0) return true;
+  const lastAttemptAt = row.lastAttemptAt ?? row.createdAt;
+  const nextAllowedAt = lastAttemptAt + computeBackoffMs(attempts);
+  return nowMs >= nextAllowedAt;
+}
+
 /**
  * Drains the SQLite pending sync queue (harvests, photo sync, evidence sync).
  * Fetches server plots once per run and uses the same local↔server matching as Home / My Plots.
@@ -77,6 +93,7 @@ export async function processPendingSyncQueue(params: {
   const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync'];
   const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
   const attemptScope = params.attemptScope ?? 'all';
+  const nowMs = Date.now();
   const scopedActions = (await loadPendingSyncActions())
     .filter((row) => allowedActionTypeSet.has(row.actionType))
     .filter((row) => {
@@ -84,6 +101,7 @@ export async function processPendingSyncQueue(params: {
       if (attemptScope === 'first_attempt_only') return (row.attempts ?? 0) === 0;
       return true;
     })
+    .filter((row) => isEligibleForRetry(row, nowMs))
     .sort((a, b) => {
       const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
       if (cmp !== 0) return cmp;
@@ -133,6 +151,7 @@ export async function processPendingSyncQueue(params: {
           await markPendingSyncAttempt(a.id, {
             attempts: (a.attempts ?? 0) + 1,
             lastError: 'Plot not on server yet — upload plot from My Plots first.',
+            lastAttemptAt: Date.now(),
           });
           continue;
         }
@@ -146,6 +165,7 @@ export async function processPendingSyncQueue(params: {
           await markPendingSyncAttempt(a.id, {
             attempts: (a.attempts ?? 0) + 1,
             lastError: 'Plot not on server — upload from My Plots first.',
+            lastAttemptAt: Date.now(),
           });
           continue;
         }
@@ -161,6 +181,7 @@ export async function processPendingSyncQueue(params: {
             await markPendingSyncAttempt(a.id, {
               attempts: (a.attempts ?? 0) + 1,
               lastError: 'Plot not on server — upload from My Plots first.',
+              lastAttemptAt: Date.now(),
             });
           } else {
             await deletePendingSyncAction(a.id);
@@ -229,6 +250,7 @@ export async function processPendingSyncQueue(params: {
       await markPendingSyncAttempt(a.id, {
         attempts: nextAttempts,
         lastError: errorText,
+        lastAttemptAt: Date.now(),
       });
       await logAuditEvent({
         eventType: 'sync_queue_action_failed',

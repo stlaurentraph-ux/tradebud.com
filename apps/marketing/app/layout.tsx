@@ -1,15 +1,24 @@
-import type { Metadata, Viewport } from 'next'
-import { getMessages } from 'next-intl/server'
-import { NextIntlClientProvider } from 'next-intl'
-import { Analytics } from '@vercel/analytics/next'
-import { isLocale, locales } from '@/i18n.config'
-import './globals.css'
+import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Tracebud | Trade freely. Trace Easily.',
-  description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets. De-risk the global supply chain with Tracebud.',
+  description:
+    'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets. De-risk the global supply chain with Tracebud.',
   generator: 'Tracebud',
-  keywords: ['EUDR', 'traceability', 'supply chain', 'compliance', 'deforestation', 'coffee', 'cocoa', 'palm oil', 'sustainability', 'ESG'],
+  keywords: [
+    'EUDR',
+    'traceability',
+    'supply chain',
+    'compliance',
+    'deforestation',
+    'coffee',
+    'cocoa',
+    'palm oil',
+    'sustainability',
+    'ESG',
+  ],
   authors: [{ name: 'Tracebud' }],
   creator: 'Tracebud',
   publisher: 'Tracebud',
@@ -23,17 +32,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
     languages: {
-      'en': '/en',
-      'es': '/es',
-      'pt': '/pt',
-      'fr': '/fr',
-      'de': '/de',
-      'nl': '/nl',
-      'it': '/it',
-      'id': '/id',
-      'vi': '/vi',
-      'am': '/am',
-      'no': '/no',
+      en: '/en',
+      es: '/es',
+      pt: '/pt',
+      fr: '/fr',
+      de: '/de',
+      nl: '/nl',
+      it: '/it',
+      id: '/id',
+      vi: '/vi',
+      am: '/am',
+      no: '/no',
     },
   },
   openGraph: {
@@ -42,7 +51,8 @@ export const metadata: Metadata = {
     url: 'https://tracebud.com',
     siteName: 'Tracebud',
     title: 'Tracebud | Trade freely. Trace Easily.',
-    description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+    description:
+      'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
     images: [
       {
         url: '/og-image.png',
@@ -55,7 +65,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Tracebud | Trade freely. Trace Easily.',
-    description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+    description:
+      'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -78,30 +89,30 @@ export const metadata: Metadata = {
     apple: '/favicon-32x32-v6.png',
     shortcut: '/favicon-32x32-v6.png',
   },
-}
+};
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   themeColor: '#064E3B',
-}
+};
 
-// JSON-LD structured data for SEO
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Tracebud',
   url: 'https://tracebud.com',
   logo: 'https://tracebud.com/tracebud-logo-v6.png',
-  description: 'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+  description:
+    'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
   sameAs: [],
   contactPoint: {
     '@type': 'ContactPoint',
     email: 'support@tracebud.com',
     contactType: 'customer service',
   },
-}
+};
 
 const faqJsonLd = {
   '@context': 'https://schema.org',
@@ -132,28 +143,15 @@ const faqJsonLd = {
       },
     },
   ],
-}
+};
 
-export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }))
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
-  params,
 }: Readonly<{
-  children: React.ReactNode
-  params: { locale: string }
+  children: React.ReactNode;
 }>) {
-  const { locale } = await params
-  
-  // Locale validation moved to [locale]/layout.tsx
-  const validLocale = isLocale(locale) ? locale : 'en'
-
-  const messages = await getMessages()
-
   return (
-    <html lang={validLocale} className="bg-background">
+    <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <script
           type="application/ld+json"
@@ -163,14 +161,12 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
-        <NextIntlClientProvider messages={messages}>
-          <a href="#main-content" className="skip-to-content">
-            Skip to content
-          </a>
-          {children}
-          <Analytics />
-        </NextIntlClientProvider>
+        <a href="#main-content" className="skip-to-content">
+          Skip to content
+        </a>
+        {children}
+        <Analytics />
       </body>
     </html>
-  )
+  );
 }

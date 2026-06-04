@@ -1,0 +1,8 @@
+{
+  "window": "2026-06-02T00:00:00Z/2026-06-02T23:59:59Z",
+  "sessions": 380,
+  "crashFreeRatePct": 99.6,
+  "syncSuccessRatePct": 98.7,
+  "authErrorRatePct": 0.8,
+  "apiTimeoutRatePct": 0.6
+}

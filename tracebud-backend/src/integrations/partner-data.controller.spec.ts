@@ -1,10 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PartnerDataController } from './partner-data.controller';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 
 describe('PartnerDataController', () => {
   it('rejects dataset reads when tenant claim is missing', async () => {
     const pool = { query: jest.fn() };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.listDatasets('read:lineage', {
@@ -15,7 +16,7 @@ describe('PartnerDataController', () => {
 
   it('rejects partner export starts for non-exporter roles', async () => {
     const pool = { query: jest.fn() };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.startExport(
@@ -29,7 +30,7 @@ describe('PartnerDataController', () => {
           user: {
             id: 'user_1',
             email: 'agent+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
           },
         },
       ),
@@ -38,14 +39,14 @@ describe('PartnerDataController', () => {
 
   it('lists scope-allowed datasets and writes immutable audit evidence', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.listDatasets('read:lineage', {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).resolves.toEqual({
@@ -91,7 +92,7 @@ describe('PartnerDataController', () => {
         })
         .mockResolvedValue({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     const result = await controller.startExport(
       {
@@ -105,7 +106,7 @@ describe('PartnerDataController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       },
     );
@@ -231,7 +232,7 @@ describe('PartnerDataController', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     const result = await controller.startExport(
       {
@@ -244,7 +245,7 @@ describe('PartnerDataController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       },
     );
@@ -293,14 +294,14 @@ describe('PartnerDataController', () => {
         ],
       }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.getExportStatus('export_1', {
         user: {
           id: 'user_2',
           email: 'agent+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
         },
       }),
     ).resolves.toEqual({
@@ -347,14 +348,14 @@ describe('PartnerDataController', () => {
         ],
       }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.getExportDownload('export_1', {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).resolves.toEqual({
@@ -419,7 +420,7 @@ describe('PartnerDataController', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     await expect(
       controller.finalizeExport(
@@ -429,7 +430,7 @@ describe('PartnerDataController', () => {
           user: {
             id: 'user_1',
             email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
           },
         },
       ),
@@ -526,13 +527,13 @@ describe('PartnerDataController', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
 
     const queue = await controller.listRetryQueue('20', {
       user: {
         id: 'user_1',
         email: 'agent+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
       },
     });
     expect(queue.items).toHaveLength(1);
@@ -548,7 +549,7 @@ describe('PartnerDataController', () => {
       user: {
         id: 'user_1',
         email: 'exporter+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
       },
     });
     expect(retried).toEqual(
@@ -589,13 +590,13 @@ describe('PartnerDataController', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
     await expect(
       controller.retryExport('export_failed', {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow('Partner export retry cap reached');
@@ -635,13 +636,13 @@ describe('PartnerDataController', () => {
           ],
         }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
     await expect(
       controller.getRetrySummary({
         user: {
           id: 'user_1',
           email: 'agent+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
         },
       }),
     ).resolves.toEqual({
@@ -706,7 +707,7 @@ describe('PartnerDataController', () => {
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new PartnerDataController(pool as any);
+    const controller = new PartnerDataController(pool as any, createLaunchServiceMock());
     await expect(
       controller.triggerRetrySweep(
         { limit: 10 },
@@ -714,7 +715,7 @@ describe('PartnerDataController', () => {
           user: {
             id: 'user_1',
             email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
           },
         },
         'token_1',

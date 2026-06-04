@@ -3,6 +3,8 @@
 Date: 2026-04-20  
 Owner: Product + Engineering + Infra (privileged DB operator)
 
+> **2026-06 update:** PostGIS relocation (Support) and TB-V16-030 are complete on `uzsktajlnofosxeqwdwl`. One-shot npm pack scripts were removed; use `db:verify:rls-phase3` and SQL verify files in `tracebud-backend/sql/`.
+
 ## Purpose
 
 One-pass operator packet to close the remaining non-code scorecard lanes:

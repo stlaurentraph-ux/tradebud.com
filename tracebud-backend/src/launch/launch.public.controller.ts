@@ -6,6 +6,7 @@ import {
   SignupPrimaryObjective,
   SignupPrimaryRole,
 } from './launch.service';
+import { deriveTenantIdFromSupabaseUser } from '../auth/roles';
 
 @ApiTags('Launch')
 @Controller('v1/launch')
@@ -82,9 +83,9 @@ export class LaunchPublicController {
     }
 
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     const organizationName = body.organizationName?.trim() ?? '';
     const country = body.country?.trim() ?? '';
@@ -119,9 +120,9 @@ export class LaunchPublicController {
     },
   ): Promise<any> {
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     const skipped = Boolean(body.skipped);
     const profile = await this.launchService.saveCommercialProfile({

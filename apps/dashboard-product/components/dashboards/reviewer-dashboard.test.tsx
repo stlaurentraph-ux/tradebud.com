@@ -51,8 +51,9 @@ describe('ReviewerDashboard', () => {
 
   it('displays pending review count correctly', () => {
     render(<ReviewerDashboard metrics={mockMetrics} />);
-    // READY status packages = 5
-    expect(screen.getByText('5')).toBeInTheDocument();
+    // READY status packages = 5 (shown in queue banner and Pending Review KPI)
+    expect(screen.getByText(/5 packages awaiting your compliance review/i)).toBeInTheDocument();
+    expect(screen.getByText('Packages to review')).toBeInTheDocument();
   });
 
   it('shows compliance verification status breakdown', () => {
@@ -62,7 +63,8 @@ describe('ReviewerDashboard', () => {
 
   it('displays critical alerts section', () => {
     render(<ReviewerDashboard metrics={mockMetrics} />);
-    expect(screen.getByText(/Deforestation Alerts|Protected Area|Critical/i)).toBeInTheDocument();
+    expect(screen.getByText('Deforestation Alerts')).toBeInTheDocument();
+    expect(screen.getByText('Protected Area Overlaps')).toBeInTheDocument();
   });
 
   it('renders virgin state with helpful CTA buttons', () => {

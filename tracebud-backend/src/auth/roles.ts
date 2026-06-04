@@ -1,10 +1,7 @@
 export type AppRole = 'farmer' | 'agent' | 'exporter' | 'admin' | 'compliance_manager';
 
 function parseClaimRole(user: any): AppRole | null {
-  const rawClaimRole =
-    (user?.app_metadata?.role as string | undefined) ??
-    (user?.user_metadata?.role as string | undefined) ??
-    '';
+  const rawClaimRole = (user?.app_metadata?.role as string | undefined) ?? '';
   const claimRole = rawClaimRole.trim().toLowerCase();
   if (!claimRole) {
     return null;
@@ -33,20 +30,15 @@ export function deriveRoleFromSupabaseUser(user: any): AppRole {
   if (claimRole) {
     return claimRole;
   }
-
-  const email = (user?.email as string | undefined)?.toLowerCase();
-  if (!email) {
-    return 'farmer';
-  }
-
-  if (email.startsWith('agent+')) {
-    return 'agent';
-  }
-
-  if (email.startsWith('exporter+') || email.endsWith('@tracebud.com')) {
-    return 'exporter';
-  }
-
   return 'farmer';
+}
+
+export function deriveTenantIdFromSupabaseUser(user: any): string | null {
+  const appTenant = user?.app_metadata?.tenant_id;
+  if (typeof appTenant !== 'string') {
+    return null;
+  }
+  const tenantId = appTenant.trim();
+  return tenantId.length > 0 ? tenantId : null;
 }
 

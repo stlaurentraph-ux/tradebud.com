@@ -18,7 +18,16 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint --max-warnings 0"
+    "lint": "expo lint --max-warnings 0",
+    "release:preflight:preview": "node ./scripts/release-preflight.mjs --profile=preview",
+    "release:preflight:production": "node ./scripts/release-preflight.mjs --profile=production",
+    "release:slo:gate": "node ./scripts/release-rollout-slo-gate.mjs",
+    "release:preview": "eas build --platform all --profile preview",
+    "release:production": "eas build --platform all --profile production",
+    "release:production:safe": "npm run release:preflight:production && npm run release:production",
+    "submit:production": "eas submit --platform all --profile production",
+    "update:preview": "eas update --branch preview --message \"preview ota\"",
+    "update:production": "eas update --branch production --message \"production ota\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -40,6 +49,7 @@
     "expo-linking": "~8.0.11",
     "expo-location": "~19.0.8",
     "expo-router": "~6.0.23",
+    "expo-secure-store": "^56.0.4",
     "expo-sharing": "~14.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-sqlite": "~16.0.10",

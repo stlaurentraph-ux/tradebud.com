@@ -88,6 +88,10 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
   const [orgCount, setOrgCount] = useState<number | null>(null);
   const [campaignCount, setCampaignCount] = useState<number | null>(null);
   const [draftCampaignCount, setDraftCampaignCount] = useState<number>(0);
+  const isVirginTenant =
+    metrics.total_packages === 0 &&
+    metrics.total_plots === 0 &&
+    metrics.total_farmers === 0;
   const atRiskOrgs = useMemo(
     () => organisations.filter((org) => Number(org.onboardingCompleteness ?? 0) < 80).length,
     [organisations]

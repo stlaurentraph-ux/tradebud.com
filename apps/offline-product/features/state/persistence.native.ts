@@ -50,7 +50,10 @@ export type PendingSyncAction = {
   payloadJson: string;
   attempts: number;
   lastError: string | null;
+  lastAttemptAt: number | null;
 };
+
+const MAX_PENDING_SYNC_ACTIONS = 1000;
 
 export type LocalAuditEvent = {
   id: number;
@@ -193,6 +196,9 @@ async function ensurePendingSyncSchemaExtras(db: SQLite.SQLiteDatabase) {
   const has = (col: string) => rows.some((r) => r.name === col);
   if (!has('hlcTimestamp')) {
     await db.execAsync('ALTER TABLE pending_sync ADD COLUMN hlcTimestamp TEXT;');
+  }
+  if (!has('lastAttemptAt')) {
+    await db.execAsync('ALTER TABLE pending_sync ADD COLUMN lastAttemptAt INTEGER;');
   }
 }
 
@@ -498,7 +504,7 @@ export async function loadEvidenceForPlot(
 }
 
 export async function enqueuePendingSync(
-  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp'> & { hlcTimestamp?: string },
+  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp' | 'lastAttemptAt'> & { hlcTimestamp?: string },
 ) {
   const db = await getDb();
   const last = await db.getFirstAsync<{ hlcTimestamp?: string | null }>(
@@ -506,9 +512,20 @@ export async function enqueuePendingSync(
   );
   const hlcTimestamp = generateHlcTimestamp(action.createdAt, action.hlcTimestamp ?? last?.hlcTimestamp ?? null);
   await db.runAsync(
-    `INSERT INTO pending_sync (createdAt, hlcTimestamp, actionType, payloadJson, attempts, lastError)
-     VALUES (?, ?, ?, ?, 0, ?);`,
+    `INSERT INTO pending_sync (createdAt, hlcTimestamp, actionType, payloadJson, attempts, lastError, lastAttemptAt)
+     VALUES (?, ?, ?, ?, 0, ?, NULL);`,
     [action.createdAt, hlcTimestamp, action.actionType, action.payloadJson, action.lastError ?? null],
+  );
+  await db.runAsync(
+    `DELETE FROM pending_sync
+     WHERE id IN (
+       SELECT id FROM pending_sync
+       ORDER BY createdAt ASC, id ASC
+       LIMIT (
+         SELECT MAX(COUNT(*) - ?, 0) FROM pending_sync
+       )
+     );`,
+    [MAX_PENDING_SYNC_ACTIONS],
   );
 }
 
@@ -523,14 +540,19 @@ export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {
     payloadJson: row.payloadJson,
     attempts: row.attempts ?? 0,
     lastError: row.lastError ?? null,
+    lastAttemptAt: row.lastAttemptAt ?? null,
   }));
 }
 
-export async function markPendingSyncAttempt(id: number, params: { attempts: number; lastError: string | null }) {
+export async function markPendingSyncAttempt(
+  id: number,
+  params: { attempts: number; lastError: string | null; lastAttemptAt?: number | null },
+) {
   const db = await getDb();
-  await db.runAsync('UPDATE pending_sync SET attempts = ?, lastError = ? WHERE id = ?;', [
+  await db.runAsync('UPDATE pending_sync SET attempts = ?, lastError = ?, lastAttemptAt = ? WHERE id = ?;', [
     params.attempts,
     params.lastError ?? null,
+    params.lastAttemptAt ?? Date.now(),
     id,
   ]);
 }

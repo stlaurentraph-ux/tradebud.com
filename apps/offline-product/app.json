@@ -51,7 +51,8 @@
         }
       ],
       "expo-sqlite",
-      "expo-camera"
+      "expo-camera",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

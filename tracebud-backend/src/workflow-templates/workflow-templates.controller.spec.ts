@@ -22,7 +22,7 @@ describe('WorkflowTemplatesController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       },
     );
@@ -46,7 +46,7 @@ describe('WorkflowTemplatesController', () => {
           user: {
             id: 'user_1',
             email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
           },
         },
       ),
@@ -69,7 +69,7 @@ describe('WorkflowTemplatesController', () => {
       user: {
         id: 'user_1',
         email: 'exporter+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
       },
     };
     await expect(controller.transitionStage('template_1', 'collect_docs', { toStatus: 'in_progress' }, req)).resolves.toEqual(
@@ -95,7 +95,7 @@ describe('WorkflowTemplatesController', () => {
           user: {
             id: 'user_1',
             email: 'exporter+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
           },
         },
       ),
@@ -120,7 +120,7 @@ describe('WorkflowTemplatesController', () => {
       user: {
         id: 'user_1',
         email: 'exporter+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
       },
     };
     await expect(

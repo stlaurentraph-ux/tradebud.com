@@ -1,7 +1,18 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SponsorDashboard } from './sponsor-dashboard';
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => ({
+    get: () => null,
+  }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+  }),
+  usePathname: () => '/',
+}));
 
 const mockMetrics = {
   total_packages: 30,
@@ -51,22 +62,23 @@ describe('SponsorDashboard', () => {
 
   it('displays network overview section', () => {
     render(<SponsorDashboard metrics={mockMetrics} />);
-    expect(screen.getByText(/Network Overview|Sponsored Organizations/i)).toBeInTheDocument();
+    expect(screen.getByText('Network Health Snapshot')).toBeInTheDocument();
   });
 
   it('shows active campaign tracking', () => {
     render(<SponsorDashboard metrics={mockMetrics} />);
-    expect(screen.getByText(/Campaign|Data Request/i)).toBeInTheDocument();
+    expect(screen.getByText('Programme Performance')).toBeInTheDocument();
   });
 
   it('renders virgin state with helpful CTA buttons', () => {
     render(<SponsorDashboard metrics={virginMetrics} />);
-    const createLink = screen.getByRole('link', { name: /Create first campaign|Open|Connect/ });
-    expect(createLink).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create first campaign' })).toHaveAttribute('href', '/requests');
+    expect(screen.getByRole('link', { name: 'Connect organizations' })).toHaveAttribute('href', '/farmers');
   });
 
   it('displays KPI cards for sponsored organizations', () => {
     render(<SponsorDashboard metrics={mockMetrics} />);
-    expect(screen.getByText(/Compliance Rate|At-Risk|Organizations/i)).toBeInTheDocument();
+    expect(screen.getByText('Governed organisations')).toBeInTheDocument();
+    expect(screen.getByText('Compliance health')).toBeInTheDocument();
   });
 });

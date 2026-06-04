@@ -21,12 +21,24 @@ EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 EXPO_PUBLIC_TRACEBUD_TEST_EMAIL=YOUR_TEST_USER_EMAIL
 EXPO_PUBLIC_TRACEBUD_TEST_PASSWORD=YOUR_TEST_USER_PASSWORD
+EXPO_PUBLIC_ALLOW_TEST_AUTH=1
+EXPO_PUBLIC_ALLOW_LOCALHOST_API=1
+EXPO_PUBLIC_ALLOW_INSECURE_API=1
 ```
 
 These are used by the app’s API client to:
 
 - Call the NestJS backend.
 - Log in automatically to Supabase to obtain a JWT for each sync call.
+
+Production safety defaults:
+
+- `EXPO_PUBLIC_ALLOW_TEST_AUTH` defaults to off unless explicitly set to `1`.
+- `EXPO_PUBLIC_ALLOW_LOCALHOST_API` defaults to off unless explicitly set to `1`.
+- `EXPO_PUBLIC_ALLOW_INSECURE_API` defaults to off unless explicitly set to `1`.
+- For preview/production builds, use a reachable HTTPS API URL (not localhost).
+- Sync account credentials are stored in secure platform storage (Keychain/Keystore). Legacy
+  plaintext settings are migrated automatically on first load.
 
 ### 3. Install & run
 
@@ -73,4 +85,39 @@ Make sure the **backend** is already running and reachable from your device at `
      - Tap **Run compliance check** to flip compliance/overlap flags.
      - Enter kg and tap **Record harvest** to create a voucher.
      - Use **Create DDS package from active vouchers** to create an exporter package.
+
+### 6. Release model (testing vs official app)
+
+Use one codebase with separate release tracks:
+
+- `development` -> internal dev builds
+- `preview` -> QA and pilot testers
+- `production` -> official public app for farmers
+
+Commands:
+
+```bash
+# Build for testers
+npm run release:preview
+
+# Build for official users
+npm run release:production
+
+# Production preflight + build (recommended)
+npm run release:production:safe
+
+# Rollout SLO go/no-go gate (before preview -> production promotion)
+npm run release:slo:gate -- --report=release-health-report.json
+
+# Submit official build to stores
+npm run submit:production
+
+# OTA updates (after validation)
+npm run update:preview
+npm run update:production
+```
+
+See `RELEASE_MODEL.md` for the full branch and promotion workflow.
+For operational launch steps and staged rollout procedure, see `RELEASE_RUNBOOK.md`.
+Example SLO report payload lives at `release-health-report.example.json`.
 

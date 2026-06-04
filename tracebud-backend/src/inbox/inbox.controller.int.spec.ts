@@ -72,14 +72,14 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     await expect(
       controller.bootstrap(
         { action: 'seed_first_customer' },
-        { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'farmer@example.com' } },
+        { user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'farmer' }, email: 'farmer@example.com' } },
       ),
     ).rejects.toThrow('Only exporter/admin users can run inbox bootstrap actions.');
 
     await expect(
       controller.bootstrap(
         { action: 'seed_golden_path' },
-        { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
+        { user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' } },
       ),
     ).resolves.toEqual({ ok: true });
   });
@@ -87,11 +87,11 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   it('enforces tenant scope on respond with DB-backed records', async () => {
     await controller.bootstrap(
       { action: 'reset' },
-      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
+      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' } },
     );
 
     const listed = await controller.list({
-      user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+      user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
     });
     expect(listed.requests.length).toBeGreaterThan(0);
 
@@ -100,7 +100,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     const requestId = pending!.id;
     await expect(
       controller.respond(requestId, {
-        user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+        user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).resolves.toMatchObject({
       request: expect.objectContaining({ id: requestId, status: 'RESPONDED' }),
@@ -108,7 +108,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
 
     await expect(
       controller.respond(requestId, {
-        user: { app_metadata: { tenant_id: 'tenant_brazil_001' }, email: 'exporter+demo@tracebud.com' },
+        user: { app_metadata: { tenant_id: 'tenant_brazil_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).rejects.toThrow(NotFoundException);
   }, 60_000);
@@ -116,14 +116,14 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   it('self-heals table state for controller list/respond after external table drop', async () => {
     await controller.bootstrap(
       { action: 'reset' },
-      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' } },
+      { user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' } },
     );
 
     await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
 
     const listed = await controller.list({
-      user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+      user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
     });
     expect(listed.requests.length).toBeGreaterThan(0);
 
@@ -131,7 +131,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     expect(pending).toBeDefined();
     await expect(
       controller.respond(pending!.id, {
-        user: { app_metadata: { tenant_id: 'tenant_rwanda_001' }, email: 'exporter+demo@tracebud.com' },
+        user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).resolves.toMatchObject({
       request: expect.objectContaining({ id: pending!.id, status: 'RESPONDED' }),

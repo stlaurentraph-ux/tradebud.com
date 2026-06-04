@@ -49,7 +49,10 @@ export type PendingSyncAction = {
   payloadJson: string;
   attempts: number;
   lastError: string | null;
+  lastAttemptAt: number | null;
 };
+
+const MAX_PENDING_SYNC_ACTIONS = 1000;
 
 export type LocalAuditEvent = {
   id: number;
@@ -147,7 +150,7 @@ export async function loadEvidenceForPlot(plotId: string, kind?: PlotEvidenceKin
 }
 
 export async function enqueuePendingSync(
-  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp'> & { hlcTimestamp?: string },
+  action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp' | 'lastAttemptAt'> & { hlcTimestamp?: string },
 ) {
   const previous = memPending.length > 0 ? memPending[memPending.length - 1].hlcTimestamp : null;
   memPending.push({
@@ -155,15 +158,24 @@ export async function enqueuePendingSync(
     attempts: 0,
     ...action,
     hlcTimestamp: generateHlcTimestamp(action.createdAt, action.hlcTimestamp ?? previous),
+    lastAttemptAt: null,
   });
+  if (memPending.length > MAX_PENDING_SYNC_ACTIONS) {
+    memPending = memPending.slice(memPending.length - MAX_PENDING_SYNC_ACTIONS);
+  }
 }
 
 export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {
   return memPending;
 }
 
-export async function markPendingSyncAttempt(id: number, params: { attempts: number; lastError: string | null }) {
-  memPending = memPending.map((a) => (a.id === id ? { ...a, ...params } : a));
+export async function markPendingSyncAttempt(
+  id: number,
+  params: { attempts: number; lastError: string | null; lastAttemptAt?: number | null },
+) {
+  memPending = memPending.map((a) =>
+    a.id === id ? { ...a, ...params, lastAttemptAt: params.lastAttemptAt ?? Date.now() } : a,
+  );
 }
 
 export async function deletePendingSyncAction(id: number) {

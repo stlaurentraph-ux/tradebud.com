@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreatePlotDto } from './dto/create-plot.dto';
 import { SyncPlotEvidenceDto } from './dto/sync-plot-evidence.dto';
 import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
@@ -21,11 +21,9 @@ export class PlotsController {
   constructor(private readonly plotsService: PlotsService) {}
 
   private requireTenantClaim(req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
   }
 
@@ -67,8 +65,6 @@ export class PlotsController {
     this.requireTenantClaim(req);
     const userId = req.user?.id as string | undefined;
     const role = deriveRoleFromSupabaseUser(req.user);
-    // Farmers and agents upload from the field app; exporters include @tracebud.com test accounts
-    // (see deriveRoleFromSupabaseUser) who still need to create demo plots like agents.
     if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
       throw new ForbiddenException('Only farmers, agents, or exporters can create plots');
     }
@@ -200,10 +196,7 @@ export class PlotsController {
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async syncEvidence(@Param('id') id: string, @Body() dto: SyncPlotEvidenceDto, @Req() req: any) {
     this.requireTenantClaim(req);
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id ??
-      null;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
     return this.plotsService.syncEvidence(id, dto, userId, tenantId);
   }
@@ -242,10 +235,7 @@ export class PlotsController {
     const fromDays = fromDaysRaw ? Number(fromDaysRaw) : 30;
     const limit = limitRaw ? Number(limitRaw) : 20;
     const offset = offsetRaw ? Number(offsetRaw) : 0;
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id ??
-      null;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const userId = (req?.user?.id as string | undefined) ?? null;
     const exportedBy =
       (req?.user?.email as string | undefined) ??

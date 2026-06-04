@@ -509,7 +509,6 @@ export class LaunchService {
         user?: {
           id?: string;
           app_metadata?: { tenant_id?: string };
-          user_metadata?: { tenant_id?: string };
         };
         access_token?: string;
         refresh_token?: string;
@@ -520,10 +519,7 @@ export class LaunchService {
       };
 
       if (signinResponse.ok && signinPayload.user?.id && signinPayload.access_token) {
-        const tenantId =
-          signinPayload.user.app_metadata?.tenant_id ??
-          signinPayload.user.user_metadata?.tenant_id ??
-          defaultTenantId;
+        const tenantId = signinPayload.user.app_metadata?.tenant_id ?? defaultTenantId;
         await this.getOrCreateTrialState(tenantId);
         await this.emitAuditEvent('signup_completed', {
           tenantId,

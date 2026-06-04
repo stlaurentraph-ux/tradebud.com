@@ -989,6 +989,115 @@ Verification:
 
 - From repository root: `npm run i18n:queue:verify:clean` (expect PASS; artifacts under `apps/offline-product/` and gitignored there).
 
+### S1 post-closeout hardening slice 65 - release-track model + launch checklist
+
+- Offline app now defines explicit release tracks in EAS (`development`, `preview`, `production`) with channel mapping and release scripts for build/submit/update flows.
+- Added release-model and launch-readiness docs for controlled promotion from tester tracks to official farmer production rollout.
+- **Permissions/tenant boundaries:** unchanged in runtime behavior; rollout controls reduce accidental exposure of unvalidated changes to production users.
+- **State transitions:** release-state transitions are now explicit (`develop -> preview -> production`) with staged rollout.
+- **Exception/recovery:** rollout runbook now includes phased rollback path and hotfix procedure.
+- **Analytics/events:** no new runtime event schema in this slice; release observability is handled operationally via runbook metrics.
+- **Acceptance mapping:** provides deterministic release gate checklist for FEAT-002 production operability.
+
+Verification commands:
+
+- `npm run lint` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 66 - production auth + API safety guards
+
+- Mobile auth defaults now fail closed for production-like runs:
+  - test auth defaults require explicit opt-in (`EXPO_PUBLIC_ALLOW_TEST_AUTH=1`)
+  - localhost API use in non-dev runtime requires explicit opt-in (`EXPO_PUBLIC_ALLOW_LOCALHOST_API=1`)
+- Transport hardening now enforces HTTPS API base in preview/production unless explicitly overridden for controlled testing (`EXPO_PUBLIC_ALLOW_INSECURE_API=1`).
+- **Permissions/tenant boundaries:** unchanged and preserved; guards reduce accidental insecure runtime configuration.
+- **State transitions:** sync auth remains explicit sign-in -> token issuance -> sync actions.
+- **Exception/recovery:** login checks now return deterministic operator guidance on unsafe API config.
+- **Analytics/events:** no new event names in this guardrail slice.
+- **Acceptance mapping:** closes key production-readiness gap for secure auth/API environment handling.
+
+Verification commands:
+
+- `npm run lint` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 67 - secure credential storage migration
+
+- Sync credentials now persist in secure platform storage (Keychain/Keystore via `expo-secure-store`).
+- Added one-time migration path from legacy plaintext settings storage to secure storage.
+- Sign-out now clears secure storage and legacy fallback keys.
+- **Permissions/tenant boundaries:** unchanged; credential-at-rest safety is improved without policy broadening.
+- **State transitions:** persisted auth state now hydrates through secure-store adapter with backward-compatible migration.
+- **Exception/recovery:** secure store fallback remains available for unsupported environments (web) to preserve usability.
+- **Analytics/events:** no new analytics schema in this slice.
+- **Acceptance mapping:** addresses mobile credential-storage hardening needed for global farmer rollout.
+
+Verification commands:
+
+- `npm run lint` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 68 - retry backoff + queue cap + retry ETA UX
+
+- Pending sync queue now applies exponential retry backoff (5s base, doubled, capped at 5m) using per-row `lastAttemptAt`.
+- Queue size now enforces hard cap (`1000`) with deterministic oldest-first trimming.
+- Settings UI now surfaces:
+  - latest queue error (localized)
+  - next retry ETA in seconds (localized)
+- **Permissions/tenant boundaries:** unchanged and preserved.
+- **State transitions:** retry transitions now include temporal eligibility (`pending/retrying` -> eligible retry window) before execution.
+- **Exception/recovery:** improves network outage resilience and prevents unbounded queue growth.
+- **Analytics/events:** existing queue success/failure/drop telemetry remains in place; this slice improves operator visibility.
+- **Acceptance mapping:** closes reliability/usability gap for weak-connectivity field operations.
+
+Verification commands:
+
+- `npm run lint` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 69 - release preflight automation gate
+
+- Added preflight automation script (`scripts/release-preflight.mjs`) to validate release-critical runtime/env constraints before preview/production builds.
+- Preflight checks now enforce:
+  - required env vars (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`)
+  - `eas.json` profile/channel consistency for selected profile
+  - production safety policy (no localhost API, HTTPS required, no insecure/test override flags)
+- Added release scripts:
+  - `release:preflight:preview`
+  - `release:preflight:production`
+  - `release:production:safe` (preflight + build)
+- Updated launch/release docs to make preflight a standard go/no-go gate.
+- **Permissions/tenant boundaries:** unchanged.
+- **State transitions:** release-state promotion now gains deterministic preflight gate before production build transition.
+- **Exception/recovery:** preflight fails fast with actionable error messages for misconfiguration.
+- **Analytics/events:** no runtime analytics schema changes in this slice.
+- **Acceptance mapping:** improves release reliability and reduces config-driven production incidents.
+
+Verification commands:
+
+- `npm run release:preflight:preview` (from `apps/offline-product`)
+- `npm run lint` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 70 - rollout SLO go/no-go gate
+
+- Added rollout SLO gate automation (`scripts/release-rollout-slo-gate.mjs`) to block preview -> production promotion when health metrics violate thresholds.
+- Gate evaluates report metrics:
+  - sessions
+  - crash-free rate
+  - sync success rate
+  - auth error rate
+  - API timeout rate
+- Default thresholds are configurable via env (`RELEASE_SLO_*`) for controlled release policy tuning.
+- Added release command:
+  - `npm run release:slo:gate -- --report=release-health-report.json`
+- Added example report template `release-health-report.example.json`.
+- Updated release docs/checklists to include SLO gate as explicit promotion requirement.
+- **Permissions/tenant boundaries:** unchanged.
+- **State transitions:** release promotion now includes quantitative health-gate transition check.
+- **Exception/recovery:** gate fails fast with metric-level diagnostics and blocks unsafe promotion.
+- **Analytics/events:** no new runtime analytics schema in this slice.
+- **Acceptance mapping:** closes rollout-governance gap for data-backed production promotion decisions.
+
+Verification commands:
+
+- `npm run release:slo:gate -- --report=release-health-report.example.json` (from `apps/offline-product`)
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.

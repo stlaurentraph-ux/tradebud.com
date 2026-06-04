@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { IntegrationRun, TimelineEvent, RunStatus } from '@/types/integrations';
-import { getMockTimeline, getUserNameById } from '@/lib/integrations-mock-data';
+import { toast } from 'sonner';
 
 interface RunDetailsDrawerProps {
   run: IntegrationRun | null;
@@ -155,10 +155,81 @@ export function RunDetailsDrawer({
   onRelease,
   onRetry,
 }: RunDetailsDrawerProps) {
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+
+  useEffect(() => {
+    const loadTimeline = async () => {
+      if (!open || !run) {
+        return;
+      }
+      try {
+        const response = await fetch(
+          `/api/integrations/coolfarm-sai/v2/questionnaire-drafts/${encodeURIComponent(run.questionnaireId)}/runs`,
+          { cache: 'no-store' },
+        );
+        const body = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(body?.error ?? 'Failed to load run timeline.');
+        }
+        const items = Array.isArray(body?.items) ? body.items : [];
+        const events: TimelineEvent[] = items.flatMap((item: Record<string, unknown>) => {
+          const itemId = String(item.id ?? '');
+          const startedAt =
+            typeof item.started_at === 'string'
+              ? item.started_at
+              : typeof item.updated_at === 'string'
+                ? item.updated_at
+                : null;
+          const finishedAt =
+            typeof item.finished_at === 'string'
+              ? item.finished_at
+              : typeof item.updated_at === 'string'
+                ? item.updated_at
+                : null;
+          const runStatus =
+            item.status === 'started' || item.status === 'completed' || item.status === 'failed'
+              ? item.status
+              : 'started';
+          const startedEvent: TimelineEvent | null = startedAt
+            ? {
+                id: `${itemId}-started`,
+                type: 'run_started',
+                timestamp: startedAt,
+                payload: { runType: item.run_type, attemptCount: item.attempt_count },
+              }
+            : null;
+          const endEventType =
+            runStatus === 'failed' ? 'run_failed' : runStatus === 'completed' ? 'run_completed' : null;
+          const endedEvent: TimelineEvent | null =
+            endEventType && finishedAt
+              ? {
+                  id: `${itemId}-ended`,
+                  type: endEventType,
+                  timestamp: finishedAt,
+                  payload:
+                    typeof item.details === 'object' && item.details && !Array.isArray(item.details)
+                      ? (item.details as Record<string, unknown>)
+                      : undefined,
+                }
+              : null;
+          return [startedEvent, endedEvent].filter((event): event is TimelineEvent => Boolean(event));
+        });
+        const fallbackEvent: TimelineEvent = {
+          id: `${run.id}-fallback`,
+          type: run.status === 'failed' ? 'run_failed' : run.status === 'completed' ? 'run_completed' : 'run_started',
+          timestamp: run.updatedAt,
+          payload: run.errorCode ? { errorCode: run.errorCode } : undefined,
+        };
+        setTimeline(events.length > 0 ? events.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1)) : [fallbackEvent]);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load run timeline.');
+        setTimeline([]);
+      }
+    };
+    void loadTimeline();
+  }, [open, run]);
+
   if (!run) return null;
-  // TODO: Replace with actual API call
-  // GET /v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs
-  const timeline: TimelineEvent[] = getMockTimeline(run.id);
 
   const canClaim = run.status === 'failed' && !run.claimedByUserId;
   const canRelease = !!run.claimedByUserId;
@@ -232,7 +303,7 @@ export function RunDetailsDrawer({
                   <div>
                     <p className="text-xs font-medium text-amber-800">Claimed by</p>
                     <p className="text-sm text-amber-700">
-                      {getUserNameById(run.claimedByUserId)}
+                      {run.claimedByUserId}
                     </p>
                     <p className="text-xs text-amber-600 mt-0.5">
                       {formatTimestamp(run.claimedAt)}

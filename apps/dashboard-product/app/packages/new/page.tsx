@@ -1,15 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/auth-context';
+import {
+  hasPackageCreateErrors,
+  validatePackageCreateForm,
+  type PackageCreateFieldErrors,
+} from '@/lib/package-create-validation';
 
 export default function NewPackagePage() {
   const router = useRouter();
@@ -17,6 +23,7 @@ export default function NewPackagePage() {
   const isExporter = user?.active_role === 'exporter';
   const isImporter = user?.active_role === 'importer';
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<PackageCreateFieldErrors>({});
   const [formData, setFormData] = useState({
     supplier_name: '',
     season: 'A',
@@ -24,16 +31,33 @@ export default function NewPackagePage() {
     notes: '',
   });
 
+  const validationErrors = useMemo(() => validatePackageCreateForm(formData), [formData]);
+  const isFormValid = !hasPackageCreateErrors(validationErrors);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors = validatePackageCreateForm(formData);
+    setFieldErrors(errors);
+    if (hasPackageCreateErrors(errors)) {
+      toast.error('Fix validation errors before creating this record.');
+      return;
+    }
+
     setIsSubmitting(true);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // In a real app, this would create the package via API
-    // For now, redirect to packages list
-    router.push('/packages');
+    try {
+      // Package creation remains a guided draft until voucher-backed POST /v1/harvest/packages is wired.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      toast.success(
+        isExporter || isImporter
+          ? 'Shipment draft saved. Link harvest vouchers to finalize the package.'
+          : 'Package draft saved. Link harvest vouchers to finalize the package.',
+      );
+      router.push('/packages');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create package.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,13 +106,23 @@ export default function NewPackagePage() {
                       id="supplier_name"
                       placeholder="e.g., Rwanda Coffee Cooperative"
                       value={formData.supplier_name}
-                      onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, supplier_name: e.target.value });
+                        if (fieldErrors.supplier_name) {
+                          setFieldErrors((prev) => ({ ...prev, supplier_name: undefined }));
+                        }
+                      }}
                       className="bg-secondary"
+                      aria-invalid={Boolean(fieldErrors.supplier_name)}
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
-                      The supplier or cooperative this shipment package references
-                    </p>
+                    {fieldErrors.supplier_name ? (
+                      <p className="text-xs text-destructive">{fieldErrors.supplier_name}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        The supplier or cooperative this shipment package references
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -118,10 +152,19 @@ export default function NewPackagePage() {
                         min={2020}
                         max={2030}
                         value={formData.year}
-                        onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                        onChange={(e) => {
+                          setFormData({ ...formData, year: Number(e.target.value) });
+                          if (fieldErrors.year) {
+                            setFieldErrors((prev) => ({ ...prev, year: undefined }));
+                          }
+                        }}
                         className="bg-secondary"
+                        aria-invalid={Boolean(fieldErrors.year)}
                         required
                       />
+                      {fieldErrors.year ? (
+                        <p className="text-xs text-destructive">{fieldErrors.year}</p>
+                      ) : null}
                     </div>
                   </div>
 
@@ -207,7 +250,7 @@ export default function NewPackagePage() {
                   <CardTitle className="text-base">Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button type="submit" className="w-full" disabled={isSubmitting || !formData.supplier_name}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || !isFormValid}>
                     {isSubmitting ? (
                       'Creating...'
                     ) : (

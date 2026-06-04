@@ -1,15 +1,10 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { InboxService } from './inbox.service';
 
-type SupabaseUserLike = {
-  email?: string | null;
-  app_metadata?: Record<string, unknown> | null;
-  user_metadata?: Record<string, unknown> | null;
-  [key: string]: unknown;
-};
+type SupabaseUserLike = Record<string, unknown> & { email?: string | null };
 
 @ApiTags('Inbox Requests')
 @ApiBearerAuth()
@@ -19,17 +14,13 @@ export class InboxController {
   constructor(private readonly inboxService: InboxService) {}
 
   private resolveTenantId(user: SupabaseUserLike): string | null {
-    const appTenant = typeof user.app_metadata?.tenant_id === 'string' ? user.app_metadata.tenant_id : null;
-    if (appTenant && appTenant.trim().length > 0) return appTenant;
-    const userTenant = typeof user.user_metadata?.tenant_id === 'string' ? user.user_metadata.tenant_id : null;
-    if (userTenant && userTenant.trim().length > 0) return userTenant;
-    return null;
+    return deriveTenantIdFromSupabaseUser(user);
   }
 
   private requireTenantId(req: { user?: SupabaseUserLike }): string {
     const tenantId = this.resolveTenantId(req.user ?? {});
     if (!tenantId) {
-      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed auth token.');
+      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed app_metadata.');
     }
     return tenantId;
   }

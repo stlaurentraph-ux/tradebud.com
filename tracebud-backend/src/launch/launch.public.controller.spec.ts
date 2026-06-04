@@ -65,7 +65,7 @@ describe('LaunchPublicController', () => {
           data: {
             user: {
               id: 'user_1',
-              user_metadata: { tenant_id: 'tenant_1' },
+              app_metadata: { tenant_id: 'tenant_1' },
             },
           },
           error: null,

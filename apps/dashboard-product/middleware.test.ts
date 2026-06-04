@@ -14,7 +14,7 @@ describe('middleware gate redirect', () => {
   it('redirects deferred routes when gates are disabled', () => {
     expect(getGateRedirectPath('/outreach')).toBe('/');
     expect(getGateRedirectPath('/inbox')).toBe('/');
-    expect(getGateRedirectPath('/reports')).toBe('/');
+    expect(getGateRedirectPath('/reports')).toBe(null);
     expect(getGateRedirectPath('/')).toBe(null);
   });
 
@@ -22,8 +22,8 @@ describe('middleware gate redirect', () => {
     expect(getGateRedirectPath('/outreach/')).toBe('/');
     expect(getGateRedirectPath('/outreach/new')).toBe('/');
     expect(getGateRedirectPath('/inbox/threads')).toBe('/');
-    expect(getGateRedirectPath('/reports/annual')).toBe('/');
-    expect(getGateRedirectPath('/reports/export/pdf')).toBe('/');
+    expect(getGateRedirectPath('/reports/annual')).toBe(null);
+    expect(getGateRedirectPath('/reports/export/pdf')).toBe(null);
   });
 
   it('allows deferred routes when gates are enabled', () => {
@@ -37,7 +37,14 @@ describe('middleware gate redirect', () => {
     expect(getGateRedirectPath('/reports/annual')).toBe(null);
   });
 
+  it('redirects reports when annual reporting is explicitly disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'false');
+    expect(getGateRedirectPath('/reports')).toBe('/');
+    expect(getGateRedirectPath('/reports/annual')).toBe('/');
+  });
+
   it('appends feature gate marker while preserving query params', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'false');
     const original = new URL('https://tracebud.test/reports/annual?tenant=tenant_1&tab=all');
     const redirected = applyGateRedirectParams(original);
     expect(redirected.pathname).toBe('/');
@@ -48,6 +55,7 @@ describe('middleware gate redirect', () => {
   });
 
   it('middleware redirects gated request with feature marker', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'false');
     const request = makeMiddlewareRequest('https://tracebud.test/reports/annual?tenant=tenant_1');
 
     const response = middleware(request);

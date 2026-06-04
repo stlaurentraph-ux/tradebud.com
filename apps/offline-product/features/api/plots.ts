@@ -6,6 +6,7 @@
 import { getAccessTokenFromSupabase } from './auth';
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import { logError } from '@/features/errors/ErrorLogger';
+import { getTracebudApiBaseUrl } from './runtimeGuards';
 
 type GeoJSONPoint = {
   type: 'Point';
@@ -66,7 +67,7 @@ export type PostPlotToBackendResult =
       message?: string;
     };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const API_BASE_URL = getTracebudApiBaseUrl();
 
 /** Extract error message from NestJS-style response */
 function messageFromBackendJson(body: unknown): string | undefined {

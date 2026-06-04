@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { HarvestController } from '../harvest/harvest.controller';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { HarvestService } from '../harvest/harvest.service';
 import { ReportsController } from './reports.controller';
 
@@ -92,8 +93,8 @@ describeIfDb('API integration: package/report access policy', () => {
       )
     `);
 
-    harvestController = new HarvestController(new HarvestService(pool));
-    reportsController = new ReportsController(pool);
+    harvestController = new HarvestController(new HarvestService(pool), createLaunchServiceMock());
+    reportsController = new ReportsController(pool, createLaunchServiceMock());
   }, 20_000);
 
   afterAll(async () => {
@@ -211,19 +212,19 @@ describeIfDb('API integration: package/report access policy', () => {
   it('denies package and report export for non-exporter role even with tenant claim', async () => {
     await expect(
       harvestController.listPackages(farmerId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackage(packageId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackageTracesJson(packageId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
@@ -232,7 +233,7 @@ describeIfDb('API integration: package/report access policy', () => {
       reportsController.plotsReport(
         farmerId,
         undefined,
-        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
         res as any,
       ),
     ).rejects.toThrow(ForbiddenException);
@@ -244,7 +245,7 @@ describeIfDb('API integration: package/report access policy', () => {
         undefined,
         undefined,
         undefined,
-        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
         resHarvest as any,
       ),
     ).rejects.toThrow(ForbiddenException);
@@ -253,7 +254,7 @@ describeIfDb('API integration: package/report access policy', () => {
   it('allows exporter role with tenant claim for package and report export', async () => {
     await expect(
       harvestController.listPackages(farmerId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual(
       expect.arrayContaining([
@@ -266,7 +267,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
     await expect(
       harvestController.getPackage(packageId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toMatchObject({
       package: expect.objectContaining({
@@ -277,7 +278,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
     await expect(
       harvestController.getPackageTracesJson(packageId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toMatchObject({
       ddsPackageId: packageId,
@@ -288,7 +289,7 @@ describeIfDb('API integration: package/report access policy', () => {
     await reportsController.plotsReport(
       farmerId,
       undefined,
-      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       res as any,
     );
     expect(res.json).toHaveBeenCalled();
@@ -299,7 +300,7 @@ describeIfDb('API integration: package/report access policy', () => {
       undefined,
       undefined,
       undefined,
-      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       resHarvest as any,
     );
     expect(resHarvest.json).toHaveBeenCalled();

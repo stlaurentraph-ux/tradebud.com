@@ -61,6 +61,14 @@ import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
 
+const RETRY_BACKOFF_BASE_MS = 5000;
+const RETRY_BACKOFF_MAX_MS = 5 * 60 * 1000;
+
+function computeRetryBackoffMs(attempts: number): number {
+  if (attempts <= 0) return 0;
+  return Math.min(RETRY_BACKOFF_MAX_MS, RETRY_BACKOFF_BASE_MS * 2 ** (attempts - 1));
+}
+
 const fsAny = FileSystem as unknown as {
   documentDirectory?: string | null;
   cacheDirectory?: string | null;
@@ -82,6 +90,7 @@ export default function SettingsScreen() {
   const [queueMaxAttempts, setQueueMaxAttempts] = useState(0);
   const [queueLastError, setQueueLastError] = useState<string | null>(null);
   const [queueLastErrorActionType, setQueueLastErrorActionType] = useState<string | null>(null);
+  const [queueNextRetrySeconds, setQueueNextRetrySeconds] = useState<number | null>(null);
   const [queueCountByActionType, setQueueCountByActionType] = useState<
     Record<PendingSyncAction['actionType'], number>
   >({
@@ -139,6 +148,18 @@ export default function SettingsScreen() {
       .find((row) => typeof row.lastError === 'string' && row.lastError.trim().length > 0);
     setQueueLastError(latestErrored?.lastError?.trim() ?? null);
     setQueueLastErrorActionType(latestErrored?.actionType ?? null);
+    const now = Date.now();
+    const nextRetryMs = retryingRows
+      .map((row) => {
+        const attempts = row.attempts ?? 0;
+        if (attempts <= 0) return 0;
+        const lastAttemptAt = row.lastAttemptAt ?? row.createdAt ?? now;
+        const readyAt = lastAttemptAt + computeRetryBackoffMs(attempts);
+        return Math.max(0, readyAt - now);
+      })
+      .filter((ms) => ms > 0)
+      .sort((a, b) => a - b)[0];
+    setQueueNextRetrySeconds(nextRetryMs != null ? Math.ceil(nextRetryMs / 1000) : null);
 
     const { email, password } = getAuthCredentials();
     const canQueryServer = Boolean(farmer?.id && email?.trim() && password);
@@ -1031,8 +1052,13 @@ export default function SettingsScreen() {
                 </ThemedText>
                 {queueLastError ? (
                   <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    Latest queue error
+                    {t('sync_queue_latest_error_label')}
                     {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}: {queueLastError}
+                  </ThemedText>
+                ) : null}
+                {queueNextRetrySeconds != null ? (
+                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                    {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
                   </ThemedText>
                 ) : null}
                 <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
