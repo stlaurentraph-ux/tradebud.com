@@ -4,6 +4,27 @@ function isDevSignupBypassEnabled(): boolean {
   return process.env.TRACEBUD_DEV_SIGNUP_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
 }
 
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
+  if (!backendBase) {
+    return NextResponse.json({ error: 'TRACEBUD_BACKEND_URL is required.' }, { status: 503 });
+  }
+  if (!authHeader) {
+    return NextResponse.json({ error: 'Authorization header is required.' }, { status: 401 });
+  }
+
+  const response = await fetch(`${backendBase}/v1/launch/commercial-profile`, {
+    cache: 'no-store',
+    headers: { Authorization: authHeader },
+  });
+  const payload = await response.json().catch(() => ({ error: 'Backend request failed.' }));
+  if (!response.ok) {
+    return NextResponse.json(payload, { status: response.status });
+  }
+  return NextResponse.json(payload);
+}
+
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization');
   const body = await request.json().catch(() => ({}));

@@ -1,3 +1,14 @@
+### 2026-06-03 (dashboard: signup confirm + workspace resume)
+- Focus: email confirm page, incomplete wizard redirect, role from commercial profile, clearer pending-email errors, `GET /v1/launch/commercial-profile`.
+- Files: `apps/dashboard-product/app/auth/confirm`, `create-account`, `login`, `dashboard-layout`, `auth-context`, `commercial-profile.ts`, `app/api/launch/commercial-profile`; `tracebud-backend/src/launch/*`.
+- Deploy: `dashboard-product` Vercel prod + `tracebud-backend` Railway; Supabase Site URL `https://dashboard.tracebud.com/auth/confirm` (optional: disable Confirm email for beta).
+
+### 2026-06-04 (marketing: consent-gated web analytics + conversion events)
+- Focus: wire marketing site analytics behind cookie consent with Vercel Web Analytics, Speed Insights, and optional GA4.
+- Files changed: `apps/marketing/lib/marketing-analytics.ts`, `apps/marketing/components/marketing-analytics.tsx`, `apps/marketing/components/cookie-consent.tsx`, `apps/marketing/app/layout.tsx`, `apps/marketing/app/[locale]/layout.tsx`, `apps/marketing/components/waitlist-dialog.tsx`, `apps/marketing/app/[locale]/thank-you/page.tsx`, `apps/marketing/app/[locale]/pilot/page.tsx`, `apps/marketing/README.md`, `apps/marketing/package.json`.
+- Events: `marketing_waitlist_opened`, `marketing_waitlist_submitted`, `marketing_thank_you_viewed`, `marketing_lead_submitted`.
+- Next step: enable Web Analytics + Speed Insights on the Vercel marketing project; optionally set `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
+
 ### 2026-06-03 (execution: production API deploy runbook + runtime hardening)
 - Focus: enable Railway + Namecheap DNS path for `api.tracebud.com`; harden Nest for container/proxy production.
 - Files changed: `tracebud-backend/DEPLOY_PRODUCTION.md`, `tracebud-backend/railway.toml`, `tracebud-backend/.env.production.example`, `tracebud-backend/scripts/check-deploy-health.mjs`, `tracebud-backend/src/cors-origins.ts`, `tracebud-backend/src/main.ts`, `tracebud-backend/README.md`.

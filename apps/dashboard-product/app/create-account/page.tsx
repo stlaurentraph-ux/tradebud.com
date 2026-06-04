@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -95,8 +95,9 @@ function parsePrefillRole(role: string | null): SupportedPrefillRole | '' {
 export default function CreateAccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hydrateSessionFromToken } = useAuth();
-  const [step, setStep] = useState<Step>(1);
+  const { hydrateSessionFromToken, isAuthenticated } = useAuth();
+  const resumeWorkspace = searchParams.get('resume') === 'workspace';
+  const [step, setStep] = useState<Step>(resumeWorkspace ? 2 : 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,6 +121,13 @@ export default function CreateAccountPage() {
 
   const prefillRole = parsePrefillRole(searchParams.get('role'));
   const effectivePrimaryRole = workspaceData.primaryRole || prefillRole;
+
+  useEffect(() => {
+    if (!resumeWorkspace || !isAuthenticated) return;
+    if (!workspaceData.primaryRole && prefillRole) {
+      setWorkspaceData((current) => ({ ...current, primaryRole: prefillRole }));
+    }
+  }, [resumeWorkspace, isAuthenticated, prefillRole, workspaceData.primaryRole]);
 
   const handleStep1 = async () => {
     setError(null);
@@ -245,7 +253,11 @@ export default function CreateAccountPage() {
 
           <CardHeader className="pt-4 pb-2">
             <CardTitle className="text-xl">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardDescription>
+              {resumeWorkspace && step === 2
+                ? 'Your email is confirmed. Choose your organization and role to finish setup.'
+                : description}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-2">

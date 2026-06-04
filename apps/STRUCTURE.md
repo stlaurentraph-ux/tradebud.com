@@ -34,7 +34,7 @@ Tracebud now follows a two-product + multi-demo model:
 
 - `tracebud.com` -> `apps/marketing`
 - `offline.tracebud.com` -> `apps/offline-product`
-- `app.tracebud.com` (or `dashboard.tracebud.com`) -> `apps/dashboard-product`
+- `dashboard.tracebud.com` -> `apps/dashboard-product`
 - `fieldapp-demo.tracebud.com` -> `apps/demos/offline`
 - `exporter-demo.tracebud.com` -> `apps/demos/exporter`
 - `importer-demo.tracebud.com` -> `apps/demos/importer`

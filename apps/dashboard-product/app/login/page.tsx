@@ -19,6 +19,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const intent = searchParams.get('intent');
   const recorded = searchParams.get('recorded') === '1';
+  const emailConfirmed = searchParams.get('confirmed') === '1';
   const intentLabel =
     intent === 'accept'
       ? 'accept this request'
@@ -35,6 +36,22 @@ export default function LoginPage() {
       await login(email, password);
       const nextPath = searchParams.get('next');
       const safeNext = nextPath && nextPath.startsWith('/') ? nextPath : '/';
+      const profileRes = await fetch('/api/launch/commercial-profile', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${sessionStorage.getItem('tracebud_token') ?? ''}` },
+      });
+      const profilePayload = (await profileRes.json().catch(() => ({}))) as {
+        profile?: { organization_name?: string | null; country?: string | null; primary_role?: string | null };
+      };
+      const profile = profilePayload.profile;
+      const workspaceComplete =
+        Boolean(profile?.organization_name?.trim()) &&
+        Boolean(profile?.country?.trim()) &&
+        Boolean(profile?.primary_role?.trim());
+      if (!workspaceComplete) {
+        router.push('/create-account?resume=workspace');
+        return;
+      }
       router.push(safeNext);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -65,6 +82,11 @@ export default function LoginPage() {
             <CardDescription>
               Enter your credentials to access your Tracebud workspace
             </CardDescription>
+            {emailConfirmed ? (
+              <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Your email is confirmed. Sign in with your password to continue.
+              </div>
+            ) : null}
             {intentLabel ? (
               <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
                 {recorded

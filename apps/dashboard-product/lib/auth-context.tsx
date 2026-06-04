@@ -19,6 +19,7 @@ interface AuthContextType {
   hydrateSessionFromToken: (token: string) => void;
   logout: () => void;
   switchRole: (role: TenantRole) => void;
+  applyTenantRoleFromProfile: (role: TenantRole) => void;
   impersonateDemo: (email: string) => Promise<void>;
 }
 
@@ -46,6 +47,9 @@ function mapClaimRoleToTenantRole(role: string | undefined): TenantRole {
   if (role === 'cooperative') return 'cooperative';
   if (role === 'country_reviewer' || role === 'reviewer') return 'country_reviewer';
   if (role === 'sponsor') return 'sponsor';
+  if (role === 'compliance_manager' || role === 'compliance-manager') return 'importer';
+  // Signup stores admin until workspace setup picks exporter/importer/cooperative.
+  if (role === 'admin') return 'exporter';
   return 'exporter';
 }
 
@@ -198,6 +202,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
   }, [user]);
 
+  const applyTenantRoleFromProfile = useCallback((role: TenantRole) => {
+    setUser((current) => {
+      if (!current) return current;
+      const roles = current.roles.includes(role) ? current.roles : [role];
+      const updatedUser: User = { ...current, roles, active_role: role };
+      sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
+
   const impersonateDemo = useCallback(async (email: string) => {
     void email;
     throw new Error('Demo impersonation is disabled.');
@@ -213,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hydrateSessionFromToken,
         logout,
         switchRole,
+        applyTenantRoleFromProfile,
         impersonateDemo,
       }}
     >

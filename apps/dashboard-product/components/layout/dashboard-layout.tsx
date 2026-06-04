@@ -6,6 +6,11 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { AppSidebar } from './app-sidebar';
 import { useAuth } from '@/lib/auth-context';
+import {
+  commercialPrimaryRoleToTenantRole,
+  fetchCommercialProfile,
+  isWorkspaceSetupComplete,
+} from '@/lib/commercial-profile';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,11 +19,16 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, applyTenantRoleFromProfile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isPublicRoute = pathname === '/login' || pathname === '/create-account' || pathname === '/requests/intent';
+  const [workspaceCheckDone, setWorkspaceCheckDone] = useState(false);
+  const isPublicRoute =
+    pathname === '/login' ||
+    pathname === '/create-account' ||
+    pathname === '/auth/confirm' ||
+    pathname === '/requests/intent';
 
   // Close sidebar on route change
   useEffect(() => {
@@ -44,8 +54,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isAuthenticated, isLoading, isPublicRoute, router]);
 
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || isPublicRoute) {
+      return;
+    }
+    let cancelled = false;
+    void fetchCommercialProfile().then((profile) => {
+      if (cancelled) return;
+      if (!isWorkspaceSetupComplete(profile)) {
+        const resume = new URLSearchParams({ resume: 'workspace' });
+        router.replace(`/create-account?${resume.toString()}`);
+        return;
+      }
+      applyTenantRoleFromProfile(commercialPrimaryRoleToTenantRole(profile?.primary_role));
+      setWorkspaceCheckDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, isAuthenticated, isPublicRoute, router, applyTenantRoleFromProfile]);
+
   // Show loading state
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && !isPublicRoute && !workspaceCheckDone)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

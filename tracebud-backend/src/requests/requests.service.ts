@@ -160,7 +160,7 @@ export class RequestsService {
 
   private getDashboardBaseUrl(): string {
     const raw = process.env.TRACEBUD_DASHBOARD_PUBLIC_URL?.trim();
-    return raw && raw.length > 0 ? raw.replace(/\/$/, '') : 'https://app.tracebud.com';
+    return raw && raw.length > 0 ? raw.replace(/\/$/, '') : 'https://dashboard.tracebud.com';
   }
 
   private getDocsBaseUrl(): string {

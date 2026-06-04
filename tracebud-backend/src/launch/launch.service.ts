@@ -251,6 +251,29 @@ export class LaunchService {
     return this.evaluateLifecycleState(tenantId);
   }
 
+  async getCommercialProfile(tenantId: string): Promise<CommercialProfileRow | null> {
+    await this.ensureSchema();
+    const result = await this.pool.query<CommercialProfileRow>(
+      `
+        SELECT
+          tenant_id,
+          organization_name,
+          country,
+          primary_role,
+          team_size,
+          main_commodity,
+          primary_objective,
+          profile_skipped,
+          updated_at
+        FROM tenant_commercial_profiles
+        WHERE tenant_id = $1
+        LIMIT 1
+      `,
+      [tenantId],
+    );
+    return result.rows[0] ?? null;
+  }
+
   async markPaidActive(tenantId: string): Promise<TrialRow> {
     await this.ensureSchema();
     const updated = await this.pool.query<TrialRow>(
@@ -536,11 +559,23 @@ export class LaunchService {
         };
       }
 
-      throw new ForbiddenException(resolveErrorMessage(signinPayload));
+      const signinMessage = resolveErrorMessage(signinPayload);
+      if (/not confirmed|confirm your email/i.test(signinMessage)) {
+        throw new ForbiddenException(
+          'Email confirmation is required. Check your inbox for the Tracebud confirmation link, then sign in at dashboard.tracebud.com/login.',
+        );
+      }
+      throw new ForbiddenException(signinMessage);
     }
 
     if (!signupResponse.ok || !signupPayload.user?.id || !signupPayload.access_token) {
-      throw new ForbiddenException(resolveErrorMessage(signupPayload));
+      const signupMessage = resolveErrorMessage(signupPayload);
+      if (signupResponse.ok && signupPayload.user?.id && !signupPayload.access_token) {
+        throw new ForbiddenException(
+          'Account created. Check your email for the confirmation link, then sign in at dashboard.tracebud.com/login.',
+        );
+      }
+      throw new ForbiddenException(signupMessage);
     }
 
     const tenantId = defaultTenantId;

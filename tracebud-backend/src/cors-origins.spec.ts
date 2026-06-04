@@ -16,7 +16,7 @@ describe('cors-origins', () => {
 
   it('allows tracebud.com subdomains in production', () => {
     process.env.NODE_ENV = 'production';
-    expect(isCorsOriginAllowed('https://app.tracebud.com')).toBe(true);
+    expect(isCorsOriginAllowed('https://dashboard.tracebud.com')).toBe(true);
     expect(isCorsOriginAllowed('https://api.tracebud.com')).toBe(true);
   });
 

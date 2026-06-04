@@ -40,6 +40,16 @@ export class LaunchController {
     return this.launchService.getLaunchState(tenantId);
   }
 
+  @Get('commercial-profile')
+  @ApiOperation({
+    summary: 'Get tenant commercial profile from signup onboarding',
+  })
+  async getCommercialProfile(@Req() req: any): Promise<{ profile: any | null }> {
+    const tenantId = this.getTenantId(req);
+    const profile = await this.launchService.getCommercialProfile(tenantId);
+    return { profile };
+  }
+
   @Patch('state/upgrade')
   @ApiOperation({
     summary: 'Mark tenant as paid-active',

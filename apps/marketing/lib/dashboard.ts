@@ -1,7 +1,7 @@
 const DEFAULT_DASHBOARD_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : "https://app.tracebud.com";
+    : "https://dashboard.tracebud.com";
 
 export const DASHBOARD_URL =
   process.env.NEXT_PUBLIC_DASHBOARD_URL || DEFAULT_DASHBOARD_URL;

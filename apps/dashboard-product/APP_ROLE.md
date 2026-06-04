@@ -3,7 +3,7 @@
 This folder is the production-track multi-tenant SaaS dashboard.
 
 - Audience: exporters, importers, cooperatives, country/government users
-- Domain target: `app.tracebud.com` (or `dashboard.tracebud.com`)
+- Domain target: `dashboard.tracebud.com`
 - Vercel root directory: `apps/dashboard-product`
 
 Authorization model:
