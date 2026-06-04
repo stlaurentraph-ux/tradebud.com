@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { X, Cookie } from 'lucide-react'
 import Link from 'next/link'
+import { notifyAnalyticsConsentChanged } from '@/lib/marketing-analytics'
 
 function readCookieConsent(): boolean {
   if (typeof window === 'undefined') return false
@@ -26,12 +27,14 @@ export function CookieConsent() {
     localStorage.setItem('cookie-consent-date', new Date().toISOString())
     setAccepted(true)
     setShowBanner(false)
+    notifyAnalyticsConsentChanged()
   }
 
   const handleReject = () => {
     localStorage.setItem('cookie-consent', 'rejected')
     setAccepted(true)
     setShowBanner(false)
+    notifyAnalyticsConsentChanged()
   }
 
   return (
