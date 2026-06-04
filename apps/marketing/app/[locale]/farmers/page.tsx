@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { WifiOff, Camera, FileCheck, Shield, Smartphone, CheckCircle, Users, User, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +10,7 @@ import { Footer } from "@/components/tracebud/footer";
 
 const FIELD_APP_DEMO = "https://fieldapp-demo.tracebud.com";
 const COOP_DASHBOARD_DEMO = "https://cooperative-demo.tracebud.com";
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 

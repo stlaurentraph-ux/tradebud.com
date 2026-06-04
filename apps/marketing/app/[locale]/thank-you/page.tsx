@@ -1,14 +1,20 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Share2, Calendar, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { trackMarketingEvent } from '@/lib/marketing-analytics';
 
 export default function ThankYouPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
+
+  useEffect(() => {
+    trackMarketingEvent('marketing_thank_you_viewed');
+  }, []);
 
   const handleShare = (platform: string) => {
     const text = encodeURIComponent('I just joined Tracebud to access EU markets with full supply chain traceability. Join me!');

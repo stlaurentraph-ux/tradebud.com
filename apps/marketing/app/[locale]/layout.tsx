@@ -2,6 +2,7 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { CookieConsent } from '@/components/cookie-consent';
+import { MarketingAnalytics } from '@/components/marketing-analytics';
 import { routing } from '@/i18n/routing';
 
 type Props = {
@@ -27,6 +28,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <NextIntlClientProvider locale={locale} messages={messages}>
       {children}
       <CookieConsent />
+      <MarketingAnalytics />
     </NextIntlClientProvider>
   );
 }

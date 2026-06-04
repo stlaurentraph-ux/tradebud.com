@@ -8,7 +8,7 @@ import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 

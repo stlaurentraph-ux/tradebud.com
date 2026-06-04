@@ -9,7 +9,7 @@ import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const EXPORTER_DEMO = "https://exporter-demo.tracebud.com";
 
 const features = [

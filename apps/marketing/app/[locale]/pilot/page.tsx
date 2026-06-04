@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, CheckCircle2, ClipboardList, Users } from "lucide-react";
 
+import { trackMarketingEvent } from "@/lib/marketing-analytics";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,10 @@ export default function PilotPage() {
         throw new Error(json?.error ?? "Could not submit application.");
       }
       setOk("Thanks — we received your pilot interest. We will follow up by email.");
+      trackMarketingEvent("marketing_lead_submitted", {
+        form_type: "pilot",
+        source_page: "/pilot",
+      });
       setForm({
         pilotRole: "",
         organizationName: "",
