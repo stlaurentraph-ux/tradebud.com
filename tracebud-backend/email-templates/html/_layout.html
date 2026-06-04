@@ -1,0 +1,121 @@
+<!--
+  Tracebud — Shared Master Layout (header + footer)
+  ─────────────────────────────────────────────────
+  Usage: Wrap each email's content card between
+  <!-- [HEADER] --> and <!-- [FOOTER] --> markers below.
+
+  Design tokens
+  ─────────────────────────────────────────────────
+  Forest canopy  (primary brand bar)  #064E3B
+  Data emerald   (accent)             #10B981
+  CTA green      (Email A button)     #16A34A
+  Resume blue    (Email B/C button)   #1D4ED8
+  Body text                           #022C22
+  Muted text                          #64748B
+  Page bg                             #F9FAFB
+  Card surface                        #FFFFFF
+  Border                              #E5E7EB
+
+  Font: Arial, Helvetica, sans-serif
+  Max width: 600 px  ·  Mobile: 320 px
+  Button radius: 6 px  ·  Min tap height: 44 px
+-->
+
+<!-- ═══════════════════════  HEADER  ═══════════════════════ -->
+
+<!-- Preheader (replace per-email) -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F9FAFB;">
+  PREHEADER_TEXT_HERE &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+</div>
+
+<!-- Outer wrapper -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F9FAFB;margin:0;padding:0;">
+  <tr>
+    <td align="center" style="padding:32px 16px 24px;">
+
+      <!-- 600 px container -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;">
+
+        <!-- Header: brand strip + logo + hero (HERO_SRC and HERO_HREF per email) -->
+        <tr>
+          <td style="border-left:1px solid #D1FAE5;border-right:1px solid #D1FAE5;border-top:1px solid #D1FAE5;border-radius:8px 8px 0 0;overflow:hidden;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="background-color:#064E3B;height:3px;line-height:3px;font-size:0;mso-line-height-rule:exactly;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="center" style="background-color:#FFFFFF;padding:22px 32px 18px;">
+                  <a href="https://tracebud.com" target="_blank" style="text-decoration:none;">
+                    <img src="https://www.tracebud.com/images/tracebud-logo.png" alt="Tracebud" width="130" style="display:block;border:0;height:auto;max-height:36px;width:auto;" />
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td class="hero-cell" align="center" style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;background-color:#022C22;">
+                  <a href="HERO_HREF" target="_blank" style="text-decoration:none;display:block;line-height:0;">
+                    <img class="hero-img" src="HERO_SRC" alt="Tracebud supply chain" width="600" height="327" border="0" style="display:block;width:100%;max-width:600px;height:auto;border:0;line-height:0;-ms-interpolation-mode:bicubic;" />
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+<!-- ═══════════════════════  CONTENT SLOT (paste between here and FOOTER)  ═══════════════════════ -->
+<!--
+        <tr>
+          <td style="background-color:#FFFFFF;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;padding:32px 32px 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#022C22;">
+            ... email body ...
+          </td>
+        </tr>
+-->
+<!-- ═══════════════════════  END CONTENT SLOT  ═══════════════════════ -->
+
+<!-- ═══════════════════════  FOOTER  ═══════════════════════ -->
+
+        <!-- Footer card bottom border -->
+        <tr>
+          <td style="background-color:#FFFFFF;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="background-color:#E5E7EB;height:1px;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer content -->
+        <tr>
+          <td style="background-color:#FFFFFF;border-left:1px solid #E5E7EB;border-right:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;border-radius:0 0 8px 8px;padding:24px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#64748B;text-align:center;">
+
+            <!-- Brand line -->
+            <p style="margin:0 0 8px;font-weight:600;color:#022C22;font-size:14px;">Tracebud</p>
+            <p style="margin:0 0 4px;">EUDR compliance workspace</p>
+
+            <!-- Links -->
+            <p style="margin:0 0 12px;">
+              <a href="https://dashboard.tracebud.com" target="_blank" style="color:#064E3B;text-decoration:underline;">dashboard.tracebud.com</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://tracebud.com" target="_blank" style="color:#064E3B;text-decoration:underline;">tracebud.com</a>
+            </p>
+
+            <!-- Manage account (replace {{loginUrl}} per template) -->
+            <p style="margin:0 0 16px;">
+              <a href="{{loginUrl}}" target="_blank" style="color:#064E3B;text-decoration:underline;font-size:12px;">Manage account</a>
+            </p>
+
+            <!-- Copyright -->
+            <p style="margin:0;font-size:12px;color:#94A3B8;">
+              &copy; {{year}} Tracebud. All rights reserved.
+            </p>
+
+          </td>
+        </tr>
+
+      </table>
+      <!-- /600 px container -->
+
+    </td>
+  </tr>
+</table>
+<!-- /Outer wrapper -->

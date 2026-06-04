@@ -1,7 +1,28 @@
+Subject: Finish setting up your Tracebud workspace
+Preheader: Pick up where you left off — about 2 minutes
+──────────────────────────────────────────────────────
+
 Hi {{firstName}},
 
-You started creating a Tracebud account but have not finished workspace setup yet.
+You started creating a Tracebud account but haven't finished workspace
+setup yet. You're just a few fields away.
 
-Continue here: {{resumeUrl}}
+Still to complete:
+  - Organization name
+  - Country
+  - Primary role (importer, exporter, etc.)
 
-If you did not request this, you can ignore this email.
+The link below signs you straight back in — no password needed:
+
+  Complete workspace setup
+  {{resumeUrl}}
+
+No credit card required · 30-day trial
+
+──────────────────────────────────────────────────────
+Tracebud · EUDR compliance workspace
+dashboard.tracebud.com | tracebud.com
+
+© {{year}} Tracebud. All rights reserved.
+
+If you did not request this, you can safely ignore this email.

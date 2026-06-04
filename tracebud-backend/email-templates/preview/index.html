@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tracebud — Email template preview</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        min-height: 100vh;
+      }
+      header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #334155;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+      header p { margin: 4px 0 0; font-size: 13px; color: #94a3b8; }
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px 20px;
+        border-bottom: 1px solid #334155;
+      }
+      .tabs button {
+        border: 1px solid #475569;
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .tabs button.active {
+        background: #064e3b;
+        border-color: #10b981;
+      }
+      .meta {
+        padding: 10px 20px;
+        font-size: 13px;
+        color: #94a3b8;
+        border-bottom: 1px solid #334155;
+      }
+      .meta strong { color: #cbd5e1; }
+      .frame-wrap {
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        min-height: calc(100vh - 180px);
+        background: #1e293b;
+      }
+      iframe {
+        width: 100%;
+        max-width: 680px;
+        height: calc(100vh - 200px);
+        min-height: 720px;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        background: #f9fafb;
+      }
+      .width-toggle { display: flex; gap: 8px; }
+      .width-toggle button {
+        border: 1px solid #475569;
+        background: #1e293b;
+        color: #94a3b8;
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .width-toggle button.active { color: #fff; border-color: #10b981; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Tracebud transactional emails</h1>
+        <p>Mock data applied · source: <code>tracebud-backend/email-templates/html/</code></p>
+      </div>
+      <div class="width-toggle">
+        <button type="button" data-width="680" class="active">600px desktop</button>
+        <button type="button" data-width="320">320px mobile</button>
+      </div>
+    </header>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="meta" id="meta"></div>
+    <div class="frame-wrap">
+      <iframe id="preview" title="Email preview"></iframe>
+    </div>
+    <script>
+      const tabsEl = document.getElementById('tabs');
+      const metaEl = document.getElementById('meta');
+      const iframe = document.getElementById('preview');
+      let templates = [];
+      let activeId = null;
+
+      function setWidth(px) {
+        iframe.style.maxWidth = px + 'px';
+        document.querySelectorAll('.width-toggle button').forEach((b) => {
+          b.classList.toggle('active', Number(b.dataset.width) === px);
+        });
+      }
+
+      document.querySelectorAll('.width-toggle button').forEach((btn) => {
+        btn.addEventListener('click', () => setWidth(Number(btn.dataset.width)));
+      });
+
+      function show(id) {
+        const t = templates.find((x) => x.id === id);
+        if (!t) return;
+        activeId = id;
+        document.querySelectorAll('.tabs button').forEach((b) => {
+          b.classList.toggle('active', b.dataset.id === id);
+        });
+        metaEl.innerHTML =
+          '<strong>Subject:</strong> ' +
+          t.subject +
+          ' &nbsp;·&nbsp; <strong>File:</strong> ' +
+          t.file;
+        iframe.src = '/render/' + encodeURIComponent(id);
+      }
+
+      fetch('/api/templates')
+        .then((r) => r.json())
+        .then((data) => {
+          templates = data.templates;
+          tabsEl.innerHTML = templates
+            .map(
+              (t) =>
+                '<button type="button" data-id="' +
+                t.id +
+                '">' +
+                t.label +
+                '</button>',
+            )
+            .join('');
+          tabsEl.querySelectorAll('button').forEach((btn) => {
+            btn.addEventListener('click', () => show(btn.dataset.id));
+          });
+          show(templates[0].id);
+        })
+        .catch((err) => {
+          metaEl.textContent = 'Failed to load templates: ' + err.message;
+        });
+    </script>
+  </body>
+</html>

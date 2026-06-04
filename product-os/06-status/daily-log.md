@@ -1,3 +1,7 @@
+### 2026-06-04 (backend: wire v0 email templates into Resend)
+- Focus: load `email-templates/html|text` in `onboarding-email.templates.ts`; welcome + resume first/final with `{{placeholders}}`.
+- Deploy: `Dockerfile` copies `email-templates/`; optional `TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL`.
+
 ### 2026-06-03 (backend: onboarding welcome + resume nudge emails)
 - Focus: Resend welcome after wizard step 2; daily cron for incomplete workspace setup with magic-link resume.
 - Files: `tracebud-backend/src/launch/onboarding-email.service.ts`, `launch.cron.controller.ts`, `tb_v16_032_tenant_onboarding_email.sql`, `launch.service.ts`.

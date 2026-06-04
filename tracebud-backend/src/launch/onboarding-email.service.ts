@@ -3,6 +3,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
 import { PG_POOL } from '../db/db.module';
+import {
+  buildOnboardingTemplateVars,
+  getResumeNudgeTemplateId,
+  ONBOARDING_EMAIL_SUBJECTS,
+  renderOnboardingEmailHtml,
+  renderOnboardingEmailText,
+} from './onboarding-email.templates';
+
 type SignupPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
 
 export interface SignupContactRow {
@@ -118,6 +126,14 @@ export class OnboardingEmailService {
     const dashboardUrl = this.getDashboardBaseUrl();
     const loginUrl = `${dashboardUrl}/login`;
     const roleLabel = this.formatPrimaryRole(input.primaryRole);
+    const templateVars = buildOnboardingTemplateVars({
+      firstName,
+      organizationName: input.organizationName.trim(),
+      country: input.country.trim(),
+      roleLabel,
+      loginUrl,
+      dashboardBaseUrl: dashboardUrl,
+    });
 
     try {
       const resend = this.getResendClient();
@@ -126,14 +142,9 @@ export class OnboardingEmailService {
         from,
         to: recipient,
         replyTo: this.getReplyTo(from),
-        subject: 'Welcome to Tracebud — your workspace is ready',
-        html: this.renderWelcomeHtml({
-          firstName,
-          organizationName: input.organizationName.trim(),
-          country: input.country.trim(),
-          roleLabel,
-          loginUrl,
-        }),
+        subject: ONBOARDING_EMAIL_SUBJECTS.welcome,
+        html: renderOnboardingEmailHtml('welcome', templateVars),
+        text: renderOnboardingEmailText('welcome', templateVars),
       });
       if (result.error) {
         this.logger.warn(`Welcome email failed for ${recipient}: ${result.error.message}`);
@@ -251,6 +262,12 @@ export class OnboardingEmailService {
 
     const recipient = contact.email.trim().toLowerCase();
     const firstName = this.firstNameFrom(contact.full_name, recipient);
+    const templateId = getResumeNudgeTemplateId(contact.resume_nudge_count);
+    const templateVars = buildOnboardingTemplateVars({
+      firstName,
+      resumeUrl,
+      dashboardBaseUrl: this.getDashboardBaseUrl(),
+    });
     try {
       const resend = this.getResendClient();
       const from = this.formatFromAddress();
@@ -258,8 +275,9 @@ export class OnboardingEmailService {
         from,
         to: recipient,
         replyTo: this.getReplyTo(from),
-        subject: 'Finish setting up your Tracebud workspace',
-        html: this.renderResumeNudgeHtml({ firstName, resumeUrl }),
+        subject: ONBOARDING_EMAIL_SUBJECTS[templateId],
+        html: renderOnboardingEmailHtml(templateId, templateVars),
+        text: renderOnboardingEmailText(templateId, templateVars),
       });
       if (sendResult.error) {
         return sendResult.error.message;
@@ -279,6 +297,7 @@ export class OnboardingEmailService {
       await this.emitAuditEvent('onboarding_resume_nudge_sent', {
         tenantId: contact.tenant_id,
         email: recipient,
+        templateId,
         nudgeCount: contact.resume_nudge_count + 1,
         sentAt: new Date().toISOString(),
       });
@@ -363,65 +382,6 @@ export class OnboardingEmailService {
     if (role === 'compliance_manager') return 'Compliance manager';
     if (role === 'admin') return 'Administrator';
     return 'Exporter';
-  }
-
-  private renderWelcomeHtml(input: {
-    firstName: string;
-    organizationName: string;
-    country: string;
-    roleLabel: string;
-    loginUrl: string;
-  }): string {
-    return `
-      <div style="font-family:Arial,sans-serif;line-height:1.5;max-width:640px;color:#022c22">
-        <h2 style="margin:0 0 12px">Hi ${this.escapeHtml(input.firstName)},</h2>
-        <p style="margin:0 0 12px">
-          Your Tracebud workspace for <strong>${this.escapeHtml(input.organizationName)}</strong>
-          (${this.escapeHtml(input.country)}, ${this.escapeHtml(input.roleLabel)}) is ready.
-        </p>
-        <p style="margin:0 0 12px">
-          Sign in to continue onboarding and set up your first workflows.
-        </p>
-        <p style="margin:16px 0">
-          <a href="${this.escapeHtml(input.loginUrl)}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600">
-            Open Tracebud Dashboard
-          </a>
-        </p>
-        <p style="margin:0;font-size:12px;color:#64748b">
-          You received this because you completed workspace setup on dashboard.tracebud.com.
-        </p>
-      </div>
-    `;
-  }
-
-  private renderResumeNudgeHtml(input: { firstName: string; resumeUrl: string }): string {
-    return `
-      <div style="font-family:Arial,sans-serif;line-height:1.5;max-width:640px;color:#022c22">
-        <h2 style="margin:0 0 12px">Hi ${this.escapeHtml(input.firstName)},</h2>
-        <p style="margin:0 0 12px">
-          You started creating a Tracebud account but have not finished workspace setup yet.
-        </p>
-        <p style="margin:0 0 12px">
-          Use the link below to continue where you left off (organization, country, and role).
-        </p>
-        <p style="margin:16px 0">
-          <a href="${this.escapeHtml(input.resumeUrl)}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600">
-            Complete workspace setup
-          </a>
-        </p>
-        <p style="margin:0;font-size:12px;color:#64748b">
-          If you did not request this, you can ignore this email.
-        </p>
-      </div>
-    `;
-  }
-
-  private escapeHtml(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 
   private async emitAuditEvent(eventType: string, payload: Record<string, unknown>): Promise<void> {
