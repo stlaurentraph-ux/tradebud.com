@@ -366,6 +366,8 @@ Done (multi-tenant admin v1 scope closed with governance and evidence gates)
 
 ### Analytics events (canonical names)
 
+- `onboarding_welcome_email_sent` (after workspace setup / wizard step 2 complete)
+- `onboarding_resume_nudge_sent` (cron dropout reminder; max 2 per tenant)
 - `signup_started`
 - `signup_completed`
 - `trial_started`
