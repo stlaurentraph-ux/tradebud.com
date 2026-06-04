@@ -1,0 +1,7 @@
+Hi {{firstName}},
+
+You started creating a Tracebud account but have not finished workspace setup yet.
+
+Continue here: {{resumeUrl}}
+
+If you did not request this, you can ignore this email.

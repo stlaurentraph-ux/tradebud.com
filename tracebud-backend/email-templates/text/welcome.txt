@@ -1,0 +1,7 @@
+Hi {{firstName}},
+
+Your Tracebud workspace for {{organizationName}} ({{country}}, {{roleLabel}}) is ready.
+
+Sign in to continue onboarding: {{loginUrl}}
+
+You received this because you completed workspace setup on dashboard.tracebud.com.

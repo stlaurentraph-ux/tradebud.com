@@ -1,0 +1,21 @@
+<!--
+  Email A — Welcome (after wizard step 2).
+  Replace this file with v0 export. Wired in production via onboarding-email.service.ts.
+  Placeholders: {{firstName}}, {{organizationName}}, {{country}}, {{roleLabel}}, {{loginUrl}}, {{year}}
+-->
+<div style="font-family:Arial,sans-serif;line-height:1.5;max-width:640px;color:#022c22">
+  <p>Hi {{firstName}},</p>
+  <p>
+    Your Tracebud workspace for <strong>{{organizationName}}</strong>
+    ({{country}}, {{roleLabel}}) is ready.
+  </p>
+  <p>Sign in to continue onboarding and set up your first workflows.</p>
+  <p>
+    <a href="{{loginUrl}}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600">
+      Open Tracebud Dashboard
+    </a>
+  </p>
+  <p style="font-size:12px;color:#64748b">
+    You received this because you completed workspace setup on dashboard.tracebud.com.
+  </p>
+</div>
