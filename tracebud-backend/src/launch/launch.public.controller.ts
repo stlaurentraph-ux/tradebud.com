@@ -99,6 +99,13 @@ export class LaunchPublicController {
       country,
       primaryRole,
       actorUserId: (user?.id as string | undefined) ?? null,
+      actorEmail: typeof user?.email === 'string' ? user.email : null,
+      actorFullName:
+        typeof user?.user_metadata?.full_name === 'string'
+          ? user.user_metadata.full_name
+          : typeof user?.user_metadata?.fullName === 'string'
+            ? user.user_metadata.fullName
+            : null,
     });
     return { ok: true, profile };
   }

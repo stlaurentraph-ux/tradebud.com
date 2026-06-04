@@ -53,6 +53,17 @@ Expect: `OK …/api/health`
 
 ```bash
 npm run check:deploy-health -- "https://api.tracebud.com"
+
+### Onboarding email cron (optional)
+
+Daily resume nudges for users who stopped before workspace setup (wizard step 2):
+
+```bash
+curl -sS -X POST "https://api.tracebud.com/api/v1/launch/onboarding/remind-incomplete" \
+  -H "x-tracebud-launch-cron-token: YOUR_LAUNCH_ONBOARDING_CRON_TOKEN"
+```
+
+Railway **Cron** or external scheduler: run once per day. Requires `RESEND_*`, `LAUNCH_ONBOARDING_CRON_TOKEN`, and `SUPABASE_SERVICE_ROLE_KEY` for magic-link resume URLs.
 ```
 
 ## 4) Clients

@@ -1,6 +1,7 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
 export type LaunchFeatureKey =
@@ -49,7 +50,10 @@ interface CommercialProfileRow {
 
 @Injectable()
 export class LaunchService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly onboardingEmailService: OnboardingEmailService,
+  ) {}
 
   private schemaReady = false;
 
@@ -550,6 +554,14 @@ export class LaunchService {
           source: 'launch_signup_existing_user_signin',
           completedAt: new Date().toISOString(),
         }).catch(() => undefined);
+        await this.onboardingEmailService
+          .recordSignupContact({
+            tenantId,
+            userId: signinPayload.user.id,
+            email: normalizedEmail,
+            fullName: input.fullName.trim(),
+          })
+          .catch(() => undefined);
 
         return {
           userId: signinPayload.user.id,
@@ -586,6 +598,14 @@ export class LaunchService {
       source: 'launch_signup',
       completedAt: new Date().toISOString(),
     }).catch(() => undefined);
+    await this.onboardingEmailService
+      .recordSignupContact({
+        tenantId,
+        userId: signupPayload.user.id,
+        email: normalizedEmail,
+        fullName: input.fullName.trim(),
+      })
+      .catch(() => undefined);
 
     return {
       userId: signupPayload.user.id,
@@ -595,12 +615,18 @@ export class LaunchService {
     };
   }
 
+  async remindIncompleteOnboarding(): Promise<RemindIncompleteResult> {
+    return this.onboardingEmailService.remindIncompleteSignups();
+  }
+
   async saveWorkspaceSetup(input: {
     tenantId: string;
     organizationName: string;
     country: string;
     primaryRole: SignupPrimaryRole;
     actorUserId: string | null;
+    actorEmail: string | null;
+    actorFullName: string | null;
   }): Promise<CommercialProfileRow> {
     await this.ensureSchema();
     const result = await this.pool.query<CommercialProfileRow>(
@@ -630,7 +656,33 @@ export class LaunchService {
       primaryRole: input.primaryRole,
       updatedAt: new Date().toISOString(),
     }).catch(() => undefined);
-    return result.rows[0];
+
+    const profile = result.rows[0];
+    if (input.actorEmail?.trim() && input.actorUserId) {
+      await this.onboardingEmailService
+        .recordSignupContact({
+          tenantId: input.tenantId,
+          userId: input.actorUserId,
+          email: input.actorEmail,
+          fullName: input.actorFullName,
+        })
+        .catch(() => undefined);
+    }
+    if (input.actorEmail?.trim()) {
+      void this.onboardingEmailService
+        .sendWelcomeAfterWorkspaceSetup({
+          tenantId: input.tenantId,
+          userId: input.actorUserId,
+          email: input.actorEmail,
+          fullName: input.actorFullName,
+          organizationName: input.organizationName,
+          country: input.country,
+          primaryRole: input.primaryRole,
+        })
+        .catch(() => undefined);
+    }
+
+    return profile;
   }
 
   async saveCommercialProfile(input: {

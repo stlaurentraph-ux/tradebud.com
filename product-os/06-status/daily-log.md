@@ -1,3 +1,9 @@
+### 2026-06-03 (backend: onboarding welcome + resume nudge emails)
+- Focus: Resend welcome after wizard step 2; daily cron for incomplete workspace setup with magic-link resume.
+- Files: `tracebud-backend/src/launch/onboarding-email.service.ts`, `launch.cron.controller.ts`, `tb_v16_032_tenant_onboarding_email.sql`, `launch.service.ts`.
+- Events: `onboarding_welcome_email_sent`, `onboarding_resume_nudge_sent`.
+- Ops: set `RESEND_*`, `SUPABASE_SERVICE_ROLE_KEY`, `LAUNCH_ONBOARDING_CRON_TOKEN`; cron `POST /api/v1/launch/onboarding/remind-incomplete`.
+
 ### 2026-06-03 (dashboard: signup confirm + workspace resume)
 - Focus: email confirm page, incomplete wizard redirect, role from commercial profile, clearer pending-email errors, `GET /v1/launch/commercial-profile`.
 - Files: `apps/dashboard-product/app/auth/confirm`, `create-account`, `login`, `dashboard-layout`, `auth-context`, `commercial-profile.ts`, `app/api/launch/commercial-profile`; `tracebud-backend/src/launch/*`.

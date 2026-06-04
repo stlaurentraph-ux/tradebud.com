@@ -65,7 +65,9 @@ describe('LaunchPublicController', () => {
           data: {
             user: {
               id: 'user_1',
+              email: 'ops@tracebud.test',
               app_metadata: { tenant_id: 'tenant_1' },
+              user_metadata: { full_name: 'Ops User' },
             },
           },
           error: null,
@@ -92,6 +94,8 @@ describe('LaunchPublicController', () => {
         country: 'France',
         primaryRole: 'importer',
         actorUserId: 'user_1',
+        actorEmail: 'ops@tracebud.test',
+        actorFullName: 'Ops User',
       }),
     );
   });
