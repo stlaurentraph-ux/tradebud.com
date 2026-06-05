@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Pensato per ogni anello della catena",
-      "description": "Dal produttore all'acquirente, ogni attore ha gli strumenti di cui ha bisogno.",
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
       "personas": {
         "producers": {
-          "title": "Producers",
-          "description": "Condividi i dati di azienda e appezzamento in modo semplice, senza burocrazia."
+          "title": "Produttori",
+          "description": "Che hanno bisogno di un modo semplice per condividere i dati di azienda e appezzamento."
         },
         "cooperatives": {
-          "title": "Cooperatives",
-          "description": "Gestisci centinaia di soci e richieste in un unico luogo."
+          "title": "Cooperative",
+          "description": "Che gestiscono molti soci e molte richieste."
         },
         "exporters": {
-          "title": "Exporters",
-          "description": "Genera prove di spedizione affidabili, pronte per l'audit."
+          "title": "Esportatori",
+          "description": "Che hanno bisogno di prove di spedizione affidabili."
         },
         "buyers": {
-          "title": "Buyers",
-          "description": "Accedi a dati a monte puliti senza record mancanti."
+          "title": "Acquirenti",
+          "description": "Che vogliono dati a monte più puliti e meno record mancanti."
         }
       }
     },

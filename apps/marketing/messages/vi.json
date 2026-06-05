@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Dành cho mọi mắt xích trong chuỗi",
-      "description": "Từ nhà sản xuất đến người mua, mỗi bên đều có công cụ phù hợp.",
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
       "personas": {
         "producers": {
-          "title": "Producers",
-          "description": "Chia sẻ dữ liệu trang trại và thửa đất đơn giản, không cần giấy tờ."
+          "title": "Nhà sản xuất",
+          "description": "Cần cách đơn giản để chia sẻ dữ liệu trang trại và thửa đất."
         },
         "cooperatives": {
-          "title": "Cooperatives",
-          "description": "Quản lý hàng trăm thành viên và yêu cầu tại một nơi."
+          "title": "Hợp tác xã",
+          "description": "Quản lý nhiều thành viên và nhiều yêu cầu."
         },
         "exporters": {
-          "title": "Exporters",
-          "description": "Tạo bằng chứng lô hàng đáng tin cậy, sẵn sàng kiểm toán."
+          "title": "Nhà xuất khẩu",
+          "description": "Cần bằng chứng lô hàng đáng tin cậy."
         },
         "buyers": {
-          "title": "Buyers",
-          "description": "Truy cập dữ liệu đầu nguồn sạch, không có hồ sơ bị thiếu."
+          "title": "Người mua",
+          "description": "Muốn dữ liệu đầu nguồn sạch hơn và ít hồ sơ bị thiếu hơn."
         }
       }
     },

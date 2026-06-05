@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Dibangun untuk setiap mata rantai",
-      "description": "Dari produsen hingga pembeli, setiap aktor mendapatkan alat yang mereka butuhkan.",
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
       "personas": {
         "producers": {
-          "title": "Producers",
-          "description": "Bagikan data pertanian dan petak secara sederhana, tanpa dokumen kertas."
+          "title": "Produsen",
+          "description": "Yang membutuhkan cara sederhana untuk berbagi data pertanian dan petak."
         },
         "cooperatives": {
-          "title": "Cooperatives",
-          "description": "Kelola ratusan anggota dan permintaan dalam satu tempat."
+          "title": "Koperasi",
+          "description": "Yang mengelola banyak anggota dan banyak permintaan."
         },
         "exporters": {
-          "title": "Exporters",
-          "description": "Hasilkan bukti pengiriman yang andal, siap untuk audit."
+          "title": "Eksportir",
+          "description": "Yang membutuhkan bukti pengiriman yang andal."
         },
         "buyers": {
-          "title": "Buyers",
-          "description": "Akses data hulu yang bersih tanpa catatan yang hilang."
+          "title": "Pembeli",
+          "description": "Yang menginginkan data hulu yang lebih bersih dan lebih sedikit catatan yang hilang."
         }
       }
     },

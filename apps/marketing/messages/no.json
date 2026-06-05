@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Bygget for hvert ledd i kjeden",
-      "description": "Fra produsent til sluttjkjøper – alle aktører får verktøyene de trenger.",
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
       "personas": {
         "producers": {
-          "title": "Producers",
-          "description": "Del gårds- og arealdata enkelt, uten papirarbeid."
+          "title": "Produsenter",
+          "description": "Som trenger en enkel måte å dele gårds- og arealdata på."
         },
         "cooperatives": {
-          "title": "Cooperatives",
-          "description": "Administrer hundrevis av medlemmer og forespørsler på ett sted."
+          "title": "Kooperativer",
+          "description": "Som administrerer mange medlemmer og mange forespørsler."
         },
         "exporters": {
-          "title": "Exporters",
-          "description": "Generer pålitelig forsendelsesdokumentasjon, revisjonsklar."
+          "title": "Eksportører",
+          "description": "Som trenger pålitelig forsendelsesdokumentasjon."
         },
         "buyers": {
-          "title": "Buyers",
-          "description": "Få tilgang til rene data fra leverandørkjeden uten manglende poster."
+          "title": "Kjøpere",
+          "description": "Som ønsker renere data fra leverandørkjeden og færre manglende poster."
         }
       }
     },

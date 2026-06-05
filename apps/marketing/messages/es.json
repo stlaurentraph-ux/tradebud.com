@@ -116,6 +116,28 @@
           "name": "Empresa"
         }
       }
+    },
+    "whoItIsForSection": {
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "personas": {
+        "producers": {
+          "title": "Productores",
+          "description": "Que necesitan una forma sencilla de compartir datos de finca y parcela."
+        },
+        "cooperatives": {
+          "title": "Cooperativas",
+          "description": "Que gestionan muchos miembros y muchas solicitudes."
+        },
+        "exporters": {
+          "title": "Exportadores",
+          "description": "Que necesitan pruebas de envío fiables."
+        },
+        "buyers": {
+          "title": "Compradores",
+          "description": "Que quieren datos de origen más limpios y menos registros faltantes."
+        }
+      }
     }
   },
   "common": {

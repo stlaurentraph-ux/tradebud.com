@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "ለሰንሰለቱ ሁሉ አስፈላጊ ሁኔታ",
-      "description": "ከአምራቹ እስከ ገዢው፣ ሁሉም ተሳታፊ የሚፈልጉትን መሳሪያ ያገኛሉ።",
+      "headline": "Who it's for",
+      "description": "Tracebud helps teams that need traceability without added complexity.",
       "personas": {
         "producers": {
-          "title": "Producers",
-          "description": "የቦታ እና የእርሻ ውሂብን ያለምንም ወረቀት ያካፍሉ።"
+          "title": "አምራቾች",
+          "description": "የእርሻ እና የቦታ ውሂብ ለማካፈል ቀላል መንገድ የሚፈልጉ።"
         },
         "cooperatives": {
-          "title": "Cooperatives",
-          "description": "በአንድ ቦታ ብዙ አባላትን እና ጥያቄዎችን ያስተዳድሩ።"
+          "title": "ህብረት ሥራ ማህበራት",
+          "description": "ብዙ አባላትን እና ብዙ ጥያቄዎችን የሚያስተዳድሩ።"
         },
         "exporters": {
-          "title": "Exporters",
-          "description": "ለኦዲት ዝግጁ የሆነ አስተማማኝ የጭነት ማስረጃ ይፍጠሩ።"
+          "title": "ላኪዎች",
+          "description": "አስተማማኝ የጭነት ማስረጃ የሚፈልጉ።"
         },
         "buyers": {
-          "title": "Buyers",
-          "description": "የጠፉ ሰነዶች ሳይኖሩ ንፁህ የዥረት ውሂብ ያግኙ።"
+          "title": "ገዢዎች",
+          "description": "የጠፉ ሰነዶችን ቀንሰው ንፁህ የዥረት ውሂብ የሚፈልጉ።"
         }
       }
     },
