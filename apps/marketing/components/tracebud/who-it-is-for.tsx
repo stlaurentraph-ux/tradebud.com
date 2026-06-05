@@ -32,9 +32,9 @@ export function WhoItIsFor() {
     { 
       keyPrefix: "whoItIsForSection.personas.buyers",
       icon: ShoppingBag,
-      color: "bg-purple-50",
-      iconColor: "text-purple-600",
-      borderColor: "hover:border-purple-300",
+      color: "bg-emerald-50",
+      iconColor: "text-emerald-700",
+      borderColor: "hover:border-emerald-300",
     },
   ];
 
@@ -55,9 +55,6 @@ export function WhoItIsFor() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <p className="text-sm font-semibold text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-            Built for everyone in the chain
-          </p>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance leading-[1.1]">
             {t("whoItIsForSection.headline")}
           </h2>
@@ -87,9 +84,6 @@ export function WhoItIsFor() {
               <p className="text-base text-gray-600 leading-relaxed">
                 {t(`${persona.keyPrefix}.description`)}
               </p>
-              
-              {/* Decorative corner */}
-              <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
           ))}
         </div>

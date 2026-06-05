@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "headline": "Dành cho mọi mắt xích trong chuỗi",
+      "description": "Từ nhà sản xuất đến người mua, mỗi bên đều có công cụ phù hợp.",
       "personas": {
         "producers": {
           "title": "Producers",
-          "description": "Who need a simple way to share farm and plot data."
+          "description": "Chia sẻ dữ liệu trang trại và thửa đất đơn giản, không cần giấy tờ."
         },
         "cooperatives": {
           "title": "Cooperatives",
-          "description": "That manage many members and many requests."
+          "description": "Quản lý hàng trăm thành viên và yêu cầu tại một nơi."
         },
         "exporters": {
           "title": "Exporters",
-          "description": "That need reliable shipment evidence."
+          "description": "Tạo bằng chứng lô hàng đáng tin cậy, sẵn sàng kiểm toán."
         },
         "buyers": {
           "title": "Buyers",
-          "description": "That want cleaner upstream data and fewer missing records."
+          "description": "Truy cập dữ liệu đầu nguồn sạch, không có hồ sơ bị thiếu."
         }
       }
     },

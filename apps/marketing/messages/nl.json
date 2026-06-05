@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "headline": "Gebouwd voor elke schakel in de keten",
+      "description": "Van producent tot eindkoper, elke actor krijgt de tools die hij nodig heeft.",
       "personas": {
         "producers": {
           "title": "Producers",
-          "description": "Who need a simple way to share farm and plot data."
+          "description": "Deel boerderij- en perceelgegevens eenvoudig, zonder papierwerk."
         },
         "cooperatives": {
           "title": "Cooperatives",
-          "description": "That manage many members and many requests."
+          "description": "Beheer honderden leden en verzoeken op één plek."
         },
         "exporters": {
           "title": "Exporters",
-          "description": "That need reliable shipment evidence."
+          "description": "Genereer betrouwbaar verzendingsbewijs, klaar voor audit."
         },
         "buyers": {
           "title": "Buyers",
-          "description": "That want cleaner upstream data and fewer missing records."
+          "description": "Toegang tot schone upstream-data zonder ontbrekende records."
         }
       }
     },

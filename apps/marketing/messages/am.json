@@ -129,24 +129,24 @@
       }
     },
     "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
+      "headline": "ለሰንሰለቱ ሁሉ አስፈላጊ ሁኔታ",
+      "description": "ከአምራቹ እስከ ገዢው፣ ሁሉም ተሳታፊ የሚፈልጉትን መሳሪያ ያገኛሉ።",
       "personas": {
         "producers": {
           "title": "Producers",
-          "description": "Who need a simple way to share farm and plot data."
+          "description": "የቦታ እና የእርሻ ውሂብን ያለምንም ወረቀት ያካፍሉ።"
         },
         "cooperatives": {
           "title": "Cooperatives",
-          "description": "That manage many members and many requests."
+          "description": "በአንድ ቦታ ብዙ አባላትን እና ጥያቄዎችን ያስተዳድሩ።"
         },
         "exporters": {
           "title": "Exporters",
-          "description": "That need reliable shipment evidence."
+          "description": "ለኦዲት ዝግጁ የሆነ አስተማማኝ የጭነት ማስረጃ ይፍጠሩ።"
         },
         "buyers": {
           "title": "Buyers",
-          "description": "That want cleaner upstream data and fewer missing records."
+          "description": "የጠፉ ሰነዶች ሳይኖሩ ንፁህ የዥረት ውሂብ ያግኙ።"
         }
       }
     },
