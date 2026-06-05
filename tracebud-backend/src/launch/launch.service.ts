@@ -1,5 +1,7 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { createClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
+import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
@@ -56,6 +58,93 @@ export class LaunchService {
   ) {}
 
   private schemaReady = false;
+
+  buildDefaultTenantIdFromEmail(email: string): string {
+    return `tenant_${email.trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
+  }
+
+  resolveTenantIdFromUserRecord(user: {
+    email?: string | null;
+    app_metadata?: { tenant_id?: string };
+    user_metadata?: { tenant_id?: string };
+  }): string | null {
+    const fromApp = deriveTenantIdFromSupabaseUser(user);
+    if (fromApp) {
+      return fromApp;
+    }
+    const fromUserMeta = user?.user_metadata?.tenant_id;
+    if (typeof fromUserMeta === 'string') {
+      const tenantId = fromUserMeta.trim();
+      if (tenantId.length > 0) {
+        return tenantId;
+      }
+    }
+    if (typeof user?.email === 'string' && user.email.trim().length > 0) {
+      return this.buildDefaultTenantIdFromEmail(user.email);
+    }
+    return null;
+  }
+
+  signupPrimaryRoleToAppRole(role: SignupPrimaryRole): AppRole {
+    if (role === 'compliance_manager') {
+      return 'compliance_manager';
+    }
+    if (role === 'admin') {
+      return 'admin';
+    }
+    if (role === 'exporter' || role === 'importer') {
+      return 'exporter';
+    }
+    return 'admin';
+  }
+
+  async ensureUserAppMetadataClaims(
+    userId: string,
+    tenantId: string,
+    role: AppRole,
+  ): Promise<void> {
+    const supabaseUrl = process.env.SUPABASE_URL?.trim();
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new ForbiddenException(
+        'SUPABASE_SERVICE_ROLE_KEY must be configured to finalize signup tenant claims.',
+      );
+    }
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      app_metadata: { tenant_id: tenantId, role },
+    });
+    if (error) {
+      throw new ForbiddenException(`Unable to set tenant claim: ${error.message}`);
+    }
+  }
+
+  async resolveAndEnsureTenantClaim(
+    user: {
+      id?: string;
+      email?: string | null;
+      app_metadata?: { tenant_id?: string };
+      user_metadata?: { tenant_id?: string };
+    },
+    role: SignupPrimaryRole,
+  ): Promise<string> {
+    const userId = typeof user?.id === 'string' ? user.id : null;
+    if (!userId) {
+      throw new ForbiddenException('Authenticated user id is required.');
+    }
+    const tenantId = this.resolveTenantIdFromUserRecord(user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    await this.ensureUserAppMetadataClaims(
+      userId,
+      tenantId,
+      this.signupPrimaryRoleToAppRole(role),
+    );
+    return tenantId;
+  }
 
   private async emitAuditEvent(eventType: string, payload: Record<string, unknown>): Promise<void> {
     await this.pool.query(
@@ -479,7 +568,7 @@ export class LaunchService {
       throw new ForbiddenException('SUPABASE_URL and SUPABASE_ANON_KEY must be configured.');
     }
     const normalizedEmail = input.workEmail.trim().toLowerCase();
-    const defaultTenantId = `tenant_${normalizedEmail.replace(/[^a-z0-9]/gi, '_')}`;
+    const defaultTenantId = this.buildDefaultTenantIdFromEmail(normalizedEmail);
     const resolveErrorMessage = (payload: {
       message?: string;
       msg?: string;
@@ -546,7 +635,9 @@ export class LaunchService {
       };
 
       if (signinResponse.ok && signinPayload.user?.id && signinPayload.access_token) {
-        const tenantId = signinPayload.user.app_metadata?.tenant_id ?? defaultTenantId;
+        const tenantId =
+          this.resolveTenantIdFromUserRecord(signinPayload.user) ?? defaultTenantId;
+        await this.ensureUserAppMetadataClaims(signinPayload.user.id, tenantId, 'admin');
         await this.getOrCreateTrialState(tenantId);
         await this.emitAuditEvent('signup_completed', {
           tenantId,
@@ -591,6 +682,7 @@ export class LaunchService {
     }
 
     const tenantId = defaultTenantId;
+    await this.ensureUserAppMetadataClaims(signupPayload.user.id, tenantId, 'admin');
     await this.getOrCreateTrialState(tenantId);
     await this.emitAuditEvent('signup_completed', {
       tenantId,

@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
+const marketingPublic = path.join(__dirname, '..', '..', '..', 'apps/marketing/public');
 const port = Number(process.env.EMAIL_PREVIEW_PORT || 8765);
+const previewOrigin = `http://127.0.0.1:${port}`;
 
 const mock = {
   firstName: 'Amara',
@@ -15,6 +17,7 @@ const mock = {
   roleLabel: 'Exporter',
   loginUrl: 'https://dashboard.tracebud.com/login',
   resumeUrl: 'https://dashboard.tracebud.com/create-account?resume=workspace',
+  unsubscribeUrl: 'https://dashboard.tracebud.com/settings',
   year: '2026',
 };
 
@@ -47,11 +50,16 @@ const templates = [
 ];
 
 function substitute(html, supabase = false) {
+  let output = html;
   if (supabase) {
     const url = 'https://dashboard.tracebud.com/auth/confirm?token=preview-mock';
-    return html.replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, url);
+    output = output.replace(/\{\{\s*\.ConfirmationURL\s*\}\}/g, url);
+  } else {
+    output = output.replace(/\{\{(\w+)\}\}/g, (_, key) => mock[key] ?? `{{${key}}}`);
   }
-  return html.replace(/\{\{(\w+)\}\}/g, (_, key) => mock[key] ?? `{{${key}}}`);
+  // Use repo images locally (production CDN may lag behind git)
+  output = output.replace(/https:\/\/www\.tracebud\.com\/images\//g, `${previewOrigin}/images/`);
+  return output;
 }
 
 function contentType(filePath) {
@@ -60,15 +68,38 @@ function contentType(filePath) {
   if (filePath.endsWith('.json')) return 'application/json; charset=utf-8';
   if (filePath.endsWith('.txt')) return 'text/plain; charset=utf-8';
   if (filePath.endsWith('.md')) return 'text/plain; charset=utf-8';
+  if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) return 'image/jpeg';
+  if (filePath.endsWith('.png')) return 'image/png';
+  if (filePath.endsWith('.webp')) return 'image/webp';
   return 'application/octet-stream';
 }
 
+function serveMarketingImage(url, res) {
+  const imagePath = decodeURIComponent(url.pathname).replace(/^\/images\//, '');
+  const filePath = path.join(marketingPublic, 'images', imagePath);
+  if (!filePath.startsWith(marketingPublic) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Image not found');
+    return;
+  }
+  res.writeHead(200, {
+    'Content-Type': contentType(filePath),
+    'Cache-Control': 'no-store',
+  });
+  res.end(fs.readFileSync(filePath));
+}
+
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+  const url = new URL(req.url ?? '/', previewOrigin);
+
+  if (url.pathname.startsWith('/images/')) {
+    serveMarketingImage(url, res);
+    return;
+  }
 
   if (url.pathname === '/api/templates') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ mock, templates }));
+    res.end(JSON.stringify({ mock, templates, imagesFrom: marketingPublic }));
     return;
   }
 
@@ -113,5 +144,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Tracebud email preview → http://127.0.0.1:${port}`);
+  console.log(`Tracebud email preview → ${previewOrigin}`);
+  console.log(`Local images → ${marketingPublic}`);
 });

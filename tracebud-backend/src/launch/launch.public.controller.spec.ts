@@ -75,6 +75,7 @@ describe('LaunchPublicController', () => {
       },
     } as any);
     const launchService = {
+      resolveAndEnsureTenantClaim: jest.fn().mockResolvedValue('tenant_1'),
       saveWorkspaceSetup: jest.fn().mockResolvedValue({ tenant_id: 'tenant_1' }),
     } as unknown as LaunchService;
     const controller = new LaunchPublicController(launchService);
@@ -87,6 +88,10 @@ describe('LaunchPublicController', () => {
     });
 
     expect(result).toMatchObject({ ok: true });
+    expect((launchService.resolveAndEnsureTenantClaim as jest.Mock)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user_1' }),
+      'importer',
+    );
     expect((launchService.saveWorkspaceSetup as jest.Mock)).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant_1',
@@ -97,6 +102,41 @@ describe('LaunchPublicController', () => {
         actorEmail: 'ops@tracebud.test',
         actorFullName: 'Ops User',
       }),
+    );
+  });
+
+  it('syncs tenant claim from user_metadata during workspace setup', async () => {
+    createClientMock.mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: {
+            user: {
+              id: 'user_john',
+              email: 'john.doe@example.com',
+              user_metadata: { tenant_id: 'tenant_john_doe_example_com', full_name: 'John Doe' },
+            },
+          },
+          error: null,
+        }),
+      },
+    } as any);
+    const launchService = {
+      resolveAndEnsureTenantClaim: jest.fn().mockResolvedValue('tenant_john_doe_example_com'),
+      saveWorkspaceSetup: jest.fn().mockResolvedValue({ tenant_id: 'tenant_john_doe_example_com' }),
+    } as unknown as LaunchService;
+    const controller = new LaunchPublicController(launchService);
+
+    const result = await controller.signup('Bearer test_token', {
+      stage: 'workspace_setup',
+      organizationName: 'John Doe Exports',
+      country: 'Belgium',
+      primaryRole: 'exporter',
+    });
+
+    expect(result).toMatchObject({ ok: true });
+    expect((launchService.resolveAndEnsureTenantClaim as jest.Mock)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user_john' }),
+      'exporter',
     );
   });
 });

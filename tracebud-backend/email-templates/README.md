@@ -77,6 +77,18 @@ HTML values are HTML-escaped; URLs in `href` attributes use escaped URLs.
 
 **Supabase confirm** (`html/supabase-confirm-email.html`) is still pasted manually into Supabase Dashboard (uses `{{ .ConfirmationURL }}`).
 
+### Supabase Dashboard preview (broken images?)
+
+The Studio **Preview** pane runs in a sandboxed iframe. Common failures:
+
+| Issue | Fix |
+|-------|-----|
+| Logo missing | Use the committed template: logo is a **~16 KB embedded data URI**, not `tracebud-logo.png` (879 KB). |
+| Hero missing | Template uses **jsDelivr** from `main` until `www.tracebud.com` deploy is updated; re-paste after pulling latest `supabase-confirm-email.html`. |
+| Preview still empty | Send a real **test signup** — many clients render images even when Studio preview does not. |
+
+After editing the logo PNG, run `node tracebud-backend/email-templates/scripts/embed-supabase-logo.mjs` and paste the HTML again.
+
 ---
 
 ## Brand tokens quick reference

@@ -6,7 +6,6 @@ import {
   SignupPrimaryObjective,
   SignupPrimaryRole,
 } from './launch.service';
-import { deriveTenantIdFromSupabaseUser } from '../auth/roles';
 
 @ApiTags('Launch')
 @Controller('v1/launch')
@@ -83,16 +82,13 @@ export class LaunchPublicController {
     }
 
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = deriveTenantIdFromSupabaseUser(user);
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim in app_metadata');
-    }
     const organizationName = body.organizationName?.trim() ?? '';
     const country = body.country?.trim() ?? '';
     if (!organizationName || !country) {
       throw new ForbiddenException('organizationName and country are required.');
     }
     const primaryRole = this.parseRole(body.primaryRole);
+    const tenantId = await this.launchService.resolveAndEnsureTenantClaim(user, primaryRole);
     const profile = await this.launchService.saveWorkspaceSetup({
       tenantId,
       organizationName,
@@ -127,11 +123,11 @@ export class LaunchPublicController {
     },
   ): Promise<any> {
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = deriveTenantIdFromSupabaseUser(user);
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim in app_metadata');
-    }
     const skipped = Boolean(body.skipped);
+    const tenantId = await this.launchService.resolveAndEnsureTenantClaim(
+      user,
+      this.parseRole(body.primaryRole),
+    );
     const profile = await this.launchService.saveCommercialProfile({
       tenantId,
       primaryRole: this.parseRole(body.primaryRole),
