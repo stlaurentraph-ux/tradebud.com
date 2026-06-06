@@ -18,6 +18,13 @@ import { Pool } from 'pg';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
+import {
+  buildFarmQuestionnaireMappingRegistryV1,
+  buildFarmQuestionnaireSchemaV1,
+  questionnaireFieldKey,
+  validateQuestionnaireResponseCompleteness,
+  type QuestionnairePathway,
+} from './coolfarm-sai-v2.schema';
 
 type AssessmentPathway = 'annuals' | 'rice';
 type AssessmentRequestStatus =
@@ -67,6 +74,61 @@ export class AssessmentRequestsController {
       return role;
     }
     throw new ForbiddenException('Role not permitted to view assessment requests');
+  }
+
+  private ensureFarmerOrAgent(req: any) {
+    const role = this.ensureCanView(req);
+    if (role !== 'farmer' && role !== 'agent') {
+      throw new ForbiddenException('Only farmer or agent can execute assigned assessment questionnaires');
+    }
+    return role;
+  }
+
+  private async loadFarmerAssignedRequest(params: {
+    tenantId: string;
+    requestId: string;
+    actorUserId: string | null;
+    role: string;
+  }) {
+    try {
+      const res = await this.pool.query<{
+        id: string;
+        pathway: AssessmentPathway;
+        farmer_user_id: string;
+        questionnaire_id: string | null;
+        status: AssessmentRequestStatus;
+        title: string;
+        instructions: string;
+      }>(
+        `
+          SELECT id, pathway, farmer_user_id, questionnaire_id, status, title, instructions
+          FROM integration_assessment_requests
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [params.requestId, params.tenantId],
+      );
+      if ((res.rowCount ?? 0) === 0) {
+        throw new BadRequestException('Assessment request not found');
+      }
+      const row = res.rows[0];
+      if (params.role === 'farmer' && row.farmer_user_id !== params.actorUserId) {
+        throw new ForbiddenException('Farmer cannot access another farmer assessment request');
+      }
+      return row;
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      const err = error as { code?: string };
+      if (err?.code === '42P01') {
+        throw new BadRequestException(
+          'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
+        );
+      }
+      throw error;
+    }
   }
 
   private async assertQuestionnaireSubmissionReady(params: {
@@ -324,6 +386,349 @@ export class AssessmentRequestsController {
       if (err?.code === '42P01') {
         throw new BadRequestException(
           'Assessment request tables are not available. Apply TB-V16-021 and TB-V16-022 migrations first.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  @Get(':id/questionnaire-schema')
+  @ApiOperation({ summary: 'Get questionnaire schema for assigned assessment request' })
+  async getQuestionnaireSchema(@Param('id') id: string, @Req() req: any) {
+    const tenantId = this.getTenantClaim(req);
+    const role = this.ensureFarmerOrAgent(req);
+    const actorUserId = (req?.user?.id as string | undefined) ?? null;
+    const request = await this.loadFarmerAssignedRequest({
+      tenantId,
+      requestId: id,
+      actorUserId,
+      role,
+    });
+    const pathway: QuestionnairePathway = request.pathway === 'rice' ? 'rice' : 'annuals';
+    return {
+      requestId: request.id,
+      pathway,
+      schema: buildFarmQuestionnaireSchemaV1(pathway),
+      mappingRegistry: buildFarmQuestionnaireMappingRegistryV1(pathway),
+    };
+  }
+
+  @Get(':id/questionnaire')
+  @ApiOperation({ summary: 'Get linked questionnaire draft for assigned assessment request' })
+  async getQuestionnaire(@Param('id') id: string, @Req() req: any) {
+    const tenantId = this.getTenantClaim(req);
+    const role = this.ensureFarmerOrAgent(req);
+    const actorUserId = (req?.user?.id as string | undefined) ?? null;
+    const request = await this.loadFarmerAssignedRequest({
+      tenantId,
+      requestId: id,
+      actorUserId,
+      role,
+    });
+    if (!request.questionnaire_id) {
+      throw new BadRequestException('Assessment request is not linked to a questionnaire draft');
+    }
+    try {
+      const res = await this.pool.query<{
+        id: string;
+        status: string;
+        pathway: string;
+        response: Record<string, unknown>;
+        updated_at: string;
+      }>(
+        `
+          SELECT id, status, pathway, response, updated_at
+          FROM integration_questionnaire_v2
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [request.questionnaire_id, tenantId],
+      );
+      if ((res.rowCount ?? 0) === 0) {
+        throw new BadRequestException('Linked questionnaire draft not found');
+      }
+      const row = res.rows[0];
+      return {
+        requestId: request.id,
+        questionnaireId: row.id,
+        status: row.status,
+        pathway: row.pathway,
+        response: row.response ?? {},
+        updatedAt: row.updated_at,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      const err = error as { code?: string };
+      if (err?.code === '42P01') {
+        throw new BadRequestException(
+          'V2 questionnaire persistence tables are not available. Apply TB-V16-013 migration first.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  @Patch(':id/questionnaire/responses')
+  @ApiOperation({ summary: 'Save questionnaire responses for assigned assessment request' })
+  async updateQuestionnaireResponses(
+    @Param('id') id: string,
+    @Body() body: { response?: Record<string, unknown> },
+    @Req() req: any,
+  ) {
+    const tenantId = this.getTenantClaim(req);
+    const role = this.ensureFarmerOrAgent(req);
+    const actorUserId = (req?.user?.id as string | undefined) ?? null;
+    const request = await this.loadFarmerAssignedRequest({
+      tenantId,
+      requestId: id,
+      actorUserId,
+      role,
+    });
+    if (!request.questionnaire_id) {
+      throw new BadRequestException('Assessment request is not linked to a questionnaire draft');
+    }
+    const response = body?.response ?? {};
+    if (typeof response !== 'object' || Array.isArray(response)) {
+      throw new BadRequestException('response must be an object');
+    }
+    try {
+      const draftRes = await this.pool.query<{ status: string }>(
+        `
+          SELECT status
+          FROM integration_questionnaire_v2
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [request.questionnaire_id, tenantId],
+      );
+      if ((draftRes.rowCount ?? 0) === 0) {
+        throw new BadRequestException('Linked questionnaire draft not found');
+      }
+      const currentStatus = draftRes.rows[0]?.status ?? '';
+      if (currentStatus !== 'draft') {
+        throw new BadRequestException(`Questionnaire cannot be edited in status ${currentStatus}`);
+      }
+
+      const updateRes = await this.pool.query<{ id: string; status: string; updated_at: string }>(
+        `
+          UPDATE integration_questionnaire_v2
+          SET
+            response = $3::jsonb,
+            updated_by_user_id = $4,
+            updated_at = NOW()
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          RETURNING id, status, updated_at
+        `,
+        [request.questionnaire_id, tenantId, JSON.stringify(response), actorUserId],
+      );
+
+      await this.pool.query(
+        `
+          INSERT INTO integration_audit_v2 (
+            tenant_id,
+            questionnaire_id,
+            event_type,
+            payload,
+            actor_user_id
+          )
+          VALUES ($1, $2::uuid, $3, $4::jsonb, $5)
+        `,
+        [
+          tenantId,
+          request.questionnaire_id,
+          'integration_v2_questionnaire_draft_saved',
+          JSON.stringify({
+            tenantId,
+            requestId: request.id,
+            source: 'farmer_assessment_execution',
+            fieldCount: Object.keys(response).length,
+          }),
+          actorUserId,
+        ],
+      );
+
+      return {
+        requestId: request.id,
+        questionnaireId: updateRes.rows[0]?.id ?? request.questionnaire_id,
+        status: updateRes.rows[0]?.status ?? 'draft',
+        response,
+        updatedAt: updateRes.rows[0]?.updated_at ?? null,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      const err = error as { code?: string };
+      if (err?.code === '42P01') {
+        throw new BadRequestException(
+          'V2 questionnaire persistence tables are not available. Apply TB-V16-013 migration first.',
+        );
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/questionnaire/submit')
+  @ApiOperation({ summary: 'Submit linked questionnaire for assigned assessment request' })
+  async submitQuestionnaire(@Param('id') id: string, @Req() req: any) {
+    const tenantId = this.getTenantClaim(req);
+    const role = this.ensureFarmerOrAgent(req);
+    const actorUserId = (req?.user?.id as string | undefined) ?? null;
+    const request = await this.loadFarmerAssignedRequest({
+      tenantId,
+      requestId: id,
+      actorUserId,
+      role,
+    });
+    if (!request.questionnaire_id) {
+      throw new BadRequestException('Assessment request is not linked to a questionnaire draft');
+    }
+    const pathway: QuestionnairePathway = request.pathway === 'rice' ? 'rice' : 'annuals';
+    const schema = buildFarmQuestionnaireSchemaV1(pathway);
+
+    try {
+      const draftRes = await this.pool.query<{
+        id: string;
+        status: string;
+        response: Record<string, unknown>;
+      }>(
+        `
+          SELECT id, status, response
+          FROM integration_questionnaire_v2
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [request.questionnaire_id, tenantId],
+      );
+      if ((draftRes.rowCount ?? 0) === 0) {
+        throw new BadRequestException('Linked questionnaire draft not found');
+      }
+      const draft = draftRes.rows[0];
+      const currentStatus = draft.status ?? '';
+      if (currentStatus !== 'draft') {
+        throw new BadRequestException(`Invalid transition: ${currentStatus} -> submitted`);
+      }
+      const response = (draft.response ?? {}) as Record<string, unknown>;
+      const missingFields = validateQuestionnaireResponseCompleteness(schema, response);
+      if (missingFields.length > 0) {
+        throw new BadRequestException(
+          `Questionnaire is incomplete. Missing or invalid fields: ${missingFields.join(', ')}`,
+        );
+      }
+
+      await this.pool.query(
+        `
+          UPDATE integration_questionnaire_v2
+          SET
+            status = 'submitted',
+            updated_by_user_id = $2,
+            updated_at = NOW()
+          WHERE id = $1::uuid
+            AND tenant_id = $3
+        `,
+        [request.questionnaire_id, actorUserId, tenantId],
+      );
+
+      const runRes = await this.pool.query<{ id: string }>(
+        `
+          INSERT INTO integration_runs_v2 (
+            tenant_id,
+            questionnaire_id,
+            run_type,
+            status,
+            details
+          )
+          VALUES ($1, $2::uuid, 'validation', 'started', $3::jsonb)
+          RETURNING id
+        `,
+        [
+          tenantId,
+          request.questionnaire_id,
+          JSON.stringify({
+            phase: 'farmer_assessment_submit',
+            requestId: request.id,
+            triggeredBy: role,
+          }),
+        ],
+      );
+      const runId = runRes.rows[0]?.id ?? null;
+      if (runId) {
+        await this.pool.query(
+          `
+            UPDATE integration_runs_v2
+            SET
+              status = 'completed',
+              details = details || $2::jsonb,
+              finished_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $1::uuid
+              AND tenant_id = $3
+          `,
+          [
+            runId,
+            JSON.stringify({
+              result: 'ok',
+              validatedFieldCount: Object.keys(response).filter((key) =>
+                schema.sections.some((section) =>
+                  section.fields.some((field) => questionnaireFieldKey(section.id, field.id) === key),
+                ),
+              ).length,
+            }),
+            tenantId,
+          ],
+        );
+      }
+
+      await this.pool.query(
+        `
+          INSERT INTO integration_audit_v2 (
+            tenant_id,
+            questionnaire_id,
+            event_type,
+            payload,
+            actor_user_id
+          )
+          VALUES ($1, $2::uuid, $3, $4::jsonb, $5)
+        `,
+        [
+          tenantId,
+          request.questionnaire_id,
+          'integration_v2_questionnaire_submitted',
+          JSON.stringify({
+            tenantId,
+            requestId: request.id,
+            draftId: request.questionnaire_id,
+            runId,
+            source: 'farmer_assessment_execution',
+          }),
+          actorUserId,
+        ],
+      );
+
+      return {
+        requestId: request.id,
+        questionnaireId: request.questionnaire_id,
+        status: 'submitted',
+        run: {
+          id: runId,
+          type: 'validation',
+          status: 'completed',
+        },
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      const err = error as { code?: string };
+      if (err?.code === '42P01') {
+        throw new BadRequestException(
+          'V2 questionnaire persistence tables are not available. Apply TB-V16-013 migration first.',
         );
       }
       throw error;

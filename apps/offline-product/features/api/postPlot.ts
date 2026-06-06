@@ -811,15 +811,23 @@ export async function updateAssessmentRequestStatus(params: {
     throw new Error('No access token available for assessment requests');
   }
 
+  const farmerStatusPath: Partial<Record<AssessmentRequestStatus, string>> = {
+    opened: 'opened',
+    in_progress: 'in-progress',
+    submitted: 'submitted',
+  };
+  const pathSuffix = farmerStatusPath[params.status];
+  if (!pathSuffix) {
+    throw new Error(`Unsupported farmer assessment status transition: ${params.status}`);
+  }
+
   const res = await fetch(
-    `${API_BASE_URL}/v1/integrations/assessments/requests/${encodeURIComponent(params.requestId)}/status`,
+    `${API_BASE_URL}/v1/integrations/assessments/requests/${encodeURIComponent(params.requestId)}/${pathSuffix}`,
     {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status: params.status }),
     },
   );
 

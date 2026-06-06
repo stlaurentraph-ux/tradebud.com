@@ -4,6 +4,7 @@ Track completed milestones/features/docs updates.
 
 ## Initial entries
 
+- FEAT-009 offline farmer questionnaire execution slice delivered: backend now exposes farmer/agent assessment-scoped questionnaire schema/read/save/submit routes; offline app includes dedicated questionnaire screen with draft save + submit flow, canonical farmer status transitions, and EN/ES assessment UI copy.
 - FEAT-009 dashboard integrations hardening delivered: high-priority `dashboard-product` integration TODOs are now closed with live V2 API wiring (scheduler config/trigger, run summary/queue, claim/release/retry, stale release, and questionnaire run-history timeline) via fail-closed dashboard proxy routes under `app/api/integrations/coolfarm-sai/v2/*`.
 - Beta readiness pack published: scope matrix, cohort template, cross-tenant deny runbook, and evidence snapshot (`beta-readiness-evidence-2026-06-03.md`); checklist sign-off set to `hold_beta` pending deny-path proof and cohort A approval.
 - Dashboard medium-priority integration cleanup delivered: `lib/integrations-v2-api.ts` now centralizes live V2 operations client calls; package creation form uses `lib/package-create-validation.ts`; legacy integration mock exports are deprecated; dashboard test suite is green (225 tests), including sponsor virgin-state bugfix and middleware gate expectation alignment.

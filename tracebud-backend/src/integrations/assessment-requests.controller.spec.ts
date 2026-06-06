@@ -89,5 +89,64 @@ describe('AssessmentRequestsController', () => {
       BadRequestException,
     );
   });
+
+  it('returns questionnaire schema for assigned farmer request', async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'request-1',
+          pathway: 'annuals',
+          farmer_user_id: farmerReq.user.id,
+          questionnaire_id: 'questionnaire-1',
+          status: 'opened',
+          title: 'Annual assessment',
+          instructions: 'Complete all sections',
+        },
+      ],
+      rowCount: 1,
+    });
+    const controller = new AssessmentRequestsController({ query } as any);
+    const result = await controller.getQuestionnaireSchema('request-1', farmerReq);
+    expect(result.requestId).toBe('request-1');
+    expect(result.schema.sections.length).toBeGreaterThan(0);
+  });
+
+  it('rejects questionnaire response save for non-farmer role', async () => {
+    const controller = new AssessmentRequestsController({ query: jest.fn() } as any);
+    await expect(
+      controller.updateQuestionnaireResponses(
+        'request-1',
+        { response: { 'farm_assessment_context.assessment_year': 2026 } },
+        exporterReq,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('blocks questionnaire submit when required fields are missing', async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'request-1',
+            pathway: 'annuals',
+            farmer_user_id: farmerReq.user.id,
+            questionnaire_id: 'questionnaire-1',
+            status: 'in_progress',
+            title: 'Annual assessment',
+            instructions: 'Complete all sections',
+          },
+        ],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 'questionnaire-1', status: 'draft', response: {} }],
+        rowCount: 1,
+      });
+    const controller = new AssessmentRequestsController({ query } as any);
+    await expect(controller.submitQuestionnaire('request-1', farmerReq)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
 });
 
