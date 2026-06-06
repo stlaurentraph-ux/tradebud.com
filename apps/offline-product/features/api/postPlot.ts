@@ -64,14 +64,17 @@ export type PostPlotToBackendResult =
       message?: string;
     };
 
-const API_BASE_URL = getRuntimeGuardedApiBaseUrl();
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
 const ALLOW_LOCALHOST_API = process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API === '1';
 const IS_DEV_RUNTIME = typeof __DEV__ !== 'undefined' && __DEV__;
 
+function apiBaseUrl(): string {
+  return getRuntimeGuardedApiBaseUrl();
+}
+
 /** Resolved API root (includes `/api`). Use in Settings to show which server the app calls. */
 export function getTracebudApiBaseUrl(): string {
-  return API_BASE_URL;
+  return apiBaseUrl();
 }
 
 /** NestJS often returns `{ message: string | string[] }` on 4xx/5xx. */
@@ -141,7 +144,7 @@ async function getAccessTokenFromSupabase(): Promise<string | null> {
 
 export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    if (isLocalhostApi(API_BASE_URL) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
+    if (isLocalhostApi(apiBaseUrl()) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
       return {
         ok: false,
         message:
@@ -234,7 +237,7 @@ export async function postPlotToBackend(params: {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/v1/plots`, {
+    const res = await fetch(`${apiBaseUrl()}/v1/plots`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -284,7 +287,7 @@ export async function syncPlotPhotosToBackend(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
+    `${apiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
     {
       method: 'POST',
       headers: {
@@ -321,7 +324,7 @@ export async function updatePlotMetadataOnBackend(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}`,
+    `${apiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}`,
     {
       method: 'PATCH',
       headers: {
@@ -351,7 +354,7 @@ export async function fetchPlotsForFarmer(farmerId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`,
+    `${apiBaseUrl()}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -381,7 +384,7 @@ export async function postHarvestToBackend(params: {
     throw new Error('No access token available for harvest sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest`, {
+  const res = await fetch(`${apiBaseUrl()}/v1/harvest`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -413,7 +416,7 @@ export async function fetchVouchersForFarmer(farmerId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/vouchers?farmerId=${encodeURIComponent(farmerId)}`,
+    `${apiBaseUrl()}/v1/harvest/vouchers?farmerId=${encodeURIComponent(farmerId)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -436,7 +439,7 @@ export async function fetchVoucherByQrRef(qrRef: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/vouchers/by-qr?qrRef=${encodeURIComponent(qrRef)}`,
+    `${apiBaseUrl()}/v1/harvest/vouchers/by-qr?qrRef=${encodeURIComponent(qrRef)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -460,7 +463,7 @@ export async function fetchDdsPackagesForFarmer(farmerId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/packages?farmerId=${encodeURIComponent(farmerId)}`,
+    `${apiBaseUrl()}/v1/harvest/packages?farmerId=${encodeURIComponent(farmerId)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -483,7 +486,7 @@ export async function fetchDdsPackageTracesJson(packageId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(
+    `${apiBaseUrl()}/v1/harvest/packages/${encodeURIComponent(
       packageId,
     )}/traces-json`,
     {
@@ -507,7 +510,7 @@ export async function runComplianceCheckForPlot(plotId: string) {
     throw new Error('No access token available for compliance checks');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/compliance-check`, {
+  const res = await fetch(`${apiBaseUrl()}/v1/plots/${encodeURIComponent(plotId)}/compliance-check`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -529,7 +532,7 @@ export async function runGfwCheckForPlot(plotId: string) {
     throw new Error('No access token available for GFW checks');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/gfw-check`, {
+  const res = await fetch(`${apiBaseUrl()}/v1/plots/${encodeURIComponent(plotId)}/gfw-check`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -555,7 +558,7 @@ export async function createDdsPackageForFarmer(params: {
     throw new Error('No access token available for DDS packages');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/packages`, {
+  const res = await fetch(`${apiBaseUrl()}/v1/harvest/packages`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -582,7 +585,7 @@ export async function submitDdsPackage(packageId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(packageId)}/submit`,
+    `${apiBaseUrl()}/v1/harvest/packages/${encodeURIComponent(packageId)}/submit`,
     {
       method: 'PATCH',
       headers: {
@@ -607,7 +610,7 @@ export async function fetchAuditForFarmer(farmerId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/audit?farmerId=${encodeURIComponent(farmerId)}`,
+    `${apiBaseUrl()}/v1/audit?farmerId=${encodeURIComponent(farmerId)}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -639,7 +642,7 @@ export async function syncPlotLegalToBackend(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`,
+    `${apiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`,
     {
       method: 'POST',
       headers: {
@@ -681,7 +684,7 @@ export async function syncPlotEvidenceToBackend(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`,
+    `${apiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`,
     {
       method: 'POST',
       headers: {
@@ -728,7 +731,7 @@ export async function postAuditEventToBackend(params: {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/v1/audit`, {
+    const res = await fetch(`${apiBaseUrl()}/v1/audit`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -788,7 +791,7 @@ export async function fetchAssignedAssessmentRequests(): Promise<FarmerAssessmen
     throw new Error('No access token available for assessment requests');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/integrations/assessments/requests?assignedToMe=true`, {
+  const res = await fetch(`${apiBaseUrl()}/v1/integrations/assessments/requests?assignedToMe=true`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -812,7 +815,7 @@ export async function updateAssessmentRequestStatus(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/integrations/assessments/requests/${encodeURIComponent(params.requestId)}/status`,
+    `${apiBaseUrl()}/v1/integrations/assessments/requests/${encodeURIComponent(params.requestId)}/status`,
     {
       method: 'PATCH',
       headers: {

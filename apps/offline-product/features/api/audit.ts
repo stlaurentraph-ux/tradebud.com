@@ -7,8 +7,6 @@ import { getAccessTokenFromSupabase } from './auth';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
 
-const API_BASE_URL = getTracebudApiBaseUrl();
-
 /** Extract error message from NestJS-style response */
 function messageFromBackendJson(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
@@ -26,7 +24,7 @@ export async function fetchAuditForFarmer(farmerId: string) {
     throw new Error('No access token available for audit log');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/audit?farmerId=${encodeURIComponent(farmerId)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/audit?farmerId=${encodeURIComponent(farmerId)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -69,7 +67,7 @@ export async function postAuditEventToBackend(params: {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/v1/audit`, {
+    const res = await fetch(`${getTracebudApiBaseUrl()}/v1/audit`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,

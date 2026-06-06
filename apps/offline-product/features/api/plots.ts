@@ -67,8 +67,6 @@ export type PostPlotToBackendResult =
       message?: string;
     };
 
-const API_BASE_URL = getTracebudApiBaseUrl();
-
 /** Extract error message from NestJS-style response */
 function messageFromBackendJson(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
@@ -94,7 +92,7 @@ export async function postPlotToBackend(params: {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/v1/plots`, {
+    const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -120,7 +118,7 @@ export async function postPlotToBackend(params: {
     return { ok: true };
   } catch (e) {
     logError(e as Error, { context: 'postPlot', phase: 'network' });
-    const base = API_BASE_URL;
+    const base = getTracebudApiBaseUrl();
     const hint =
       base.includes('localhost') || base.includes('127.0.0.1')
         ? ' If you use a real device, replace localhost with your computer IP in EXPO_PUBLIC_API_URL.'
@@ -144,7 +142,7 @@ export async function updatePlotMetadataOnBackend(params: {
     throw new Error('No access token available for plot edits');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -175,7 +173,7 @@ export async function fetchPlotsForFarmer(farmerId: string) {
     throw new Error('No access token available for plot sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -200,7 +198,7 @@ export async function runComplianceCheckForPlot(plotId: string) {
     throw new Error('No access token available for compliance checks');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/compliance-check`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(plotId)}/compliance-check`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -227,7 +225,7 @@ export async function runGfwCheckForPlot(plotId: string) {
     throw new Error('No access token available for GFW checks');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/gfw-check`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(plotId)}/gfw-check`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -262,7 +260,7 @@ export async function syncPlotPhotosToBackend(params: {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
+    `${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
     {
       method: 'POST',
       headers: {
@@ -309,7 +307,7 @@ export async function syncPlotLegalToBackend(params: {
     throw new Error('No access token available for legality sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -353,7 +351,7 @@ export async function syncPlotEvidenceToBackend(params: {
     throw new Error('No access token available for evidence sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,

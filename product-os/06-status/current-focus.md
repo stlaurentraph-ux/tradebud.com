@@ -2,6 +2,7 @@
 
 ## Work now
 
+- Offline beta store validation is blocked on a rebuilt preview/production binary: current downloaded build likely lacks Supabase EAS env injection and/or hit startup import-time API guard failures; slice 71 adds crash-safe startup UX — next step is configure Expo env vars (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`), run `npm run release:preview`, redistribute TestFlight/Play internal build, and execute `BETA_STORE_TESTING.md` smoke checklist on iOS + Android.
 - FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.
 - Beta-release readiness track is now formalized: controlled beta go/no-go checklist is published at `product-os/04-quality/beta-go-no-go-checklist.md` with explicit invite-only scope, waived official gates (`P0-02`, `P0-03`), and required fail-closed/security/test evidence for tenant-safe rollout.
 - Importer dashboard IA foundation is being aligned to Tier 3 compliance operations: sidebar/order now maps to `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log` with settings/help as support destinations.
