@@ -156,7 +156,7 @@ export default function PilotPage() {
       <Header />
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden bg-[var(--forest-canopy)]">
+      <section className="relative pt-28 overflow-hidden bg-[var(--forest-canopy)]">
         <div className="absolute inset-0">
           <Image
             src="/images/aerial-farm-jungle.png"
@@ -165,11 +165,13 @@ export default function PilotPage() {
             className="object-cover opacity-20"
           />
         </div>
-        <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 items-end">
+          {/* Left: copy */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
+            className="pb-16 pt-8"
           >
             <div className="inline-flex items-center gap-2 bg-[var(--data-emerald)]/20 border border-[var(--data-emerald)]/30 text-[var(--data-emerald)] px-4 py-1.5 rounded-full text-sm font-semibold mb-8">
               <Calendar className="w-3.5 h-3.5" />
@@ -178,7 +180,7 @@ export default function PilotPage() {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 text-balance leading-[1.1]">
               Join the Tracebud Pilot
             </h1>
-            <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl mb-10">
+            <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mb-10">
               Help us build a fully transparent, EUDR-ready coffee supply chain. We are inviting a small group of producers, cooperatives, exporters, and importers to test our tools and traceability workflows.
             </p>
             <a href="#apply">
@@ -190,6 +192,24 @@ export default function PilotPage() {
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </a>
+          </motion.div>
+
+          {/* Right: farmer image */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="relative hidden lg:block"
+          >
+            <div className="relative h-[420px] w-full rounded-t-2xl overflow-hidden">
+              <Image
+                src="/images/farmer-hero.jpg"
+                alt="Farmer using Tracebud in the field"
+                fill
+                className="object-cover object-top"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)] via-transparent to-transparent" />
+            </div>
           </motion.div>
         </div>
       </section>
@@ -224,6 +244,25 @@ export default function PilotPage() {
               </ul>
             </motion.div>
 
+            {/* Image strip */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-3 gap-3"
+            >
+              {[
+                { src: "/images/feature-offline-mapping.jpg", alt: "Offline field mapping" },
+                { src: "/images/step-map-plot.jpg", alt: "Mapping a farm plot" },
+                { src: "/images/feature-photo-vault.jpg", alt: "Photo evidence capture" },
+              ].map((img) => (
+                <div key={img.src} className="relative aspect-[4/3] rounded-xl overflow-hidden">
+                  <Image src={img.src} alt={img.alt} fill className="object-cover" />
+                </div>
+              ))}
+            </motion.div>
+
             {/* Who should apply */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -236,11 +275,17 @@ export default function PilotPage() {
                 Who should apply
               </h2>
               <p className="text-gray-600 mb-6">We want a balanced group across the chain.</p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {whoShouldApply.map((w) => (
-                  <div key={w.label} className="flex items-center gap-3 bg-[var(--warm-stone)] rounded-xl px-4 py-3">
-                    <w.icon className="w-4 h-4 text-[var(--forest-canopy)] flex-shrink-0" />
-                    <span className="text-sm font-semibold text-[var(--forest-canopy)]">{w.label}</span>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { src: "/images/farmer-hero.jpg", label: "Producers & farmer groups" },
+                  { src: "/images/country-hero.jpg", label: "Cooperatives" },
+                  { src: "/images/exporter-hero.jpg", label: "Exporters" },
+                  { src: "/images/supply-chain-flow.jpg", label: "Importers & roasters" },
+                ].map((card) => (
+                  <div key={card.label} className="relative aspect-[3/2] rounded-xl overflow-hidden group">
+                    <Image src={card.src} alt={card.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)]/80 via-[var(--forest-canopy)]/20 to-transparent" />
+                    <span className="absolute bottom-3 left-3 text-sm font-bold text-white">{card.label}</span>
                   </div>
                 ))}
               </div>
@@ -289,13 +334,24 @@ export default function PilotPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="bg-[var(--forest-canopy)] rounded-2xl p-8"
+              className="bg-[var(--forest-canopy)] rounded-2xl overflow-hidden"
             >
-              <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-3">Why now</p>
-              <h2 className="text-xl font-bold text-white mb-4">Why join</h2>
-              <p className="text-white/75 leading-relaxed text-sm">
-                This pilot is not just a trial. It is a chance to shape a product built for real supply chains, while getting early access, lower risk, and better commercial terms later. Pilot projects work best when both sides are clear about scope, timing, and expectations.
-              </p>
+              <div className="relative h-44 w-full">
+                <Image
+                  src="/images/gis-geolocation.jpg"
+                  alt="Aerial farm fields"
+                  fill
+                  className="object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--forest-canopy)]" />
+              </div>
+              <div className="p-8 -mt-8 relative z-10">
+                <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-3">Why now</p>
+                <h2 className="text-xl font-bold text-white mb-4">Why join</h2>
+                <p className="text-white/75 leading-relaxed text-sm">
+                  This pilot is not just a trial. It is a chance to shape a product built for real supply chains, while getting early access, lower risk, and better commercial terms later. Pilot projects work best when both sides are clear about scope, timing, and expectations.
+                </p>
+              </div>
             </motion.div>
 
             {/* Trust */}
