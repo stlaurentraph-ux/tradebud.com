@@ -380,8 +380,20 @@ export default function PilotPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="bg-white rounded-3xl border border-gray-200 shadow-lg p-8"
+              className="bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden"
             >
+              {/* Farmer image header */}
+              <div className="relative h-52 w-full">
+                <Image
+                  src="/images/inclusion-visual.jpg"
+                  alt="Farmer using Tracebud in the field"
+                  fill
+                  className="object-cover object-top"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
+              </div>
+
+              <div className="p-8 -mt-6 relative z-10">
               <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-1">Apply to join the pilot</h2>
               <p className="text-sm text-gray-500 mb-7">
                 Submitting this form creates no financial obligation.
