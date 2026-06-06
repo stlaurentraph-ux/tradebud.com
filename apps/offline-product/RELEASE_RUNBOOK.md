@@ -49,6 +49,8 @@ npm run update:production
 
 ## Pre-release gates (must pass)
 
+See also **[BETA_STORE_TESTING.md](./BETA_STORE_TESTING.md)** for TestFlight / Play internal testing and crash troubleshooting.
+
 - Permissions: role + tenant behavior validated.
 - State transitions: canonical sync/assignment transitions preserved.
 - Exceptions/recovery: offline queue retries and failure messaging validated.

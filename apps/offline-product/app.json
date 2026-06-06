@@ -7,9 +7,10 @@
     "icon": "./assets/images/icon.png",
     "scheme": "tracebudoffline",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.tracebud.offline",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Tracebud needs your location to record farm boundaries while you walk around the plot.",
         "NSPhotoLibraryUsageDescription": "Tracebud uses your photo library so you can set a profile picture.",
@@ -17,6 +18,7 @@
       }
     },
     "android": {
+      "package": "com.tracebud.offline",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -55,8 +57,7 @@
       "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     }
   }
 }

@@ -8,8 +8,6 @@ import { validateHarvestKg } from '@/features/validation/validators';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
 
-const API_BASE_URL = getTracebudApiBaseUrl();
-
 /** Extract error message from NestJS-style response */
 function messageFromBackendJson(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
@@ -43,7 +41,7 @@ export async function postHarvestToBackend(params: {
     throw new Error('No access token available for harvest sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -82,7 +80,7 @@ export async function fetchVouchersForFarmer(farmerId: string) {
     throw new Error('No access token available for vouchers');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/vouchers?farmerId=${encodeURIComponent(farmerId)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest/vouchers?farmerId=${encodeURIComponent(farmerId)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -107,7 +105,7 @@ export async function fetchVoucherByQrRef(qrRef: string) {
     throw new Error('No access token available for voucher lookup');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/vouchers/by-qr?qrRef=${encodeURIComponent(qrRef)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest/vouchers/by-qr?qrRef=${encodeURIComponent(qrRef)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       accept: 'application/json',
@@ -133,7 +131,7 @@ export async function fetchDdsPackagesForFarmer(farmerId: string) {
     throw new Error('No access token available for DDS packages');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/packages?farmerId=${encodeURIComponent(farmerId)}`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest/packages?farmerId=${encodeURIComponent(farmerId)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -159,7 +157,7 @@ export async function fetchDdsPackageTracesJson(packageId: string) {
   }
 
   const res = await fetch(
-    `${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(packageId)}/traces-json`,
+    `${getTracebudApiBaseUrl()}/v1/harvest/packages/${encodeURIComponent(packageId)}/traces-json`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -190,7 +188,7 @@ export async function createDdsPackageForFarmer(params: {
     throw new Error('No access token available for DDS packages');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/packages`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest/packages`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -222,7 +220,7 @@ export async function submitDdsPackage(packageId: string) {
     throw new Error('No access token available for DDS packages');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest/packages/${encodeURIComponent(packageId)}/submit`, {
+  const res = await fetch(`${getTracebudApiBaseUrl()}/v1/harvest/packages/${encodeURIComponent(packageId)}/submit`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${accessToken}`,

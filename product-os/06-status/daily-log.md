@@ -1,3 +1,9 @@
+### 2026-06-06 (execution: FEAT-002 beta store startup crash hardening slice 71)
+- Focus: fix downloaded iOS/Android beta builds closing ~2s after launch and document store testing workflow.
+- Root cause: release builds could throw during API module import when env/HTTPS guards failed, terminating JS before UI rendered; missing Supabase EAS env also likely on current beta build.
+- Files changed: `apps/offline-product/features/api/runtimeGuards.ts`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/features/api/plots.ts`, `apps/offline-product/features/api/harvest.ts`, `apps/offline-product/features/api/audit.ts`, `apps/offline-product/app/_layout.tsx`, `apps/offline-product/components/RootErrorBoundary.tsx`, `apps/offline-product/components/StartupConfigGate.tsx`, `apps/offline-product/eas.json`, `apps/offline-product/app.json`, `apps/offline-product/BETA_STORE_TESTING.md`, `apps/offline-product/.env.example`, `apps/offline-product/RELEASE_RUNBOOK.md`, `product-os/02-features/FEAT-002-mobile-field-capture.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`, `product-os/06-status/current-focus.md`.
+- Next step: set Supabase EAS env vars, rebuild preview profile, redistribute via TestFlight/Play internal, rerun device smoke checklist.
+
 ### 2026-06-04 (backend: wire v0 email templates into Resend)
 - Focus: load `email-templates/html|text` in `onboarding-email.templates.ts`; welcome + resume first/final with `{{placeholders}}`.
 - Deploy: `Dockerfile` copies `email-templates/`; optional `TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL`.

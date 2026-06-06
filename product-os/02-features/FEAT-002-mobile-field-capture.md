@@ -1098,6 +1098,23 @@ Verification commands:
 
 - `npm run release:slo:gate -- --report=release-health-report.example.json` (from `apps/offline-product`)
 
+### S1 post-closeout hardening slice 71 - beta store startup crash hardening
+
+- Fixed release-build startup crash when API env validation threw during module import (`runtimeGuards` + API modules now resolve URL lazily).
+- Added startup safety UX:
+  - `StartupConfigGate` shows missing EAS env issues instead of silent exit.
+  - `RootErrorBoundary` surfaces unexpected startup JS errors with operator guidance.
+- Hardened beta release packaging:
+  - `eas.json` pins preview/production `EXPO_PUBLIC_API_URL=https://api.tracebud.com/api`.
+  - `app.json` adds iOS/Android identifiers, disables experimental React Compiler, disables New Architecture for beta stability.
+  - `_layout.tsx` loads `react-native-reanimated` first (required for release stability).
+- Published `BETA_STORE_TESTING.md` with TestFlight/Play internal testing and crash triage steps.
+
+Verification commands:
+
+- `cd apps/offline-product && npm run lint`
+- `cd apps/offline-product && npm run release:preflight:preview`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.
