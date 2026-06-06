@@ -269,3 +269,40 @@ export function buildFarmQuestionnaireMappingRegistryV1(
   };
 }
 
+export function questionnaireFieldKey(sectionId: string, fieldId: string): string {
+  return `${sectionId}.${fieldId}`;
+}
+
+export function validateQuestionnaireResponseCompleteness(
+  schema: FarmQuestionnaireSchemaV1,
+  response: Record<string, unknown>,
+): string[] {
+  const errors: string[] = [];
+  for (const section of schema.sections) {
+    for (const field of section.fields) {
+      if (!field.required) {
+        continue;
+      }
+      const key = questionnaireFieldKey(section.id, field.id);
+      const value = response[key];
+      if (value === undefined || value === null || value === '') {
+        errors.push(key);
+        continue;
+      }
+      if (field.type === 'number') {
+        const numeric = typeof value === 'number' ? value : Number(value);
+        if (!Number.isFinite(numeric)) {
+          errors.push(`${key} must be a number`);
+        }
+      }
+      if (field.type === 'array') {
+        const arr = Array.isArray(value) ? value : null;
+        if (!arr || arr.length === 0) {
+          errors.push(`${key} must be a non-empty array`);
+        }
+      }
+    }
+  }
+  return errors;
+}
+

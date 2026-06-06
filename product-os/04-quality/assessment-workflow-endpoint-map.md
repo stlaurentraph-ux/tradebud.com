@@ -86,6 +86,22 @@ Use these routes only; deprecated aliases are intentionally removed.
   - Purpose: refresh `updated_at` timestamp.
   - Roles: view-allowed roles.
 
+- `GET /v1/integrations/assessments/requests/:id/questionnaire-schema`
+  - Purpose: return pathway-scoped questionnaire schema for assigned farmer execution.
+  - Roles: `farmer | agent`.
+
+- `GET /v1/integrations/assessments/requests/:id/questionnaire`
+  - Purpose: read linked questionnaire draft response/status for assigned request.
+  - Roles: `farmer | agent`.
+
+- `PATCH /v1/integrations/assessments/requests/:id/questionnaire/responses`
+  - Purpose: save draft responses for linked questionnaire while status is `draft`.
+  - Roles: `farmer | agent`.
+
+- `POST /v1/integrations/assessments/requests/:id/questionnaire/submit`
+  - Purpose: validate required fields and transition linked questionnaire to `submitted`.
+  - Roles: `farmer | agent`.
+
 ## Related Questionnaire Endpoints
 
 - Schema/drafts/runs are served by `CoolFarmSaiV2Controller`:

@@ -1,3 +1,10 @@
+### 2026-06-06 (execution: FEAT-009 offline farmer questionnaire execution slice 71)
+- Focus: wire end-to-end farmer assessment questionnaire execution in the offline app with tenant-scoped backend endpoints and canonical status transitions.
+- Files changed: `tracebud-backend/src/integrations/assessment-requests.controller.ts`, `tracebud-backend/src/integrations/coolfarm-sai-v2.schema.ts`, `tracebud-backend/src/integrations/assessment-requests.controller.spec.ts`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/features/api/assessmentQuestionnaire.ts`, `apps/offline-product/app/assessment/[id].tsx`, `apps/offline-product/app/(tabs)/index.tsx`, `apps/offline-product/features/state/LanguageContext.tsx`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/04-quality/assessment-workflow-endpoint-map.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions: Added farmer/agent assessment-scoped questionnaire schema/read/save/submit routes on assessment requests; offline home now deep-links to questionnaire form screen; farmer status updates now call canonical `/opened`, `/in-progress`, `/submitted` endpoints.
+- Verification: `cd tracebud-backend && npm test -- --runTestsByPath src/integrations/assessment-requests.controller.spec.ts --runInBand` (9/9 pass); `cd apps/offline-product && npm run lint` (pass).
+- Next step: add OpenAPI publication for new farmer questionnaire routes and optional offline component tests wired into CI.
+
 ### 2026-06-04 (backend: wire v0 email templates into Resend)
 - Focus: load `email-templates/html|text` in `onboarding-email.templates.ts`; welcome + resume first/final with `{{placeholders}}`.
 - Deploy: `Dockerfile` copies `email-templates/`; optional `TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL`.

@@ -1457,6 +1457,23 @@ Verification commands:
 - `npm run openapi:governance:assessment:aliases:check`
 - `npm run openapi:lint`
 
+### S1 post-closeout hardening slice 71 - offline farmer questionnaire execution
+
+- Added farmer/agent assessment-scoped questionnaire execution endpoints on assessment requests:
+  - `GET /v1/integrations/assessments/requests/:id/questionnaire-schema`
+  - `GET /v1/integrations/assessments/requests/:id/questionnaire`
+  - `PATCH /v1/integrations/assessments/requests/:id/questionnaire/responses`
+  - `POST /v1/integrations/assessments/requests/:id/questionnaire/submit`
+- Enforced tenant + assignment scope for farmer execution and required-field validation before questionnaire submit.
+- Offline app now deep-links assigned assessment tasks into a dedicated questionnaire screen with draft save + submit flow.
+- Fixed offline farmer status transitions to use canonical endpoints (`/opened`, `/in-progress`, `/submitted`) instead of manager-only `/status`.
+- Added EN/ES i18n keys for assessment task and questionnaire UI copy.
+
+Verification commands:
+
+- `cd tracebud-backend && npm test -- src/integrations/assessment-requests.controller.spec.ts --runInBand`
+- `cd apps/offline-product && npm run lint`
+
 ## Acceptance criteria
 
 Reference domain criteria in `product-os/04-quality/acceptance-criteria.md`.

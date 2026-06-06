@@ -174,6 +174,23 @@ export default function HomeScreen() {
     assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
     null;
 
+  const openAssessmentForm = async (requestId: string, markInProgress: boolean) => {
+    setAssessmentSavingId(requestId);
+    try {
+      if (markInProgress) {
+        await updateAssessmentRequestStatus({ requestId, status: 'in_progress' });
+        const rows = await fetchAssignedAssessmentRequests();
+        setAssessmentRequests(rows);
+      }
+      setAssessmentError(null);
+      router.push(`/assessment/${encodeURIComponent(requestId)}`);
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : t('assessment_submit_failed'));
+    } finally {
+      setAssessmentSavingId((prev) => (prev === requestId ? null : prev));
+    }
+  };
+
   const markAssessmentProgress = async (requestId: string, status: 'opened' | 'in_progress' | 'submitted') => {
     setAssessmentSavingId(requestId);
     try {
@@ -411,10 +428,12 @@ export default function HomeScreen() {
           <View style={styles.syncHeader}>
             <View style={styles.syncTitleRow}>
               <Ionicons name="clipboard-outline" size={16} color={colors.textSecondary} />
-              <ThemedText type="defaultSemiBold">Assessment Tasks</ThemedText>
+              <ThemedText type="defaultSemiBold">{t('assessment_tasks_title')}</ThemedText>
             </View>
             <View style={styles.pendingPill}>
-              <ThemedText type="caption">{assessmentRequests.length} assigned</ThemedText>
+              <ThemedText type="caption">
+                {t('assessment_tasks_assigned', { n: assessmentRequests.length })}
+              </ThemedText>
             </View>
           </View>
           {assessmentError ? (
@@ -428,44 +447,64 @@ export default function HomeScreen() {
                 {nextAssessment.pathway} · status: {nextAssessment.status}
               </ThemedText>
               <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                Questionnaire: {nextAssessment.questionnaire_id ?? 'not linked'}
+                {t('assessment_questionnaire_label')}:{' '}
+                {nextAssessment.questionnaire_id ?? t('assessment_not_linked')}
               </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 {nextAssessment.status === 'sent' ? (
                   <Pressable
                     onPress={() => void markAssessmentProgress(nextAssessment.id, 'opened')}
                     style={styles.onboardingPill}
                   >
                     <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Open task'}
+                      {assessmentSavingId === nextAssessment.id
+                        ? t('assessment_saving')
+                        : t('assessment_open_task')}
                     </ThemedText>
                   </Pressable>
                 ) : null}
                 {(nextAssessment.status === 'opened' || nextAssessment.status === 'needs_changes') ? (
-                  <Pressable
-                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'in_progress')}
-                    style={styles.onboardingPill}
-                  >
-                    <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Start form'}
-                    </ThemedText>
-                  </Pressable>
+                  nextAssessment.questionnaire_id ? (
+                    <Pressable
+                      onPress={() => void openAssessmentForm(nextAssessment.id, true)}
+                      style={styles.onboardingPill}
+                    >
+                      <ThemedText type="caption">
+                        {assessmentSavingId === nextAssessment.id
+                          ? t('assessment_saving')
+                          : t('assessment_start_form')}
+                      </ThemedText>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => void markAssessmentProgress(nextAssessment.id, 'in_progress')}
+                      style={styles.onboardingPill}
+                    >
+                      <ThemedText type="caption">
+                        {assessmentSavingId === nextAssessment.id
+                          ? t('assessment_saving')
+                          : t('assessment_start_form')}
+                      </ThemedText>
+                    </Pressable>
+                  )
                 ) : null}
                 {nextAssessment.status === 'in_progress' ? (
-                  <Pressable
-                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'submitted')}
-                    style={styles.onboardingPill}
-                  >
-                    <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Submit to dashboard'}
-                    </ThemedText>
-                  </Pressable>
+                  <>
+                    {nextAssessment.questionnaire_id ? (
+                      <Pressable
+                        onPress={() => void openAssessmentForm(nextAssessment.id, false)}
+                        style={styles.onboardingPill}
+                      >
+                        <ThemedText type="caption">{t('assessment_continue_form')}</ThemedText>
+                      </Pressable>
+                    ) : null}
+                  </>
                 ) : null}
               </View>
             </View>
           ) : (
             <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-              No pending assessments right now.
+              {t('assessment_tasks_none')}
             </ThemedText>
           )}
         </Card>
