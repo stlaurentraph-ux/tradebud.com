@@ -558,6 +558,7 @@ export default function PilotPage() {
                   </p>
                 </form>
               )}
+              </div>
             </motion.div>
           </div>
 
