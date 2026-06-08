@@ -3,13 +3,20 @@
     "hero": {
       "headline": "Pelacakan yang bekerja untuk seluruh rantai.",
       "subheadline": "Tracebud menyederhanakan kepatuhan EUDR dengan alat yang sederhana, mandiri, dan terjangkau, sehingga petani, koperasi, eksportir, dan pembeli dapat mengumpulkan, membagikan, dan menggunakan kembali data asal tanpa mengejar dokumen.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Gratis untuk produsen. Dibuat untuk kondisi lapangan dengan konektivitas terbatas dan alur yang sederhana. Tanpa konsultan.",
       "cta": {
         "primary": "Lihat cara kerjanya",
         "secondary": "Hubungi kami"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+      "eyebrow": "Why Tracebud",
       "headline": "Kepatuhan seharusnya tidak rumit agar bisa dipercaya.",
       "description": "Sebagian besar rantai pasok tidak gagal karena orang tidak peduli. Mereka gagal karena prosesnya terlalu manual, terlalu mahal, dan terlalu terfragmentasi. Tracebud menghilangkan bolak-balik agar setiap pihak bisa ikut serta, bahkan ketika jaringannya besar, tersebar, atau kekurangan sumber daya.",
       "pillars": {
@@ -56,22 +63,23 @@
     "productsSection": {
       "eyebrow": "Dua produk, satu alur kerja",
       "title": "Dibangun untuk cara rantai pasok benar-benar bekerja",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
         "label": "Aplikasi seluler",
         "headline": "Dibuat untuk lapangan, bukan untuk kantor.",
         "description": "Petani dapat memetakan petak, berbagi informasi, dan merespons melalui pengalaman mobile yang sederhana dan dirancang untuk kondisi lapangan yang nyata. Aplikasi ini berfungsi offline, menggunakan visual yang jelas, dan menjaga proses tetap ringan.",
-        "supportingText": "Gratis untuk produsen. Tanpa penyiapan yang berat atau pelatihan yang lama.",
         "features": {
+          "free": "No training-heavy setup required",
           "offline": "Berfungsi offline, sinkron saat koneksi kembali",
           "gps": "Jalan di sepanjang batas untuk menangkap poligon GPS",
           "photo": "Bukti foto dan pencatatan persetujuan"
-        }
+        },
+        "supportingText": "Gratis untuk produsen. Tanpa penyiapan yang berat atau pelatihan yang lama."
       },
       "dashboard": {
         "label": "Dasbor",
         "headline": "Kelola jaringan Anda tanpa bolak-balik.",
         "description": "Unggah kontak secara massal, kirim satu permintaan, dan biarkan alur kerja menjalar ke seluruh rantai pasok. Lacak respons, gunakan kembali data yang telah diverifikasi, dan jaga setiap pengiriman tetap bergerak dengan lebih sedikit tindak lanjut manual.",
-        "supportingText": "Lebih sedikit mengejar. Lebih sedikit celah. Serah terima lebih cepat.",
         "features": {
           "import": "Impor massal kontak melalui unggahan CSV",
           "bulkRequest": "Kirim permintaan ke ratusan kontak sekaligus",
@@ -79,10 +87,31 @@
           "readiness": "Lacak kesiapan seluruh anggota jaringan",
           "evidence": "Identifikasi bukti yang hilang secara instan",
           "dds": "Susun paket DDS untuk pengiriman"
-        }
+        },
+        "supportingText": "Lebih sedikit mengejar. Lebih sedikit celah. Serah terima lebih cepat."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
       }
     },
     "customersSection": {
+      "eyebrow": "Outcomes",
       "headline": "Mengapa pelanggan menggunakan Tracebud",
       "description": "Kurangi tindak lanjut manual. Jaga asal-usul melalui agregasi. Kirim dengan percaya diri.",
       "cards": {
@@ -106,95 +135,115 @@
       "punchline": "Kami menghapus hambatan akses yang selama ini membuat petani kecil terpinggirkan."
     },
     "finalCtaSection": {
-      "headline": "Membuat kepatuhan dapat digunakan untuk seluruh rantai.",
-      "description": "Mulailah dengan jaringan yang sudah Anda miliki, dan berikan setiap pihak cara untuk ikut berpartisipasi.",
-      "cta": "Mulai"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Siap bergabung ke daftar tunggu?",
-      "description": "Tracebud membantu jaringan Anda mengumpulkan, berbagi, dan menggunakan kembali data asal. Sederhana, terjangkau, dan inklusif untuk petani, koperasi, eksportir, dan pembeli.",
+      "headline": "Mulai bangun traceability untuk jaringan Anda.",
+      "description": "Gabung daftar tunggu untuk akses awal saat Tracebud dibuka di wilayah dan komoditas Anda.",
       "cta": {
-        "primary": "Gabung sekarang",
-        "secondary": "Lanjutkan menjelajah"
+        "primary": "Gabung daftar tunggu",
+        "secondary": "Lanjutkan browsing"
       },
-      "note": "Tempat terbatas untuk mitra pilot awal."
+      "note": "Tanpa spam. Berhenti berlangganan kapan saja."
     },
     "waitlistDialog": {
-      "headline": "Bergabung dengan program pilot",
-      "description": "Tempat terbatas untuk mitra pilot awal. Ceritakan tentang jaringan Anda dan kami akan menghubungi Anda.",
-      "note": "Tanpa spam. Berhenti berlangganan kapan saja.",
+      "headline": "Gabung daftar tunggu",
+      "description": "Ceritakan tentang jaringan Anda — kami akan menghubungi saat Tracebud siap.",
+      "note": "No spam, ever. Unsubscribe at any time.",
       "sidePanel": {
-        "tagline": "Siap untuk EUDR, tanpa kerumitan.",
-        "subline": "Sederhana. Terjangkau. Dibangun untuk setiap pelaku dalam rantai."
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
       },
-      "submit": "Gabung pilot",
-      "submitting": "Mengirim...",
+      "submit": "Gabung daftar tunggu",
+      "submitting": "Submitting...",
       "success": {
-        "title": "Permohonan diterima",
-        "description": "Kami meninjau setiap permohonan secara personal. Mitra pilot mendapat onboarding prioritas dan akses langsung ke tim kepatuhan kami."
+        "title": "Anda terdaftar",
+        "description": "Kami meninjau setiap permohonan secara personal dan akan follow-up via email."
       },
       "form": {
-        "firstName": "Nama depan",
-        "lastName": "Nama belakang",
-        "email": "Email kerja",
-        "organisation": "Organisasi",
-        "role": "Peran Anda",
-        "roleOther": "Jelaskan peran Anda",
-        "commodity": "Komoditas utama",
-        "producerRange": "Berapa produsen yang membutuhkan kepatuhan EUDR?",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
         "placeholders": {
           "firstName": "Maria",
-          "lastName": "Santoso",
-          "email": "maria@perusahaan.com",
-          "organisation": "Koperasi Sol Naciente",
-          "role": "Pilih peran Anda",
-          "roleOther": "Jelaskan peran Anda",
-          "commodity": "Pilih komoditas",
-          "producerRange": "Pilih rentang"
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
         },
         "roles": {
-          "cooperative": "Koperasi",
-          "exporter": "Eksportir",
-          "importer": "Importir",
-          "sponsor": "Sponsor (merek, negara, LSM)",
-          "other": "Lainnya"
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
         },
         "commodities": {
-          "coffee": "Kopi",
-          "cocoa": "Kakao",
-          "palmOil": "Minyak kelapa sawit",
-          "rubber": "Karet",
-          "soy": "Kedelai",
-          "cattle": "Sapi / Kulit",
-          "wood": "Kayu / Kayu olahan",
-          "other": "Lainnya"
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
+          "rubber": "Rubber",
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
         },
         "producerRanges": {
-          "r1": "1 – 50 produsen",
-          "r2": "51 – 200 produsen",
-          "r3": "201 – 500 produsen",
-          "r4": "501 – 2.000 produsen",
-          "r5": "2.001 – 10.000 produsen",
-          "r6": "10.000+ produsen"
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
         },
         "errors": {
-          "emailRequired": "Email wajib diisi.",
-          "emailInvalid": "Masukkan alamat email yang valid.",
-          "firstNameRequired": "Nama depan wajib diisi.",
-          "lastNameRequired": "Nama belakang wajib diisi.",
-          "organisationRequired": "Organisasi wajib diisi.",
-          "roleRequired": "Pilih peran Anda.",
-          "roleOtherRequired": "Jelaskan peran Anda.",
-          "commodityRequired": "Pilih komoditas.",
-          "producerRangeRequired": "Pilih jumlah produsen.",
-          "generic": "Terjadi kesalahan. Silakan coba lagi."
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
         }
       }
-    }
+    },
+    "earlyAdopters": "Gabung daftar tunggu untuk akses awal"
   },
   "common": {
     "language": "Bahasa",
-    "joinWaitlist": "Bergabunglah dengan daftar tunggu",
+    "joinWaitlist": "Gabung daftar tunggu",
     "learnMore": "Pelajari selengkapnya",
     "contactUs": "Hubungi kami"
   },
@@ -244,14 +293,18 @@
     }
   },
   "footer": {
-    "startMapping": "Mulai pemetaan",
-    "contactSales": "Hubungi penjualan",
-    "joinWaitlist": "Bergabunglah dengan daftar tunggu",
-    "howItWorks": "Cara kerjanya",
-    "privacy": "Privasi",
-    "terms": "Ketentuan",
-    "contact": "Kontak",
-    "tagline": "Operasi EUDR lebih sederhana. Akses pasar lebih kuat."
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Gabung sekarang",
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "Siap gabung daftar tunggu?",
+    "waitlistSubline": "Jadilah yang pertama tahu saat Tracebud dibuka untuk jaringan Anda."
   },
   "impact": {
     "title": "Mengapa Tracebud Bekerja",
@@ -282,18 +335,19 @@
     "integrations": "Integrasi Langsung"
   },
   "faq": {
-    "title": "Pertanyaan yang Sering Diajukan",
-    "whenLaunch": "Kapan Tracebud akan diluncurkan?",
-    "whenLaunchAnswer": "Tracebud sedang dalam pengujian pilot aktif. Kami mendaftarkan mitra terpilih sekarang. Bergabunglah dengan daftar tunggu untuk diberitahu saat diluncurkan.",
-    "whyCommodities": "Mengapa memulai dengan komoditas ini?",
+    "title": "Questions? We have answers.",
+    "whenLaunch": "Kapan saya bisa mulai menggunakan Tracebud?",
+    "whenLaunchAnswer": "Tracebud dibuka bertahap per wilayah dan komoditas. Gabung daftar tunggu dan kami akan email saat use case Anda didukung.",
+    "whyCommodities": "What crops does Tracebud support?",
     "whoCommoditiesAnswer": "Kopi, kakao, minyak sawit, karet, kedelai, ternak, dan kayu adalah komoditas EUDR utama. Kami akan berkembang berdasarkan permintaan.",
-    "howCost": "Berapa biayanya?",
-    "howCostAnswer": "Harga transparan dan diskalakan dengan ukuran operasi Anda. Uji coba gratis tersedia. Detail dibagikan selama onboarding.",
-    "howLong": "Berapa lama waktu yang diperlukan untuk penyiapan?",
-    "howLongAnswer": "Sebagian besar koperasi dipetakan dan beroperasi dalam 48 jam setelah pendaftaran. Desain offline-first berarti waktu henti nol.",
-    "support": "Dukungan apa yang tersedia?",
-    "supportAnswer": "Dukungan email 24/7, ditambah dukungan telepon prioritas untuk mitra pilot. Akses langsung ke tim kepatuhan kami.",
-    "waitlistPrompt": "Siap bergabung ke daftar tunggu?",
-    "joinNow": "Gabung sekarang"
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Gratis untuk produsen. Koperasi, eksportir, dan pembeli membayar berdasarkan ukuran jaringan dan penggunaan. Halaman harga atau daftar tunggu untuk detail.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Produsen bisa langsung mulai memetakan dengan app offline. Sebagian besar koperasi mengunggah jaringan dan mengirim permintaan pertama dalam seminggu.",
+    "support": "What support is available?",
+    "supportAnswer": "Setiap anggota daftar tunggu mendapat follow-up personal via email. Setelah onboarding, akses langsung ke tim kami untuk setup dan kepatuhan.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "whyCommoditiesAnswer": "Kopi dulu, lalu enam komoditas EUDR lainnya: kakao, minyak kelapa sawit, karet, kedelai, sapi, dan kayu. Lihat halaman harga untuk roadmap lengkap."
   }
 }

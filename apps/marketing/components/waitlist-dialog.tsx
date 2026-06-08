@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { createContext, useContext, useMemo, useState, useRef, useEffect, type FormEvent, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { trackMarketingEvent } from "@/lib/marketing-analytics";
 
 const ROLE_OPTIONS = [
   { value: "Cooperative", key: "cooperative" },
@@ -105,6 +106,7 @@ export function WaitlistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("marketing.waitlistDialog");
   const tf = useTranslations("marketing.waitlistDialog.form");
@@ -176,6 +178,7 @@ export function WaitlistDialog({
       role: role === "Other" ? roleOther.trim() : role,
       commodity,
       producer_range: producerRange,
+      source_page: pathname || `/${locale}`,
     };
 
     try {
@@ -190,10 +193,19 @@ export function WaitlistDialog({
         throw new Error((data.error as string) || tf("errors.generic"));
       }
 
+      const result = (await res.json()) as { confirmationSent?: boolean };
+      const confirmationSent = result.confirmationSent === true;
+
       setSubmitted(true);
+      trackMarketingEvent("marketing_waitlist_submitted", {
+        role: role === "Other" ? "other" : role.toLowerCase(),
+        commodity: commodity.toLowerCase().replace(/\s+/g, "_"),
+      });
 
       setTimeout(() => {
-        router.push(`/${locale}/thank-you?email=${encodeURIComponent(email)}`);
+        const params = new URLSearchParams({ email });
+        if (confirmationSent) params.set("confirmed", "1");
+        router.push(`/${locale}/thank-you?${params.toString()}`);
       }, 2000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : tf("errors.generic");
@@ -204,6 +216,9 @@ export function WaitlistDialog({
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      trackMarketingEvent("marketing_waitlist_opened");
+    }
     if (!nextOpen) {
       setTimeout(() => {
         setSubmitted(false);
@@ -394,6 +409,32 @@ export function WaitlistDialog({
 }
 
 export function useWaitlistDialog() {
+  const context = useContext(WaitlistDialogContext);
+  if (!context) {
+    throw new Error("useWaitlistDialog must be used within WaitlistDialogProvider");
+  }
+  return context;
+}
+
+type WaitlistDialogContextValue = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  onOpenChange: (open: boolean) => void;
+};
+
+const WaitlistDialogContext = createContext<WaitlistDialogContextValue | null>(null);
+
+export function WaitlistDialogProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  return { open, setOpen, onOpenChange: setOpen };
+  const value = useMemo(
+    () => ({ open, setOpen, onOpenChange: setOpen }),
+    [open],
+  );
+
+  return (
+    <WaitlistDialogContext.Provider value={value}>
+      {children}
+      <WaitlistDialog open={open} onOpenChange={setOpen} />
+    </WaitlistDialogContext.Provider>
+  );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Server, Globe, Shield, Database, Link2, Users, ArrowRight, ExternalLink } from "lucide-react";
+import { Server, Globe, Shield, Database, Link2, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,10 +39,10 @@ const features = [
 ];
 
 const partnerCountries = [
-  { name: "Honduras", registries: ["IHCAFE", "ICF"], status: "live", farmers: "28,000+", image: "https://images.unsplash.com/photo-1502657877623-f66bf489d236?q=80&w=400&auto=format&fit=crop" },
-  { name: "Ivory Coast", registries: ["Conseil Cafe-Cacao"], status: "live", farmers: "45,000+", image: "https://images.unsplash.com/photo-1489392191049-fc10c97e64b6?q=80&w=400&auto=format&fit=crop" },
-  { name: "Uganda", registries: ["UCDA"], status: "pilot", farmers: "12,000+", image: "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=400&auto=format&fit=crop" },
-  { name: "Indonesia", registries: ["ITPC"], status: "pilot", farmers: "8,000+", image: "https://images.unsplash.com/photo-1555899434-94d1368aa7af?q=80&w=400&auto=format&fit=crop" },
+  { name: "Honduras", registries: ["IHCAFE", "ICF"], image: "https://images.unsplash.com/photo-1502657877623-f66bf489d236?q=80&w=400&auto=format&fit=crop" },
+  { name: "Ivory Coast", registries: ["Conseil Cafe-Cacao"], image: "https://images.unsplash.com/photo-1489392191049-fc10c97e64b6?q=80&w=400&auto=format&fit=crop" },
+  { name: "Uganda", registries: ["UCDA"], image: "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=400&auto=format&fit=crop" },
+  { name: "Indonesia", registries: ["ITPC"], image: "https://images.unsplash.com/photo-1555899434-94d1368aa7af?q=80&w=400&auto=format&fit=crop" },
 ];
 
 export default function CountriesPage() {
@@ -148,27 +148,18 @@ export default function CountriesPage() {
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                  <div className="absolute bottom-3 left-3 right-3">
                     <h3 className="text-xl font-bold text-white">{country.name}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      country.status === "live" ? "bg-emerald-500 text-white" : "bg-amber-500 text-white"
-                    }`}>
-                      {country.status}
-                    </span>
                   </div>
                 </div>
                 <div className="p-4">
                   <div className="text-sm text-foreground/60 mb-2">Integrated Registries</div>
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex flex-wrap gap-2">
                     {country.registries.map((registry) => (
                       <span key={registry} className="text-xs bg-muted px-2 py-1 rounded-full text-foreground">
                         {registry}
                       </span>
                     ))}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-[var(--data-emerald)]" />
-                    <span className="text-foreground/70">{country.farmers} farmers</span>
                   </div>
                 </div>
               </motion.div>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { sendLeadConfirmation, sendTeamFormNotification } from "@/lib/marketing-email";
+import { syncLeadToProspects } from "@/lib/prospect-sync";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const leadSchema = z.object({
@@ -39,6 +41,15 @@ function asStringList(value: unknown): string[] {
   }
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
+
+const FORM_LABELS: Record<string, string> = {
+  exporter: "exporter interest",
+  importer: "importer interest",
+  country: "government / registry interest",
+  farmer: "farmer interest",
+  cooperative: "cooperative interest",
+  pilot: "pilot program application",
+};
 
 export async function POST(request: Request) {
   try {
@@ -196,7 +207,49 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    const formLabel = FORM_LABELS[parsed.data.formType] ?? "website form";
+
+    if (parsed.data.formType !== "pilot") {
+      await syncLeadToProspects(supabase, {
+        formType: parsed.data.formType,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        company: parsed.data.company,
+        country: parsed.data.country,
+        sourcePage: parsed.data.sourcePage,
+        payload,
+      }).catch((syncError: unknown) => {
+        console.error("[leads] prospect sync failed:", syncError);
+      });
+    }
+
+    await sendTeamFormNotification({
+      subject: `[Tracebud] ${formLabel} — ${parsed.data.company ?? parsed.data.name}`,
+      headline: `New ${formLabel}`,
+      fields: {
+        Name: parsed.data.name,
+        Email: parsed.data.email,
+        Company: parsed.data.company ?? asString(payload.organizationName) ?? asString(payload.cooperativeName),
+        Phone: parsed.data.phone ?? asString(payload.phone),
+        Country: parsed.data.country ?? asString(payload.country),
+        "Source page": parsed.data.sourcePage,
+        "Form type": parsed.data.formType,
+        Message: parsed.data.message ?? asString(payload.successCriteria) ?? asString(payload.biggestChallenge),
+      },
+    }).catch((notifyError: unknown) => {
+      console.error("[leads] team notification failed:", notifyError);
+    });
+
+    const confirmationSent = await sendLeadConfirmation({
+      email: parsed.data.email,
+      name: parsed.data.name,
+      formLabel,
+    }).catch((confirmError: unknown) => {
+      console.error("[leads] confirmation email failed:", confirmError);
+      return false;
+    });
+
+    return NextResponse.json({ ok: true, confirmationSent });
   } catch (error) {
     return NextResponse.json(
       {

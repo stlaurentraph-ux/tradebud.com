@@ -8,7 +8,7 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import { locales, type Locale } from "@/i18n.config";
 
 function isHomePath(pathname: string) {
@@ -27,8 +27,9 @@ export function Header() {
   const waitlist = useWaitlistDialog();
 
   const navLinks = [
-    { label: t("nav.howItWorks"), href: "#how-it-works" },
     { label: t("nav.whyTracebud"), href: "#why-tracebud" },
+    { label: t("nav.howItWorks"), href: "#how-it-works" },
+    { label: t("nav.products"), href: "#products" },
     { label: t("nav.faq"), href: "#faq" },
   ];
 
@@ -144,8 +145,6 @@ export function Header() {
           )}
         </AnimatePresence>
       </motion.header>
-
-      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }

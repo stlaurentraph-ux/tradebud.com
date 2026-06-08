@@ -40,7 +40,51 @@ Set environment variables in Vercel (and locally in `.env.local`):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+RESEND_API_KEY=re_xxxxxxxx
+# Optional: override team notification inbox (defaults to hello@tracebud.com)
+MARKETING_TEAM_NOTIFY_EMAIL=hello@tracebud.com
+# Optional: Google Analytics 4 (only loads after cookie consent)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
+
+## Form submissions
+
+| Form | API | Stored in | Team notified |
+| --- | --- | --- | --- |
+| Waitlist dialog | `POST /api/waitlist` | `waitlist_signups` + `prospects` | Email via Resend |
+| Pilot application | `POST /api/leads` | `pilot_leads` | Email via Resend |
+
+Visitor confirmation emails are sent when `RESEND_API_KEY` is set. The thank-you page only shows “Confirmation sent” when the email actually went out.
+
+Create `waitlist_signups` in Supabase (see `supabase/waitlist_signups.sql`) before accepting waitlist submissions.
+
+## Supabase Lead Forms Setup
+
+The pilot form on `/pilot` posts to `POST /api/leads`, which inserts into dedicated Supabase tables:
+
+- `pilot_leads` (MVP pilot program; see `supabase/pilot_leads.sql`)
+- `farmer_leads`
+- `cooperative_leads`
+- `exporter_leads`
+- `importer_leads`
+- `country_leads`
+
+## Web analytics in the root layout (always on, per [Vercel setup](https://vercel.com/docs/speed-insights/quickstart)) and **Web Analytics** + optional GA4 behind the cookie consent banner (`Accept` only). Custom conversion events use `@vercel/analytics` `track()`:
+
+| Event | When |
+| --- | --- |
+| `marketing_waitlist_opened` | Waitlist dialog opened |
+| `marketing_waitlist_submitted` | Waitlist form submitted successfully |
+| `marketing_thank_you_viewed` | Thank-you page viewed |
+| `marketing_lead_submitted` | Pilot lead form submitted |
+
+**Enable in production**
+
+1. Deploy the marketing app on Vercel.
+2. In the Vercel project → **Analytics** → enable **Web Analytics** and **Speed Insights**.
+3. Page views and custom events appear in the Vercel dashboard after visitors accept cookies.
+
+Optional GA4: set `NEXT_PUBLIC_GA_MEASUREMENT_ID` in Vercel env vars; the script loads only after consent.
 
 Create the tables in Supabase SQL editor. The pilot table DDL also lives in `supabase/pilot_leads.sql`:
 

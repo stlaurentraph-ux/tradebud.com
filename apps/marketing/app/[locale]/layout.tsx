@@ -2,7 +2,9 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { CookieConsent } from '@/components/cookie-consent';
+import { FloatingMobileCTA } from '@/components/floating-mobile-cta';
 import { MarketingAnalytics } from '@/components/marketing-analytics';
+import { WaitlistDialogProvider } from '@/components/waitlist-dialog';
 import { routing } from '@/i18n/routing';
 
 type Props = {
@@ -26,9 +28,12 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      {children}
-      <CookieConsent />
-      <MarketingAnalytics />
+      <WaitlistDialogProvider>
+        {children}
+        <FloatingMobileCTA />
+        <CookieConsent />
+        <MarketingAnalytics />
+      </WaitlistDialogProvider>
     </NextIntlClientProvider>
   );
 }

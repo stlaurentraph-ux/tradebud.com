@@ -3,13 +3,20 @@
     "hero": {
       "headline": "La trazabilidad que funciona para toda la cadena.",
       "subheadline": "Tracebud simplifica el cumplimiento del EUDR con una herramienta simple, autoservicio y asequible, para que productores, cooperativas, exportadores y compradores puedan recopilar, compartir y reutilizar datos de origen sin perseguir documentación.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Gratis para productores. Diseñado para realidades de campo con conectividad limitada y procesos sencillos. Sin consultores.",
       "cta": {
         "primary": "Ver cómo funciona",
         "secondary": "Hablar con nosotros"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+      "eyebrow": "Why Tracebud",
       "headline": "El cumplimiento no debería ser complicado para ser creíble.",
       "description": "La mayoría de las cadenas de suministro no fallan porque a la gente no le importe. Fallan porque el proceso es demasiado manual, demasiado caro y demasiado fragmentado. Tracebud elimina el ir y venir para que cada actor pueda participar, incluso cuando la red es grande, dispersa o tiene pocos recursos.",
       "pillars": {
@@ -56,22 +63,23 @@
     "productsSection": {
       "eyebrow": "Dos productos, un solo flujo de trabajo",
       "title": "Diseñado para cómo funcionan realmente las cadenas de suministro",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
         "label": "Aplicación móvil",
         "headline": "Hecha para el campo, no para la oficina.",
         "description": "Los productores pueden mapear parcelas, compartir información y responder desde una experiencia móvil simple, diseñada para condiciones reales de campo. Funciona sin conexión, usa elementos visuales claros y mantiene el proceso ligero.",
-        "supportingText": "Gratis para productores. Sin configuración pesada ni formación extensa.",
         "features": {
+          "free": "No training-heavy setup required",
           "offline": "Funciona sin conexión, sincroniza cuando vuelve la red",
           "gps": "Recorre el límite para capturar el polígono GPS",
           "photo": "Evidencia fotográfica y registro de consentimiento"
-        }
+        },
+        "supportingText": "Gratis para productores. Sin configuración pesada ni formación extensa."
       },
       "dashboard": {
         "label": "Panel de control",
         "headline": "Gestiona tu red sin idas y vueltas.",
         "description": "Sube contactos en masa, envía una sola solicitud y deja que el flujo de trabajo recorra toda la cadena de suministro. Haz seguimiento de las respuestas, reutiliza datos verificados y mantiene cada envío en marcha con menos seguimiento manual.",
-        "supportingText": "Menos persecución. Menos vacíos. Transferencias más rápidas.",
         "features": {
           "import": "Importación masiva de contactos vía CSV",
           "bulkRequest": "Envía solicitudes a cientos de contactos a la vez",
@@ -79,10 +87,31 @@
           "readiness": "Sigue el estado de preparación de toda la red",
           "evidence": "Identifica al instante la evidencia faltante",
           "dds": "Prepara paquetes DDS para el envío"
-        }
+        },
+        "supportingText": "Menos persecución. Menos vacíos. Transferencias más rápidas."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
       }
     },
     "customersSection": {
+      "eyebrow": "Outcomes",
       "headline": "Por qué los clientes usan Tracebud",
       "description": "Menos seguimiento manual. Procedencia preservada mediante agregación. Envía con confianza.",
       "cards": {
@@ -106,32 +135,51 @@
       "punchline": "Eliminamos las barreras de acceso que durante años dejaron fuera a los pequeños productores."
     },
     "finalCtaSection": {
-      "headline": "Hacer que el cumplimiento sea utilizable para toda la cadena.",
-      "description": "Empieza con la red que ya tienes y da a cada actor una forma de participar.",
-      "cta": "Comenzar"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Listo para unirte a la lista de espera.",
-      "description": "Tracebud ayuda a tu red a recopilar, compartir y reutilizar datos de origen. Es simple, asequible e inclusivo para productores, cooperativas, exportadores y compradores.",
+      "headline": "Empieza a construir trazabilidad para tu red.",
+      "description": "Únete a la lista de espera para acceso anticipado cuando Tracebud abra en tu región y producto.",
       "cta": {
-        "primary": "Unirme ahora",
-        "secondary": "Continuar navegando"
+        "primary": "Unirse a la lista de espera",
+        "secondary": "Seguir navegando"
       },
-      "note": "Places limitadas para los primeros socios piloto."
+      "note": "Sin spam. Cancela cuando quieras."
     },
     "waitlistDialog": {
-      "headline": "Únete al programa piloto",
-      "description": "Places limitadas para los primeros socios piloto. Cuéntanos sobre tu red y nos pondremos en contacto.",
-      "note": "Sin spam. Cancelar suscripción en cualquier momento.",
+      "headline": "Unirse a la lista de espera",
+      "description": "Cuéntanos sobre tu red y te contactaremos cuando Tracebud esté listo para ti.",
+      "note": "No spam, ever. Unsubscribe at any time.",
       "sidePanel": {
-        "tagline": "Prepárate para el EUDR, sin la complejidad.",
-        "subline": "Simple. Asequible. Diseñado para cada actor de la cadena."
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
       },
-      "submit": "Unirse al piloto",
-      "submitting": "Enviando...",
+      "submit": "Unirse a la lista de espera",
+      "submitting": "Submitting...",
       "success": {
-        "title": "Application received",
-        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+        "title": "Estás en la lista",
+        "description": "Revisamos cada solicitud personalmente y te responderemos por correo."
       },
       "form": {
         "firstName": "First name",
@@ -190,11 +238,12 @@
           "generic": "Something went wrong. Please try again."
         }
       }
-    }
+    },
+    "earlyAdopters": "Únete a la lista de espera para acceso anticipado"
   },
   "common": {
     "language": "Idioma",
-    "joinWaitlist": "Únete a la lista de espera",
+    "joinWaitlist": "Unirse a la lista de espera",
     "learnMore": "Saber más",
     "contactUs": "Contáctenos"
   },
@@ -244,14 +293,18 @@
     }
   },
   "footer": {
-    "howItWorks": "Cómo funciona",
-    "privacy": "Privacidad",
-    "terms": "Términos",
-    "contact": "Contacto",
-    "tagline": "Operaciones EUDR más simples. Mayor acceso al mercado.",
-    "startMapping": "Comenzar mapeo",
-    "contactSales": "Contactar ventas",
-    "joinWaitlist": "Únete a la lista de espera"
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Unirse ahora",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "¿Listo para unirte a la lista de espera?",
+    "waitlistSubline": "Sé el primero en saber cuando Tracebud abra para tu red."
   },
   "impact": {
     "title": "Por qué funciona Tracebud",
@@ -282,18 +335,19 @@
     "integrations": "Integraciones Directas"
   },
   "faq": {
-    "waitlistPrompt": "¿Listo para unirte a la lista de espera?",
-    "joinNow": "Unirme ahora",
-    "title": "Preguntas Frecuentes",
-    "whenLaunch": "¿Cuándo se lanzará Tracebud?",
-    "whenLaunchAnswer": "Tracebud está en pruebas piloto activas. Estamos inscribiendo socios seleccionados ahora. Únete a la lista de espera para ser notificado cuando se lance.",
-    "whyCommodities": "¿Por qué comenzar con estas materias primas?",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "title": "Questions? We have answers.",
+    "whenLaunch": "¿Cuándo puedo empezar a usar Tracebud?",
+    "whenLaunchAnswer": "Tracebud se abre por fases según región y producto. Únete a la lista de espera y te avisaremos cuando tu caso esté soportado.",
+    "whyCommodities": "What crops does Tracebud support?",
     "whoCommoditiesAnswer": "Café, cacao, aceite de palma, caucho, soja, ganado y madera son las materias primas principales de EUDR. Expandiremos según la demanda.",
-    "howCost": "¿Cuánto cuesta?",
-    "howCostAnswer": "El precio es transparente y se escala según el tamaño de tu operación. Prueba gratuita disponible. Detalles compartidos durante la incorporación.",
-    "howLong": "¿Cuánto tiempo lleva la configuración?",
-    "howLongAnswer": "La mayoría de las cooperativas están mapeadas y operativas en 48 horas después de registrarse. El diseño sin conexión significa cero tiempo de inactividad.",
-    "support": "¿Qué soporte está disponible?",
-    "supportAnswer": "Soporte por correo electrónico 24/7, más soporte telefónico prioritario para socios piloto. Acceso directo a nuestro equipo de cumplimiento."
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Gratis para productores. Cooperativas, exportadores y compradores pagan según el tamaño de la red y el uso. Visita la página de precios o únete a la lista de espera.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Los productores pueden empezar a mapear con la app offline de inmediato. La mayoría de cooperativas suben su red y envían la primera solicitud en una semana.",
+    "support": "What support is available?",
+    "supportAnswer": "Cada miembro de la lista recibe seguimiento personal por correo. Una vez integrado, tienes acceso directo a nuestro equipo para configuración y cumplimiento.",
+    "whyCommoditiesAnswer": "Café primero, luego los otros seis productos EUDR: cacao, aceite de palma, caucho, soja, ganado y madera. Consulta nuestra página de precios para la hoja de ruta completa."
   }
 }

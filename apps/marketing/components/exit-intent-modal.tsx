@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import { useTranslations } from "next-intl";
 
 export function ExitIntentModal() {
@@ -109,8 +109,6 @@ export function ExitIntentModal() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }
