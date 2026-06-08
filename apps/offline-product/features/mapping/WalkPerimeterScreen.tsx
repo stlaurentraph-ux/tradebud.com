@@ -17,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { useAppState } from '@/features/state/AppStateContext';
 import { buildGeometryFromLocalPlot, postPlotToBackend } from '@/features/api/postPlot';
+import { isSyncSignedIn } from '@/features/auth/signInSync';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   getSetting,
@@ -109,6 +111,7 @@ export function WalkPerimeterScreen() {
     replacePointsFromPlot,
   } = useWalkPerimeter();
   const { farmer, setFarmer, plots, addPlot, updatePlot } = useAppState();
+  const { openSignIn } = useSignInSheet();
   const params = useLocalSearchParams<{ editPlotId?: string }>();
   const editPlotId = typeof params.editPlotId === 'string' ? params.editPlotId : undefined;
   const editingPlot = useMemo(
@@ -296,6 +299,38 @@ export function WalkPerimeterScreen() {
       : undefined;
 
   const hasFarmerAccess = farmer?.selfDeclared === true;
+
+  const finishNewPlotSave = useCallback(
+    (name: string, tryServerUpload: () => void) => {
+      if (!isSyncSignedIn()) {
+        openSignIn({ variant: 'after_plot', onSuccess: tryServerUpload });
+        return;
+      }
+      Alert.alert(t('plot_saved_title'), t('plot_saved_message', { name }));
+      tryServerUpload();
+    },
+    [openSignIn, t],
+  );
+
+  const handlePlotUploadResult = useCallback(
+    (result: Awaited<ReturnType<typeof postPlotToBackend>>, retry: () => void) => {
+      if (result.ok) return;
+      if (result.reason === 'no_access_token') {
+        openSignIn({ variant: 'sync', onSuccess: retry });
+        return;
+      }
+      if (result.reason === 'server_error' || result.reason === 'network_error') {
+        Alert.alert(
+          t('plot_saved_title'),
+          result.message ??
+            (result.reason === 'network_error'
+              ? 'Could not reach Tracebud. Upload this plot from My Plots when you are online.'
+              : 'Server rejected the upload. Open My Plots → Upload plot to Tracebud to retry.'),
+        );
+      }
+    },
+    [openSignIn, t],
+  );
 
   const isUuid = (value: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -537,34 +572,19 @@ export function WalkPerimeterScreen() {
     });
     if (newPlotId) lastRegisteredPlotIdRef.current = newPlotId;
 
-    Alert.alert('Plot saved (point)', `${name} saved using a single GPS fix.`);
-
     if (farmer) {
-      postPlotToBackend({
-        farmerId: farmer.id,
-        clientPlotId: name,
-        geometry: pointGeometryForUpload,
-        declaredAreaHa: declaredAreaHectares ?? null,
-        precisionMeters: precisionMeters ?? null,
-      }).then((r) => {
-        if (r.ok) return;
-        if (r.reason === 'no_access_token') {
-          Alert.alert(
-            'Saved offline',
-            'Plot saved locally. To sync to the backend, go to Settings → Backend account and enter a Supabase user email/password.',
-          );
-          return;
-        }
-        if (r.reason === 'server_error' || r.reason === 'network_error') {
-          Alert.alert(
-            'Plot saved locally',
-            r.message ??
-              (r.reason === 'network_error'
-                ? 'Could not reach Tracebud. Upload this plot from My Plots when you are online.'
-                : 'Server rejected the upload. Open My Plots → Upload plot to Tracebud to retry.'),
-          );
-        }
-      });
+      const tryServerUpload = () => {
+        postPlotToBackend({
+          farmerId: farmer.id,
+          clientPlotId: name,
+          geometry: pointGeometryForUpload,
+          declaredAreaHa: declaredAreaHectares ?? null,
+          precisionMeters: precisionMeters ?? null,
+        }).then((r) => handlePlotUploadResult(r, tryServerUpload));
+      };
+      finishNewPlotSave(name, tryServerUpload);
+    } else {
+      Alert.alert('Plot saved (point)', `${name} saved using a single GPS fix.`);
     }
   };
 
@@ -700,8 +720,6 @@ export function WalkPerimeterScreen() {
       // ignore
     }
 
-    Alert.alert('Plot saved', `${name} has been saved for farmer ${farmer?.id}.`);
-
     // Prototype parity: log compliance declarations captured during registration (local audit only).
     try {
       logAuditEvent({
@@ -723,31 +741,16 @@ export function WalkPerimeterScreen() {
     }
 
     if (farmer && points.length > 0 && !editingPlot) {
-      postPlotToBackend({
-        farmerId: farmer.id,
-        clientPlotId: name,
-        geometry: geometryForUpload,
-        declaredAreaHa: declaredAreaHectares ?? null,
-        precisionMeters: precisionMeters ?? null,
-      }).then((r) => {
-        if (r.ok) return;
-        if (r.reason === 'no_access_token') {
-          Alert.alert(
-            'Saved offline',
-            'Plot saved locally. To sync to the backend, go to Settings → Backend account and enter a Supabase user email/password.',
-          );
-          return;
-        }
-        if (r.reason === 'server_error' || r.reason === 'network_error') {
-          Alert.alert(
-            'Plot saved locally',
-            r.message ??
-              (r.reason === 'network_error'
-                ? 'Could not reach Tracebud. Upload this plot from My Plots when you are online.'
-                : 'Server rejected the upload. Open My Plots → Upload plot to Tracebud to retry.'),
-          );
-        }
-      });
+      const tryServerUpload = () => {
+        postPlotToBackend({
+          farmerId: farmer.id,
+          clientPlotId: name,
+          geometry: geometryForUpload,
+          declaredAreaHa: declaredAreaHectares ?? null,
+          precisionMeters: precisionMeters ?? null,
+        }).then((r) => handlePlotUploadResult(r, tryServerUpload));
+      };
+      finishNewPlotSave(name, tryServerUpload);
     }
   };
 

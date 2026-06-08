@@ -36,6 +36,9 @@ export interface RequestCampaign {
   created_at: string;
   updated_at: string;
   target_contact_emails?: string[];
+  accepted_count?: number;
+  pending_count?: number;
+  expired_count?: number;
 }
 
 function getAuthHeaders(): Record<string, string> | undefined {
@@ -103,7 +106,14 @@ export function useInboxRequests(tenantId: string | null) {
     [requests]
   );
 
-  const respond = async (requestId: string) => {
+  const respond = async (
+    requestId: string,
+    payload?: {
+      notes?: string;
+      evidencePlotIds?: string[];
+      evidencePackageIds?: string[];
+    },
+  ) => {
     if (!tenantId) throw new Error('No tenant context available.');
     try {
       const response = await fetch(`/api/inbox-requests/${encodeURIComponent(requestId)}/respond`, {
@@ -112,7 +122,7 @@ export function useInboxRequests(tenantId: string | null) {
           'Content-Type': 'application/json',
           ...(getAuthHeaders() ?? {}),
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(payload ?? {}),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, TrendingUp, AlertCircle, CheckCircle, Truck, MapPin, MessageSquare } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { listBatchIntakes } from '@/lib/batch-intake-service';
 
 interface Harvest {
   id: string;
@@ -115,6 +116,22 @@ export default function HarvestsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
   const [harvests, setHarvests] = useState<Harvest[]>(mockHarvests);
+
+  useEffect(() => {
+    if (!user?.tenant_id) return;
+    void listBatchIntakes(user.tenant_id).then((storedBatches) => {
+      if (storedBatches.length === 0) return;
+      setHarvests((previous) => {
+        const merged = [...storedBatches, ...previous];
+        const seen = new Set<string>();
+        return merged.filter((batch) => {
+          if (seen.has(batch.id)) return false;
+          seen.add(batch.id);
+          return true;
+        });
+      });
+    });
+  }, [user?.tenant_id]);
   const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');

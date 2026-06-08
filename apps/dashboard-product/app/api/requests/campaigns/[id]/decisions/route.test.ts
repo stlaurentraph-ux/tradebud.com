@@ -45,7 +45,7 @@ describe('request campaigns decision timeline proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/requests/campaigns/camp_1/decisions',
+      'https://backend.tracebud.test/api/v1/requests/campaigns/camp_1/decisions',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -81,7 +81,7 @@ describe('request campaigns decision timeline proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/requests/campaigns/camp_1/decisions?decision=accept&limit=10&offset=20',
+      'https://backend.tracebud.test/api/v1/requests/campaigns/camp_1/decisions?decision=accept&limit=10&offset=20',
       expect.any(Object),
     );
   });

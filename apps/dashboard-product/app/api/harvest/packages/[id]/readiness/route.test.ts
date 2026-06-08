@@ -49,7 +49,7 @@ describe('package readiness proxy route', () => {
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/harvest/packages/pkg_1/readiness',
+      'https://backend.tracebud.test/api/v1/harvest/packages/pkg_1/readiness',
       expect.objectContaining({
         method: 'GET',
         cache: 'no-store',

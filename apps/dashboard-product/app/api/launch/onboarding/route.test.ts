@@ -39,7 +39,7 @@ describe('launch onboarding proxy route', () => {
       items: [{ step_key: 'create_first_campaign', completed: true }],
     });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/onboarding?role=compliance_manager',
+      'https://backend.tracebud.test/api/v1/launch/onboarding?role=compliance_manager',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -81,7 +81,7 @@ describe('launch onboarding proxy route', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/onboarding/complete',
+      'https://backend.tracebud.test/api/v1/launch/onboarding/complete',
       expect.objectContaining({
         method: 'POST',
         headers: {

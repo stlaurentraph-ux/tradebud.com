@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards 
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
+import { RespondInboxRequestDto } from './dto/respond-inbox-request.dto';
 import { InboxService } from './inbox.service';
 
 type SupabaseUserLike = Record<string, unknown> & { email?: string | null };
@@ -36,9 +37,18 @@ export class InboxController {
   @Post(':id/respond')
   @ApiOperation({ summary: 'Mark inbox request as responded' })
   @ApiParam({ name: 'id', required: true })
-  async respond(@Param('id') id: string, @Req() req: { user?: SupabaseUserLike }) {
+  async respond(
+    @Param('id') id: string,
+    @Body() body: RespondInboxRequestDto,
+    @Req() req: { user?: SupabaseUserLike },
+  ) {
     const tenantId = this.requireTenantId(req);
-    const request = await this.inboxService.respond(id, tenantId);
+    const role = deriveRoleFromSupabaseUser(req.user ?? {});
+    if (!['exporter', 'admin', 'compliance_manager', 'agent'].includes(role)) {
+      throw new ForbiddenException('Only organization operators can fulfill inbox requests.');
+    }
+    const userId = typeof req.user?.id === 'string' ? req.user.id : null;
+    const request = await this.inboxService.respond(id, tenantId, body, userId);
     return { request };
   }
 

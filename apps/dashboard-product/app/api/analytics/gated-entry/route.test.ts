@@ -147,7 +147,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ ok: true, sink: 'backend' });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit',
+      'https://backend.tracebud.test/api/v1/audit',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -175,7 +175,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([{ id: 'evt_1', event_type: 'dashboard_gated_entry_attempt' }]);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry?gate=request_campaigns&fromHours=24&limit=10&offset=20&sort=asc',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry?gate=request_campaigns&fromHours=24&limit=10&offset=20&sort=asc',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -211,7 +211,7 @@ describe('gated-entry analytics route', () => {
     expect(res.headers.get('x-export-truncated')).toBe('false');
     expect(await res.text()).toContain('captured_at,gate,role,feature,redirected_path');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/export?gate=request_campaigns&fromHours=24&sort=desc',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/export?gate=request_campaigns&fromHours=24&sort=desc',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -241,7 +241,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/exports?fromHours=24&limit=10&offset=0&sort=desc',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/exports?fromHours=24&limit=10&offset=0&sort=desc',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -274,7 +274,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/assignment-exports?fromHours=24&limit=10&offset=0&sort=desc&phase=succeeded&status=active',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/assignment-exports?fromHours=24&limit=10&offset=0&sort=desc&phase=succeeded&status=active',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -309,7 +309,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/csv');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/assignment-exports/export?fromHours=24&sort=desc&phase=failed&status=active',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/assignment-exports/export?fromHours=24&sort=desc&phase=failed&status=active',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -342,7 +342,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/risk-scores?fromHours=24&limit=10&offset=0&sort=desc&phase=medium&band=medium',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/risk-scores?fromHours=24&limit=10&offset=0&sort=desc&phase=medium&band=medium',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -377,7 +377,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/csv');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/risk-scores/export?fromHours=24&sort=desc&phase=medium&band=medium',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/risk-scores/export?fromHours=24&sort=desc&phase=medium&band=medium',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -406,7 +406,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/filing-activity?fromHours=24&limit=10&offset=0&sort=desc&phase=submission_accepted',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/filing-activity?fromHours=24&limit=10&offset=0&sort=desc&phase=submission_accepted',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -437,7 +437,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toContain('text/csv');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/filing-activity/export?fromHours=24&sort=desc&phase=submission_replayed',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/filing-activity/export?fromHours=24&sort=desc&phase=submission_replayed',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -466,7 +466,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/chat-threads?fromHours=24&limit=10&offset=0&sort=desc&phase=created',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/chat-threads?fromHours=24&limit=10&offset=0&sort=desc&phase=created',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -495,7 +495,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/workflow-activity?fromHours=24&limit=10&offset=0&sort=desc&phase=stage_transitioned&slaState=warning',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/workflow-activity?fromHours=24&limit=10&offset=0&sort=desc&phase=stage_transitioned&slaState=warning',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -523,7 +523,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).totalDiagnostics).toBe(8);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/dashboard-summary?fromHours=24',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/dashboard-summary?fromHours=24',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -550,7 +550,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).actors['11111111-1111-1111-1111-111111111111']).toBe('ops@tracebud.test');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/actors?ids=11111111-1111-1111-1111-111111111111',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/actors?ids=11111111-1111-1111-1111-111111111111',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -575,7 +575,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'ids must be UUID values.' });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/audit/gated-entry/actors?ids=not-a-uuid',
+      'https://backend.tracebud.test/api/v1/audit/gated-entry/actors?ids=not-a-uuid',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -603,7 +603,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/webhooks?limit=10&offset=0',
+      'https://backend.tracebud.test/api/v1/webhooks?limit=10&offset=0',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },
@@ -634,7 +634,7 @@ describe('gated-entry analytics route', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).items).toHaveLength(1);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/webhooks/webhook_1/deliveries?limit=10&offset=0',
+      'https://backend.tracebud.test/api/v1/webhooks/webhook_1/deliveries?limit=10&offset=0',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(
   request: Request,
@@ -17,7 +18,7 @@ export async function GET(
       );
     }
 
-    const backendUrl = new URL(`${backendBase}/v1/plots/${encodeURIComponent(id)}/assignments`);
+    const backendUrl = new URL(backendApiUrl(backendBase, `/v1/plots/${encodeURIComponent(id)}/assignments`));
     ['status', 'fromDays', 'agentUserId', 'limit', 'offset', 'format'].forEach((key) => {
       const value = requestUrl.searchParams.get(key);
       if (value) backendUrl.searchParams.set(key, value);
@@ -68,7 +69,7 @@ export async function POST(
     }
 
     const payload = await request.json().catch(() => ({}));
-    const backendResponse = await fetch(`${backendBase}/v1/plots/${encodeURIComponent(id)}/assignments`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/plots/${encodeURIComponent(id)}/assignments`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

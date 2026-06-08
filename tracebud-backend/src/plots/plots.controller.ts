@@ -73,21 +73,43 @@ export class PlotsController {
   }
 
   @Get()
-  @ApiQuery({ name: 'farmerId', required: true })
-  async listByFarmer(@Query('farmerId') farmerId: string, @Req() req: any) {
+  @ApiQuery({ name: 'farmerId', required: false })
+  @ApiQuery({ name: 'scope', required: false, enum: ['tenant', 'farmer'] })
+  async listByFarmer(
+    @Query('farmerId') farmerId: string | undefined,
+    @Query('scope') scope: string | undefined,
+    @Req() req: any,
+  ) {
     this.requireTenantClaim(req);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const role = deriveRoleFromSupabaseUser(req.user);
+    const resolvedScope = scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
+
+    if (resolvedScope === 'tenant') {
+      if (role === 'farmer') {
+        throw new ForbiddenException('Farmers must provide farmerId scope');
+      }
+      if (!tenantId) {
+        throw new ForbiddenException('Missing tenant claim in app_metadata');
+      }
+      return this.plotsService.listForTenant(tenantId);
+    }
+
+    const scopedFarmerId = farmerId?.trim();
+    if (!scopedFarmerId) {
+      throw new ForbiddenException('farmerId is required when scope=farmer');
+    }
     if (role === 'farmer') {
       const userId = req.user?.id as string | undefined;
       if (!userId) {
         throw new ForbiddenException('Missing authenticated user');
       }
-      const owned = await this.plotsService.isFarmerOwnedByUser(farmerId, userId);
+      const owned = await this.plotsService.isFarmerOwnedByUser(scopedFarmerId, userId);
       if (!owned) {
         throw new ForbiddenException('Farmer scope violation');
       }
     }
-    return this.plotsService.listByFarmer(farmerId);
+    return this.plotsService.listByFarmer(scopedFarmerId);
   }
 
   @Patch(':id/compliance-check')

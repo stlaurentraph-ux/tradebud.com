@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 type HarvestPackage = {
   id: string;
@@ -32,7 +33,7 @@ async function fetchJson(path: string, authHeader: string | null): Promise<unkno
   if (!backendBase) {
     throw new Error('TRACEBUD_BACKEND_URL is required for cooperative evidence.');
   }
-  const response = await fetch(`${backendBase}${path}`, {
+  const response = await fetch(`${backendApiUrl(backendBase, path)}`, {
     method: 'GET',
     headers: authHeader ? { Authorization: authHeader } : undefined,
     cache: 'no-store',

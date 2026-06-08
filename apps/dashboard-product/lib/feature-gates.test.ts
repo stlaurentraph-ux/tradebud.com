@@ -6,14 +6,14 @@ describe('feature gates', () => {
     vi.unstubAllEnvs();
   });
 
-  it('disables deferred routes by default in MVP mode', () => {
-    expect(isFeatureEnabled('request_campaigns')).toBe(false);
+  it('enables campaign routes by default for beta launch', () => {
+    expect(isFeatureEnabled('request_campaigns')).toBe(true);
     expect(isFeatureEnabled('annual_reporting')).toBe(true);
-    expect(isRouteEnabled('/outreach')).toBe(false);
-    expect(isRouteEnabled('/inbox')).toBe(false);
+    expect(isRouteEnabled('/outreach')).toBe(true);
+    expect(isRouteEnabled('/inbox')).toBe(true);
     expect(isRouteEnabled('/reports')).toBe(true);
-    expect(getDeferredGateForPath('/outreach')).toBe('request_campaigns');
-    expect(getDeferredGateForPath('/inbox')).toBe('request_campaigns');
+    expect(getDeferredGateForPath('/outreach')).toBe(null);
+    expect(getDeferredGateForPath('/inbox')).toBe(null);
     expect(getDeferredGateForPath('/reports')).toBe(null);
   });
 
@@ -31,6 +31,7 @@ describe('feature gates', () => {
   });
 
   it('gates nested and trailing-slash route variants when disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'false');
     expect(getDeferredGateForPath('/outreach/')).toBe('request_campaigns');
     expect(getDeferredGateForPath('/outreach/abc-123')).toBe('request_campaigns');
     expect(getDeferredGateForPath('/inbox/')).toBe('request_campaigns');

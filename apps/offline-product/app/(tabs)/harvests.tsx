@@ -63,7 +63,6 @@ export default function HarvestsScreen() {
     if (!farmer) {
       setBackendPlots([]);
       setVouchers([]);
-      setBackendError(null);
       return;
     }
     Promise.all([fetchPlotsForFarmer(farmer.id), fetchVouchersForFarmer(farmer.id)])

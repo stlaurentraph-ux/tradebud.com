@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export function getBackendBase() {
   const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
@@ -28,7 +29,7 @@ export async function proxyJson(
     headers['Content-Type'] = 'application/json';
   }
 
-  const backendResponse = await fetch(`${backendBase}${backendPath}`, {
+  const backendResponse = await fetch(`${backendApiUrl(backendBase, backendPath)}`, {
     method,
     cache: 'no-store',
     headers,

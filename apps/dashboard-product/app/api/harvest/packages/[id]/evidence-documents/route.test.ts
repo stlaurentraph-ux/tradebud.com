@@ -43,7 +43,7 @@ describe('package evidence-documents proxy route', () => {
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/harvest/packages/pkg_1/evidence-documents',
+      'https://backend.tracebud.test/api/v1/harvest/packages/pkg_1/evidence-documents',
       expect.objectContaining({
         method: 'GET',
         cache: 'no-store',

@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Tracebud - Supply Chain Traceability Platform',
+        alt: 'Tracebud — farmer in the field with traceability infrastructure for the whole chain',
       },
     ],
   },

@@ -96,7 +96,7 @@ describe('plot geometry history proxy route', () => {
       }),
     );
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/geometry-history?limit=20&offset=0&sort=asc&anomalyProfile=strict&signalsOnly=true',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/geometry-history?limit=20&offset=0&sort=asc&anomalyProfile=strict&signalsOnly=true',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },

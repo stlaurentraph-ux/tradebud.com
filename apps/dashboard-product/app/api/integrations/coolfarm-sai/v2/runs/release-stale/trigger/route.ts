@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 import { getBackendBase } from '../../../_utils';
 
 export async function POST(request: Request) {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     const backendResponse = await fetch(
-      `${backendBase}/v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger`,
+      backendApiUrl(backendBase, `/v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger`),
       {
         method: 'POST',
         headers: {

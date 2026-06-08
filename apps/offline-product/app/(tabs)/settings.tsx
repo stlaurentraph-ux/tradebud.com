@@ -30,7 +30,6 @@ import {
   getTracebudApiBaseUrl,
   hydrateSyncAuthFromSettings,
   postAuditEventToBackend,
-  saveAndApplySyncAuth,
   testBackendLogin,
 } from '@/features/api/postPlot';
 import {
@@ -56,6 +55,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Brand, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { signInAndSyncPlots } from '@/features/auth/signInSync';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { localeNames } from '@/features/i18n/config';
 import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
@@ -75,8 +77,9 @@ const fsAny = FileSystem as unknown as {
 };
 
 export default function SettingsScreen() {
-  const { lang, setLang, t } = useLanguage();
+  const { lang, languageCode, openLanguagePicker, t } = useLanguage();
   const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
+  const { refreshAuth } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -390,23 +393,21 @@ export default function SettingsScreen() {
   };
 
   const onSignInForSync = async () => {
-    if (!syncEmail.trim() || !syncPassword) {
-      setSyncAuthHint(t('enter_email_password'));
-      return;
-    }
     setSyncSigningIn(true);
     setSyncAuthHint(null);
     try {
-      await saveAndApplySyncAuth(syncEmail, syncPassword);
-      const res = await testBackendLogin();
+      const res = await signInAndSyncPlots({
+        email: syncEmail,
+        password: syncPassword,
+        farmerId: farmer?.id,
+        localPlots: plots,
+      });
       if (res.ok) {
         setSyncSignedIn(true);
         setSyncAuthHint(null);
         setSyncPassword('');
         setSyncMessage(null);
-        if (farmer?.id && plots.length > 0) {
-          await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
-        }
+        await refreshAuth();
         if (farmer?.id) {
           const bits: string[] = [];
           const appendQueueResultBits = (
@@ -476,7 +477,9 @@ export default function SettingsScreen() {
         void refreshSyncMetrics();
       } else {
         setSyncSignedIn(false);
-        setSyncAuthHint(res.message);
+        setSyncAuthHint(
+          res.message === 'enter_email_password' ? t('enter_email_password') : res.message,
+        );
       }
     } catch (e) {
       setSyncSignedIn(false);
@@ -493,6 +496,7 @@ export default function SettingsScreen() {
     setSyncPassword('');
     setSyncAuthHint(t('signed_out_device'));
     setSyncMessage(null);
+    await refreshAuth();
     void refreshSyncMetrics();
   };
 
@@ -698,8 +702,8 @@ export default function SettingsScreen() {
           </Pressable>
         }
         centerTitle={t('settings_title')}
-        onLanguagePress={() => setLang(lang === 'en' ? 'es' : 'en')}
-        languageLabel={String(lang)}
+        onLanguagePress={openLanguagePicker}
+        languageLabel={languageCode}
         textInverseColor={colors.textInverse}
       />
 
@@ -946,9 +950,9 @@ export default function SettingsScreen() {
                   {t('language')}
                 </ThemedText>
               </View>
-              <Pressable onPress={() => setLang(lang === 'en' ? 'es' : 'en')} hitSlop={10}>
+              <Pressable onPress={openLanguagePicker} hitSlop={10}>
                 <ThemedText type="defaultSemiBold" style={styles.greenText}>
-                  {lang === 'es' ? 'Español' : 'English'}
+                  {localeNames[lang]}
                 </ThemedText>
               </Pressable>
             </View>

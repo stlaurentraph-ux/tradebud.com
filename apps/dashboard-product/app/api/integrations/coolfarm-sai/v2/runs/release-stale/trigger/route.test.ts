@@ -52,7 +52,7 @@ describe('Cool Farm V2 stale sweeper trigger proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger',
       expect.objectContaining({
         method: 'POST',
         headers: {

@@ -26,6 +26,7 @@ import { Badge, ComplianceBadge } from '@/components/ui/badge';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { Input } from '@/components/ui/input';
 import { useAppState, Plot } from '@/features/state/AppStateContext';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   loadPhotosForPlot,
@@ -142,6 +143,7 @@ export default function PlotsScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [sectionY, setSectionY] = useState<{ photos?: number; documents?: number }>({});
   const { plots, farmer, renamePlot, removePlot } = useAppState();
+  const { openSignIn } = useSignInSheet();
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [loadingBackend, setLoadingBackend] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
@@ -160,7 +162,7 @@ export default function PlotsScreen() {
     plots[0]?.id,
   );
   const [submittingPackage, setSubmittingPackage] = useState(false);
-  const { t, lang, setLang } = useLanguage();
+  const { t, languageCode, openLanguagePicker } = useLanguage();
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
   const [titlePhotos, setTitlePhotos] = useState<PlotTitlePhoto[]>([]);
   const [evidence, setEvidence] = useState<PlotEvidenceItem[]>([]);
@@ -196,8 +198,10 @@ export default function PlotsScreen() {
   const [uploadPlotBusy, setUploadPlotBusy] = useState(false);
   const isAuthMissing =
     !!backendError &&
-    (backendError.toLowerCase().includes('not logged in') ||
-      backendError.toLowerCase().includes('no access token'));
+    (backendError.toLowerCase().includes('sign in') ||
+      backendError.toLowerCase().includes('not logged in') ||
+      backendError.toLowerCase().includes('no access token') ||
+      backendError.toLowerCase().includes('inicia sesión'));
 
   const unsyncedPlotCount = useMemo(
     () => (farmer ? listUnsyncedLocalPlots(plots, backendPlots).length : 0),
@@ -294,9 +298,7 @@ export default function PlotsScreen() {
             ? err.message
             : 'Could not reach backend. Working offline from local data.';
         if (typeof msg === 'string' && msg.toLowerCase().includes('no access token')) {
-          setBackendError(
-            'Not logged in to backend. Go to Settings → Backend account and enter your Supabase email/password.',
-          );
+          setBackendError(t('auth_required_sync'));
         } else {
         setBackendError(
           msg,
@@ -308,7 +310,7 @@ export default function PlotsScreen() {
         setAuditEvents([]);
       })
       .finally(() => setLoadingBackend(false));
-  }, [farmer]);
+  }, [farmer, t]);
 
   const refreshPendingCount = () => {
     loadPendingSyncActions().then((actions) => setPendingCount(actions.length));
@@ -521,8 +523,8 @@ export default function PlotsScreen() {
             </Pressable>
           }
           centerTitle={t('my_plots_header')}
-          onLanguagePress={() => setLang(lang === 'en' ? 'es' : 'en')}
-          languageLabel={String(lang)}
+          onLanguagePress={openLanguagePicker}
+          languageLabel={languageCode}
           textInverseColor={colors.textInverse}
         />
 
@@ -643,15 +645,13 @@ export default function PlotsScreen() {
         </View>
 
         {loadingBackend ? (
-          <ThemedText type="caption">Checking backend…</ThemedText>
+          <ThemedText type="caption">{t('plots_checking_sync')}</ThemedText>
         ) : backendError ? (
           <ThemedText type="caption">
-            {isAuthMissing
-              ? 'Backend account not connected. Local mode is active.'
-              : 'Offline — working from local data only.'}
+            {isAuthMissing ? t('plots_local_mode') : t('offline')}
           </ThemedText>
         ) : (
-          <ThemedText type="caption">Online — data synced with backend.</ThemedText>
+          <ThemedText type="caption">{t('plots_synced_online')}</ThemedText>
         )}
 
         {lastSyncAt ? (
@@ -685,9 +685,20 @@ export default function PlotsScreen() {
             />
             {isAuthMissing ? (
               <Button
-                title="Connect backend account"
+                title={t('sign_in')}
                 variant="secondary"
-                onPress={() => router.push('/settings')}
+                onPress={() =>
+                  openSignIn({
+                    variant: 'sync',
+                    onSuccess: async () => {
+                      if (farmer?.id && plots.length > 0) {
+                        await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
+                      }
+                      await refreshFromBackend();
+                      refreshPendingCount();
+                    },
+                  })
+                }
               />
             ) : null}
             {pendingCount > 0 ? (
@@ -801,8 +812,7 @@ export default function PlotsScreen() {
                 ) : (
                   <>
                     <ThemedText type="caption" style={{ marginTop: 6 }}>
-                      This plot exists only on the device until you upload it (for example if you saved it before
-                      signing in under Settings).
+                      This plot is only on this device until you sign in and upload it to Tracebud.
                     </ThemedText>
                     <Button
                       title={uploadPlotBusy ? 'Uploading…' : 'Upload plot to Tracebud'}
@@ -824,11 +834,17 @@ export default function PlotsScreen() {
                             cadastralKey: cadastralKey.trim() ? cadastralKey.trim() : null,
                           });
                           if (!r.ok) {
-                            setSyncMessage(
-                              r.reason === 'no_access_token'
-                                ? 'Sign in under Settings → Your profile with your Tracebud email and password.'
-                                : r.message ?? 'Could not upload plot.',
-                            );
+                            if (r.reason === 'no_access_token') {
+                              openSignIn({
+                                variant: 'sync',
+                                onSuccess: async () => {
+                                  await refreshFromBackend();
+                                  setSyncMessage('Plot uploaded. You can sync photos and record harvests.');
+                                },
+                              });
+                              return;
+                            }
+                            setSyncMessage(r.message ?? 'Could not upload plot.');
                             return;
                           }
                           await refreshFromBackend();

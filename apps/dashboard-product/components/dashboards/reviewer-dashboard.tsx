@@ -24,37 +24,19 @@ interface ReviewerDashboardProps {
     packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
+    blocking_issues_count?: number;
+    yield_failures_count?: number;
   };
 }
 
 export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
   const pendingReview = metrics.packages_by_status?.READY || 0;
-  const flaggedItems = Math.ceil((metrics.total_plots - metrics.compliant_plots) * 0.3);
-  const isVirginTenant = metrics.total_packages === 0 && metrics.total_plots === 0;
+  const blockingIssuesCount = metrics.blocking_issues_count ?? 0;
+  const yieldFailuresCount = metrics.yield_failures_count ?? 0;
+  const flaggedItems = blockingIssuesCount + yieldFailuresCount;
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-purple-200 bg-purple-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your reviewer workspace</CardTitle>
-            <CardDescription>
-              No items are pending review yet. Once exporters submit DDS packages for verification, they will appear in your compliance review queue.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link href="/compliance">Open review queue</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/plots">Browse plot registry</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
       {/* Review Queue Banner */}
       <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50">
         <CardContent className="flex items-center justify-between p-6">
@@ -133,8 +115,8 @@ export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
             {[
               { label: 'Approved - No Issues', count: metrics.compliant_plots, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
               { label: 'Under Review', count: pendingReview, icon: Clock, color: 'text-purple-600', bg: 'bg-purple-100' },
-              { label: 'Amber Flag - Manual Check', count: Math.ceil(flaggedItems * 0.7), icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-100' },
-              { label: 'Red Flag - Non-Compliant', count: Math.floor(flaggedItems * 0.3), icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
+              { label: 'Amber Flag - Manual Check', count: yieldFailuresCount, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-100' },
+              { label: 'Red Flag - Non-Compliant', count: blockingIssuesCount, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.bg}`}>
@@ -155,38 +137,55 @@ export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
             <CardDescription>Items requiring immediate attention</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-5 w-5 text-red-600" />
-                <div>
-                  <div className="font-medium text-red-900">Deforestation Alerts</div>
-                  <div className="text-sm text-red-700">Post-2020 satellite anomalies detected</div>
-                </div>
-              </div>
-              <Badge className="bg-red-100 text-red-700">{Math.floor(flaggedItems * 0.3)}</Badge>
-            </div>
+            {pendingReview === 0 && metrics.total_packages === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Priority alerts will appear when exporters submit packages for your jurisdiction.
+              </p>
+            ) : (
+              <>
+                <Link
+                  href="/compliance/issues"
+                  className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <XCircle className="h-5 w-5 text-red-600" />
+                    <div>
+                      <div className="font-medium text-red-900">Deforestation Alerts</div>
+                      <div className="text-sm text-red-700">Post-2020 satellite anomalies detected</div>
+                    </div>
+                  </div>
+                  <Badge className="bg-red-100 text-red-700">{blockingIssuesCount}</Badge>
+                </Link>
 
-            <div className="flex items-center justify-between p-4 rounded-lg border border-amber-200 bg-amber-50">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                <div>
-                  <div className="font-medium text-amber-900">Protected Area Overlaps</div>
-                  <div className="text-sm text-amber-700">Plots near conservation zones</div>
-                </div>
-              </div>
-              <Badge className="bg-amber-100 text-amber-700">{Math.ceil(flaggedItems * 0.4)}</Badge>
-            </div>
+                <Link
+                  href="/compliance/issues"
+                  className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 transition-colors hover:bg-amber-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <div className="font-medium text-amber-900">Protected Area Overlaps</div>
+                      <div className="text-sm text-amber-700">Plots near conservation zones</div>
+                    </div>
+                  </div>
+                  <Badge className="bg-amber-100 text-amber-700">{yieldFailuresCount}</Badge>
+                </Link>
 
-            <div className="flex items-center justify-between p-4 rounded-lg border border-purple-200 bg-purple-50">
-              <div className="flex items-center gap-3">
-                <Scale className="h-5 w-5 text-purple-600" />
-                <div>
-                  <div className="font-medium text-purple-900">Land Tenure Verification</div>
-                  <div className="text-sm text-purple-700">Documentation pending review</div>
-                </div>
-              </div>
-              <Badge className="bg-purple-100 text-purple-700">{Math.ceil(flaggedItems * 0.3)}</Badge>
-            </div>
+                <Link
+                  href="/compliance"
+                  className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-4 transition-colors hover:bg-purple-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <Scale className="h-5 w-5 text-purple-600" />
+                    <div>
+                      <div className="font-medium text-purple-900">Land Tenure Verification</div>
+                      <div className="text-sm text-purple-700">Documentation pending review</div>
+                    </div>
+                  </div>
+                  <Badge className="bg-purple-100 text-purple-700">{pendingReview}</Badge>
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

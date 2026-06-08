@@ -44,7 +44,7 @@ describe('plot deforestation decision proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/deforestation-decision?cutoffDate=2020-12-31',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/deforestation-decision?cutoffDate=2020-12-31',
       expect.objectContaining({
         method: 'POST',
         headers: { Authorization: 'Bearer demo_token' },

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
     }
-    const backendResponse = await fetch(`${backendBase}/v1/public/requests/campaigns/decision-intent`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/public/requests/campaigns/decision-intent`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

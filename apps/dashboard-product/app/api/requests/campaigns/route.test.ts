@@ -53,7 +53,7 @@ describe('request campaigns create proxy route', () => {
 
     expect(res.status).toBe(202);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/requests/campaigns',
+      'https://backend.tracebud.test/api/v1/requests/campaigns',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({

@@ -33,8 +33,33 @@ describe('InboxController auth and tenant claim checks', () => {
     const service = makeServiceMock();
     const controller = new InboxController(service as unknown as InboxService);
 
-    await expect(controller.respond('req_1', { user: { email: 'exporter@tracebud.com' } })    ).rejects.toThrow(
-      'Missing required tenant claim (tenant_id) in signed app_metadata.',
+    await expect(
+      controller.respond('req_1', {}, { user: { email: 'exporter@tracebud.com' } }),
+    ).rejects.toThrow('Missing required tenant claim (tenant_id) in signed app_metadata.');
+  });
+
+  it('passes fulfillment payload to service for exporter role', async () => {
+    const service = makeServiceMock();
+    service.respond.mockResolvedValue({ id: 'req_1', status: 'RESPONDED' } as any);
+    const controller = new InboxController(service as unknown as InboxService);
+
+    await controller.respond(
+      'req_1',
+      { notes: 'Evidence attached', evidencePackageIds: ['pkg_1'] },
+      {
+        user: {
+          id: 'user_1',
+          app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' },
+          email: 'exporter+demo@tracebud.com',
+        },
+      },
+    );
+
+    expect(service.respond).toHaveBeenCalledWith(
+      'req_1',
+      'tenant_rwanda_001',
+      { notes: 'Evidence attached', evidencePackageIds: ['pkg_1'] },
+      'user_1',
     );
   });
 

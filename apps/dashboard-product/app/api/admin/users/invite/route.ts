@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function POST(request: Request) {
   const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid payload.' }, { status: 400 });
   }
 
-  const response = await fetch(`${backendBase}/v1/admin/users/invite`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/admin/users/invite`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

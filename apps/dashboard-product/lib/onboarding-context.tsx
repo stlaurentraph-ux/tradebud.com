@@ -18,6 +18,11 @@ import {
   type OnboardingConfig,
 } from '@/lib/onboarding-config';
 import { hasPermission } from '@/lib/rbac';
+import {
+  readOnboardingFlag,
+  removeOnboardingFlag,
+  writeOnboardingFlag,
+} from '@/lib/onboarding-persistence';
 
 // ─────────────────────────────────────────────────────────────
 // State shape
@@ -52,7 +57,7 @@ interface OnboardingContextType {
   prevStep: () => void;
   /** Mark the current step as completed (action-validated) */
   completeCurrentStep: () => void;
-  /** Skip the entire tour for now (persists in sessionStorage) */
+  /** Skip the entire tour for now (persists in localStorage) */
   skipTour: () => void;
   /** Resume tour from current step */
   resumeTour: () => void;
@@ -84,7 +89,7 @@ function getSkippedKey(userId: string): string {
 
 function loadCompleted(userId: string): CompletedSteps {
   try {
-    const raw = sessionStorage.getItem(getCompletedKey(userId));
+    const raw = readOnboardingFlag(getCompletedKey(userId));
     return raw ? (JSON.parse(raw) as CompletedSteps) : {};
   } catch {
     return {};
@@ -92,7 +97,7 @@ function loadCompleted(userId: string): CompletedSteps {
 }
 
 function saveCompleted(userId: string, data: CompletedSteps): void {
-  sessionStorage.setItem(getCompletedKey(userId), JSON.stringify(data));
+  writeOnboardingFlag(getCompletedKey(userId), JSON.stringify(data));
 }
 
 function isActionCompleted(actionKey?: string): boolean {
@@ -139,8 +144,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     const stored = loadCompleted(user.id);
     setCompletedSteps(stored);
 
-    const skipped = sessionStorage.getItem(getSkippedKey(user.id)) === '1';
-    const storedPhase = sessionStorage.getItem(getPhaseKey(user.id)) as OnboardingPhase | null;
+    const skipped = readOnboardingFlag(getSkippedKey(user.id)) === '1';
+    const storedPhase = readOnboardingFlag(getPhaseKey(user.id)) as OnboardingPhase | null;
 
     if (storedPhase === 'complete') {
       setPhase('complete');
@@ -154,6 +159,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
 
     if (!storedPhase || storedPhase === 'idle') {
+      const isPostSignupWelcome =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('welcome') === '1';
+
+      if (isPostSignupWelcome) {
+        // Post-signup redirect already shows the inline WelcomeCard on the dashboard.
+        // Skip the modal + guided tour so we do not stack onboarding popups.
+        writeOnboardingFlag(getSkippedKey(user.id), '1');
+        writeOnboardingFlag(getPhaseKey(user.id), 'checklist');
+        setPhase('checklist');
+        return;
+      }
+
       // First session — show welcome modal
       setPhase('welcome');
       return;
@@ -173,7 +191,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     (next: OnboardingPhase) => {
       if (!user) return;
       setPhase(next);
-      sessionStorage.setItem(getPhaseKey(user.id), next);
+      writeOnboardingFlag(getPhaseKey(user.id), next);
     },
     [user],
   );
@@ -187,7 +205,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const dismissWelcome = useCallback(() => {
     if (!user) return;
     persistPhase('checklist');
-    sessionStorage.setItem(getSkippedKey(user.id), '1');
+    writeOnboardingFlag(getSkippedKey(user.id), '1');
     trackOnboardingEvent({ event: 'onboarding_skipped', persona: persona! });
   }, [user, persona, persistPhase]);
 
@@ -272,14 +290,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   const skipTour = useCallback(() => {
     if (!user) return;
-    sessionStorage.setItem(getSkippedKey(user.id), '1');
+    writeOnboardingFlag(getSkippedKey(user.id), '1');
     persistPhase('checklist');
     trackOnboardingEvent({ event: 'onboarding_skipped', persona: persona! });
   }, [user, persona, persistPhase]);
 
   const resumeTour = useCallback(() => {
     if (!user || !config) return;
-    sessionStorage.removeItem(getSkippedKey(user.id));
+    removeOnboardingFlag(getSkippedKey(user.id));
     const firstIncomplete = config.steps.findIndex((s) => !completedSteps[s.key]);
     setCurrentStepIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
     persistPhase('tour');

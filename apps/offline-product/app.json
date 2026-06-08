@@ -13,8 +13,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Tracebud needs your location to record farm boundaries while you walk around the plot.",
         "NSPhotoLibraryUsageDescription": "Tracebud uses your photo library so you can set a profile picture.",
-        "NSCameraUsageDescription": "Tracebud uses the camera so you can take a profile picture."
-      }
+        "NSCameraUsageDescription": "Tracebud uses the camera so you can take a profile picture.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.tracebud.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +31,15 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -52,11 +62,25 @@
       ],
       "expo-sqlite",
       "expo-camera",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f7e2b0c7-bb72-4d87-b6d4-3fceeaebd969"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f7e2b0c7-bb72-4d87-b6d4-3fceeaebd969"
     }
   }
 }

@@ -74,7 +74,7 @@ describe('commercial profile proxy route', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/commercial-profile',
+      'https://backend.tracebud.test/api/v1/launch/commercial-profile',
       expect.objectContaining({
         method: 'POST',
         headers: {

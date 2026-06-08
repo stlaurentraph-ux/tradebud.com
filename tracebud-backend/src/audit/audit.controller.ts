@@ -107,15 +107,26 @@ export class AuditController {
       'Field app and agents can record declaration snapshots, device metadata, and other events into the central audit_log.',
   })
   async create(@Body() dto: CreateAuditEventDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    const tenantId = this.getTenantClaim(req);
     const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
+    const eventType = dto.eventType?.trim() ?? '';
+    const isDashboardEvent = eventType.startsWith('dashboard_');
+    if (
+      !isDashboardEvent &&
+      role !== 'farmer' &&
+      role !== 'agent' &&
+      role !== 'exporter'
+    ) {
       throw new ForbiddenException('Only farmers, agents, or exporters can append audit events');
     }
-    if (!dto.eventType?.trim() || typeof dto.payload !== 'object' || dto.payload === null) {
+    if (!eventType || typeof dto.payload !== 'object' || dto.payload === null) {
       throw new BadRequestException('eventType and payload are required');
     }
     const userId = req.user?.id as string | undefined;
+    const payload = {
+      ...dto.payload,
+      tenantId: typeof dto.payload.tenantId === 'string' ? dto.payload.tenantId : tenantId,
+    };
     try {
       const res = await this.pool.query(
         `
@@ -126,8 +137,8 @@ export class AuditController {
         [
           userId ?? null,
           dto.deviceId?.trim() || null,
-          dto.eventType.trim(),
-          JSON.stringify(dto.payload),
+          eventType,
+          JSON.stringify(payload),
         ],
       );
       return res.rows[0] ?? { ok: true };
@@ -142,39 +153,63 @@ export class AuditController {
 
   @Get()
   @ApiQuery({ name: 'farmerId', required: false })
-  async list(@Query('farmerId') farmerId: string | undefined, @Req() req: any) {
-    this.requireTenantClaim(req);
-    const query = (params?: string[]) => {
-      if (params) {
-        return this.pool.query(
+  @ApiQuery({ name: 'tenantId', required: false })
+  @ApiQuery({ name: 'eventType', required: false })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async list(
+    @Query('farmerId') farmerId: string | undefined,
+    @Query('tenantId') tenantIdQuery: string | undefined,
+    @Query('eventType') eventType: string | undefined,
+    @Query('limit') limitRaw: string | undefined,
+    @Req() req: any,
+  ) {
+    const tenantId = this.getTenantClaim(req);
+    const scopedTenantId = tenantIdQuery?.trim() || tenantId;
+    const limit = limitRaw ? Number(limitRaw) : 100;
+    if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
+      throw new BadRequestException('limit must be between 1 and 200.');
+    }
+
+    try {
+      if (farmerId) {
+        const res = await this.pool.query(
           `
             SELECT id, timestamp, user_id, device_id, event_type, payload
             FROM audit_log
             WHERE payload ->> 'farmerId' = $1
             ORDER BY timestamp DESC
-            LIMIT 100
+            LIMIT $2
           `,
-          params,
+          [farmerId, limit],
         );
-      }
-
-      return this.pool.query(
-        `
-          SELECT id, timestamp, user_id, device_id, event_type, payload
-          FROM audit_log
-          ORDER BY timestamp DESC
-          LIMIT 100
-        `,
-      );
-    };
-
-    try {
-      if (farmerId) {
-        const res = await query([farmerId]);
         return res.rows;
       }
 
-      const res = await query();
+      if (eventType?.trim()) {
+        const res = await this.pool.query(
+          `
+            SELECT id, timestamp, user_id, device_id, event_type, payload
+            FROM audit_log
+            WHERE event_type = $1
+              AND payload ->> 'tenantId' = $2
+            ORDER BY timestamp DESC
+            LIMIT $3
+          `,
+          [eventType.trim(), scopedTenantId, limit],
+        );
+        return res.rows;
+      }
+
+      const res = await this.pool.query(
+        `
+          SELECT id, timestamp, user_id, device_id, event_type, payload
+          FROM audit_log
+          WHERE payload ->> 'tenantId' = $1
+          ORDER BY timestamp DESC
+          LIMIT $2
+        `,
+        [scopedTenantId, limit],
+      );
       return res.rows;
     } catch (e) {
       const err = e as { code?: string; message?: string };

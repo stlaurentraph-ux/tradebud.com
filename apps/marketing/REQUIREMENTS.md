@@ -19,4 +19,8 @@ Prioritize:
 - Persona pages and call-to-action flows
 - Quote request intake and routing expectations
 
+## Site structure (planned)
+
+Incremental IA, navigation, Insights (blog), and rollout phases are documented in [SITE_ARCHITECTURE.md](./SITE_ARCHITECTURE.md). Implement slice-by-slice; do not treat as a single big-bang release.
+
 If requirements conflict, treat `REQUIREMENTS.md` as business intent, `MVP_PRD.md` as release boundary, `PRODUCT_PRD.md` as implementation detail, and `JTBD_PRD.md` as role-workflow behavior.

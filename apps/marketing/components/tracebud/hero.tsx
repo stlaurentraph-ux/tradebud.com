@@ -26,13 +26,14 @@ export function Hero() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 md:py-32">
-          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.42fr)_minmax(0,0.58fr)] lg:gap-10 xl:grid-cols-[minmax(0,1.28fr)_minmax(0,0.72fr)] xl:gap-16">
             <motion.div
+              className="min-w-0 lg:max-w-none"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="mb-6 text-balance text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+              <h1 className="mb-6 max-w-[44rem] text-pretty text-4xl font-bold leading-[1.08] text-white sm:text-5xl lg:max-w-none lg:text-5xl lg:leading-[1.08] xl:text-6xl xl:leading-tight">
                 {t("hero.headline")}
               </h1>
 
@@ -65,12 +66,12 @@ export function Hero() {
             </motion.div>
 
             <motion.div
-              className="relative flex justify-center lg:justify-end"
+              className="relative flex justify-center lg:justify-end lg:pl-2"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <div className="relative w-[280px] md:w-[320px]">
+              <div className="relative w-[280px] md:w-[320px] lg:w-[250px] xl:w-[320px]">
                 <Image
                   src="/images/farmer-app-homepage.png"
                   alt="Tracebud Farmer App interface"

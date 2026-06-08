@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
-import { usePackageById } from '@/lib/use-packages';
+import { usePackageDetail } from '@/lib/use-package-detail';
+import { useAuth } from '@/lib/auth-context';
 import { ArrowLeft, Clock, CheckCircle2, AlertTriangle, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,13 +29,18 @@ const STATE_FLOW = [
 ];
 
 export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
+  const { user } = useAuth();
   const { id } = use(params);
-  const { pkg, isLoading } = usePackageById(id);
+  const { pkg, isLoading, error } = usePackageDetail(id, user?.tenant_id ?? null);
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Loading shipment timeline...</div>;
   }
   if (!pkg) {
-    return <div className="p-6 text-sm text-muted-foreground">Shipment not found.</div>;
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        {error ? `Failed to load shipment: ${error}` : 'Shipment not found.'}
+      </div>
+    );
   }
   const currentStateIndex = STATE_FLOW.findIndex(
     (s) => s.state.toLowerCase() === pkg.status.toLowerCase()
@@ -48,7 +54,7 @@ export default function ShipmentTimelinePage({ params }: TimelinePageProps) {
           subtitle="Complete audit history of shipment state changes and events"
           breadcrumbs={[
             { label: 'Dashboard', href: '/' },
-            { label: 'Shipments', href: '/shipments' },
+            { label: 'Shipments', href: '/packages' },
             { label: pkg.code, href: `/packages/${id}` },
             { label: 'Timeline' },
           ]}

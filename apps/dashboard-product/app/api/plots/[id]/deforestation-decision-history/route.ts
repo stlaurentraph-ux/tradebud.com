@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(
   request: Request,
@@ -16,7 +17,7 @@ export async function GET(
       );
     }
 
-    const backendUrl = `${backendBase}/v1/plots/${encodeURIComponent(id)}/deforestation-decision-history`;
+    const backendUrl = backendApiUrl(backendBase, `/v1/plots/${encodeURIComponent(id)}/deforestation-decision-history`);
     const backendResponse = await fetch(backendUrl, {
       cache: 'no-store',
       headers: authHeader ? { Authorization: authHeader } : undefined,

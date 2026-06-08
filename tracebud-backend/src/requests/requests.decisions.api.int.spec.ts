@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
+import { InboxService } from '../inbox/inbox.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { PG_POOL } from '../db/db.module';
@@ -50,7 +51,7 @@ describeIfDb('Requests decisions API integration', () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [RequestsController],
-      providers: [RequestsService, { provide: PG_POOL, useValue: pool }],
+      providers: [RequestsService, InboxService, { provide: PG_POOL, useValue: pool }],
     }).compile();
 
     app = moduleRef.createNestApplication();

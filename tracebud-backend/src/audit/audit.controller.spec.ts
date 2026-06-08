@@ -18,9 +18,11 @@ describe('AuditController tenant-claim and role checks', () => {
     const pool = { query: jest.fn() };
     const controller = new AuditController(pool as any);
 
-    await expect(controller.list(undefined, { user: { id: 'user_1', email: 'farmer@example.com' } })).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(
+      controller.list(undefined, undefined, undefined, undefined, {
+        user: { id: 'user_1', email: 'farmer@example.com' },
+      }),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('allows list when tenant claim is present', async () => {
@@ -28,7 +30,9 @@ describe('AuditController tenant-claim and role checks', () => {
     const controller = new AuditController(pool as any);
 
     await expect(
-      controller.list(undefined, { user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } }),
+      controller.list(undefined, undefined, undefined, undefined, {
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      }),
     ).resolves.toEqual([{ id: 'evt_1' }]);
   });
 

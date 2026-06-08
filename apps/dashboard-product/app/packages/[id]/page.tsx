@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -17,7 +17,6 @@ import {
   ExternalLink,
   AlertCircle,
   CheckCircle2,
-  Unlock,
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
@@ -27,33 +26,10 @@ import { toast } from 'sonner';
 import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages/package-status-badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { BlockerCard } from '@/components/ui/blocker-card';
-import { transitionPackage } from '@/lib/package-service';
-import { usePackageById } from '@/lib/use-packages';
+import { generateHarvestPackage, submitHarvestPackage } from '@/lib/harvest-package-actions';
+import { usePackageDetail } from '@/lib/use-package-detail';
+import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { useAuth } from '@/lib/auth-context';
-import type { ShipmentStatus } from '@/types';
-
-// Canonical shipment state machine
-const STATE_TRANSITIONS: Record<ShipmentStatus, ShipmentStatus[]> = {
-  DRAFT: ['READY', 'ON_HOLD'],
-  READY: ['DRAFT', 'SEALED', 'ON_HOLD'],
-  SEALED: ['SUBMITTED', 'ON_HOLD'],
-  SUBMITTED: ['ACCEPTED', 'REJECTED', 'ON_HOLD'],
-  ACCEPTED: ['ARCHIVED'],
-  REJECTED: ['DRAFT', 'ON_HOLD'],
-  ARCHIVED: [],
-  ON_HOLD: ['DRAFT', 'READY'],
-};
-
-const BLOCKING_RULES: Record<ShipmentStatus, string[]> = {
-  DRAFT: [],
-  READY: ['All plots must have deforestation assessment', 'All associated entities must have FPIC consent'],
-  SEALED: ['All compliance checks must pass', 'Liability acknowledgement required'],
-  SUBMITTED: ['Cannot modify submitted shipment'],
-  ACCEPTED: [],
-  REJECTED: [],
-  ARCHIVED: [],
-  ON_HOLD: [],
-};
 
 interface PackageDetailPageProps {
   params: Promise<{ id: string }>;
@@ -63,105 +39,64 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
   const { id } = use(params);
-  const { pkg, isLoading, error } = usePackageById(id);
+  const { pkg, isLoading, error, refetch } = usePackageDetail(id, user?.tenant_id ?? null);
+  const { data: readiness, isLoading: readinessLoading } = usePackageReadiness(id);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [isTransitioningTo, setIsTransitioningTo] = useState<ShipmentStatus | null>(null);
+  const [pendingAction, setPendingAction] = useState<'generate' | 'submit' | null>(null);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [currentStatus, setCurrentStatus] = useState<ShipmentStatus>('DRAFT');
-  useEffect(() => {
-    if (pkg) setCurrentStatus(pkg.status);
-  }, [pkg]);
 
-  if (!isLoading && !pkg) {
+  if (!isLoading && !pkg && !error) {
     notFound();
   }
 
-  // Check if transition is allowed
-  const allowedTransitions = STATE_TRANSITIONS[currentStatus] || [];
-  const blockingIssues = BLOCKING_RULES[currentStatus] || [];
-  const canTransition = blockingIssues.length === 0;
+  if (!isLoading && error?.toLowerCase().includes('not found')) {
+    notFound();
+  }
 
-  const handleStateTransition = async (newStatus: ShipmentStatus) => {
-    if (!allowedTransitions.includes(newStatus)) {
-      return;
-    }
-    if (newStatus === 'SEALED') {
-      setShowLiabilityModal(true);
-    } else {
-      if (!pkg) return;
-      setIsTransitioningTo(newStatus);
-      setActionError(null);
-      try {
-        const result = await transitionPackage(pkg.id, newStatus);
-        setCurrentStatus(result.pkg.status);
-        toast.success(`Shipment moved to ${result.pkg.status}.`);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Transition failed.';
-        setActionError(message);
-        toast.error(message);
-      } finally {
-        setIsTransitioningTo(null);
-      }
-    }
-  };
+  const readinessBlockers =
+    readiness?.blockers.map((issue) => issue.message) ??
+    (readinessLoading ? ['Loading readiness checks...'] : []);
+  const canGenerate = pkg?.status === 'DRAFT' && readinessBlockers.length === 0;
+  const canSubmit = pkg?.status === 'READY' && readinessBlockers.length === 0;
 
-  const confirmSeal = async () => {
+  const confirmGenerateArtifacts = async () => {
     if (!pkg) return;
-    setIsTransitioningTo('SEALED');
+    setPendingAction('generate');
     setActionError(null);
     try {
-      const result = await transitionPackage(pkg.id, 'SEALED', { confirmLiability: true });
-      setCurrentStatus(result.pkg.status);
+      await generateHarvestPackage(pkg.id);
       setShowLiabilityModal(false);
-      toast.success('Shipment sealed successfully.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to seal shipment.';
+      refetch();
+      toast.success('Filing artifacts generated. Package is ready to submit.');
+    } catch (generateError) {
+      const message =
+        generateError instanceof Error ? generateError.message : 'Failed to generate filing artifacts.';
       setActionError(message);
       toast.error(message);
     } finally {
-      setIsTransitioningTo(null);
+      setPendingAction(null);
     }
   };
 
-  const approveSubmittedShipment = async () => {
+  const handleSubmitPackage = async () => {
     if (!pkg) return;
-    setIsTransitioningTo('ACCEPTED');
+    setPendingAction('submit');
     setActionError(null);
     try {
-      const result = await transitionPackage(pkg.id, 'ACCEPTED');
-      setCurrentStatus(result.pkg.status);
-      toast.success('Shipment accepted.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to accept shipment.';
+      const idempotencyKey = `submit-${pkg.id}-${Date.now()}`;
+      const result = await submitHarvestPackage(pkg.id, idempotencyKey);
+      refetch();
+      toast.success(
+        result.replayed
+          ? 'Submission replayed from idempotency cache.'
+          : `Package submitted${result.tracesReference ? ` (${result.tracesReference})` : ''}.`,
+      );
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : 'Failed to submit package.';
       setActionError(message);
       toast.error(message);
     } finally {
-      setIsTransitioningTo(null);
-    }
-  };
-
-  const confirmRejectShipment = async () => {
-    if (!pkg) return;
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason.');
-      return;
-    }
-    setIsTransitioningTo('REJECTED');
-    setActionError(null);
-    try {
-      const result = await transitionPackage(pkg.id, 'REJECTED');
-      setCurrentStatus(result.pkg.status);
-      setShowRejectModal(false);
-      setRejectionReason('');
-      toast.success('Shipment rejected.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to reject shipment.';
-      setActionError(message);
-      toast.error(message);
-    } finally {
-      setIsTransitioningTo(null);
+      setPendingAction(null);
     }
   };
 
@@ -193,17 +128,20 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Link>
               </Button>
             </PermissionGate>
-            {currentStatus === 'SEALED' && (
+            {pkg.status === 'READY' && (
               <PermissionGate permission="packages:submit_traces">
-                <Button asChild>
-                  <Link href={`/packages/${pkg.id}/submit`}>
-                    <Send className="mr-2 h-4 w-4" />
-                    Submit downstream handoff
-                  </Link>
+                <Button
+                  onClick={() => {
+                    void handleSubmitPackage();
+                  }}
+                  disabled={!canSubmit || pendingAction !== null}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {pendingAction === 'submit' ? 'Submitting...' : 'Submit downstream handoff'}
                 </Button>
               </PermissionGate>
             )}
-            {currentStatus === 'DRAFT' || currentStatus === 'READY' ? (
+            {pkg.status === 'DRAFT' || pkg.status === 'READY' ? (
               <PermissionGate permission="packages:seal_shipment">
                 <Button asChild variant="default">
                   <Link href={`/packages/${pkg.id}/assemble`}>
@@ -220,28 +158,6 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 </Link>
               </Button>
             </PermissionGate>
-            {currentStatus === 'SUBMITTED' && (
-              <PermissionGate permission="packages:approve">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      void approveSubmittedShipment();
-                    }}
-                    disabled={isTransitioningTo !== null}
-                  >
-                    {isTransitioningTo === 'ACCEPTED' ? 'Accepting...' : 'Accept Shipment'}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowRejectModal(true)}
-                    disabled={isTransitioningTo !== null}
-                  >
-                    Reject Shipment
-                  </Button>
-                </div>
-              </PermissionGate>
-            )}
           </div>
         }
       />
@@ -264,57 +180,69 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Info */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Blocking Issues */}
-            {blockingIssues.length > 0 && (
+            {/* Readiness blockers */}
+            {readinessBlockers.length > 0 && (
               <BlockerCard
                 blockerType="INVALID_STATE"
                 severity="BLOCKING"
-                title="Cannot proceed to next state"
-                description={`Resolve the following to advance: ${blockingIssues.join(', ')}`}
-                relatedEntityLabel="Shipment blocking requirements"
+                title="Filing preflight blockers"
+                description={`Resolve the following before generating or submitting: ${readinessBlockers.join(', ')}`}
+                relatedEntityLabel="Package readiness requirements"
                 slaCountdown="Immediate action required"
                 remediationAction={{
-                  label: 'View requirements',
-                  href: '#',
+                  label: 'Run compliance checks',
+                  href: `/compliance?package=${pkg.id}`,
                 }}
               />
             )}
 
-            {/* State Transition Panel */}
+            {/* Backend filing workflow */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">State Transitions</CardTitle>
+                <CardTitle className="text-base font-medium">Filing Workflow</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Current backend status: <span className="font-medium text-foreground">{pkg.status}</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {allowedTransitions.length > 0 ? (
-                    allowedTransitions.map((nextStatus) => (
-                      <PermissionGate key={nextStatus} permission="packages:edit">
-                        <Button
-                          onClick={() => void handleStateTransition(nextStatus)}
-                          disabled={!canTransition || isTransitioningTo !== null}
-                          variant={canTransition ? 'default' : 'outline'}
-                        >
-                          {canTransition ? (
-                            <Unlock className="mr-2 h-4 w-4" />
-                          ) : (
-                            <Lock className="mr-2 h-4 w-4" />
-                          )}
-                          {isTransitioningTo === nextStatus ? 'Applying...' : `→ ${nextStatus.toUpperCase()}`}
-                        </Button>
-                      </PermissionGate>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No state transitions available from {currentStatus}</p>
+                  {pkg.status === 'DRAFT' && (
+                    <PermissionGate permission="packages:seal_shipment">
+                      <Button
+                        onClick={() => setShowLiabilityModal(true)}
+                        disabled={!canGenerate || pendingAction !== null}
+                      >
+                        <Lock className="mr-2 h-4 w-4" />
+                        {pendingAction === 'generate' ? 'Generating...' : 'Generate filing artifacts'}
+                      </Button>
+                    </PermissionGate>
+                  )}
+                  {pkg.status === 'READY' && (
+                    <PermissionGate permission="packages:submit_traces">
+                      <Button
+                        onClick={() => {
+                          void handleSubmitPackage();
+                        }}
+                        disabled={!canSubmit || pendingAction !== null}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        {pendingAction === 'submit' ? 'Submitting...' : 'Submit to downstream'}
+                      </Button>
+                    </PermissionGate>
+                  )}
+                  {pkg.status === 'SUBMITTED' && (
+                    <p className="text-sm text-muted-foreground">
+                      This package has been submitted and is awaiting downstream processing.
+                    </p>
                   )}
                 </div>
 
-                {blockingIssues.length > 0 && (
+                {readinessBlockers.length > 0 && (
                   <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
-                    <p className="text-sm font-semibold text-amber-900 mb-2">Blocking Issues:</p>
+                    <p className="text-sm font-semibold text-amber-900 mb-2">Readiness blockers:</p>
                     <ul className="space-y-1">
-                      {blockingIssues.map((issue, i) => (
-                        <li key={i} className="text-sm text-amber-800 flex items-start gap-2">
+                      {readinessBlockers.map((issue, index) => (
+                        <li key={index} className="text-sm text-amber-800 flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                           {issue}
                         </li>
@@ -590,57 +518,21 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
                 <p className="text-sm text-amber-900">
-                  By advancing this shipment to handoff-ready, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations. This action cannot be undone.
+                  By generating filing artifacts, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setShowLiabilityModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={confirmSeal} className="bg-red-600 hover:bg-red-700">
+                <Button
+                  onClick={() => {
+                    void confirmGenerateArtifacts();
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {isTransitioningTo === 'SEALED' ? 'Sealing...' : 'I Acknowledge'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <Card className="w-[30rem]">
-            <CardHeader>
-              <CardTitle>Reject Shipment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Provide a reason for rejection. This reason is used for downstream remediation.
-              </p>
-              <textarea
-                className="min-h-28 w-full rounded-md border border-border bg-background p-3 text-sm"
-                placeholder="Enter rejection reason..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowRejectModal(false);
-                    setRejectionReason('');
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    void confirmRejectShipment();
-                  }}
-                  disabled={isTransitioningTo !== null}
-                >
-                  {isTransitioningTo === 'REJECTED' ? 'Rejecting...' : 'Confirm Rejection'}
+                  {pendingAction === 'generate' ? 'Generating...' : 'I Acknowledge'}
                 </Button>
               </div>
             </CardContent>

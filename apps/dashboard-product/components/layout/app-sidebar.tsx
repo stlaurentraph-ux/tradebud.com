@@ -39,6 +39,7 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/auth-context';
+import { useLocale } from '@/lib/locale-context';
 import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
 import type { TenantRole } from '@/types';
@@ -69,6 +70,13 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   Scale,
   Zap,
 };
+
+function translateNavLabel(name: string, t: (key: string) => string): string {
+  if (name === 'Overview') return t('nav.overview');
+  if (name === 'Settings') return t('nav.settings');
+  if (name === 'Help') return t('nav.help');
+  return name;
+}
 
 const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
   Overview: 'overview',
@@ -104,6 +112,7 @@ const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout, switchRole } = useAuth();
+  const { t } = useLocale();
   const { sponsorView, setSponsorView } = useSponsorViewControls();
 
   const navItems = getVisibleNavItems(user);
@@ -237,7 +246,7 @@ export function AppSidebar() {
       {/* Main Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Main navigation">
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
-          Navigation
+          {t('nav.navigation')}
         </p>
         {navItems.map((item) => {
           const isActive = pathname === item.href ||
@@ -263,7 +272,7 @@ export function AppSidebar() {
               aria-label={item.name}
             >
               <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
-              {item.name}
+              {translateNavLabel(item.name, t)}
             </Link>
           );
         })}
@@ -272,7 +281,7 @@ export function AppSidebar() {
           <>
             <div className="my-3 mx-3 h-px bg-white/10" />
             <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
-              Support
+              {t('nav.support')}
             </p>
             {secondaryNavItems.map((item) => {
               const isActive = pathname === item.href;
@@ -292,7 +301,7 @@ export function AppSidebar() {
                   aria-label={item.name}
                 >
                   <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
-                  {item.name}
+                  {translateNavLabel(item.name, t)}
                 </Link>
               );
             })}

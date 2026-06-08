@@ -100,7 +100,7 @@ export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; me
     if (!token) {
       return {
         ok: false,
-        message: 'Sign in under Settings → Your profile with your Tracebud email and password.',
+        message: 'Sign in to sync your plots to Tracebud.',
       };
     }
 

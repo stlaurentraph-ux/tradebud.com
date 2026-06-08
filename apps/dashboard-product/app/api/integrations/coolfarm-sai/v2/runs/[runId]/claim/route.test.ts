@@ -31,7 +31,7 @@ describe('Cool Farm V2 claim run proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/run%2Fabc/claim',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/run%2Fabc/claim',
       expect.objectContaining({
         method: 'POST',
         headers: {

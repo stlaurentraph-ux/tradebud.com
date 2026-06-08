@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { InboxService } from '../inbox/inbox.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 
@@ -38,7 +39,8 @@ describeIfDb('RequestsController integration: decision timeline', () => {
       )
     `);
 
-    const service = new RequestsService(pool as any);
+    const inboxService = new InboxService(pool as any);
+    const service = new RequestsService(pool as any, inboxService);
     controller = new RequestsController(service);
   }, 20_000);
 

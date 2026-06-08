@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 type ContactRecord = {
   consent_status?: 'unknown' | 'granted' | 'revoked';
@@ -8,6 +9,8 @@ type PlotRecord = {
   verified?: boolean;
   compliance_status?: string;
   deforestation_risk?: string;
+  status?: string;
+  sinaph_overlap?: boolean;
 };
 
 type InboxRequest = {
@@ -47,7 +50,7 @@ async function fetchBackendJson(path: string, authHeader: string | null): Promis
   if (!backendBase) {
     throw new Error('TRACEBUD_BACKEND_URL is required for cooperative insights.');
   }
-  const response = await fetch(`${backendBase}${path}`, {
+  const response = await fetch(`${backendApiUrl(backendBase, path)}`, {
     method: 'GET',
     headers: authHeader ? { Authorization: authHeader } : undefined,
     cache: 'no-store',
@@ -64,8 +67,8 @@ export async function GET(request: Request) {
   try {
     const [contactsRaw, plotsRaw, inboxRaw, campaignsRaw] = await Promise.allSettled([
       fetchBackendJson('/v1/contacts', authHeader),
-      fetchBackendJson('/v1/plots', authHeader),
-      fetchBackendJson('/api/v1/inbox-requests', authHeader),
+      fetchBackendJson('/v1/plots?scope=tenant', authHeader),
+      fetchBackendJson('/v1/inbox-requests', authHeader),
       fetchBackendJson('/v1/requests/campaigns', authHeader),
     ]);
 
@@ -76,8 +79,11 @@ export async function GET(request: Request) {
 
     const compliantPlots = plots.filter((plot) => {
       if (plot.verified) return true;
-      const complianceStatus = (plot.compliance_status ?? '').toUpperCase();
-      if (complianceStatus === 'PASSED' || complianceStatus === 'COMPLIANT') return true;
+      const complianceStatus = (plot.compliance_status ?? plot.status ?? '').toUpperCase();
+      if (complianceStatus === 'PASSED' || complianceStatus === 'COMPLIANT' || complianceStatus === 'VERIFIED') {
+        return true;
+      }
+      if (plot.sinaph_overlap === false) return true;
       const risk = (plot.deforestation_risk ?? '').toLowerCase();
       return risk === 'low';
     }).length;
@@ -89,9 +95,9 @@ export async function GET(request: Request) {
       return status === 'DRAFT' || status === 'QUEUED' || status === 'RUNNING';
     });
     const blockedOrHighRiskPlots = plots.filter((plot) => {
-      const complianceStatus = (plot.compliance_status ?? '').toUpperCase();
+      const complianceStatus = (plot.compliance_status ?? plot.status ?? '').toUpperCase();
       const risk = (plot.deforestation_risk ?? '').toLowerCase();
-      return complianceStatus === 'BLOCKED' || risk === 'high';
+      return complianceStatus === 'BLOCKED' || plot.sinaph_overlap === true || risk === 'high';
     }).length;
 
     const portabilityPending = campaigns.filter((item) =>

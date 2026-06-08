@@ -63,7 +63,7 @@ describe('plot deforestation decision history proxy route', () => {
       }),
     ]);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/deforestation-decision-history',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/deforestation-decision-history',
       expect.objectContaining({
         cache: 'no-store',
         headers: { Authorization: 'Bearer demo_token' },

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     }
 
     const backendResponse = await fetch(
-      `${backendBase}/v1/integrations/assessments/requests`,
+      backendApiUrl(backendBase, `/v1/integrations/assessments/requests`),
       {
         cache: 'no-store',
         headers: authHeader ? { Authorization: authHeader } : undefined,
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     }
     const body = await request.json().catch(() => ({}));
     const backendResponse = await fetch(
-      `${backendBase}/v1/integrations/assessments/requests`,
+      backendApiUrl(backendBase, `/v1/integrations/assessments/requests`),
       {
         method: 'POST',
         headers: {

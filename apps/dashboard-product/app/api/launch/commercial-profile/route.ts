@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 function isDevSignupBypassEnabled(): boolean {
   return process.env.TRACEBUD_DEV_SIGNUP_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Authorization header is required.' }, { status: 401 });
   }
 
-  const response = await fetch(`${backendBase}/v1/launch/commercial-profile`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/launch/commercial-profile`), {
     cache: 'no-store',
     headers: { Authorization: authHeader },
   });
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Authorization header is required.' }, { status: 401 });
   }
 
-  const response = await fetch(`${backendBase}/v1/launch/commercial-profile`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/launch/commercial-profile`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

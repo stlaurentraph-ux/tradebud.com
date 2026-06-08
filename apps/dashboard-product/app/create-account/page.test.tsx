@@ -69,7 +69,7 @@ describe('CreateAccountPage', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Organization name')).toBeInTheDocument();
     });
-    expect(hydrateSessionFromTokenMock).toHaveBeenCalledWith('token_1');
+    expect(hydrateSessionFromTokenMock).toHaveBeenCalledWith('token_1', undefined);
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/auth/signup',
       expect.objectContaining({

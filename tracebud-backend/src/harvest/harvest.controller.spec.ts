@@ -11,6 +11,7 @@ function makeServiceMock(): jest.Mocked<
     | 'listVouchersForFarmer'
     | 'createDdsPackage'
     | 'listDdsPackagesForFarmer'
+    | 'canReadPackageForTenant'
     | 'getDdsPackageDetail'
     | 'listDdsPackageEvidenceDocuments'
     | 'evaluateDdsPackageReadiness'
@@ -27,6 +28,7 @@ function makeServiceMock(): jest.Mocked<
     listVouchersForFarmer: jest.fn(),
     createDdsPackage: jest.fn(),
     listDdsPackagesForFarmer: jest.fn(),
+    canReadPackageForTenant: jest.fn().mockResolvedValue(true),
     getDdsPackageDetail: jest.fn(),
     listDdsPackageEvidenceDocuments: jest.fn(),
     evaluateDdsPackageReadiness: jest.fn(),

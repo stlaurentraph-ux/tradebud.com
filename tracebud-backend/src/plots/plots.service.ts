@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
+import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -898,6 +899,36 @@ export class PlotsService {
         ORDER BY created_at DESC
       `,
       [farmerId],
+    );
+
+    return result.rows;
+  }
+
+  async listForTenant(tenantId: string) {
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    if (farmerIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.pool.query(
+      `
+        SELECT
+          id,
+          farmer_id,
+          name,
+          kind,
+          area_ha,
+          declared_area_ha,
+          precision_m_at_capture,
+          sinaph_overlap,
+          indigenous_overlap,
+          status,
+          created_at
+        FROM plot
+        WHERE farmer_id = ANY($1::uuid[])
+        ORDER BY created_at DESC
+      `,
+      [farmerIds],
     );
 
     return result.rows;

@@ -1,7 +1,30 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CooperativeDashboard } from './cooperative-dashboard';
+
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({
+    user: {
+      id: 'user-coop',
+      tenant_id: 'tenant-coop',
+      active_role: 'cooperative',
+    },
+  }),
+}));
+
+vi.mock('@/lib/use-requests', () => ({
+  useRequestCampaigns: () => ({
+    campaigns: [],
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/use-dashboard-activity', () => ({
+  useDashboardActivity: () => ({ events: [], loaded: true }),
+}));
 
 const mockMetrics = {
   total_plots: 10,
@@ -16,14 +39,15 @@ const virginMetrics = {
 };
 
 describe('CooperativeDashboard', () => {
-  it('renders virgin tenant empty state when no data exists', () => {
+  it('renders campaigns overview for empty tenants', () => {
     render(<CooperativeDashboard metrics={virginMetrics} />);
-    expect(screen.getByText('Welcome to your cooperative workspace')).toBeInTheDocument();
-    expect(screen.getByText(/No demo data is preloaded/)).toBeInTheDocument();
+    expect(screen.getByText('Campaigns')).toBeInTheDocument();
+    expect(screen.queryByText('Welcome to your cooperative workspace')).not.toBeInTheDocument();
   });
 
-  it('does not show virgin state when metrics exist', () => {
+  it('shows cooperative cockpit when metrics exist', () => {
     render(<CooperativeDashboard metrics={mockMetrics} />);
+    expect(screen.getByText('Cooperative Operations Cockpit')).toBeInTheDocument();
     expect(screen.queryByText('Welcome to your cooperative workspace')).not.toBeInTheDocument();
   });
 
@@ -42,6 +66,11 @@ describe('CooperativeDashboard', () => {
     render(<CooperativeDashboard metrics={mockMetrics} />);
     expect(screen.getByText('Members and Portability')).toBeInTheDocument();
     expect(screen.getByText('Field Capture and Plots')).toBeInTheDocument();
+  });
+
+  it('shows cooperative activity section', () => {
+    render(<CooperativeDashboard metrics={mockMetrics} />);
+    expect(screen.getByText('Cooperative activity')).toBeInTheDocument();
   });
 
   it('calculates verification rate as 0 when no plots exist', () => {

@@ -68,7 +68,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     await expect(
-      controller.listByFarmer('farmer_1', { user: { id: 'user_1', email: 'farmer@example.com' } }),
+      controller.listByFarmer('farmer_1', undefined, { user: { id: 'user_1', email: 'farmer@example.com' } }),
     ).rejects.toThrow(ForbiddenException);
   });
 
@@ -78,7 +78,7 @@ describe('PlotsController scope boundaries', () => {
     const controller = new PlotsController(service as unknown as PlotsService);
 
     await expect(
-      controller.listByFarmer('farmer_other', {
+      controller.listByFarmer('farmer_other', undefined, {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);

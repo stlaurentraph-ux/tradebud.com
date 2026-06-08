@@ -1,42 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { DDSPackage } from '@/types';
-import { getPackagesSnapshot, listPackages, subscribePackages } from '@/lib/package-service';
+import { useAuth } from '@/lib/auth-context';
+import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
+import { useHarvestPackages } from '@/lib/use-harvest-packages';
 
-export function usePackages() {
-  const [packages, setPackages] = useState<DDSPackage[]>(() => getPackagesSnapshot());
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await listPackages();
-        if (!cancelled) setPackages(data);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load packages.');
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    void load();
-    const unsubscribe = subscribePackages(() => {
-      if (!cancelled) setPackages(getPackagesSnapshot());
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
+export function usePackages(options?: { scope?: 'tenant' | 'shared' }) {
+  const { user } = useAuth();
+  const scope = options?.scope ?? resolveHarvestPackageScope(user?.active_role);
+  const { packages, isLoading, error } = useHarvestPackages(user?.tenant_id ?? null, { scope });
 
   return { packages, isLoading, error };
 }
