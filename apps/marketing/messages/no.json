@@ -3,13 +3,20 @@
     "hero": {
       "headline": "Sporbarhet som fungerer for hele kjeden.",
       "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
       "cta": {
         "primary": "Se hvordan det fungerer",
         "secondary": "Kontakt oss"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+      "eyebrow": "Why Tracebud",
       "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
       "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
       "pillars": {
@@ -56,22 +63,23 @@
     "productsSection": {
       "eyebrow": "To produkter, én arbeidsflyt",
       "title": "Bygget for hvordan forsyningskjeder faktisk fungerer",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
         "label": "Mobilapp",
         "headline": "Bygget for feltet, ikke kontoret.",
         "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
-        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring.",
         "features": {
+          "free": "No training-heavy setup required",
           "offline": "Fungerer offline, synkroniserer når tilkoblingen er tilbake",
           "gps": "Gå langs grensen for å registrere GPS-polygon",
           "photo": "Fotobevis og samtykkeregistrering"
-        }
+        },
+        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
       },
       "dashboard": {
         "label": "Dashbord",
         "headline": "Administrer nettverket uten frem og tilbake.",
         "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
-        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer.",
         "features": {
           "import": "Masseimport av kontakter via CSV-opplasting",
           "bulkRequest": "Send forespørsler til hundrevis av kontakter samtidig",
@@ -79,10 +87,31 @@
           "readiness": "Følg beredskap på tvers av nettverket",
           "evidence": "Identifiser manglende bevis umiddelbart",
           "dds": "Sett sammen DDS-pakker for forsendelse"
-        }
+        },
+        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
       }
     },
     "customersSection": {
+      "eyebrow": "Outcomes",
       "headline": "Hvorfor kunder bruker Tracebud",
       "description": "Mindre manuell oppfølging. Bevar opprinnelse gjennom aggregering. Send med trygghet.",
       "cards": {
@@ -106,91 +135,111 @@
       "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
     },
     "finalCtaSection": {
-      "headline": "Gjør etterlevelse brukbar for hele kjeden.",
-      "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
-      "cta": "Kom i gang"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Klar til å bli med på ventelisten?",
-      "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
+      "headline": "Begynn å bygge sporbarhet for nettverket ditt.",
+      "description": "Bli med på ventelisten for tidlig tilgang når Tracebud åpner i din region og råvare.",
       "cta": {
-        "primary": "Bli med nå",
+        "primary": "Bli med på ventelisten",
         "secondary": "Fortsett å bla"
       },
-      "note": "Begrenset antall plasser for tidlige pilotpartnere."
+      "note": "Ingen spam. Avslutt abonnement når som helst."
     },
     "waitlistDialog": {
-      "headline": "Bli med i pilotprogrammet",
-      "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
-      "note": "Ingen spam. Avslutt abonnementet når som helst.",
+      "headline": "Bli med på ventelisten",
+      "description": "Fortell oss om nettverket ditt — vi tar kontakt når Tracebud er klart.",
+      "note": "No spam, ever. Unsubscribe at any time.",
       "sidePanel": {
-        "tagline": "Klar for EUDR, uten kompleksiteten.",
-        "subline": "Enkelt. Rimelig. Bygget for alle aktører i kjeden."
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
       },
-      "submit": "Bli med i piloten",
-      "submitting": "Sender...",
+      "submit": "Bli med på ventelisten",
+      "submitting": "Submitting...",
       "success": {
-        "title": "Søknad mottatt",
-        "description": "Vi vurderer hver søknad personlig. Pilotpartnere får prioritert onboarding og direkte tilgang til compliance-teamet vårt."
+        "title": "Du står på listen",
+        "description": "Vi vurderer hver forespørsel personlig og følger opp på e-post."
       },
       "form": {
-        "firstName": "Fornavn",
-        "lastName": "Etternavn",
-        "email": "Jobb-e-post",
-        "organisation": "Organisasjon",
-        "role": "Din rolle",
-        "roleOther": "Beskriv rollen din",
-        "commodity": "Hovedråvare",
-        "producerRange": "Hvor mange produsenter trenger EUDR-samsvar?",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
         "placeholders": {
           "firstName": "Maria",
-          "lastName": "Hansen",
-          "email": "maria@firma.no",
-          "organisation": "Kooperativ Sol Naciente",
-          "role": "Velg din rolle",
-          "roleOther": "Beskriv rollen din",
-          "commodity": "Velg en råvare",
-          "producerRange": "Velg et intervall"
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
         },
         "roles": {
-          "cooperative": "Kooperativ",
-          "exporter": "Eksportør",
-          "importer": "Importør",
-          "sponsor": "Sponsor (merkevare, land, NGO)",
-          "other": "Annet"
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
         },
         "commodities": {
-          "coffee": "Kaffe",
-          "cocoa": "Kakao",
-          "palmOil": "Palmolje",
-          "rubber": "Gummi",
-          "soy": "Soya",
-          "cattle": "Fe / Lær",
-          "wood": "Tre / Tømmer",
-          "other": "Annet"
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
+          "rubber": "Rubber",
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
         },
         "producerRanges": {
-          "r1": "1 – 50 produsenter",
-          "r2": "51 – 200 produsenter",
-          "r3": "201 – 500 produsenter",
-          "r4": "501 – 2 000 produsenter",
-          "r5": "2 001 – 10 000 produsenter",
-          "r6": "10 000+ produsenter"
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
         },
         "errors": {
-          "emailRequired": "E-post er påkrevd.",
-          "emailInvalid": "Oppgi en gyldig e-postadresse.",
-          "firstNameRequired": "Fornavn er påkrevd.",
-          "lastNameRequired": "Etternavn er påkrevd.",
-          "organisationRequired": "Organisasjon er påkrevd.",
-          "roleRequired": "Velg din rolle.",
-          "roleOtherRequired": "Beskriv rollen din.",
-          "commodityRequired": "Velg en råvare.",
-          "producerRangeRequired": "Velg antall produsenter.",
-          "generic": "Noe gikk galt. Prøv igjen."
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
         }
       }
-    }
+    },
+    "earlyAdopters": "Bli med på ventelisten for tidlig tilgang"
   },
   "common": {
     "language": "Språk",
@@ -244,14 +293,18 @@
     }
   },
   "footer": {
-    "startMapping": "Start kartlegging",
-    "contactSales": "Kontakt salg",
-    "joinWaitlist": "Bli med på ventelisten",
-    "howItWorks": "Slik fungerer det",
-    "privacy": "Personvern",
-    "terms": "Vilkår",
-    "contact": "Kontakt",
-    "tagline": "Enklere EUDR-prosesser. Sterkere markedstilgang."
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Bli med nå",
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "Klar for ventelisten?",
+    "waitlistSubline": "Vær først ute når Tracebud åpner for nettverket ditt."
   },
   "impact": {
     "title": "Hvorfor Tracebud fungerer",
@@ -282,18 +335,19 @@
     "integrations": "Direkte integrasjoner"
   },
   "faq": {
-    "title": "Ofte stilte spørsmål",
-    "whenLaunch": "Når blir Tracebud lansert?",
-    "whenLaunchAnswer": "Tracebud er i aktiv pilottesting. Vi melder nå utvalgte partnere. Bli med på ventelisten for å få beskjed når vi lanseres.",
-    "whyCommodities": "Hvorfor starte med disse varene?",
+    "title": "Questions? We have answers.",
+    "whenLaunch": "Når kan jeg begynne å bruke Tracebud?",
+    "whenLaunchAnswer": "Tracebud åpner i faser etter region og råvare. Bli med på ventelisten — vi sender e-post når use casen din støttes.",
+    "whyCommodities": "What crops does Tracebud support?",
     "whoCommoditiesAnswer": "Kaffe, kakao, palmeølje, gummi, soya, storfe og tre er de viktigste EUDR-varene. Vi vil utvide basert på etterspørsel.",
-    "howCost": "Hvor mye koster det?",
-    "howCostAnswer": "Prisen er gjennomsiktig og skaleres med størrelsen på operasjonen din. Gratis prøveversjon tilgjengelig. Detaljer deles under onboarding.",
-    "howLong": "Hvor lang tid tar oppsettet?",
-    "howLongAnswer": "De fleste kooperativer blir kartlagt og operasjonelle innen 48 timer etter registrering. Offline-first design betyr null nedetid.",
-    "support": "Hva slags støtte er tilgjengelig?",
-    "supportAnswer": "24/7 e-poststøtte, pluss prioritert telefonsupp for pilotpartnere. Direkte tilgang til vårt compliance-team.",
-    "waitlistPrompt": "Klar for å bli med på ventelisten?",
-    "joinNow": "Bli med nå"
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Gratis for produsenter. Kooperativer, eksportører og kjøpere betaler etter nettverksstørrelse og bruk. Prisside eller venteliste for detaljer.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Produsenter kan begynne å kartlegge med offline-appen med en gang. De fleste kooperativer laster opp nettverket og sender første forespørsel innen en uke.",
+    "support": "What support is available?",
+    "supportAnswer": "Hvert ventelistemedlem får personlig oppfølging på e-post. Etter onboarding har du direkte tilgang til teamet vårt for oppsett og compliance.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "whyCommoditiesAnswer": "Kaffe først, deretter de andre seks EUDR-varene: kakao, palmeolje, gummi, soya, storfe og tre. Se prissiden for full roadmap."
   }
 }

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const faqItems = [
   { key: "whenLaunch", question: "whenLaunch", answer: "whenLaunchAnswer" },
@@ -18,7 +16,6 @@ const faqItems = [
 export function FAQ() {
   const t = useTranslations("faq");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const waitlist = useWaitlistDialog();
 
   return (
     <section id="faq" className="scroll-mt-20 py-20 px-6 bg-background">
@@ -36,7 +33,7 @@ export function FAQ() {
         </motion.div>
 
         {/* FAQ Items */}
-        <div className="space-y-3 mb-12">
+        <div className="space-y-3">
           {faqItems.map((item, index) => {
             const isExpanded = expandedId === item.key;
 
@@ -86,25 +83,6 @@ export function FAQ() {
             );
           })}
         </div>
-
-        {/* Still Have Questions CTA */}
-        <motion.div
-          className="p-8 rounded-xl bg-[var(--data-emerald)]/10 border border-[var(--data-emerald)]/20 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <p className="text-foreground font-semibold mb-4">
-            {t("waitlistPrompt")}
-          </p>
-          <Button
-            onClick={() => waitlist.setOpen(true)}
-            className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-10 py-3 rounded-full"
-          >
-            {t("joinNow")}
-          </Button>
-        </motion.div>
       </div>
     </section>
   );

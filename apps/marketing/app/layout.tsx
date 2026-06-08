@@ -3,9 +3,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Tracebud | Trade freely. Trace Easily.',
+  title: 'Tracebud | Traceability infrastructure for the whole chain',
   description:
-    'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets. De-risk the global supply chain with Tracebud.',
+    'Capture origin data once, preserve provenance, and generate EUDR-ready compliance records. Built for farmers, cooperatives, exporters, and buyers.',
   generator: 'Tracebud',
   keywords: [
     'EUDR',
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://tracebud.com',
     siteName: 'Tracebud',
-    title: 'Tracebud | Trade freely. Trace Easily.',
+    title: 'Tracebud | Traceability infrastructure for the whole chain',
     description:
-      'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+      'Capture origin data once, preserve provenance, and generate EUDR-ready compliance records for fragmented supply chains.',
     images: [
       {
         url: '/og-image.png',
@@ -64,9 +64,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tracebud | Trade freely. Trace Easily.',
+    title: 'Tracebud | Traceability infrastructure for the whole chain',
     description:
-      'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+      'Capture origin data once, preserve provenance, and generate EUDR-ready compliance records.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -105,7 +105,7 @@ const jsonLd = {
   url: 'https://tracebud.com',
   logo: 'https://tracebud.com/tracebud-logo-v6.png',
   description:
-    'The fastest, safest, cheapest way to move smallholder production into EUDR & ESG markets.',
+    'Capture origin data once, preserve provenance, and generate EUDR-ready compliance records for fragmented supply chains.',
   sameAs: [],
   contactPoint: {
     '@type': 'ContactPoint',
@@ -120,18 +120,18 @@ const faqJsonLd = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'When will Tracebud launch?',
+      name: 'When can I start using Tracebud?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Tracebud is in active pilot testing. We are enrolling select partners now. Join the waitlist to be notified when we go live.',
+        text: 'Tracebud is opening in phases by region and commodity. Join the waitlist and we will email you when your use case is supported.',
       },
     },
     {
       '@type': 'Question',
-      name: 'How much does Tracebud cost?',
+      name: 'What does it cost?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Pricing is transparent and scales with your operation size. Free trial available. Details shared during onboarding.',
+        text: 'Free for producers. Cooperatives, exporters, and buyers pay based on network size and usage. Visit the pricing page or join the waitlist for details.',
       },
     },
     {
@@ -139,7 +139,7 @@ const faqJsonLd = {
       name: 'How long does setup take?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Most cooperatives are mapped and operational within 48 hours of signing up. Offline-first design means zero downtime.',
+        text: 'Producers can start mapping with the offline app right away. Most cooperatives upload their network and send the first request within a week.',
       },
     },
   ],

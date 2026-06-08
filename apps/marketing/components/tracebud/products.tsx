@@ -7,8 +7,10 @@ import { useTranslations } from "next-intl";
 
 export function Products() {
   const t = useTranslations("marketing.productsSection");
+  const preview = useTranslations("marketing.productsSection.dashboardPreview");
 
   const mobileFeatures = [
+    { icon: CheckCircle, text: t("mobileApp.features.free") },
     { icon: WifiOff, text: t("mobileApp.features.offline") },
     { icon: MapPin, text: t("mobileApp.features.gps") },
     { icon: Camera, text: t("mobileApp.features.photo") },
@@ -24,7 +26,7 @@ export function Products() {
   ];
 
   return (
-    <section id="how-it-works" className="scroll-mt-20 py-24 md:py-32 bg-white">
+    <section id="products" className="scroll-mt-20 py-24 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
           className="text-center mb-20"
@@ -39,6 +41,7 @@ export function Products() {
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
             {t("title")}
           </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t("intro")}</p>
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-32">
@@ -62,9 +65,7 @@ export function Products() {
               {t("mobileApp.headline")}
             </h3>
 
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">{t("mobileApp.description")}</p>
-
-            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">{t("mobileApp.supportingText")}</p>
+            <p className="text-lg text-gray-600 leading-relaxed mb-8">{t("mobileApp.description")}</p>
 
             <div className="space-y-4">
               {mobileFeatures.map((feature, index) => (
@@ -121,53 +122,53 @@ export function Products() {
               <div className="p-4 bg-white">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="text-sm font-bold text-gray-900">Network Management</div>
-                    <div className="text-xs text-gray-500">Kaffa Cooperative • 247 contacts</div>
+                    <div className="text-sm font-bold text-gray-900">{preview("networkTitle")}</div>
+                    <div className="text-xs text-gray-500">{preview("networkSubtitle")}</div>
                   </div>
                   <button type="button" className="bg-[var(--forest-canopy)] text-white text-[10px] font-semibold px-2 py-1.5 rounded-md flex items-center gap-1">
                     <Upload className="w-3 h-3" />
-                    Import CSV
+                    {preview("importCsv")}
                   </button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="bg-emerald-50 rounded-lg p-2 text-center">
                     <div className="text-lg font-bold text-emerald-700">214</div>
-                    <div className="text-[9px] text-emerald-600">Ready</div>
+                    <div className="text-[9px] text-emerald-600">{preview("ready")}</div>
                   </div>
                   <div className="bg-amber-50 rounded-lg p-2 text-center">
                     <div className="text-lg font-bold text-amber-700">28</div>
-                    <div className="text-[9px] text-amber-600">Pending</div>
+                    <div className="text-[9px] text-amber-600">{preview("pending")}</div>
                   </div>
                   <div className="bg-red-50 rounded-lg p-2 text-center">
                     <div className="text-lg font-bold text-red-700">5</div>
-                    <div className="text-[9px] text-red-600">Missing data</div>
+                    <div className="text-[9px] text-red-600">{preview("missingData")}</div>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-2 mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <input type="checkbox" className="rounded border-gray-300 w-3 h-3" defaultChecked readOnly />
-                    <span className="text-[10px] text-blue-800 font-medium">48 selected</span>
+                    <span className="text-[10px] text-blue-800 font-medium">{preview("selected")}</span>
                   </div>
                   <button type="button" className="bg-blue-600 text-white text-[9px] font-semibold px-2 py-1 rounded flex items-center gap-1">
                     <Send className="w-2.5 h-2.5" />
-                    Bulk Request
+                    {preview("bulkRequest")}
                   </button>
                 </div>
 
                 <div className="border border-gray-200 rounded-md overflow-hidden mb-4">
                   <div className="bg-gray-50 px-3 py-1.5 border-b border-gray-200 flex items-center justify-between">
-                    <div className="text-[9px] font-semibold text-gray-600 uppercase tracking-wide">Network</div>
+                    <div className="text-[9px] font-semibold text-gray-600 uppercase tracking-wide">{preview("networkLabel")}</div>
                     <div className="flex items-center gap-1 text-[9px] text-gray-500">
                       <GitBranch className="w-2.5 h-2.5" />
-                      <span>Cascades to source</span>
+                      <span>{preview("cascadesToSource")}</span>
                     </div>
                   </div>
                   <div className="divide-y divide-gray-100">
                     {[
-                      { name: "Sidama Coop", type: "Cooperative", forwards: "→ 89 producers", color: "blue" },
-                      { name: "Ethiopia Export", type: "Exporter", forwards: "→ 3 coops", color: "purple" },
+                      { name: "Sidama Coop", type: preview("cooperative"), forwards: preview("forwardsProducers"), color: "blue" },
+                      { name: "Ethiopia Export", type: preview("exporter"), forwards: preview("forwardsCoops"), color: "purple" },
                     ].map((contact, i) => (
                       <div key={i} className="px-3 py-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -196,14 +197,14 @@ export function Products() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4 text-emerald-600" />
-                      <span className="text-[11px] font-semibold text-emerald-800">Shipment #2847</span>
+                      <span className="text-[11px] font-semibold text-emerald-800">{preview("shipmentLabel")}</span>
                     </div>
-                    <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full">Ready to seal</span>
+                    <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full">{preview("readyToSeal")}</span>
                   </div>
                   <div className="h-1.5 bg-emerald-200 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: "94%" }} />
                   </div>
-                  <div className="text-[9px] text-emerald-600 mt-1">94% complete • 2 items pending</div>
+                  <div className="text-[9px] text-emerald-600 mt-1">{preview("completion")}</div>
                 </div>
               </div>
             </div>
@@ -226,9 +227,7 @@ export function Products() {
 
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">{t("dashboard.headline")}</h3>
 
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">{t("dashboard.description")}</p>
-
-            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">{t("dashboard.supportingText")}</p>
+            <p className="text-lg text-gray-600 leading-relaxed mb-8">{t("dashboard.description")}</p>
 
             <div className="space-y-4">
               {dashboardFeatures.map((feature, index) => (

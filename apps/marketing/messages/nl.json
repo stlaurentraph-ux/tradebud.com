@@ -3,13 +3,20 @@
     "hero": {
       "headline": "Traceerbaarheid die werkt voor de hele keten.",
       "subheadline": "Tracebud maakt EUDR-naleving eenvoudig, zelfbediend en betaalbaar, zodat boeren, coöperaties, exporteurs en kopers oorsprongsgegevens kunnen verzamelen, delen en hergebruiken zonder achter papierwerk aan te jagen.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Gratis voor producenten. Gebouwd voor veldcondities met beperkte connectiviteit en eenvoudige processen. Geen consultants nodig.",
       "cta": {
         "primary": "Bekijk hoe het werkt",
         "secondary": "Neem contact op"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+      "eyebrow": "Why Tracebud",
       "headline": "Naleving hoeft niet ingewikkeld te zijn om geloofwaardig te zijn.",
       "description": "De meeste toeleveringsketens falen niet omdat mensen het niet uitmaakt. Ze falen omdat het proces te handmatig, te duur en te gefragmenteerd is. Tracebud verwijdert het heen en weer zodat elke partij kan meedoen, zelfs als het netwerk groot, verspreid of weinig toegerust is.",
       "pillars": {
@@ -56,22 +63,23 @@
     "productsSection": {
       "eyebrow": "Twee producten, één workflow",
       "title": "Gebouwd voor hoe toeleveringsketens echt werken",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
         "label": "Mobiele app",
         "headline": "Gemaakt voor het veld, niet voor het kantoor.",
         "description": "Boeren kunnen percelen in kaart brengen, informatie delen en reageren via een eenvoudige mobiele ervaring die is ontworpen voor echte veldcondities. Het werkt offline, gebruikt duidelijke visuals en houdt het proces licht.",
-        "supportingText": "Gratis voor producenten. Geen zware installatie of lange training.",
         "features": {
+          "free": "No training-heavy setup required",
           "offline": "Werkt offline, synchroniseert wanneer verbinding terugkeert",
           "gps": "Loop de grens af om GPS-polygoon vast te leggen",
           "photo": "Fotobewijs en vastlegging van toestemming"
-        }
+        },
+        "supportingText": "Gratis voor producenten. Geen zware installatie of lange training."
       },
       "dashboard": {
         "label": "Dashboard",
         "headline": "Beheer uw netwerk zonder eindeloos heen en weer.",
         "description": "Upload contacten in bulk, stuur één verzoek en laat de workflow door de hele toeleveringsketen stromen. Volg reacties, hergebruik geverifieerde gegevens en houd elke zending in beweging met minder handmatig opvolgen.",
-        "supportingText": "Minder achtervolging. Minder hiaten. Snellere overdrachten.",
         "features": {
           "import": "Bulkimport van contacten via CSV-upload",
           "bulkRequest": "Stuur verzoeken naar honderden contacten tegelijk",
@@ -79,10 +87,31 @@
           "readiness": "Volg gereedheid van alle netwerkleden",
           "evidence": "Identificeer ontbrekend bewijs direct",
           "dds": "Stel DDS-pakketten samen voor verzending"
-        }
+        },
+        "supportingText": "Minder achtervolging. Minder hiaten. Snellere overdrachten."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
       }
     },
     "customersSection": {
+      "eyebrow": "Outcomes",
       "headline": "Waarom klanten Tracebud gebruiken",
       "description": "Minder handmatige opvolging. Behoud herkomst via aggregatie. Verzend met vertrouwen.",
       "cards": {
@@ -106,95 +135,115 @@
       "punchline": "Wij verwijderen de toegangsdrempels die kleine boeren jarenlang buitensloten."
     },
     "finalCtaSection": {
-      "headline": "Naleving bruikbaar maken voor de hele keten.",
-      "description": "Begin met het netwerk dat u al heeft en geef elke partij een manier om mee te doen.",
-      "cta": "Aan de slag"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Klaar voor EUDR, zonder de complexiteit.",
-      "description": "Tracebud helpt uw netwerk oorsprongsgegevens te verzamelen, delen en hergebruiken. Eenvoudig, betaalbaar en inclusief voor boeren, coöperaties, exporteurs en kopers.",
+      "headline": "Begin met traceerbaarheid voor uw netwerk.",
+      "description": "Sluit u aan bij de wachtlijst voor vroege toegang wanneer Tracebud opent in uw regio en commodity.",
       "cta": {
-        "primary": "Nu aanmelden",
-        "secondary": "Verder bladeren"
+        "primary": "Op de wachtlijst",
+        "secondary": "Verder browsen"
       },
-      "note": "Beperkt aantal plaatsen voor vroege pilotpartners."
+      "note": "Geen spam. Altijd uitschrijven."
     },
     "waitlistDialog": {
-      "headline": "Doe mee aan het pilotprogramma",
-      "description": "Beperkt aantal plaatsen voor vroege pilotpartners. Vertel ons over uw netwerk en we nemen contact op.",
-      "note": "Geen spam. Op elk moment uitschrijven.",
+      "headline": "Op de wachtlijst",
+      "description": "Vertel ons over uw netwerk — we nemen contact op wanneer Tracebud klaar is.",
+      "note": "No spam, ever. Unsubscribe at any time.",
       "sidePanel": {
-        "tagline": "Klaar voor EUDR, zonder de complexiteit.",
-        "subline": "Eenvoudig. Betaalbaar. Voor elke schakel in de keten."
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
       },
-      "submit": "Deelnemen aan pilot",
-      "submitting": "Verzenden...",
+      "submit": "Op de wachtlijst",
+      "submitting": "Submitting...",
       "success": {
-        "title": "Aanvraag ontvangen",
-        "description": "We beoordelen elke aanvraag persoonlijk. Pilotpartners krijgen prioritaire onboarding en directe toegang tot ons compliance-team."
+        "title": "U staat op de lijst",
+        "description": "We beoordelen elke aanvraag persoonlijk en volgen per e-mail op."
       },
       "form": {
-        "firstName": "Voornaam",
-        "lastName": "Achternaam",
-        "email": "Zakelijk e-mailadres",
-        "organisation": "Organisatie",
-        "role": "Uw rol",
-        "roleOther": "Beschrijf uw rol",
-        "commodity": "Belangrijkste grondstof",
-        "producerRange": "Hoeveel producenten hebben EUDR-naleving nodig?",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
         "placeholders": {
           "firstName": "Maria",
-          "lastName": "Jansen",
-          "email": "maria@bedrijf.nl",
-          "organisation": "Coöperatie Sol Naciente",
-          "role": "Selecteer uw rol",
-          "roleOther": "Beschrijf uw rol",
-          "commodity": "Selecteer een grondstof",
-          "producerRange": "Selecteer een bereik"
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
         },
         "roles": {
-          "cooperative": "Coöperatie",
-          "exporter": "Exporteur",
-          "importer": "Importeur",
-          "sponsor": "Sponsor (merk, land, NGO)",
-          "other": "Overig"
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
         },
         "commodities": {
-          "coffee": "Koffie",
-          "cocoa": "Cacao",
-          "palmOil": "Palmolie",
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
           "rubber": "Rubber",
-          "soy": "Soja",
-          "cattle": "Vee / Leer",
-          "wood": "Hout / Timmerhout",
-          "other": "Overig"
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
         },
         "producerRanges": {
-          "r1": "1 – 50 producenten",
-          "r2": "51 – 200 producenten",
-          "r3": "201 – 500 producenten",
-          "r4": "501 – 2.000 producenten",
-          "r5": "2.001 – 10.000 producenten",
-          "r6": "10.000+ producenten"
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
         },
         "errors": {
-          "emailRequired": "E-mail is verplicht.",
-          "emailInvalid": "Voer een geldig e-mailadres in.",
-          "firstNameRequired": "Voornaam is verplicht.",
-          "lastNameRequired": "Achternaam is verplicht.",
-          "organisationRequired": "Organisatie is verplicht.",
-          "roleRequired": "Selecteer uw rol.",
-          "roleOtherRequired": "Beschrijf uw rol.",
-          "commodityRequired": "Selecteer een grondstof.",
-          "producerRangeRequired": "Selecteer het aantal producenten.",
-          "generic": "Er is iets misgegaan. Probeer het opnieuw."
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
         }
       }
-    }
+    },
+    "earlyAdopters": "Op de wachtlijst voor vroege toegang"
   },
   "common": {
     "language": "Taal",
-    "joinWaitlist": "Doe mee aan de wachtlijst",
+    "joinWaitlist": "Op de wachtlijst",
     "learnMore": "Meer informatie",
     "contactUs": "Neem contact op"
   },
@@ -244,14 +293,18 @@
     }
   },
   "footer": {
-    "startMapping": "Begin met in kaart brengen",
-    "contactSales": "Neem contact op met verkoop",
-    "joinWaitlist": "Doe mee aan de wachtlijst",
-    "howItWorks": "Hoe het werkt",
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Nu aanmelden",
+    "howItWorks": "How it works",
     "privacy": "Privacy",
-    "terms": "Voorwaarden",
+    "terms": "Terms",
     "contact": "Contact",
-    "tagline": "Eenvoudigere EUDR-processen. Sterkere markttoegang."
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "Klaar om u aan te sluiten?",
+    "waitlistSubline": "Wees als eerste op de hoogte wanneer Tracebud opent voor uw netwerk."
   },
   "impact": {
     "title": "Waarom Tracebud werkt",
@@ -282,18 +335,19 @@
     "integrations": "Directe integraties"
   },
   "faq": {
-    "title": "Veelgestelde vragen",
-    "whenLaunch": "Wanneer wordt Tracebud gelanceerd?",
-    "whenLaunchAnswer": "Tracebud is in actieve pilottests. We nemen nu geselecteerde partners in. Sluit je aan bij de wachtlijst om berichten te ontvangen.",
-    "whyCommodities": "Waarom met deze goederen beginnen?",
+    "title": "Questions? We have answers.",
+    "whenLaunch": "Wanneer kan ik Tracebud gebruiken?",
+    "whenLaunchAnswer": "Tracebud opent gefaseerd per regio en commodity. Sluit u aan bij de wachtlijst — we mailen wanneer uw use case wordt ondersteund.",
+    "whyCommodities": "What crops does Tracebud support?",
     "whoCommoditiesAnswer": "Koffie, cacao, palmolie, rubber, soja, rundvee en hout zijn de belangrijkste EUDR-goederen. We zullen uitbreiden op basis van vraag.",
-    "howCost": "Hoeveel kost het?",
-    "howCostAnswer": "Prijzen zijn transparant en schalen met de grootte van uw bedrijf. Gratis proefversie beschikbaar. Details gedeeld tijdens onboarding.",
-    "howLong": "Hoe lang duurt de installatie?",
-    "howLongAnswer": "De meeste coöperaties zijn binnen 48 uur na aanmelding in kaart gebracht en operationeel. Offline-first design betekent nul uitvaltijd.",
-    "support": "Welke ondersteuning is beschikbaar?",
-    "supportAnswer": "24/7 e-mailondersteuning, plus prioritaire telefonische ondersteuning voor pilotpartners. Directe toegang tot ons complianceteam.",
-    "waitlistPrompt": "Klaar om op de wachtlijst te komen?",
-    "joinNow": "Nu deelnemen"
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Gratis voor producenten. Coöperaties, exporteurs en kopers betalen op basis van netwerkgrootte en gebruik. Prijspagina of wachtlijst voor details.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Producenten kunnen meteen beginnen met kaarteren in de offline app. De meeste coöperaties uploaden hun netwerk en sturen binnen een week het eerste verzoek.",
+    "support": "What support is available?",
+    "supportAnswer": "Elk wachtlijstlid krijgt persoonlijke opvolging per e-mail. Na onboarding directe toegang tot ons team voor setup en compliance.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "whyCommoditiesAnswer": "Eerst koffie, daarna de andere zes EUDR-grondstoffen: cacao, palmolie, rubber, soja, vee en hout. Zie onze prijspagina voor de volledige roadmap."
   }
 }

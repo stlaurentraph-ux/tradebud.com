@@ -7,35 +7,42 @@
   },
   "marketing": {
     "hero": {
-      "headline": "Traceability that works for everyone in the chain.",
-      "subheadline": "Tracebud makes EUDR compliance simple, self-serve, and affordable so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.",
-      "supportingText": "Free for producers. Built for low-connectivity, low-friction field realities. No consultants required.",
+      "headline": "Traceability infrastructure anyone in the chain can start using.",
+      "subheadline": "Tracebud gives farmers, cooperatives, exporters, and buyers one shared system for origin data.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
+      "supportingText": "Built for fragmented networks and low-connectivity field realities.",
       "cta": {
         "primary": "See how it works",
-        "secondary": "Talk to us"
+        "secondary": "Join the waitlist"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
-      "headline": "Compliance should not be complicated to be credible.",
-      "description": "Most supply chains do not fail because people do not care. They fail because the process is too manual, too expensive, and too fragmented. Tracebud removes the back-and-forth so every actor can participate, even when the network is large, spread out, or under-resourced.",
+      "eyebrow": "Why Tracebud",
+      "headline": "Compliance should be easy to start, but strong enough to trust.",
+      "description": "Most supply chains do not fail because people do not care. They fail because origin data, evidence, and shipment records are fragmented across actors and tools. Tracebud creates a shared system of record so compliance data can move through the network without losing context or provenance.",
       "pillars": {
         "simple": {
-          "title": "Simple",
-          "description": "One platform. One workflow. One source of truth."
+          "title": "Self-serve by design",
+          "description": "Anyone can join, start a request, or begin capture without consultants or complex setup."
         },
         "automated": {
-          "title": "Automated",
-          "description": "Requests move through the network automatically, so proof reaches the source faster."
+          "title": "Infrastructure underneath",
+          "description": "The data model, lineage, consent, and compliance records stay structured, reusable, and audit-ready."
         },
         "inclusive": {
-          "title": "Inclusive",
+          "title": "Inclusive by default",
           "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
         }
       }
     },
     "howItWorksSection": {
-      "headline": "From first request to reusable proof.",
-      "subtitle": "Four steps. No complexity.",
+      "headline": "Four steps. Self-serve from the start.",
+      "subtitle": "From first request to reusable compliance records.",
       "steps": {
         "step1": {
           "number": "01",
@@ -45,99 +52,138 @@
         "step2": {
           "number": "02",
           "title": "Send one request",
-          "description": "Let it flow through the chain automatically. No chasing."
+          "description": "Let it flow through the chain automatically, so the right request reaches the right actor without manual chasing."
         },
         "step3": {
           "number": "03",
-          "title": "Collect origin data",
-          "description": "Capture it once, then reuse it across shipments and buyers."
+          "title": "Collect origin data once",
+          "description": "Capture producer, plot, evidence, and consent data once, then reuse it across shipments and buyers."
         },
         "step4": {
           "number": "04",
           "title": "Stay aligned",
-          "description": "Keep everyone on the same page with a shared, digital workflow."
+          "description": "Keep everyone on the same page with a shared workflow and a structured source of truth."
         }
       }
     },
     "productsSection": {
-      "eyebrow": "Two products, one workflow",
-      "title": "Built for how supply chains actually work",
+      "eyebrow": "Products",
+      "title": "Two products, one shared operating layer.",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
         "label": "Mobile App",
-        "headline": "Built for the farm, not the office.",
-        "description": "Farmers can map plots, share information, and respond from a simple mobile experience designed for real field conditions. It works offline, uses clear visuals, and keeps the process lightweight.",
-        "supportingText": "Free for producers. No training-heavy setup.",
+        "headline": "Field capture that feeds the whole network.",
+        "description": "Tracebud's mobile app is built for real sourcing conditions. Farmers and field teams can map plots, capture evidence, record consent, and respond through a simple mobile experience designed for low-connectivity environments. The result is structured origin data the whole chain can rely on.",
         "features": {
+          "free": "No training-heavy setup required",
           "offline": "Works offline, syncs when connectivity returns",
-          "gps": "Walk the boundary to capture GPS polygon",
+          "gps": "Walk the boundary to capture GPS polygons",
           "photo": "Photo evidence and consent recording"
         }
       },
       "dashboard": {
         "label": "Dashboard",
-        "headline": "Manage your network without the back-and-forth.",
-        "description": "Upload contacts in bulk, send one request, and let the workflow cascade through your supply chain. Track responses, reuse verified data, and keep every shipment moving with less manual follow-up.",
-        "supportingText": "Less chasing. Fewer gaps. Faster handoffs.",
+        "headline": "Network infrastructure, not spreadsheet orchestration.",
+        "description": "Upload contacts in bulk, send one request, and let the workflow move through your supply chain to source. Track readiness, identify missing data, and assemble provenance-linked compliance records from one shared operating layer.",
         "features": {
           "import": "Bulk import contacts via CSV upload",
           "bulkRequest": "Send requests to hundreds of contacts at once",
           "cascade": "Requests cascade through your network to source",
           "readiness": "Track readiness across all network members",
           "evidence": "Identify missing evidence instantly",
-          "dds": "Assemble DDS packages for shipment"
+          "dds": "Assemble shipment-ready compliance records"
         }
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
       }
     },
     "customersSection": {
-      "headline": "Why customers use Tracebud",
-      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Ship with confidence.",
+      "eyebrow": "Outcomes",
+      "headline": "Because the best infrastructure is the kind people can actually start using.",
+      "description": "Reduce manual follow-up. Preserve provenance through aggregation. Move with more confidence.",
       "cards": {
         "gaps": {
           "title": "Fewer proof gaps",
-          "description": "Onboarding, evidence requests, duplicate checks, lineage, and DDS preparation in one connected system."
+          "description": "Onboarding, evidence requests, duplicate checks, lineage, and compliance preparation in one connected system."
         },
         "provenance": {
           "title": "Provenance preserved",
-          "description": "Compliance proof tied to real producer, plot, batch, and shipment records. Not disconnected files."
+          "description": "Compliance proof stays tied to real producer, plot, batch, and shipment records, not disconnected files and folders."
         },
         "handoff": {
           "title": "Faster handoff",
-          "description": "More confidence in what can actually ship. Less time chasing missing data when shipments need to move."
+          "description": "Move from fragmented follow-up to shared readiness across the network, with less time lost chasing missing data."
         }
       }
     },
     "inclusionSection": {
       "headline": "Compliance should not leave smallholders behind.",
-      "description": "Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and ready for the market.",
+      "description": "Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and able to participate, even in low-connectivity field conditions or shared-device environments.",
       "punchline": "We remove the access barriers that kept smallholders out."
     },
     "finalCtaSection": {
       "headline": "Make compliance usable for the whole chain.",
-      "description": "Start with the network you already have, and give every actor a way to participate.",
-      "cta": "Get started"
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Be ready for EUDR, without the complexity.",
-      "description": "Tracebud helps your network collect, share, and reuse origin data. It's simple, affordable, and includes farmers, cooperatives, exporters, and buyers.",
+      "headline": "Start building traceability for your network.",
+      "description": "Join the waitlist to get early access when Tracebud opens for your region and commodity.",
       "cta": {
-        "primary": "Join the pilot",
+        "primary": "Join the waitlist",
         "secondary": "Keep browsing"
       },
-      "note": "Limited spots for early pilot partners."
+      "note": "No spam. Unsubscribe any time."
     },
     "waitlistDialog": {
-      "headline": "Join the pilot",
-      "description": "Limited spots for early pilot partners. Tell us about your network and we'll be in touch.",
+      "headline": "Join the waitlist",
+      "description": "Tell us about your network and we'll reach out when Tracebud is ready for you.",
       "note": "No spam, ever. Unsubscribe at any time.",
       "sidePanel": {
-        "tagline": "Be ready for EUDR, without the complexity.",
-        "subline": "Simple. Affordable. Built for every actor in the chain."
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
       },
-      "submit": "Join the pilot",
+      "submit": "Join the waitlist",
       "submitting": "Submitting...",
       "success": {
-        "title": "Application received",
-        "description": "We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."
+        "title": "You're on the list",
+        "description": "We review every submission personally and will follow up by email."
       },
       "form": {
         "firstName": "First name",
@@ -220,7 +266,7 @@
       "bookDemo": "See how it works"
     },
     "trialInfo": "Free for producers. No credit card required.",
-    "earlyAdopters": "Limited pilot spots available",
+    "earlyAdopters": "Join the waitlist for early access",
     "seeHowItWorks": "See how it works"
   },
   "header": {
@@ -232,8 +278,9 @@
       "countries": "Countries"
     },
     "nav": {
-      "howItWorks": "How it works",
       "whyTracebud": "Why Tracebud",
+      "howItWorks": "How it works",
+      "products": "Products",
       "faq": "FAQ"
     },
     "cta": {
@@ -244,28 +291,32 @@
     }
   },
   "footer": {
+    "whyTracebud": "Why Tracebud",
     "howItWorks": "How it works",
+    "products": "Products",
     "privacy": "Privacy",
     "terms": "Terms",
     "contact": "Contact",
     "tagline": "Simpler EUDR operations. Stronger market access.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "waitlistSubline": "Be first to know when Tracebud opens for your network.",
+    "joinWaitlist": "Join now",
     "startMapping": "Start Mapping",
-    "contactSales": "Contact Sales",
-    "joinWaitlist": "Join the waitlist"
+    "contactSales": "Contact Sales"
   },
   "faq": {
     "title": "Questions? We have answers.",
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whenLaunch": "When can I start using Tracebud?",
-    "whenLaunchAnswer": "We're testing with cooperatives, exporters, and importers now. Join the waitlist and we'll reach out when we're ready for your region.",
+    "whenLaunchAnswer": "Tracebud is opening in phases by region and commodity. Join the waitlist and we will email you when your use case is supported.",
     "whyCommodities": "What crops does Tracebud support?",
-    "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. We're starting where smallholder complexity meets immediate buyer demand.",
+    "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. See our pricing page for the full roadmap.",
     "howCost": "What does it cost?",
-    "howCostAnswer": "Free for producers. Cooperatives, exporters, and buyers pay based on usage. We'll share pricing details when you join the waitlist.",
+    "howCostAnswer": "Free for producers. Cooperatives, exporters, and buyers pay based on network size and usage. Visit the pricing page or join the waitlist for details.",
     "howLong": "How long does setup take?",
-    "howLongAnswer": "Producers can start mapping immediately with the offline app. Most cooperatives have their network mapped within a week. The dashboard is ready the moment you sign up.",
+    "howLongAnswer": "Producers can start mapping with the offline app right away. Most cooperatives upload their network and send the first request within a week.",
     "support": "What support is available?",
-    "supportAnswer": "Hands-on onboarding for all customers. Direct support from our team. We're building this alongside our early users, so your feedback shapes the product."
+    "supportAnswer": "Every waitlist member gets a personal follow-up by email. Once onboarded, you have direct access to our team for setup and compliance questions."
   }
 }

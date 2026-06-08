@@ -360,47 +360,6 @@ export default function FarmersPage() {
         </div>
       </section>
 
-      {/* Testimonial */}
-      <section className="relative py-32 px-6">
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?q=80&w=2070&auto=format&fit=crop"
-            alt="Coffee farmer smiling in plantation"
-            fill
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-[var(--forest-canopy)]/80" />
-        </div>
-        <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-2xl md:text-3xl text-white font-medium leading-relaxed mb-8 italic">
-              {
-                '"Before Tracebud, I had no proof my coffee was deforestation-free. Now I have a digital passport that opens doors to European buyers who pay premium prices."'
-              }
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--data-emerald)]">
-                <Image
-                  src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Gemini_Generated_Image_ovl863ovl863ovl8.png-c53xqJEY3Dl9bxyOVl3m0cSYyKnxof.jpeg"
-                  alt="Maria Santos"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              </div>
-              <div className="text-left">
-                <div className="text-white font-bold">Maria Santos</div>
-                <div className="text-white/70">Coffee Farmer, Honduras</div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-16 md:py-24 px-4 md:px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">

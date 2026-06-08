@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Users, Package, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWaitlistDialog, WaitlistDialog } from "@/components/waitlist-dialog";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
@@ -21,7 +21,7 @@ export function ValueProp() {
   return (
     <>
       {/* Why Customers Use It */}
-      <section id="why-tracebud" className="scroll-mt-20 py-24 md:py-32 bg-[var(--forest-canopy)]">
+      <section id="outcomes" className="scroll-mt-20 py-24 md:py-32 bg-[var(--forest-canopy)]">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             className="text-center mb-16"
@@ -30,6 +30,9 @@ export function ValueProp() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--data-emerald)]">
+              {tCustomers("eyebrow")}
+            </p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
               {tCustomers("headline")}
             </h2>
@@ -136,8 +139,6 @@ export function ValueProp() {
           </motion.div>
         </div>
       </section>
-
-      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }
