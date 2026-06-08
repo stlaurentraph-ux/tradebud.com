@@ -8,7 +8,14 @@ function getAuthHeaders(): Record<string, string> | undefined {
   return token ? { Authorization: `Bearer ${token}` } : undefined;
 }
 
-export function useHarvestPackages(tenantId: string | null) {
+type HarvestPackageScope = 'tenant' | 'shared';
+
+export function useHarvestPackages(
+  tenantId: string | null,
+  options?: { scope?: HarvestPackageScope; enabled?: boolean },
+) {
+  const scope = options?.scope ?? 'tenant';
+  const enabled = options?.enabled ?? true;
   const [packages, setPackages] = useState<DDSPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +27,7 @@ export function useHarvestPackages(tenantId: string | null) {
     let cancelled = false;
 
     const load = async () => {
-      if (!tenantId) {
+      if (!tenantId || !enabled) {
         setPackages([]);
         setIsLoading(false);
         setError(null);
@@ -31,7 +38,7 @@ export function useHarvestPackages(tenantId: string | null) {
       setError(null);
 
       try {
-        const response = await fetch('/api/harvest/packages', {
+        const response = await fetch(`/api/harvest/packages?scope=${scope}`, {
           method: 'GET',
           cache: 'no-store',
           headers: getAuthHeaders(),
@@ -67,7 +74,7 @@ export function useHarvestPackages(tenantId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [tenantId, reloadTick]);
+  }, [tenantId, reloadTick, scope, enabled]);
 
   const countsByStatus = useMemo(() => {
     return packages.reduce<Record<DDSPackage['status'], number>>(

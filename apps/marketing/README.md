@@ -2,6 +2,10 @@
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
 
+## Site architecture (planning)
+
+Navigation, Insights (blog), platform/compliance hubs, and phased rollout: [SITE_ARCHITECTURE.md](./SITE_ARCHITECTURE.md).
+
 ## Built with v0
 
 This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
@@ -55,6 +59,8 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 | Pilot application | `POST /api/leads` | `pilot_leads` | Email via Resend |
 
 Visitor confirmation emails are sent when `RESEND_API_KEY` is set. The thank-you page only shows “Confirmation sent” when the email actually went out.
+
+Waitlist confirmation uses the branded HTML template in `email-templates/html/waitlist-confirmation.html` (same layout as dashboard onboarding welcome email).
 
 Create `waitlist_signups` in Supabase (see `supabase/waitlist_signups.sql`) before accepting waitlist submissions.
 

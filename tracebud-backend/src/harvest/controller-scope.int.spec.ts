@@ -81,6 +81,14 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     await pool.query(`ALTER TABLE ${schema}.agent_plot_assignment ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
     await pool.query(`ALTER TABLE ${schema}.agent_plot_assignment ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${schema}.tenant_signup_contacts (
+        tenant_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (tenant_id, email)
+      )
+    `);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS ${schema}.audit_log (
         id UUID PRIMARY KEY,
         timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -128,6 +136,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     await pool.query(`DELETE FROM ${schema}.agent_plot_assignment`);
     await pool.query(`DELETE FROM ${schema}.plot`);
     await pool.query(`DELETE FROM ${schema}.audit_log`);
+    await pool.query(`DELETE FROM ${schema}.tenant_signup_contacts`);
     await pool.query(`DELETE FROM ${schema}.farmer_profile`);
     await pool.query(`DELETE FROM ${schema}.user_account`);
 
@@ -139,6 +148,11 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       `INSERT INTO ${schema}.farmer_profile (id, user_id, country_code, self_declared, status)
        VALUES ($1, $2, 'HN', true, 'active'), ($3, $4, 'HN', true, 'active')`,
       [farmerA, userA, farmerB, userB],
+    );
+    await pool.query(
+      `INSERT INTO ${schema}.tenant_signup_contacts (tenant_id, user_id, email)
+       VALUES ('tenant_1', $1, 'farmer-a@example.com'), ('tenant_1', $2, 'farmer-b@example.com')`,
+      [userA, userB],
     );
     await pool.query(`INSERT INTO ${schema}.plot (id, farmer_id, name) VALUES ($1, $2, 'Plot A')`, [plotA, farmerA]);
     await pool.query(
@@ -170,13 +184,13 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     const updateSpy = jest.spyOn(plotsService, 'updateMetadata').mockResolvedValue({ id: plotA, name: 'Renamed' } as any);
 
     await expect(
-      plotsController.listByFarmer(farmerB, {
+      plotsController.listByFarmer(farmerB, undefined, {
         user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
-      plotsController.listByFarmer(farmerA, {
+      plotsController.listByFarmer(farmerA, undefined, {
         user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual([]);
@@ -277,13 +291,14 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
   it('enforces tenant claim and exporter role for package detail/list/export endpoints', async () => {
     const listSpy = jest.spyOn(harvestService, 'listDdsPackagesForFarmer').mockResolvedValue([]);
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     const detailSpy = jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({ id: 'pkg_1' } as any);
     const tracesSpy = jest
       .spyOn(harvestService, 'getDdsPackageTracesJson')
       .mockResolvedValue({ reference: 'TRACES-1' } as any);
 
     await expect(
-      harvestController.listPackages(farmerA, {
+      harvestController.listPackages(farmerA, undefined, {
         user: { id: userA, email: 'exporter+scope@example.com' },
       }),
     ).rejects.toThrow(ForbiddenException);
@@ -301,10 +316,10 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
-      harvestController.listPackages(farmerA, {
+      harvestController.listPackages(farmerA, undefined, {
         user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ packages: [] });
 
     await expect(
       harvestController.getPackage('pkg_1', {
@@ -356,6 +371,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   it('persists readiness audit lifecycle events on exporter readiness checks', async () => {
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_1' },
       vouchers: [

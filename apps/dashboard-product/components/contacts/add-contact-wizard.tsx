@@ -50,9 +50,18 @@ interface ContactDraft {
 interface AddContactWizardProps {
   onComplete: (data: ContactDraft) => Promise<void>;
   onCancel: () => void;
+  defaultContactType?: ContactType;
+  lockContactType?: boolean;
+  lockedTypeLabel?: string;
 }
 
-export function AddContactWizard({ onComplete, onCancel }: AddContactWizardProps) {
+export function AddContactWizard({
+  onComplete,
+  onCancel,
+  defaultContactType = 'farmer',
+  lockContactType = false,
+  lockedTypeLabel = 'Producer',
+}: AddContactWizardProps) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +70,7 @@ export function AddContactWizard({ onComplete, onCancel }: AddContactWizardProps
     full_name: '',
     email: '',
     phone: '',
-    contact_type: 'farmer',
+    contact_type: defaultContactType,
     organization: '',
     job_title: '',
     country: '',
@@ -169,22 +178,26 @@ export function AddContactWizard({ onComplete, onCancel }: AddContactWizardProps
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contact_type">Contact Type</Label>
-                <Select
-                  value={draft.contact_type}
-                  onValueChange={(value) => updateDraft('contact_type', value as ContactType)}
-                >
-                  <SelectTrigger id="contact_type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONTACT_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="contact_type">{lockContactType ? `${lockedTypeLabel} type` : 'Contact Type'}</Label>
+                {lockContactType ? (
+                  <Input id="contact_type" value={lockedTypeLabel} readOnly disabled />
+                ) : (
+                  <Select
+                    value={draft.contact_type}
+                    onValueChange={(value) => updateDraft('contact_type', value as ContactType)}
+                  >
+                    <SelectTrigger id="contact_type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTACT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

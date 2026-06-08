@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -18,9 +19,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const backendUrl = `${backendBase}/v1/integrations/eudr/dds/status?referenceNumber=${encodeURIComponent(
+    const backendUrl = backendApiUrl(backendBase, `/v1/integrations/eudr/dds/status?referenceNumber=${encodeURIComponent(
       referenceNumber,
-    )}`;
+    )}`);
     const backendResponse = await fetch(backendUrl, {
       method: 'GET',
       cache: 'no-store',

@@ -10,16 +10,18 @@ import {
   type ReactNode,
 } from 'react';
 import type { User, TenantRole } from '@/types';
+import { clearAuthTokens, setAuthTokens } from '@/lib/auth-session';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  hydrateSessionFromToken: (token: string) => void;
+  hydrateSessionFromToken: (token: string, refreshToken?: string | null) => void;
   logout: () => void;
   switchRole: (role: TenantRole) => void;
   applyTenantRoleFromProfile: (role: TenantRole) => void;
+  updateProfile: (patch: { name?: string }) => void;
   impersonateDemo: (email: string) => Promise<void>;
 }
 
@@ -66,12 +68,15 @@ function buildUserFromToken(token: string): User | null {
     (userMetadata.tenant_id as string | undefined);
   const email = (payload.email as string | undefined) ?? '';
   const userId = (payload.sub as string | undefined) ?? '';
+  const fullName =
+    (userMetadata.full_name as string | undefined) ??
+    (userMetadata.fullName as string | undefined);
   if (!tenantId || !userId || !email) return null;
   const activeRole = mapClaimRoleToTenantRole(roleClaim);
   return {
     id: userId,
     email,
-    name: email.split('@')[0] || 'Tracebud User',
+    name: fullName?.trim() || email.split('@')[0] || 'Tracebud User',
     tenant_id: tenantId,
     roles: [activeRole],
     active_role: activeRole,
@@ -160,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const payload = (await response.json().catch(() => ({}))) as {
         access_token?: string;
+        refresh_token?: string;
         error_description?: string;
         error?: string;
       };
@@ -170,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!derivedUser) {
         throw new Error('Authenticated user is missing required role/tenant claims.');
       }
-      sessionStorage.setItem('tracebud_token', payload.access_token);
+      setAuthTokens(payload.access_token, payload.refresh_token);
       sessionStorage.setItem('tracebud_user', JSON.stringify(derivedUser));
       setUser(derivedUser);
     } finally {
@@ -181,13 +187,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem('tracebud_user');
-    sessionStorage.removeItem('tracebud_token');
+    clearAuthTokens();
   }, []);
 
-  const hydrateSessionFromToken = useCallback((token: string) => {
+  const hydrateSessionFromToken = useCallback((token: string, refreshToken?: string | null) => {
     const tokenUser = buildUserFromToken(token);
     if (!tokenUser) return;
-    sessionStorage.setItem('tracebud_token', token);
+    setAuthTokens(token, refreshToken);
     sessionStorage.setItem('tracebud_user', JSON.stringify(tokenUser));
     setUser(tokenUser);
   }, []);
@@ -212,6 +218,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateProfile = useCallback((patch: { name?: string }) => {
+    setUser((current) => {
+      if (!current) return current;
+      const updatedUser: User = {
+        ...current,
+        ...(patch.name ? { name: patch.name } : {}),
+      };
+      sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
+
   const impersonateDemo = useCallback(async (email: string) => {
     void email;
     throw new Error('Demo impersonation is disabled.');
@@ -228,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         switchRole,
         applyTenantRoleFromProfile,
+        updateProfile,
         impersonateDemo,
       }}
     >

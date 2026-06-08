@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PermissionGate } from '@/components/common/permission-gate';
-import { usePackageById } from '@/lib/use-packages';
+import { usePackageDetail } from '@/lib/use-package-detail';
 import { useAuth } from '@/lib/auth-context';
 
 interface AssemblePageProps {
@@ -22,7 +22,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
   const { id } = use(params);
-  const { pkg, isLoading } = usePackageById(id);
+  const { pkg, isLoading, error } = usePackageDetail(id, user?.tenant_id ?? null);
   const harvests: Array<{
     id: string;
     name: string;
@@ -34,7 +34,11 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
     return <div className="p-6 text-sm text-muted-foreground">Loading shipment assembly...</div>;
   }
   if (!pkg) {
-    return <div className="p-6 text-sm text-muted-foreground">Shipment not found.</div>;
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        {error ? `Failed to load shipment: ${error}` : 'Shipment not found.'}
+      </div>
+    );
   }
 
   const [currentStep, setCurrentStep] = useState<StepType>('select_batches');

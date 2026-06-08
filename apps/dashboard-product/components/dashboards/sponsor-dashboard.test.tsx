@@ -14,6 +14,33 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({
+    user: {
+      id: 'user-sponsor',
+      tenant_id: 'tenant-sponsor',
+      active_role: 'sponsor',
+    },
+  }),
+}));
+
+vi.mock('@/lib/use-requests', () => ({
+  useRequestCampaigns: () => ({
+    campaigns: [],
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/use-dashboard-activity', () => ({
+  useDashboardActivity: () => ({ events: [], loaded: true }),
+}));
+
+vi.mock('@/components/dashboards/dashboard-activity-card', () => ({
+  DashboardActivityCard: ({ title }: { title?: string }) => <div>{title}</div>,
+}));
+
 const mockMetrics = {
   total_packages: 30,
   packages_by_status: {
@@ -49,15 +76,16 @@ const virginMetrics = {
 };
 
 describe('SponsorDashboard', () => {
-  it('renders virgin tenant empty state when no data exists', () => {
+  it('renders programmes overview for empty tenants', () => {
     render(<SponsorDashboard metrics={virginMetrics} />);
-    expect(screen.getByText('Welcome to your sponsor workspace')).toBeInTheDocument();
-    expect(screen.getByText(/No sponsored organizations have been connected yet/)).toBeInTheDocument();
+    expect(screen.getByText('Programmes')).toBeInTheDocument();
+    expect(screen.queryByText('Welcome to your sponsor workspace')).not.toBeInTheDocument();
   });
 
-  it('does not show virgin state when metrics exist', () => {
+  it('shows governance sections when metrics exist', () => {
     render(<SponsorDashboard metrics={mockMetrics} />);
     expect(screen.queryByText('Welcome to your sponsor workspace')).not.toBeInTheDocument();
+    expect(screen.getByText('Network Health Snapshot')).toBeInTheDocument();
   });
 
   it('displays network overview section', () => {
@@ -72,8 +100,8 @@ describe('SponsorDashboard', () => {
 
   it('renders virgin state with helpful CTA buttons', () => {
     render(<SponsorDashboard metrics={virginMetrics} />);
-    expect(screen.getByRole('link', { name: 'Create first campaign' })).toHaveAttribute('href', '/requests');
-    expect(screen.getByRole('link', { name: 'Connect organizations' })).toHaveAttribute('href', '/farmers');
+    const programmeLinks = screen.getAllByRole('link', { name: 'Launch first programme' });
+    expect(programmeLinks[0]).toHaveAttribute('href', '/programmes?new=1&sponsorView=country');
   });
 
   it('displays KPI cards for sponsored organizations', () => {

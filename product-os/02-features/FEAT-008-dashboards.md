@@ -78,6 +78,37 @@ Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFAC
   - importer flow uses campaign terminology (`Campaign Type`, `Campaign Details`, `Launch Campaign`).
   - non-importer flow keeps request terminology (`Request Type`, `Request Details`, `Send Request`).
   - outreach entry now passes role-specific wizard mode/title/description to keep onboarding CTAs and in-flow taxonomy consistent.
+- Dashboard BFF routes now consistently use `backendApiUrl()` for backend proxy calls (harvest, plots, requests, launch, admin, integrations, cooperative aggregates, inbox, analytics gated-entry).
+- Inbox fulfillment uses real plot and evidence pickers (not package stubs only):
+  - `InboxFulfillmentDialog` loads tenant plots and `/api/requests/evidence-feed` (same backend source as FPIC repository rows).
+  - multi-select plots and evidence documents; evidence rows with `plot_id` auto-select linked plots for `evidencePlotIds` payload.
+- Importer shipments page defaults to shared upstream tab:
+  - `defaultPackagesPageTab` returns `shared` for importer/reviewer roles; `/packages` uses override-friendly tab state.
+  - assemble and timeline sub-routes now load packages via `usePackageDetail` (backend vouchers/plots) instead of list cache.
+- Email campaign CTA accept now ensures recipient inbox rows (not only decision counters):
+  - public `POST /v1/public/requests/campaigns/decision-intent` accept path calls `ensureInboxFromEmailCtaAccept` after ledger insert.
+  - covers recipients who were unresolved at send-time or missed send fan-out; emits `REQUEST_CREATED_FROM_EMAIL_CTA_ACCEPT` inbox event.
+- Outreach campaigns now expose recipient decision timeline UI:
+  - sent/completed campaign rows include **View timeline** action opening `CampaignDecisionsDialog`.
+  - dialog reads `GET /api/requests/campaigns/:id/decisions` with all/accept/refuse filters, paginated load-more, and source labels (`email_cta`, `inbox_fulfillment`).
+- Package detail page (`/packages/[id]`) is now backend-backed for reads and filing transitions:
+  - `usePackageDetail` maps backend package + voucher rows into dashboard `DDSPackage` shape (real plot names/areas from vouchers).
+  - filing workflow calls `POST /api/harvest/packages/:id/generate` and `PATCH /api/harvest/packages/:id/submit` (BFF proxies to harvest controller).
+  - readiness blockers from `/readiness` gate generate/submit; in-memory `transitionPackage` is no longer used on the detail page.
+- Importer upstream shipment visibility is now role-scoped before deploy:
+  - overview/compliance/DDS surfaces default to `scope=shared` for importer and country reviewer roles via `resolveHarvestPackageScope`.
+  - backend package detail/evidence/readiness enforce `canReadPackageForTenant` (own-tenant farmers or inbox-granted sender packages only).
+  - outreach campaigns table shows `accepted_count` / `pending_count` response progress (includes `inbox_fulfillment` decisions after recipient Fulfill).
+- Inbox fulfillment now closes the recipient loop with evidence + sender campaign reconciliation:
+  - `POST /v1/inbox-requests/:id/respond` accepts optional `notes`, `evidencePlotIds`, and `evidencePackageIds`.
+  - successful respond emits `inbox_request_responded` and `inbox_request_evidence_attached` audits, then records `inbox_fulfillment` accept in `request_campaign_recipient_decisions` when recipient email resolves.
+  - sender campaign `accepted_count` / `pending_count` / status are updated on first inbox fulfillment decision (idempotent if email CTA already recorded).
+  - `/inbox` UI exposes Fulfill dialog for pending requests (`requests:respond` permission).
+  - dashboard inbox BFF uses `backendApiUrl()` so production `TRACEBUD_BACKEND_URL` values ending in `/api` do not double-prefix paths.
+- Campaign send now fans out tenant-scoped inbox rows for registered recipients:
+  - on `POST /v1/requests/campaigns/:id/send`, backend resolves recipient emails via `tenant_signup_contacts` and `admin_users`, then inserts `inbox_requests` for each distinct recipient tenant (skips sender tenant and unresolved emails).
+  - exporter/importer/cooperative dashboards surface inbound work through `/inbox` and overview `incoming_requests_pending` without demo bootstrap seeding.
+  - fan-out failures are audit-logged (`inbox_requests_campaign_fanout_failed`) but do not roll back successful email delivery.
 - Importer backend-connectivity slice now extends beyond campaigns/requests list reads:
   - `Reporting` reads tenant-scoped summary telemetry from backend (`/v1/reports/importer-summary`) for readiness rate, compliant evidence count, shipment volume, and readiness distribution.
   - `Issues` reads backend-derived operational issue records (`/v1/requests/issues`) from active/overdue campaigns and inbound request queues.
@@ -444,6 +475,14 @@ Done (TB-V16-008 / FEAT-008)
   - Exporter dashboard copy now frames readiness as importer handoff readiness.
   - Importer dashboard now labels tenant as final compliance owner and surfaces filing-oriented CTA copy.
 - Preserved cooperative nuance: cooperative request orchestration (`requests:create` / `requests:send`) remains enabled for member coordination.
+
+## 2026-06-03 cross-tenant dashboard data connectivity slice
+
+- Added tenant-scoped package listing (`GET /v1/harvest/packages?scope=tenant`) resolved through `tenant_signup_contacts` → `farmer_profile` → `dds_package`, with plot coverage counts for overview metrics.
+- Added importer shared shipment listing (`GET /v1/harvest/packages?scope=shared`) sourced from inbox sender grants (`inbox_requests.sender_tenant_id`) so exporter upstream packages appear on importer `Shipments > Shared` tab.
+- Added tenant-scoped plot listing (`GET /v1/plots?scope=tenant`) for cooperative insights and member coverage metrics.
+- Dashboard BFF maps backend package rows into `DDSPackage` via `lib/harvest-package-mapper.ts`; cooperative insights inbox path corrected to `/v1/inbox-requests`.
+- Signup now backfills inbox rows for `RUNNING`/`PARTIAL` campaigns that already targeted the new user's email (`inbox_requests_signup_backfill` audit).
 
 ## 2026-04-22 filing endpoint server-policy assertion slice
 

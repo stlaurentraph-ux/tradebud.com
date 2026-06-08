@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 import { validateEudrDdsStatement } from '@/lib/eudr-dds-validation';
 
 type SubmitDdsBody = {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const backendResponse = await fetch(`${backendBase}/v1/integrations/eudr/dds`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/integrations/eudr/dds`), {
       method: 'POST',
       cache: 'no-store',
       headers: {

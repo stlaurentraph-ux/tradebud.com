@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useOnboarding } from '@/lib/onboarding-context';
+import { readOnboardingFlag, writeOnboardingFlag } from '@/lib/onboarding-persistence';
 import { useAuth } from '@/lib/auth-context';
 
 // ─────────────────────────────────────────────────────────────
@@ -49,14 +50,8 @@ interface StepRowProps {
 }
 
 function StepRow({ step, isComplete, isActive, index }: StepRowProps) {
-  return (
-    <div
-      className={cn(
-        'flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors',
-        isActive && !isComplete ? 'bg-primary/5 ring-1 ring-primary/20' : 'hover:bg-muted/50',
-        isComplete ? 'opacity-70' : '',
-      )}
-    >
+  const rowContent = (
+    <>
       {/* Check icon */}
       <div className="mt-0.5 shrink-0">
         {isComplete ? (
@@ -87,15 +82,12 @@ function StepRow({ step, isComplete, isActive, index }: StepRowProps) {
           )}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{step.description}</p>
-        {isActive && !isComplete && (
-          <Link
-            href={step.ctaHref}
-            className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:underline"
-          >
+        {!isComplete ? (
+          <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary">
             {step.ctaLabel}
             <ExternalLink className="h-3 w-3" />
-          </Link>
-        )}
+          </span>
+        ) : null}
       </div>
 
       {/* Step number pill */}
@@ -112,8 +104,25 @@ function StepRow({ step, isComplete, isActive, index }: StepRowProps) {
       >
         {index + 1}
       </span>
-    </div>
+    </>
   );
+
+  const rowClassName = cn(
+    'flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors',
+    isActive && !isComplete ? 'bg-primary/5 ring-1 ring-primary/20' : 'hover:bg-muted/50',
+    isComplete ? 'opacity-70' : '',
+    !isComplete ? 'cursor-pointer' : '',
+  );
+
+  if (!isComplete) {
+    return (
+      <Link href={step.ctaHref} className={rowClassName}>
+        {rowContent}
+      </Link>
+    );
+  }
+
+  return <div className={rowClassName}>{rowContent}</div>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -138,7 +147,7 @@ export function OnboardingChecklistCard() {
 
   const dismissKey = user ? `tracebud_getting_started_hidden_${user.id}` : null;
   const dismissedFromStorage =
-    typeof window !== 'undefined' && dismissKey ? window.sessionStorage.getItem(dismissKey) === '1' : false;
+    typeof window !== 'undefined' && dismissKey ? readOnboardingFlag(dismissKey) === '1' : false;
   const hasAction = (actionKey: string) =>
     typeof window !== 'undefined' && window.sessionStorage.getItem(`tracebud_onboarding_action_${actionKey}`) === '1';
 
@@ -167,19 +176,11 @@ export function OnboardingChecklistCard() {
       key: 'launch_programme_campaign',
       label: 'Launch programme campaign',
       description: 'Send your first bulk programme campaign to upstream organisations.',
-      ctaHref: '/programmes',
-      ctaLabel: 'Open programmes',
+      ctaHref: '/programmes?new=1',
+      ctaLabel: 'Launch programme',
       done: hasAction('campaign_created'),
     },
   ] as const : [
-    {
-      key: 'finish_overview',
-      label: 'Finish overview',
-      description: 'Complete the first overview step of the guided onboarding flow.',
-      ctaHref: '/',
-      ctaLabel: 'Resume tour',
-      done: firstOverviewStepKey ? Boolean(completedSteps[firstOverviewStepKey]) : phase === 'complete',
-    },
     {
       key: 'launch_first_workflow',
       label: isImporter ? 'Launch campaign' : isExporter ? 'Start campaign' : 'Start a campaign',
@@ -188,8 +189,8 @@ export function OnboardingChecklistCard() {
         : isExporter
           ? 'Launch your first campaign to collect missing plot, evidence, and upstream producer data.'
           : 'Launch your first campaign to collect missing plot geometry, evidence, and member data.',
-      ctaHref: '/outreach',
-      ctaLabel: 'Go to campaigns',
+      ctaHref: '/outreach?new=1',
+      ctaLabel: 'Launch campaign',
       done: hasAction('campaign_created'),
     },
     {
@@ -200,8 +201,8 @@ export function OnboardingChecklistCard() {
         : isExporter
           ? 'Build your producer directory so traceability links and requests route correctly.'
           : 'Create cooperative member records for consent, portability, and aggregation workflows.',
-      ctaHref: isImporter ? '/contacts' : isExporter ? '/farmers' : '/contacts',
-      ctaLabel: isImporter ? 'Go to network' : isExporter ? 'Go to producers' : 'Go to members',
+      ctaHref: isExporter ? '/farmers/new' : '/contacts/add?mode=contact',
+      ctaLabel: isImporter ? 'Add contact' : isExporter ? 'Add producer' : 'Add member',
       done: hasAction('contacts_uploaded'),
     },
   ] as const;
@@ -215,7 +216,7 @@ export function OnboardingChecklistCard() {
   const handleDismiss = () => {
     setDismissed(true);
     if (dismissKey && typeof window !== 'undefined') {
-      window.sessionStorage.setItem(dismissKey, '1');
+      writeOnboardingFlag(dismissKey, '1');
     }
   };
 
@@ -244,7 +245,7 @@ export function OnboardingChecklistCard() {
             <p className="text-xs text-muted-foreground text-pretty">
               {isComplete
                 ? 'Your workspace is fully configured.'
-                : 'Complete these 3 starter tasks to activate your workflow.'}
+                : `Complete these ${totalSteps} starter tasks to activate your workflow.`}
             </p>
           </div>
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   }
   const requestUrl = new URL(request.url);
   const role = requestUrl.searchParams.get('role');
-  const backendUrl = new URL(`${backendBase}/v1/launch/onboarding`);
+  const backendUrl = new URL(backendApiUrl(backendBase, `/v1/launch/onboarding`));
   if (role) backendUrl.searchParams.set('role', role);
 
   let response: Response;
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   let response: Response;
   try {
-    response = await fetch(`${backendBase}/v1/launch/onboarding/complete`, {
+    response = await fetch(backendApiUrl(backendBase, `/v1/launch/onboarding/complete`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

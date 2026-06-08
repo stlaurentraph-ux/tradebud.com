@@ -145,9 +145,9 @@ export default function CreateAccountPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(extractErrorMessage(json));
-      const payload = json as { accessToken?: string };
+      const payload = json as { accessToken?: string; refreshToken?: string | null };
       if (payload.accessToken) {
-        hydrateSessionFromToken(payload.accessToken);
+        hydrateSessionFromToken(payload.accessToken, payload.refreshToken);
       }
       setStep(2);
     } catch (err) {

@@ -41,7 +41,7 @@ describe('Cool Farm V2 run summary proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/summary',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/summary',
       expect.objectContaining({
         method: 'GET',
         headers: { Authorization: 'Bearer demo_token' },

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
         { status: 503 },
       );
     }
-    const backendResponse = await fetch(`${backendBase}/v1/requests/campaigns`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/requests/campaigns`), {
       method: 'GET',
       headers: {
         ...(authHeader ? { Authorization: authHeader } : {}),
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     const idempotencyKey = request.headers.get('x-idempotency-key') ?? crypto.randomUUID();
-    const backendResponse = await fetch(`${backendBase}/v1/requests/campaigns`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/requests/campaigns`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ export async function PATCH(request: Request) {
     if (!campaignId) {
       return NextResponse.json({ error: 'campaign_id is required for update.' }, { status: 400 });
     }
-    const backendResponse = await fetch(`${backendBase}/v1/requests/campaigns/${encodeURIComponent(campaignId)}`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/requests/campaigns/${encodeURIComponent(campaignId)}`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

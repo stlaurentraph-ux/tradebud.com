@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import UserManagementPage from './page';
 
 vi.mock('@/components/layout/app-header', () => ({
-  AppHeader: ({ title, action }: { title: string; action?: React.ReactNode }) => (
+  AppHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => (
     <div>
       <div>{title}</div>
-      {action}
+      {actions}
     </div>
   ),
 }));

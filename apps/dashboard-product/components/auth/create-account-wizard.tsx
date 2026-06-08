@@ -131,7 +131,7 @@ export function CreateAccountWizard() {
         throw new Error(readApiError(payload, 'Unable to create account.'));
       }
       if (payload.accessToken) {
-        hydrateSessionFromToken(payload.accessToken);
+        hydrateSessionFromToken(payload.accessToken, payload.refreshToken);
       }
       setSignupResult(payload);
       setStep(2);

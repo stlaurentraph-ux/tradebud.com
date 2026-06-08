@@ -22,8 +22,6 @@ import {
   persistPlots,
   saveFarmerProfilePhotoUri,
 } from './persistence';
-import { useFarmer } from './FarmerContext';
-import { usePlots } from './PlotsContext';
 
 export type Role = 'farmer';
 
@@ -242,28 +240,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * DEPRECATED: Use useFarmer() and usePlots() instead.
- *
- * This hook provides backward compatibility by combining both split contexts.
- * Performance impact: Re-renders when EITHER farmer OR plots change.
- * New code should use useFarmer() and usePlots() separately.
- *
- * @deprecated Use useFarmer() and usePlots() instead
+ * Primary app state hook — reads from AppStateProvider.
+ * FarmerProvider/PlotsProvider are optional split contexts for future migration.
  */
 export function useAppState() {
-  const { farmer, setFarmer, updateFarmerProfilePhoto } = useFarmer();
-  const { plots, addPlot, renamePlot, updatePlot, removePlot } = usePlots();
-
-  return {
-    farmer,
-    plots,
-    setFarmer,
-    updateFarmerProfilePhoto,
-    addPlot: (input: Omit<any, 'id' | 'farmerId' | 'createdAt'>) =>
-      farmer ? addPlot(input, farmer.id) : undefined,
-    renamePlot,
-    updatePlot: (plotId: string, patch: Partial<any>) => updatePlot(plotId, patch, farmer?.id),
-    removePlot: (plotId: string) => removePlot(plotId, farmer?.id),
-  };
+  const ctx = useContext(AppStateContext);
+  if (!ctx) {
+    throw new Error('useAppState must be used within AppStateProvider');
+  }
+  return ctx;
 }
 

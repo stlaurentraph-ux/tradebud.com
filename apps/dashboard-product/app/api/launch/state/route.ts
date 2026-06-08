@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'TRACEBUD_BACKEND_URL is required.' }, { status: 503 });
   }
 
-  const response = await fetch(`${backendBase}/v1/launch/state`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/launch/state`), {
     cache: 'no-store',
     headers: authHeader ? { Authorization: authHeader } : undefined,
   });

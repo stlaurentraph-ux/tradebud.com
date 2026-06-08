@@ -138,9 +138,9 @@ export default function ContactsPage() {
                 </Link>
               </Button>
               <Button asChild>
-                <Link href="/contacts/add">
+                <Link href="/contacts/add?mode=contact">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Contact
+                  {isCooperative ? 'Add Member' : 'Add Contact'}
                 </Link>
               </Button>
             </div>
@@ -156,8 +156,39 @@ export default function ContactsPage() {
         <Card>
           <CardHeader><CardTitle>{isCooperative ? 'Member directory' : 'Contact list'}</CardTitle></CardHeader>
           <CardContent>
-            {filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No contacts match your filters yet.</p>
+            {contacts.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <p className="font-medium">
+                  {isCooperative ? 'No members yet' : 'No contacts yet'}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {isCooperative
+                    ? 'Add your first cooperative member to anchor consent, portability, and aggregation workflows.'
+                    : 'Add counterpart contacts so campaigns and request workflows route correctly.'}
+                </p>
+                <PermissionGate permission="contacts:create">
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                    <Button asChild>
+                      <Link href="/contacts/add?mode=contact">
+                        <Plus className="mr-2 h-4 w-4" />
+                        {isCooperative ? 'Add first member' : 'Add first contact'}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link href="/contacts/add?mode=csv">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Import CSV
+                      </Link>
+                    </Button>
+                  </div>
+                </PermissionGate>
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {isCooperative
+                  ? 'No members match your search or filters yet.'
+                  : 'No contacts match your search or filters yet.'}
+              </p>
             ) : (
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full table-fixed text-sm">

@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { AutoPlotUploadBridge } from '@/components/AutoPlotUploadBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { AppStateProvider } from '@/features/state/AppStateContext';
 import { LanguageProvider } from '@/features/state/LanguageContext';
 
@@ -18,16 +19,18 @@ export default function RootLayout() {
   return (
     <LanguageProvider>
       <AppStateProvider>
-        <AutoPlotUploadBridge />
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen name="documents" options={{ headerShown: false }} />
-            <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
+        <SignInProvider>
+          <AutoPlotUploadBridge />
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              <Stack.Screen name="documents" options={{ headerShown: false }} />
+              <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </SignInProvider>
       </AppStateProvider>
     </LanguageProvider>
   );

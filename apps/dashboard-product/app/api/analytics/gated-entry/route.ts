@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 type DeferredGate = 'request_campaigns' | 'annual_reporting';
 type GateFeature = 'mvp_gated';
@@ -15,6 +16,43 @@ interface GatedEntryTelemetryBody {
 
 const ALLOWED_GATES: readonly DeferredGate[] = ['request_campaigns', 'annual_reporting'] as const;
 
+function resolveGatedEntryApiPath(
+  eventKind: string | null,
+  wantsCsv: boolean,
+  webhookId: string | null,
+): string {
+  if (eventKind === 'webhook_deliveries') {
+    if (!webhookId) {
+      throw new Error('webhookId is required for webhook delivery reads.');
+    }
+    return `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries`;
+  }
+  if (eventKind === 'webhooks') {
+    return '/v1/webhooks';
+  }
+  if (wantsCsv && eventKind === 'assignment_exports') {
+    return '/v1/audit/gated-entry/assignment-exports/export';
+  }
+  if (wantsCsv && eventKind === 'risk_scores') {
+    return '/v1/audit/gated-entry/risk-scores/export';
+  }
+  if (wantsCsv && eventKind === 'filing_activity') {
+    return '/v1/audit/gated-entry/filing-activity/export';
+  }
+  if (wantsCsv) {
+    return '/v1/audit/gated-entry/export';
+  }
+  if (eventKind === 'exports') return '/v1/audit/gated-entry/exports';
+  if (eventKind === 'assignment_exports') return '/v1/audit/gated-entry/assignment-exports';
+  if (eventKind === 'risk_scores') return '/v1/audit/gated-entry/risk-scores';
+  if (eventKind === 'filing_activity') return '/v1/audit/gated-entry/filing-activity';
+  if (eventKind === 'chat_threads') return '/v1/audit/gated-entry/chat-threads';
+  if (eventKind === 'workflow_activity') return '/v1/audit/gated-entry/workflow-activity';
+  if (eventKind === 'dashboard_summary') return '/v1/audit/gated-entry/dashboard-summary';
+  if (eventKind === 'actors') return '/v1/audit/gated-entry/actors';
+  return '/v1/audit/gated-entry';
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
@@ -30,50 +68,17 @@ export async function GET(request: Request) {
     const format = requestUrl.searchParams.get('format');
     const eventKind = requestUrl.searchParams.get('eventKind');
     const wantsCsv = format === 'csv';
-    const backendUrl = new URL(`${backendBase}/v1/audit/gated-entry`);
-    if (eventKind === 'exports') {
-      backendUrl.pathname = '/v1/audit/gated-entry/exports';
+    const webhookId = requestUrl.searchParams.get('webhookId');
+    let apiPath: string;
+    try {
+      apiPath = resolveGatedEntryApiPath(eventKind, wantsCsv, webhookId);
+    } catch (pathError) {
+      return NextResponse.json(
+        { error: pathError instanceof Error ? pathError.message : 'Invalid gated-entry request.' },
+        { status: 400 },
+      );
     }
-    if (eventKind === 'assignment_exports') {
-      backendUrl.pathname = '/v1/audit/gated-entry/assignment-exports';
-    }
-    if (eventKind === 'risk_scores') {
-      backendUrl.pathname = '/v1/audit/gated-entry/risk-scores';
-    }
-    if (eventKind === 'filing_activity') {
-      backendUrl.pathname = '/v1/audit/gated-entry/filing-activity';
-    }
-    if (eventKind === 'chat_threads') {
-      backendUrl.pathname = '/v1/audit/gated-entry/chat-threads';
-    }
-    if (eventKind === 'workflow_activity') {
-      backendUrl.pathname = '/v1/audit/gated-entry/workflow-activity';
-    }
-    if (eventKind === 'dashboard_summary') {
-      backendUrl.pathname = '/v1/audit/gated-entry/dashboard-summary';
-    }
-    if (eventKind === 'actors') {
-      backendUrl.pathname = '/v1/audit/gated-entry/actors';
-    }
-    if (eventKind === 'webhooks') {
-      backendUrl.pathname = '/v1/webhooks';
-    }
-    if (eventKind === 'webhook_deliveries') {
-      const webhookId = requestUrl.searchParams.get('webhookId');
-      if (!webhookId) {
-        return NextResponse.json({ error: 'webhookId is required for webhook delivery reads.' }, { status: 400 });
-      }
-      backendUrl.pathname = `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries`;
-    }
-    if (wantsCsv && eventKind === 'assignment_exports') {
-      backendUrl.pathname = '/v1/audit/gated-entry/assignment-exports/export';
-    } else if (wantsCsv && eventKind === 'risk_scores') {
-      backendUrl.pathname = '/v1/audit/gated-entry/risk-scores/export';
-    } else if (wantsCsv && eventKind === 'filing_activity') {
-      backendUrl.pathname = '/v1/audit/gated-entry/filing-activity/export';
-    } else if (wantsCsv) {
-      backendUrl.pathname = '/v1/audit/gated-entry/export';
-    }
+    const backendUrl = new URL(backendApiUrl(backendBase, apiPath));
     ['gate', 'fromHours', 'limit', 'offset', 'sort', 'ids', 'phase', 'status', 'band', 'slaState'].forEach((key) => {
       const value = requestUrl.searchParams.get(key);
       if (value) backendUrl.searchParams.set(key, value);
@@ -147,7 +152,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const backendResponse = await fetch(`${backendBase}/v1/audit`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, `/v1/audit`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

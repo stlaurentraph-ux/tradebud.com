@@ -43,7 +43,7 @@ describe('coolfarm-sai v2 proxy utils', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/summary',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/summary',
       expect.objectContaining({
         method: 'GET',
         headers: { Authorization: 'Bearer tenant_token' },
@@ -66,7 +66,7 @@ describe('coolfarm-sai v2 proxy utils', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/release-stale',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/release-stale',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

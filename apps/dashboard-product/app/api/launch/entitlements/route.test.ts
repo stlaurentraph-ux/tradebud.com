@@ -36,7 +36,7 @@ describe('Launch entitlements proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/entitlements',
+      'https://backend.tracebud.test/api/v1/launch/entitlements',
       expect.objectContaining({
         method: 'GET',
         headers: { Authorization: 'Bearer demo_token' },
@@ -68,7 +68,7 @@ describe('Launch entitlements proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/entitlements',
+      'https://backend.tracebud.test/api/v1/launch/entitlements',
       expect.objectContaining({
         method: 'PATCH',
         headers: {

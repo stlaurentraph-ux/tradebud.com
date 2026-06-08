@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const backendResponse = await fetch(`${backendBase}/api/v1/inbox-requests`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, '/v1/inbox-requests'), {
       cache: 'no-store',
       headers: authHeader ? { Authorization: authHeader } : undefined,
     });

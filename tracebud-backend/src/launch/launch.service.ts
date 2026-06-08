@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
+import { InboxService } from '../inbox/inbox.service';
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
@@ -55,6 +56,7 @@ export class LaunchService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly onboardingEmailService: OnboardingEmailService,
+    private readonly inboxService: InboxService,
   ) {}
 
   private schemaReady = false;
@@ -653,6 +655,12 @@ export class LaunchService {
             fullName: input.fullName.trim(),
           })
           .catch(() => undefined);
+        await this.inboxService
+          .backfillInboxForSignupContact({
+            email: normalizedEmail,
+            recipientTenantId: tenantId,
+          })
+          .catch(() => undefined);
 
         return {
           userId: signinPayload.user.id,
@@ -696,6 +704,12 @@ export class LaunchService {
         userId: signupPayload.user.id,
         email: normalizedEmail,
         fullName: input.fullName.trim(),
+      })
+      .catch(() => undefined);
+    await this.inboxService
+      .backfillInboxForSignupContact({
+        email: normalizedEmail,
+        recipientTenantId: tenantId,
       })
       .catch(() => undefined);
 

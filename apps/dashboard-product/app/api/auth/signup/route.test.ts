@@ -71,7 +71,7 @@ describe('auth signup proxy route', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ userId: 'user_1', tenantId: 'tenant_1' });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/signup',
+      'https://backend.tracebud.test/api/v1/launch/signup',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +106,7 @@ describe('auth signup proxy route', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/launch/signup',
+      'https://backend.tracebud.test/api/v1/launch/signup',
       expect.objectContaining({
         method: 'POST',
         headers: {

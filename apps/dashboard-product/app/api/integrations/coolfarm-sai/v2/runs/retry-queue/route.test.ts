@@ -27,7 +27,7 @@ describe('Cool Farm V2 retry queue proxy route', () => {
     );
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/coolfarm-sai/v2/runs/retry-queue?limit=25',
+      'https://backend.tracebud.test/api/v1/integrations/coolfarm-sai/v2/runs/retry-queue?limit=25',
       expect.any(Object),
     );
   });

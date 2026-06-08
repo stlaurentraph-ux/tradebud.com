@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
         { status: 503 },
       );
     }
-    const backendResponse = await fetch(`${backendBase}/v1/requests/evidence-feed`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, '/v1/requests/evidence-feed'), {
       method: 'GET',
       headers: authHeader ? { Authorization: authHeader } : undefined,
       cache: 'no-store',

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 function backendBaseUrl(): string | null {
   return process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '') ?? null;
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   const authHeader = request.headers.get('authorization');
-  const response = await fetch(`${backendBase}/v1/admin/organizations`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/admin/organizations`), {
     method: 'GET',
     headers: authHeader ? { Authorization: authHeader } : {},
     cache: 'no-store',
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid payload.' }, { status: 400 });
   }
 
-  const response = await fetch(`${backendBase}/v1/admin/organizations`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/admin/organizations`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

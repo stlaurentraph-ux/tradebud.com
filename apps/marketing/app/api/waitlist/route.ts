@@ -97,6 +97,8 @@ export async function POST(req: Request) {
           email: data.email.trim().toLowerCase(),
           firstName: data.first_name.trim(),
           organisation: data.organisation.trim(),
+          role: data.role.trim(),
+          commodity: data.commodity.trim(),
         }).catch((error: unknown) => {
           console.error('[waitlist] confirmation email failed:', error);
           return false;

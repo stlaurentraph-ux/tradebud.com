@@ -8,7 +8,10 @@ function createLaunchService(pool: { query: jest.Mock }) {
     sendWelcomeAfterWorkspaceSetup: jest.fn().mockResolvedValue(false),
     remindIncompleteSignups: jest.fn().mockResolvedValue({ scanned: 0, sent: 0, skipped: 0, failures: [] }),
   } as unknown as OnboardingEmailService;
-  return new LaunchService(pool as any, onboardingEmailService);
+  const inboxService = {
+    backfillInboxForSignupContact: jest.fn().mockResolvedValue({ created: 0, skippedUnresolved: 0, skippedSelfTenant: 0 }),
+  };
+  return new LaunchService(pool as any, onboardingEmailService, inboxService as any);
 }
 
 describe('LaunchService', () => {

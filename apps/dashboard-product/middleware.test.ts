@@ -11,19 +11,29 @@ describe('middleware gate redirect', () => {
     vi.unstubAllEnvs();
   });
 
-  it('redirects deferred routes when gates are disabled', () => {
-    expect(getGateRedirectPath('/outreach')).toBe('/');
-    expect(getGateRedirectPath('/inbox')).toBe('/');
+  it('allows deferred routes by default when gates are enabled', () => {
+    expect(getGateRedirectPath('/outreach')).toBe(null);
+    expect(getGateRedirectPath('/inbox')).toBe(null);
     expect(getGateRedirectPath('/reports')).toBe(null);
     expect(getGateRedirectPath('/')).toBe(null);
   });
 
+  it('redirects deferred routes when gates are explicitly disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'false');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'false');
+    expect(getGateRedirectPath('/outreach')).toBe('/');
+    expect(getGateRedirectPath('/inbox')).toBe('/');
+    expect(getGateRedirectPath('/reports')).toBe('/');
+  });
+
   it('redirects nested deferred routes when gates are disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'false');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'false');
     expect(getGateRedirectPath('/outreach/')).toBe('/');
     expect(getGateRedirectPath('/outreach/new')).toBe('/');
     expect(getGateRedirectPath('/inbox/threads')).toBe('/');
-    expect(getGateRedirectPath('/reports/annual')).toBe(null);
-    expect(getGateRedirectPath('/reports/export/pdf')).toBe(null);
+    expect(getGateRedirectPath('/reports/annual')).toBe('/');
+    expect(getGateRedirectPath('/reports/export/pdf')).toBe('/');
   });
 
   it('allows deferred routes when gates are enabled', () => {
@@ -64,6 +74,7 @@ describe('middleware gate redirect', () => {
   });
 
   it('adds request_campaigns gate marker for outreach route redirect', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'false');
     const request = makeMiddlewareRequest('https://tracebud.test/outreach/new?tenant=tenant_1');
 
     const response = middleware(request);
