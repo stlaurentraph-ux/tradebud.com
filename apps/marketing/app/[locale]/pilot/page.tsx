@@ -13,9 +13,6 @@ import {
   Tag,
   ShieldCheck,
   Sprout,
-  Building2,
-  Ship,
-  Coffee,
   ChevronRight,
 } from "lucide-react";
 
@@ -55,18 +52,11 @@ const startWindows = [
 ] as const;
 
 const benefits = [
-  { icon: Gift, text: "3 months free, or your first shipment free." },
+  { icon: Gift, text: "Free for the duration of the pilot — no billing until you go live." },
   { icon: MapPin, text: "Free mapping of farmers and fields during the pilot." },
   { icon: Sprout, text: "Built for low digital literacy and self-serve onboarding." },
   { icon: Tag, text: "Lifelong preferential pricing for active early partners." },
   { icon: ShieldCheck, text: "Designed for traceability, consent, and EU data residency." },
-];
-
-const whoShouldApply = [
-  { icon: Sprout, label: "Producers and farmer groups" },
-  { icon: Building2, label: "Cooperatives" },
-  { icon: Ship, label: "Exporters" },
-  { icon: Coffee, label: "Importers and roasters" },
 ];
 
 const whatsIncluded = [
@@ -181,7 +171,7 @@ export default function PilotPage() {
               Join the Tracebud Pilot
             </h1>
             <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mb-10">
-              Help us build a fully transparent, EUDR-ready coffee supply chain. We are inviting a small group of producers, cooperatives, exporters, and importers to test our tools and traceability workflows.
+              We are inviting a small group of producers, cooperatives, exporters, and importers to test our traceability tools and help us build a fully EUDR-ready supply chain — together.
             </p>
             <a href="#apply">
               <Button
@@ -230,7 +220,7 @@ export default function PilotPage() {
             >
               <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-4">What you get</p>
               <h2 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-8">
-                Top benefits
+                What pilot partners get
               </h2>
               <ul className="space-y-4">
                 {benefits.map((b) => (
@@ -371,6 +361,26 @@ export default function PilotPage() {
               </div>
             </motion.div>
 
+            {/* Mobile-only closing CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="lg:hidden text-center pt-4"
+            >
+              <a href="#apply">
+                <Button
+                  size="lg"
+                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-6 text-base rounded-full"
+                >
+                  Apply to join the pilot
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </a>
+              <p className="text-sm text-gray-400 mt-3">No financial obligation. Open until 30 September 2026.</p>
+            </motion.div>
+
           </div>
 
           {/* Right column — sticky form */}
@@ -394,10 +404,10 @@ export default function PilotPage() {
               </div>
 
               <div className="p-8 -mt-6 relative z-10">
-              <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-1">Apply to join the pilot</h2>
-              <p className="text-sm text-gray-500 mb-7">
-                Submitting this form creates no financial obligation.
-              </p>
+                <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-1">Apply to join the pilot</h2>
+                <p className="text-sm text-gray-500 mb-7">
+                  No financial obligation. We will follow up within 5 business days.
+                </p>
 
               {ok ? (
                 <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
@@ -551,7 +561,6 @@ export default function PilotPage() {
                   </Button>
 
                   <p className="text-xs text-gray-400 text-center">
-                    No financial obligation.{" "}
                     <Link href="/get-started" className="text-[var(--forest-canopy)] underline-offset-2 hover:underline">
                       Create a free account instead
                     </Link>
