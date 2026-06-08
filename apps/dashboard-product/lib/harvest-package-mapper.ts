@@ -52,6 +52,7 @@ function buildPlotStubs(
     evidence: [],
     verified: index < compliantPlotCount,
     created_at: createdAt,
+    updated_at: createdAt,
   }));
 }
 
@@ -133,6 +134,7 @@ export function mapBackendPackageDetailToDdsPackage(
     if (!voucher.plot_id || plotMap.has(voucher.plot_id)) {
       continue;
     }
+    const plotTimestamp = voucher.created_at ?? row.created_at;
     plotMap.set(voucher.plot_id, {
       id: voucher.plot_id,
       name: voucher.plot_name?.trim() || `Plot ${plotMap.size + 1}`,
@@ -141,7 +143,8 @@ export function mapBackendPackageDetailToDdsPackage(
       deforestation_risk: 'low',
       evidence: [],
       verified: isVoucherPlotCompliant(voucher.status),
-      created_at: voucher.created_at ?? row.created_at,
+      created_at: plotTimestamp,
+      updated_at: plotTimestamp,
     });
   }
 

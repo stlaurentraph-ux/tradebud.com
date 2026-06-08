@@ -18,21 +18,21 @@ function getAuthHeaders(): HeadersInit {
 
 function normalizePlots(payload: unknown): TenantPlot[] {
   const rows = Array.isArray(payload) ? payload : [];
-  return rows
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const plot = row as Record<string, unknown>;
-      const id = typeof plot.id === 'string' ? plot.id : '';
-      if (!id) return null;
-      return {
-        id,
-        name: typeof plot.name === 'string' && plot.name.trim() ? plot.name : `Plot ${id.slice(0, 8)}`,
-        farmer_id: typeof plot.farmer_id === 'string' ? plot.farmer_id : undefined,
-        status: typeof plot.status === 'string' ? plot.status : null,
-        area_ha: typeof plot.area_ha === 'number' ? plot.area_ha : null,
-      };
-    })
-    .filter((plot): plot is TenantPlot => plot !== null);
+  const plots: TenantPlot[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const plot = row as Record<string, unknown>;
+    const id = typeof plot.id === 'string' ? plot.id : '';
+    if (!id) continue;
+    plots.push({
+      id,
+      name: typeof plot.name === 'string' && plot.name.trim() ? plot.name : `Plot ${id.slice(0, 8)}`,
+      farmer_id: typeof plot.farmer_id === 'string' ? plot.farmer_id : undefined,
+      status: typeof plot.status === 'string' ? plot.status : null,
+      area_ha: typeof plot.area_ha === 'number' ? plot.area_ha : null,
+    });
+  }
+  return plots;
 }
 
 export function useTenantPlots(tenantId: string | null, options?: { enabled?: boolean }) {

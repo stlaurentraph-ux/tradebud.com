@@ -21,25 +21,25 @@ function getAuthHeaders(): HeadersInit {
 
 function normalizeEvidenceFeed(payload: unknown): EvidenceFeedDocument[] {
   const rows = Array.isArray(payload) ? payload : [];
-  return rows
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const doc = row as Record<string, unknown>;
-      const id = typeof doc.id === 'string' ? doc.id : '';
-      if (!id) return null;
-      return {
-        id,
-        name: typeof doc.name === 'string' ? doc.name : 'Evidence document',
-        type: typeof doc.type === 'string' ? doc.type : 'community_minutes',
-        farmer_or_community:
-          typeof doc.farmer_or_community === 'string' ? doc.farmer_or_community : 'Unknown',
-        plot_id: typeof doc.plot_id === 'string' && doc.plot_id.trim() ? doc.plot_id : null,
-        upload_date: typeof doc.upload_date === 'string' ? doc.upload_date : new Date().toISOString(),
-        expiry_date: typeof doc.expiry_date === 'string' ? doc.expiry_date : new Date().toISOString(),
-        status: typeof doc.status === 'string' ? doc.status : 'pending_review',
-      };
-    })
-    .filter((doc): doc is EvidenceFeedDocument => doc !== null);
+  const documents: EvidenceFeedDocument[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const doc = row as Record<string, unknown>;
+    const id = typeof doc.id === 'string' ? doc.id : '';
+    if (!id) continue;
+    documents.push({
+      id,
+      name: typeof doc.name === 'string' ? doc.name : 'Evidence document',
+      type: typeof doc.type === 'string' ? doc.type : 'community_minutes',
+      farmer_or_community:
+        typeof doc.farmer_or_community === 'string' ? doc.farmer_or_community : 'Unknown',
+      plot_id: typeof doc.plot_id === 'string' && doc.plot_id.trim() ? doc.plot_id : null,
+      upload_date: typeof doc.upload_date === 'string' ? doc.upload_date : new Date().toISOString(),
+      expiry_date: typeof doc.expiry_date === 'string' ? doc.expiry_date : new Date().toISOString(),
+      status: typeof doc.status === 'string' ? doc.status : 'pending_review',
+    });
+  }
+  return documents;
 }
 
 export function useEvidenceFeed(options?: { enabled?: boolean }) {
