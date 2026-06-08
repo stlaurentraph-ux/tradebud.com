@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Layers, Zap, Users } from "lucide-react";
+import { ArrowRight, Layers, Zap, Users, ShieldCheck, Link2, Zap as ZapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
@@ -65,16 +65,15 @@ export function Hero() {
                 {t("hero.supportingText")}
               </p>
 
-              {/* KPI Badges */}
-              <div className="flex flex-wrap gap-4 mt-8 pt-8 border-t border-white/10">
+              {/* Trust strip */}
+              <div className="flex flex-wrap gap-6 mt-8 pt-8 border-t border-white/10">
                 {[
-                  { stat: "60%", label: "less manual work" },
-                  { stat: "100%", label: "audit ready" },
-                  { stat: "3x", label: "faster export" },
-                ].map((kpi) => (
-                  <div key={kpi.label} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10">
-                    <span className="text-xl font-bold text-[var(--data-emerald)]">{kpi.stat}</span>
-                    <span className="text-sm text-white/70 ml-2">{kpi.label}</span>
+                  { label: "Works offline" },
+                  { label: "20 min to map a farm" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[var(--data-emerald)]" />
+                    <span className="text-sm text-white/70 font-medium">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -135,15 +134,16 @@ export function Hero() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-8 text-balance leading-tight">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6 text-balance leading-tight">
                 {t("whyTracebudSection.headline")}
               </h2>
-              <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-12">
-                {t("whyTracebudSection.description")}
+              <p className="text-base text-gray-500 leading-relaxed mb-10">
+                {t("whyTracebudSection.intro")}
               </p>
             </motion.div>
 
-            <div className="space-y-5">
+            {/* Value pillars */}
+            <div className="space-y-5 mb-14">
               {[
                 {
                   icon: Layers,
@@ -178,6 +178,45 @@ export function Hero() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Outcome pillars */}
+            <div className="border-t border-gray-100 pt-10">
+              <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-6">
+                Why Tracebud
+              </p>
+              <div className="grid sm:grid-cols-3 gap-6">
+                {[
+                  {
+                    icon: ShieldCheck,
+                    titleKey: "whyTracebudSection.outcomeSection.pillars.proofGaps.title",
+                    descriptionKey: "whyTracebudSection.outcomeSection.pillars.proofGaps.description",
+                  },
+                  {
+                    icon: Link2,
+                    titleKey: "whyTracebudSection.outcomeSection.pillars.provenance.title",
+                    descriptionKey: "whyTracebudSection.outcomeSection.pillars.provenance.description",
+                  },
+                  {
+                    icon: ZapIcon,
+                    titleKey: "whyTracebudSection.outcomeSection.pillars.handoff.title",
+                    descriptionKey: "whyTracebudSection.outcomeSection.pillars.handoff.description",
+                  },
+                ].map((pillar, index) => (
+                  <motion.div
+                    key={pillar.titleKey}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className="bg-[var(--warm-stone)] rounded-2xl p-5"
+                  >
+                    <pillar.icon className="w-5 h-5 text-[var(--data-emerald)] mb-3" />
+                    <h3 className="text-sm font-bold text-[var(--forest-canopy)] mb-1">{t(pillar.titleKey)}</h3>
+                    <p className="text-xs text-gray-500 leading-relaxed">{t(pillar.descriptionKey)}</p>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

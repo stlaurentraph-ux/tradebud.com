@@ -19,10 +19,10 @@ export function Products() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-sm font-medium text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-            Two products, one workflow
+            {t("productsSection.headline")}
           </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
-            Built for how supply chains actually work
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-4">
+            {t("productsSection.intro")}
           </h2>
         </motion.div>
 
@@ -56,9 +56,10 @@ export function Products() {
 
             <div className="space-y-4">
               {[
-                { icon: WifiOff, text: "Works offline, syncs when connectivity returns" },
-                { icon: MapPin, text: "Walk the boundary to capture GPS polygon" },
-                { icon: Camera, text: "Photo evidence and consent recording" },
+                { icon: CheckCircle, text: "Free for producers. No training-heavy setup." },
+                { icon: WifiOff, text: "Works offline, syncs when connectivity returns." },
+                { icon: MapPin, text: "Walk the boundary to capture GPS polygons." },
+                { icon: Camera, text: "Photo evidence and consent recording." },
               ].map((feature, index) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">
@@ -240,7 +241,7 @@ export function Products() {
                 { icon: GitBranch, text: "Requests cascade through your network to source" },
                 { icon: Eye, text: "Track readiness across all network members" },
                 { icon: CheckCircle, text: "Identify missing evidence instantly" },
-                { icon: Package, text: "Assemble DDS packages for shipment" },
+                { icon: Package, text: "Assemble shipment-ready compliance records." },
               ].map((feature, index) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">

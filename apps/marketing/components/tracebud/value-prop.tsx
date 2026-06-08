@@ -35,7 +35,7 @@ export function ValueProp() {
             transition={{ duration: 0.6 }}
           >
             <p className="text-sm font-semibold text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-              Get started today
+              Ready to join
             </p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-8 text-balance leading-[1.1]">
               {t("finalCtaSection.headline")}

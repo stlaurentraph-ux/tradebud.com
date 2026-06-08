@@ -7,35 +7,57 @@
   },
   "marketing": {
     "hero": {
-      "headline": "Traceability that works for everyone in the chain.",
-      "subheadline": "Tracebud makes EUDR compliance simple, self-serve, and affordable so farmers, cooperatives, exporters, and buyers can collect, share, and reuse origin data without chasing paperwork.",
-      "supportingText": "Free for producers. Built for low-connectivity, low-friction field realities. No consultants required.",
+      "headline": "Traceability infrastructure anyone in the chain can start using.",
+      "subheadline": "Tracebud gives farmers, cooperatives, exporters, and buyers a shared system to capture origin data once, govern how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
+      "supportingText": "Free for producers. Self-serve from the first request. Built for low-connectivity field realities and large, fragmented networks.",
       "cta": {
         "primary": "See how it works",
         "secondary": "Talk to us"
       }
     },
+    "problemSection": {
+      "headline": "Compliance should be easy to start, but strong enough to trust.",
+      "description": "Most supply chains do not fail because people do not care. They fail because origin data, evidence, and shipment records are fragmented across actors and tools. Tracebud creates a shared system of record so compliance data can move through the network without losing context or provenance."
+    },
     "whyTracebudSection": {
-      "headline": "Compliance made simple.",
-      "description": "Supply chains fail when the process is too manual and too fragmented. Tracebud removes the friction so everyone participates—at any scale.",
+      "headline": "Because the best infrastructure is the kind people can actually start using.",
+      "intro": "Reduce manual follow-up. Preserve provenance through aggregation. Move with more confidence.",
       "pillars": {
         "simple": {
-          "title": "Simple",
-          "description": "One platform. One workflow. One source of truth."
+          "title": "Self-serve by design",
+          "description": "Anyone can join, start a request, or begin capture without consultants or complex setup."
         },
         "automated": {
-          "title": "Automated",
-          "description": "Requests move through the network automatically, so proof reaches the source faster."
+          "title": "Inclusive by default",
+          "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
         },
         "inclusive": {
-          "title": "Inclusive",
-          "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
+          "title": "Infrastructure underneath",
+          "description": "The data model, lineage, consent, and compliance records stay structured, reusable, and audit-ready."
+        }
+      },
+      "outcomeSection": {
+        "headline": "Why Tracebud",
+        "intro": "Reduce manual follow-up. Preserve provenance through aggregation. Move with more confidence.",
+        "pillars": {
+          "proofGaps": {
+            "title": "Fewer proof gaps",
+            "description": "Onboarding, evidence requests, duplicate checks, lineage, and compliance preparation in one connected system."
+          },
+          "provenance": {
+            "title": "Provenance preserved",
+            "description": "Compliance proof stays tied to real producer, plot, batch, and shipment records, not disconnected files and folders."
+          },
+          "handoff": {
+            "title": "Faster handoff",
+            "description": "Move from fragmented follow-up to shared readiness across the network, with less time lost chasing missing data."
+          }
         }
       }
     },
     "howItWorksSection": {
-      "headline": "From first request to reusable proof.",
-      "subtitle": "Four steps. No complexity.",
+      "headline": "Four steps. Self-serve from the start.",
+      "subtitle": "From first request to reusable compliance records.",
       "steps": {
         "step1": {
           "number": "01",
@@ -45,40 +67,42 @@
         "step2": {
           "number": "02",
           "title": "Send one request",
-          "description": "Let it flow through the chain automatically. No chasing."
+          "description": "Let it flow through the chain automatically, so the right request reaches the right actor without manual chasing."
         },
         "step3": {
           "number": "03",
-          "title": "Collect origin data",
-          "description": "Capture it once, then reuse it across shipments and buyers."
+          "title": "Collect origin data once",
+          "description": "Capture producer, plot, evidence, and consent data once, then reuse it across shipments and buyers."
         },
         "step4": {
           "number": "04",
           "title": "Stay aligned",
-          "description": "Keep everyone on the same page with a shared, digital workflow."
+          "description": "Keep everyone on the same page with a shared workflow and a structured source of truth."
         }
       }
     },
     "productsSection": {
+      "headline": "Two products, one shared operating layer.",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
-        "headline": "Built for the farm, not the office.",
-        "description": "Farmers can map plots, share information, and respond from a simple mobile experience designed for real field conditions. It works offline, uses clear visuals, and keeps the process lightweight.",
+        "headline": "Field capture that feeds the whole network.",
+        "description": "Tracebud's mobile app is built for real sourcing conditions. Farmers and field teams can map plots, capture evidence, record consent, and respond through a simple mobile experience designed for low-connectivity environments. The result is structured origin data the whole chain can rely on.",
         "supportingText": "Free for producers. No training-heavy setup."
       },
       "dashboard": {
-        "headline": "Manage your network without the back-and-forth.",
-        "description": "Upload contacts in bulk, send one request, and let the workflow cascade through your supply chain. Track responses, reuse verified data, and keep every shipment moving with less manual follow-up.",
+        "headline": "Network infrastructure, not spreadsheet orchestration.",
+        "description": "Upload contacts in bulk, send one request, and let the workflow move through your supply chain to source. Track readiness, identify missing data, and assemble provenance-linked compliance records from one shared operating layer.",
         "supportingText": "Less chasing. Fewer gaps. Faster handoffs."
       }
     },
     "inclusionSection": {
       "headline": "Compliance should not leave smallholders behind.",
-      "description": "Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and ready for the market.",
+      "description": "Big companies can buy complex systems. Smallholders should not be excluded because the tools are too expensive, too technical, or too slow. Tracebud keeps every actor visible, connected, and able to participate, even in low-connectivity field conditions or shared-device environments.",
       "punchline": "We remove the access barriers that kept smallholders out."
     },
     "finalCtaSection": {
       "headline": "Make compliance usable for the whole chain.",
-      "description": "Start with the network you already have, and give every actor a way to participate.",
+      "description": "Start with the network you already have, and give every actor a way to participate. Tracebud makes it possible to begin self-serve, capture data once, and reuse it across shipments, buyers, and downstream workflows without turning the process into paperwork theater.",
       "cta": "Get started"
     },
     "exitIntentModal": {
