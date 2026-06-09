@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Marketing static asset cleanup delivered: removed unused v0 stock PNGs (~742MB), recompressed referenced PNGs; `public/` now ~6.6MB.
 - Marketing Vercel deploy fix delivered: `outputFileTracingExcludes` prevents Turbopack from bundling `public/` static assets into `/api/*` serverless functions (749MB → ~2MB traced).
 ## Initial entries
 
