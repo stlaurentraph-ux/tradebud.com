@@ -82,22 +82,26 @@ export class LaunchPublicController {
     }
 
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
     const organizationName = body.organizationName?.trim() ?? '';
     const country = body.country?.trim() ?? '';
     if (!organizationName || !country) {
       throw new ForbiddenException('organizationName and country are required.');
     }
     const primaryRole = this.parseRole(body.primaryRole);
+    const tenantId = await this.launchService.resolveAndEnsureTenantClaim(user, primaryRole);
     const profile = await this.launchService.saveWorkspaceSetup({
       tenantId,
       organizationName,
       country,
       primaryRole,
       actorUserId: (user?.id as string | undefined) ?? null,
+      actorEmail: typeof user?.email === 'string' ? user.email : null,
+      actorFullName:
+        typeof user?.user_metadata?.full_name === 'string'
+          ? user.user_metadata.full_name
+          : typeof user?.user_metadata?.fullName === 'string'
+            ? user.user_metadata.fullName
+            : null,
     });
     return { ok: true, profile };
   }
@@ -119,11 +123,11 @@ export class LaunchPublicController {
     },
   ): Promise<any> {
     const user = await this.getUserFromAuthHeader(authHeader);
-    const tenantId = user?.app_metadata?.tenant_id ?? user?.user_metadata?.tenant_id;
-    if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
-    }
     const skipped = Boolean(body.skipped);
+    const tenantId = await this.launchService.resolveAndEnsureTenantClaim(
+      user,
+      this.parseRole(body.primaryRole),
+    );
     const profile = await this.launchService.saveCommercialProfile({
       tenantId,
       primaryRole: this.parseRole(body.primaryRole),

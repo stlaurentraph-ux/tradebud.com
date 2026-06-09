@@ -3,15 +3,27 @@
     "hero": {
       "headline": "La tracciabilità che funziona per tutta la filiera.",
       "subheadline": "Tracebud semplifica la conformità EUDR con uno strumento semplice, autonomo e accessibile, così agricoltori, cooperative, esportatori e acquirenti possono raccogliere, condividere e riutilizzare i dati di origine senza inseguire documenti.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Gratis per i produttori. Pensato per le realtà sul campo, con connettività limitata e flussi semplici. Nessun consulente necessario.",
       "cta": {
         "primary": "Scopri come funziona",
         "secondary": "Contattaci"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+<<<<<<< HEAD
       "headline": "Conformità semplificata.",
       "description": "Le catene di fornitura falliscono quando il processo è troppo manuale e frammentato. Tracebud rimuove le frizioni affinché tutti possano partecipare, a qualsiasi scala.",
+=======
+      "eyebrow": "Why Tracebud",
+      "headline": "La conformità non dovrebbe essere complicata per essere credibile.",
+      "description": "La maggior parte delle filiere non fallisce perché le persone non ci tengono. Fallisce perché il processo è troppo manuale, troppo costoso e troppo frammentato. Tracebud elimina il continuo andare avanti e indietro, così ogni attore può partecipare, anche quando la rete è grande, distribuita o con risorse limitate.",
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Semplice",
@@ -54,15 +66,72 @@
       }
     },
     "productsSection": {
+      "eyebrow": "Due prodotti, un unico flusso di lavoro",
+      "title": "Progettato per come funzionano davvero le catene di approvvigionamento",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
+        "label": "App mobile",
         "headline": "Pensata per il campo, non per l'ufficio.",
         "description": "Gli agricoltori possono mappare i confini, condividere informazioni e rispondere da un'esperienza mobile semplice, progettata per le condizioni reali del campo. Funziona offline, usa elementi visivi chiari e mantiene il processo leggero.",
+        "features": {
+          "free": "No training-heavy setup required",
+          "offline": "Funziona offline, si sincronizza al ritorno della connessione",
+          "gps": "Percorri il confine per acquisire il poligono GPS",
+          "photo": "Prove fotografiche e registrazione del consenso"
+        },
         "supportingText": "Gratis per i produttori. Nessuna configurazione pesante o formazione lunga."
       },
       "dashboard": {
+        "label": "Dashboard",
         "headline": "Gestisci la tua rete senza continui scambi.",
         "description": "Carica i contatti in blocco, invia una richiesta e lascia che il flusso di lavoro attraversi l'intera filiera. Monitora le risposte, riutilizza i dati verificati e fai avanzare ogni spedizione con meno lavoro manuale.",
+        "features": {
+          "import": "Importazione massiva dei contatti tramite CSV",
+          "bulkRequest": "Invia richieste a centinaia di contatti in una volta",
+          "cascade": "Le richieste si propagano nella rete fino all'origine",
+          "readiness": "Monitora la prontezza di tutta la rete",
+          "evidence": "Identifica subito le prove mancanti",
+          "dds": "Assembla pacchetti DDS per la spedizione"
+        },
         "supportingText": "Meno rincorse. Meno lacune. Consegne più rapide."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
+      }
+    },
+    "customersSection": {
+      "eyebrow": "Outcomes",
+      "headline": "Perché i clienti usano Tracebud",
+      "description": "Meno follow-up manuale. Provenienza preservata tramite aggregazione. Spedisci con fiducia.",
+      "cards": {
+        "gaps": {
+          "title": "Meno lacune nelle prove",
+          "description": "Onboarding, richieste di prove, controlli duplicati, lineage e preparazione DDS in un unico sistema connesso."
+        },
+        "provenance": {
+          "title": "Provenienza preservata",
+          "description": "Prove di conformità collegate a produttori, appezzamenti, lotti e spedizioni reali. Non file scollegati."
+        },
+        "handoff": {
+          "title": "Passaggio più rapido",
+          "description": "Più fiducia su ciò che può effettivamente essere spedito. Meno tempo a inseguire dati mancanti quando le spedizioni devono partire."
+        }
       }
     },
     "inclusionSection": {
@@ -71,20 +140,40 @@
       "punchline": "Eliminiamo le barriere di accesso che per anni hanno lasciato fuori i piccoli agricoltori."
     },
     "finalCtaSection": {
-      "headline": "Rendere la conformità utilizzabile per tutta la filiera.",
-      "description": "Inizia con la rete che hai già e dai a ogni attore un modo per partecipare.",
-      "cta": "Inizia"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Pronto a unirti alla lista d'attesa?",
-      "description": "Tracebud aiuta la tua rete a raccogliere, condividere e riutilizzare i dati di origine. È semplice, accessibile e inclusivo per agricoltori, cooperative, esportatori e acquirenti.",
+      "headline": "Inizia a costruire la tracciabilità per la tua rete.",
+      "description": "Unisciti alla lista d'attesa per l'accesso anticipato quando Tracebud aprirà nella tua regione e commodity.",
       "cta": {
-        "primary": "Unisciti ora",
+        "primary": "Unisciti alla lista d'attesa",
         "secondary": "Continua a navigare"
       },
-      "note": "Posti limitati per i primi partner pilota."
+      "note": "Niente spam. Disiscriviti quando vuoi."
     },
     "waitlistDialog": {
+<<<<<<< HEAD
       "headline": "Unisciti al programma pilota",
       "description": "Posti limitati per i primi partner pilota. Raccontaci della tua rete e ti ricontatteremo.",
       "note": "Niente spam. Cancellati in qualsiasi momento."
@@ -184,10 +273,84 @@
         }
       }
     }
+=======
+      "headline": "Unisciti alla lista d'attesa",
+      "description": "Raccontaci della tua rete — ti contatteremo quando Tracebud sarà pronto.",
+      "note": "No spam, ever. Unsubscribe at any time.",
+      "sidePanel": {
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
+      },
+      "submit": "Unisciti alla lista d'attesa",
+      "submitting": "Submitting...",
+      "success": {
+        "title": "Sei in lista",
+        "description": "Esaminiamo ogni richiesta personalmente e rispondiamo via email."
+      },
+      "form": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
+        "placeholders": {
+          "firstName": "Maria",
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
+        },
+        "roles": {
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
+        },
+        "commodities": {
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
+          "rubber": "Rubber",
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
+        },
+        "producerRanges": {
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
+        },
+        "errors": {
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
+        }
+      }
+    },
+    "earlyAdopters": "Unisciti alla lista d'attesa per accesso anticipato"
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Lingua",
-    "joinWaitlist": "Iscriviti alla lista d'attesa",
+    "joinWaitlist": "Unisciti alla lista d'attesa",
     "learnMore": "Scopri di più",
     "contactUs": "Contattaci"
   },
@@ -225,9 +388,9 @@
       "countries": "Paesi"
     },
     "nav": {
-      "pilot": "Progetto pilota",
       "howItWorks": "Come funziona",
-      "pricing": "Prezzi"
+      "whyTracebud": "Perché Tracebud",
+      "faq": "FAQ"
     },
     "cta": {
       "downloadApp": "Scarica l'app",
@@ -237,9 +400,18 @@
     }
   },
   "footer": {
-    "startMapping": "Inizia la mappatura",
-    "contactSales": "Contatta le vendite",
-    "joinWaitlist": "Iscriviti alla lista d'attesa"
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Unisciti ora",
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "Pronto a unirti alla lista d'attesa?",
+    "waitlistSubline": "Sii il primo a sapere quando Tracebud aprirà per la tua rete."
   },
   "impact": {
     "title": "Perché Tracebud funziona",
@@ -270,6 +442,7 @@
     "integrations": "Integrazioni dirette"
   },
   "faq": {
+<<<<<<< HEAD
     "title": "Domande? Abbiamo risposte.",
     "whenLaunch": "Quando posso iniziare a usare Tracebud?",
     "whenLaunchAnswer": "Stiamo testando con cooperative, esportatori e importatori ora. Unisciti alla lista d'attesa e ti contatteremo quando saremo pronti per la tua regione.",
@@ -287,5 +460,21 @@
     "whoItIsForAnswer": "No. Tracebud aiuta le cooperative a gestire molti membri, gli esportatori a raccogliere prove affidabili di spedizione e gli importatori a ottenere dati più puliti. Tutti nella catena possono partecipare, anche con accesso digitale limitato.",
     "support": "Quale supporto è disponibile?",
     "supportAnswer": "Onboarding pratico per tutti i clienti. Supporto diretto dal nostro team. Stiamo costruendo questo insieme ai nostri utenti iniziali, quindi il tuo feedback modella il prodotto."
+=======
+    "title": "Questions? We have answers.",
+    "whenLaunch": "Quando posso iniziare a usare Tracebud?",
+    "whenLaunchAnswer": "Tracebud apre per fasi per regione e commodity. Unisciti alla lista d'attesa e ti scriveremo quando il tuo caso sarà supportato.",
+    "whyCommodities": "What crops does Tracebud support?",
+    "whoCommoditiesAnswer": "Caffè, cacao, olio di palma, gomma, soia, bestiame e legno sono i principali prodotti EUDR. Espanderemo in base alla domanda.",
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Gratuito per i produttori. Cooperative, esportatori e acquirenti pagano in base alla dimensione della rete e all'utilizzo. Pagina prezzi o lista d'attesa per i dettagli.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "I produttori possono iniziare subito a mappare con l'app offline. La maggior parte delle cooperative carica la rete e invia la prima richiesta entro una settimana.",
+    "support": "What support is available?",
+    "supportAnswer": "Ogni membro della lista riceve un follow-up personale via email. Dopo l'onboarding, accesso diretto al nostro team per setup e conformità.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "whyCommoditiesAnswer": "Prima il caffè, poi le altre sei commodity EUDR: cacao, olio di palma, gomma, soia, bestiame e legno. Vedi la pagina prezzi per la roadmap completa."
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

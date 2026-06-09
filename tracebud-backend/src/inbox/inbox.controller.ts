@@ -1,15 +1,11 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
+import { RespondInboxRequestDto } from './dto/respond-inbox-request.dto';
 import { InboxService } from './inbox.service';
 
-type SupabaseUserLike = {
-  email?: string | null;
-  app_metadata?: Record<string, unknown> | null;
-  user_metadata?: Record<string, unknown> | null;
-  [key: string]: unknown;
-};
+type SupabaseUserLike = Record<string, unknown> & { email?: string | null };
 
 @ApiTags('Inbox Requests')
 @ApiBearerAuth()
@@ -19,17 +15,13 @@ export class InboxController {
   constructor(private readonly inboxService: InboxService) {}
 
   private resolveTenantId(user: SupabaseUserLike): string | null {
-    const appTenant = typeof user.app_metadata?.tenant_id === 'string' ? user.app_metadata.tenant_id : null;
-    if (appTenant && appTenant.trim().length > 0) return appTenant;
-    const userTenant = typeof user.user_metadata?.tenant_id === 'string' ? user.user_metadata.tenant_id : null;
-    if (userTenant && userTenant.trim().length > 0) return userTenant;
-    return null;
+    return deriveTenantIdFromSupabaseUser(user);
   }
 
   private requireTenantId(req: { user?: SupabaseUserLike }): string {
     const tenantId = this.resolveTenantId(req.user ?? {});
     if (!tenantId) {
-      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed auth token.');
+      throw new ForbiddenException('Missing required tenant claim (tenant_id) in signed app_metadata.');
     }
     return tenantId;
   }
@@ -45,9 +37,18 @@ export class InboxController {
   @Post(':id/respond')
   @ApiOperation({ summary: 'Mark inbox request as responded' })
   @ApiParam({ name: 'id', required: true })
-  async respond(@Param('id') id: string, @Req() req: { user?: SupabaseUserLike }) {
+  async respond(
+    @Param('id') id: string,
+    @Body() body: RespondInboxRequestDto,
+    @Req() req: { user?: SupabaseUserLike },
+  ) {
     const tenantId = this.requireTenantId(req);
-    const request = await this.inboxService.respond(id, tenantId);
+    const role = deriveRoleFromSupabaseUser(req.user ?? {});
+    if (!['exporter', 'admin', 'compliance_manager', 'agent'].includes(role)) {
+      throw new ForbiddenException('Only organization operators can fulfill inbox requests.');
+    }
+    const userId = typeof req.user?.id === 'string' ? req.user.id : null;
+    const request = await this.inboxService.respond(id, tenantId, body, userId);
     return { request };
   }
 

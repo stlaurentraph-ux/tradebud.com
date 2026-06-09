@@ -2,6 +2,8 @@
 
 ## Work now
 
+- FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.
+- Beta-release readiness track is now formalized: controlled beta go/no-go checklist is published at `product-os/04-quality/beta-go-no-go-checklist.md` with explicit invite-only scope, waived official gates (`P0-02`, `P0-03`), and required fail-closed/security/test evidence for tenant-safe rollout.
 - Importer dashboard IA foundation is being aligned to Tier 3 compliance operations: sidebar/order now maps to `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log` with settings/help as support destinations.
 - Importer page framing pass is complete on shared routes: importer users now see role-appropriate destination labels and explanatory copy on `Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, and `Issues`.
 - Importer terminology alignment now also covers shared child components (package tables + compliance/evidence cards) so importer copy stays consistent across reused UI blocks.
@@ -570,6 +572,11 @@
 - Account creation slice C (OpenAPI + UI tests + DB-backed integration) is now implemented and validated; next execution step is optional role-aware post-signup redirect/onboarding continuity wiring in auth/layout layer.
 - Account creation slice D (session continuity + role-aware redirect) is now implemented and validated; next execution step is optional onboarding action-marker wiring on first-value destination pages for full auto-validation continuity.
 - Account creation slice J (local dev signup bypass for QA) is now implemented and validated; next execution step is running manual local create-account click-through with `TRACEBUD_DEV_SIGNUP_BYPASS=true` and recording UX evidence notes.
+- Offline-product rollout-hardening + release-governance automation are now implemented (release channels/runbook, auth/transport guardrails, secure credential storage migration, retry backoff + queue cap, next-retry UX, production preflight gate, rollout SLO go/no-go gate); next execution step is optional transport-layer pinning strategy decision for Expo managed vs native workflow and staged-rollout telemetry source integration.
+- Supabase PostGIS relocation completed by Support (Clément): `postgis` + `spatial_ref_sys` in `extensions`; PostGIS-related ERROR/WARN cleared from advisor.
+- TB-V16-030 RLS phase-3 **applied live** on `uzsktajlnofosxeqwdwl` (14/14 tenant policies verified pass). Security advisor now INFO-only on phase-2 internal tables (`rls_enabled_no_policy` deny-by-default backlog).
+- Backend Supabase claim trust hardening is now implemented (`app_metadata`-only tenant/role trust path, email fallback removed); next execution step is adding explicit regression tests for missing-claim `403` and user-metadata privilege escalation denial paths.
+- Supabase RLS remediation pack (PostGIS + TB-V16-030 + leaked-password) executed on live project; optional follow-up: phase-4 explicit deny policies for INFO-only internal tables if a clean advisor score is required.
 
 ## Priority migration lanes (v1.6)
 

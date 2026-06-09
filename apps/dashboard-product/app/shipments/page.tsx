@@ -113,7 +113,7 @@ export default function ShipmentsPage() {
             { label: 'Operations' },
             { label: 'Shipments' },
           ]}
-          action={
+          actions={
             <PermissionGate permission="packages:create">
               <Button asChild>
                 <Link href="/packages/new">

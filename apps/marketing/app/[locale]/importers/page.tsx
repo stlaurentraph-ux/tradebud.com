@@ -1,12 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "For Importers & Brands | Tracebud",
-  description: "Full supply chain visibility with zero risk. EUDR compliance, audit trails, and CSRD reporting - all in one dashboard.",
-};
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -36,7 +30,7 @@ import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const IMPORTER_DEMO = "https://importer-demo.tracebud.com";
 
 const features = [
@@ -510,45 +504,6 @@ export default function ImportersPage() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* Testimonial */}
-      <section className="relative py-20 md:py-32">
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1611174275735-21c4fd75d9ec?q=80&w=2070&auto=format&fit=crop"
-            alt="Coffee cupping session"
-            fill
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-[var(--forest-canopy)]/85" />
-        </div>
-        <div className="max-w-4xl mx-auto px-4 md:px-6 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-xl md:text-2xl lg:text-3xl text-white font-medium leading-relaxed mb-6 md:mb-8 italic">
-              &ldquo;Tracebud gives us the confidence to tell our customers exactly where their coffee comes from. Full transparency, zero guesswork.&rdquo;
-            </p>
-            <div className="flex items-center justify-center gap-3 md:gap-4">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-[var(--data-emerald)]">
-                <Image
-                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop"
-                  alt="Anna Schmidt"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              </div>
-              <div className="text-left">
-                <div className="text-white font-bold text-sm md:text-base">Anna Schmidt</div>
-                <div className="text-white/70 text-xs md:text-sm">Head of Sustainability, EuroRoast GmbH</div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 

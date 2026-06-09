@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(
   request: Request,
@@ -17,7 +18,7 @@ export async function GET(
       );
     }
 
-    const backendUrl = new URL(`${backendBase}/v1/plots/${encodeURIComponent(id)}/geometry-history`);
+    const backendUrl = new URL(backendApiUrl(backendBase, `/v1/plots/${encodeURIComponent(id)}/geometry-history`));
     ['limit', 'offset', 'sort', 'anomalyProfile', 'signalsOnly'].forEach((key) => {
       const value = requestUrl.searchParams.get(key);
       if (value) backendUrl.searchParams.set(key, value);

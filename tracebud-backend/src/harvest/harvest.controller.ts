@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -20,22 +20,33 @@ export class HarvestController {
   ) {}
 
   private requireTenantClaim(req: any) {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
   }
 
   private getTenantId(req: any): string {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     return tenantId;
+  }
+
+  private async enforcePackageReadAccess(packageId: string, req: any): Promise<void> {
+    const tenantId = this.getTenantId(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
+      throw new ForbiddenException('Only exporters can view DDS package details');
+    }
+    if (role === 'admin') {
+      return;
+    }
+    const allowed = await this.harvestService.canReadPackageForTenant(packageId, tenantId);
+    if (!allowed) {
+      throw new ForbiddenException('Package scope violation');
+    }
   }
 
   @Post()
@@ -99,23 +110,52 @@ export class HarvestController {
   }
 
   @Get('packages')
-  @ApiQuery({ name: 'farmerId', required: true })
-  async listPackages(@Query('farmerId') farmerId: string, @Req() req: any) {
-    this.requireTenantClaim(req);
+  @ApiQuery({ name: 'farmerId', required: false })
+  @ApiQuery({ name: 'scope', required: false, enum: ['tenant', 'shared', 'farmer'] })
+  async listPackages(
+    @Query('farmerId') farmerId: string | undefined,
+    @Query('scope') scope: string | undefined,
+    @Req() req: any,
+  ) {
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
+    const resolvedScope =
+      scope === 'shared' ? 'shared' : scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
+
+    if (resolvedScope === 'shared') {
+      const packages = await this.harvestService.listSharedDdsPackagesForRecipientTenant(tenantId);
+      return { packages };
+    }
+
+    if (resolvedScope === 'farmer') {
+      const scopedFarmerId = farmerId?.trim();
+      if (!scopedFarmerId) {
+        throw new ForbiddenException('farmerId is required when scope=farmer');
+      }
+      if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
+        throw new ForbiddenException('Only exporters can list DDS packages');
+      }
+      if (role !== 'admin') {
+        const inTenant = await this.harvestService.isFarmerInTenant(scopedFarmerId, tenantId);
+        if (!inTenant) {
+          throw new ForbiddenException('Farmer scope violation');
+        }
+      }
+      const packages = await this.harvestService.listDdsPackagesForFarmer(scopedFarmerId);
+      return { packages };
+    }
+
+    if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
       throw new ForbiddenException('Only exporters can list DDS packages');
     }
-    return this.harvestService.listDdsPackagesForFarmer(farmerId);
+    const packages = await this.harvestService.listDdsPackagesForTenant(tenantId);
+    return { packages };
   }
 
   @Get('packages/:id')
   async getPackage(@Param('id') id: string, @Req() req: any) {
     this.requireTenantClaim(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can view DDS package details');
-    }
+    await this.enforcePackageReadAccess(id, req);
     return this.harvestService.getDdsPackageDetail(id);
   }
 
@@ -132,10 +172,7 @@ export class HarvestController {
   })
   async getPackageEvidenceDocuments(@Param('id') id: string, @Req() req: any) {
     this.requireTenantClaim(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can view package evidence documents');
-    }
+    await this.enforcePackageReadAccess(id, req);
     return this.harvestService.listDdsPackageEvidenceDocuments(id);
   }
 
@@ -147,10 +184,8 @@ export class HarvestController {
   })
   async getPackageReadiness(@Param('id') id: string, @Req() req: any) {
     const tenantId = this.getTenantId(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can evaluate DDS package readiness');
-    }
+    this.requireTenantClaim(req);
+    await this.enforcePackageReadAccess(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageReadiness(id);
   }

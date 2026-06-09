@@ -30,7 +30,6 @@ import {
   getTracebudApiBaseUrl,
   hydrateSyncAuthFromSettings,
   postAuditEventToBackend,
-  saveAndApplySyncAuth,
   testBackendLogin,
 } from '@/features/api/postPlot';
 import {
@@ -56,10 +55,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Brand, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { signInAndSyncPlots } from '@/features/auth/signInSync';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { localeNames } from '@/features/i18n/config';
 import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
+
+const RETRY_BACKOFF_BASE_MS = 5000;
+const RETRY_BACKOFF_MAX_MS = 5 * 60 * 1000;
+
+function computeRetryBackoffMs(attempts: number): number {
+  if (attempts <= 0) return 0;
+  return Math.min(RETRY_BACKOFF_MAX_MS, RETRY_BACKOFF_BASE_MS * 2 ** (attempts - 1));
+}
 
 const fsAny = FileSystem as unknown as {
   documentDirectory?: string | null;
@@ -67,8 +77,9 @@ const fsAny = FileSystem as unknown as {
 };
 
 export default function SettingsScreen() {
-  const { lang, setLang, t } = useLanguage();
+  const { lang, languageCode, openLanguagePicker, t } = useLanguage();
   const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
+  const { refreshAuth } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -82,6 +93,7 @@ export default function SettingsScreen() {
   const [queueMaxAttempts, setQueueMaxAttempts] = useState(0);
   const [queueLastError, setQueueLastError] = useState<string | null>(null);
   const [queueLastErrorActionType, setQueueLastErrorActionType] = useState<string | null>(null);
+  const [queueNextRetrySeconds, setQueueNextRetrySeconds] = useState<number | null>(null);
   const [queueCountByActionType, setQueueCountByActionType] = useState<
     Record<PendingSyncAction['actionType'], number>
   >({
@@ -139,6 +151,18 @@ export default function SettingsScreen() {
       .find((row) => typeof row.lastError === 'string' && row.lastError.trim().length > 0);
     setQueueLastError(latestErrored?.lastError?.trim() ?? null);
     setQueueLastErrorActionType(latestErrored?.actionType ?? null);
+    const now = Date.now();
+    const nextRetryMs = retryingRows
+      .map((row) => {
+        const attempts = row.attempts ?? 0;
+        if (attempts <= 0) return 0;
+        const lastAttemptAt = row.lastAttemptAt ?? row.createdAt ?? now;
+        const readyAt = lastAttemptAt + computeRetryBackoffMs(attempts);
+        return Math.max(0, readyAt - now);
+      })
+      .filter((ms) => ms > 0)
+      .sort((a, b) => a - b)[0];
+    setQueueNextRetrySeconds(nextRetryMs != null ? Math.ceil(nextRetryMs / 1000) : null);
 
     const { email, password } = getAuthCredentials();
     const canQueryServer = Boolean(farmer?.id && email?.trim() && password);
@@ -369,23 +393,21 @@ export default function SettingsScreen() {
   };
 
   const onSignInForSync = async () => {
-    if (!syncEmail.trim() || !syncPassword) {
-      setSyncAuthHint(t('enter_email_password'));
-      return;
-    }
     setSyncSigningIn(true);
     setSyncAuthHint(null);
     try {
-      await saveAndApplySyncAuth(syncEmail, syncPassword);
-      const res = await testBackendLogin();
+      const res = await signInAndSyncPlots({
+        email: syncEmail,
+        password: syncPassword,
+        farmerId: farmer?.id,
+        localPlots: plots,
+      });
       if (res.ok) {
         setSyncSignedIn(true);
         setSyncAuthHint(null);
         setSyncPassword('');
         setSyncMessage(null);
-        if (farmer?.id && plots.length > 0) {
-          await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
-        }
+        await refreshAuth();
         if (farmer?.id) {
           const bits: string[] = [];
           const appendQueueResultBits = (
@@ -455,7 +477,9 @@ export default function SettingsScreen() {
         void refreshSyncMetrics();
       } else {
         setSyncSignedIn(false);
-        setSyncAuthHint(res.message);
+        setSyncAuthHint(
+          res.message === 'enter_email_password' ? t('enter_email_password') : res.message,
+        );
       }
     } catch (e) {
       setSyncSignedIn(false);
@@ -472,6 +496,7 @@ export default function SettingsScreen() {
     setSyncPassword('');
     setSyncAuthHint(t('signed_out_device'));
     setSyncMessage(null);
+    await refreshAuth();
     void refreshSyncMetrics();
   };
 
@@ -677,8 +702,8 @@ export default function SettingsScreen() {
           </Pressable>
         }
         centerTitle={t('settings_title')}
-        onLanguagePress={() => setLang(lang === 'en' ? 'es' : 'en')}
-        languageLabel={String(lang)}
+        onLanguagePress={openLanguagePicker}
+        languageLabel={languageCode}
         textInverseColor={colors.textInverse}
       />
 
@@ -925,9 +950,9 @@ export default function SettingsScreen() {
                   {t('language')}
                 </ThemedText>
               </View>
-              <Pressable onPress={() => setLang(lang === 'en' ? 'es' : 'en')} hitSlop={10}>
+              <Pressable onPress={openLanguagePicker} hitSlop={10}>
                 <ThemedText type="defaultSemiBold" style={styles.greenText}>
-                  {lang === 'es' ? 'Español' : 'English'}
+                  {localeNames[lang]}
                 </ThemedText>
               </Pressable>
             </View>
@@ -1031,8 +1056,13 @@ export default function SettingsScreen() {
                 </ThemedText>
                 {queueLastError ? (
                   <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    Latest queue error
+                    {t('sync_queue_latest_error_label')}
                     {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}: {queueLastError}
+                  </ThemedText>
+                ) : null}
+                {queueNextRetrySeconds != null ? (
+                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                    {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
                   </ThemedText>
                 ) : null}
                 <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>

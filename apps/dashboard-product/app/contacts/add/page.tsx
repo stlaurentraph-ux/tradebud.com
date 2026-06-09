@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,14 @@ import {
 } from 'lucide-react';
 
 type AddMode = 'select' | 'contact' | 'organization' | 'csv-contacts' | 'csv-organizations';
+
+const MODE_FROM_QUERY: Record<string, AddMode> = {
+  contact: 'contact',
+  organization: 'organization',
+  csv: 'csv-contacts',
+  'csv-contacts': 'csv-contacts',
+  'csv-organizations': 'csv-organizations',
+};
 
 interface ContactDraft {
   full_name: string;
@@ -66,8 +76,41 @@ interface ImportResult {
 
 export default function AddContactPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const isCooperative = user?.active_role === 'cooperative';
+  const isImporter = user?.active_role === 'importer';
   const [mode, setMode] = useState<AddMode>('select');
   const [importTab, setImportTab] = useState<'contacts' | 'organizations'>('contacts');
+
+  useEffect(() => {
+    const requestedMode = searchParams.get('mode');
+    if (requestedMode && MODE_FROM_QUERY[requestedMode]) {
+      setMode(MODE_FROM_QUERY[requestedMode]);
+    }
+  }, [searchParams]);
+
+  const contactWizardDefaults = useMemo(() => {
+    if (isCooperative) {
+      return {
+        defaultContactType: 'farmer' as ContactType,
+        lockContactType: true,
+        lockedTypeLabel: 'Member',
+      };
+    }
+    if (isImporter) {
+      return {
+        defaultContactType: 'exporter' as ContactType,
+        lockContactType: false,
+        lockedTypeLabel: 'Contact',
+      };
+    }
+    return {
+      defaultContactType: 'farmer' as ContactType,
+      lockContactType: false,
+      lockedTypeLabel: 'Producer',
+    };
+  }, [isCooperative, isImporter]);
 
   const handleContactComplete = async (data: ContactDraft) => {
     await createContact({
@@ -80,7 +123,8 @@ export default function AddContactPage() {
       tags: data.tags ? data.tags.split(',').map((t) => t.trim()) : [],
       consent_status: data.consent_status,
     });
-    toast.success('Contact created successfully');
+    markOnboardingAction('contacts_uploaded');
+    toast.success(isCooperative ? 'Member added to your directory' : 'Contact created successfully');
     router.push('/contacts');
   };
 
@@ -97,6 +141,7 @@ export default function AddContactPage() {
       tags: data.commodities ? data.commodities.split(',').map((t) => t.trim()) : [],
       consent_status: 'unknown',
     });
+    markOnboardingAction('contacts_uploaded');
     toast.success('Organization created successfully');
     router.push('/contacts');
   };
@@ -131,6 +176,7 @@ export default function AddContactPage() {
     }
 
     if (success > 0) {
+      markOnboardingAction('contacts_uploaded');
       toast.success(`Successfully imported ${success} record${success !== 1 ? 's' : ''}`);
     }
 
@@ -145,9 +191,10 @@ export default function AddContactPage() {
     }
   };
 
+  const directoryLabel = isCooperative ? 'Members' : 'Contacts';
   const breadcrumbs = [
-    { label: 'Contacts', href: '/contacts' },
-    { label: mode === 'select' ? 'Add' : mode.includes('csv') ? 'Bulk Import' : mode === 'contact' ? 'Add Contact' : 'Add Organization' },
+    { label: directoryLabel, href: '/contacts' },
+    { label: mode === 'select' ? 'Add' : mode.includes('csv') ? 'Bulk Import' : mode === 'contact' ? (isCooperative ? 'Add Member' : 'Add Contact') : 'Add Organization' },
   ];
 
   return (
@@ -155,14 +202,18 @@ export default function AddContactPage() {
       <AppHeader
         title={
           mode === 'select'
-            ? 'Add Contact or Organization'
+            ? isCooperative
+              ? 'Add Member or Organization'
+              : 'Add Contact or Organization'
             : mode.includes('csv')
               ? 'Bulk Import'
               : mode === 'contact'
-                ? 'Add New Contact'
+                ? isCooperative
+                  ? 'Add New Member'
+                  : 'Add New Contact'
                 : 'Add New Organization'
         }
-        subtitle="Tenant CRM"
+        subtitle={isCooperative ? 'Cooperative member directory' : 'Tenant CRM'}
         breadcrumbs={breadcrumbs}
         actions={
           mode !== 'select' && (
@@ -286,7 +337,13 @@ export default function AddContactPage() {
           )}
 
           {mode === 'contact' && (
-            <AddContactWizard onComplete={handleContactComplete} onCancel={handleCancel} />
+            <AddContactWizard
+              onComplete={handleContactComplete}
+              onCancel={handleCancel}
+              defaultContactType={contactWizardDefaults.defaultContactType}
+              lockContactType={contactWizardDefaults.lockContactType}
+              lockedTypeLabel={contactWizardDefaults.lockedTypeLabel}
+            />
           )}
 
           {mode === 'organization' && (

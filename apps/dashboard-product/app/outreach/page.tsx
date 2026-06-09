@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Send } from 'lucide-react';
+import { CampaignDecisionsDialog } from '@/components/requests/campaign-decisions-dialog';
 import { NewRequestWizardDialog, type NewRequestResult } from '@/components/requests/wizard/new-request-wizard-dialog';
 import { useAuth } from '@/lib/auth-context';
 import { useRequestCampaigns } from '@/lib/use-requests';
@@ -32,11 +34,21 @@ const statusBadgeClass: Record<OutreachStatus, string> = {
 };
 
 export default function OutreachPage() {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
   const { campaigns, isLoading, error, reload } = useRequestCampaigns(user?.tenant_id ?? null);
   const [statusTab, setStatusTab] = useState<OutreachStatus>('Draft');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [decisionsCampaignId, setDecisionsCampaignId] = useState<string | null>(null);
+  const [decisionsCampaignTitle, setDecisionsCampaignTitle] = useState<string | null>(null);
+  const [isDecisionsOpen, setIsDecisionsOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setIsWizardOpen(true);
+    }
+  }, [searchParams]);
 
   const requests = useMemo<OutreachRequest[]>(
     () =>
@@ -65,6 +77,12 @@ export default function OutreachPage() {
   const handleWizardComplete = (result: NewRequestResult) => {
     setStatusTab(result.status);
     reload();
+  };
+
+  const openDecisionsTimeline = (campaignId: string, campaignTitle: string) => {
+    setDecisionsCampaignId(campaignId);
+    setDecisionsCampaignTitle(campaignTitle);
+    setIsDecisionsOpen(true);
   };
 
   return (
@@ -130,27 +148,81 @@ export default function OutreachPage() {
                     <TableHead>Counterpart Name</TableHead>
                     <TableHead>Commodity</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Responses</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.id}</TableCell>
-                      <TableCell>{request.counterpartName}</TableCell>
-                      <TableCell>{request.commodity}</TableCell>
-                      <TableCell>{new Date(request.date).toLocaleDateString()}</TableCell>
+                  {campaigns
+                    .filter((campaign) => {
+                      const status =
+                        campaign.status === 'DRAFT'
+                          ? 'Draft'
+                          : campaign.status === 'QUEUED' || campaign.status === 'RUNNING'
+                            ? 'Sent'
+                            : campaign.status === 'COMPLETED' || campaign.status === 'PARTIAL'
+                              ? 'Completed'
+                              : 'Archived';
+                      return status === statusTab;
+                    })
+                    .map((campaign) => {
+                      const status =
+                        campaign.status === 'DRAFT'
+                          ? 'Draft'
+                          : campaign.status === 'QUEUED' || campaign.status === 'RUNNING'
+                            ? 'Sent'
+                            : campaign.status === 'COMPLETED' || campaign.status === 'PARTIAL'
+                              ? 'Completed'
+                              : 'Archived';
+                      const accepted = campaign.accepted_count ?? 0;
+                      const pending = campaign.pending_count ?? 0;
+                      return (
+                    <TableRow key={campaign.id}>
+                      <TableCell className="font-medium">{campaign.id}</TableCell>
+                      <TableCell>{`${campaign.target_contact_emails?.length ?? 0} recipient${(campaign.target_contact_emails?.length ?? 0) === 1 ? '' : 's'}`}</TableCell>
+                      <TableCell>{campaign.request_type.replace(/_/g, ' ').toLowerCase()}</TableCell>
+                      <TableCell>{new Date(campaign.updated_at ?? campaign.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {accepted} accepted · {pending} pending
+                      </TableCell>
                       <TableCell>
-                        <Badge className={statusBadgeClass[request.status]}>{request.status}</Badge>
+                        <Badge className={statusBadgeClass[status]}>{status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {status !== 'Draft' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDecisionsTimeline(campaign.id, campaign.title)}
+                          >
+                            View timeline
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                      );
+                    })}
                 </TableBody>
               </Table>
             )}
           </CardContent>
         </Card>
       </div>
+      <CampaignDecisionsDialog
+        campaignId={decisionsCampaignId}
+        campaignTitle={decisionsCampaignTitle}
+        open={isDecisionsOpen}
+        onOpenChange={(open) => {
+          setIsDecisionsOpen(open);
+          if (!open) {
+            setDecisionsCampaignId(null);
+            setDecisionsCampaignTitle(null);
+          }
+        }}
+      />
       <NewRequestWizardDialog
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}

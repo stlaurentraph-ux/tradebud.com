@@ -115,6 +115,25 @@ Scope: integrations execution matrix bootstrap for tenant-safe public API, webho
 
 ## Execution slices
 
+### S1 post-closeout hardening slice 41 - dashboard integrations operations now use live V2 APIs (mock path removed)
+
+- Dashboard integrations operations console now uses contract-backed API proxies instead of mock-only data for high-priority run-ops workflows:
+  - scheduler config: `GET /api/integrations/coolfarm-sai/v2/scheduler/config`
+  - scheduler trigger: `POST /api/integrations/coolfarm-sai/v2/runs/release-stale/trigger`
+  - run summary + queue: `GET /api/integrations/coolfarm-sai/v2/runs/summary`, `GET /api/integrations/coolfarm-sai/v2/runs/retry-queue`
+  - run actions: `POST /api/integrations/coolfarm-sai/v2/runs/{runId}/claim|release|retry`
+  - stale release: `POST /api/integrations/coolfarm-sai/v2/runs/release-stale`
+  - run detail history: `GET /api/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs`
+- Permissions and tenant boundaries:
+  - all proxy routes forward tenant-scoped Authorization headers to backend and remain fail-closed when `TRACEBUD_BACKEND_URL` is missing.
+  - scheduler trigger proxy uses server-side scheduler token (`COOLFARM_SAI_V2_SCHEDULER_TOKEN`) and does not expose token material to the client.
+- State transitions:
+  - claim/release/retry/release-stale actions now execute canonical backend transitions directly and refresh queue/summary state from source of truth.
+- Exception handling and recovery:
+  - UI now surfaces backend error payloads for operator recovery instead of mock success paths.
+- Analytics and acceptance:
+  - immutable backend audit events remain the source for run lifecycle actions; acceptance now includes live contract wiring with no mock fallback for high-priority run-ops TODOs.
+
 ### S1 post-closeout hardening slice 30 - Cool Farm + SAI V2 schema bootstrap API (shadow mode)
 
 - Added a new tenant-safe V2 schema bootstrap endpoint:
@@ -1474,3 +1493,13 @@ Done (TB-V16-009 / FEAT-009)
 - Partner export surfaces now enforce tenant trial/paywall checks before dataset listing, export start/finalize, retry operations, and artifact download.
 - EUDR integration endpoints now enforce launch entitlement checks before connectivity, submit, and status calls.
 - This closes the free-app data exfiltration path by requiring active trial/paid dashboard entitlement for high-value export/integration APIs.
+
+## 2026-06-02 RLS hardening slice (advisor critical remediation)
+
+- Added migration `tracebud-backend/sql/tb_v16_030_rls_phase3_launch_admin_and_integrations.sql`.
+- Enables RLS + tenant-scoped policies for advisor-flagged integration/request/admin/launch tables in `public`.
+- Closes critical Supabase advisor findings for:
+  - `integration_*_v2` persistence surfaces
+  - `request_campaigns` + `request_campaign_recipient_decisions`
+  - `crm_contacts`
+  - launch/admin tenant tables used by dashboard flows.

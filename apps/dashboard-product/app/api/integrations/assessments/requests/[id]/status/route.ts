@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function PATCH(
   request: Request,
@@ -16,7 +17,7 @@ export async function PATCH(
     }
     const body = await request.json().catch(() => ({}));
     const backendResponse = await fetch(
-      `${backendBase}/v1/integrations/assessments/requests/${encodeURIComponent(id)}/status`,
+      backendApiUrl(backendBase, `/v1/integrations/assessments/requests/${encodeURIComponent(id)}/status`),
       {
         method: 'PATCH',
         headers: {

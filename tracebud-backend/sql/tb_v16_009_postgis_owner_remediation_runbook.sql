@@ -5,20 +5,28 @@
 --   - overly broad anon/authenticated grants on spatial_ref_sys
 --
 -- IMPORTANT:
--- - This script is intended for execution by a database owner/superuser in a controlled window.
+-- - Preferred path: run `tb_v16_031_postgis_relocate_robust.sql` first (Supabase documented relocatable flow).
+-- - This file is the fallback when relocation cannot run (table-level hardening only).
 -- - Do not run through limited app migration roles if they do not own extension objects.
 -- - Validate in staging first.
+
+-- Primary (robust): execute entire file `tb_v16_031_postgis_relocate_robust.sql`, then verify with
+-- `tb_v16_009_postgis_owner_remediation_verify.sql`. Stop here if relocation succeeds.
 
 BEGIN;
 
 -- 1) Ensure dedicated extensions schema exists.
 CREATE SCHEMA IF NOT EXISTS extensions;
 
--- 2) Move postgis extension out of public schema.
--- NOTE: This requires owner privileges over the extension.
+-- 2) Fallback: naive SET SCHEMA (often insufficient on PostGIS 2.3+ without extrelocatable dance).
 DO $$
 BEGIN
-  ALTER EXTENSION postgis SET SCHEMA extensions;
+  BEGIN
+    ALTER EXTENSION postgis SET SCHEMA extensions;
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Insufficient privilege to move postgis extension schema. Run tb_v16_031_postgis_relocate_robust.sql as owner or escalate to Supabase support.';
+  END;
 EXCEPTION
   WHEN feature_not_supported THEN
     RAISE NOTICE 'postgis SET SCHEMA is not supported on this platform/version; continue with table-level hardening.';
@@ -46,14 +54,19 @@ BEGIN
     RAISE EXCEPTION 'spatial_ref_sys table not found in public/extensions.';
   END IF;
 
-  EXECUTE format('ALTER TABLE %I.spatial_ref_sys ENABLE ROW LEVEL SECURITY;', target_schema);
+  BEGIN
+    EXECUTE format('ALTER TABLE %I.spatial_ref_sys ENABLE ROW LEVEL SECURITY;', target_schema);
 
-  -- Remove broad DML exposure from client-facing roles.
-  EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE %I.spatial_ref_sys FROM anon, authenticated;', target_schema);
+    -- Remove broad DML exposure from client-facing roles.
+    EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE %I.spatial_ref_sys FROM anon, authenticated;', target_schema);
 
-  -- Keep read compatibility under explicit policy.
-  EXECUTE format('DROP POLICY IF EXISTS spatial_ref_sys_public_read ON %I.spatial_ref_sys;', target_schema);
-  EXECUTE format('CREATE POLICY spatial_ref_sys_public_read ON %I.spatial_ref_sys FOR SELECT TO public USING (true);', target_schema);
+    -- Keep read compatibility under explicit policy.
+    EXECUTE format('DROP POLICY IF EXISTS spatial_ref_sys_public_read ON %I.spatial_ref_sys;', target_schema);
+    EXECUTE format('CREATE POLICY spatial_ref_sys_public_read ON %I.spatial_ref_sys FOR SELECT TO public USING (true);', target_schema);
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Insufficient privilege to alter %.spatial_ref_sys. Escalate owner-only PostGIS remediation to Supabase support.', target_schema;
+  END;
 END $$;
 
 COMMIT;

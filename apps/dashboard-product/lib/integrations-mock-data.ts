@@ -1,6 +1,6 @@
 /**
- * @deprecated Use `lib/mocks/integrations` instead
- * This file re-exports from the new consolidated mocks directory for backwards compatibility
+ * @deprecated Integration operations UI uses `lib/integrations-v2-api` and
+ * `/api/integrations/coolfarm-sai/v2/*` proxies. This file remains for legacy test fixtures only.
  */
 
 export {

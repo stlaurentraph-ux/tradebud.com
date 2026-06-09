@@ -15,9 +15,9 @@ const FEATURE_GATE_CONFIG: readonly FeatureGateConfig[] = [
   {
     key: 'request_campaigns',
     envVar: 'NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS',
-    defaultEnabled: false,
+    defaultEnabled: true,
     owner: 'Dashboard + Product Eng',
-    deferredReason: 'Request campaign workflows are Release 2+ and out of MVP scope.',
+    deferredReason: 'Disable with NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS=false to hide campaign routes.',
     routes: ['/outreach', '/inbox'],
   },
   {

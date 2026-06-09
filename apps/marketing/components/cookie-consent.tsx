@@ -5,36 +5,36 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { X, Cookie } from 'lucide-react'
 import Link from 'next/link'
+import { notifyAnalyticsConsentChanged } from '@/lib/marketing-analytics'
+
+function readCookieConsent(): boolean {
+  if (typeof window === 'undefined') return false
+  return Boolean(localStorage.getItem('cookie-consent'))
+}
 
 export function CookieConsent() {
-  const [accepted, setAccepted] = useState(false)
+  const [accepted, setAccepted] = useState(readCookieConsent)
   const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
-    // Check if user has already accepted cookies
-    const cookieConsent = localStorage.getItem('cookie-consent')
-    if (cookieConsent) {
-      setAccepted(true)
-    } else {
-      // Show banner after 1 second
-      const timer = setTimeout(() => {
-        setShowBanner(true)
-      }, 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [])
+    if (accepted) return
+    const timer = setTimeout(() => setShowBanner(true), 1000)
+    return () => clearTimeout(timer)
+  }, [accepted])
 
   const handleAccept = () => {
     localStorage.setItem('cookie-consent', 'accepted')
     localStorage.setItem('cookie-consent-date', new Date().toISOString())
     setAccepted(true)
     setShowBanner(false)
+    notifyAnalyticsConsentChanged()
   }
 
   const handleReject = () => {
     localStorage.setItem('cookie-consent', 'rejected')
     setAccepted(true)
     setShowBanner(false)
+    notifyAnalyticsConsentChanged()
   }
 
   return (

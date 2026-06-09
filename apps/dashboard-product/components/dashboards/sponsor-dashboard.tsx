@@ -16,9 +16,10 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
-import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { cn } from '@/lib/utils';
 import { deriveInterventionCounts } from '@/lib/sponsor-dashboard-mappers';
+import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
+import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
 
 interface SponsorDashboardProps {
   metrics: {
@@ -49,37 +50,6 @@ type BackendCampaign = {
   target_contact_emails?: unknown[];
   commodity?: string;
 };
-
-const governanceEvents: TimelineEvent[] = [
-  {
-    id: '1',
-    eventType: 'status_change',
-    timestamp: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    userName: 'Delegated Admin Console',
-    description: 'Visibility scope expanded to include 3 new cooperatives in Kenya.',
-  },
-  {
-    id: '2',
-    eventType: 'alert',
-    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    userName: 'Compliance Health',
-    description: 'High-risk origin alert triggered for Kivu Open Chain Network.',
-  },
-  {
-    id: '3',
-    eventType: 'approval',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    userName: 'Programme Governance Board',
-    description: 'Approved Q2 premium distribution rule update for Peru cluster.',
-  },
-  {
-    id: '4',
-    eventType: 'document_uploaded',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-    userName: 'Billing & Coverage',
-    description: 'Uploaded sponsor coverage extract for monthly governance review.',
-  },
-];
 
 export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
   const { sponsorView, setSponsorView } = useSponsorViewControls();
@@ -138,21 +108,23 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
         );
       })
       .catch(() => undefined);
+
   }, []);
 
   const networkHealthSegments = useMemo(
     () =>
       organisations.slice(0, 6).map((org, index) => {
         const completeness = Number(org.onboardingCompleteness ?? 0);
-        const complianceRate = completeness > 0 ? completeness : 65 + (index % 4) * 8;
+        const hasCompleteness = completeness > 0;
+        const complianceRate = hasCompleteness ? completeness : 0;
         return {
           id: org.id ?? `org-${index}`,
           name: org.name ?? 'Unnamed Organisation',
           country: org.country ?? 'Unknown',
           complianceRate,
-          riskTier: complianceRate < 75 ? 'High' : complianceRate < 90 ? 'Moderate' : 'Low',
-          status: complianceRate < 80 ? 'At Risk' : 'Active',
-          escalations: complianceRate < 80 ? 2 : 0,
+          riskTier: !hasCompleteness ? 'Unknown' : complianceRate < 75 ? 'High' : complianceRate < 90 ? 'Moderate' : 'Low',
+          status: !hasCompleteness ? 'Pending data' : complianceRate < 80 ? 'At Risk' : 'Active',
+          escalations: hasCompleteness && complianceRate < 80 ? 1 : 0,
         };
       }),
     [organisations]
@@ -214,14 +186,14 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
       },
       {
         label: 'Compliance health',
-        value: metrics.total_plots > 0 ? `${Math.round((metrics.compliant_plots / metrics.total_plots) * 100)}%` : '91%',
+        value: metrics.total_plots > 0 ? `${Math.round((metrics.compliant_plots / metrics.total_plots) * 100)}%` : '--',
         hint: `${atRiskOrgs} high-risk segments`,
         icon: ShieldCheck,
         tone: 'text-purple-600 bg-purple-100',
       },
       {
         label: 'Delegated admin alerts',
-        value: campaignCount !== null ? String(Math.max(1, Math.round(campaignCount * 0.2))) : '--',
+        value: campaignCount !== null ? String(draftCampaignCount) : '--',
         hint:
           campaignCount !== null
             ? `${draftCampaignCount} draft campaigns pending launch`
@@ -235,26 +207,17 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-blue-200 bg-blue-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your sponsor workspace</CardTitle>
-            <CardDescription>
-              No sponsored organizations have been connected yet. Create your first data request campaign to onboard cooperatives and begin collecting compliance data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/requests">Create first campaign</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/farmers">Connect organizations</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <CampaignsOverviewCard
+        title="Programmes"
+        description="Launch sponsor-funded programme campaigns to collect compliance data across your governed network"
+        createHref={withSponsorView('/programmes?new=1')}
+        listHref={withSponsorView('/programmes')}
+        createLabel="New programme"
+        emptyTitle="No programmes yet"
+        emptyDescription="Create your first programme campaign to onboard cooperatives and collect missing evidence."
+        emptyCtaLabel="Launch first programme"
+        listLinkLabel="View all programmes"
+      />
 
       <span className="sr-only">
         Network metrics snapshot: {metrics.total_packages} packages, {metrics.total_plots} plots (
@@ -383,23 +346,23 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
                 </div>
               ))}
               {networkHealthSegments.length === 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-                  No organisation data yet. Add organisations to populate health insights.
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  <p>No organisation data yet. Add organisations to populate health insights.</p>
+                  <Button asChild className="mt-4" size="sm">
+                    <Link href={withSponsorView('/organisations')}>Add organisations</Link>
+                  </Button>
                 </div>
               ) : null}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Governance Activity</CardTitle>
-            <CardDescription>Latest delegated admin, policy, and coverage events</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Timeline events={governanceEvents} />
-          </CardContent>
-        </Card>
+        <DashboardActivityCard
+          title="Governance Activity"
+          description="Latest delegated admin, policy, and coverage events"
+          emptyMessage="Governance activity will appear once organisations, programmes, and shipments generate events."
+          maxHeight={280}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -410,9 +373,9 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
               <CardDescription>Track sponsor-funded interventions and Open Chain profile outcomes</CardDescription>
             </div>
             <Button asChild>
-            <Link href={withSponsorView('/programmes')}>
+              <Link href={withSponsorView('/programmes?new=1')}>
                 <Handshake className="mr-2 h-4 w-4" />
-                Open Programmes
+                New programme
               </Link>
             </Button>
           </CardHeader>
@@ -442,8 +405,11 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
                 </div>
               ))}
               {sponsorProgrammes.length === 0 ? (
-                <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-                  No programme campaigns yet. Launch one from Programmes to populate this section.
+                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  <p>No programme campaigns yet. Launch one to populate this section.</p>
+                  <Button asChild className="mt-4" size="sm" variant="outline">
+                    <Link href={withSponsorView('/programmes?new=1')}>Launch first programme</Link>
+                  </Button>
                 </div>
               ) : null}
             </div>

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,6 +21,7 @@ import {
   loadTitlePhotosForPlot,
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import {
@@ -33,7 +35,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { farmer, plots } = useAppState();
-  const { lang, setLang, t } = useLanguage();
+  const { languageCode, openLanguagePicker, t } = useLanguage();
 
   const [pendingCount, setPendingCount] = useState(0);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
@@ -44,6 +46,13 @@ export default function HomeScreen() {
   const [assessmentRequests, setAssessmentRequests] = useState<FarmerAssessmentRequest[]>([]);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [assessmentSavingId, setAssessmentSavingId] = useState<string | null>(null);
+  const { openSignIn, isSignedIn, refreshAuth } = useSignInSheet();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshAuth();
+    }, [refreshAuth]),
+  );
 
   useEffect(() => {
     loadPendingSyncActions()
@@ -166,9 +175,14 @@ export default function HomeScreen() {
 
   const backendConfigured =
     !!process.env.EXPO_PUBLIC_SUPABASE_URL && !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-  const hasFarmer = !!farmer;
-  const hasPlots = plots.length > 0;
-  const needsOnboarding = !backendConfigured || !hasFarmer || !hasPlots;
+
+  /** One next-step card until the first plot is saved; then hidden. */
+  const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
+    if (plots.length > 0) return null;
+    if (farmer && !farmer.name?.trim()) return 'add_name';
+    return 'register_plot';
+  }, [plots.length, farmer]);
+
   const isOnline = backendConfigured && !loadingBackend && !backendError;
   const nextAssessment =
     assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
@@ -198,58 +212,69 @@ export default function HomeScreen() {
           </Badge>
         }
         left={<HomeHeaderBrandLeft subtitle={t('home_subtitle')} />}
-        onLanguagePress={() => setLang(lang === 'en' ? 'es' : 'en')}
-        languageLabel={String(lang)}
+        onLanguagePress={openLanguagePicker}
+        languageLabel={languageCode}
         textInverseColor={colors.textInverse}
         homeBrandLayout
       />
 
       <ThemedScrollView contentContainerStyle={styles.container}>
-        {needsOnboarding && (
+        {onboardingStep ? (
           <Card variant="outlined" style={styles.onboardingCard}>
-            <ThemedText type="defaultSemiBold">{t('getting_started_title')}</ThemedText>
-            <ThemedText type="caption" style={{ marginTop: 6 }}>
-              {t('getting_started_body')}
-            </ThemedText>
-            <View style={{ marginTop: 10, gap: 6 }}>
-              <ThemedText type="caption">
-                {backendConfigured ? '✓' : '•'} {t('checklist_backend')}
-              </ThemedText>
-              <ThemedText type="caption">
-                {hasFarmer ? '✓' : '•'} {t('checklist_farmer')}
-              </ThemedText>
-              <ThemedText type="caption">
-                {hasPlots ? '✓' : '•'} {t('checklist_plot')}
-              </ThemedText>
+            <View style={styles.onboardingHeader}>
+              <View style={styles.onboardingIconWrap}>
+                <Ionicons
+                  name={onboardingStep === 'add_name' ? 'person-outline' : 'walk-outline'}
+                  size={22}
+                  color={Brand.primary}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText type="defaultSemiBold">
+                  {t(
+                    onboardingStep === 'add_name'
+                      ? 'onboarding_next_title_name'
+                      : 'onboarding_next_title_plot',
+                  )}
+                </ThemedText>
+                <ThemedText type="caption" style={{ marginTop: 6 }}>
+                  {t(
+                    onboardingStep === 'add_name'
+                      ? 'onboarding_next_body_name'
+                      : 'onboarding_next_body_plot',
+                  )}
+                </ThemedText>
+              </View>
             </View>
-            <View style={{ marginTop: 10, flexDirection: 'row', gap: 8 }}>
-              <Pressable
-                onPress={() => router.push('/(tabs)/settings')}
-                style={({ pressed }) => [
-                  styles.onboardingPill,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <Ionicons name="settings-outline" size={16} color={Brand.primary} />
-                <ThemedText type="caption" style={{ color: Brand.primary }}>
-                  {t('open_settings')}
+            {onboardingStep === 'register_plot' && !isSignedIn ? (
+              <Pressable onPress={() => openSignIn({ variant: 'general' })} hitSlop={8}>
+                <ThemedText type="caption" style={styles.onboardingLink}>
+                  {t('already_have_account')}
                 </ThemedText>
               </Pressable>
-              <Pressable
-                onPress={() => router.push('/record')}
-                style={({ pressed }) => [
-                  styles.onboardingPill,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <Ionicons name="walk-outline" size={16} color={Brand.primary} />
-                <ThemedText type="caption" style={{ color: Brand.primary }}>
-                  {t('record_a_plot')}
-                </ThemedText>
-              </Pressable>
-            </View>
+            ) : null}
+            <Pressable
+              onPress={() =>
+                onboardingStep === 'add_name'
+                  ? router.push('/(tabs)/settings')
+                  : router.push('/record')
+              }
+              style={({ pressed }) => [
+                styles.onboardingCta,
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <ThemedText type="defaultSemiBold" style={styles.onboardingCtaText}>
+                {t(
+                  onboardingStep === 'add_name'
+                    ? 'onboarding_next_cta_name'
+                    : 'onboarding_next_cta_plot',
+                )}
+              </ThemedText>
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+            </Pressable>
           </Card>
-        )}
+        ) : null}
         <Card variant="outlined" style={styles.welcomeCard}>
           <ThemedText type="caption" style={{ color: '#2C6B57', opacity: 0.95 }}>
             {t('welcome_back')}
@@ -659,7 +684,40 @@ const styles = StyleSheet.create({
   },
   onboardingCard: {
     borderRadius: 18,
-    padding: 12,
+    padding: 14,
+    borderColor: '#AEE6D3',
+    backgroundColor: '#F4FBF8',
+    gap: 12,
+  },
+  onboardingHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  onboardingIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.lg,
+    backgroundColor: '#DDEFE8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingLink: {
+    color: Brand.primary,
+    textDecorationLine: 'underline',
+  },
+  onboardingCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: Radius.lg,
+    backgroundColor: Brand.primary,
+  },
+  onboardingCtaText: {
+    color: '#FFFFFF',
   },
   onboardingPill: {
     flexDirection: 'row',

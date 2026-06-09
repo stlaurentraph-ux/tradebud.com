@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const authHeader = request.headers.get('authorization');
@@ -13,7 +14,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       );
     }
 
-    const backendResponse = await fetch(`${backendBase}/v1/harvest/packages/${encodeURIComponent(id)}/readiness`, {
+    const backendResponse = await fetch(
+      backendApiUrl(backendBase, `/v1/harvest/packages/${encodeURIComponent(id)}/readiness`),
+      {
       method: 'GET',
       cache: 'no-store',
       headers: {

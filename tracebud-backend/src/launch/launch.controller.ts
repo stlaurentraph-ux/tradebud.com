@@ -1,6 +1,6 @@
 import { Body, Controller, ForbiddenException, Get, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import {
   FeatureEntitlementStatus,
@@ -17,11 +17,9 @@ export class LaunchController {
   constructor(private readonly launchService: LaunchService) {}
 
   private getTenantId(req: any): string {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     if (!tenantId) {
-      throw new ForbiddenException('Missing tenant claim');
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     return tenantId;
   }
@@ -40,6 +38,16 @@ export class LaunchController {
   async getState(@Req() req: any): Promise<any> {
     const tenantId = this.getTenantId(req);
     return this.launchService.getLaunchState(tenantId);
+  }
+
+  @Get('commercial-profile')
+  @ApiOperation({
+    summary: 'Get tenant commercial profile from signup onboarding',
+  })
+  async getCommercialProfile(@Req() req: any): Promise<{ profile: any | null }> {
+    const tenantId = this.getTenantId(req);
+    const profile = await this.launchService.getCommercialProfile(tenantId);
+    return { profile };
   }
 
   @Patch('state/upgrade')

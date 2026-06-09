@@ -20,6 +20,7 @@ describe('rbac navigation visibility', () => {
   });
 
   it('hides deferred routes for exporter when feature flags are disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'false');
     const exporter = makeUser('exporter');
     const names = getVisibleNavItems(exporter).map((item) => item.name);
 
@@ -39,6 +40,7 @@ describe('rbac navigation visibility', () => {
     expect(names).toContain('Campaigns');
     expect(names).toContain('Requests');
     expect(names).not.toContain('Reports');
+    expect(names.indexOf('Campaigns')).toBe(names.indexOf('Overview') + 1);
   });
 
   it('keeps role restrictions even when all feature flags are enabled', () => {

@@ -31,7 +31,7 @@ describe('IntegrationsController', () => {
           user: {
             id: 'user_1',
             email: 'agent+ops@tracebud.com',
-            app_metadata: { tenant_id: 'tenant_1' },
+            app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
           },
         },
       ),
@@ -51,7 +51,7 @@ describe('IntegrationsController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       },
     );
@@ -87,7 +87,7 @@ describe('IntegrationsController', () => {
         user: {
           id: 'user_1',
           email: 'agent+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'agent' },
         },
       }),
     ).resolves.toEqual({
@@ -113,7 +113,7 @@ describe('IntegrationsController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).resolves.toEqual({

@@ -10,15 +10,18 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  TrendingUp,
   FileText,
   ArrowRight,
   AlertOctagon,
+  UserPlus,
 } from 'lucide-react';
 import { BlockerCard } from '@/components/ui/blocker-card';
 import { StatusChip } from '@/components/ui/status-chip';
-import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
-import type { ShipmentStatus } from '@/types';
+import type { TimelineEvent } from '@/components/ui/timeline-row';
+import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
+import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
+import { buildShipmentSlaSnapshots, type ShipmentSlaSnapshot } from '@/lib/package-sla';
+import type { DDSPackage, ShipmentStatus } from '@/types';
 
 interface ExporterDashboardProps {
   metrics: {
@@ -31,9 +34,10 @@ interface ExporterDashboardProps {
     yield_failures_count?: number;
     recent_activity?: TimelineEvent[];
   };
+  packages?: DDSPackage[];
 }
 
-export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
+export function ExporterDashboard({ metrics, packages = [] }: ExporterDashboardProps) {
   // Canonical shipment states from spec
   const shipmentStates = {
     DRAFT: metrics.packages_by_status?.DRAFT || 0,
@@ -45,17 +49,32 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
     ON_HOLD: metrics.packages_by_status?.ON_HOLD || 0,
   };
 
-  // Calculate SLA metrics
-  const draftSLA = { count: shipmentStates.DRAFT, daysSLA: 7, daysActive: 3 };
-  const readySLA = { count: shipmentStates.READY, daysSLA: 5, daysActive: 2 };
-  const sealedSLA = { count: shipmentStates.SEALED, daysSLA: 10, daysActive: 1 };
-
-  // Calculate SLA health
-  const calculateSLAHealth = (daysActive: number, daysSLA: number): 'healthy' | 'warning' | 'overdue' => {
-    if (daysActive >= daysSLA) return 'overdue';
-    if (daysActive >= daysSLA * 0.8) return 'warning';
-    return 'healthy';
-  };
+  const slaSnapshots = buildShipmentSlaSnapshots(packages, shipmentStates);
+  const renderSlaCard = (label: 'DRAFT' | 'READY' | 'SEALED', snapshot: ShipmentSlaSnapshot, chipStatus: ShipmentStatus, chipLabel?: string) => (
+    <div className={`rounded-lg border p-4 ${label === 'DRAFT' ? 'bg-blue-50/50' : label === 'READY' ? 'bg-cyan-50/50' : 'bg-purple-50/50'}`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold mt-1">{snapshot.count}</p>
+        </div>
+        <StatusChip status={chipStatus} label={chipLabel} />
+      </div>
+      <div className="mt-3 space-y-1 text-xs">
+        <div className="flex justify-between">
+          <span>SLA: {snapshot.daysSLA}d</span>
+          <span className={snapshot.health === 'overdue' ? 'text-red-600' : snapshot.health === 'warning' ? 'text-amber-600' : 'text-emerald-600'}>
+            {snapshot.daysActive}d active
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-1">
+          <div
+            className={`h-1 rounded-full ${snapshot.health === 'overdue' ? 'bg-red-600' : snapshot.health === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
+            style={{ width: `${Math.min((snapshot.daysActive / snapshot.daysSLA) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
 
   const complianceRate =
     metrics.total_plots > 0
@@ -73,32 +92,15 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-emerald-200 bg-emerald-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your new workspace</CardTitle>
-            <CardDescription>
-              No demo data is preloaded. Complete onboarding steps above to create your first campaign, import contacts, and start collecting field data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/outreach">Create first campaign</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/farmers">Add first producer</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/plots">Capture first plot</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
       <span className="sr-only">
         Plot compliance rate {complianceRate} percent ({metrics.compliant_plots} of {metrics.total_plots} plots).
       </span>
+      <CampaignsOverviewCard
+        description="Launch outbound requests to collect missing producer, plot, and evidence data"
+        createHref="/outreach?new=1"
+        listHref="/outreach"
+      />
+
       {/* SLA Burndown Pipeline */}
       <Card>
         <CardHeader>
@@ -107,80 +109,9 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {/* DRAFT State */}
-            <div className="rounded-lg border p-4 bg-blue-50/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">DRAFT</p>
-                  <p className="text-2xl font-bold mt-1">{shipmentStates.DRAFT}</p>
-                </div>
-                <StatusChip status="DRAFT" />
-              </div>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>SLA: {draftSLA.daysSLA}d</span>
-                  <span className={calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
-                    {draftSLA.daysActive}d active
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1">
-                  <div 
-                    className={`h-1 rounded-full ${calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(draftSLA.daysActive, draftSLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
-                    style={{ width: `${Math.min((draftSLA.daysActive / draftSLA.daysSLA) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* READY State */}
-            <div className="rounded-lg border p-4 bg-cyan-50/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">READY</p>
-                  <p className="text-2xl font-bold mt-1">{shipmentStates.READY}</p>
-                </div>
-                <StatusChip status="READY" label="Ready" />
-              </div>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>SLA: {readySLA.daysSLA}d</span>
-                  <span className={calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
-                    {readySLA.daysActive}d active
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1">
-                  <div 
-                    className={`h-1 rounded-full ${calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(readySLA.daysActive, readySLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
-                    style={{ width: `${Math.min((readySLA.daysActive / readySLA.daysSLA) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SEALED State */}
-            <div className="rounded-lg border p-4 bg-purple-50/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">SEALED</p>
-                  <p className="text-2xl font-bold mt-1">{shipmentStates.SEALED}</p>
-                </div>
-                <StatusChip status="SEALED" label="Sealed" />
-              </div>
-              <div className="mt-3 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>SLA: {sealedSLA.daysSLA}d</span>
-                  <span className={calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'overdue' ? 'text-red-600' : 'text-emerald-600'}>
-                    {sealedSLA.daysActive}d active
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1">
-                  <div 
-                    className={`h-1 rounded-full ${calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'overdue' ? 'bg-red-600' : calculateSLAHealth(sealedSLA.daysActive, sealedSLA.daysSLA) === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'}`}
-                    style={{ width: `${Math.min((sealedSLA.daysActive / sealedSLA.daysSLA) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
+            {renderSlaCard('DRAFT', slaSnapshots.DRAFT, 'DRAFT')}
+            {renderSlaCard('READY', slaSnapshots.READY, 'READY', 'Ready')}
+            {renderSlaCard('SEALED', slaSnapshots.SEALED, 'SEALED', 'Sealed')}
 
             {/* SUBMITTED State */}
             <div className="rounded-lg border p-4 bg-emerald-50/50">
@@ -345,26 +276,11 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Recent Activity Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
-          <CardDescription>Latest actions and system events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isVirginTenant ? (
-            <p className="text-sm text-muted-foreground">
-              Activity will appear here once your team starts onboarding and submission workflows.
-            </p>
-          ) : (
-            <Timeline
-              events={metrics.recent_activity ?? []}
-              maxHeight={250}
-              compact
-            />
-          )}
-        </CardContent>
-      </Card>
+      <DashboardActivityCard
+        isVirginTenant={isVirginTenant}
+        fallbackEvents={metrics.recent_activity ?? []}
+        emptyMessage="Activity will appear here once your team starts onboarding and submission workflows."
+      />
 
       {/* Quick Actions for Exporters */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -399,14 +315,14 @@ export function ExporterDashboard({ metrics }: ExporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/outreach">
+          <Link href="/farmers/new">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+                <UserPlus className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Launch campaign</h4>
-                <p className="text-sm text-muted-foreground">Request missing producer or plot evidence at scale</p>
+                <h4 className="font-semibold">Add producer</h4>
+                <p className="text-sm text-muted-foreground">Register upstream producers in your traceability directory</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>

@@ -53,7 +53,7 @@ describe('EUDR DDS status proxy route', () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/integrations/eudr/dds/status?referenceNumber=TB-REF-001',
+      'https://backend.tracebud.test/api/v1/integrations/eudr/dds/status?referenceNumber=TB-REF-001',
       expect.objectContaining({
         method: 'GET',
         headers: { Authorization: 'Bearer demo_token' },

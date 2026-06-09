@@ -2,12 +2,13 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { buildCorsOriginOption } from './cors-origins';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [/^http:\/\/localhost(:\d+)?$/, /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/],
+    origin: buildCorsOriginOption(),
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -18,6 +19,7 @@ async function bootstrap() {
   const buckets = new Map<string, { count: number; resetAt: number }>();
 
   const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', 1);
   expressApp.use((req: any, res: any, next: () => void) => {
     const ip =
       req.ip ||
@@ -54,8 +56,9 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = Number(process.env.PORT) || 4000;
-  await app.listen(port);
-  console.log(`Tracebud API listening on http://localhost:${port}/api (docs: /api/docs)`);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`Tracebud API listening on http://${host}:${port}/api (docs: /api/docs)`);
 }
 
 bootstrap().catch((err) => {

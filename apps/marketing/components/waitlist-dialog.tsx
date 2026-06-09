@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { createContext, useContext, useMemo, useState, useRef, useEffect, type FormEvent, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -22,34 +22,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { trackMarketingEvent } from "@/lib/marketing-analytics";
 
-const ROLES = [
-  "Cooperative",
-  "Exporter",
-  "Importer",
-  "Sponsor (brand, country, NGO)",
-  "Other",
-];
+const ROLE_OPTIONS = [
+  { value: "Cooperative", key: "cooperative" },
+  { value: "Exporter", key: "exporter" },
+  { value: "Importer", key: "importer" },
+  { value: "Sponsor (brand, country, NGO)", key: "sponsor" },
+  { value: "Other", key: "other" },
+] as const;
 
-const COMMODITIES = [
-  "Coffee",
-  "Cocoa",
-  "Palm Oil",
-  "Rubber",
-  "Soy",
-  "Cattle / Leather",
-  "Wood / Timber",
-  "Other",
-];
+const COMMODITY_OPTIONS = [
+  { value: "Coffee", key: "coffee" },
+  { value: "Cocoa", key: "cocoa" },
+  { value: "Palm Oil", key: "palmOil" },
+  { value: "Rubber", key: "rubber" },
+  { value: "Soy", key: "soy" },
+  { value: "Cattle / Leather", key: "cattle" },
+  { value: "Wood / Timber", key: "wood" },
+  { value: "Other", key: "other" },
+] as const;
 
-const PRODUCER_RANGES = [
-  "1 – 50 producers",
-  "51 – 200 producers",
-  "201 – 500 producers",
-  "501 – 2,000 producers",
-  "2,001 – 10,000 producers",
-  "10,000+ producers",
-];
+const PRODUCER_RANGE_OPTIONS = [
+  { value: "1 – 50 producers", key: "r1" },
+  { value: "51 – 200 producers", key: "r2" },
+  { value: "201 – 500 producers", key: "r3" },
+  { value: "501 – 2,000 producers", key: "r4" },
+  { value: "2,001 – 10,000 producers", key: "r5" },
+  { value: "10,000+ producers", key: "r6" },
+] as const;
 
 function AnimatedCheckmark() {
   const circleRef = useRef<SVGCircleElement>(null);
@@ -84,16 +85,14 @@ function AnimatedCheckmark() {
 }
 
 function SuccessState() {
+  const t = useTranslations("marketing.waitlistDialog.success");
+
   return (
     <div className="flex flex-col items-center gap-5 py-8 text-center">
       <AnimatedCheckmark />
       <div className="flex flex-col gap-2">
-        <h3 className="text-2xl font-bold text-[var(--forest-canopy)]">
-          {"Application received"}
-        </h3>
-        <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-          {"We review every application personally. Pilot partners receive priority onboarding and direct access to our compliance team."}
-        </p>
+        <h3 className="text-2xl font-bold text-[var(--forest-canopy)]">{t("title")}</h3>
+        <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">{t("description")}</p>
       </div>
     </div>
   );
@@ -107,7 +106,10 @@ export function WaitlistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const t = useTranslations("marketing");
+  const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations("marketing.waitlistDialog");
+  const tf = useTranslations("marketing.waitlistDialog.form");
   const [submitted, setSubmitted] = useState(false);
   const [role, setRole] = useState("");
   const [roleOther, setRoleOther] = useState("");
@@ -122,58 +124,47 @@ export function WaitlistDialog({
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    
+
     const email = (formData.get("email") as string).trim();
     const firstName = (formData.get("firstName") as string).trim();
     const lastName = (formData.get("lastName") as string).trim();
     const organisation = (formData.get("organisation") as string).trim();
 
-    // Email validation
     if (!email) {
-      setError("Email is required.");
+      setError(tf("errors.emailRequired"));
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address.");
+      setError(tf("errors.emailInvalid"));
       return;
     }
-
-    // Name validation
     if (!firstName.trim()) {
-      setError("First name is required.");
+      setError(tf("errors.firstNameRequired"));
       return;
     }
     if (!lastName.trim()) {
-      setError("Last name is required.");
+      setError(tf("errors.lastNameRequired"));
       return;
     }
-
-    // Organization validation
     if (!organisation) {
-      setError("Organization is required.");
+      setError(tf("errors.organisationRequired"));
       return;
     }
-
-    // Role validation
     if (!role) {
-      setError("Please select your role.");
+      setError(tf("errors.roleRequired"));
       return;
     }
     if (role === "Other" && !roleOther.trim()) {
-      setError("Please describe your role.");
+      setError(tf("errors.roleOtherRequired"));
       return;
     }
-
-    // Commodity validation
     if (!commodity) {
-      setError("Please select a commodity.");
+      setError(tf("errors.commodityRequired"));
       return;
     }
-
-    // Producer range validation
     if (!producerRange) {
-      setError("Please select the number of producers.");
+      setError(tf("errors.producerRangeRequired"));
       return;
     }
 
@@ -187,6 +178,7 @@ export function WaitlistDialog({
       role: role === "Other" ? roleOther.trim() : role,
       commodity,
       producer_range: producerRange,
+      source_page: pathname || `/${locale}`,
     };
 
     try {
@@ -198,23 +190,35 @@ export function WaitlistDialog({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Something went wrong. Please try again.");
+        throw new Error((data.error as string) || tf("errors.generic"));
       }
 
+      const result = (await res.json()) as { confirmationSent?: boolean };
+      const confirmationSent = result.confirmationSent === true;
+
       setSubmitted(true);
-      
-      // Redirect to thank-you page after 2 seconds
+      trackMarketingEvent("marketing_waitlist_submitted", {
+        role: role === "Other" ? "other" : role.toLowerCase(),
+        commodity: commodity.toLowerCase().replace(/\s+/g, "_"),
+      });
+
       setTimeout(() => {
-        router.push(`/thank-you?email=${encodeURIComponent(email)}`);
+        const params = new URLSearchParams({ email });
+        if (confirmationSent) params.set("confirmed", "1");
+        router.push(`/${locale}/thank-you?${params.toString()}`);
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : tf("errors.generic");
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      trackMarketingEvent("marketing_waitlist_opened");
+    }
     if (!nextOpen) {
       setTimeout(() => {
         setSubmitted(false);
@@ -231,7 +235,6 @@ export function WaitlistDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl border-border/60 bg-background p-0 sm:max-w-2xl flex flex-col sm:flex-row">
-        {/* Left: Image panel — hidden on mobile */}
         <div className="relative hidden sm:block w-[38%] flex-shrink-0 self-stretch">
           <Image
             src="/images/supply-chain-flow.jpg"
@@ -239,181 +242,166 @@ export function WaitlistDialog({
             fill
             className="object-cover"
           />
-          {/* Forest overlay for text legibility */}
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--forest-canopy)]/40 via-[var(--forest-canopy)]/50 to-[var(--forest-canopy)]/80" />
-          {/* Pinned content */}
           <div className="absolute inset-0 flex flex-col justify-between p-7">
             <p className="text-white/90 text-sm font-semibold tracking-wide uppercase">Tracebud</p>
             <div>
-              <p className="text-white font-bold text-lg leading-snug mb-2">
-                Be ready for EUDR, without the complexity.
-              </p>
-              <p className="text-white/70 text-xs leading-relaxed">
-                Simple. Affordable. Built for every actor in the chain.
-              </p>
+              <p className="text-white font-bold text-lg leading-snug mb-2">{t("sidePanel.tagline")}</p>
+              <p className="text-white/70 text-xs leading-relaxed">{t("sidePanel.subline")}</p>
             </div>
           </div>
         </div>
 
-        {/* Right: Form */}
         <div className="flex-1 overflow-y-auto">
-        {submitted ? (
-          <div className="p-8">
-            <SuccessState />
-          </div>
-        ) : (
-          <div className="p-6 sm:p-8">
-            <DialogHeader className="gap-2 pb-5">
-              <DialogTitle className="text-2xl font-bold text-[var(--forest-canopy)]">
-                {t("waitlistDialog.headline")}
-              </DialogTitle>
-              <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                {t("waitlistDialog.description")}
-              </DialogDescription>
-            </DialogHeader>
+          {submitted ? (
+            <div className="p-8">
+              <SuccessState />
+            </div>
+          ) : (
+            <div className="p-6 sm:p-8">
+              <DialogHeader className="gap-2 pb-5">
+                <DialogTitle className="text-2xl font-bold text-[var(--forest-canopy)]">{t("headline")}</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">{t("description")}</DialogDescription>
+              </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                  {error}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="firstName">{tf("firstName")}</Label>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      placeholder={tf("placeholders.firstName")}
+                      required
+                      className="h-11 rounded-xl"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="lastName">{tf("lastName")}</Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      placeholder={tf("placeholders.lastName")}
+                      required
+                      className="h-11 rounded-xl"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {/* Name row */}
-              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="firstName">First name</Label>
+                  <Label htmlFor="email">{tf("email")}</Label>
                   <Input
-                    id="firstName"
-                    name="firstName"
-                    placeholder="Maria"
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder={tf("placeholders.email")}
                     required
                     className="h-11 rounded-xl"
                   />
                 </div>
+
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="lastName">Last name</Label>
+                  <Label htmlFor="organisation">{tf("organisation")}</Label>
                   <Input
-                    id="lastName"
-                    name="lastName"
-                    placeholder="Gonzalez"
+                    id="organisation"
+                    name="organisation"
+                    placeholder={tf("placeholders.organisation")}
                     required
                     className="h-11 rounded-xl"
                   />
                 </div>
-              </div>
 
-              {/* Work email */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email">Work email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="maria@company.com"
-                  required
-                  className="h-11 rounded-xl"
-                />
-              </div>
-
-              {/* Organisation */}
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="organisation">Organisation</Label>
-                <Input
-                  id="organisation"
-                  name="organisation"
-                  placeholder="Cooperative Sol Naciente"
-                  required
-                  className="h-11 rounded-xl"
-                />
-              </div>
-
-              {/* Role */}
-              <div className="flex flex-col gap-1.5">
-                <Label>Your role</Label>
-                <Select required value={role} onValueChange={(v) => { setRole(v); if (v !== "Other") setRoleOther(""); }}>
-                  <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {ROLES.map((r) => (
-                      <SelectItem key={r} value={r} className="rounded-lg">
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {role === "Other" && (
-                  <Input
-                    value={roleOther}
-                    onChange={(e) => setRoleOther(e.target.value)}
-                    placeholder="Please describe your role"
-                    className="h-11 rounded-xl mt-1"
+                <div className="flex flex-col gap-1.5">
+                  <Label>{tf("role")}</Label>
+                  <Select
                     required
-                  />
-                )}
-              </div>
+                    value={role}
+                    onValueChange={(v) => {
+                      setRole(v);
+                      if (v !== "Other") setRoleOther("");
+                    }}
+                  >
+                    <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
+                      <SelectValue placeholder={tf("placeholders.role")} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {ROLE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                          {tf(`roles.${option.key}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {role === "Other" && (
+                    <Input
+                      value={roleOther}
+                      onChange={(e) => setRoleOther(e.target.value)}
+                      placeholder={tf("placeholders.roleOther")}
+                      className="h-11 rounded-xl mt-1"
+                      required
+                    />
+                  )}
+                </div>
 
-              {/* Commodity */}
-              <div className="flex flex-col gap-1.5">
-                <Label>Main commodity</Label>
-                <Select required value={commodity} onValueChange={setCommodity}>
-                  <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
-                    <SelectValue placeholder="Select a commodity" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {COMMODITIES.map((c) => (
-                      <SelectItem key={c} value={c} className="rounded-lg">
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>{tf("commodity")}</Label>
+                  <Select required value={commodity} onValueChange={setCommodity}>
+                    <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
+                      <SelectValue placeholder={tf("placeholders.commodity")} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {COMMODITY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                          {tf(`commodities.${option.key}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Number of producers */}
-              <div className="flex flex-col gap-1.5">
-                <Label>How many producers need EUDR compliance?</Label>
-                <Select required value={producerRange} onValueChange={setProducerRange}>
-                  <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
-                    <SelectValue placeholder="Select a range" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {PRODUCER_RANGES.map((r) => (
-                      <SelectItem key={r} value={r} className="rounded-lg">
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>{tf("producerRange")}</Label>
+                  <Select required value={producerRange} onValueChange={setProducerRange}>
+                    <SelectTrigger className="h-11 w-full rounded-xl data-[placeholder]:text-muted-foreground">
+                      <SelectValue placeholder={tf("placeholders.producerRange")} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {PRODUCER_RANGE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value} className="rounded-lg">
+                          {tf(`producerRanges.${option.key}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Submit */}
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isSubmitting}
-                className="mt-2 h-12 w-full rounded-xl bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    Join the pilot
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="mt-2 h-12 w-full rounded-xl bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t("submitting")}
+                    </>
+                  ) : (
+                    <>
+                      {t("submit")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
 
-              <p className="text-center text-xs text-muted-foreground">
-                {t("waitlistDialog.note")}
-              </p>
-            </form>
-          </div>
-        )}
+                <p className="text-center text-xs text-muted-foreground">{t("note")}</p>
+              </form>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -421,6 +409,32 @@ export function WaitlistDialog({
 }
 
 export function useWaitlistDialog() {
+  const context = useContext(WaitlistDialogContext);
+  if (!context) {
+    throw new Error("useWaitlistDialog must be used within WaitlistDialogProvider");
+  }
+  return context;
+}
+
+type WaitlistDialogContextValue = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  onOpenChange: (open: boolean) => void;
+};
+
+const WaitlistDialogContext = createContext<WaitlistDialogContextValue | null>(null);
+
+export function WaitlistDialogProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  return { open, setOpen, onOpenChange: setOpen };
+  const value = useMemo(
+    () => ({ open, setOpen, onOpenChange: setOpen }),
+    [open],
+  );
+
+  return (
+    <WaitlistDialogContext.Provider value={value}>
+      {children}
+      <WaitlistDialog open={open} onOpenChange={setOpen} />
+    </WaitlistDialogContext.Provider>
+  );
 }

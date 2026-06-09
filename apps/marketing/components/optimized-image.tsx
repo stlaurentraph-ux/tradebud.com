@@ -2,8 +2,6 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { SkeletonLoader } from '@/components/skeleton-loader';
-
 interface OptimizedImageProps {
   src: string;
   alt: string;

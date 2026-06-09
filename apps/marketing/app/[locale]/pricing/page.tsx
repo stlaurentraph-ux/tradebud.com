@@ -1,12 +1,6 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Pricing | Tracebud",
-  description: "Simple, transparent pricing. 30-day free trial, no credit card required. Pay only after trial based on organizations reviewed.",
-};
 import { motion } from "framer-motion";
 import { Check, ArrowRight, Shield, Zap, Users, Globe, ExternalLink } from "lucide-react";
 import { Header } from "@/components/tracebud/header";
@@ -14,7 +8,7 @@ import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.tracebud";
 

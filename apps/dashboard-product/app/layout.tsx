@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/lib/auth-context';
+import { LocaleProvider } from '@/lib/locale-context';
 import { OnboardingProvider } from '@/lib/onboarding-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { OnboardingWelcomeModal } from '@/components/onboarding/onboarding-welcome-modal';
@@ -58,11 +59,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
-          <OnboardingProvider>
-            <DashboardLayout>{children}</DashboardLayout>
-            <OnboardingWelcomeModal />
-            <GuidedTourOverlay />
-          </OnboardingProvider>
+          <LocaleProvider>
+            <OnboardingProvider>
+              <DashboardLayout>{children}</DashboardLayout>
+              <OnboardingWelcomeModal />
+              <GuidedTourOverlay />
+            </OnboardingProvider>
+          </LocaleProvider>
           <Toaster richColors position="top-right" />
         </AuthProvider>
       </body>

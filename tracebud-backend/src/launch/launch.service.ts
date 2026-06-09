@@ -1,6 +1,10 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { createClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
+import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
+import { InboxService } from '../inbox/inbox.service';
+import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
 export type LaunchFeatureKey =
@@ -49,9 +53,100 @@ interface CommercialProfileRow {
 
 @Injectable()
 export class LaunchService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly onboardingEmailService: OnboardingEmailService,
+    private readonly inboxService: InboxService,
+  ) {}
 
   private schemaReady = false;
+
+  buildDefaultTenantIdFromEmail(email: string): string {
+    return `tenant_${email.trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
+  }
+
+  resolveTenantIdFromUserRecord(user: {
+    email?: string | null;
+    app_metadata?: { tenant_id?: string };
+    user_metadata?: { tenant_id?: string };
+  }): string | null {
+    const fromApp = deriveTenantIdFromSupabaseUser(user);
+    if (fromApp) {
+      return fromApp;
+    }
+    const fromUserMeta = user?.user_metadata?.tenant_id;
+    if (typeof fromUserMeta === 'string') {
+      const tenantId = fromUserMeta.trim();
+      if (tenantId.length > 0) {
+        return tenantId;
+      }
+    }
+    if (typeof user?.email === 'string' && user.email.trim().length > 0) {
+      return this.buildDefaultTenantIdFromEmail(user.email);
+    }
+    return null;
+  }
+
+  signupPrimaryRoleToAppRole(role: SignupPrimaryRole): AppRole {
+    if (role === 'compliance_manager') {
+      return 'compliance_manager';
+    }
+    if (role === 'admin') {
+      return 'admin';
+    }
+    if (role === 'exporter' || role === 'importer') {
+      return 'exporter';
+    }
+    return 'admin';
+  }
+
+  async ensureUserAppMetadataClaims(
+    userId: string,
+    tenantId: string,
+    role: AppRole,
+  ): Promise<void> {
+    const supabaseUrl = process.env.SUPABASE_URL?.trim();
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new ForbiddenException(
+        'SUPABASE_SERVICE_ROLE_KEY must be configured to finalize signup tenant claims.',
+      );
+    }
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      app_metadata: { tenant_id: tenantId, role },
+    });
+    if (error) {
+      throw new ForbiddenException(`Unable to set tenant claim: ${error.message}`);
+    }
+  }
+
+  async resolveAndEnsureTenantClaim(
+    user: {
+      id?: string;
+      email?: string | null;
+      app_metadata?: { tenant_id?: string };
+      user_metadata?: { tenant_id?: string };
+    },
+    role: SignupPrimaryRole,
+  ): Promise<string> {
+    const userId = typeof user?.id === 'string' ? user.id : null;
+    if (!userId) {
+      throw new ForbiddenException('Authenticated user id is required.');
+    }
+    const tenantId = this.resolveTenantIdFromUserRecord(user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    await this.ensureUserAppMetadataClaims(
+      userId,
+      tenantId,
+      this.signupPrimaryRoleToAppRole(role),
+    );
+    return tenantId;
+  }
 
   private async emitAuditEvent(eventType: string, payload: Record<string, unknown>): Promise<void> {
     await this.pool.query(
@@ -249,6 +344,29 @@ export class LaunchService {
 
   async getLaunchState(tenantId: string): Promise<TrialRow> {
     return this.evaluateLifecycleState(tenantId);
+  }
+
+  async getCommercialProfile(tenantId: string): Promise<CommercialProfileRow | null> {
+    await this.ensureSchema();
+    const result = await this.pool.query<CommercialProfileRow>(
+      `
+        SELECT
+          tenant_id,
+          organization_name,
+          country,
+          primary_role,
+          team_size,
+          main_commodity,
+          primary_objective,
+          profile_skipped,
+          updated_at
+        FROM tenant_commercial_profiles
+        WHERE tenant_id = $1
+        LIMIT 1
+      `,
+      [tenantId],
+    );
+    return result.rows[0] ?? null;
   }
 
   async markPaidActive(tenantId: string): Promise<TrialRow> {
@@ -452,7 +570,7 @@ export class LaunchService {
       throw new ForbiddenException('SUPABASE_URL and SUPABASE_ANON_KEY must be configured.');
     }
     const normalizedEmail = input.workEmail.trim().toLowerCase();
-    const defaultTenantId = `tenant_${normalizedEmail.replace(/[^a-z0-9]/gi, '_')}`;
+    const defaultTenantId = this.buildDefaultTenantIdFromEmail(normalizedEmail);
     const resolveErrorMessage = (payload: {
       message?: string;
       msg?: string;
@@ -509,7 +627,6 @@ export class LaunchService {
         user?: {
           id?: string;
           app_metadata?: { tenant_id?: string };
-          user_metadata?: { tenant_id?: string };
         };
         access_token?: string;
         refresh_token?: string;
@@ -521,9 +638,8 @@ export class LaunchService {
 
       if (signinResponse.ok && signinPayload.user?.id && signinPayload.access_token) {
         const tenantId =
-          signinPayload.user.app_metadata?.tenant_id ??
-          signinPayload.user.user_metadata?.tenant_id ??
-          defaultTenantId;
+          this.resolveTenantIdFromUserRecord(signinPayload.user) ?? defaultTenantId;
+        await this.ensureUserAppMetadataClaims(signinPayload.user.id, tenantId, 'admin');
         await this.getOrCreateTrialState(tenantId);
         await this.emitAuditEvent('signup_completed', {
           tenantId,
@@ -531,6 +647,20 @@ export class LaunchService {
           source: 'launch_signup_existing_user_signin',
           completedAt: new Date().toISOString(),
         }).catch(() => undefined);
+        await this.onboardingEmailService
+          .recordSignupContact({
+            tenantId,
+            userId: signinPayload.user.id,
+            email: normalizedEmail,
+            fullName: input.fullName.trim(),
+          })
+          .catch(() => undefined);
+        await this.inboxService
+          .backfillInboxForSignupContact({
+            email: normalizedEmail,
+            recipientTenantId: tenantId,
+          })
+          .catch(() => undefined);
 
         return {
           userId: signinPayload.user.id,
@@ -540,14 +670,27 @@ export class LaunchService {
         };
       }
 
-      throw new ForbiddenException(resolveErrorMessage(signinPayload));
+      const signinMessage = resolveErrorMessage(signinPayload);
+      if (/not confirmed|confirm your email/i.test(signinMessage)) {
+        throw new ForbiddenException(
+          'Email confirmation is required. Check your inbox for the Tracebud confirmation link, then sign in at dashboard.tracebud.com/login.',
+        );
+      }
+      throw new ForbiddenException(signinMessage);
     }
 
     if (!signupResponse.ok || !signupPayload.user?.id || !signupPayload.access_token) {
-      throw new ForbiddenException(resolveErrorMessage(signupPayload));
+      const signupMessage = resolveErrorMessage(signupPayload);
+      if (signupResponse.ok && signupPayload.user?.id && !signupPayload.access_token) {
+        throw new ForbiddenException(
+          'Account created. Check your email for the confirmation link, then sign in at dashboard.tracebud.com/login.',
+        );
+      }
+      throw new ForbiddenException(signupMessage);
     }
 
     const tenantId = defaultTenantId;
+    await this.ensureUserAppMetadataClaims(signupPayload.user.id, tenantId, 'admin');
     await this.getOrCreateTrialState(tenantId);
     await this.emitAuditEvent('signup_completed', {
       tenantId,
@@ -555,6 +698,20 @@ export class LaunchService {
       source: 'launch_signup',
       completedAt: new Date().toISOString(),
     }).catch(() => undefined);
+    await this.onboardingEmailService
+      .recordSignupContact({
+        tenantId,
+        userId: signupPayload.user.id,
+        email: normalizedEmail,
+        fullName: input.fullName.trim(),
+      })
+      .catch(() => undefined);
+    await this.inboxService
+      .backfillInboxForSignupContact({
+        email: normalizedEmail,
+        recipientTenantId: tenantId,
+      })
+      .catch(() => undefined);
 
     return {
       userId: signupPayload.user.id,
@@ -564,12 +721,18 @@ export class LaunchService {
     };
   }
 
+  async remindIncompleteOnboarding(): Promise<RemindIncompleteResult> {
+    return this.onboardingEmailService.remindIncompleteSignups();
+  }
+
   async saveWorkspaceSetup(input: {
     tenantId: string;
     organizationName: string;
     country: string;
     primaryRole: SignupPrimaryRole;
     actorUserId: string | null;
+    actorEmail: string | null;
+    actorFullName: string | null;
   }): Promise<CommercialProfileRow> {
     await this.ensureSchema();
     const result = await this.pool.query<CommercialProfileRow>(
@@ -599,7 +762,33 @@ export class LaunchService {
       primaryRole: input.primaryRole,
       updatedAt: new Date().toISOString(),
     }).catch(() => undefined);
-    return result.rows[0];
+
+    const profile = result.rows[0];
+    if (input.actorEmail?.trim() && input.actorUserId) {
+      await this.onboardingEmailService
+        .recordSignupContact({
+          tenantId: input.tenantId,
+          userId: input.actorUserId,
+          email: input.actorEmail,
+          fullName: input.actorFullName,
+        })
+        .catch(() => undefined);
+    }
+    if (input.actorEmail?.trim()) {
+      void this.onboardingEmailService
+        .sendWelcomeAfterWorkspaceSetup({
+          tenantId: input.tenantId,
+          userId: input.actorUserId,
+          email: input.actorEmail,
+          fullName: input.actorFullName,
+          organizationName: input.organizationName,
+          country: input.country,
+          primaryRole: input.primaryRole,
+        })
+        .catch(() => undefined);
+    }
+
+    return profile;
   }
 
   async saveCommercialProfile(input: {

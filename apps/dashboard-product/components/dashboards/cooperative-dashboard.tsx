@@ -15,7 +15,11 @@ import {
   Package,
   FileCheck,
   ClipboardList,
+  Send,
 } from 'lucide-react';
+import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
+import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
+import type { ShipmentStatus } from '@/types';
 
 interface CooperativeDashboardProps {
   metrics: {
@@ -28,6 +32,7 @@ interface CooperativeDashboardProps {
     requests_overdue?: number;
     portability_reviews_pending?: number;
     blocking_issues_count?: number;
+    packages_by_status?: Partial<Record<ShipmentStatus, number>>;
   };
 }
 
@@ -38,34 +43,24 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
     : 0;
   const incomingPending = metrics.incoming_requests_pending ?? 0;
   const outgoingPending = metrics.outgoing_requests_pending ?? 0;
-  const membersMissingConsent = metrics.members_missing_consent ?? Math.max(1, Math.ceil(metrics.total_farmers * 0.08));
-  const requestsOverdue = metrics.requests_overdue ?? 7;
-  const portabilityPending = metrics.portability_reviews_pending ?? 4;
-  const blockingIssues = metrics.blocking_issues_count ?? Math.max(0, Math.ceil(pendingPlots * 0.4));
-  const isVirginTenant = metrics.total_plots === 0 && metrics.total_farmers === 0;
+  const membersMissingConsent = metrics.members_missing_consent ?? 0;
+  const requestsOverdue = metrics.requests_overdue ?? 0;
+  const portabilityPending = metrics.portability_reviews_pending ?? 0;
+  const blockingIssues = metrics.blocking_issues_count ?? 0;
+  const readyShipments =
+    (metrics.packages_by_status?.READY ?? 0) + (metrics.packages_by_status?.SEALED ?? 0);
+  const isVirginTenant =
+    metrics.total_farmers === 0 && metrics.total_plots === 0 && (metrics.packages_by_status?.DRAFT ?? 0) === 0;
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-teal-200 bg-teal-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your cooperative workspace</CardTitle>
-            <CardDescription>
-              No demo data is preloaded. Complete onboarding to register your first farmers, map plot boundaries, and begin compliance verification.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/farmers">Add first farmer</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/plots">Register first plot</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <CampaignsOverviewCard
+        description="Launch campaigns to collect missing plot geometry, evidence, and member data from your network"
+        createHref="/outreach?new=1"
+        listHref="/outreach"
+        emptyDescription="Create your first campaign to request missing field data and evidence from cooperative members."
+        emptyCtaLabel="Launch first campaign"
+      />
 
       {/* Primary Action Banner */}
       <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50">
@@ -77,6 +72,12 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button asChild variant="outline" className="border-teal-300 hover:bg-teal-100">
+              <Link href="/outreach?new=1">
+                <Send className="mr-2 h-4 w-4" />
+                Launch campaign
+              </Link>
+            </Button>
             <Button asChild variant="outline" className="border-teal-300 hover:bg-teal-100">
               <Link href="/field-operations">
                 <ClipboardList className="mr-2 h-4 w-4" />
@@ -133,8 +134,8 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">3</div>
-            <p className="text-xs text-muted-foreground mt-1">Decisions awaiting committee sign-off</p>
+            <div className="text-2xl font-bold text-emerald-600">{portabilityPending}</div>
+            <p className="text-xs text-muted-foreground mt-1">Portability reviews awaiting sign-off</p>
           </CardContent>
         </Card>
       </div>
@@ -163,6 +164,13 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
         </CardContent>
       </Card>
 
+      <DashboardActivityCard
+        title="Cooperative activity"
+        description="Member onboarding, batch intake, campaigns, and shipment events"
+        isVirginTenant={isVirginTenant}
+        emptyMessage="Activity will appear once members are onboarded and field capture or batch workflows begin."
+      />
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>
@@ -173,6 +181,10 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             <CardDescription>Manage producer identity, consent status, and transfer readiness.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Link href="/contacts/add?mode=contact" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Add member</span>
+              <Badge variant="outline">New</Badge>
+            </Link>
             <Link href="/contacts" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <span className="font-medium">Open member directory</span>
               <Badge variant="outline">{metrics.total_farmers}</Badge>
@@ -209,7 +221,9 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
                 <ClipboardList className="h-4 w-4" />
                 <span className="font-medium">Field remediation queues</span>
               </div>
-              <Badge variant="outline">5 sync issues</Badge>
+              {incomingPending > 0 ? (
+                <Badge variant="outline">{incomingPending} pending</Badge>
+              ) : null}
             </Link>
             <Link href="/compliance/issues" className="flex items-center justify-between rounded-lg bg-red-50 p-3 transition-colors hover:bg-red-100">
               <div className="flex items-center gap-2">
@@ -230,13 +244,21 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
             <CardDescription>Monitor aggregation integrity and cooperative value-distribution flows.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Link href="/harvests/new" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+              <span className="font-medium">Add batch input</span>
+              <Badge variant="outline">New</Badge>
+            </Link>
             <Link href="/harvests" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <span className="font-medium">Lots and batch integrity</span>
-              <Badge variant="outline">2 blocked</Badge>
+              {blockingIssues > 0 ? (
+                <Badge variant="outline">{blockingIssues} blocked</Badge>
+              ) : null}
             </Link>
             <Link href="/packages" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <span className="font-medium">Shipment seal readiness</span>
-              <Badge variant="outline">6 ready</Badge>
+              {readyShipments > 0 ? (
+                <Badge variant="outline">{readyShipments} ready</Badge>
+              ) : null}
             </Link>
             <Link href="/governance" className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100">
               <div className="flex items-center gap-2">

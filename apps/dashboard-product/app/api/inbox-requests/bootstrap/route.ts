@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 type BootstrapAction = 'reset' | 'seed_first_customer' | 'seed_golden_path';
 
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const backendResponse = await fetch(`${backendBase}/api/v1/inbox-requests/bootstrap`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, '/v1/inbox-requests/bootstrap'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,0 +1,28 @@
+Subject: Welcome to Tracebud — your workspace is ready
+Preheader: Continue onboarding for {{organizationName}}
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+Your EUDR-ready workspace is set up.
+
+  Organisation : {{organizationName}}
+  Country      : {{country}}
+  Role         : {{roleLabel}}
+
+Sign in to continue onboarding and set up your first workflows — plots,
+suppliers, and due-diligence records are all ready for you.
+
+  Open Tracebud Dashboard
+  {{loginUrl}}
+
+──────────────────────────────────────────────────────
+Tracebud · EUDR compliance workspace
+dashboard.tracebud.com | tracebud.com
+
+Manage account: {{loginUrl}}
+
+© {{year}} Tracebud. All rights reserved.
+
+You received this because you completed workspace setup on
+dashboard.tracebud.com.

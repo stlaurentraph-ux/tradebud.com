@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
+<<<<<<< HEAD
 import { ChevronDown, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog } from "@/components/waitlist-dialog";
+=======
+import { ChevronDown } from "lucide-react";
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
 
 const faqItems = [
   { key: "whenLaunch", question: "whenLaunch", answer: "whenLaunchAnswer" },
@@ -20,12 +24,20 @@ const faqItems = [
 
 export function FAQ() {
   const t = useTranslations("faq");
+<<<<<<< HEAD
   const [expandedId, setExpandedId] = useState<string | null>("whenLaunch");
   const waitlist = useWaitlistDialog();
 
   return (
     <section className="py-24 md:py-32 bg-[var(--warm-stone)]">
       <div className="max-w-5xl mx-auto px-6">
+=======
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <section id="faq" className="scroll-mt-20 py-20 px-6 bg-background">
+      <div className="max-w-4xl mx-auto">
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: 20 }}
@@ -41,8 +53,13 @@ export function FAQ() {
           </h2>
         </motion.div>
 
+<<<<<<< HEAD
         {/* FAQ Items - Two columns on desktop */}
         <div className="grid md:grid-cols-2 gap-4 mb-16">
+=======
+        {/* FAQ Items */}
+        <div className="space-y-3">
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
           {faqItems.map((item, index) => {
             const isExpanded = expandedId === item.key;
 
@@ -92,6 +109,7 @@ export function FAQ() {
             );
           })}
         </div>
+<<<<<<< HEAD
 
         {/* CTA Card */}
         <motion.div
@@ -123,6 +141,8 @@ export function FAQ() {
             </Button>
           </div>
         </motion.div>
+=======
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       </div>
     </section>
   );

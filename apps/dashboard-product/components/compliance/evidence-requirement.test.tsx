@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EvidenceRequirement } from './evidence-requirement';
+
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({
+    user: {
+      active_role: 'cooperative',
+    },
+  }),
+}));
 
 describe('EvidenceRequirement', () => {
   it('renders autonomous reason-code remediation for blocking issues', () => {

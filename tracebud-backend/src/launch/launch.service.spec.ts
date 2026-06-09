@@ -1,9 +1,22 @@
 import { ForbiddenException } from '@nestjs/common';
 import { LaunchService } from './launch.service';
+import { OnboardingEmailService } from './onboarding-email.service';
+
+function createLaunchService(pool: { query: jest.Mock }) {
+  const onboardingEmailService = {
+    recordSignupContact: jest.fn().mockResolvedValue(undefined),
+    sendWelcomeAfterWorkspaceSetup: jest.fn().mockResolvedValue(false),
+    remindIncompleteSignups: jest.fn().mockResolvedValue({ scanned: 0, sent: 0, skipped: 0, failures: [] }),
+  } as unknown as OnboardingEmailService;
+  const inboxService = {
+    backfillInboxForSignupContact: jest.fn().mockResolvedValue({ created: 0, skippedUnresolved: 0, skippedSelfTenant: 0 }),
+  };
+  return new LaunchService(pool as any, onboardingEmailService, inboxService as any);
+}
 
 describe('LaunchService', () => {
   it('allows feature access when trial is active and entitlement is trial', async () => {
-    const service = new LaunchService({ query: jest.fn() } as any);
+    const service = createLaunchService({ query: jest.fn() });
     jest
       .spyOn(service, 'evaluateLifecycleState')
       .mockResolvedValue({
@@ -30,7 +43,7 @@ describe('LaunchService', () => {
   });
 
   it('allows feature access when paid is active and entitlement is enabled', async () => {
-    const service = new LaunchService({ query: jest.fn() } as any);
+    const service = createLaunchService({ query: jest.fn() });
     jest
       .spyOn(service, 'evaluateLifecycleState')
       .mockResolvedValue({
@@ -57,7 +70,7 @@ describe('LaunchService', () => {
   });
 
   it('denies feature access when trial has expired', async () => {
-    const service = new LaunchService({ query: jest.fn() } as any);
+    const service = createLaunchService({ query: jest.fn() });
     jest
       .spyOn(service, 'evaluateLifecycleState')
       .mockResolvedValue({
@@ -75,7 +88,7 @@ describe('LaunchService', () => {
   });
 
   it('denies feature access when workspace is suspended', async () => {
-    const service = new LaunchService({ query: jest.fn() } as any);
+    const service = createLaunchService({ query: jest.fn() });
     jest
       .spyOn(service, 'evaluateLifecycleState')
       .mockResolvedValue({
@@ -93,7 +106,7 @@ describe('LaunchService', () => {
   });
 
   it('denies feature access when entitlement is explicitly disabled', async () => {
-    const service = new LaunchService({ query: jest.fn() } as any);
+    const service = createLaunchService({ query: jest.fn() });
     jest
       .spyOn(service, 'evaluateLifecycleState')
       .mockResolvedValue({

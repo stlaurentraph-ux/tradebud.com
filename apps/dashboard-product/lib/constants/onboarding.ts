@@ -22,8 +22,8 @@ export const ONBOARDING_COPY: Record<
     title: 'Upload initial contacts',
     description:
       'Add partners and operators so requests route correctly and no manual reassignment is needed later.',
-    ctaLabel: 'Open contacts',
-    href: '/contacts',
+    ctaLabel: 'Add contact',
+    href: '/contacts/add?mode=contact',
   },
   invite_field_team: {
     title: 'Invite your field team',

@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { IntegrationRun, RunStatus, RunType } from '@/types/integrations';
-import { getUserNameById } from '@/lib/integrations-mock-data';
 
 interface RunQueueTableProps {
   runs: IntegrationRun[];
@@ -93,6 +92,10 @@ function isClaimStale(claimedAt: string | null, staleMinutes = 60): boolean {
   const claimTime = new Date(claimedAt).getTime();
   const now = Date.now();
   return now - claimTime > staleMinutes * 60 * 1000;
+}
+
+function formatClaimedBy(userId: string): string {
+  return userId.length > 12 ? `${userId.slice(0, 12)}...` : userId;
 }
 
 function SortHeader({ field, children, sortField, sortDirection, onSort }: SortHeaderProps) {
@@ -282,7 +285,7 @@ export function RunQueueTable({
                   <TableCell>
                     {run.claimedByUserId ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs">{getUserNameById(run.claimedByUserId)}</span>
+                        <span className="text-xs">{formatClaimedBy(run.claimedByUserId)}</span>
                         {stale && (
                           <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                         )}

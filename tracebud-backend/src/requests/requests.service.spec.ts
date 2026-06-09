@@ -1,5 +1,25 @@
+import { createHmac } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
 import { RequestsService } from './requests.service';
+
+function createRequestsService(pool: unknown) {
+  const inboxService = {
+    fanOutFromCampaignSend: jest.fn().mockResolvedValue({
+      created: 0,
+      skippedUnresolved: 0,
+      skippedSelfTenant: 0,
+    }),
+    ensureInboxFromEmailCtaAccept: jest.fn().mockResolvedValue({
+      created: 1,
+      skippedUnresolved: 0,
+      skippedSelfTenant: 0,
+    }),
+  };
+  return {
+    service: new RequestsService(pool as any, inboxService as any),
+    inboxService,
+  };
+}
 
 describe('RequestsService', () => {
   it('lists recipient decisions for a tenant-scoped campaign in descending order', async () => {
@@ -31,7 +51,7 @@ describe('RequestsService', () => {
           ],
         }),
     };
-    const service = new RequestsService(pool as any);
+    const { service } = createRequestsService(pool);
 
     const result = await service.listDecisions('tenant_1', 'camp_1');
 
@@ -77,7 +97,7 @@ describe('RequestsService', () => {
           ],
         }),
     };
-    const service = new RequestsService(pool as any);
+    const { service } = createRequestsService(pool);
 
     const result = await service.listDecisions('tenant_contract', 'camp_contract', {
       decision: 'accept',
@@ -117,11 +137,105 @@ describe('RequestsService', () => {
     const pool = {
       query: jest.fn().mockResolvedValueOnce({ rows: [] }),
     };
-    const service = new RequestsService(pool as any);
+    const { service } = createRequestsService(pool);
 
     await expect(service.listDecisions('tenant_1', 'camp_missing')).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('ensures inbox row after public email CTA accept is recorded', async () => {
+    process.env.RESEND_DECISION_SECRET = 'test-decision-secret';
+    const campaignRow = {
+      id: 'camp_1',
+      tenant_id: 'tenant_importer',
+      title: 'Evidence request',
+      description: '',
+      request_type: 'GENERAL_EVIDENCE',
+      status: 'RUNNING',
+      target_organization_ids: [],
+      target_farmer_ids: [],
+      target_plot_ids: [],
+      target_contact_emails: ['exporter@tracebud.test'],
+      due_at: '2026-05-01T00:00:00.000Z',
+      reminder_sent_at: null,
+      accepted_count: 1,
+      pending_count: 0,
+      expired_count: 0,
+      created_by: 'user_1',
+      idempotency_key: null,
+      created_at: '2026-04-01T00:00:00.000Z',
+      updated_at: '2026-04-22T12:00:00.000Z',
+    };
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
+        .mockResolvedValueOnce({ rows: [campaignRow] }),
+    };
+    const { service, inboxService } = createRequestsService(pool);
+    const token = createHmac('sha256', 'test-decision-secret')
+      .update('camp_1:exporter@tracebud.test')
+      .digest('hex');
+
+    const result = await service.recordDecisionIntentPublic({
+      campaignId: 'camp_1',
+      recipientEmail: 'exporter@tracebud.test',
+      decision: 'accept',
+      token,
+    });
+
+    expect(result.recorded).toBe(true);
+    expect(inboxService.ensureInboxFromEmailCtaAccept).toHaveBeenCalledWith({
+      campaignId: 'camp_1',
+      recipientEmail: 'exporter@tracebud.test',
+    });
+    delete process.env.RESEND_DECISION_SECRET;
+  });
+
+  it('does not ensure inbox row when public email CTA refuse is recorded', async () => {
+    process.env.RESEND_DECISION_SECRET = 'test-decision-secret';
+    const campaignRow = {
+      id: 'camp_1',
+      tenant_id: 'tenant_importer',
+      title: 'Evidence request',
+      description: '',
+      request_type: 'GENERAL_EVIDENCE',
+      status: 'EXPIRED',
+      target_organization_ids: [],
+      target_farmer_ids: [],
+      target_plot_ids: [],
+      target_contact_emails: ['exporter@tracebud.test'],
+      due_at: '2026-05-01T00:00:00.000Z',
+      reminder_sent_at: null,
+      accepted_count: 0,
+      pending_count: 0,
+      expired_count: 1,
+      created_by: 'user_1',
+      idempotency_key: null,
+      created_at: '2026-04-01T00:00:00.000Z',
+      updated_at: '2026-04-22T12:00:00.000Z',
+    };
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
+        .mockResolvedValueOnce({ rows: [campaignRow] }),
+    };
+    const { service, inboxService } = createRequestsService(pool);
+    const token = createHmac('sha256', 'test-decision-secret')
+      .update('camp_1:exporter@tracebud.test')
+      .digest('hex');
+
+    await service.recordDecisionIntentPublic({
+      campaignId: 'camp_1',
+      recipientEmail: 'exporter@tracebud.test',
+      decision: 'refuse',
+      token,
+    });
+
+    expect(inboxService.ensureInboxFromEmailCtaAccept).not.toHaveBeenCalled();
+    delete process.env.RESEND_DECISION_SECRET;
   });
 
   it('returns migration guidance when decision ledger table is missing', async () => {
@@ -139,7 +253,7 @@ describe('RequestsService', () => {
           message: 'relation "request_campaign_recipient_decisions" does not exist',
         }),
     };
-    const service = new RequestsService(pool as any);
+    const { service } = createRequestsService(pool);
 
     await expect(service.listDecisions('tenant_1', 'camp_1')).rejects.toThrow(
       'Request campaign decision ledger is not available. Apply TB-V16-027 migration first.',

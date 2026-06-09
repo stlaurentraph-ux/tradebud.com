@@ -366,6 +366,8 @@ Done (multi-tenant admin v1 scope closed with governance and evidence gates)
 
 ### Analytics events (canonical names)
 
+- `onboarding_welcome_email_sent` (after workspace setup / wizard step 2 complete)
+- `onboarding_resume_nudge_sent` (cron dropout reminder; max 2 per tenant)
 - `signup_started`
 - `signup_completed`
 - `trial_started`
@@ -566,3 +568,38 @@ Done (multi-tenant admin v1 scope closed with governance and evidence gates)
   - `app/api/launch/commercial-profile/route.test.ts` verifies bypass success payload.
 - Verification executed:
   - `cd apps/dashboard-product && npm run -s test -- app/api/auth/signup/route.test.ts app/api/launch/commercial-profile/route.test.ts app/create-account/page.test.tsx` (pass, 13 tests)
+
+## 2026-06-02 backend auth claim hardening (tenant + role trust boundary)
+
+- Hardened backend authorization claim sourcing to trust `app_metadata` only for tenant scoping:
+  - removed controller-level `tenant_id` fallback from `user_metadata` across guarded backend APIs.
+  - centralized tenant claim extraction through `deriveTenantIdFromSupabaseUser()` in `tracebud-backend/src/auth/roles.ts`.
+- Hardened role derivation behavior:
+  - removed `user_metadata.role` fallback.
+  - removed email-pattern role inference fallbacks.
+  - default role remains `farmer` when no trusted role claim exists.
+- Launch sign-in tenant extraction now reads `app_metadata.tenant_id` only (fallback only to local default tenant bootstrap).
+- Verification executed:
+  - `cd tracebud-backend && npm run lint` (pass).
+
+## 2026-06-02 RLS phase-3 operability tooling (TB-V16-030 apply/verify automation)
+
+- Added repeatable backend automation for Supabase advisor RLS phase-3 remediation rollout:
+  - script: `tracebud-backend/scripts/apply-rls-phase3-launch-admin-integrations.mjs`
+  - package commands:
+    - `npm run db:apply:rls-phase3`
+    - `npm run db:verify:rls-phase3`
+  - deterministic verification SQL snapshot:
+    - `tracebud-backend/sql/tb_v16_030_rls_phase3_launch_admin_and_integrations_verify.sql`
+- Permissions and tenant boundary alignment:
+  - verification asserts expected tenant-scoped policy presence and RLS enablement on launch/admin/integration/request public tables when present.
+  - preserves fail-closed remediation posture for missing/partial policy hardening.
+- State transition behavior:
+  - no application lifecycle transitions changed; this slice operationalizes infra hardening execution.
+- Exception handling and recovery:
+  - apply/verify script fails fast with explicit env contract and verification failure messages.
+  - supports `--verify-only` path for non-destructive validation windows.
+- Analytics/event coverage:
+  - no runtime analytics schema changes in this infra-operability slice.
+- Verification executed:
+  - `cd tracebud-backend && npm run db:verify:rls-phase3` (expected failure in local shell without DB URL env).

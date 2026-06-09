@@ -402,10 +402,10 @@ export function useGatedEntryEvents(options?: UseGatedEntryOptions) {
         const body = (await response.json()) as GatedEntryListResponse | GatedEntryEvent[];
         if (!cancelled) {
           if (Array.isArray(body)) {
-            setEvents(body);
+            setEvents(body as GatedEntryEvent[]);
             setTotal(body.length);
           } else {
-            setEvents(body.items ?? []);
+            setEvents((body.items ?? []) as GatedEntryEvent[]);
             setTotal(body.total ?? 0);
           }
         }

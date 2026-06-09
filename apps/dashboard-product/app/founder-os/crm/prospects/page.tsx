@@ -77,7 +77,9 @@ export default function FounderOsCrmProspectsPage() {
                       .map((activity) => (
                         <div key={activity.id} className="rounded border p-2 text-xs">
                           <p>{activity.content}</p>
-                          <p className="mt-1 text-muted-foreground">{new Date(activity.created_at).toLocaleString()}</p>
+                          <p className="mt-1 text-muted-foreground">
+                            {activity.created_at ? new Date(activity.created_at).toLocaleString() : 'n/a'}
+                          </p>
                         </div>
                       ))}
                   </div>

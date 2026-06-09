@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
 import { PG_POOL } from '../db/db.module';
+import { InboxService } from '../inbox/inbox.service';
 
 export type RequestType =
   | 'MISSING_PRODUCER_PROFILE'
@@ -65,6 +66,7 @@ export interface EvidenceFeedRecord {
   name: string;
   type: 'community_minutes' | 'consent_form' | 'agreement' | 'affidavit';
   farmer_or_community: string;
+  plot_id: string | null;
   upload_date: string;
   expiry_date: string;
   status: 'verified' | 'pending_review' | 'expired' | 'renewal_due';
@@ -78,7 +80,10 @@ type DecisionFilter = 'all' | 'accept' | 'refuse';
 
 @Injectable()
 export class RequestsService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly inboxService: InboxService,
+  ) {}
 
   private mapDatabaseError(error: unknown): never {
     const pgError = error as { code?: string; message?: string } | null;
@@ -160,7 +165,7 @@ export class RequestsService {
 
   private getDashboardBaseUrl(): string {
     const raw = process.env.TRACEBUD_DASHBOARD_PUBLIC_URL?.trim();
-    return raw && raw.length > 0 ? raw.replace(/\/$/, '') : 'https://app.tracebud.com';
+    return raw && raw.length > 0 ? raw.replace(/\/$/, '') : 'https://dashboard.tracebud.com';
   }
 
   private getDocsBaseUrl(): string {
@@ -761,6 +766,30 @@ export class RequestsService {
         throw new BadRequestException('Draft campaign not found or already sent.');
       }
       const campaign = this.mapRow(result.rows[0]);
+      const fromOrg = await this.getRequestingOrganizationLabel(campaign);
+      try {
+        await this.inboxService.fanOutFromCampaignSend({ campaign, fromOrg });
+      } catch (fanoutError) {
+        try {
+          await this.pool.query(
+            `
+              INSERT INTO audit_log (event_type, payload)
+              VALUES ($1, $2::jsonb)
+            `,
+            [
+              'inbox_requests_campaign_fanout_failed',
+              JSON.stringify({
+                campaignId: campaign.id,
+                senderTenantId: tenantId,
+                message:
+                  fanoutError instanceof Error ? fanoutError.message : 'Inbox fan-out failed after campaign send.',
+              }),
+            ],
+          );
+        } catch {
+          // Campaign send already succeeded; do not fail the API response.
+        }
+      }
       return { campaign_id: campaign.id, campaign };
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -940,11 +969,44 @@ export class RequestsService {
     if (!updated.rows[0]) {
       throw new BadRequestException('Campaign not found for decision intent recording.');
     }
+    const campaign = this.mapRow(updated.rows[0]);
+
+    if (input.decision === 'accept') {
+      try {
+        await this.inboxService.ensureInboxFromEmailCtaAccept({
+          campaignId: input.campaignId,
+          recipientEmail,
+        });
+      } catch (inboxError) {
+        try {
+          await this.pool.query(
+            `
+              INSERT INTO audit_log (event_type, payload)
+              VALUES ($1, $2::jsonb)
+            `,
+            [
+              'inbox_requests_email_cta_inbox_failed',
+              JSON.stringify({
+                campaignId: input.campaignId,
+                recipientEmail,
+                message:
+                  inboxError instanceof Error
+                    ? inboxError.message
+                    : 'Inbox ensure failed after email CTA accept.',
+              }),
+            ],
+          );
+        } catch {
+          // Decision was recorded; do not fail the public CTA response.
+        }
+      }
+    }
+
     return {
       campaign_id: input.campaignId,
       decision: input.decision,
       recorded: true,
-      campaign: this.mapRow(updated.rows[0]),
+      campaign,
     };
   }
 
@@ -1046,6 +1108,7 @@ export class RequestsService {
               NULLIF(item.value ->> 'farmerName', ''),
               CONCAT('Plot ', COALESCE(al.payload ->> 'plotId', 'unknown'))
             ) AS farmer_or_community,
+            NULLIF(al.payload ->> 'plotId', '') AS plot_id,
             al.timestamp::text AS upload_date,
             (al.timestamp + INTERVAL '365 days')::text AS expiry_date,
             CASE

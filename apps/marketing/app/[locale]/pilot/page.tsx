@@ -1,5 +1,6 @@
-"use client";
+import { redirect } from 'next/navigation';
 
+<<<<<<< HEAD
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -577,4 +578,13 @@ export default function PilotPage() {
       <Footer />
     </main>
   );
+=======
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function PilotPage({ params }: Props) {
+  const { locale } = await params;
+  redirect(`/${locale}`);
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
 }

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SchedulerConfig, StaleReleaseResult, TriggerSource } from '@/types/integrations';
-import { getMockSchedulerConfig, getMockLastTriggerResult } from '@/lib/integrations-mock-data';
+import { fetchRunSummary, fetchSchedulerConfig, triggerStaleSweeper } from '@/lib/integrations-v2-api';
 
 function TokenStatusIndicator({ configured, version }: { configured: boolean; version: string | null }) {
   return (
@@ -138,18 +138,30 @@ export function SchedulerSection() {
 
   // Load config
   useEffect(() => {
-    // TODO: Replace with actual API call to get scheduler config
-    const timer = setTimeout(() => {
-      const mockConfig = getMockSchedulerConfig();
-      const mockResult = getMockLastTriggerResult();
-      setConfig(mockConfig);
-      setLastResult(mockResult);
-      setStaleMinutes(mockConfig.defaultStaleMinutes);
-      setLimit(mockConfig.defaultLimit);
-      setIsLoading(false);
-    }, 600);
+    const loadSchedulerData = async () => {
+      try {
+        const [loadedConfig, summary] = await Promise.all([fetchSchedulerConfig(), fetchRunSummary()]);
+        const loadedLastResult: StaleReleaseResult | null = summary.lastSweeperRun
+          ? {
+              releasedCount: summary.lastSweeperReleasedCount,
+              timestamp: summary.lastSweeperRun,
+              triggerSource: summary.lastSweeperTriggerSource === 'scheduled' ? 'scheduled' : 'manual',
+              tokenVersion: summary.lastSweeperTokenVersion ?? loadedConfig.tokenVersion,
+            }
+          : null;
 
-    return () => clearTimeout(timer);
+        setConfig(loadedConfig);
+        setLastResult(loadedLastResult);
+        setStaleMinutes(loadedConfig.defaultStaleMinutes);
+        setLimit(loadedConfig.defaultLimit);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load scheduler settings.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadSchedulerData();
   }, []);
 
   const handleTrigger = async () => {
@@ -159,29 +171,22 @@ export function SchedulerSection() {
     }
 
     setIsTriggerLoading(true);
+    try {
+      const newResult = await triggerStaleSweeper(staleMinutes, limit);
+      setLastResult({
+        ...newResult,
+        tokenVersion: newResult.tokenVersion ?? config.tokenVersion,
+      });
 
-    // TODO: Replace with actual API call
-    // POST /v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger
-    // Headers: { 'x-tracebud-scheduler-token': '***' }
-    // Body: { staleMinutes, limit }
-
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const releasedCount = Math.floor(Math.random() * 5);
-    const newResult: StaleReleaseResult = {
-      releasedCount,
-      timestamp: new Date().toISOString(),
-      triggerSource: 'manual',
-      tokenVersion: config.tokenVersion,
-    };
-
-    setLastResult(newResult);
-    setIsTriggerLoading(false);
-
-    if (releasedCount > 0) {
-      toast.success(`Released ${releasedCount} stale claim${releasedCount !== 1 ? 's' : ''}`);
-    } else {
-      toast.info('No stale claims found to release');
+      if (newResult.releasedCount > 0) {
+        toast.success(`Released ${newResult.releasedCount} stale claim${newResult.releasedCount !== 1 ? 's' : ''}`);
+      } else {
+        toast.info('No stale claims found to release');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to trigger stale sweeper.');
+    } finally {
+      setIsTriggerLoading(false);
     }
   };
 

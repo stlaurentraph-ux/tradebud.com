@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
+import { isFarmerInTenant, resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -76,6 +77,19 @@ export interface SubmitDdsPackageResult {
   tracesReference: string;
   replayed: boolean;
   persistedAt: string;
+}
+
+export interface DdsPackageListItem {
+  id: string;
+  farmer_id: string;
+  label: string | null;
+  status: string;
+  created_at: string;
+  traces_reference?: string | null;
+  plot_count: number;
+  compliant_plot_count: number;
+  sender_tenant_id?: string;
+  sender_org?: string;
 }
 
 export type DdsPackageEvidenceDocument = DdsPackageEvidenceDocumentDto;
@@ -414,6 +428,155 @@ export class HarvestService {
         ORDER BY created_at DESC
       `,
       [farmerId],
+    );
+
+    return res.rows;
+  }
+
+  async isFarmerInTenant(farmerId: string, tenantId: string): Promise<boolean> {
+    return isFarmerInTenant(this.pool, farmerId, tenantId);
+  }
+
+  async isSharedPackageVisibleToRecipient(packageId: string, recipientTenantId: string): Promise<boolean> {
+    try {
+      const res = await this.pool.query<{ visible: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM dds_package dp
+            INNER JOIN inbox_requests ir ON ir.recipient_tenant_id = $2
+            INNER JOIN tenant_signup_contacts tsc ON tsc.tenant_id = ir.sender_tenant_id
+            INNER JOIN farmer_profile fp ON fp.user_id = NULLIF(tsc.user_id, '')::uuid
+            WHERE dp.id = $1
+              AND fp.id = dp.farmer_id
+          ) AS visible
+        `,
+        [packageId, recipientTenantId],
+      );
+      return Boolean(res.rows[0]?.visible);
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  async canReadPackageForTenant(packageId: string, tenantId: string): Promise<boolean> {
+    const pkgRes = await this.pool.query<{ farmer_id: string }>(
+      `
+        SELECT farmer_id
+        FROM dds_package
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [packageId],
+    );
+    const farmerId = pkgRes.rows[0]?.farmer_id;
+    if (!farmerId) {
+      return false;
+    }
+    if (await this.isFarmerInTenant(farmerId, tenantId)) {
+      return true;
+    }
+    return this.isSharedPackageVisibleToRecipient(packageId, tenantId);
+  }
+
+  async listDdsPackagesForTenant(tenantId: string): Promise<DdsPackageListItem[]> {
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    return this.listDdsPackagesEnrichedForFarmerIds(farmerIds);
+  }
+
+  async listSharedDdsPackagesForRecipientTenant(recipientTenantId: string): Promise<DdsPackageListItem[]> {
+    try {
+      const res = await this.pool.query<DdsPackageListItem>(
+        `
+          WITH sender_grants AS (
+            SELECT DISTINCT sender_tenant_id, from_org
+            FROM inbox_requests
+            WHERE recipient_tenant_id = $1
+          ),
+          sender_farmers AS (
+            SELECT sg.sender_tenant_id, sg.from_org, fp.id AS farmer_id
+            FROM sender_grants sg
+            JOIN tenant_signup_contacts tsc ON tsc.tenant_id = sg.sender_tenant_id
+            JOIN farmer_profile fp ON fp.user_id = NULLIF(tsc.user_id, '')::uuid
+          )
+          SELECT
+            dp.id,
+            dp.farmer_id,
+            dp.label,
+            dp.status,
+            dp.created_at,
+            dp.traces_reference,
+            sf.sender_tenant_id,
+            sf.from_org AS sender_org,
+            COALESCE(plot_stats.plot_count, 0)::int AS plot_count,
+            COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count
+          FROM dds_package dp
+          INNER JOIN sender_farmers sf ON sf.farmer_id = dp.farmer_id
+          LEFT JOIN LATERAL (
+            SELECT
+              COUNT(DISTINCT p.id) AS plot_count,
+              COUNT(DISTINCT p.id) FILTER (
+                WHERE COALESCE(p.status, '') IN ('verified', 'compliant')
+                  OR p.sinaph_overlap IS FALSE
+              ) AS compliant_plot_count
+            FROM dds_package_voucher dpv
+            JOIN voucher v ON v.id = dpv.voucher_id
+            JOIN harvest_transaction ht ON ht.id = v.transaction_id
+            JOIN plot p ON p.id = ht.plot_id
+            WHERE dpv.dds_package_id = dp.id
+          ) plot_stats ON TRUE
+          ORDER BY dp.created_at DESC
+        `,
+        [recipientTenantId],
+      );
+      return res.rows;
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async listDdsPackagesEnrichedForFarmerIds(farmerIds: string[]): Promise<DdsPackageListItem[]> {
+    if (farmerIds.length === 0) {
+      return [];
+    }
+
+    const res = await this.pool.query<DdsPackageListItem>(
+      `
+        SELECT
+          dp.id,
+          dp.farmer_id,
+          dp.label,
+          dp.status,
+          dp.created_at,
+          dp.traces_reference,
+          COALESCE(plot_stats.plot_count, 0)::int AS plot_count,
+          COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count
+        FROM dds_package dp
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(DISTINCT p.id) AS plot_count,
+            COUNT(DISTINCT p.id) FILTER (
+              WHERE COALESCE(p.status, '') IN ('verified', 'compliant')
+                OR p.sinaph_overlap IS FALSE
+            ) AS compliant_plot_count
+          FROM dds_package_voucher dpv
+          JOIN voucher v ON v.id = dpv.voucher_id
+          JOIN harvest_transaction ht ON ht.id = v.transaction_id
+          JOIN plot p ON p.id = ht.plot_id
+          WHERE dpv.dds_package_id = dp.id
+        ) plot_stats ON TRUE
+        WHERE dp.farmer_id = ANY($1::uuid[])
+        ORDER BY dp.created_at DESC
+      `,
+      [farmerIds],
     );
 
     return res.rows;

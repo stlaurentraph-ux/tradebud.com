@@ -1,32 +1,252 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout/app-header';
+import { TwoFactorSetupDialog } from '@/components/settings/two-factor-setup-dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  User, 
-  Building2, 
-  Bell, 
-  Shield, 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  User,
+  Building2,
+  Bell,
+  Shield,
   Key,
-  Globe,
   Save,
-  Upload
+  Upload,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { hasSupabaseSessionTokens, setAuthTokens } from '@/lib/auth-session';
+import { getAuthenticatedSupabaseClient } from '@/lib/supabase-browser';
+import { NOTIFICATION_CAPABILITIES } from '@/lib/settings-capabilities';
+import { useLocale } from '@/lib/locale-context';
+import {
+  getAvailableLocales,
+  getLocaleLabel,
+  isDashboardTimezone,
+  isLocale,
+  TIMEZONE_OPTIONS,
+  type DashboardTimezone,
+  type Locale,
+} from '@/lib/i18n';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const { locale, timezone, setLocale, setTimezone, t } = useLocale();
   const [activeTab, setActiveTab] = useState<'profile' | 'organization' | 'notifications' | 'security'>('profile');
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    phone: '',
+  });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isTwoFactorDialogOpen, setIsTwoFactorDialogOpen] = useState(false);
+  const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
+  const [isLoadingSecurity, setIsLoadingSecurity] = useState(false);
+  const [securityError, setSecurityError] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [preferencesDraft, setPreferencesDraft] = useState<{ locale: Locale; timezone: DashboardTimezone }>({
+    locale: 'en',
+    timezone: 'UTC',
+  });
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+
+  useEffect(() => {
+    setPreferencesDraft({ locale, timezone });
+  }, [locale, timezone]);
+
+  useEffect(() => {
+    if (activeTab !== 'profile') return;
+    setProfileForm({
+      fullName: user?.name ?? '',
+      phone: '',
+    });
+    setPreferencesDraft({ locale, timezone });
+
+    if (!hasSupabaseSessionTokens()) {
+      setProfileError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadProfile = async () => {
+      setIsLoadingProfile(true);
+      setProfileError(null);
+      try {
+        const supabase = await getAuthenticatedSupabaseClient();
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (cancelled || !data.user) return;
+        const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+        const fullName =
+          (typeof metadata.full_name === 'string' && metadata.full_name) ||
+          (typeof metadata.fullName === 'string' && metadata.fullName) ||
+          user?.name ||
+          '';
+        const phone = typeof metadata.phone === 'string' ? metadata.phone : '';
+        const storedLocale = typeof metadata.locale === 'string' ? metadata.locale : null;
+        const storedTimezone = typeof metadata.timezone === 'string' ? metadata.timezone : null;
+        setProfileForm({ fullName, phone });
+        if (storedLocale && isLocale(storedLocale)) {
+          setPreferencesDraft((previous) => ({ ...previous, locale: storedLocale }));
+        }
+        if (storedTimezone && isDashboardTimezone(storedTimezone)) {
+          setPreferencesDraft((previous) => ({ ...previous, timezone: storedTimezone }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setProfileError(error instanceof Error ? error.message : 'Unable to load profile.');
+        }
+      } finally {
+        if (!cancelled) setIsLoadingProfile(false);
+      }
+    };
+
+    void loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, user?.id, user?.name]);
+
+  const handlePreferencesSave = async () => {
+    setIsSavingPreferences(true);
+    try {
+      setLocale(preferencesDraft.locale);
+      setTimezone(preferencesDraft.timezone);
+
+      if (hasSupabaseSessionTokens()) {
+        const supabase = await getAuthenticatedSupabaseClient();
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            locale: preferencesDraft.locale,
+            timezone: preferencesDraft.timezone,
+          },
+        });
+        if (error) throw error;
+
+        const refresh = await supabase.auth.refreshSession();
+        if (refresh.data.session?.access_token && refresh.data.session.refresh_token) {
+          setAuthTokens(refresh.data.session.access_token, refresh.data.session.refresh_token);
+        }
+      }
+
+      toast.success(t('settings.preferences.saved'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save preferences.');
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    const fullName = profileForm.fullName.trim();
+    if (!fullName) {
+      toast.error('Full name is required.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setProfileError(null);
+    try {
+      const supabase = await getAuthenticatedSupabaseClient();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName,
+          phone: profileForm.phone.trim() || null,
+        },
+      });
+      if (error) throw error;
+
+      const refresh = await supabase.auth.refreshSession();
+      if (refresh.data.session?.access_token && refresh.data.session.refresh_token) {
+        setAuthTokens(refresh.data.session.access_token, refresh.data.session.refresh_token);
+      }
+
+      updateProfile({ name: fullName });
+      toast.success('Profile saved');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save profile.';
+      setProfileError(message);
+      toast.error(message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'security') return;
+    if (!hasSupabaseSessionTokens()) {
+      setIsTwoFactorEnabled(false);
+      setSecurityError('Sign out and sign in again to manage security settings.');
+      return;
+    }
+
+    let cancelled = false;
+    const loadSecurityState = async () => {
+      setIsLoadingSecurity(true);
+      setSecurityError(null);
+      try {
+        const supabase = await getAuthenticatedSupabaseClient();
+        const factors = await supabase.auth.mfa.listFactors();
+        if (factors.error) throw factors.error;
+        if (!cancelled) {
+          const verifiedTotp = factors.data.totp.filter((factor) => factor.status === 'verified');
+          setIsTwoFactorEnabled(verifiedTotp.length > 0);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSecurityError(error instanceof Error ? error.message : 'Unable to load security settings.');
+          setIsTwoFactorEnabled(false);
+        }
+      } finally {
+        if (!cancelled) setIsLoadingSecurity(false);
+      }
+    };
+
+    void loadSecurityState();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, isTwoFactorDialogOpen]);
+
+  const handlePasswordUpdate = async () => {
+    if (!passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match.');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters.');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const supabase = await getAuthenticatedSupabaseClient();
+      const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
+      if (error) throw error;
+      toast.success('Password updated');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update password.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Settings"
-        description="Manage your account and organization settings"
+        title={t('settings.title')}
+        description={t('settings.description')}
       />
 
       <main className="flex-1 p-6">
@@ -63,35 +283,55 @@ export default function SettingsPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Profile Information</CardTitle>
-                    <CardDescription>Update your personal information</CardDescription>
+                    <CardTitle>{t('settings.profile.title')}</CardTitle>
+                    <CardDescription>{t('settings.profile.description')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {profileError ? (
+                      <Alert className="border-amber-500/40 bg-amber-500/10">
+                        <AlertDescription className="text-amber-800">{profileError}</AlertDescription>
+                      </Alert>
+                    ) : null}
+
                     <div className="flex items-center gap-4">
                       <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold">
-                        {user?.name.split(' ').map(n => n[0]).join('') || 'U'}
+                        {profileForm.fullName.split(' ').map((n) => n[0]).join('') || user?.name?.[0] || 'U'}
                       </div>
                       <div>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" disabled>
                           <Upload className="w-4 h-4 mr-2" />
                           Change Photo
                         </Button>
-                        <p className="text-xs text-muted-foreground mt-1">JPG, PNG. Max 2MB</p>
+                        <p className="text-xs text-muted-foreground mt-1">Profile photos are not wired yet</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Full Name</label>
-                        <Input defaultValue={user?.name || ''} />
+                        <Input
+                          value={profileForm.fullName}
+                          onChange={(event) =>
+                            setProfileForm((previous) => ({ ...previous, fullName: event.target.value }))
+                          }
+                          disabled={isLoadingProfile || isSavingProfile}
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Email</label>
-                        <Input defaultValue={user?.email || ''} type="email" />
+                        <Input value={user?.email || ''} type="email" disabled />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Phone</label>
-                        <Input defaultValue="+1 (555) 000-0000" type="tel" />
+                        <Input
+                          value={profileForm.phone}
+                          onChange={(event) =>
+                            setProfileForm((previous) => ({ ...previous, phone: event.target.value }))
+                          }
+                          type="tel"
+                          placeholder="+55 11 99999-9999"
+                          disabled={isLoadingProfile || isSavingProfile}
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Role</label>
@@ -99,10 +339,18 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
-                      <Button>
+                    <div className="flex flex-col items-end gap-2">
+                      {!hasSupabaseSessionTokens() ? (
+                        <p className="text-xs text-muted-foreground">
+                          Sign out and sign back in to save profile changes.
+                        </p>
+                      ) : null}
+                      <Button
+                        onClick={() => void handleProfileSave()}
+                        disabled={isLoadingProfile || isSavingProfile || !hasSupabaseSessionTokens()}
+                      >
                         <Save className="w-4 h-4 mr-2" />
-                        Save Changes
+                        {isSavingProfile ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </CardContent>
@@ -110,33 +358,61 @@ export default function SettingsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Preferences</CardTitle>
-                    <CardDescription>Customize your experience</CardDescription>
+                    <CardTitle>{t('settings.preferences.title')}</CardTitle>
+                    <CardDescription>{t('settings.preferences.description')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-medium">Language</p>
-                        <p className="text-sm text-muted-foreground">Select your preferred language</p>
+                        <p className="font-medium">{t('settings.preferences.language')}</p>
+                        <p className="text-sm text-muted-foreground">{t('settings.preferences.language_hint')}</p>
                       </div>
-                      <select className="px-3 py-2 rounded-md border bg-background text-sm">
-                        <option>English</option>
-                        <option>Spanish</option>
-                        <option>French</option>
-                        <option>Portuguese</option>
+                      <select
+                        value={preferencesDraft.locale}
+                        onChange={(event) =>
+                          setPreferencesDraft((previous) => ({
+                            ...previous,
+                            locale: event.target.value as Locale,
+                          }))
+                        }
+                        className="min-w-[10rem] rounded-md border bg-background px-3 py-2 text-sm"
+                        disabled={isSavingPreferences}
+                      >
+                        {getAvailableLocales().map((option) => (
+                          <option key={option} value={option}>
+                            {getLocaleLabel(option)}
+                          </option>
+                        ))}
                       </select>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-medium">Timezone</p>
-                        <p className="text-sm text-muted-foreground">Set your local timezone</p>
+                        <p className="font-medium">{t('settings.preferences.timezone')}</p>
+                        <p className="text-sm text-muted-foreground">{t('settings.preferences.timezone_hint')}</p>
                       </div>
-                      <select className="px-3 py-2 rounded-md border bg-background text-sm">
-                        <option>UTC+0 (London)</option>
-                        <option>UTC+1 (Paris)</option>
-                        <option>UTC+2 (Kigali)</option>
-                        <option>UTC-3 (Sao Paulo)</option>
+                      <select
+                        value={preferencesDraft.timezone}
+                        onChange={(event) =>
+                          setPreferencesDraft((previous) => ({
+                            ...previous,
+                            timezone: event.target.value as DashboardTimezone,
+                          }))
+                        }
+                        className="min-w-[10rem] rounded-md border bg-background px-3 py-2 text-sm"
+                        disabled={isSavingPreferences}
+                      >
+                        {TIMEZONE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {t(option.labelKey)}
+                          </option>
+                        ))}
                       </select>
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      <Button onClick={() => void handlePreferencesSave()} disabled={isSavingPreferences}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {isSavingPreferences ? t('common.loading') : t('settings.preferences.save')}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -202,41 +478,41 @@ export default function SettingsPage() {
             {activeTab === 'notifications' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                  <CardDescription>Configure how you receive notifications</CardDescription>
+                  <CardTitle>Notification delivery</CardTitle>
+                  <CardDescription>
+                    What Tracebud can send today versus what is still on the roadmap
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {[
-                    { title: 'Package Updates', description: 'Get notified when package status changes', email: true, push: true },
-                    { title: 'Compliance Alerts', description: 'Receive alerts for compliance issues', email: true, push: true },
-                    { title: 'TRACES Submissions', description: 'Notifications for TRACES submission status', email: true, push: false },
-                    { title: 'Weekly Reports', description: 'Receive weekly summary reports', email: true, push: false },
-                    { title: 'System Updates', description: 'Important system announcements', email: true, push: false },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{item.title}</p>
+                  <Alert>
+                    <AlertDescription>
+                      Most toggles in the old settings screen were placeholders. Only the items marked
+                      <span className="font-medium"> Active today</span> are wired in the current beta setup.
+                      Per-user notification preferences are not persisted yet.
+                    </AlertDescription>
+                  </Alert>
+
+                  {NOTIFICATION_CAPABILITIES.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between gap-4 border-b border-border/60 pb-4 last:border-0 last:pb-0">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{item.title}</p>
+                          <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
+                            {item.status === 'active' ? 'Active today' : 'Planned'}
+                          </Badge>
+                        </div>
                         <p className="text-sm text-muted-foreground">{item.description}</p>
+                        {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
                       </div>
-                      <div className="flex gap-6">
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" defaultChecked={item.email} className="rounded border-input" />
-                          Email
-                        </label>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" defaultChecked={item.push} className="rounded border-input" />
-                          Push
-                        </label>
+                      <div className="flex shrink-0 flex-col gap-2 text-xs text-muted-foreground">
+                        {item.deliveries.email ? (
+                          <span>{item.status === 'active' ? 'Email: sent' : 'Email: planned'}</span>
+                        ) : null}
+                        {item.deliveries.in_app ? <span>In-app: planned</span> : null}
+                        {item.deliveries.push ? <span>Push: not wired</span> : null}
                       </div>
                     </div>
                   ))}
-
-                  <div className="flex justify-end pt-4">
-                    <Button>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Preferences
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             )}
@@ -244,26 +520,57 @@ export default function SettingsPage() {
             {/* Security Tab */}
             {activeTab === 'security' && (
               <>
+                {securityError ? (
+                  <Alert className="border-amber-500/40 bg-amber-500/10">
+                    <AlertDescription className="text-amber-800">{securityError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Change Password</CardTitle>
-                    <CardDescription>Update your password regularly for security</CardDescription>
+                    <CardDescription>Updates your Supabase auth password for this account</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Current Password</label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={(event) =>
+                          setPasswordForm((previous) => ({ ...previous, currentPassword: event.target.value }))
+                        }
+                        disabled
+                        placeholder="Not required for Supabase password reset in-session"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">New Password</label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(event) =>
+                          setPasswordForm((previous) => ({ ...previous, newPassword: event.target.value }))
+                        }
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Confirm New Password</label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(event) =>
+                          setPasswordForm((previous) => ({ ...previous, confirmPassword: event.target.value }))
+                        }
+                      />
                     </div>
                     <div className="flex justify-end">
-                      <Button>Update Password</Button>
+                      <Button
+                        onClick={() => void handlePasswordUpdate()}
+                        disabled={isUpdatingPassword || !hasSupabaseSessionTokens()}
+                      >
+                        {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -271,15 +578,33 @@ export default function SettingsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Two-Factor Authentication</CardTitle>
-                    <CardDescription>Add an extra layer of security to your account</CardDescription>
+                    <CardDescription>
+                      Protect your account with a TOTP authenticator app via Supabase Auth
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="font-medium">Status</p>
-                        <p className="text-sm text-muted-foreground">2FA is currently disabled</p>
+                        <p className="text-sm text-muted-foreground">
+                          {isLoadingSecurity
+                            ? 'Checking authenticator status...'
+                            : isTwoFactorEnabled
+                              ? '2FA is enabled for this account'
+                              : '2FA is currently disabled'}
+                        </p>
                       </div>
-                      <Button variant="outline">Enable 2FA</Button>
+                      {!isTwoFactorEnabled ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsTwoFactorDialogOpen(true)}
+                          disabled={!hasSupabaseSessionTokens() || isLoadingSecurity}
+                        >
+                          Enable 2FA
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary">Enabled</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -287,30 +612,24 @@ export default function SettingsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Active Sessions</CardTitle>
-                    <CardDescription>Manage your active login sessions</CardDescription>
+                    <CardDescription>Session revocation is not wired in beta yet</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {[
-                      { device: 'Chrome on MacOS', location: 'Sao Paulo, Brazil', current: true, lastActive: 'Now' },
-                      { device: 'Safari on iPhone', location: 'Sao Paulo, Brazil', current: false, lastActive: '2 hours ago' },
-                    ].map((session, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          <Globe className="w-5 h-5 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium text-sm">{session.device}</p>
-                            <p className="text-xs text-muted-foreground">{session.location} · {session.lastActive}</p>
-                          </div>
-                        </div>
-                        {session.current ? (
-                          <Badge variant="secondary">Current</Badge>
-                        ) : (
-                          <Button variant="ghost" size="sm" className="text-destructive">Revoke</Button>
-                        )}
-                      </div>
-                    ))}
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      You are signed in on this browser. Multi-device session management will be added in a
+                      later release.
+                    </p>
                   </CardContent>
                 </Card>
+
+                <TwoFactorSetupDialog
+                  open={isTwoFactorDialogOpen}
+                  onOpenChange={setIsTwoFactorDialogOpen}
+                  onEnabled={() => {
+                    setIsTwoFactorEnabled(true);
+                    toast.success('Two-factor authentication enabled');
+                  }}
+                />
               </>
             )}
           </div>

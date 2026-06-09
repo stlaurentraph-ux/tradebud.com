@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
-import { deleteSetting, getSetting, setSetting } from '@/features/state/persistence';
+import {
+  clearSyncAuthCredentials,
+  loadSyncAuthCredentials,
+  saveSyncAuthCredentials,
+} from '@/features/security/syncAuthStorage';
+import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 type GeoJSONPoint = {
   type: 'Point';
@@ -59,12 +64,14 @@ export type PostPlotToBackendResult =
       message?: string;
     };
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const API_BASE_URL = getRuntimeGuardedApiBaseUrl();
+const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
+const ALLOW_LOCALHOST_API = process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API === '1';
+const IS_DEV_RUNTIME = typeof __DEV__ !== 'undefined' && __DEV__;
 
 /** Resolved API root (includes `/api`). Use in Settings to show which server the app calls. */
 export function getTracebudApiBaseUrl(): string {
-  return API_BASE_URL.replace(/\/$/, '');
+  return API_BASE_URL;
 }
 
 /** NestJS often returns `{ message: string | string[] }` on 4xx/5xx. */
@@ -83,14 +90,15 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 const DEFAULT_EMAIL = process.env.EXPO_PUBLIC_TRACEBUD_TEST_EMAIL ?? '';
 const DEFAULT_PASSWORD = process.env.EXPO_PUBLIC_TRACEBUD_TEST_PASSWORD ?? '';
 
-const SYNC_AUTH_EMAIL_KEY = 'tracebudSyncAuthEmail';
-const SYNC_AUTH_PASSWORD_KEY = 'tracebudSyncAuthPassword';
-
 let supabaseClient: SupabaseClient | null = null;
 let cachedAccessToken: string | null = null;
 let cachedExpiresAt: number | null = null;
-let currentEmail = DEFAULT_EMAIL;
-let currentPassword = DEFAULT_PASSWORD;
+let currentEmail = ALLOW_TEST_AUTH ? DEFAULT_EMAIL : '';
+let currentPassword = ALLOW_TEST_AUTH ? DEFAULT_PASSWORD : '';
+
+function isLocalhostApi(url: string): boolean {
+  return /:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url);
+}
 
 function getSupabaseClient(): SupabaseClient {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -133,11 +141,18 @@ async function getAccessTokenFromSupabase(): Promise<string | null> {
 
 export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
+    if (isLocalhostApi(API_BASE_URL) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
+      return {
+        ok: false,
+        message:
+          'EXPO_PUBLIC_API_URL points to localhost. For preview/production builds, set a reachable HTTPS API URL.',
+      };
+    }
     const token = await getAccessTokenFromSupabase();
     if (!token) {
       return {
         ok: false,
-        message: 'Sign in under Settings → Your profile with your Tracebud email and password.',
+        message: 'Sign in to sync your plots to Tracebud.',
       };
     }
     const base = getTracebudApiBaseUrl();
@@ -177,11 +192,10 @@ export function getAuthCredentials() {
 /** Load saved Tracebud account from local settings into memory (call on app start). */
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
   try {
-    const email = (await getSetting(SYNC_AUTH_EMAIL_KEY))?.trim() ?? '';
-    const password = (await getSetting(SYNC_AUTH_PASSWORD_KEY)) ?? '';
-    if (email && password) {
-      currentEmail = email;
-      currentPassword = password;
+    const credentials = await loadSyncAuthCredentials();
+    if (credentials) {
+      currentEmail = credentials.email;
+      currentPassword = credentials.password;
       cachedAccessToken = null;
       cachedExpiresAt = null;
     }
@@ -193,15 +207,13 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
 /** Save account on device and apply for API calls. */
 export async function saveAndApplySyncAuth(email: string, password: string): Promise<void> {
   const e = email.trim();
-  await setSetting(SYNC_AUTH_EMAIL_KEY, e);
-  await setSetting(SYNC_AUTH_PASSWORD_KEY, password);
+  await saveSyncAuthCredentials(e, password);
   setAuthCredentials(e, password);
 }
 
 /** Remove saved account and clear session cache. */
 export async function clearPersistedSyncAuth(): Promise<void> {
-  await deleteSetting(SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
-  await deleteSetting(SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
+  await clearSyncAuthCredentials();
   currentEmail = '';
   currentPassword = '';
   cachedAccessToken = null;

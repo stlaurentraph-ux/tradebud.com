@@ -3,15 +3,27 @@
     "hero": {
       "headline": "Khả năng truy xuất nguồn gốc hoạt động cho toàn bộ chuỗi.",
       "subheadline": "Tracebud giúp đơn giản hóa việc tuân thủ EUDR bằng một công cụ đơn giản, tự phục vụ và chi phí phải chăng, để nông dân, hợp tác xã, nhà xuất khẩu và người mua có thể thu thập, chia sẻ và tái sử dụng dữ liệu nguồn gốc mà không phải chạy theo giấy tờ.",
+      "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Miễn phí cho nhà sản xuất. Được xây dựng cho thực tế ngoài đồng với kết nối hạn chế và quy trình đơn giản. Không cần tư vấn.",
       "cta": {
         "primary": "Xem cách hoạt động",
         "secondary": "Liên hệ với chúng tôi"
+      },
+      "trustStrip": {
+        "offline": "Works offline",
+        "mapTime": "20 min",
+        "mapTimeLabel": "to map a farm"
       }
     },
     "whyTracebudSection": {
+<<<<<<< HEAD
       "headline": "Tuân thủ đơn giản hóa.",
       "description": "Chuỗi cung ứng thất bại khi quy trình quá thủ công và phân mảnh. Tracebud loại bỏ rào cản để mọi người đều có thể tham gia—ở bất kỳ quy mô nào.",
+=======
+      "eyebrow": "Why Tracebud",
+      "headline": "Tuân thủ không nên phức tạp nếu muốn đáng tin.",
+      "description": "Phần lớn chuỗi cung ứng không thất bại vì mọi người không quan tâm. Chúng thất bại vì quy trình quá thủ công, quá tốn kém và quá phân mảnh. Tracebud loại bỏ việc qua lại nhiều lần để mọi bên đều có thể tham gia, ngay cả khi mạng lưới lớn, phân tán hoặc thiếu nguồn lực.",
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Đơn giản",
@@ -54,15 +66,72 @@
       }
     },
     "productsSection": {
+      "eyebrow": "Hai sản phẩm, một quy trình",
+      "title": "Được xây dựng cho cách chuỗi cung ứng thực sự vận hành",
+      "intro": "Built for how fragmented supply chains actually work.",
       "mobileApp": {
+        "label": "Ứng dụng di động",
         "headline": "Dành cho ruộng đồng, không phải văn phòng.",
         "description": "Nông dân có thể vẽ ranh giới thửa đất, chia sẻ thông tin và phản hồi qua trải nghiệm di động đơn giản, được thiết kế cho điều kiện thực tế ngoài đồng. Ứng dụng hoạt động ngoại tuyến, dùng hình ảnh rõ ràng và giữ quy trình nhẹ nhàng.",
+        "features": {
+          "free": "No training-heavy setup required",
+          "offline": "Hoạt động ngoại tuyến, đồng bộ khi có kết nối trở lại",
+          "gps": "Đi theo ranh giới để thu thập đa giác GPS",
+          "photo": "Bằng chứng ảnh và ghi nhận đồng ý"
+        },
         "supportingText": "Miễn phí cho nhà sản xuất. Không cần thiết lập nặng nề hay đào tạo dài."
       },
       "dashboard": {
+        "label": "Bảng điều khiển",
         "headline": "Quản lý mạng lưới của bạn mà không cần qua lại nhiều lần.",
         "description": "Tải lên liên hệ hàng loạt, gửi một yêu cầu và để quy trình lan qua toàn bộ chuỗi cung ứng. Theo dõi phản hồi, tái sử dụng dữ liệu đã xác minh và giữ mọi lô hàng tiếp tục di chuyển với ít công việc thủ công hơn.",
+        "features": {
+          "import": "Nhập hàng loạt danh bạ qua tải lên CSV",
+          "bulkRequest": "Gửi yêu cầu đến hàng trăm liên hệ cùng lúc",
+          "cascade": "Yêu cầu lan truyền qua mạng lưới đến nguồn",
+          "readiness": "Theo dõi mức độ sẵn sàng của toàn mạng lưới",
+          "evidence": "Xác định ngay bằng chứng còn thiếu",
+          "dds": "Lắp ráp gói DDS cho lô hàng"
+        },
         "supportingText": "Ít đuổi theo hơn. Ít khoảng trống hơn. Bàn giao nhanh hơn."
+      },
+      "dashboardPreview": {
+        "networkTitle": "Network Management",
+        "networkSubtitle": "Kaffa Cooperative • 247 contacts",
+        "importCsv": "Import CSV",
+        "ready": "Ready",
+        "pending": "Pending",
+        "missingData": "Missing data",
+        "selected": "48 selected",
+        "bulkRequest": "Bulk Request",
+        "networkLabel": "Network",
+        "cascadesToSource": "Cascades to source",
+        "cooperative": "Cooperative",
+        "exporter": "Exporter",
+        "forwardsProducers": "→ 89 producers",
+        "forwardsCoops": "→ 3 coops",
+        "shipmentLabel": "Shipment #2847",
+        "readyToSeal": "Ready to seal",
+        "completion": "94% complete • 2 items pending"
+      }
+    },
+    "customersSection": {
+      "eyebrow": "Outcomes",
+      "headline": "Vì sao khách hàng dùng Tracebud",
+      "description": "Giảm theo dõi thủ công. Bảo toàn nguồn gốc qua tổng hợp. Giao hàng tự tin.",
+      "cards": {
+        "gaps": {
+          "title": "Ít khoảng trống bằng chứng hơn",
+          "description": "Tiếp nhận, yêu cầu bằng chứng, kiểm tra trùng lặp, dòng nguồn và chuẩn bị DDS trong một hệ thống kết nối."
+        },
+        "provenance": {
+          "title": "Nguồn gốc được bảo toàn",
+          "description": "Bằng chứng tuân thủ gắn với nhà sản xuất, thửa đất, lô và lô hàng thực tế. Không phải tệp rời rạc."
+        },
+        "handoff": {
+          "title": "Bàn giao nhanh hơn",
+          "description": "Tự tin hơn về những gì thực sự có thể giao. Ít thời gian truy tìm dữ liệu thiếu khi lô hàng phải đi."
+        }
       }
     },
     "inclusionSection": {
@@ -71,20 +140,40 @@
       "punchline": "Chúng tôi loại bỏ các rào cản tiếp cận từng khiến nông hộ nhỏ bị đứng ngoài."
     },
     "finalCtaSection": {
-      "headline": "Làm cho tuân thủ có thể sử dụng cho toàn chuỗi.",
-      "description": "Hãy bắt đầu với mạng lưới bạn đã có, và cho mọi bên một cách để tham gia.",
-      "cta": "Bắt đầu"
+      "headline": "Make compliance usable for the whole chain.",
+      "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
+      "cta": "Join the waitlist"
+    },
+    "thankYou": {
+      "title": "You're on the list",
+      "description": "Thank you for your interest in Tracebud. We review every submission personally.",
+      "confirmationSent": "Confirmation sent to {email}",
+      "savedWithoutEmail": "We saved your request for {email}. Our team will follow up by email.",
+      "timeline": {
+        "submittedTitle": "Request received",
+        "submittedDescription": "We have your details and will review your role in the supply chain.",
+        "followUpTitle": "Personal follow-up",
+        "followUpDescription": "We will email you with next steps when Tracebud is available for your use case.",
+        "accessTitle": "Early access",
+        "accessDescription": "Waitlist members get first access as we open new regions and commodities."
+      },
+      "shareTitle": "Spread the word",
+      "shareDescription": "Know a cooperative, exporter, or importer who needs traceability? Send them to Tracebud.",
+      "backHome": "Back to home",
+      "contactUs": "Contact us",
+      "supportPrompt": "Questions? Email us at"
     },
     "exitIntentModal": {
-      "headline": "Sẵn sàng tham gia danh sách chờ?",
-      "description": "Tracebud giúp mạng lưới của bạn thu thập, chia sẻ và tái sử dụng dữ liệu nguồn gốc. Đơn giản, phải chăng và bao gồm nông dân, hợp tác xã, nhà xuất khẩu và người mua.",
+      "headline": "Bắt đầu xây dựng truy xuất nguồn gốc cho mạng lưới của bạn.",
+      "description": "Tham gia danh sách chờ để được truy cập sớm khi Tracebud mở ở khu vực và hàng hóa của bạn.",
       "cta": {
-        "primary": "Tham gia ngay",
-        "secondary": "Tiếp tục duyệt web"
+        "primary": "Tham gia danh sách chờ",
+        "secondary": "Tiếp tục duyệt"
       },
-      "note": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên."
+      "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
     },
     "waitlistDialog": {
+<<<<<<< HEAD
       "headline": "Tham gia chương trình thí điểm",
       "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m�������ng lưới của bạn và chúng tôi sẽ liên hệ.",
       "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
@@ -184,6 +273,80 @@
         }
       }
     }
+=======
+      "headline": "Tham gia danh sách chờ",
+      "description": "Cho chúng tôi biết về mạng lưới của bạn — chúng tôi sẽ liên hệ khi Tracebud sẵn sàng.",
+      "note": "No spam, ever. Unsubscribe at any time.",
+      "sidePanel": {
+        "tagline": "Traceability infrastructure for the whole chain.",
+        "subline": "Built for every actor — from field to export desk."
+      },
+      "submit": "Tham gia danh sách chờ",
+      "submitting": "Submitting...",
+      "success": {
+        "title": "Bạn đã trong danh sách",
+        "description": "Chúng tôi xem xét từng đơn cá nhân và sẽ phản hồi qua email."
+      },
+      "form": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Work email",
+        "organisation": "Organisation",
+        "role": "Your role",
+        "roleOther": "Please describe your role",
+        "commodity": "Main commodity",
+        "producerRange": "How many producers need EUDR compliance?",
+        "placeholders": {
+          "firstName": "Maria",
+          "lastName": "Gonzalez",
+          "email": "maria@company.com",
+          "organisation": "Cooperative Sol Naciente",
+          "role": "Select your role",
+          "roleOther": "Please describe your role",
+          "commodity": "Select a commodity",
+          "producerRange": "Select a range"
+        },
+        "roles": {
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer",
+          "sponsor": "Sponsor (brand, country, NGO)",
+          "other": "Other"
+        },
+        "commodities": {
+          "coffee": "Coffee",
+          "cocoa": "Cocoa",
+          "palmOil": "Palm Oil",
+          "rubber": "Rubber",
+          "soy": "Soy",
+          "cattle": "Cattle / Leather",
+          "wood": "Wood / Timber",
+          "other": "Other"
+        },
+        "producerRanges": {
+          "r1": "1 – 50 producers",
+          "r2": "51 – 200 producers",
+          "r3": "201 – 500 producers",
+          "r4": "501 – 2,000 producers",
+          "r5": "2,001 – 10,000 producers",
+          "r6": "10,000+ producers"
+        },
+        "errors": {
+          "emailRequired": "Email is required.",
+          "emailInvalid": "Please enter a valid email address.",
+          "firstNameRequired": "First name is required.",
+          "lastNameRequired": "Last name is required.",
+          "organisationRequired": "Organization is required.",
+          "roleRequired": "Please select your role.",
+          "roleOtherRequired": "Please describe your role.",
+          "commodityRequired": "Please select a commodity.",
+          "producerRangeRequired": "Please select the number of producers.",
+          "generic": "Something went wrong. Please try again."
+        }
+      }
+    },
+    "earlyAdopters": "Tham gia danh sách chờ để truy cập sớm"
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Ngôn ngữ",
@@ -225,9 +388,9 @@
       "countries": "Quốc gia"
     },
     "nav": {
-      "pilot": "Dự án thí điểm",
       "howItWorks": "Cách hoạt động",
-      "pricing": "Giá cả"
+      "whyTracebud": "Vì sao Tracebud",
+      "faq": "FAQ"
     },
     "cta": {
       "downloadApp": "Tải xuống ứng dụng",
@@ -237,9 +400,18 @@
     }
   },
   "footer": {
-    "startMapping": "Bắt đầu lập bản đồ",
-    "contactSales": "Liên hệ bộ phận bán hàng",
-    "joinWaitlist": "Tham gia danh sách chờ"
+    "startMapping": "Start Mapping",
+    "contactSales": "Contact Sales",
+    "joinWaitlist": "Tham gia ngay",
+    "howItWorks": "How it works",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "tagline": "Simpler EUDR operations. Stronger market access.",
+    "whyTracebud": "Why Tracebud",
+    "products": "Products",
+    "waitlistPrompt": "Sẵn sàng tham gia danh sách chờ?",
+    "waitlistSubline": "Hãy là người đầu tiên biết khi Tracebud mở cho mạng lưới của bạn."
   },
   "impact": {
     "title": "Tại sao Tracebud hoạt động",
@@ -270,6 +442,7 @@
     "integrations": "Tích hợp trực tiếp"
   },
   "faq": {
+<<<<<<< HEAD
     "title": "Có câu hỏi? Chúng tôi có câu trả lời.",
     "whenLaunch": "Khi nào tôi có thể bắt đầu sử dụng Tracebud?",
     "whenLaunchAnswer": "Chúng tôi đang kiểm tra với các hợp tác xã, nhà xuất khẩu và nhà nhập khẩu ngay bây giờ. Tham gia danh sách chờ và chúng tôi sẽ liên hệ với bạn khi sẵn sàng cho khu vực của bạn.",
@@ -287,5 +460,21 @@
     "whoItIsForAnswer": "Không. Tracebud giúp hợp tác xã quản lý nhiều thành viên, nhà xuất khẩu thu thập bằng chứng vận chuyển đáng tin cậy và nhà nhập khẩu nhận dữ liệu sạch hơn. Mọi người trong chuỗi có thể tham gia, ngay cả khi truy cập kỹ thuật số bị hạn chế.",
     "support": "Hỗ trợ gì có sẵn?",
     "supportAnswer": "Onboarding thực tế cho tất cả khách hàng. Hỗ trợ trực tiếp từ đội của chúng tôi. Chúng tôi đang xây dựng điều này cùng với những người dùng ban đầu của chúng tôi, vì vậy phản hồi của bạn định hình sản phẩm."
+=======
+    "title": "Questions? We have answers.",
+    "whenLaunch": "Khi nào tôi có thể bắt đầu dùng Tracebud?",
+    "whenLaunchAnswer": "Tracebud mở theo từng giai đoạn theo khu vực và hàng hóa. Tham gia danh sách chờ và chúng tôi sẽ email khi use case của bạn được hỗ trợ.",
+    "whyCommodities": "What crops does Tracebud support?",
+    "whoCommoditiesAnswer": "Cà phê, ca cao, dầu cọ, cao su, đậu tương, gia súc và gỗ là các hàng hóa EUDR chính. Chúng tôi sẽ mở rộng dựa trên nhu cầu.",
+    "howCost": "What does it cost?",
+    "howCostAnswer": "Miễn phí cho nông dân. Hợp tác xã, nhà xuất khẩu và người mua trả theo quy mô mạng lưới và mức sử dụng. Trang giá hoặc danh sách chờ để biết chi tiết.",
+    "howLong": "How long does setup take?",
+    "howLongAnswer": "Nông dân có thể bắt đầu lập bản đồ ngay với app offline. Hầu hết hợp tác xã tải mạng lưới và gửi yêu cầu đầu tiên trong một tuần.",
+    "support": "What support is available?",
+    "supportAnswer": "Mỗi thành viên danh sách chờ được follow-up cá nhân qua email. Sau onboarding, truy cập trực tiếp đội ngũ của chúng tôi cho setup và tuân thủ.",
+    "waitlistPrompt": "Ready to join the waitlist?",
+    "joinNow": "Join now",
+    "whyCommoditiesAnswer": "Cà phê trước, sau đó sáu hàng hóa EUDR khác: ca cao, dầu cọ, cao su, đậu nành, gia súc và gỗ. Xem trang giá để biết lộ trình đầy đủ."
+>>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

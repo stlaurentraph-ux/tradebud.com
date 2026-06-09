@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { ReportsController } from './reports.controller';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 
 function makeResponseMock() {
   return {
@@ -12,7 +13,7 @@ function makeResponseMock() {
 describe('ReportsController role guard', () => {
   it('rejects when tenant claim is missing', async () => {
     const pool = { query: jest.fn() };
-    const controller = new ReportsController(pool as any);
+    const controller = new ReportsController(pool as any, createLaunchServiceMock());
     const res = makeResponseMock();
 
     await expect(
@@ -23,7 +24,7 @@ describe('ReportsController role guard', () => {
 
   it('rejects plots report for non-exporter users', async () => {
     const pool = { query: jest.fn() };
-    const controller = new ReportsController(pool as any);
+    const controller = new ReportsController(pool as any, createLaunchServiceMock());
     const res = makeResponseMock();
 
     await expect(
@@ -39,7 +40,7 @@ describe('ReportsController role guard', () => {
 
   it('rejects harvest report for non-exporter users', async () => {
     const pool = { query: jest.fn() };
-    const controller = new ReportsController(pool as any);
+    const controller = new ReportsController(pool as any, createLaunchServiceMock());
     const res = makeResponseMock();
 
     await expect(
@@ -59,13 +60,13 @@ describe('ReportsController role guard', () => {
     const pool = {
       query: jest.fn().mockResolvedValue({ rows: [{ id: 'plot_1', farmer_id: 'farmer_1' }] }),
     };
-    const controller = new ReportsController(pool as any);
+    const controller = new ReportsController(pool as any, createLaunchServiceMock());
     const res = makeResponseMock();
 
     await controller.plotsReport(
       'farmer_1',
       undefined,
-      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       res as any,
     );
 

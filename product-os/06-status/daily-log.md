@@ -1,3 +1,250 @@
+### 2026-06-03 (dashboard slice 6: backendApiUrl rollout across BFF routes)
+- Focus: all dashboard `app/api/**` proxies now use `backendApiUrl()` so prod `TRACEBUD_BACKEND_URL` values ending in `/api` do not double-prefix or drop `/api`.
+- Files: 37 route files under `app/api`, `integrations/coolfarm-sai/v2/_utils.ts`, gated-entry path resolver fix, API route test URL expectations.
+- Behavior: consistent `${base}/api/v1/...` vs `${base}/v1/...` handling; `app/api` test suite 96/96 green.
+
+### 2026-06-03 (dashboard slice 5: inbox fulfillment plot/evidence pickers)
+- Focus: fulfillment dialog loads tenant plots (`/api/plots?scope=tenant`) and FPIC evidence feed (`/api/requests/evidence-feed`); multi-select plots + evidence with plot linkage.
+- Files: `components/inbox/inbox-fulfillment-dialog.tsx`, `lib/use-tenant-plots.ts`, `lib/use-evidence-feed.ts`, `tracebud-backend/src/requests/requests.service.ts` (`plot_id` on evidence feed).
+- Behavior: recipients attach real plot IDs and repository evidence when fulfilling inbox requests; evidence selection auto-links plot when `plot_id` is present.
+
+### 2026-06-08 (marketing: site architecture planning doc)
+- Focus: document target IA for marketing site — nav, Insights blog, platform/compliance hubs, homepage funnel, phased rollout checklists.
+- Files: `apps/marketing/SITE_ARCHITECTURE.md`, `apps/marketing/REQUIREMENTS.md`, `apps/marketing/README.md`.
+- Behavior: no runtime changes; local blueprint for implementation.
+
+### 2026-06-08 (marketing: stealth-build workflow)
+- Focus: agreed build order — Stage A build all pages at final URLs behind publication registry (404 in prod); Stage B flip flags + wire nav/footer/homepage/sitemap in one assembly PR.
+- Files: `apps/marketing/SITE_ARCHITECTURE.md` (Stealth build & launch section, reordered phases A/B/C).
+- Behavior: no runtime changes; preview via local dev or optional `MARKETING_PREVIEW_SECRET`.
+
+### 2026-06-03 (dashboard slice 4: importer packages default + assemble/timeline backend detail)
+- Focus: importer `/packages` opens Shared Shipments tab by default; assemble/timeline use `usePackageDetail`; harvest list + evidence-documents BFF use `backendApiUrl`.
+- Files: `app/packages/page.tsx`, `lib/harvest-package-scope.ts`, `app/packages/[id]/assemble/page.tsx`, `app/packages/[id]/timeline/page.tsx`, `app/api/harvest/packages/*`.
+- Behavior: importers land on upstream shared shipments; sub-routes load same backend detail as package detail page; prod API base path safe for harvest proxies.
+
+### 2026-06-03 (backend slice 3: email CTA accept ensures inbox row)
+- Focus: `recordDecisionIntentPublic` accept path calls `InboxService.ensureInboxFromEmailCtaAccept` so email accept creates recipient inbox work item (not only decision stats).
+- Files: `tracebud-backend/src/inbox/inbox.service.ts`, `tracebud-backend/src/requests/requests.service.ts`, unit specs.
+- Behavior: accept via public CTA inserts `inbox_requests` when recipient email resolves to tenant; idempotent `ON CONFLICT`; audit `inbox_requests_email_cta_inbox_ensured`; refuse unchanged.
+
+### 2026-06-03 (dashboard slice 2: campaign decisions timeline on outreach)
+- Focus: outreach/campaigns table exposes recipient accept/refuse timeline via `GET /api/requests/campaigns/:id/decisions`; filter tabs + pagination; BFF uses `backendApiUrl`.
+- Files: `app/outreach/page.tsx`, `components/requests/campaign-decisions-dialog.tsx`, `lib/use-campaign-decisions.ts`, `app/api/requests/campaigns/[id]/decisions/route.ts`.
+- Behavior: sent/completed campaigns open timeline dialog with email, decision, source (`email_cta` / `inbox_fulfillment`), and decided-at; counts align with outreach response summary.
+
+### 2026-06-03 (dashboard slice 1: package detail wired to backend filing APIs)
+- Focus: `/packages/[id]` loads backend detail + voucher plots; generate/submit proxy BFF routes; replace in-memory `transitionPackage` with `POST .../generate` and `PATCH .../submit`.
+- Files: `app/packages/[id]/page.tsx`, `lib/use-package-detail.ts`, `lib/harvest-package-mapper.ts`, `lib/harvest-package-actions.ts`, `app/api/harvest/packages/[id]/{generate,submit}/route.ts`.
+- Behavior: draft packages generate filing artifacts after liability ack; ready packages submit with idempotency key; readiness blockers gate both actions.
+
+### 2026-06-03 (importer shared shipments + package read scope before deploy)
+- Focus: importer/reviewer overview and compliance surfaces use `scope=shared` packages; backend package detail enforces tenant-or-inbox-grant read access; outreach shows campaign accept/pending counts.
+- Files: `lib/harvest-package-scope.ts`, `app/page.tsx`, `lib/use-packages.ts`, `harvest.service.ts`, `harvest.controller.ts`, `app/outreach/page.tsx`.
+- Behavior: importer dashboard metrics reflect upstream shared shipments; importers can open shared package detail without cross-tenant leakage on unknown IDs.
+
+### 2026-06-03 (inbox: fulfill with evidence + campaign reconciliation + BFF URL fix)
+- Focus: inbox respond accepts notes/shipment/plot evidence; reconciles sender campaign decision ledger; fulfillment UI on `/inbox`; fix inbox BFF double-`/api` path via `backendApiUrl`.
+- Files: `tracebud-backend/src/inbox/*`, `apps/dashboard-product/app/inbox/page.tsx`, `components/inbox/inbox-fulfillment-dialog.tsx`, `app/api/inbox-requests/*`, `lib/backend-api-url.ts`.
+- Behavior: recipient Fulfill marks request RESPONDED, emits `inbox_request_evidence_attached` + `inbox_request_campaign_reconciled` audits, and records `inbox_fulfillment` accept when recipient email resolves.
+
+### 2026-06-03 (backend + dashboard: tenant package/plot listing + importer shared shipments)
+- Focus: tenant-wide `GET /v1/harvest/packages` and `GET /v1/plots?scope=tenant`; importer shared packages via inbox sender grants; signup inbox backfill for campaigns sent before recipient registration.
+- Files: `tracebud-backend/src/harvest/*`, `plots/*`, `inbox/inbox.service.ts`, `launch/launch.service.ts`, `common/tenant-farmer-scope.ts`, `apps/dashboard-product/lib/harvest-package-mapper.ts`, `app/api/harvest/packages/route.ts`, `app/api/cooperative/insights/route.ts`, `app/packages/page.tsx`.
+- Behavior: overview/package pages load real backend shipments; cooperative insights use `/v1/plots?scope=tenant` and `/v1/inbox-requests`; new signups backfill pending campaign inbox rows when email was already targeted.
+
+### 2026-06-04 (marketing: homepage restructure + honest waitlist copy)
+- Focus: split homepage sections, unify waitlist language (no pilot/social-proof claims), remove fake testimonials, redirect `/pilot` to locale home.
+- Files: `apps/marketing/app/[locale]/page.tsx`, hero/problem/how-it-works components, `messages/en.json`, `scripts/apply-waitlist-i18n.mjs`, persona pages, `app/layout.tsx` structured data.
+- Behavior: EN homepage matches approved copy; waitlist/FAQ strings synced across locales; countries page drops fabricated live/pilot farmer counts.
+
+### 2026-06-03 (backend: campaign send → recipient inbox fan-out)
+- Focus: when a request campaign is sent, create `inbox_requests` rows for recipient tenants resolved from signup/admin user email lookup.
+- Files: `tracebud-backend/src/inbox/inbox.service.ts`, `requests.service.ts`, `requests.module.ts`, `inbox.module.ts`, fan-out unit tests.
+- Behavior: importer→exporter handoff appears on exporter `/inbox` and overview pending count when recipient email maps to a Tracebud tenant; unknown emails still get campaign email only.
+
+### 2026-06-03 (dashboard: test suite green + sponsor activity card)
+- Focus: align middleware/create-account tests with campaigns default-on and refresh-token signup; sponsor governance uses shared `DashboardActivityCard`.
+- Files: `middleware.test.ts`, `app/create-account/page.test.tsx`, `sponsor-dashboard.tsx`.
+- Result: dashboard-product test suite 244/244 passing.
+
+### 2026-06-03 (dashboard: shared activity card + importer/coop timelines + admin test fix)
+- Focus: extract `DashboardActivityCard` for exporter/importer/cooperative; SLA age uses `created_at` for draft and `submitted_at` for submitted; fix admin users test `AppHeader` mock (`actions` prop).
+- Files: `dashboard-activity-card.tsx`, `importer-dashboard.tsx`, `cooperative-dashboard.tsx`, `package-sla.ts`, `app/admin/users/page.test.tsx`.
+- Behavior: importer/cooperative overviews show live merged activity feed; virgin tenants get honest empty states.
+
+### 2026-06-03 (dashboard: live activity hook + reviewer compliance counts)
+- Focus: share `/api/dashboard/activity` via `useDashboardActivity`; exporter timeline merges campaigns/batches/audit; reviewer flagged counts from package compliance status; sponsor org health drops synthetic compliance fallback.
+- Files: `lib/use-dashboard-activity.ts`, `lib/dashboard-activity.ts`, `exporter-dashboard.tsx`, `sponsor-dashboard.tsx`, `reviewer-dashboard.tsx`, dashboard tests.
+- Behavior: org timeline events require real timestamps; reviewer amber/red badges map to `yield_failures_count` / `blocking_issues_count`.
+
+### 2026-06-03 (dashboard: backend-backed batches, SLA, sponsor activity)
+- Focus: persist batch intakes via audit_log, compute exporter SLA from package timestamps, replace sponsor mock governance timeline with live activity feed.
+- Files: `app/api/harvest/batch-intakes/route.ts`, `app/api/dashboard/activity/route.ts`, `lib/batch-intake-service.ts`, `lib/package-sla.ts`, `lib/dashboard-activity.ts`, `exporter-dashboard.tsx`, `sponsor-dashboard.tsx`, `harvests/*`, `tracebud-backend/src/audit/audit.controller.ts`.
+- Behavior: batch create tries backend audit + local fallback; sponsor governance timeline loads merged package/campaign/org/audit events.
+
+### 2026-06-03 (dashboard: cross-role overview audit pass)
+- Focus: align stale onboarding CTAs, remove cooperative/sponsor placeholder metrics, fix importer duplicate quick actions, wire reviewer/sponsor empty states.
+- Files: `app/page.tsx`, `onboarding-config.ts`, all `*-dashboard.tsx`.
+- Fixes: cooperative uses live insight counts (no fake 3/5/6/7 defaults); importer gets compliance + add-contact actions; exporter quick action → add producer; sponsor drops fake 91% compliance and mock timeline on empty tenants.
+
+### 2026-06-03 (dashboard: contact/producer deep links + cooperative member defaults)
+- Focus: getting-started and empty states route directly into add flows; cooperative members default to `farmer` type with locked Member label.
+- Files: `onboarding-checklist-card.tsx`, `onboarding-config.ts`, `app/contacts/page.tsx`, `app/contacts/add/page.tsx`, `app/farmers/page.tsx`, `add-contact-wizard.tsx`, `cooperative-dashboard.tsx`.
+- Behavior: exporter → `/farmers/new`; importer/cooperative → `/contacts/add?mode=contact`; empty directories show Add first CTA; create/import marks `contacts_uploaded`.
+
+### 2026-06-03 (dashboard: propagate campaigns UX across role dashboards)
+- Focus: align importer/cooperative/sponsor/reviewer overviews with exporter fixes — remove redundant welcome cards, shared campaigns/programmes overview widget, `/outreach?new=1` and `/programmes?new=1` CTAs.
+- Files: `components/dashboards/campaigns-overview-card.tsx`, `*-dashboard.tsx`, `app/programmes/page.tsx`, `components/onboarding/onboarding-checklist-card.tsx`, dashboard tests.
+- Behavior: importer/cooperative get Campaigns overview + launch quick actions; sponsor gets Programmes overview; reviewer keeps compliance-first overview without duplicate welcome card.
+
+### 2026-06-03 (dashboard: enable campaigns + overview campaign section)
+- Focus: unblock `/outreach` redirects (campaign feature gate now on by default); add Campaigns widget on exporter overview; fix getting-started CTA to open campaign wizard.
+- Files: `lib/feature-gates.ts`, `components/dashboards/exporter-dashboard.tsx`, `components/onboarding/onboarding-checklist-card.tsx`, `app/outreach/page.tsx`.
+- Ops: set `NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS=true` on Vercel dashboard prod if not already present.
+
+### 2026-06-03 (dashboard: settings language/timezone preferences)
+- Focus: wire Preferences language + timezone save (localStorage + Supabase `user_metadata`); add `LocaleProvider` and apply translations to settings + sidebar labels.
+- Files: `lib/locale-context.tsx`, `lib/i18n/index.ts`, `app/settings/page.tsx`, `app/layout.tsx`, `components/layout/app-sidebar.tsx`, `locales/*.json`.
+- Note: beta covers en/fr/es only; most dashboard pages remain English until more translation keys are added.
+
+### 2026-06-03 (dashboard: settings profile save via Supabase)
+- Focus: wire Profile Information save to Supabase `user_metadata` (`full_name`, `phone`) and refresh local session/user display.
+- Files: `app/settings/page.tsx`, `lib/auth-context.tsx`.
+
+### 2026-06-03 (dashboard: settings security honesty + Supabase 2FA)
+- Focus: replace stub settings security/notifications UI; wire TOTP enrollment via Supabase Auth; clarify which notification channels are live today.
+- Files: `app/settings/page.tsx`, `components/settings/two-factor-setup-dialog.tsx`, `lib/supabase-browser.ts`, `lib/auth-session.ts`, `lib/settings-capabilities.ts`, `lib/auth-context.tsx`.
+- Live today: onboarding + campaign outreach emails (Resend). Planned: package/compliance/TRACES/push/in-app prefs.
+
+### 2026-06-03 (dashboard: wire exporter producers + batch intake flows)
+- Focus: fix dead "Add Producer"/Filters buttons on `/farmers`; replace harvest intake placeholder with working batch form.
+- Files: `app/farmers/page.tsx`, `app/farmers/new/page.tsx`, `app/harvests/new/page.tsx`, `app/harvests/page.tsx`, `lib/exporter-batch-store.ts`, `components/contacts/add-contact-wizard.tsx`.
+- Behavior: producers load from contacts API (`contact_type=farmer`); add producer opens wizard; batch inputs persist per tenant in localStorage with yield-cap preview.
+
+### 2026-06-03 (dashboard: de-stack post-signup onboarding popups)
+- Focus: stop welcome modal + legacy step dialog from auto-opening back-to-back after signup redirect (`?welcome=1`).
+- Files: `apps/dashboard-product/lib/onboarding-context.tsx`, `apps/dashboard-product/app/page.tsx`, `apps/dashboard-product/lib/onboarding-persistence.ts`.
+- Behavior: post-signup shows inline WelcomeCard only; step dialog opens only when user clicks "Start onboarding"; dismiss/skip state persists in localStorage (survives reconnect); silent step validation no longer auto-navigates.
+
+### 2026-06-04 (backend: wire v0 email templates into Resend)
+- Focus: load `email-templates/html|text` in `onboarding-email.templates.ts`; welcome + resume first/final with `{{placeholders}}`.
+- Deploy: `Dockerfile` copies `email-templates/`; optional `TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL`.
+
+### 2026-06-03 (backend: onboarding welcome + resume nudge emails)
+- Focus: Resend welcome after wizard step 2; daily cron for incomplete workspace setup with magic-link resume.
+- Files: `tracebud-backend/src/launch/onboarding-email.service.ts`, `launch.cron.controller.ts`, `tb_v16_032_tenant_onboarding_email.sql`, `launch.service.ts`.
+- Events: `onboarding_welcome_email_sent`, `onboarding_resume_nudge_sent`.
+- Ops: set `RESEND_*`, `SUPABASE_SERVICE_ROLE_KEY`, `LAUNCH_ONBOARDING_CRON_TOKEN`; cron `POST /api/v1/launch/onboarding/remind-incomplete`.
+
+### 2026-06-03 (dashboard: signup confirm + workspace resume)
+- Focus: email confirm page, incomplete wizard redirect, role from commercial profile, clearer pending-email errors, `GET /v1/launch/commercial-profile`.
+- Files: `apps/dashboard-product/app/auth/confirm`, `create-account`, `login`, `dashboard-layout`, `auth-context`, `commercial-profile.ts`, `app/api/launch/commercial-profile`; `tracebud-backend/src/launch/*`.
+- Deploy: `dashboard-product` Vercel prod + `tracebud-backend` Railway; Supabase Site URL `https://dashboard.tracebud.com/auth/confirm` (optional: disable Confirm email for beta).
+
+### 2026-06-04 (marketing: form submissions persist + Resend notifications)
+- Focus: wire waitlist and lead forms to Supabase storage, team alerts, and honest visitor confirmation UX.
+- Files changed: `apps/marketing/app/api/waitlist/route.ts`, `apps/marketing/app/api/leads/route.ts`, `apps/marketing/lib/marketing-email.ts`, `apps/marketing/lib/prospect-sync.ts`, `apps/marketing/supabase/waitlist_signups.sql`, `apps/marketing/components/waitlist-dialog.tsx`, `apps/marketing/app/[locale]/thank-you/page.tsx`, `apps/marketing/messages/en.json`, `apps/marketing/README.md`, `apps/marketing/package.json`.
+- Next step: run `supabase/waitlist_signups.sql` on production Supabase; set `RESEND_API_KEY` on Vercel marketing project.
+
+### 2026-06-04 (marketing: consent-gated web analytics + conversion events)
+- Focus: wire marketing site analytics behind cookie consent with Vercel Web Analytics, Speed Insights, and optional GA4.
+- Files changed: `apps/marketing/lib/marketing-analytics.ts`, `apps/marketing/components/marketing-analytics.tsx`, `apps/marketing/components/cookie-consent.tsx`, `apps/marketing/app/layout.tsx`, `apps/marketing/app/[locale]/layout.tsx`, `apps/marketing/components/waitlist-dialog.tsx`, `apps/marketing/app/[locale]/thank-you/page.tsx`, `apps/marketing/app/[locale]/pilot/page.tsx`, `apps/marketing/README.md`, `apps/marketing/package.json`.
+- Events: `marketing_waitlist_opened`, `marketing_waitlist_submitted`, `marketing_thank_you_viewed`, `marketing_lead_submitted`.
+- Next step: enable Web Analytics + Speed Insights on the Vercel marketing project; optionally set `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
+
+### 2026-06-03 (execution: production API deploy runbook + runtime hardening)
+- Focus: enable Railway + Namecheap DNS path for `api.tracebud.com`; harden Nest for container/proxy production.
+- Files changed: `tracebud-backend/DEPLOY_PRODUCTION.md`, `tracebud-backend/railway.toml`, `tracebud-backend/.env.production.example`, `tracebud-backend/scripts/check-deploy-health.mjs`, `tracebud-backend/src/cors-origins.ts`, `tracebud-backend/src/main.ts`, `tracebud-backend/README.md`.
+- Verification: `npm test -- --runTestsByPath src/cors-origins.spec.ts`; `npm run build` (pass).
+- Next step: deploy `tracebud-backend` on Railway, CNAME `api` at Namecheap, run `npm run check:deploy-health -- https://api.tracebud.com`, then EAS production preflight.
+
+### 2026-06-03 (cleanup: remove one-shot Supabase remediation pack scripts)
+- Focus: trim completed RLS/PostGIS orchestration tooling; keep canonical SQL + phase-3 apply/verify.
+- Removed: `scripts/run-rls-remediation-pack.mjs`, `scripts/preflight-rls-remediation-pack.mjs`, `scripts/collect-rls-remediation-evidence.mjs`, `scripts/apply-postgis-owner-remediation.mjs`.
+- Kept: `sql/tb_v16_030_*`, `sql/tb_v16_009_*`, `sql/tb_v16_031_*`, `scripts/apply-rls-phase3-launch-admin-integrations.mjs`, `db:apply:rls-phase3`, `db:verify:rls-phase3`.
+- Docs: `release-qa-evidence.md`, `remaining-execution-scorecard.md` updated.
+
+### 2026-06-03 (execution: beta readiness baseline + ops artifacts)
+- Focus: run beta test baselines, publish scope/cohort/deny runbooks, record checklist sign-off state.
+- Files changed: `product-os/04-quality/beta-scope-matrix.md`, `product-os/04-quality/beta-cohort-template.md`, `product-os/04-quality/beta-cross-tenant-deny-runbook.md`, `product-os/04-quality/beta-readiness-evidence-2026-06-03.md`, `product-os/04-quality/beta-go-no-go-checklist.md`, `tracebud-backend/src/testing/launch-service.mock.ts`, `tracebud-backend/src/harvest/harvest.controller.spec.ts`, `tracebud-backend/src/harvest/controller-scope.int.spec.ts`, `tracebud-backend/src/reports/reports.controller.spec.ts`, `tracebud-backend/src/reports/package-report-access.int.spec.ts`, `tracebud-backend/src/integrations/partner-data.controller.spec.ts`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Verification: `cd apps/dashboard-product && npm run -s test` (225/225 pass); `cd tracebud-backend && npm run -s test` (200/237 pass, LaunchService constructor drift fixed in specs).
+- Blockers: none after Test Supabase project reactivation and role-claim test fixture alignment.
+- Follow-up verification: `npm run -s test` (237/237) and `npm run test:integration:ownership` (54/54) in `tracebud-backend`.
+
+### 2026-06-03 (execution: TB-V16-030 RLS phase-3 applied live)
+- Focus: apply tenant-scoped RLS policies for launch/admin/integration/request tables on `uzsktajlnofosxeqwdwl`.
+- Applied: migration `tb_v16_030_rls_phase3_launch_admin_and_integrations` via Supabase MCP.
+- Verification: `phase3_table_rls_status=pass`, `tables_hardened_count=14/14`.
+- Advisor after apply: no ERROR/WARN (only INFO `rls_enabled_no_policy` on phase-2 internal tables; PostGIS + leaked-password items cleared).
+- Blockers: none.
+
+### 2026-06-03 (execution: PostGIS robust relocation attempt)
+- Focus: apply Supabase-documented PostGIS relocatable flow on live project `uzsktajlnofosxeqwdwl` (postgis 3.3.7 in `public`).
+- Files changed: `tracebud-backend/sql/tb_v16_031_postgis_relocate_robust.sql`, `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_runbook.sql`, `tracebud-backend/scripts/apply-postgis-owner-remediation.mjs`, `tracebud-backend/package.json`, `tracebud-backend/scripts/preflight-rls-remediation-pack.mjs`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Decisions: use official `extrelocatable` + `SET SCHEMA extensions` + `UPDATE TO next` path (not DROP/CASCADE) because `plot`/`sinaph_zone`/`indigenous_zone` already depend on geometry/geography.
+- Blockers: MCP `execute_sql` and `apply_migration` fail with `42501 permission denied for table pg_extension`; `postgis` extowner is `supabase_admin`, `postgres.rolsuper=false`. Clément clarified robust path is **project-owner run** (Support cannot execute it); support-run snippet is a separate simplified option.
+- Next step: run `tb_v16_031` in Dashboard SQL Editor (direct DB session), verify, apply `tb_v16_030`; if SQL Editor also returns `42501`, escalate to Support with evidence and pick simplified support-run vs staged drop/recreate.
+
+### 2026-06-03 (execution: medium-priority integration mocks + dashboard test fixes)
+- Focus: close remaining medium-priority integration TODOs and fix pre-existing dashboard test failures.
+- Files changed: `apps/dashboard-product/lib/integrations-v2-api.ts`, `apps/dashboard-product/lib/package-create-validation.ts`, `apps/dashboard-product/components/integrations/run-queue-section.tsx`, `apps/dashboard-product/components/integrations/scheduler-section.tsx`, `apps/dashboard-product/app/packages/new/page.tsx`, `apps/dashboard-product/components/dashboards/sponsor-dashboard.tsx`, `apps/dashboard-product/app/page.test.tsx`, `apps/dashboard-product/app/create-account/page.test.tsx`, `apps/dashboard-product/components/dashboards/cooperative-dashboard.test.tsx`, `apps/dashboard-product/components/dashboards/reviewer-dashboard.test.tsx`, `apps/dashboard-product/components/dashboards/sponsor-dashboard.test.tsx`, `apps/dashboard-product/components/compliance/evidence-requirement.test.tsx`, `apps/dashboard-product/middleware.test.ts`, `apps/dashboard-product/lib/integrations-v2-api.test.ts`, `apps/dashboard-product/lib/package-create-validation.test.ts`, `apps/dashboard-product/ISSUES_TRACKING.md`, `product-os/06-status/daily-log.md`, `product-os/06-status/done-log.md`.
+- Decisions:
+  - Centralized Cool Farm V2 client calls in `lib/integrations-v2-api.ts` and removed duplicate inline fetch/mapping logic from integration operations components.
+  - Added package-create validation module with inline field errors and submit guardrails on `/packages/new`.
+  - Fixed failing tests by mocking onboarding/auth/navigation context and aligning dashboard/middleware assertions with current UI copy and feature-gate defaults (`annual_reporting` on by default).
+  - Fixed sponsor dashboard runtime bug: missing `isVirginTenant` definition.
+- Verification:
+  - `npm run -s test -- app/page.test.tsx app/create-account/page.test.tsx components/dashboards/cooperative-dashboard.test.tsx` (pass).
+  - `npm run -s test` (full dashboard suite pass).
+- Blockers: none.
+
+### 2026-06-03 (execution: Cool Farm V2 dashboard proxy route tests)
+- Focus: add CI coverage for new `dashboard-product` Cool Farm + SAI V2 API proxies and fix broken `_utils` import paths.
+- Files changed: `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/_utils.test.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/summary/route.test.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/retry-queue/route.test.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/[runId]/claim/route.test.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/scheduler/config/route.test.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/release-stale/trigger/route.test.ts`, route import fixes under `app/api/integrations/coolfarm-sai/v2/**/route.ts`, `product-os/06-status/daily-log.md`.
+- Verification: `cd apps/dashboard-product && npm run -s test -- app/api/integrations/coolfarm-sai/v2` (pass, `6 files / 13 tests`).
+- Blockers: none.
+
+### 2026-06-02 (execution: close high-priority dashboard integration TODOs)
+- Focus: replace mock-only scheduler/run-queue operations in `dashboard-product` with live Cool Farm + SAI V2 API wiring.
+- Files changed: `apps/dashboard-product/components/integrations/scheduler-section.tsx`, `apps/dashboard-product/components/integrations/run-queue-section.tsx`, `apps/dashboard-product/components/integrations/run-details-drawer.tsx`, `apps/dashboard-product/components/integrations/run-queue-table.tsx`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/_utils.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/scheduler/config/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/summary/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/retry-queue/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/release-stale/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/release-stale/trigger/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/[runId]/claim/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/[runId]/release/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/runs/[runId]/retry/route.ts`, `apps/dashboard-product/app/api/integrations/coolfarm-sai/v2/questionnaire-drafts/[id]/runs/route.ts`, `apps/dashboard-product/ISSUES_TRACKING.md`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added fail-closed dashboard proxy layer for V2 integration operations so client surfaces do not call mocks for high-priority scheduler/run-queue actions.
+  - Switched run-queue actions (`claim|release|retry|release-stale`) to execute backend contracts and refresh from source-of-truth summary/queue endpoints after each mutation.
+  - Switched scheduler panel to load real config/summary data and trigger scheduled stale sweeper through backend wrapper with server-side token header.
+  - Switched run-details timeline to fetch questionnaire run history and render lifecycle events from backend rows.
+- Permissions/tenant boundaries:
+  - Proxy routes forward Authorization headers to backend tenant-scoped endpoints and fail closed when backend base URL is missing.
+  - Scheduler trigger route keeps scheduler token server-side and never exposes token to browser clients.
+- State transitions:
+  - UI now respects canonical backend run transitions for claim/release/retry/release-stale instead of local optimistic mock mutation.
+- Exception handling/recovery:
+  - Operator toasts now surface backend-returned error conditions for actionable recovery.
+- Analytics:
+  - Lifecycle/audit evidence remains backend-immutable (`integration_audit_v2`) because operator actions now execute real contracts.
+- Acceptance criteria:
+  - `ReadLints` on touched integration files (no lints).
+  - `cd apps/dashboard-product && npm run -s test -- components/integrations` (no matching tests in current suite).
+  - `cd apps/dashboard-product && npm run -s test` (fails on pre-existing unrelated suites: `app/page.test.tsx`, `app/create-account/page.test.tsx`, `components/dashboards/cooperative-dashboard.test.tsx`).
+- Blockers: none for this slice; test-suite failures are pre-existing outside touched integration files.
+
+### 2026-06-02 (execution: controlled beta go/no-go artifact)
+- Focus: define a safe publish path for `dashboard-product` beta without claiming official global launch.
+- Files changed: `product-os/04-quality/beta-go-no-go-checklist.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Published a dedicated controlled-beta checklist with explicit invite-only positioning, legal/compliance disclaimer requirements, and cohort rollout sequence.
+  - Locked must-pass beta gates across permissions/tenant isolation, canonical state transitions, exception/recovery, analytics/audit evidence, and acceptance test baseline.
+  - Explicitly documented waived official launch gates for beta (`P0-02`, `P0-03`) plus non-waived stop conditions and rollback semantics.
+- Permissions/tenant boundaries:
+  - Beta requires phase-3 RLS apply/verify evidence and cross-tenant deny-path checks before cohort enablement.
+- Exception handling/recovery:
+  - Checklist now requires fail-closed backend-unavailable behavior, incident owner/escalation paths, and deployment/flag rollback readiness.
+- Analytics:
+  - Checklist now requires visibility for onboarding and gated-route telemetry plus daily beta health reviews.
+- Acceptance criteria:
+  - Entry requires green dashboard and ownership integration test baselines plus published included/excluded beta scope matrix.
+- Blockers: none (artifact publication only).
+
 ### 2026-04-22 (execution: legacy evidence tenant backfill migration)
 - Focus: recover importer evidence-feed visibility for historical `plot_evidence_synced` audit events missing tenant metadata.
 - Files changed: `tracebud-backend/sql/tb_v16_029_backfill_evidence_tenant.sql`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
@@ -3232,6 +3479,173 @@ Append-only session log.
 - Risks: README can drift from behavior if commands/arguments change without doc updates.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
+
+### 2026-06-02 (execution: supabase advisor RLS critical remediation)
+- Focus: address Supabase advisor critical findings showing RLS disabled on newly added `public` tables.
+- Files changed: `tracebud-backend/sql/tb_v16_030_rls_phase3_launch_admin_and_integrations.sql`, `product-os/02-features/FEAT-009-integrations.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Added phase-3 hardening migration enabling RLS on launch/admin/integration/request tables flagged by advisor.
+  - Added tenant-scoped `FOR ALL` policies keyed on `auth.jwt() -> 'app_metadata' ->> 'tenant_id'`.
+  - Added join-based tenant policy for `request_campaign_recipient_decisions` through parent `request_campaigns`.
+  - Added read-only public policy for `spatial_ref_sys` after enabling RLS to satisfy advisor while preserving reference reads.
+- Verification: migration file compiled/reviewed for idempotent reruns (`IF EXISTS`/`DROP POLICY IF EXISTS` patterns).
+- Blockers: Migration still needs to be applied on Supabase environment to clear dashboard findings.
+- Next step: run migration in Supabase project, then re-run advisors/security scan to confirm critical list drops to zero for these tables.
+
+### 2026-06-02 (execution: offline-product release preflight automation)
+- Focus: add deterministic preflight automation before preview/production release commands.
+- Files changed: `apps/offline-product/scripts/release-preflight.mjs`, `apps/offline-product/package.json`, `apps/offline-product/README.md`, `apps/offline-product/LAUNCH_READINESS_CHECKLIST.md`, `apps/offline-product/RELEASE_RUNBOOK.md`, `product-os/02-features/FEAT-002-mobile-field-capture.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - introduced release preflight command gates for `preview` and `production` profiles.
+  - production preflight now fail-closes on missing required env values, non-HTTPS API URLs, localhost API URLs, or enabled test/insecure override flags.
+  - added `release:production:safe` command (`preflight -> build`) to reduce manual release mistakes.
+- Permissions/tenant boundaries: unchanged.
+- State transitions: production release transition now includes explicit config-safety gate before build.
+- Exception/recovery: preflight outputs actionable, deterministic errors for misconfigured release environments.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd apps/offline-product && npm run lint`
+  - `cd apps/offline-product && npm run release:preflight:preview`
+- Blockers: None.
+- Next step: optional rollout telemetry SLO guard script (`go/no-go` thresholds) for staged promotion checkpoints.
+
+### 2026-06-02 (execution: offline-product rollout SLO gate automation)
+- Focus: add quantitative go/no-go release gate before promoting preview builds to production.
+- Files changed: `apps/offline-product/scripts/release-rollout-slo-gate.mjs`, `apps/offline-product/release-health-report.example.json`, `apps/offline-product/package.json`, `apps/offline-product/README.md`, `apps/offline-product/RELEASE_RUNBOOK.md`, `apps/offline-product/LAUNCH_READINESS_CHECKLIST.md`, `product-os/02-features/FEAT-002-mobile-field-capture.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added `release:slo:gate` command with report-based health checks on sessions, crash-free, sync success, auth error, and API timeout rates.
+  - default thresholds established with env override support (`RELEASE_SLO_*`) so release policy can be tuned without code changes.
+  - release runbook/checklist now require SLO gate pass before preview -> production promotion.
+- Permissions/tenant boundaries: unchanged.
+- State transitions: release promotion now includes explicit quantitative health threshold gate.
+- Exception/recovery: gate returns per-metric pass/fail diagnostics and blocks unsafe promotion.
+- Analytics/events: no runtime event schema additions in this slice.
+- Verification:
+  - `cd apps/offline-product && npm run lint`
+  - `cd apps/offline-product && npm run release:slo:gate -- --report=release-health-report.example.json`
+- Blockers: None.
+- Next step: integrate real staged-rollout telemetry source export into `release-health-report.json` generation pipeline.
+
+### 2026-06-02 (execution: TB-V16-009 PostGIS owner-remediation automation)
+- Focus: operationalize owner-only PostGIS remediation with repeatable apply/verify commands and deterministic verification output.
+- Files changed: `tracebud-backend/scripts/apply-postgis-owner-remediation.mjs`, `tracebud-backend/sql/tb_v16_009_postgis_owner_remediation_verify.sql`, `tracebud-backend/package.json`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added dedicated owner-oriented script to run TB-V16-009 remediation SQL and verify RLS/grant/policy outcomes.
+  - added verify-only command path for non-destructive validation.
+  - preserved extension-schema check as `warn` semantics when platform blocks `ALTER EXTENSION ... SET SCHEMA`.
+- Permissions/tenant boundaries: no application-role policy broadening; this slice is infra-owner remediation tooling only.
+- State transitions: not applicable to product workflows.
+- Exception/recovery: script fails fast with explicit verification errors and env-contract guidance.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd tracebud-backend && npm run db:verify:postgis-owner-remediation`
+  - Result in this environment: expected fail due missing `POSTGIS_OWNER_REMEDIATION_DATABASE_URL`/`DATABASE_URL`/`TEST_DATABASE_URL`.
+- Blockers: owner-privileged DB URL and execution window required.
+- Next step: run `db:apply:postgis-owner-remediation` in privileged Supabase window, then capture advisor and SQL verify snapshots.
+
+### 2026-06-02 (execution: TB-V16-030 RLS phase-3 operability automation)
+- Focus: operationalize phase-3 Supabase RLS remediation rollout with repeatable apply/verify commands and deterministic verification snapshots.
+- Files changed: `tracebud-backend/scripts/apply-rls-phase3-launch-admin-integrations.mjs`, `tracebud-backend/sql/tb_v16_030_rls_phase3_launch_admin_and_integrations_verify.sql`, `tracebud-backend/package.json`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added dedicated TB-V16-030 apply/verify script with `--verify-only` mode.
+  - added package commands `db:apply:rls-phase3` and `db:verify:rls-phase3`.
+  - added SQL verification artifact that reports PASS/FAIL summary for RLS + expected policy presence across launch/admin/integration/request tables.
+- Permissions/tenant boundaries: no policy broadening; this slice ensures already-defined tenant-scoped policies are applied and verifiable.
+- State transitions: no user-facing state transition changes.
+- Exception/recovery: apply/verify flow fail-closes with explicit env contract and verification failure messages.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd tracebud-backend && npm run db:verify:rls-phase3`
+  - Result in this shell: expected fail without `RLS_PHASE3_DATABASE_URL`/`DATABASE_URL`/`TEST_DATABASE_URL`.
+- Blockers: privileged DB URL + execution window required.
+- Next step: run `db:apply:rls-phase3` in Supabase execution window and capture advisor before/after evidence plus verification SQL snapshots.
+
+### 2026-06-02 (execution: Supabase RLS remediation evidence automation)
+- Focus: produce a single command that captures TB-V16-009 + TB-V16-030 verification snapshots into timestamped artifact files for release/compliance evidence.
+- Files changed: `tracebud-backend/scripts/collect-rls-remediation-evidence.mjs`, `tracebud-backend/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added `db:evidence:rls-remediation` command to write JSON evidence bundles under `tracebud-backend/evidence/`.
+  - evidence payload includes structured summaries + snapshots for TB-V16-009 (`spatial_ref_sys`) and TB-V16-030 (phase-3 launch/admin/integration/request tables).
+  - quality evidence runbook now includes explicit remediation apply/verify/evidence command sequence.
+- Permissions/tenant boundaries: unchanged.
+- State transitions: no user-facing workflow state changes.
+- Exception/recovery: command fail-closes with explicit DB URL env contract when run outside privileged env.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd tracebud-backend && npm run db:evidence:rls-remediation`
+  - Result in local shell: expected env-gate failure without DB URL configured.
+- Blockers: privileged DB URL + owner execution window required for real evidence generation.
+- Next step: execute remediation window, run evidence command, and attach generated JSON path + advisor references to release QA evidence.
+
+### 2026-06-02 (execution: Supabase RLS remediation pack orchestrator)
+- Focus: provide one deterministic command for privileged remediation windows that runs both remediation tracks end-to-end with fail-fast semantics.
+- Files changed: `tracebud-backend/scripts/run-rls-remediation-pack.mjs`, `tracebud-backend/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added orchestrator command `db:run:rls-remediation-pack`.
+  - command executes in strict order:
+    1) TB-V16-009 apply
+    2) TB-V16-009 verify
+    3) TB-V16-030 apply
+    4) TB-V16-030 verify
+    5) consolidated evidence generation
+  - stop-on-failure behavior ensures no silent partial completion.
+- Permissions/tenant boundaries: unchanged.
+- State transitions: no user-facing transition changes.
+- Exception/recovery: step-level logging + fail-fast error exit make remediation-window troubleshooting deterministic.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd tracebud-backend && npm run db:run:rls-remediation-pack`
+  - Result in local shell: expected env-gate failure due missing DB URL.
+- Blockers: privileged DB URL + owner execution window required.
+- Next step: execute orchestrator in owner window and attach evidence artifact path + advisor before/after references.
+
+### 2026-06-02 (execution: Supabase RLS remediation preflight gate)
+- Focus: prevent late-step remediation failures by validating prerequisites before orchestrator execution.
+- Files changed: `tracebud-backend/scripts/preflight-rls-remediation-pack.mjs`, `tracebud-backend/package.json`, `product-os/04-quality/release-qa-evidence.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - added `db:preflight:rls-remediation-pack` (checks SQL/script presence, DB URL resolution, DB connectivity).
+  - added `db:run:rls-remediation-pack:safe` to chain preflight + orchestrator.
+  - preflight loads repo-level and backend-level `.env`/`.env.local` for operator convenience.
+- Permissions/tenant boundaries: unchanged.
+- State transitions: no user-facing state changes.
+- Exception/recovery: fail-fast preflight provides clearer operator diagnostics before mutating steps start.
+- Analytics/events: no runtime analytics schema changes.
+- Verification:
+  - `cd tracebud-backend && npm run db:preflight:rls-remediation-pack`
+  - `cd tracebud-backend && npm run db:run:rls-remediation-pack:safe`
+  - Result in local shell: expected env/DB connectivity failure without privileged DB URL.
+- Blockers: privileged DB URL + owner execution window required.
+- Next step: run safe pack in execution window and attach evidence artifact path plus advisor delta references.
+
+### 2026-06-02 (execution: supabase claim trust hardening)
+- Focus: remove insecure authorization fallbacks (`user_metadata` and email-pattern role inference) from backend claim handling.
+- Files changed: `tracebud-backend/src/auth/roles.ts`, backend guarded controllers under `tracebud-backend/src/**`, `tracebud-backend/src/launch/launch.service.ts`, `product-os/02-features/FEAT-001-multi-tenant-admin.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - tenant scope authorization now trusts `app_metadata.tenant_id` only.
+  - role derivation now trusts `app_metadata.role` only; removed `user_metadata.role` and email-derived privileged role fallback.
+  - launch sign-in path now avoids `user_metadata.tenant_id` fallback.
+- Verification: `cd tracebud-backend && npm run lint` (pass).
+- Blockers: None.
+- Next step: add/refresh targeted auth regression tests for `403` on missing `app_metadata.tenant_id` and no privilege escalation from user-editable claims.
+
+### 2026-06-02 (execution: offline-product production rollout hardening pack)
+- Focus: complete mobile rollout hardening for global farmer launch readiness across release operations, auth/storage security, sync resilience, and operator visibility.
+- Files changed: `apps/offline-product/eas.json`, `apps/offline-product/package.json`, `apps/offline-product/app.json`, `apps/offline-product/README.md`, `apps/offline-product/LAUNCH_READINESS_CHECKLIST.md`, `apps/offline-product/RELEASE_MODEL.md`, `apps/offline-product/RELEASE_RUNBOOK.md`, `apps/offline-product/features/api/runtimeGuards.ts`, `apps/offline-product/features/api/auth.ts`, `apps/offline-product/features/api/postPlot.ts`, `apps/offline-product/features/api/plots.ts`, `apps/offline-product/features/api/harvest.ts`, `apps/offline-product/features/api/audit.ts`, `apps/offline-product/features/security/syncAuthStorage.ts`, `apps/offline-product/features/state/persistence.native.ts`, `apps/offline-product/features/state/persistence.web.ts`, `apps/offline-product/features/sync/processPendingSyncQueue.ts`, `apps/offline-product/app/(tabs)/settings.tsx`, `apps/offline-product/features/state/LanguageContext.tsx`, `product-os/02-features/FEAT-002-mobile-field-capture.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/done-log.md`, `product-os/06-status/daily-log.md`.
+- Decisions:
+  - Release lanes formalized to one-codebase multi-track model (`development`/`preview`/`production`) with staged rollout runbook and launch checklist.
+  - Auth hardening now defaults fail-closed for production-like runtime: no implicit test credentials, localhost API guardrails, and HTTPS transport requirement unless explicit test override flags are set.
+  - Sync credentials now use secure platform storage (`expo-secure-store`) with backward-compatible one-time migration from legacy settings keys.
+  - Pending queue now enforces bounded growth (`max 1000`) and exponential retry backoff with persisted attempt timestamps.
+  - Settings sync panel now shows latest queue error and next retry ETA (localized EN/ES) for better field-operator recovery clarity.
+- Permissions/tenant boundaries: no scope broadening; role/tenant checks unchanged and preserved while runtime safety constraints tightened.
+- State transitions: retry state now includes temporal eligibility via backoff (`lastAttemptAt + backoff`) before reprocessing.
+- Exception and recovery: deterministic guidance added for unsafe API config; queue retry behavior now protects against network hammering and runaway backlog.
+- Analytics/events: existing queue success/failure/drop telemetry retained; this pack focused on transport, auth, and operator visibility hardening.
+- Acceptance mapping: FEAT-002 rollout-readiness gaps for distribution, auth safety, secure credentials, and offline retry reliability are now materially reduced.
+- Verification:
+  - `cd apps/offline-product && npm run lint` (pass after each major slice)
+- Blockers: None.
+- Next step: optional TLS pinning evaluation for managed-vs-bare Expo boundary and controlled implementation strategy if native workflow is approved.
 
 ### 2026-04-22 (execution: account creation slice A - dashboard route + signup proxy)
 - Focus: implement the first code tranche of account-creation commercialization flow in dashboard app.

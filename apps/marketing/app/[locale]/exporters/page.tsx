@@ -1,12 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "For Exporters | Tracebud",
-  description: "Batch aggregation, EUDR compliance, yield verification. Speed up exports with automated DDS packages and full audit trails.",
-};
 import { motion } from "framer-motion";
 import { Package, Scale, FileCheck, Shield, Truck, CheckCircle, AlertTriangle, Clock, Zap, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,7 +9,7 @@ import Link from "next/link";
 import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 
-const DASHBOARD_URL = "https://app.tracebud.com";
+const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const EXPORTER_DEMO = "https://exporter-demo.tracebud.com";
 
 const features = [
@@ -254,46 +248,6 @@ export default function ExportersPage() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* Testimonial Section */}
-      <section className="relative py-16 md:py-32">
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=2070&auto=format&fit=crop"
-            alt="Coffee beans close-up at export facility"
-            fill
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-[var(--mountain-clay)]/70" />
-        </div>
-        <div className="max-w-4xl mx-auto px-4 md:px-6 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-xl md:text-3xl text-white font-medium leading-relaxed mb-6 md:mb-8 italic">
-              &ldquo;We cut our compliance processing time by 80%. What used to take weeks now happens in
-              hours.&rdquo;
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden border-2 border-white flex-shrink-0">
-                <Image
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=200&auto=format&fit=crop"
-                  alt="Carlos Rodriguez"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              </div>
-              <div className="text-center sm:text-left">
-                <div className="text-white font-bold text-base md:text-lg">Carlos Rodriguez</div>
-                <div className="text-white/70 text-sm md:text-base">Operations Director, CafeExport S.A.</div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 

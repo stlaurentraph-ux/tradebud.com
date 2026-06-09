@@ -1,0 +1,31 @@
+Subject: You're on the Tracebud waitlist
+Preheader: We received your request from {{organisationName}}
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+You're on the Tracebud waitlist.
+
+Thanks for your interest in traceability infrastructure built for the whole
+chain. We review every request personally and will email you when Tracebud
+opens for your region and use case.
+
+  Organisation : {{organisationName}}
+  Role         : {{roleLabel}}
+  Commodity    : {{commodity}}
+
+While you wait, explore how Tracebud helps fragmented supply chains capture
+origin data once and generate reusable EUDR-ready compliance records.
+
+  Visit tracebud.com
+  {{websiteUrl}}
+
+Questions? hello@tracebud.com
+
+──────────────────────────────────────────────────────
+Tracebud · EUDR compliance workspace
+dashboard.tracebud.com | tracebud.com
+
+© {{year}} Tracebud. All rights reserved.
+
+You received this because you joined the waitlist on tracebud.com.

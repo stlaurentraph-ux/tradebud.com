@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { HarvestController } from '../harvest/harvest.controller';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { HarvestService } from '../harvest/harvest.service';
 import { ReportsController } from './reports.controller';
 
@@ -30,6 +31,7 @@ describeIfDb('API integration: package/report access policy', () => {
   const harvestId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
   const voucherId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   const packageId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  const exporterUserId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 
   beforeAll(async () => {
     pool = new Pool({
@@ -91,9 +93,23 @@ describeIfDb('API integration: package/report access policy', () => {
         voucher_id UUID NOT NULL
       )
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS farmer_profile (
+        id UUID PRIMARY KEY,
+        user_id UUID NOT NULL
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenant_signup_contacts (
+        tenant_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (tenant_id, email)
+      )
+    `);
 
-    harvestController = new HarvestController(new HarvestService(pool));
-    reportsController = new ReportsController(pool);
+    harvestController = new HarvestController(new HarvestService(pool), createLaunchServiceMock());
+    reportsController = new ReportsController(pool, createLaunchServiceMock());
   }, 20_000);
 
   afterAll(async () => {
@@ -109,6 +125,22 @@ describeIfDb('API integration: package/report access policy', () => {
     await pool.query('DELETE FROM harvest_transaction');
     await pool.query('DELETE FROM plot');
 
+    await pool.query(
+      `
+      INSERT INTO farmer_profile (id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (id) DO UPDATE SET user_id = EXCLUDED.user_id
+      `,
+      [farmerId, exporterUserId],
+    );
+    await pool.query(
+      `
+      INSERT INTO tenant_signup_contacts (tenant_id, user_id, email)
+      VALUES ('tenant_1', $1, 'exporter+demo@tracebud.com')
+      ON CONFLICT (tenant_id, email) DO UPDATE SET user_id = EXCLUDED.user_id
+      `,
+      [exporterUserId],
+    );
     await pool.query(
       `
       INSERT INTO plot (id, farmer_id, name, kind, area_ha, declared_area_ha, created_at)
@@ -174,7 +206,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
   it('denies package and report export when tenant claim is missing', async () => {
     await expect(
-      harvestController.listPackages(farmerId, { user: { email: 'exporter+demo@tracebud.com' } }),
+      harvestController.listPackages(farmerId, undefined, { user: { email: 'exporter+demo@tracebud.com' } }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
@@ -210,20 +242,20 @@ describeIfDb('API integration: package/report access policy', () => {
 
   it('denies package and report export for non-exporter role even with tenant claim', async () => {
     await expect(
-      harvestController.listPackages(farmerId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      harvestController.listPackages(farmerId, undefined, {
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackage(packageId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackageTracesJson(packageId, {
-        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
@@ -232,7 +264,7 @@ describeIfDb('API integration: package/report access policy', () => {
       reportsController.plotsReport(
         farmerId,
         undefined,
-        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
         res as any,
       ),
     ).rejects.toThrow(ForbiddenException);
@@ -244,7 +276,7 @@ describeIfDb('API integration: package/report access policy', () => {
         undefined,
         undefined,
         undefined,
-        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
         resHarvest as any,
       ),
     ).rejects.toThrow(ForbiddenException);
@@ -252,21 +284,21 @@ describeIfDb('API integration: package/report access policy', () => {
 
   it('allows exporter role with tenant claim for package and report export', async () => {
     await expect(
-      harvestController.listPackages(farmerId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      harvestController.listPackages(farmerId, undefined, {
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
-    ).resolves.toEqual(
-      expect.arrayContaining([
+    ).resolves.toEqual({
+      packages: expect.arrayContaining([
         expect.objectContaining({
           id: packageId,
           farmer_id: farmerId,
         }),
       ]),
-    );
+    });
 
     await expect(
       harvestController.getPackage(packageId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toMatchObject({
       package: expect.objectContaining({
@@ -277,7 +309,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
     await expect(
       harvestController.getPackageTracesJson(packageId, {
-        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toMatchObject({
       ddsPackageId: packageId,
@@ -288,7 +320,7 @@ describeIfDb('API integration: package/report access policy', () => {
     await reportsController.plotsReport(
       farmerId,
       undefined,
-      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       res as any,
     );
     expect(res.json).toHaveBeenCalled();
@@ -299,7 +331,7 @@ describeIfDb('API integration: package/report access policy', () => {
       undefined,
       undefined,
       undefined,
-      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       resHarvest as any,
     );
     expect(resHarvest.json).toHaveBeenCalled();

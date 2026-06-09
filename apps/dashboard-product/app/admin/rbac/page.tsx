@@ -192,7 +192,7 @@ export default function RBACMatrixPage() {
             { label: 'Admin', href: '/admin' },
             { label: 'RBAC Matrix' },
           ]}
-          action={
+          actions={
             <Button variant="outline" asChild>
               <Link href="/admin">
                 <ArrowLeft className="mr-2 h-4 w-4" />

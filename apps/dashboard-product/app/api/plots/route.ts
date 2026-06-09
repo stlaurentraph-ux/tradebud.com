@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -12,11 +13,16 @@ export async function GET(request: Request) {
       );
     }
 
-    const backendResponse = await fetch(`${backendBase}/v1/plots`, {
-      method: 'GET',
-      headers: authHeader ? { Authorization: authHeader } : undefined,
-      cache: 'no-store',
-    });
+    const requestUrl = new URL(request.url);
+    const query = requestUrl.searchParams.toString();
+    const backendResponse = await fetch(
+      backendApiUrl(backendBase, `/v1/plots${query ? `?${query}` : ''}`),
+      {
+        method: 'GET',
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+        cache: 'no-store',
+      },
+    );
     const payload = await backendResponse
       .json()
       .catch(() => ({ error: 'Backend plot listing failed.' }));
@@ -47,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
     }
 
-    const backendResponse = await fetch(`${backendBase}/v1/plots`, {
+    const backendResponse = await fetch(backendApiUrl(backendBase, '/v1/plots'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

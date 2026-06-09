@@ -36,7 +36,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'farmer@example.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'farmer' },
         },
       }),
     ).rejects.toThrow('Only exporters or agents can perform EUDR connectivity checks');
@@ -50,7 +50,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow(BadRequestException);
@@ -69,7 +69,7 @@ describe('EudrController', () => {
       user: {
         id: 'user_1',
         email: 'exporter+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
       },
     });
 
@@ -113,7 +113,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'agent+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow(BadGatewayException);
@@ -274,7 +274,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'farmer@example.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'farmer' },
         },
       }),
     ).rejects.toThrow('Only exporters, importers/brands, agents, or admins can read EUDR DDS status');
@@ -287,7 +287,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'agent+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow(BadRequestException);
@@ -306,7 +306,7 @@ describe('EudrController', () => {
       user: {
         id: 'user_1',
         email: 'agent+ops@tracebud.com',
-        app_metadata: { tenant_id: 'tenant_1' },
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
       },
     });
 
@@ -349,7 +349,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow(BadGatewayException);
@@ -368,7 +368,7 @@ describe('EudrController', () => {
         user: {
           id: 'user_1',
           email: 'exporter+ops@tracebud.com',
-          app_metadata: { tenant_id: 'tenant_1' },
+          app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
         },
       }),
     ).rejects.toThrow('EUDR DDS status response was not valid JSON');

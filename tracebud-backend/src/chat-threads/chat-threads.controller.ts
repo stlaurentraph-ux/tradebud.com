@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { ChatThreadsService } from './chat-threads.service';
 import { CreateChatThreadDto } from './dto/create-chat-thread.dto';
 import { PostChatMessageDto } from './dto/post-chat-message.dto';
@@ -14,10 +14,8 @@ export class ChatThreadsController {
   constructor(private readonly chatThreadsService: ChatThreadsService) {}
 
   private requireTenantId(req: any): string {
-    const tenantId =
-      req?.user?.app_metadata?.tenant_id ??
-      req?.user?.user_metadata?.tenant_id;
-    if (!tenantId) throw new ForbiddenException('Missing tenant claim');
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (!tenantId) throw new ForbiddenException('Missing tenant claim in app_metadata');
     return tenantId;
   }
 

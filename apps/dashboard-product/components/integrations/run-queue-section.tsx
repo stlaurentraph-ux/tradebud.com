@@ -11,7 +11,14 @@ import { RunDetailsDrawer } from './run-details-drawer';
 import { ConfirmationModal } from './confirmation-modal';
 import { BulkReleaseModal } from './bulk-release-modal';
 import type { IntegrationRun, RunSummary, RunQueueFilters } from '@/types/integrations';
-import { generateMockRuns, getMockSummary } from '@/lib/integrations-mock-data';
+import {
+  claimRun,
+  fetchRetryQueue,
+  fetchRunSummary,
+  releaseRun,
+  releaseStaleClaims,
+  retryRun,
+} from '@/lib/integrations-v2-api';
 
 type ConfirmAction =
   | { type: 'claim'; run: IntegrationRun }
@@ -51,19 +58,23 @@ export function RunQueueSection() {
   const [bulkReleaseOpen, setBulkReleaseOpen] = useState(false);
   const [isBulkReleaseLoading, setIsBulkReleaseLoading] = useState(false);
 
+  const loadRunQueueData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [summaryState, queueRuns] = await Promise.all([fetchRunSummary(), fetchRetryQueue(200)]);
+      setSummary(summaryState);
+      setRuns(queueRuns);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load run operations data.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Load initial data
   useEffect(() => {
-    // TODO: Replace with actual API calls
-    // GET /v1/integrations/coolfarm-sai/v2/runs/summary
-    // GET /v1/integrations/coolfarm-sai/v2/runs/retry-queue
-    const timer = setTimeout(() => {
-      setRuns(generateMockRuns());
-      setSummary(getMockSummary());
-      setIsLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
-  }, []);
+    void loadRunQueueData();
+  }, [loadRunQueueData]);
 
   // Filter runs
   const filteredRuns = useMemo(() => {
@@ -130,78 +141,42 @@ export function RunQueueSection() {
     if (!confirmAction) return;
 
     setIsActionLoading(true);
-
-    // TODO: Replace with actual API calls
-    // POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/claim
-    // POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/release
-    // POST /v1/integrations/coolfarm-sai/v2/runs/{runId}/retry
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    switch (confirmAction.type) {
-      case 'claim':
+    try {
+      if (confirmAction.type === 'claim') {
+        await claimRun(confirmAction.run.id);
         toast.success(`Claimed run ${confirmAction.run.id.slice(0, 12)}...`);
-        // Update local state to reflect the claim
-        setRuns((prev) =>
-          prev.map((r) =>
-            r.id === confirmAction.run.id
-              ? { ...r, claimedByUserId: 'current_user', claimedAt: new Date().toISOString() }
-              : r
-          )
-        );
-        break;
-      case 'release':
+      } else if (confirmAction.type === 'release') {
+        await releaseRun(confirmAction.run.id, confirmAction.force);
         toast.success(
-          `${confirmAction.force ? 'Force released' : 'Released'} run ${confirmAction.run.id.slice(0, 12)}...`
+          `${confirmAction.force ? 'Force released' : 'Released'} run ${confirmAction.run.id.slice(0, 12)}...`,
         );
-        setRuns((prev) =>
-          prev.map((r) =>
-            r.id === confirmAction.run.id
-              ? { ...r, claimedByUserId: null, claimedAt: null }
-              : r
-          )
-        );
-        break;
-      case 'retry':
+      } else if (confirmAction.type === 'retry') {
+        await retryRun(confirmAction.run.id);
         toast.success(`Retry initiated for run ${confirmAction.run.id.slice(0, 12)}...`);
-        setRuns((prev) =>
-          prev.map((r) =>
-            r.id === confirmAction.run.id
-              ? { ...r, attemptCount: r.attemptCount + 1, status: 'started' as const }
-              : r
-          )
-        );
-        break;
+      }
+      await loadRunQueueData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Run action failed.');
+      return;
+    } finally {
+      setIsActionLoading(false);
     }
-
-    setIsActionLoading(false);
     setConfirmAction(null);
     setDrawerOpen(false);
   };
 
   const executeBulkRelease = async (staleMinutes: number, limit: number) => {
     setIsBulkReleaseLoading(true);
-
-    // TODO: Replace with actual API call
-    // POST /v1/integrations/coolfarm-sai/v2/runs/release-stale
-    // Body: { staleMinutes, limit }
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const releasedCount = Math.min(summary.staleClaimCount, limit);
-    toast.success(`Released ${releasedCount} stale claim${releasedCount !== 1 ? 's' : ''}`);
-
-    // Update local state
-    setSummary((prev) => ({
-      ...prev,
-      staleClaimCount: Math.max(0, prev.staleClaimCount - releasedCount),
-      lastSweeperRun: new Date().toISOString(),
-      lastSweeperReleasedCount: releasedCount,
-      lastSweeperTriggerSource: 'manual',
-    }));
-
-    setIsBulkReleaseLoading(false);
-    setBulkReleaseOpen(false);
+    try {
+      const releasedCount = await releaseStaleClaims(staleMinutes, limit);
+      toast.success(`Released ${releasedCount} stale claim${releasedCount !== 1 ? 's' : ''}`);
+      await loadRunQueueData();
+      setBulkReleaseOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to release stale claims.');
+    } finally {
+      setIsBulkReleaseLoading(false);
+    }
   };
 
   // Confirmation modal content

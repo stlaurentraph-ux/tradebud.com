@@ -5,6 +5,7 @@ import { HarvestController } from './harvest.controller';
 import { HarvestService } from './harvest.service';
 import { PlotsController } from '../plots/plots.controller';
 import { PlotsService } from '../plots/plots.service';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
@@ -80,6 +81,14 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     await pool.query(`ALTER TABLE ${schema}.agent_plot_assignment ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
     await pool.query(`ALTER TABLE ${schema}.agent_plot_assignment ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${schema}.tenant_signup_contacts (
+        tenant_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (tenant_id, email)
+      )
+    `);
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS ${schema}.audit_log (
         id UUID PRIMARY KEY,
         timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -102,7 +111,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
     harvestService = new HarvestService(pool);
     plotsService = new PlotsService(pool, {} as any);
-    harvestController = new HarvestController(harvestService);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock());
     plotsController = new PlotsController(plotsService);
   }, 20_000);
 
@@ -127,6 +136,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     await pool.query(`DELETE FROM ${schema}.agent_plot_assignment`);
     await pool.query(`DELETE FROM ${schema}.plot`);
     await pool.query(`DELETE FROM ${schema}.audit_log`);
+    await pool.query(`DELETE FROM ${schema}.tenant_signup_contacts`);
     await pool.query(`DELETE FROM ${schema}.farmer_profile`);
     await pool.query(`DELETE FROM ${schema}.user_account`);
 
@@ -138,6 +148,11 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       `INSERT INTO ${schema}.farmer_profile (id, user_id, country_code, self_declared, status)
        VALUES ($1, $2, 'HN', true, 'active'), ($3, $4, 'HN', true, 'active')`,
       [farmerA, userA, farmerB, userB],
+    );
+    await pool.query(
+      `INSERT INTO ${schema}.tenant_signup_contacts (tenant_id, user_id, email)
+       VALUES ('tenant_1', $1, 'farmer-a@example.com'), ('tenant_1', $2, 'farmer-b@example.com')`,
+      [userA, userB],
     );
     await pool.query(`INSERT INTO ${schema}.plot (id, farmer_id, name) VALUES ($1, $2, 'Plot A')`, [plotA, farmerA]);
     await pool.query(
@@ -151,13 +166,13 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
     await expect(
       harvestController.listVouchers(farmerB, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.listVouchers(farmerA, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual([]);
 
@@ -169,14 +184,14 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     const updateSpy = jest.spyOn(plotsService, 'updateMetadata').mockResolvedValue({ id: plotA, name: 'Renamed' } as any);
 
     await expect(
-      plotsController.listByFarmer(farmerB, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      plotsController.listByFarmer(farmerB, undefined, {
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
-      plotsController.listByFarmer(farmerA, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      plotsController.listByFarmer(farmerA, undefined, {
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual([]);
 
@@ -184,7 +199,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.updateMetadata(
         plotA,
         { name: 'Renamed', reason: 'scope-check' } as any,
-        { user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
@@ -192,7 +207,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.updateMetadata(
         plotA,
         { name: 'Renamed', reason: 'scope-check' } as any,
-        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).resolves.toEqual({ id: plotA, name: 'Renamed' });
 
@@ -219,13 +234,13 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
     await expect(
       plotsController.geometryHistory(plotA, undefined, undefined, undefined, undefined, undefined, {
-        user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       plotsController.geometryHistory(plotA, undefined, undefined, undefined, undefined, undefined, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual(
       expect.objectContaining({
@@ -256,10 +271,10 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     );
 
     const descRes = await plotsController.geometryHistory(plotA, '2', '0', 'desc', undefined, undefined, {
-      user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
     const ascRes = await plotsController.geometryHistory(plotA, '2', '0', 'asc', undefined, undefined, {
-      user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
     });
 
     expect(descRes.total).toBe(3);
@@ -276,44 +291,45 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
   it('enforces tenant claim and exporter role for package detail/list/export endpoints', async () => {
     const listSpy = jest.spyOn(harvestService, 'listDdsPackagesForFarmer').mockResolvedValue([]);
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     const detailSpy = jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({ id: 'pkg_1' } as any);
     const tracesSpy = jest
       .spyOn(harvestService, 'getDdsPackageTracesJson')
       .mockResolvedValue({ reference: 'TRACES-1' } as any);
 
     await expect(
-      harvestController.listPackages(farmerA, {
+      harvestController.listPackages(farmerA, undefined, {
         user: { id: userA, email: 'exporter+scope@example.com' },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackage('pkg_1', {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.getPackageTracesJson('pkg_1', {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
-      harvestController.listPackages(farmerA, {
-        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      harvestController.listPackages(farmerA, undefined, {
+        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ packages: [] });
 
     await expect(
       harvestController.getPackage('pkg_1', {
-        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual({ id: 'pkg_1' });
 
     await expect(
       harvestController.getPackageTracesJson('pkg_1', {
-        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual({ reference: 'TRACES-1' });
 
@@ -336,13 +352,13 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
     await expect(
       harvestController.submitPackage('pkg_1', { idempotencyKey: 'idem-1' } as any, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       harvestController.submitPackage('pkg_1', { idempotencyKey: 'idem-1' } as any, {
-        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual(
       expect.objectContaining({
@@ -355,6 +371,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   it('persists readiness audit lifecycle events on exporter readiness checks', async () => {
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_1' },
       vouchers: [
@@ -368,7 +385,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     } as any);
 
     const result = await harvestController.getPackageReadiness('pkg_1', {
-      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(result).toEqual(expect.objectContaining({ packageId: 'pkg_1', status: 'warning_review' }));
 
@@ -389,7 +406,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     } as any);
 
     const result = await harvestController.getPackageRiskScore('pkg_risk_1', {
-      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(result).toEqual(expect.objectContaining({ packageId: 'pkg_risk_1', band: 'medium' }));
 
@@ -402,7 +419,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     } as any);
 
     const result = await harvestController.getPackageFilingPreflight('pkg_file_1', {
-      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(result).toEqual(expect.objectContaining({ packageId: 'pkg_file_1', status: 'preflight_blocked' }));
 
@@ -426,7 +443,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     } as any);
 
     const result = await harvestController.generatePackage(packageId, {
-      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(result).toEqual(expect.objectContaining({ packageId, status: 'package_generated' }));
 
@@ -465,7 +482,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncPhotos(
         plotA,
         { kind: 'ground_truth', photos: [], hlcTimestamp: '1712524800000:1', clientEventId: 'evt-1' } as any,
-        { user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userB, email: 'farmer+other@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
@@ -479,7 +496,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
           clientEventId: 'evt-agent-1',
           assignmentId: 'assign_agent_plot_a',
         } as any,
-        { user: { id: userB, email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userB, email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } } },
       ),
     ).resolves.toEqual({ ok: true });
 
@@ -487,7 +504,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncPhotos(
         plotA,
         { kind: 'ground_truth', photos: [], hlcTimestamp: '1712524800000:1', clientEventId: 'evt-1' } as any,
-        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).resolves.toEqual({ ok: true });
 
@@ -495,7 +512,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncLegal(
         plotA,
         { reason: 'title update', hlcTimestamp: '1712524800000:1', clientEventId: 'evt-2' } as any,
-        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).resolves.toEqual({ ok: true });
 
@@ -503,7 +520,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncEvidence(
         plotA,
         { kind: 'tenure_evidence', items: [], reason: 'evidence upload', hlcTimestamp: '1712524800000:1', clientEventId: 'evt-3' } as any,
-        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).resolves.toEqual({ ok: true });
 
@@ -521,6 +538,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotA,
       expect.objectContaining({ clientEventId: 'evt-3' }),
       userA,
+      'tenant_1',
     );
   });
 
@@ -529,21 +547,21 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.createAssignment(
         plotA,
         { assignmentId: 'assign_new_1', agentUserId: userB } as any,
-        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
     const created = await plotsController.createAssignment(
       plotA,
       { assignmentId: 'assign_new_1', agentUserId: userB } as any,
-      { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
     );
     expect(created).toEqual(expect.objectContaining({ assignmentId: 'assign_new_1', status: 'active' }));
 
     const completed = await plotsController.completeAssignment(
       'assign_new_1',
       { reason: 'completed in field' } as any,
-      { user: { id: userA, email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+      { user: { id: userA, email: 'agent+field@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } } },
     );
     expect(completed).toEqual(expect.objectContaining({ assignmentId: 'assign_new_1', status: 'completed' }));
 
@@ -551,19 +569,19 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.cancelAssignment(
         'assign_new_1',
         { reason: 'late cancel' } as any,
-        { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } } },
+        { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } } },
       ),
     ).rejects.toThrow('ASN-003');
 
     await expect(
       plotsController.listAssignments(plotA, undefined, undefined, undefined, undefined, undefined, undefined, {
-        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
       plotsController.listAssignments(plotA, 'all', '30', undefined, '10', '0', undefined, {
-        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+        user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
       }),
     ).resolves.toEqual(
       expect.objectContaining({
@@ -572,7 +590,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     );
 
     const filtered = await plotsController.listAssignments(plotA, 'completed', '30', userB, '10', '0', undefined, {
-      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(filtered).toEqual(
       expect.objectContaining({

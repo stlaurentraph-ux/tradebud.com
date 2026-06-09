@@ -75,7 +75,7 @@ export default function FounderOsCrmTemplatesPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{template.content}</p>
-                <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(template.content); }}>
+                <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(template.content ?? ''); }}>
                   Copy
                 </Button>
               </CardContent>

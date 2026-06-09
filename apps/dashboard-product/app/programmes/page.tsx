@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,9 +99,16 @@ function toProgrammeCampaign(record: Record<string, unknown>): ProgrammeCampaign
 }
 
 export default function ProgrammesPage() {
+  const searchParams = useSearchParams();
   const sponsorView = useSponsorView();
   const [statusTab, setStatusTab] = useState<ProgrammeStatus>('Draft');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setIsWizardOpen(true);
+    }
+  }, [searchParams]);
   const [campaigns, setCampaigns] = useState<ProgrammeCampaign[]>(INITIAL_CAMPAIGNS);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

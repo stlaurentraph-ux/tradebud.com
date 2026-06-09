@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { WaitlistDialog, useWaitlistDialog } from "@/components/waitlist-dialog";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import { useTranslations } from "next-intl";
 
 export function ExitIntentModal() {
@@ -59,7 +59,7 @@ export function ExitIntentModal() {
                 {/* Badge pinned to bottom */}
                 <div className="absolute bottom-5 left-5 right-5">
                   <p className="text-white text-xs font-medium leading-snug opacity-90">
-                    Free for producers. Built for real field conditions.
+                    {t("hero.supportingText")}
                   </p>
                 </div>
               </div>
@@ -109,8 +109,6 @@ export function ExitIntentModal() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </>
   );
 }

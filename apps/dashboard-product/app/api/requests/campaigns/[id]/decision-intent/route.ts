@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const authHeader = request.headers.get('authorization');
@@ -15,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .catch(() => ({ decision: undefined as 'accept' | 'refuse' | undefined }));
     const { id } = await params;
     const backendResponse = await fetch(
-      `${backendBase}/v1/requests/campaigns/${encodeURIComponent(id)}/decision-intent`,
+      backendApiUrl(backendBase, `/v1/requests/campaigns/${encodeURIComponent(id)}/decision-intent`),
       {
         method: 'POST',
         headers: {

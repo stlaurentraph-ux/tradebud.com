@@ -9,13 +9,16 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Eye,
   FileSearch,
   Globe,
-  TrendingUp,
+  Send,
   ArrowRight,
   MapPin,
+  UserPlus,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
+import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
 import type { ShipmentStatus } from '@/types';
 
 interface ImporterDashboardProps {
@@ -28,34 +31,19 @@ interface ImporterDashboardProps {
 }
 
 export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
-  const isVirginTenant =
-    metrics.total_packages === 0 &&
-    metrics.total_plots === 0;
   const pendingReview = (metrics.packages_by_status?.READY || 0) + (metrics.packages_by_status?.ON_HOLD || 0);
   const approvedPackages = (metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0);
+  const isVirginTenant = metrics.total_packages === 0 && metrics.total_plots === 0;
 
   return (
     <div className="space-y-6">
-      {isVirginTenant ? (
-        <Card className="border-emerald-200 bg-emerald-50/40">
-          <CardHeader>
-            <CardTitle>Welcome to your importer workspace</CardTitle>
-            <CardDescription>
-              This workspace starts empty. Complete onboarding to connect exporters, review incoming DDS packages, and track compliance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/outreach" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
-                Review campaign requests
-              </Link>
-              <Link href="/compliance" className="inline-flex items-center rounded border px-3 py-1.5 text-sm hover:bg-muted">
-                Open compliance queue
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <CampaignsOverviewCard
+        description="Launch campaigns to collect missing upstream evidence from exporters and supply-chain partners"
+        createHref="/outreach?new=1"
+        listHref="/outreach"
+        emptyDescription="Start your first campaign to request missing plot geometry, evidence, and producer data from upstream partners."
+        emptyCtaLabel="Launch first campaign"
+      />
       {/* Status Overview Banner */}
       <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="flex items-center justify-between p-6">
@@ -65,10 +53,20 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
               Monitor {metrics.total_packages} DDS packages from your export partners
             </p>
           </div>
-          <Badge variant="outline" className="border-blue-300 bg-blue-100 text-blue-700">
-            <ShieldCheck className="mr-1 h-3 w-3" />
-            Final compliance owner
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-blue-300 bg-blue-100 text-blue-700">
+              <ShieldCheck className="mr-1 h-3 w-3" />
+              Final compliance owner
+            </Badge>
+            {pendingReview > 0 ? (
+              <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/compliance">
+                  <FileSearch className="mr-2 h-4 w-4" />
+                  Review queue
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
 
@@ -184,8 +182,13 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
         </Card>
       </div>
 
+      <DashboardActivityCard
+        isVirginTenant={isVirginTenant}
+        emptyMessage="Upstream activity will appear once exporters share packages and campaigns start generating responses."
+      />
+
       {/* Quick Actions for Importers (Read-Only) */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
           <Link href="/packages">
             <CardContent className="flex items-center gap-4 p-6">
@@ -202,14 +205,14 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/packages">
+          <Link href="/compliance">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100">
                 <ShieldCheck className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Prepare DDS Filing</h4>
-                <p className="text-sm text-muted-foreground">Approve and submit to EU workflow</p>
+                <h4 className="font-semibold">Compliance queue</h4>
+                <p className="text-sm text-muted-foreground">Review and approve incoming DDS packages</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
@@ -217,14 +220,29 @@ export function ImporterDashboard({ metrics }: ImporterDashboardProps) {
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/reports">
+          <Link href="/contacts/add?mode=contact">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
-                <TrendingUp className="h-6 w-6 text-indigo-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100">
+                <UserPlus className="h-6 w-6 text-teal-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Download Reports</h4>
-                <p className="text-sm text-muted-foreground">Export compliance documentation</p>
+                <h4 className="font-semibold">Add network contact</h4>
+                <p className="text-sm text-muted-foreground">Register upstream partners for campaigns and requests</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+          <Link href="/outreach?new=1">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
+                <Send className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold">Launch campaign</h4>
+                <p className="text-sm text-muted-foreground">Request missing upstream evidence at scale</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>

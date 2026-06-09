@@ -10,7 +10,11 @@
   - Connection pooling URL (used as `DATABASE_URL`)
   - Auth configured with at least one test user
 
-### 2. Environment variables
+### 2. Production deploy (Railway + Namecheap DNS)
+
+See **[DEPLOY_PRODUCTION.md](./DEPLOY_PRODUCTION.md)** for hosting the API at `https://api.tracebud.com` (Railway Docker + CNAME on Namecheap). Shared web hosting cannot run this Nest service.
+
+### 3. Environment variables (local)
 
 Create a `.env` file in `tracebud-backend` with:
 
@@ -23,7 +27,7 @@ SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
 > The `DATABASE_URL` should match the **pooling** URL from Supabase. For migrations you can also keep a `DIRECT_URL` if needed, but the app only uses `DATABASE_URL`.
 
-### 3. Install & run
+### 4. Install & run
 
 From the `tracebud-backend` directory:
 
@@ -57,7 +61,7 @@ docker compose up --build
 
 This will build the backend image and expose it on `http://localhost:4001/api`.
 
-### 4. Auth & roles
+### 5. Auth & roles
 
 - All main endpoints are protected by **Supabase JWT** using the `Authorization: Bearer <token>` header.
 - Roles are derived from the Supabase user’s email:

@@ -28,10 +28,17 @@ class TestAuthGuard implements CanActivate {
     const tenantId = readHeader('x-tenant-id');
     const userId = readHeader('x-user-id') ?? '11111111-1111-4111-8111-111111111111';
     const email = readHeader('x-user-email') ?? 'farmer@example.com';
+    const roleHeader = readHeader('x-user-role');
+    const roleFromEmail = email.includes('agent+')
+      ? 'agent'
+      : email.includes('exporter+')
+        ? 'exporter'
+        : 'farmer';
+    const role = roleHeader ?? roleFromEmail;
     req.user = {
       id: userId,
       email,
-      app_metadata: tenantId ? { tenant_id: tenantId } : undefined,
+      app_metadata: tenantId ? { tenant_id: tenantId, role } : undefined,
     };
     return true;
   }
@@ -198,6 +205,7 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
     const res = await request(app.getHttpServer())
       .post(`/v1/plots/${plotId}/photos-sync`)
       .set('x-tenant-id', 'tenant_1')
+      .set('x-user-role', 'agent')
       .set('x-user-email', 'agent+field@example.com')
       .set('x-user-id', userB)
       .send({
@@ -240,6 +248,7 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
     const denied = await request(app.getHttpServer())
       .post(`/v1/plots/${plotId}/photos-sync`)
       .set('x-tenant-id', 'tenant_1')
+      .set('x-user-role', 'farmer')
       .set('x-user-email', 'farmer+other@example.com')
       .set('x-user-id', userB)
       .send({
@@ -254,13 +263,14 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
     const deniedAgent = await request(app.getHttpServer())
       .post(`/v1/plots/${plotId}/photos-sync`)
       .set('x-tenant-id', 'tenant_1')
+      .set('x-user-role', 'agent')
       .set('x-user-email', 'agent+field@example.com')
       .set('x-user-id', userA)
       .send({
         kind: 'ground_truth',
         photos: [],
         hlcTimestamp: '1712524800000:000011',
-        clientEventId: 'evt-agent-allow',
+        clientEventId: 'evt-agent-deny',
         assignmentId: 'assign_agent_plot_unknown',
       });
     expect(deniedAgent.status).toBe(403);

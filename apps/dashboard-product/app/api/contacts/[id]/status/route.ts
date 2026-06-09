@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
@@ -13,7 +14,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Invalid payload.' }, { status: 400 });
   }
 
-  const response = await fetch(`${backendBase}/v1/contacts/${id}/status`, {
+  const response = await fetch(backendApiUrl(backendBase, `/v1/contacts/${id}/status`), {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',

@@ -55,6 +55,28 @@ vi.mock('@/components/onboarding/onboarding-checklist-card', () => ({
   OnboardingChecklistCard: () => <div>Onboarding Checklist</div>,
 }));
 
+vi.mock('@/lib/onboarding-context', () => ({
+  useOnboarding: () => ({
+    phase: 'checklist',
+    showChecklist: true,
+    completedSteps: {},
+    progress: 0,
+    completedCount: 0,
+    config: null,
+    persona: null,
+    currentStepIndex: 0,
+    startOnboarding: vi.fn(),
+    dismissWelcome: vi.fn(),
+    beginTour: vi.fn(),
+    nextStep: vi.fn(),
+    prevStep: vi.fn(),
+    completeCurrentStep: vi.fn(),
+    skipTour: vi.fn(),
+    resumeTour: vi.fn(),
+    markStepComplete: vi.fn(),
+  }),
+}));
+
 describe('DashboardPage gated-entry telemetry', () => {
   const getTelemetryCalls = (fetchSpy: ReturnType<typeof vi.spyOn>) =>
     fetchSpy.mock.calls.filter((call) => call[0] === '/api/analytics/gated-entry');

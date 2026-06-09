@@ -48,7 +48,7 @@ describe('plot assignment create proxy route', () => {
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ assignmentId: 'assign_1', status: 'active' });
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/assignments',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/assignments',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ Authorization: 'Bearer demo_token' }),
@@ -77,7 +77,7 @@ describe('plot assignment create proxy route', () => {
       expect.objectContaining({ items: [expect.objectContaining({ assignmentId: 'assign_1' })], total: 1 }),
     );
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/assignments?status=active&fromDays=14&limit=10&offset=0',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/assignments?status=active&fromDays=14&limit=10&offset=0',
       expect.objectContaining({
         method: 'GET',
       }),
@@ -109,7 +109,7 @@ describe('plot assignment create proxy route', () => {
     expect(await res.text()).toContain('assignment_id,status');
     expect(res.headers.get('x-export-row-count')).toBe('1');
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://backend.tracebud.test/v1/plots/plot_1/assignments?status=active&format=csv',
+      'https://backend.tracebud.test/api/v1/plots/plot_1/assignments?status=active&format=csv',
       expect.objectContaining({ method: 'GET' }),
     );
   });

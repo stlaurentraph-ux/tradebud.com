@@ -22,8 +22,15 @@ import {
 import { getDeferredGateForPath } from '@/lib/feature-gates';
 import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { useAuth } from '@/lib/auth-context';
+import {
+  acknowledgeWelcome,
+  isWelcomeAcknowledged,
+  removeOnboardingFlag,
+  writeOnboardingFlag,
+} from '@/lib/onboarding-persistence';
 import { useOnboarding } from '@/lib/onboarding-context';
 import { getRoleDisplayName } from '@/lib/rbac';
+import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useInboxRequests, useRequestCampaigns } from '@/lib/use-requests';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
@@ -39,14 +46,14 @@ const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaL
   create_first_campaign: {
     title: 'Create your first campaign',
     description: 'Campaigns define who can submit records and keep onboarding scoped to your active workflow.',
-    ctaLabel: 'Open campaigns',
-    href: '/outreach',
+    ctaLabel: 'Launch campaign',
+    href: '/outreach?new=1',
   },
   upload_contacts: {
     title: 'Set up your member and partner directory',
     description: 'Add members or partners early so campaigns, evidence collection, and traceability links route correctly.',
-    ctaLabel: 'Open directory',
-    href: '/contacts',
+    ctaLabel: 'Add contact',
+    href: '/contacts/add?mode=contact',
   },
   invite_field_team: {
     title: 'Invite your field team',
@@ -75,8 +82,8 @@ const ONBOARDING_COPY: Record<string, { title: string; description: string; ctaL
   sync_first_submission: {
     title: 'Build your first lot or batch',
     description: 'Create a first aggregation record so yield plausibility checks and lineage lock can begin.',
-    ctaLabel: 'Open lots & batches',
-    href: '/harvests',
+    ctaLabel: 'Add batch input',
+    href: '/harvests/new',
   },
   review_first_submission: {
     title: 'Review your first blocker',
@@ -98,14 +105,14 @@ const IMPORTER_ONBOARDING_COPY_OVERRIDES: Partial<
   create_first_campaign: {
     title: 'Launch your first campaign',
     description: 'Use campaigns to collect missing upstream evidence and references before declaration submission.',
-    ctaLabel: 'Open campaigns',
-    href: '/outreach',
+    ctaLabel: 'Launch campaign',
+    href: '/outreach?new=1',
   },
   upload_contacts: {
     title: 'Build your network',
     description: 'Add counterpart contacts so campaigns and inbound requests route to the correct teams.',
-    ctaLabel: 'Open network',
-    href: '/contacts',
+    ctaLabel: 'Add contact',
+    href: '/contacts/add?mode=contact',
   },
   review_first_submission: {
     title: 'Resolve your first issue',
@@ -133,8 +140,8 @@ const SPONSOR_ONBOARDING_COPY_OVERRIDES: Partial<
   create_first_campaign: {
     title: 'Launch your first programme campaign',
     description: 'Use Programmes to send sponsor-scoped bulk requests to upstream organisations.',
-    ctaLabel: 'Open programmes',
-    href: '/programmes',
+    ctaLabel: 'Launch programme',
+    href: '/programmes?new=1',
   },
   upload_contacts: {
     title: 'Map your organisations',
@@ -264,7 +271,22 @@ export default function DashboardPage() {
   const userTenantId = user?.tenant_id;
   const userId = user?.id;
   const isWelcomeEntry = searchParams.get('welcome') === '1' && !welcomeAcknowledged;
-  const { packages } = useHarvestPackages(userTenantId ?? null);
+
+  useEffect(() => {
+    if (!userId) {
+      setWelcomeAcknowledged(false);
+      return;
+    }
+    setWelcomeAcknowledged(isWelcomeAcknowledged(userId));
+  }, [userId]);
+
+  const markWelcomeAcknowledged = () => {
+    if (!userId) return;
+    acknowledgeWelcome(userId);
+    setWelcomeAcknowledged(true);
+  };
+  const packageScope = resolveHarvestPackageScope(user?.active_role);
+  const { packages } = useHarvestPackages(userTenantId ?? null, { scope: packageScope });
   const { pendingRequests } = useInboxRequests(userTenantId ?? null);
   const { campaigns } = useRequestCampaigns(userTenantId ?? null);
 
@@ -429,36 +451,23 @@ export default function DashboardPage() {
       .catch(() => undefined);
   }, [userId, onboardingRole]);
 
-  useEffect(() => {
-    if (!userId || onboardingSteps.length === 0 || activeOnboardingStepIndex === -1 || !onboardingDismissKey) {
-      setIsOnboardingDialogOpen(false);
-      return;
-    }
-    if (isWelcomeEntry) {
-      setIsOnboardingDialogOpen(false);
-      return;
-    }
-    const dismissed = window.sessionStorage.getItem(onboardingDismissKey) === '1';
-    setIsOnboardingDialogOpen(!dismissed);
-  }, [userId, onboardingSteps, activeOnboardingStepIndex, onboardingDismissKey, isWelcomeEntry]);
-
   const skipOnboardingForNow = () => {
     if (onboardingDismissKey) {
-      window.sessionStorage.setItem(onboardingDismissKey, '1');
+      writeOnboardingFlag(onboardingDismissKey, '1');
     }
     setIsOnboardingDialogOpen(false);
   };
 
   const resumeOnboarding = () => {
     if (!onboardingDismissKey || activeOnboardingStepIndex === -1) return;
-    window.sessionStorage.removeItem(onboardingDismissKey);
+    removeOnboardingFlag(onboardingDismissKey);
     setIsOnboardingDialogOpen(true);
   };
 
   useEffect(() => {
     if (!pendingOnboardingResume) return;
     if (!onboardingDismissKey || onboardingSteps.length === 0) return;
-    window.sessionStorage.removeItem(onboardingDismissKey);
+    removeOnboardingFlag(onboardingDismissKey);
     if (activeOnboardingStepIndex !== -1) {
       setIsOnboardingDialogOpen(true);
     }
@@ -546,11 +555,7 @@ export default function DashboardPage() {
             );
       setOnboardingSteps(nextSteps);
       if (onboardingDismissKey) {
-        window.sessionStorage.removeItem(onboardingDismissKey);
-      }
-      const nextStep = nextSteps.find((step) => !step.completed);
-      if (nextStep) {
-        openOnboardingStepFeature(nextStep.step_key);
+        removeOnboardingFlag(onboardingDismissKey);
       }
     } finally {
       setIsAutoValidatingStep(false);
@@ -583,7 +588,7 @@ export default function DashboardPage() {
 
     switch (user.active_role) {
       case 'exporter':
-        return <ExporterDashboard metrics={metrics} />;
+        return <ExporterDashboard metrics={metrics} packages={packages} />;
       case 'importer':
         return <ImporterDashboard metrics={metrics} />;
       case 'cooperative':
@@ -634,7 +639,7 @@ export default function DashboardPage() {
                 nextParams.delete('welcome');
                 nextParams.delete('entry');
                 const nextQuery = nextParams.toString();
-                setWelcomeAcknowledged(true);
+                markWelcomeAcknowledged();
                 router.replace(nextQuery ? `/?${nextQuery}` : '/');
               }}
               onStartOnboarding={() => {
@@ -642,7 +647,7 @@ export default function DashboardPage() {
                 nextParams.delete('welcome');
                 nextParams.delete('entry');
                 const nextQuery = nextParams.toString();
-                setWelcomeAcknowledged(true);
+                markWelcomeAcknowledged();
                 setPendingOnboardingResume(true);
                 router.replace(nextQuery ? `/?${nextQuery}` : '/');
               }}
@@ -651,7 +656,7 @@ export default function DashboardPage() {
                 nextParams.delete('welcome');
                 nextParams.delete('entry');
                 const nextQuery = nextParams.toString();
-                setWelcomeAcknowledged(true);
+                markWelcomeAcknowledged();
                 router.replace(nextQuery ? `/?${nextQuery}` : '/');
               }}
             />

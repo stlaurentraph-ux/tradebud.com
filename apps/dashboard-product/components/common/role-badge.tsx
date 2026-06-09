@@ -26,6 +26,10 @@ const ROLE_CONFIG: Record<TenantRole, { label: string; className: string }> = {
     label: 'Reviewer',
     className: 'bg-rose-400/25 text-rose-100 ring-1 ring-rose-400/30',
   },
+  sponsor: {
+    label: 'Sponsor',
+    className: 'bg-emerald-400/25 text-emerald-100 ring-1 ring-emerald-400/30',
+  },
 };
 
 export function RoleBadge({ role, size = 'sm', className }: RoleBadgeProps) {

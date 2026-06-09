@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { backendApiUrl } from '@/lib/backend-api-url';
 
 interface SignupRouteBody {
   stage?: 'create_account' | 'workspace_setup';
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
 
   let response: Response;
   try {
-    response = await fetch(`${backendBase}/v1/launch/signup`, {
+    response = await fetch(backendApiUrl(backendBase, `/v1/launch/signup`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

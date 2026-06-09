@@ -316,23 +316,23 @@ export interface NavItem {
 const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   exporter: [
     'Overview',
+    'Campaigns',
     'Producers',
     'Plots',
     'Lots & Batches',
     'Shipments',
     'Evidence',
-    'Campaigns',
     'Requests',
     'Issues',
     'Audit Log',
   ],
   importer: [
     'Overview',
+    'Campaigns',
     'Network',
     'Shipments',
     'Compliance',
     'Evidence',
-    'Campaigns',
     'Requests',
     'Reporting',
     'Issues',
@@ -340,13 +340,13 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   ],
   cooperative: [
     'Overview',
+    'Campaigns',
     'Members',
     'Plots',
     'Field Operations',
     'Lots & Batches',
     'Shipments',
     'Evidence',
-    'Campaigns',
     'Requests',
     'Governance',
     'Reporting',
@@ -485,7 +485,7 @@ export function getVisibleNavItems(user: User | null): NavItem[] {
   const navByName = new Map(NAVIGATION_ITEMS.map((item) => [item.name, item] as const));
   return allowedItems
     .map((name) => navByName.get(name))
-    .filter((item): item is NavItem => Boolean(item) && isRouteEnabled(item.href));
+    .filter((item): item is NavItem => item !== undefined && isRouteEnabled(item.href));
 }
 
 /**
