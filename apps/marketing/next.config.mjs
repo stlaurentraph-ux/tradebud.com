@@ -3,12 +3,20 @@ import { fileURLToPath } from 'node:url';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
-const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+const repoRoot = path.join(appDir, '../..');
+const marketingPublicFromRepo = path
+  .relative(repoRoot, path.join(appDir, 'public'))
+  .split(path.sep)
+  .join('/');
 
 // Turbopack NFT over-includes static marketing assets in API routes (~750MB on Vercel).
 // Match every route-key format Next/Turbopack may use (pathname and app/ prefixed).
+// Include monorepo-relative paths because Vercel reports traces as apps/marketing/public.
 const apiTraceExcludes = [
   './public/**',
+  'public/**',
+  '**/public/**',
+  `${marketingPublicFromRepo}/**`,
   './app/**',
   './components/**',
   './content/**',
@@ -17,6 +25,8 @@ const apiTraceExcludes = [
   './*.md',
   './scripts/**',
 ];
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const apiRouteKeys = [
   '/api/**',
