@@ -98,6 +98,34 @@ export const complianceHub: DraftHubContent = {
   ],
 };
 
+export const impactHub: DraftHubContent = {
+  routeId: 'impact',
+  eyebrow: 'Impact',
+  title: 'Real-world impact',
+  description:
+    'Tracebud links compliance infrastructure to outcomes that matter — fairer livelihoods for smallholders, healthier forests, and supply chains that hold up to scrutiny.',
+  links: [
+    {
+      routeId: 'impact-smallholders',
+      href: '/impact/smallholders',
+      title: 'Smallholder livelihoods',
+      description: 'How verified origin data unlocks premium markets for small-scale farmers.',
+    },
+    {
+      routeId: 'impact-forests',
+      href: '/impact/forests',
+      title: 'Forest protection',
+      description: 'Identity-preserved traceability as a direct tool for reducing deforestation.',
+    },
+    {
+      routeId: 'impact-supply-chains',
+      href: '/impact/supply-chains',
+      title: 'Ethical supply chains',
+      description: 'Structural transparency that goes beyond checkbox compliance.',
+    },
+  ],
+};
+
 export const draftPages: Record<string, DraftPageContent> = {
   'platform-offline-mapping': {
     routeId: 'platform-offline-mapping',
