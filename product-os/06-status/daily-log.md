@@ -1,3 +1,8 @@
+### 2026-06-09 (marketing: i18n MISSING_MESSAGE build fix)
+- Fixed production build failures: `marketing.pricingSection.*`, `header.nav.{products,pricing,pilot}`, and full `marketing.pilot` namespace were missing from non-English locale files.
+- Added `marketing.pilot` copy to `en.json` (from v0 pilot page); extended `merge-marketing-i18n.mjs` to backfill `header` keys from English.
+- Ran merge across all 11 locales; `npm run build` passes locally; API route traces remain ~36KB (not 749MB).
+
 ### 2026-06-09 (marketing: restore + compress PNGs in place)
 - Corrected earlier mistake: restored all v0 stock PNGs from git; script now only recompresses (never deletes).
 - Two-pass sharp optimization (2560px then 1920px for files >5MB): images folder ~746MB → ~186MB, all 55 PNGs kept.

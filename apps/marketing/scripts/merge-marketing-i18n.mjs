@@ -34,11 +34,15 @@ function deepMergeFill(base, overlay) {
 
 const enMessages = JSON.parse(fs.readFileSync(path.join(messagesDir, "en.json"), "utf8"));
 const enMarketing = enMessages.marketing;
+const enHeader = enMessages.header;
 
 for (const locale of locales) {
   const filePath = path.join(messagesDir, `${locale}.json`);
   const messages = JSON.parse(fs.readFileSync(filePath, "utf8"));
   messages.marketing = deepMergeFill(enMarketing, messages.marketing ?? {});
+  if (enHeader) {
+    messages.header = deepMergeFill(enHeader, messages.header ?? {});
+  }
   fs.writeFileSync(filePath, `${JSON.stringify(messages, null, 2)}\n`);
   console.log(`Updated ${locale}.json`);
 }
