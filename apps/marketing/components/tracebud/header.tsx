@@ -42,10 +42,6 @@ export function Header() {
     return href;
   };
 
-  const linkClass = isScrolled
-    ? "text-foreground/80 hover:text-foreground"
-    : "text-white/90 hover:text-white";
-
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 24);
     window.addEventListener("scroll", handleScroll);
@@ -62,89 +58,97 @@ export function Header() {
   return (
     <>
       <motion.header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? "border-b border-border/60 bg-background/95 shadow-sm backdrop-blur-md"
+            ? "border-b border-[var(--forest-canopy)]/10 bg-[var(--forest-canopy)] shadow-md"
             : "bg-transparent"
         }`}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link href={homePath} className="group flex items-center gap-2.5">
-            <div className="relative h-9 w-9 transition-transform group-hover:scale-105">
-              <Image src="/images/tracebud-logo.png" alt="Tracebud" fill className="object-contain" />
+          {/* Logo */}
+          <Link href={homePath} className="group flex items-center gap-2.5" aria-label="Tracebud home">
+            <div className="relative h-9 w-9 flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
+              <Image src="/images/tracebud-logo.png" alt="" fill className="object-contain" />
             </div>
-            <span className={`text-lg font-semibold tracking-tight transition-colors ${isScrolled ? "text-foreground" : "text-white"}`}>
+            <span className="text-lg font-bold tracking-tight text-white">
               Tracebud
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Page sections">
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
             {navLinks.map((link) => (
-              <Link key={link.href} href={resolvedHref(link.href)} className={`text-sm font-medium transition-colors ${linkClass}`}>
+              <Link
+                key={link.href}
+                href={resolvedHref(link.href)}
+                className="rounded-md px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              >
                 {link.label}
               </Link>
             ))}
           </nav>
 
-          <div className="hidden items-center md:flex">
+          {/* Desktop CTA */}
+          <div className="hidden items-center gap-3 md:flex">
             <Button
               onClick={() => waitlist.setOpen(true)}
               size="sm"
-              className={`rounded-full px-5 font-semibold ${
-                isScrolled
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-white text-[var(--forest-canopy)] hover:bg-white/90"
-              }`}
+              className="rounded-full bg-[var(--data-emerald)] px-5 py-2 text-sm font-bold text-[var(--forest-canopy)] shadow-none transition-colors hover:bg-emerald-400"
             >
               {t("cta.startTrial")}
             </Button>
           </div>
 
+          {/* Mobile hamburger */}
           <button
             type="button"
-            className={`p-2 md:hidden ${isScrolled ? "text-foreground" : "text-white"}`}
-            onClick={() => setIsMobileMenuOpen((previous) => !previous)}
+            className="flex h-10 w-10 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 md:hidden"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
             aria-expanded={isMobileMenuOpen}
             aria-label="Toggle menu"
           >
-            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
 
+        {/* Mobile drawer */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              className="fixed inset-0 z-40 bg-background px-6 pt-20 md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 flex flex-col bg-[var(--forest-canopy)] px-6 pb-10 pt-20 md:hidden"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              <nav className="flex flex-col gap-1" aria-label="Page sections">
+              <nav className="flex flex-col gap-1" aria-label="Main navigation">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={resolvedHref(link.href)}
-                    className="rounded-lg px-2 py-3 text-lg font-medium text-foreground hover:bg-muted"
+                    className="rounded-lg px-3 py-3.5 text-base font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {link.label}
                   </Link>
                 ))}
               </nav>
-              <Button
-                size="lg"
-                className="mt-8 w-full rounded-full font-semibold"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  waitlist.setOpen(true);
-                }}
-              >
-                {t("cta.startTrial")}
-              </Button>
+
+              <div className="mt-auto border-t border-white/10 pt-6">
+                <Button
+                  size="lg"
+                  className="w-full rounded-full bg-[var(--data-emerald)] py-6 text-base font-bold text-[var(--forest-canopy)] hover:bg-emerald-400"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    waitlist.setOpen(true);
+                  }}
+                >
+                  {t("cta.startTrial")}
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
