@@ -64,6 +64,40 @@ export const platformHub: DraftHubContent = {
   ],
 };
 
+export const impactHub: DraftHubContent = {
+  routeId: 'impact',
+  eyebrow: 'Impact',
+  title: 'People, land, and planet',
+  description:
+    'Compliance opens markets. Regenerative practice keeps them open. Tracebud connects both with proof the whole chain can trust.',
+  links: [
+    {
+      routeId: 'impact-farmer-livelihood',
+      href: '/impact/farmer-livelihood',
+      title: 'Farmer livelihood',
+      description: 'Ownership, market access, and income resilience for smallholders.',
+    },
+    {
+      routeId: 'impact-regenerative-farming',
+      href: '/impact/regenerative-farming',
+      title: 'Regenerative farming',
+      description: 'Farm resilience through practices verified at plot level.',
+    },
+    {
+      routeId: 'impact-climate-biodiversity',
+      href: '/impact/climate-biodiversity',
+      title: 'Climate & biodiversity',
+      description: 'Deforestation-free supply chains and pathways to ESRS-aligned evidence.',
+    },
+    {
+      routeId: 'why-tracebud',
+      href: '/why-tracebud',
+      title: 'Why Tracebud',
+      description: 'Infrastructure principles — not another closed compliance silo.',
+    },
+  ],
+};
+
 export const complianceHub: DraftHubContent = {
   routeId: 'compliance',
   eyebrow: 'Compliance',
@@ -333,9 +367,92 @@ export const draftPages: Record<string, DraftPageContent> = {
       { routeId: 'compliance-due-diligence', href: '/compliance/due-diligence', title: 'Due diligence workflow', description: '' },
     ],
   },
+  'impact-farmer-livelihood': {
+    routeId: 'impact-farmer-livelihood',
+    eyebrow: 'Impact',
+    title: 'Farmer livelihood',
+    description:
+      'Smallholders should benefit from compliance — not bear its cost alone. Tracebud puts farmers in control of their data and their market choices.',
+    sections: [
+      {
+        heading: 'Capture once, sell broadly',
+        body: 'Farmers map plots and build a compliance passport once, then grant access to cooperatives and buyers without repeating field work.',
+      },
+      {
+        heading: 'Self-sovereign data wallet',
+        body: 'GeoIDs and evidence stay farmer-owned. Grants can be revoked. No forced lock-in to a single exporter ecosystem.',
+      },
+      {
+        heading: 'Free entry for producers',
+        body: 'Tier 1 is free forever — removing the financial barrier that often excludes smallholders from export markets.',
+      },
+      {
+        heading: 'Tracebud connection',
+        body: 'Mobile offline capture → reusable records → explicit grants → better market access.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-farmer-livelihood'),
+  },
+  'impact-regenerative-farming': {
+    routeId: 'impact-regenerative-farming',
+    eyebrow: 'Impact',
+    title: 'Regenerative farming',
+    description:
+      'Shade-grown, agroforestry, and soil-health practices need evidence — not just intentions. Plot-level records make farm resilience auditable.',
+    sections: [
+      {
+        heading: 'Practice + place',
+        body: 'Regenerative outcomes are tied to specific plots. Identity-preserved batches keep practice evidence linked to origin coordinates.',
+      },
+      {
+        heading: 'Ground truth over false positives',
+        body: 'Timestamped field photos and waypoint-averaged boundaries help distinguish seasonal pruning from deforestation — protecting shade-grown systems.',
+      },
+      {
+        heading: 'Cooperative roll-up',
+        body: 'Cooperatives aggregate member practice and plot health without laundering origins through mass-balance pools.',
+      },
+      {
+        heading: 'Tracebud connection',
+        body: 'Photo vault + AI verification + long-lived plot records → defensible regenerative narratives for buyers.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-regenerative-farming'),
+  },
+  'impact-climate-biodiversity': {
+    routeId: 'impact-climate-biodiversity',
+    eyebrow: 'Impact',
+    title: 'Climate & biodiversity',
+    description:
+      'EUDR is the floor. Downstream buyers increasingly need climate and nature evidence aligned with ESRS — built on the same plot data.',
+    sections: [
+      {
+        heading: 'Deforestation-free as baseline',
+        body: 'Geospatial foundation models and degradation checks flag structural forest cover change — with manual review for buffer zones and agroforestry.',
+      },
+      {
+        heading: 'Pathway to ESRS-aligned metrics',
+        body: 'Data structures map toward farm-level environmental indicators (E1 climate, E3 water, E4 biodiversity) — pilot and roadmap where not yet live.',
+        bullets: [
+          'Scope 3 visibility starts at verified origin',
+          'Land-use change tracked over multi-year windows',
+          'Protected-area overlap routes to review, not silent pass',
+        ],
+      },
+      {
+        heading: 'Honest roadmap labelling',
+        body: 'We do not claim full carbon accounting or certification today. We build the traceability base that makes those claims possible later.',
+      },
+      {
+        heading: 'Tracebud connection',
+        body: 'Plot capture → verification → ESG connector APIs (roadmap) → buyer reporting without manual re-entry.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-climate-biodiversity'),
+  },
   'why-tracebud': {
     routeId: 'why-tracebud',
-    eyebrow: 'Solutions',
+    eyebrow: 'Impact',
     title: 'Why Tracebud',
     description: 'Infrastructure principles — not another closed compliance silo.',
     sections: [

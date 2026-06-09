@@ -11,6 +11,7 @@ export const INSIGHT_CATEGORIES = [
   'playbooks',
   'product',
   'compare',
+  'impact',
 ] as const;
 
 export type InsightCategory = (typeof INSIGHT_CATEGORIES)[number];
@@ -134,6 +135,7 @@ export function getInsightCategoryLabel(category: InsightCategory): string {
     playbooks: 'Playbooks',
     product: 'Product updates',
     compare: 'Comparisons',
+    impact: 'Impact',
   };
   return labels[category];
 }
