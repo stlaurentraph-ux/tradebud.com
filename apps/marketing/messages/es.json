@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Cumplimiento simplificado.",
-      "description": "Las cadenas de suministro fallan cuando el proceso es demasiado manual y fragmentado. Tracebud elimina la fricción para que todos puedan participar, a cualquier escala.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "El cumplimiento no debería ser complicado para ser creíble.",
       "description": "La mayoría de las cadenas de suministro no fallan porque a la gente no le importe. Fallan porque el proceso es demasiado manual, demasiado caro y demasiado fragmentado. Tracebud elimina el ir y venir para que cada actor pueda participar, incluso cuando la red es grande, dispersa o tiene pocos recursos.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Simple",
@@ -173,62 +168,6 @@
       "note": "Sin spam. Cancela cuando quieras."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Únete al programa piloto",
-      "description": "Places limitadas para los primeros socios piloto. Cuéntanos sobre tu red y nos pondremos en contacto.",
-      "note": "Sin spam. Cancelar suscripción en cualquier momento."
-    },
-    "pricingSection": {
-      "label": "Precios",
-      "headline": "Precios mensuales simples según el tamaño de la red.",
-      "description": "Un precio. Sin tarifas por usuario. Los productores son gratuitos.",
-      "popularBadge": "Más popular",
-      "footerNote": "Los envíos adicionales se facturan por separado. Los productores son gratuitos.",
-      "cta": "Comenzar",
-      "table": {
-        "plan": "Plan",
-        "managedScale": "Escala gestionada",
-        "shipments": "Envíos incluidos / mes",
-        "monthlyBase": "Base mensual"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Crecimiento"
-        },
-        "scale": {
-          "name": "Escala"
-        },
-        "enterprise": {
-          "name": "Empresa"
-        }
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Productores",
-          "description": "Que necesitan una forma sencilla de compartir datos de finca y parcela."
-        },
-        "cooperatives": {
-          "title": "Cooperativas",
-          "description": "Que gestionan muchos miembros y muchas solicitudes."
-        },
-        "exporters": {
-          "title": "Exportadores",
-          "description": "Que necesitan pruebas de envío fiables."
-        },
-        "buyers": {
-          "title": "Compradores",
-          "description": "Que quieren datos de origen más limpios y menos registros faltantes."
-        }
-      }
-    }
-=======
       "headline": "Unirse a la lista de espera",
       "description": "Cuéntanos sobre tu red y te contactaremos cuando Tracebud esté listo para ti.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -301,7 +240,6 @@
       }
     },
     "earlyAdopters": "Únete a la lista de espera para acceso anticipado"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Idioma",
@@ -397,27 +335,6 @@
     "integrations": "Integraciones Directas"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "¿Preguntas? Tenemos respuestas.",
-    "whenLaunch": "¿Cuándo puedo empezar a usar Tracebud?",
-    "whenLaunchAnswer": "Estamos probando con cooperativas, exportadores e importadores ahora. Únete a la lista de espera y nos pondremos en contacto cuando estemos listos para tu región.",
-    "whyCommodities": "¿Qué cultivos admite Tracebud?",
-    "whyCommoditiesAnswer": "Café primero, luego las otras seis materias primas EUDR: cacao, aceite de palma, caucho, soja, ganado y madera. Comenzamos donde la complejidad de los pequeños productores se encuentra con la demanda inmediata de los compradores.",
-    "howLong": "¿Cuánto tiempo tarda la configuración?",
-    "howLongAnswer": "Los productores pueden comenzar a mapear inmediatamente con la aplicación sin conexión. La mayoría de las cooperativas tienen su red mapeada dentro de una semana. El panel está listo en el momento en que te registres.",
-    "offlineCapability": "¿Funciona sin internet?",
-    "offlineCapabilityAnswer": "Sí. La aplicación móvil funciona completamente sin conexión. Los productores mapean parcelas, comparten información y responden solicitudes sin conexión. Los datos se sincronizan automáticamente una vez en línea.",
-    "dataControl": "¿Quién puede ver mis datos?",
-    "dataControlAnswer": "Tú tienes el control. Los productores eligen qué organizaciones comparten sus datos. Las organizaciones pueden gestionar permisos en su equipo. Todo se registra con un registro de auditoría completo para cumplimiento.",
-    "regenerativeFarming": "¿Puedo rastrear prácticas regenerativas?",
-    "regenerativeFarmingAnswer": "Sí. Tracebud te permite rastrear y verificar prácticas agrícolas a lo largo del tiempo. Eso facilita documentar el progreso, apoyar transiciones y conectar mejores datos con mejores incentivos para la agricultura regenerativa.",
-    "whoItIsFor": "¿Es solo para productores?",
-    "whoItIsForAnswer": "No. Tracebud ayuda a cooperativas a gestionar muchos miembros, exportadores a reunir pruebas confiables de envío e importadores a obtener datos más limpios. Todos en la cadena pueden participar, incluso con acceso digital limitado.",
-    "support": "¿Qué apoyo está disponible?",
-    "supportAnswer": "Incorporación práctica para todos los clientes. Soporte directo de nuestro equipo. Estamos construyendo esto junto a nuestros primeros usuarios, así que tu retroalimentación forma el producto."
-  }
-}
-=======
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "title": "Questions? We have answers.",
@@ -434,4 +351,3 @@
     "whyCommoditiesAnswer": "Café primero, luego los otros seis productos EUDR: cacao, aceite de palma, caucho, soja, ganado y madera. Consulta nuestra página de precios para la hoja de ruta completa."
   }
 }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893

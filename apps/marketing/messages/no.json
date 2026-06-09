@@ -3,21 +3,11 @@
     "hero": {
       "headline": "Sporbarhet som fungerer for hele kjeden.",
       "subheadline": "Tracebud gjør EUDR-etterlevelse enkel, selvbetjent og rimelig, slik at bønder, kooperativer, eksportører og kjøpere kan samle inn, dele og gjenbruke opprinnelsesdata uten å jage papirarbeid.",
-<<<<<<< HEAD
-=======
       "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "supportingText": "Gratis for produsenter. Bygget for feltforhold med begrenset dekning og enkle prosesser. Ingen konsulenter nødvendig.",
       "cta": {
         "primary": "Se hvordan det fungerer",
         "secondary": "Kontakt oss"
-<<<<<<< HEAD
-      }
-    },
-    "whyTracebudSection": {
-      "headline": "Samsvar gjort enkelt.",
-      "description": "Forsyningskjeder svikter når prosessen er for manuell og for fragmentert. Tracebud fjerner friksjon slik at alle kan delta—i enhver skala.",
-=======
       },
       "trustStrip": {
         "offline": "Works offline",
@@ -29,7 +19,6 @@
       "eyebrow": "Why Tracebud",
       "headline": "Etterlevelse trenger ikke være komplisert for å være troverdig.",
       "description": "De fleste forsyningskjeder feiler ikke fordi folk ikke bryr seg. De feiler fordi prosessen er for manuell, for dyr og for fragmentert. Tracebud fjerner frem og tilbake, slik at alle kan delta, selv når nettverket er stort, spredt eller underressursert.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Enkelt",
@@ -72,17 +61,6 @@
       }
     },
     "productsSection": {
-<<<<<<< HEAD
-      "mobileApp": {
-        "headline": "Bygget for feltet, ikke kontoret.",
-        "description": "Bønder kan kartlegge parseller, dele informasjon og svare via en enkel mobilopplevelse utviklet for reelle feltforhold. Den fungerer offline, bruker tydelige visuelle elementer og holder prosessen lett.",
-        "supportingText": "Gratis for produsenter. Ingen tung oppstart eller lang opplæring."
-      },
-      "dashboard": {
-        "headline": "Administrer nettverket uten frem og tilbake.",
-        "description": "Last opp kontakter i bulk, send én forespørsel og la arbeidsflyten gå gjennom hele forsyningskjeden. Spor svar, gjenbruk verifiserte data og hold hver forsendelse i bevegelse med mindre manuelt arbeid.",
-        "supportingText": "Mindre oppfølging. Færre hull. Raskere overleveringer."
-=======
       "eyebrow": "To produkter, én arbeidsflyt",
       "title": "Bygget for hvordan forsyningskjeder faktisk fungerer",
       "intro": "Built for how fragmented supply chains actually work.",
@@ -149,7 +127,6 @@
           "title": "Raskere overlevering",
           "description": "Mer tillit til hva som faktisk kan sendes. Mindre tid på å jage manglende data når forsendelser må gå."
         }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       }
     },
     "inclusionSection": {
@@ -158,121 +135,6 @@
       "punchline": "Vi fjerner tilgangsbarrierene som lenge har holdt småbønder utenfor."
     },
     "finalCtaSection": {
-<<<<<<< HEAD
-      "headline": "Gjør etterlevelse brukbar for hele kjeden.",
-      "description": "Start med nettverket du allerede har, og gi hver aktør en måte å delta på.",
-      "cta": "Kom i gang"
-    },
-    "exitIntentModal": {
-      "headline": "Klar til å bli med på ventelisten?",
-      "description": "Tracebud hjelper nettverket ditt med å samle inn, dele og gjenbruke opprinnelsesdata. Enkelt, rimelig og inkluderende for bønder, kooperativer, eksportører og kjøpere.",
-      "cta": {
-        "primary": "Bli med nå",
-        "secondary": "Fortsett å bla"
-      },
-      "note": "Begrenset antall plasser for tidlige pilotpartnere."
-    },
-    "waitlistDialog": {
-      "headline": "Bli med i pilotprogrammet",
-      "description": "Begrenset antall plasser for tidlige pilotpartnere. Fortell oss om nettverket ditt, så tar vi kontakt.",
-      "note": "Ingen spam. Avslutt abonnementet når som helst."
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Produsenter",
-          "description": "Som trenger en enkel måte å dele gårds- og arealdata på."
-        },
-        "cooperatives": {
-          "title": "Kooperativer",
-          "description": "Som administrerer mange medlemmer og mange forespørsler."
-        },
-        "exporters": {
-          "title": "Eksportører",
-          "description": "Som trenger pålitelig forsendelsesdokumentasjon."
-        },
-        "buyers": {
-          "title": "Kjøpere",
-          "description": "Som ønsker renere data fra leverandørkjeden og færre manglende poster."
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "Priser",
-      "headline": "Enkle månedlige priser etter nettverksstørrelse.",
-      "description": "Én pris. Ingen per-bruker-avgifter",
-      "popularBadge": "Mest populær",
-      "footerNote": "Ekstra forsendelser faktureres separat",
-      "cta": "Kom i gang",
-      "table": {
-        "plan": "Plan",
-        "managedScale": "Forvaltet skala",
-        "shipments": "Inkluderte forsendelser / mnd",
-        "monthlyBase": "Månedlig basis"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Vekst"
-        },
-        "scale": {
-          "name": "Skala"
-        },
-        "enterprise": {
-          "name": "Bedrift"
-        }
-      }
-    }
-=======
       "headline": "Make compliance usable for the whole chain.",
       "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
       "cta": "Join the waitlist"
@@ -378,7 +240,6 @@
       }
     },
     "earlyAdopters": "Bli med på ventelisten for tidlig tilgang"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Språk",
@@ -420,15 +281,9 @@
       "countries": "Land"
     },
     "nav": {
-<<<<<<< HEAD
-      "pilot": "Pilot",
-      "howItWorks": "Hvordan det fungerer",
-      "pricing": "Priser"
-=======
       "howItWorks": "Hvordan det fungerer",
       "whyTracebud": "Hvorfor Tracebud",
       "faq": "FAQ"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
     },
     "cta": {
       "downloadApp": "Last ned app",
@@ -438,11 +293,6 @@
     }
   },
   "footer": {
-<<<<<<< HEAD
-    "startMapping": "Start kartlegging",
-    "contactSales": "Kontakt salg",
-    "joinWaitlist": "Bli med på ventelisten"
-=======
     "startMapping": "Start Mapping",
     "contactSales": "Contact Sales",
     "joinWaitlist": "Bli med nå",
@@ -455,7 +305,6 @@
     "products": "Products",
     "waitlistPrompt": "Klar for ventelisten?",
     "waitlistSubline": "Vær først ute når Tracebud åpner for nettverket ditt."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "impact": {
     "title": "Hvorfor Tracebud fungerer",
@@ -486,25 +335,6 @@
     "integrations": "Direkte integrasjoner"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Spørsmål? Vi har svar.",
-    "whenLaunch": "Når kan jeg begynne å bruke Tracebud?",
-    "whenLaunchAnswer": "Vi tester nå med kooperativer, eksportører og importører. Bli med på ventelisten og vi kontakter deg når vi er klar for din region.",
-    "whyCommodities": "Hvilke avlinger støtter Tracebud?",
-    "whyCommoditiesAnswer": "Kaffe først, deretter de andre seks EUDR-varene: kakao, palmeølje, gummi, soya, husdyr og trelast. Vi starter der kompleksiteten ved småbønder møter umiddelbar kjøperbehov.",
-    "howLong": "Hvor lang tid tar oppsettet?",
-    "howLongAnswer": "Produsenter kan begynne å kartlegge umiddelbart med appen uten nett. De fleste kooperativer har sitt nettverk kartlagt innen en uke. Instrumentbordet er klart når du registrerer deg.",
-    "offlineCapability": "Fungerer det uten internett?",
-    "offlineCapabilityAnswer": "Ja. Mobilappen fungerer helt uten nett. Produsenter kartlegger tomter, deler informasjon og reagerer på forespørsler uten tilkobling. Data synkroniseres automatisk når du er tilbake på nett.",
-    "dataControl": "Hvem kan se dataene mine?",
-    "dataControlAnswer": "Du beholder kontrollen. Produsenter velger hvilke organisasjoner som deler dataene sine. Organisasjoner kan administrere tillatelser på sitt lag. Alt blir registrert med en fullstendig revisjonsspor for samsvar.",
-    "regenerativeFarming": "Kan jeg spore regenerativ praksis?",
-    "regenerativeFarmingAnswer": "Ja. Tracebud lar deg spore og verifisere jordbrukspraksis over tid. Det gjør det lettere å dokumentere fremgang, støtte overganger og koble bedre data med bedre insentiver for regenerativt jordbruk.",
-    "whoItIsFor": "Er dette bare for produsenter?",
-    "whoItIsForAnswer": "Nei. Tracebud hjelper kooperativer med å administrere mange medlemmer, eksportører med å samle pålitelig leveringsbevis og importører med å få renere oppstrømsdata. Alle i kjeden kan delta, selv med begrenset digital tilgang.",
-    "support": "Hvilken støtte er tilgjengelig?",
-    "supportAnswer": "Praktisk onboarding for alle kunder. Direkte støtte fra vårt team. Vi bygger dette sammen med våre tidlige brukere, så din tilbakemelding former produktet."
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "Når kan jeg begynne å bruke Tracebud?",
     "whenLaunchAnswer": "Tracebud åpner i faser etter region og råvare. Bli med på ventelisten — vi sender e-post når use casen din støttes.",
@@ -519,6 +349,5 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Kaffe først, deretter de andre seks EUDR-varene: kakao, palmeolje, gummi, soya, storfe og tre. Se prissiden for full roadmap."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

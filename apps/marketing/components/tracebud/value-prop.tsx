@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Users, Package, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import Image from "next/image";
@@ -20,8 +20,6 @@ export function ValueProp() {
 
   return (
     <>
-<<<<<<< HEAD
-=======
       {/* Why Customers Use It */}
       <section id="outcomes" className="scroll-mt-20 py-24 md:py-32 bg-[var(--forest-canopy)]">
         <div className="max-w-7xl mx-auto px-6">
@@ -103,41 +101,37 @@ export function ValueProp() {
         </div>
       </section>
 
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       {/* Final CTA Section */}
       <section className="relative py-24 md:py-32 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
           <Image
-            src="/images/exporter-hero.jpg"
-            alt="Agricultural supply chain in action"
+            src="/images/country-hero.jpg"
+            alt="Agricultural landscape"
             fill
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-[var(--forest-canopy)]/90" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--forest-canopy)]/95 via-[var(--forest-canopy)]/85 to-[var(--forest-canopy)]/75" />
         </div>
 
         {/* Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-sm font-semibold text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-              Ready to join
-            </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-8 text-balance leading-[1.1]">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-8 text-balance">
               {t("finalCtaSection.headline")}
             </h2>
-            <p className="text-lg md:text-xl text-white/70 leading-relaxed mb-10 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-white/80 leading-relaxed mb-10 max-w-2xl mx-auto">
               {t("finalCtaSection.description")}
             </p>
             <Button
               size="lg"
               onClick={() => waitlist.setOpen(true)}
-              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-12 py-7 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+              className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-semibold px-10 py-7 text-lg rounded-full"
             >
               {t("finalCtaSection.cta")}
               <ArrowRight className="ml-2 w-5 h-5" />

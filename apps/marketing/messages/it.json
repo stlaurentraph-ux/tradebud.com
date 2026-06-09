@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Conformità semplificata.",
-      "description": "Le catene di fornitura falliscono quando il processo è troppo manuale e frammentato. Tracebud rimuove le frizioni affinché tutti possano partecipare, a qualsiasi scala.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "La conformità non dovrebbe essere complicata per essere credibile.",
       "description": "La maggior parte delle filiere non fallisce perché le persone non ci tengono. Fallisce perché il processo è troppo manuale, troppo costoso e troppo frammentato. Tracebud elimina il continuo andare avanti e indietro, così ogni attore può partecipare, anche quando la rete è grande, distribuita o con risorse limitate.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Semplice",
@@ -173,107 +168,6 @@
       "note": "Niente spam. Disiscriviti quando vuoi."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Unisciti al programma pilota",
-      "description": "Posti limitati per i primi partner pilota. Raccontaci della tua rete e ti ricontatteremo.",
-      "note": "Niente spam. Cancellati in qualsiasi momento."
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Produttori",
-          "description": "Che hanno bisogno di un modo semplice per condividere i dati di azienda e appezzamento."
-        },
-        "cooperatives": {
-          "title": "Cooperative",
-          "description": "Che gestiscono molti soci e molte richieste."
-        },
-        "exporters": {
-          "title": "Esportatori",
-          "description": "Che hanno bisogno di prove di spedizione affidabili."
-        },
-        "buyers": {
-          "title": "Acquirenti",
-          "description": "Che vogliono dati a monte più puliti e meno record mancanti."
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "Prezzi",
-      "headline": "Prezzi mensili semplici in base alla dimensione della rete.",
-      "description": "Un prezzo. Nessuna tariffa per utente. I produttori rimangono gratuiti.",
-      "popularBadge": "Il più popolare",
-      "footerNote": "Le spedizioni extra vengono fatturate separatamente. I produttori rimangono gratuiti.",
-      "cta": "Inizia",
-      "table": {
-        "plan": "Piano",
-        "managedScale": "Scala gestita",
-        "shipments": "Spedizioni incluse / mese",
-        "monthlyBase": "Base mensile"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Crescita"
-        },
-        "scale": {
-          "name": "Scala"
-        },
-        "enterprise": {
-          "name": "Enterprise"
-        }
-      }
-    }
-=======
       "headline": "Unisciti alla lista d'attesa",
       "description": "Raccontaci della tua rete — ti contatteremo quando Tracebud sarà pronto.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -346,7 +240,6 @@
       }
     },
     "earlyAdopters": "Unisciti alla lista d'attesa per accesso anticipato"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Lingua",
@@ -442,25 +335,6 @@
     "integrations": "Integrazioni dirette"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Domande? Abbiamo risposte.",
-    "whenLaunch": "Quando posso iniziare a usare Tracebud?",
-    "whenLaunchAnswer": "Stiamo testando con cooperative, esportatori e importatori ora. Unisciti alla lista d'attesa e ti contatteremo quando saremo pronti per la tua regione.",
-    "whyCommodities": "Quali colture supporta Tracebud?",
-    "whyCommoditiesAnswer": "Caffè prima, poi le altre sei materie prime EUDR: cacao, olio di palma, gomma, soia, bestiame e legname. Iniziamo dove la complessità dei piccoli produttori incontra la domanda immediata degli acquirenti.",
-    "howLong": "Quanto tempo richiede l'impostazione?",
-    "howLongAnswer": "I produttori possono iniziare immediatamente a mappare con l'app offline. La maggior parte delle cooperative ha la loro rete mappata entro una settimana. Il dashboard è pronto non appena ti iscrivi.",
-    "offlineCapability": "Funziona senza internet?",
-    "offlineCapabilityAnswer": "Sì. L'app mobile funziona completamente offline. I produttori mappano i terreni, condividono informazioni e rispondono alle richieste senza connessione. I dati si sincronizzano automaticamente una volta tornati online.",
-    "dataControl": "Chi può vedere i miei dati?",
-    "dataControlAnswer": "Mantieni il controllo. I produttori scelgono quali organizzazioni condividono i loro dati. Le organizzazioni possono gestire le autorizzazioni nel loro team. Tutto viene registrato con un audit trail completo per la conformità.",
-    "regenerativeFarming": "Posso tracciare le pratiche rigenerative?",
-    "regenerativeFarmingAnswer": "Sì. Tracebud ti consente di tracciare e verificare le pratiche agricole nel tempo. Questo rende più facile documentare i progressi, supportare le transizioni e collegare dati migliori con incentivi migliori per l'agricoltura rigenerativa.",
-    "whoItIsFor": "È solo per i produttori?",
-    "whoItIsForAnswer": "No. Tracebud aiuta le cooperative a gestire molti membri, gli esportatori a raccogliere prove affidabili di spedizione e gli importatori a ottenere dati più puliti. Tutti nella catena possono partecipare, anche con accesso digitale limitato.",
-    "support": "Quale supporto è disponibile?",
-    "supportAnswer": "Onboarding pratico per tutti i clienti. Supporto diretto dal nostro team. Stiamo costruendo questo insieme ai nostri utenti iniziali, quindi il tuo feedback modella il prodotto."
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "Quando posso iniziare a usare Tracebud?",
     "whenLaunchAnswer": "Tracebud apre per fasi per regione e commodity. Unisciti alla lista d'attesa e ti scriveremo quando il tuo caso sarà supportato.",
@@ -475,6 +349,5 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Prima il caffè, poi le altre sei commodity EUDR: cacao, olio di palma, gomma, soia, bestiame e legno. Vedi la pagina prezzi per la roadmap completa."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

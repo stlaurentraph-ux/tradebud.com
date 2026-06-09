@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Conformidade simplificada.",
-      "description": "As cadeias de abastecimento falham quando o processo é demasiado manual e fragmentado. O Tracebud remove o atrito para que todos possam participar — em qualquer escala.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "O cumprimento não devia ser complicado para ser credível.",
       "description": "A maioria das cadeias de abastecimento não falha porque as pessoas não se importam. Falha porque o processo é demasiado manual, demasiado caro e demasiado fragmentado. A Tracebud elimina o vai e vem para que cada interveniente possa participar, mesmo quando a rede é grande, dispersa ou tem poucos recursos.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Simples",
@@ -173,62 +168,6 @@
       "note": "Sem spam. Cancele quando quiser."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Junte-se ao programa piloto",
-      "description": "Lugares limitados para os primeiros parceiros piloto. Conte-nos sobre a sua rede e entraremos em contacto.",
-      "note": "Sem spam. Cancelar subscrição em qualquer altura."
-    },
-    "pricingSection": {
-      "label": "Preços",
-      "headline": "Preços mensais simples por tamanho da rede.",
-      "description": "Um preço. Sem taxas por utilizador",
-      "popularBadge": "Mais popular",
-      "footerNote": "Envios adicionais são faturados separadamente",
-      "cta": "Começar",
-      "table": {
-        "plan": "Plano",
-        "managedScale": "Escala gerida",
-        "shipments": "Envios incluídos / mês",
-        "monthlyBase": "Base mensal"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Crescimento"
-        },
-        "scale": {
-          "name": "Escala"
-        },
-        "enterprise": {
-          "name": "Empresa"
-        }
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Produtores",
-          "description": "Que precisam de uma forma simples de partilhar dados de exploração e parcela."
-        },
-        "cooperatives": {
-          "title": "Cooperativas",
-          "description": "Que gerem muitos membros e muitos pedidos."
-        },
-        "exporters": {
-          "title": "Exportadores",
-          "description": "Que precisam de provas de envio fiáveis."
-        },
-        "buyers": {
-          "title": "Compradores",
-          "description": "Que querem dados a montante mais limpos e menos registos em falta."
-        }
-      }
-    }
-=======
       "headline": "Entrar na lista de espera",
       "description": "Conte-nos sobre a sua rede e entraremos em contacto quando o Tracebud estiver pronto.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -301,7 +240,6 @@
       }
     },
     "earlyAdopters": "Entre na lista de espera para acesso antecipado"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Idioma",
@@ -397,27 +335,6 @@
     "integrations": "Integrações Diretas"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Perguntas? Temos respostas.",
-    "whenLaunch": "Quando posso começar a usar Tracebud?",
-    "whenLaunchAnswer": "Estamos testando com cooperativas, exportadores e importadores agora. Junte-se à lista de espera e entraremos em contacto quando estivermos prontos para a sua região.",
-    "whyCommodities": "Quais culturas Tracebud suporta?",
-    "whyCommoditiesAnswer": "Café primeiro, depois os outros seis produtos EUDR: cacau, óleo de palma, borracha, soja, gado e madeira. Começamos onde a complexidade dos pequenos produtores encontra a demanda imediata dos compradores.",
-    "howLong": "Quanto tempo demora a configuração?",
-    "howLongAnswer": "Os produtores podem começar a mapear imediatamente com o aplicativo offline. A maioria das cooperativas tem sua rede mapeada dentro de uma semana. O painel fica pronto no momento em que você se registra.",
-    "offlineCapability": "Funciona sem internet?",
-    "offlineCapabilityAnswer": "Sim. O aplicativo móvel funciona completamente offline. Produtores mapeiam parcelas, compartilham informações e respondem solicitações sem conexão. Os dados sincronizam automaticamente assim que voltam online.",
-    "dataControl": "Quem pode ver meus dados?",
-    "dataControlAnswer": "Você mantém o controle. Produtores escolhem quais organizações compartilham seus dados. Organizações podem gerir permissões em sua equipa. Tudo é registado com um registo de auditoria completo para conformidade.",
-    "regenerativeFarming": "Posso rastrear práticas regenerativas?",
-    "regenerativeFarmingAnswer": "Sim. Tracebud permite rastrear e verificar práticas agrícolas ao longo do tempo. Isso facilita documentar progresso, apoiar transições e conectar melhores dados com melhores incentivos para agricultura regenerativa.",
-    "whoItIsFor": "É apenas para produtores?",
-    "whoItIsForAnswer": "Não. Tracebud ajuda cooperativas a gerir muitos membros, exportadores a reunir evidências confiáveis de envio e importadores a obter dados mais limpos. Todos na cadeia podem participar, mesmo com acesso digital limitado.",
-    "support": "Que suporte está disponível?",
-    "supportAnswer": "Integração prática para todos os clientes. Suporte direto da nossa equipa. Estamos construindo isso junto com nossos primeiros utilizadores, portanto seu feedback molda o produto."
-  }
-}
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "Quando posso começar a usar o Tracebud?",
     "whenLaunchAnswer": "O Tracebud abre por fases, por região e commodity. Entre na lista de espera e avisaremos quando o seu caso for suportado.",
@@ -434,4 +351,3 @@
     "whyCommoditiesAnswer": "Café primeiro, depois as outras seis commodities EUDR: cacau, óleo de palma, borracha, soja, gado e madeira. Veja a página de preços para o roadmap completo."
   }
 }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893

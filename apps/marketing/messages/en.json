@@ -8,14 +8,9 @@
   "marketing": {
     "hero": {
       "headline": "Traceability infrastructure anyone in the chain can start using.",
-<<<<<<< HEAD
-      "subheadline": "Tracebud gives farmers, cooperatives, exporters, and buyers a shared system to capture origin data once, govern how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
-      "supportingText": "Free for producers. Self-serve from the first request. Built for low-connectivity field realities and large, fragmented networks.",
-=======
       "subheadline": "Tracebud gives farmers, cooperatives, exporters, and buyers one shared system for origin data.",
       "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
       "supportingText": "Built for fragmented networks and low-connectivity field realities.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "cta": {
         "primary": "See how it works",
         "secondary": "Join the waitlist"
@@ -26,58 +21,22 @@
         "mapTimeLabel": "to map a farm"
       }
     },
-    "problemSection": {
-      "headline": "Compliance should be easy to start, but strong enough to trust.",
-      "description": "Most supply chains do not fail because people do not care. They fail because origin data, evidence, and shipment records are fragmented across actors and tools. Tracebud creates a shared system of record so compliance data can move through the network without losing context or provenance."
-    },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Because the best infrastructure is the kind people can actually start using.",
-      "intro": "Reduce manual follow-up. Preserve provenance through aggregation. Move with more confidence.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "Compliance should be easy to start, but strong enough to trust.",
       "description": "Most supply chains do not fail because people do not care. They fail because origin data, evidence, and shipment records are fragmented across actors and tools. Tracebud creates a shared system of record so compliance data can move through the network without losing context or provenance.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Self-serve by design",
           "description": "Anyone can join, start a request, or begin capture without consultants or complex setup."
         },
         "automated": {
-<<<<<<< HEAD
-          "title": "Inclusive by default",
-          "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
-        },
-        "inclusive": {
-          "title": "Infrastructure underneath",
-          "description": "The data model, lineage, consent, and compliance records stay structured, reusable, and audit-ready."
-        }
-      },
-      "outcomeSection": {
-        "headline": "Why Tracebud",
-        "intro": "Reduce manual follow-up. Preserve provenance through aggregation. Move with more confidence.",
-        "pillars": {
-          "proofGaps": {
-            "title": "Fewer proof gaps",
-            "description": "Onboarding, evidence requests, duplicate checks, lineage, and compliance preparation in one connected system."
-          },
-          "provenance": {
-            "title": "Provenance preserved",
-            "description": "Compliance proof stays tied to real producer, plot, batch, and shipment records, not disconnected files and folders."
-          },
-          "handoff": {
-            "title": "Faster handoff",
-            "description": "Move from fragmented follow-up to shared readiness across the network, with less time lost chasing missing data."
-          }
-=======
           "title": "Infrastructure underneath",
           "description": "The data model, lineage, consent, and compliance records stay structured, reusable, and audit-ready."
         },
         "inclusive": {
           "title": "Inclusive by default",
           "description": "Farmers can participate directly, even with limited digital access, shared devices, or spotty signal."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
         }
       }
     },
@@ -108,19 +67,6 @@
       }
     },
     "productsSection": {
-<<<<<<< HEAD
-      "headline": "Two products, one shared operating layer.",
-      "intro": "Built for how fragmented supply chains actually work.",
-      "mobileApp": {
-        "headline": "Field capture that feeds the whole network.",
-        "description": "Tracebud's mobile app is built for real sourcing conditions. Farmers and field teams can map plots, capture evidence, record consent, and respond through a simple mobile experience designed for low-connectivity environments. The result is structured origin data the whole chain can rely on.",
-        "supportingText": "Free for producers. No training-heavy setup."
-      },
-      "dashboard": {
-        "headline": "Network infrastructure, not spreadsheet orchestration.",
-        "description": "Upload contacts in bulk, send one request, and let the workflow move through your supply chain to source. Track readiness, identify missing data, and assemble provenance-linked compliance records from one shared operating layer.",
-        "supportingText": "Less chasing. Fewer gaps. Faster handoffs."
-=======
       "eyebrow": "Products",
       "title": "Two products, one shared operating layer.",
       "intro": "Built for how fragmented supply chains actually work.",
@@ -185,7 +131,6 @@
           "title": "Faster handoff",
           "description": "Move from fragmented follow-up to shared readiness across the network, with less time lost chasing missing data."
         }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       }
     },
     "inclusionSection": {
@@ -195,10 +140,6 @@
     },
     "finalCtaSection": {
       "headline": "Make compliance usable for the whole chain.",
-<<<<<<< HEAD
-      "description": "Start with the network you already have, and give every actor a way to participate. Tracebud makes it possible to begin self-serve, capture data once, and reuse it across shipments, buyers, and downstream workflows without turning the process into paperwork theater.",
-      "cta": "Get started"
-=======
       "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
       "cta": "Join the waitlist"
     },
@@ -220,7 +161,6 @@
       "backHome": "Back to home",
       "contactUs": "Contact us",
       "supportPrompt": "Questions? Email us at"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
     },
     "exitIntentModal": {
       "headline": "Start building traceability for your network.",
@@ -232,104 +172,6 @@
       "note": "No spam. Unsubscribe any time."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Join the pilot",
-      "description": "Limited spots for early pilot partners. Tell us about your network and we'll be in touch.",
-      "note": "No spam, ever. Unsubscribe at any time."
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Built for every link in the chain",
-      "description": "From farm to final buyer, every actor gets the tools they need.",
-      "personas": {
-        "producers": {
-          "title": "Producers",
-          "description": "Share farm and plot data simply, with no paperwork."
-        },
-        "cooperatives": {
-          "title": "Cooperatives",
-          "description": "Manage hundreds of members and requests in one place."
-        },
-        "exporters": {
-          "title": "Exporters",
-          "description": "Generate reliable shipment evidence, ready for audit."
-        },
-        "buyers": {
-          "title": "Buyers",
-          "description": "Access clean upstream data with no missing records."
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "Pricing",
-      "headline": "Simple monthly pricing by network size.",
-      "description": "One price. No per-seat fees.",
-      "popularBadge": "Most popular",
-      "footerNote": "Extra shipments are billed separately.",
-      "cta": "Get started",
-      "table": {
-        "plan": "Plan",
-        "managedScale": "Managed scale",
-        "shipments": "Included shipments / month",
-        "monthlyBase": "Monthly base"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Growth"
-        },
-        "scale": {
-          "name": "Scale"
-        },
-        "enterprise": {
-          "name": "Enterprise"
-=======
       "headline": "Join the waitlist",
       "description": "Tell us about your network and we'll reach out when Tracebud is ready for you.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -398,7 +240,6 @@
           "commodityRequired": "Please select a commodity.",
           "producerRangeRequired": "Please select the number of producers.",
           "generic": "Something went wrong. Please try again."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
         }
       }
     }
@@ -470,25 +311,11 @@
     "whenLaunch": "When can I start using Tracebud?",
     "whenLaunchAnswer": "Tracebud is opening in phases by region and commodity. Join the waitlist and we will email you when your use case is supported.",
     "whyCommodities": "What crops does Tracebud support?",
-<<<<<<< HEAD
-    "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. We're starting where smallholder complexity meets immediate buyer demand.",
-    "howLong": "How long does setup take?",
-    "howLongAnswer": "Producers can start mapping immediately with the offline app. Most cooperatives have their network mapped within a week. The dashboard is ready the moment you sign up.",
-    "offlineCapability": "Does it work without internet?",
-    "offlineCapabilityAnswer": "Yes. The mobile app works completely offline. Producers map plots, share information, and respond to requests without a connection. Data syncs automatically once back online.",
-    "dataControl": "Who can see my data?",
-    "dataControlAnswer": "You stay in control. Producers choose which organizations they share data with. Organizations can manage permissions across their team. Everything is logged with a full audit trail for compliance.",
-    "regenerativeFarming": "Can I track regenerative practices?",
-    "regenerativeFarmingAnswer": "Yes. Tracebud lets you track and verify farm practices over time. That makes it easier to document progress, support transitions, and connect better data with better incentives for regenerative farming.",
-    "whoItIsFor": "Is this just for producers?",
-    "whoItIsForAnswer": "No. Tracebud helps cooperatives manage many members, exporters gather reliable shipment evidence, and buyers get cleaner upstream data. Everyone in the chain can participate, even with limited digital access.",
-=======
     "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. See our pricing page for the full roadmap.",
     "howCost": "What does it cost?",
     "howCostAnswer": "Free for producers. Cooperatives, exporters, and buyers pay based on network size and usage. Visit the pricing page or join the waitlist for details.",
     "howLong": "How long does setup take?",
     "howLongAnswer": "Producers can start mapping with the offline app right away. Most cooperatives upload their network and send the first request within a week.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
     "support": "What support is available?",
     "supportAnswer": "Every waitlist member gets a personal follow-up by email. Once onboarded, you have direct access to our team for setup and compliance questions."
   }

@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "La conformité, simplifiée.",
-      "description": "Les chaînes d'approvisionnement échouent quand le processus est trop manuel et trop fragmenté. Tracebud supprime les frictions pour que chacun puisse participer — à n'importe quelle échelle.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "La conformité ne devrait pas être compliquée pour être crédible.",
       "description": "La plupart des chaînes d'approvisionnement ne échouent pas parce que les acteurs ne s'en soucient pas. Elles échouent parce que le processus est trop manuel, trop coûteux et trop fragmenté. Tracebud élimine les allers-retours pour que chaque acteur puisse participer, même lorsque le réseau est vaste, dispersé ou sous-doté en ressources.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Simple",
@@ -173,62 +168,6 @@
       "note": "Pas de spam. Désinscription possible à tout moment."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Rejoindre le programme pilote",
-      "description": "Places limitées pour les premiers partenaires pilotes. Parlez-nous de votre réseau et nous vous recontacterons.",
-      "note": "Pas de spam. Désinscription possible à tout moment."
-    },
-    "pricingSection": {
-      "label": "Tarifs",
-      "headline": "Tarification mensuelle simple selon la taille du réseau.",
-      "description": "Un prix. Sans frais par utilisateur. Gratuit pour les producteurs.",
-      "popularBadge": "Le plus populaire",
-      "footerNote": "Les expéditions supplémentaires sont facturées séparément. Gratuit pour les producteurs.",
-      "cta": "Commencer",
-      "table": {
-        "plan": "Plan",
-        "managedScale": "Taille gérée",
-        "shipments": "Expéditions incluses / mois",
-        "monthlyBase": "Base mensuelle"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Croissance"
-        },
-        "scale": {
-          "name": "Échelle"
-        },
-        "enterprise": {
-          "name": "Entreprise"
-        }
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Producteurs",
-          "description": "Qui ont besoin d'un moyen simple de partager les données de ferme et de parcelle."
-        },
-        "cooperatives": {
-          "title": "Coopératives",
-          "description": "Qui gèrent de nombreux membres et de nombreuses demandes."
-        },
-        "exporters": {
-          "title": "Exportateurs",
-          "description": "Qui ont besoin de preuves d'expédition fiables."
-        },
-        "buyers": {
-          "title": "Acheteurs",
-          "description": "Qui veulent des données amont plus propres et moins de dossiers manquants."
-        }
-      }
-    }
-=======
       "headline": "Rejoindre la liste d'attente",
       "description": "Parlez-nous de votre réseau et nous vous contacterons lorsque Tracebud sera prêt pour vous.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -301,7 +240,6 @@
       }
     },
     "earlyAdopters": "Rejoignez la liste d'attente pour un accès anticipé"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Langue",
@@ -397,25 +335,6 @@
     "integrations": "Intégrations directes"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Des questions ? Nous avons les réponses.",
-    "whenLaunch": "Quand puis-je commencer à utiliser Tracebud ?",
-    "whenLaunchAnswer": "Nous testons actuellement avec des coopératives, des exportateurs et des importateurs. Rejoignez la liste d'attente et nous vous contacterons quand nous serons prêts pour votre région.",
-    "whyCommodities": "Quelles cultures Tracebud supporte-t-il ?",
-    "whyCommoditiesAnswer": "D'abord le café, puis les six autres produits EUDR : cacao, huile de palme, caoutchouc, soja, bétail et bois. Nous commençons où la complexité des petits exploitants rencontre la demande immédiate des acheteurs.",
-    "howLong": "Combien de temps prend la configuration ?",
-    "howLongAnswer": "Les producteurs peuvent commencer à cartographier immédiatement avec l'application hors ligne. La plupart des coopératives ont leur réseau cartographié en une semaine. Le tableau de bord est prêt dès que vous vous inscrivez.",
-    "offlineCapability": "Fonctionne-t-il sans internet ?",
-    "offlineCapabilityAnswer": "Oui. L'application mobile fonctionne complètement hors ligne. Les producteurs cartographient les parcelles, partagent les informations et répondent aux demandes sans connexion. Les données se synchronisent automatiquement une fois de retour en ligne.",
-    "dataControl": "Qui peut voir mes données ?",
-    "dataControlAnswer": "Vous gardez le contrôle. Les producteurs choisissent les organisations avec lesquelles ils partagent les données. Les organisations peuvent gérer les permissions dans leur équipe. Tout est enregistré avec une piste d'audit complète pour la conformité.",
-    "regenerativeFarming": "Puis-je suivre les pratiques régénératives ?",
-    "regenerativeFarmingAnswer": "Oui. Tracebud vous permet de suivre et de vérifier les pratiques agricoles au fil du temps. Cela facilite la documentation des progrès, le soutien des transitions et la connexion de meilleures données avec de meilleures incitations pour l'agriculture régénérée.",
-    "whoItIsFor": "Est-ce juste pour les producteurs ?",
-    "whoItIsForAnswer": "Non. Tracebud aide les coopératives à gérer de nombreux membres, les exportateurs à rassembler des preuves d'expédition fiables et les acheteurs à obtenir des données en amont plus propres. Tout le monde dans la chaîne peut participer, même avec un accès numérique limité.",
-    "support": "Quel support est disponible ?",
-    "supportAnswer": "Intégration pratique pour tous les clients. Support direct de notre équipe. Nous construisons cela aux côtés de nos premiers utilisateurs, donc vos commentaires façonnent le produit."
-=======
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "title": "Questions? We have answers.",
@@ -430,6 +349,5 @@
     "support": "What support is available?",
     "supportAnswer": "Chaque membre de la liste d'attente reçoit un suivi personnel par e-mail. Une fois intégré, vous avez un accès direct à notre équipe pour la configuration et les questions de conformité.",
     "whyCommoditiesAnswer": "Le café en premier, puis les six autres produits EUDR : cacao, huile de palme, caoutchouc, soja, bétail et bois. Consultez notre page tarifs pour la feuille de route complète."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

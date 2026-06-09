@@ -3,21 +3,11 @@
     "hero": {
       "headline": "ለሙሉ ሰንሰለቱ የሚሰራ የመከታተያ ስርዓት።",
       "subheadline": "Tracebud የ EUDR ተገዥነትን ቀላል፣ በራስ ለራስ የሚሰራ እና ዋጋው የሚደርስ መሳሪያ በመስጠት ገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች የምንጭ ውሂብን ሰብስበው፣ አጋርተው እና እንደገና እንዲጠቀሙ ይረዳል፣ ሰነድ ለመከታተል ሳይደክሙ።",
-<<<<<<< HEAD
-=======
       "subheadlineSecondary": "Capture data once, control how it is shared, preserve provenance through the chain, and generate reusable EUDR-ready compliance records.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "supportingText": "ለአቅራቢዎች ነፃ። ለውስን ግንኙነት እና ለቀላል ሂደቶች የተነደፈ። ኮንሰልታንቶች አያስፈልጉም።",
       "cta": {
         "primary": "እንዴት እንደሚሰራ ይመልከቱ",
         "secondary": "ያግኙን"
-<<<<<<< HEAD
-      }
-    },
-    "whyTracebudSection": {
-      "headline": "ተገዢነት ቀላል ሆነ።",
-      "description": "የአቅርቦት ሰንሰለቶች ሲወድቁ ሂደቱ በጣም እጅ-ሥራ እና ተበታትኖ ስለሆነ ነው። Tracebud ማቋቋሙን ያስወግዳል፣ ሁሉም ሰው ተሳትፎ እንዲያደርግ—በማንኛውም ሚዛን።",
-=======
       },
       "trustStrip": {
         "offline": "Works offline",
@@ -29,7 +19,6 @@
       "eyebrow": "Why Tracebud",
       "headline": "ተገዥነት ታማኝ እንዲሆን ውስብስብ መሆን የለበትም።",
       "description": "አብዛኞቹ የአቅርቦት ሰንሰለቶች ሰዎች አልሞክሩም ብለው አይወድቁም። ሂደቱ በጣም በእጅ ስለሚሰራ፣ በጣም ውድ ስለሆነ እና በጣም ተበታትኖ ስለሆነ ይወድቃሉ። Tracebud ድጋጌ ማለትን ያስወግዳል፣ ስለዚህ መረቡ ትልቅ፣ ተበታትኖ ወይም አልተደገፈም ቢሆንም ሁሉም መሳተፍ ይችላሉ።",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "ቀላል",
@@ -72,17 +61,6 @@
       }
     },
     "productsSection": {
-<<<<<<< HEAD
-      "mobileApp": {
-        "headline": "ለመሬት ስራ፣ ለቢሮ አይደለም።",
-        "description": "ገበሬዎች የመሬት ድንበር ሊያስመልክቱ፣ መረጃ ሊጋሩ እና በቀላል የሞባይል ተሞክሮ ምላሽ ሊሰጡ ይችላሉ። ኦፍላይን ይሰራል፣ ግልጽ እይታዎችን ይጠቀማል እና ሂደቱን ቀላል ያደርጋል።",
-        "supportingText": "ለአቅራቢዎች ነፃ። ከባድ ማዘጋጃ ወይም ረጅም ስልጠና የለም።"
-      },
-      "dashboard": {
-        "headline": "መረብዎን ያለ ድግግሞሽ ያስተዳድሩ።",
-        "description": "ኮንታክቶችን በብዛት ይጫኑ፣ አንድ ጥያቄ ይላኩ እና የሥራ ፍሰቱ በሙሉ ሰንሰለቱ ውስጥ እንዲፈስስ ያድርጉ። ምላሾችን ይከታተሉ፣ የተረጋገጡ ውሂቦችን እንደገና ይጠቀሙ እና እያንዳንዱን ጭነት በትንሽ የእጅ ስራ ያስቀጥሉ።",
-        "supportingText": "ያነሰ መከታተል። ያነሱ ክፍተቶች። ፈጣን ማስተላለፊያ።"
-=======
       "eyebrow": "ሁለት ምርቶች፣ አንድ የስራ ፍሰት",
       "title": "የአቅርቦት ሰንሰለቶች በእውነት እንዴት እንደሚሰሩ ተነድፎ የተሰራ",
       "intro": "Built for how fragmented supply chains actually work.",
@@ -149,7 +127,6 @@
           "title": "ፈጣን ማስተላለፊያ",
           "description": "በትክክል ሊላክ የሚችለውን በተጨማሪ እምነት። መላኪያዎች ሲንቀሳቀሱ የጎደሉ ውሂብ ለመከታተል ያነሰ ጊዜ።"
         }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       }
     },
     "inclusionSection": {
@@ -158,121 +135,6 @@
       "punchline": "እኛ ለብዙ ዓመታት ትንንሽ ገበሬዎችን ውጭ ያቆዩትን የመዳረሻ መከላከያዎች እናስወግዳለን።"
     },
     "finalCtaSection": {
-<<<<<<< HEAD
-      "headline": "ተገዥነትን ለሙሉ ሰንሰለቱ የሚጠቅም ማድረግ።",
-      "description": "አሁን ባለው መረብዎ ይጀምሩ እና ለእያንዳንዱ አባል የመሳተፊያ መንገድ ይስጡ።",
-      "cta": "ጀምር"
-    },
-    "exitIntentModal": {
-      "headline": "በመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
-      "description": "Tracebud የምንጭ ውሂብን ለመሰብሰብ፣ ለማጋራት እና እንደገና ለመጠቀም ይረዳዎታል። ለገበሬዎች፣ ማህበራት፣ ላኪዎች እና ገዢዎች ቀላል፣ ዋጋው የሚደርስ እና አካታች ነው።",
-      "cta": {
-        "primary": "አሁን ይቀላቀሉ",
-        "secondary": "መስሰስቅ ቀጥሉ"
-      },
-      "note": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች።"
-    },
-    "waitlistDialog": {
-      "headline": "የፓይለት ፕሮግራሙን ይቀላቀሉ",
-      "description": "ለመጀመሪያዎቹ የፓይለት አጋሮች ውስን ቦታዎች። ስለ መረብዎ ይንገሩን እና እናገኝዎታለን።",
-      "note": "ስፓም የለም። በማንኛውም ጊዜ ይሰርዙ።"
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "አምራቾች",
-          "description": "የእርሻ እና የቦታ ውሂብ ለማካፈል ቀላል መንገድ የሚፈልጉ።"
-        },
-        "cooperatives": {
-          "title": "ህብረት ሥራ ማህበራት",
-          "description": "ብዙ አባላትን እና ብዙ ጥያቄዎችን የሚያስተዳድሩ።"
-        },
-        "exporters": {
-          "title": "ላኪዎች",
-          "description": "አስተማማኝ የጭነት ማስረጃ የሚፈልጉ።"
-        },
-        "buyers": {
-          "title": "ገዢዎች",
-          "description": "የጠፉ ሰነዶችን ቀንሰው ንፁህ የዥረት ውሂብ የሚፈልጉ።"
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "ዋጋ",
-      "headline": "ቀላል ወርሃዊ ዋጋ በአውታረ መረብ መጠን።",
-      "description": "አንድ ዋጋ። ለተጠቃሚ ምንም ተጨማሪ ክፍያ የለም። አምራቾች ነፃ ናቸው።",
-      "popularBadge": "በጣም ታዋቂ",
-      "footerNote": "ተጨማሪ ጭነቶች በተናጠል ይሰላሉ። አምራቾች ነፃ ናቸው።",
-      "cta": "ጀምር",
-      "table": {
-        "plan": "እቅድ",
-        "managedScale": "የሚተዳደር ልኬት",
-        "shipments": "የተካተቱ ጭነቶች / ወር",
-        "monthlyBase": "ወርሃዊ መሠረት"
-      },
-      "plans": {
-        "starter": {
-          "name": "ጀማሪ"
-        },
-        "growth": {
-          "name": "እድገት"
-        },
-        "scale": {
-          "name": "ልኬት"
-        },
-        "enterprise": {
-          "name": "ኢንተርፕራይዝ"
-        }
-      }
-    }
-=======
       "headline": "Make compliance usable for the whole chain.",
       "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
       "cta": "Join the waitlist"
@@ -378,7 +240,6 @@
       }
     },
     "earlyAdopters": "Join the waitlist for early access"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "ቋንቋ",
@@ -474,27 +335,6 @@
     "integrations": "ቀጥተኛ ግንኙነቶች"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "ጥያቄዎች አሉ? መልሱ አለን።",
-    "whenLaunch": "መቼ ነው Tracebud ን መጠቀም መጀመር የሚችለው?",
-    "whenLaunchAnswer": "አሁን ከተባበሩ ስራ ህብረት፣ ከላቂዎች እና ከተከላካዮች ጋር እየሞከርን ነው። ወደ ሚያስጠብቀው ዝርዝር ይሳተፉ እና በእርስዎ ክልል ዝግጁ ሆነን ወደእርስዎ ይደውላሉ።",
-    "whyCommodities": "Tracebud ምን ዓይነት ሥራዎችን ይደግፋል?",
-    "whyCommoditiesAnswer": "በመጀመሪያ ቡና፣ ከዚያ ሌሎቹ ስድስት ወቅታዊ ምርቶች - ኢኮ፣ ዘይት ዘሪዕ ዘይት፣ ጮማ፣ ሶይ፣ ከብት እና ሲሲ። የአነስተኛ ግብርብ ማዕከላዊ ውስብስብነት ግዴለሽ ገዢ ለሚወድ ምርት ህዋሱ በመሆንነው ነው።",
-    "howLong": "ማቋቋም ምን ያህል ጊዜ ይወስዳል?",
-    "howLongAnswer": "አምራቾች ከመስመር ውጭ ያለውን ተግባር በመጠቀም ወዲያውኑ ካርታ ሊጀምሩ ይችላሉ። አብዛኞቹ ተባበሩ ስራ ህብረትዎች ውስጥ አንድ ሳምንት ውስጥ ካርታ ናቸው። ሰሌዳው እርስዎ ሲመዘገቡ ዝግጁ ነው።",
-    "offlineCapability": "ምንም ምንም ወይ ሳይሰራ ይሰራል?",
-    "offlineCapabilityAnswer": "አዎ። ሞባይል መተግበሪያ ሙሉ በሙሉ ከመስመር ውጭ ይሰራል። አምራቾች ክፍሎችን ይበግሩ ነገር በማጋራት እና ያለ ግንኙነት ለጥያቄዎች መለሳሳት። ወደ ኢንተርኔት ከገቡ በኋላ ውሂብ በራስ ሰር ይመሳሰሉ።",
-    "dataControl": "ጠቅላላ ውሂብ ማን ይዩ?",
-    "dataControlAnswer": "አንተ ይቆጣጠራሉ። አምራቾች ምን ድርጅት ውሂብ ሲጋሩ ይምረጡ። ድርጅቶች በቡድን ውስጣቸው ውስጥ ውሱነትን ሊመሪ ይችላሉ። ሁሉም ለህግ አወቃቀር ሙሉ ቁጥጥር አሞሌው የታሰበ ነው።",
-    "regenerativeFarming": "ድጋሚ የግብርና ልምዶች ተከታትል ይችላሉ?",
-    "regenerativeFarmingAnswer": "አዎ። Tracebud በጊዜ ጨረታ ውስጥ ግብርናዊ ልምዶችን ተከታትሎ ማረጋገጥ ይፈቅዳል። ይህ ዕድገትን ሰነድ ዓለም ወደ ፅጉ በገንቦትና የተሻለ ውሂብ ጋር ዓለምለ ታች ግብርናስ ይሆናል።",
-    "whoItIsFor": "ይህ ለአምራቾች ብቻ?",
-    "whoItIsForAnswer": "አይ።  Tracebud ተባበሩ ስራ ህብረቶች ብዙ አባል ሊመሩ ያስችላል በተጨማሪ ላቂዎች አስተማማኝ መልእክት ማንገላገሌት ታሪክ ሊገበዩ ይቅደሙ ሙሉ በሙሉ ይበርከታሉ። ሁሉም ሰው ውስጥ ውኔ የተወሰነ ዲጂታል ይዞ ተሳትፎ ሊወስዷቸው ይችላ።",
-    "support": "ምንም ይህ ሊሰጠው ነው?",
-    "supportAnswer": "ለሁሉም ሞላላ ንጋ ጠንተ ውስጥ። ከእኔ ፍርድ ጄነራል ስዕላዊ ድርጅት ድግሪዎ።አንተ ገና ጀመርያቀርብ ስሪያ እንደ የሌላ ተጠቅሞ ስሉት ሲሇወሰደ ስሩ ከብ ስሚተ ሃሳብ።"
-  }
-}
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "When can I start using Tracebud?",
     "whenLaunchAnswer": "Tracebud is opening in phases by region and commodity. Join the waitlist and we will email you when your use case is supported.",
@@ -511,4 +351,3 @@
     "whyCommoditiesAnswer": "Coffee first, then the other six EUDR commodities: cocoa, palm oil, rubber, soy, cattle, and timber. See our pricing page for the full roadmap."
   }
 }
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893

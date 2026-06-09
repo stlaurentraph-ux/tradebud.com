@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Naleving vereenvoudigd.",
-      "description": "Toeleveringsketens falen wanneer het proces te handmatig en te gefragmenteerd is. Tracebud elimineert de wrijving zodat iedereen kan deelnemen — op elke schaal.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "Naleving hoeft niet ingewikkeld te zijn om geloofwaardig te zijn.",
       "description": "De meeste toeleveringsketens falen niet omdat mensen het niet uitmaakt. Ze falen omdat het proces te handmatig, te duur en te gefragmenteerd is. Tracebud verwijdert het heen en weer zodat elke partij kan meedoen, zelfs als het netwerk groot, verspreid of weinig toegerust is.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Eenvoudig",
@@ -173,107 +168,6 @@
       "note": "Geen spam. Altijd uitschrijven."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Doe mee aan het pilotprogramma",
-      "description": "Beperkt aantal plaatsen voor vroege pilotpartners. Vertel ons over uw netwerk en we nemen contact op.",
-      "note": "Geen spam. Op elk moment uitschrijven."
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Producenten",
-          "description": "Die een eenvoudige manier nodig hebben om boerderij- en perceelgegevens te delen."
-        },
-        "cooperatives": {
-          "title": "Coöperaties",
-          "description": "Die veel leden en veel verzoeken beheren."
-        },
-        "exporters": {
-          "title": "Exporteurs",
-          "description": "Die betrouwbaar verzendingsbewijs nodig hebben."
-        },
-        "buyers": {
-          "title": "Kopers",
-          "description": "Die schonere upstream-data en minder ontbrekende records willen."
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "Prijzen",
-      "headline": "Eenvoudige maandelijkse prijzen op basis van netwerkgrootte.",
-      "description": "Één prijs. Geen kosten per gebruiker",
-      "popularBadge": "Meest populair",
-      "footerNote": "Extra verzendingen worden apart gefactureerd",
-      "cta": "Aan de slag",
-      "table": {
-        "plan": "Plan",
-        "managedScale": "Beheerde schaal",
-        "shipments": "Inbegrepen verzendingen / maand",
-        "monthlyBase": "Maandelijkse basis"
-      },
-      "plans": {
-        "starter": {
-          "name": "Starter"
-        },
-        "growth": {
-          "name": "Groei"
-        },
-        "scale": {
-          "name": "Schaal"
-        },
-        "enterprise": {
-          "name": "Enterprise"
-        }
-      }
-    }
-=======
       "headline": "Op de wachtlijst",
       "description": "Vertel ons over uw netwerk — we nemen contact op wanneer Tracebud klaar is.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -346,7 +240,6 @@
       }
     },
     "earlyAdopters": "Op de wachtlijst voor vroege toegang"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Taal",
@@ -442,25 +335,6 @@
     "integrations": "Directe integraties"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Vragen? Wij hebben antwoorden.",
-    "whenLaunch": "Wanneer kan ik Tracebud gaan gebruiken?",
-    "whenLaunchAnswer": "We testen momenteel met coöperatieven, exporteurs en importeurs. Schrijf je in voor de wachtlijst en we nemen contact op wanneer we klaar zijn voor jouw regio.",
-    "whyCommodities": "Welke gewassen ondersteunt Tracebud?",
-    "whyCommoditiesAnswer": "Eerst koffie, dan de andere zes EUDR-grondstoffen: cacao, palmolie, rubber, soja, rundvee en hout. We beginnen waar de complexiteit van kleine boeren aansluit op de directe vraag van kopers.",
-    "howLong": "Hoe lang duurt het opzetten?",
-    "howLongAnswer": "Boeren kunnen direct beginnen met in kaart brengen met de offline app. De meeste coöperatieven hebben hun netwerk binnen een week in kaart gebracht. Het dashboard is klaar zodra je je aanmeldt.",
-    "offlineCapability": "Werkt het zonder internet?",
-    "offlineCapabilityAnswer": "Ja. De mobiele app werkt volledig offline. Boeren brengen percelen in kaart, delen informatie en reageren op verzoeken zonder verbinding. Gegevens worden automatisch gesynchroniseerd zodra je weer online bent.",
-    "dataControl": "Wie kan mijn gegevens zien?",
-    "dataControlAnswer": "Je behoudt de controle. Boeren kiezen welke organisaties hun gegevens delen. Organisaties kunnen machtigingen in hun team beheren. Alles wordt geregistreerd met een volledig auditspoor voor naleving.",
-    "regenerativeFarming": "Kan ik regeneratieve praktijken volgen?",
-    "regenerativeFarmingAnswer": "Ja. Met Tracebud kunt u boerenpraktijken in de loop der tijd volgen en verifiëren. Dit maakt het gemakkelijker om voortgang te documenteren, overgangen te ondersteunen en betere gegevens aan betere prikkels voor regeneratieve landbouw te koppelen.",
-    "whoItIsFor": "Is dit alleen voor boeren?",
-    "whoItIsForAnswer": "Nee. Tracebud helpt coöperatieven veel leden te beheren, exporteurs betrouwbare verzendbewijzen te verzamelen en importeurs schonere upstream-gegevens te krijgen. Iedereen in de keten kan deelnemen, ook met beperkte digitale toegang.",
-    "support": "Welke ondersteuning is beschikbaar?",
-    "supportAnswer": "Praktische onboarding voor alle klanten. Directe ondersteuning van ons team. We bouwen dit samen met onze eerste gebruikers, dus uw feedback vormt het product."
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "Wanneer kan ik Tracebud gebruiken?",
     "whenLaunchAnswer": "Tracebud opent gefaseerd per regio en commodity. Sluit u aan bij de wachtlijst — we mailen wanneer uw use case wordt ondersteund.",
@@ -475,6 +349,5 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Eerst koffie, daarna de andere zes EUDR-grondstoffen: cacao, palmolie, rubber, soja, vee en hout. Zie onze prijspagina voor de volledige roadmap."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

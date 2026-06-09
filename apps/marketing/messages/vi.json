@@ -16,14 +16,9 @@
       }
     },
     "whyTracebudSection": {
-<<<<<<< HEAD
-      "headline": "Tuân thủ đơn giản hóa.",
-      "description": "Chuỗi cung ứng thất bại khi quy trình quá thủ công và phân mảnh. Tracebud loại bỏ rào cản để mọi người đều có thể tham gia—ở bất kỳ quy mô nào.",
-=======
       "eyebrow": "Why Tracebud",
       "headline": "Tuân thủ không nên phức tạp nếu muốn đáng tin.",
       "description": "Phần lớn chuỗi cung ứng không thất bại vì mọi người không quan tâm. Chúng thất bại vì quy trình quá thủ công, quá tốn kém và quá phân mảnh. Tracebud loại bỏ việc qua lại nhiều lần để mọi bên đều có thể tham gia, ngay cả khi mạng lưới lớn, phân tán hoặc thiếu nguồn lực.",
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
       "pillars": {
         "simple": {
           "title": "Đơn giản",
@@ -173,107 +168,6 @@
       "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
     },
     "waitlistDialog": {
-<<<<<<< HEAD
-      "headline": "Tham gia chương trình thí điểm",
-      "description": "Số chỗ có hạn cho các đối tác thí điểm đầu tiên. Hãy cho chúng tôi biết về m�������ng lưới của bạn và chúng tôi sẽ liên hệ.",
-      "note": "Không spam. Hủy đăng ký bất cứ lúc nào."
-    },
-    "builtForRealitiesSection": {
-      "headline": "Built for real operations",
-      "description": "Tracebud is designed for low bandwidth, shared devices, multiple intermediaries, and uneven digital maturity.",
-      "thatMeans": "That means:",
-      "features": {
-        "offline": {
-          "title": "Offline capture in the field",
-          "description": "Work without connectivity and sync when ready."
-        },
-        "roleBasedAccess": {
-          "title": "Role-based access",
-          "description": "Producers, cooperatives, exporters, and buyers each see what they need."
-        },
-        "consentBased": {
-          "title": "Consent-based data sharing",
-          "description": "Organizations control who accesses their data."
-        },
-        "auditLogs": {
-          "title": "Audit logs and retention",
-          "description": "Full compliance records for regulatory requirements."
-        },
-        "reusableData": {
-          "title": "Reusable origin data",
-          "description": "Capture once, reuse across shipments and counterparties."
-        },
-        "csvUpload": {
-          "title": "CSV upload and workflows",
-          "description": "Simple data import and automated request flows."
-        }
-      }
-    },
-    "trustAndDataSection": {
-      "headline": "Compliance data should stay clear, controlled, and auditable.",
-      "description": "Producers can share data with specific organizations through consent-based workflows. Organizations can manage who sees what while preserving auditability and a reusable record of origin data.",
-      "goal": {
-        "title": "The goal",
-        "description": "Reduce repeated data collection without losing control of source records or the chain of custody."
-      }
-    },
-    "whoItIsForSection": {
-      "headline": "Who it's for",
-      "description": "Tracebud helps teams that need traceability without added complexity.",
-      "personas": {
-        "producers": {
-          "title": "Nhà sản xuất",
-          "description": "Cần cách đơn giản để chia sẻ dữ liệu trang trại và thửa đất."
-        },
-        "cooperatives": {
-          "title": "Hợp tác xã",
-          "description": "Quản lý nhiều thành viên và nhiều yêu cầu."
-        },
-        "exporters": {
-          "title": "Nhà xuất khẩu",
-          "description": "Cần bằng chứng lô hàng đáng tin cậy."
-        },
-        "buyers": {
-          "title": "Người mua",
-          "description": "Muốn dữ liệu đầu nguồn sạch hơn và ít hồ sơ bị thiếu hơn."
-        }
-      }
-    },
-    "regenerativeFarmingSection": {
-      "label": "Supporting change",
-      "headline": "Supporting regenerative farming, not just compliance.",
-      "description": "Tracebud gives supply chains a way to track and verify farm practices over time. That makes it easier to support regenerative transitions, document progress, and connect better data with better incentives.",
-      "benefit": "When farmers can show what is happening on the ground, they are better positioned to access support, build trust, and improve long-term resilience."
-    },
-    "pricingSection": {
-      "label": "Giá cả",
-      "headline": "Giá hàng tháng đơn giản theo quy mô mạng lưới.",
-      "description": "Một mức giá. Không tính phí theo người dùng",
-      "popularBadge": "Phổ biến nhất",
-      "footerNote": "Các lô hàng bổ sung được tính phí riêng",
-      "cta": "Bắt đầu",
-      "table": {
-        "plan": "Gói",
-        "managedScale": "Quy mô quản lý",
-        "shipments": "Lô hàng được bao gồm / tháng",
-        "monthlyBase": "Cơ sở hàng tháng"
-      },
-      "plans": {
-        "starter": {
-          "name": "Khởi đầu"
-        },
-        "growth": {
-          "name": "Tăng trưởng"
-        },
-        "scale": {
-          "name": "Quy mô"
-        },
-        "enterprise": {
-          "name": "Doanh nghiệp"
-        }
-      }
-    }
-=======
       "headline": "Tham gia danh sách chờ",
       "description": "Cho chúng tôi biết về mạng lưới của bạn — chúng tôi sẽ liên hệ khi Tracebud sẵn sàng.",
       "note": "No spam, ever. Unsubscribe at any time.",
@@ -346,7 +240,6 @@
       }
     },
     "earlyAdopters": "Tham gia danh sách chờ để truy cập sớm"
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   },
   "common": {
     "language": "Ngôn ngữ",
@@ -442,25 +335,6 @@
     "integrations": "Tích hợp trực tiếp"
   },
   "faq": {
-<<<<<<< HEAD
-    "title": "Có câu hỏi? Chúng tôi có câu trả lời.",
-    "whenLaunch": "Khi nào tôi có thể bắt đầu sử dụng Tracebud?",
-    "whenLaunchAnswer": "Chúng tôi đang kiểm tra với các hợp tác xã, nhà xuất khẩu và nhà nhập khẩu ngay bây giờ. Tham gia danh sách chờ và chúng tôi sẽ liên hệ với bạn khi sẵn sàng cho khu vực của bạn.",
-    "whyCommodities": "Tracebud hỗ trợ những loại cây trồng nào?",
-    "whyCommoditiesAnswer": "Cà phê trước tiên, sau đó là sáu hàng hóa EUDR khác: ca cao, dầu cọ, cao su, đậu tương, gia súc và gỗ. Chúng tôi bắt đầu từ nơi độ phức tạp của nông dân nhỏ gặp nhu cầu ngay lập tức của người mua.",
-    "howLong": "Thiết lập mất bao lâu?",
-    "howLongAnswer": "Nhà sản xuất có thể bắt đầu lập bản đồ ngay lập tức với ứng dụng ngoại tuyến. Hầu hết các hợp tác xã có mạng của họ được lập bản đồ trong vòng một tuần. Dashboard sẵn sàng khi bạn đăng ký.",
-    "offlineCapability": "Có hoạt động mà không có internet không?",
-    "offlineCapabilityAnswer": "Có. Ứng dụng di động hoạt động hoàn toàn ngoại tuyến. Nhà sản xuất lập bản đồ các thửa ruộng, chia sẻ thông tin và phản hồi các yêu cầu mà không có kết nối. Dữ liệu đồng bộ hóa tự động khi quay lại trực tuyến.",
-    "dataControl": "Ai có thể xem dữ liệu của tôi?",
-    "dataControlAnswer": "Bạn giữ quyền kiểm soát. Nhà sản xuất chọn tổ chức nào chia sẻ dữ liệu của họ. Các tổ chức có thể quản lý quyền trong nhóm của họ. Mọi thứ được ghi lại với bản ghi kiểm toán đầy đủ để tuân thủ.",
-    "regenerativeFarming": "Tôi có thể theo dõi các thực tiễn tái sinh không?",
-    "regenerativeFarmingAnswer": "Có. Tracebud cho phép bạn theo dõi và xác minh các thực tiễn nông nghiệp theo thời gian. Điều đó giúp dễ dàng hơn trong việc ghi lại tiến trình, hỗ trợ chuyển đổi và kết nối dữ liệu tốt hơn với các khuyến khích tốt hơn cho nông nghiệp tái sinh.",
-    "whoItIsFor": "Cái này chỉ dành cho nhà sản xuất?",
-    "whoItIsForAnswer": "Không. Tracebud giúp hợp tác xã quản lý nhiều thành viên, nhà xuất khẩu thu thập bằng chứng vận chuyển đáng tin cậy và nhà nhập khẩu nhận dữ liệu sạch hơn. Mọi người trong chuỗi có thể tham gia, ngay cả khi truy cập kỹ thuật số bị hạn chế.",
-    "support": "Hỗ trợ gì có sẵn?",
-    "supportAnswer": "Onboarding thực tế cho tất cả khách hàng. Hỗ trợ trực tiếp từ đội của chúng tôi. Chúng tôi đang xây dựng điều này cùng với những người dùng ban đầu của chúng tôi, vì vậy phản hồi của bạn định hình sản phẩm."
-=======
     "title": "Questions? We have answers.",
     "whenLaunch": "Khi nào tôi có thể bắt đầu dùng Tracebud?",
     "whenLaunchAnswer": "Tracebud mở theo từng giai đoạn theo khu vực và hàng hóa. Tham gia danh sách chờ và chúng tôi sẽ email khi use case của bạn được hỗ trợ.",
@@ -475,6 +349,5 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Cà phê trước, sau đó sáu hàng hóa EUDR khác: ca cao, dầu cọ, cao su, đậu nành, gia súc và gỗ. Xem trang giá để biết lộ trình đầy đủ."
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   }
 }

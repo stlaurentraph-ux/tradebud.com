@@ -6,9 +6,6 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 export function Products() {
-<<<<<<< HEAD
-  const t = useTranslations("marketing");
-=======
   const t = useTranslations("marketing.productsSection");
   const preview = useTranslations("marketing.productsSection.dashboardPreview");
 
@@ -28,7 +25,6 @@ export function Products() {
     { icon: Package, text: t("dashboard.features.dds") },
   ];
 
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
   return (
     <section id="products" className="scroll-mt-20 py-24 md:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6">
@@ -40,17 +36,10 @@ export function Products() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-sm font-medium text-[var(--data-emerald)] tracking-wide uppercase mb-4">
-<<<<<<< HEAD
-            {t("productsSection.headline")}
-          </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-4">
-            {t("productsSection.intro")}
-=======
             {t("eyebrow")}
           </p>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--forest-canopy)] mb-6">
             {t("title")}
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">{t("intro")}</p>
         </motion.div>
@@ -73,26 +62,6 @@ export function Products() {
             </div>
 
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-<<<<<<< HEAD
-              {t("productsSection.mobileApp.headline")}
-            </h3>
-            
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              {t("productsSection.mobileApp.description")}
-            </p>
-            
-            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
-              {t("productsSection.mobileApp.supportingText")}
-            </p>
-
-            <div className="space-y-4">
-              {[
-                { icon: CheckCircle, text: "Free for producers. No training-heavy setup." },
-                { icon: WifiOff, text: "Works offline, syncs when connectivity returns." },
-                { icon: MapPin, text: "Walk the boundary to capture GPS polygons." },
-                { icon: Camera, text: "Photo evidence and consent recording." },
-              ].map((feature, index) => (
-=======
               {t("mobileApp.headline")}
             </h3>
 
@@ -100,7 +69,6 @@ export function Products() {
 
             <div className="space-y-4">
               {mobileFeatures.map((feature, index) => (
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
                 <div key={index} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">
                     <feature.icon className="w-5 h-5 text-[var(--forest-canopy)]" />
@@ -256,30 +224,6 @@ export function Products() {
                 {t("dashboard.label")}
               </span>
             </div>
-<<<<<<< HEAD
-            
-            <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-              {t("productsSection.dashboard.headline")}
-            </h3>
-            
-            <p className="text-lg text-gray-600 leading-relaxed mb-6">
-              {t("productsSection.dashboard.description")}
-            </p>
-            
-            <p className="text-sm text-[var(--data-emerald)] font-medium mb-8">
-              {t("productsSection.dashboard.supportingText")}
-            </p>
-
-            <div className="space-y-4">
-              {[
-                { icon: Upload, text: "Bulk import contacts via CSV upload" },
-                { icon: Send, text: "Send requests to hundreds of contacts at once" },
-                { icon: GitBranch, text: "Requests cascade through your network to source" },
-                { icon: Eye, text: "Track readiness across all network members" },
-                { icon: CheckCircle, text: "Identify missing evidence instantly" },
-                { icon: Package, text: "Assemble shipment-ready compliance records." },
-              ].map((feature, index) => (
-=======
 
             <h3 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">{t("dashboard.headline")}</h3>
 
@@ -287,7 +231,6 @@ export function Products() {
 
             <div className="space-y-4">
               {dashboardFeatures.map((feature, index) => (
->>>>>>> 9ee0440373a9b3b88b4c628aecea1e7fbed04893
                 <div key={index} className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[var(--warm-stone)] flex items-center justify-center flex-shrink-0">
                     <feature.icon className="w-5 h-5 text-[var(--forest-canopy)]" />
