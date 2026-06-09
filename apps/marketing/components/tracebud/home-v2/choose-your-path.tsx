@@ -6,8 +6,10 @@ import { getTranslations } from 'next-intl/server';
 const PATH_ICONS: Record<string, React.ReactNode> = {
   farmers: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-      <path d="M12 8v4l3 3" />
+      {/* Sprouting plant — represents farmers & producers */}
+      <path d="M12 22V12" />
+      <path d="M12 12C12 7 8 4 3 4c0 5 3 8 9 8z" />
+      <path d="M12 12c0-4 3-7 9-8-1 5-4 8-9 8z" />
     </svg>
   ),
   cooperatives: (

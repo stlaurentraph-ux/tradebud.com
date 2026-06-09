@@ -65,21 +65,18 @@ export async function WhatsPossible() {
           {scenarios.map((key, index) => (
             <li
               key={key}
-              className="flex gap-5 rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur-sm"
+              className="flex gap-5 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
             >
-              {/* Number + icon column */}
-              <div className="flex flex-col items-center gap-3 pt-0.5">
-                <span
-                  aria-hidden
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--data-emerald)] text-sm font-bold text-[var(--forest-canopy)]"
-                >
-                  {index + 1}
-                </span>
-                <div className="flex-1 w-px bg-white/10" aria-hidden />
-              </div>
+              {/* Number badge */}
+              <span
+                aria-hidden
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--data-emerald)] text-sm font-bold text-[var(--forest-canopy)]"
+              >
+                {index + 1}
+              </span>
 
               <div>
-                <div className="mb-3 flex items-center gap-2 text-[var(--data-emerald)]">
+                <div className="mb-2 flex items-center gap-2 text-[var(--data-emerald)]">
                   {SCENARIO_ICONS[key]}
                   <h3 className="font-semibold text-white">
                     {t(`scenarios.${key}.title`)}
