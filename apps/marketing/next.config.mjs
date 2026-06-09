@@ -11,6 +11,20 @@ const nextConfig = {
   turbopack: {
     root: appDir,
   },
+  // Turbopack NFT currently over-traces static marketing assets into API routes (~750MB).
+  // API handlers only need lib/* + node_modules; public/ is served separately on Vercel.
+  outputFileTracingExcludes: {
+    '/api/**': [
+      './public/**',
+      './app/**',
+      './components/**',
+      './content/**',
+      './messages/**',
+      './email-templates/**',
+      './*.md',
+      './scripts/**',
+    ],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

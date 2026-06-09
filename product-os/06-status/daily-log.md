@@ -1,3 +1,14 @@
+### 2026-06-09 (marketing: Vercel api/leads 749MB function fix)
+- Focus: production deploy blocked — `api/leads` serverless bundle traced at 749MB (300MB limit).
+- Root cause: Turbopack NFT over-included entire `public/` (~761MB unoptimized PNGs) plus app/components into API route traces.
+- Fix: `outputFileTracingExcludes` in `apps/marketing/next.config.mjs` for `/api/**` (public, app pages, components, content, messages).
+- Verified locally: leads route trace **753MB → 2MB** (87 files, 0MB public).
+
+### 2026-06-09 (offline: EAS build upload trim for monorepo)
+- Focus: fix preview iOS build failing at ~614 MB upload (`ECONNRESET`) due to 1.5 GB monorepo tarball.
+- Files: `apps/offline-product/.easignore`, `scripts/eas-build.mjs`, `package.json`, `RELEASE_RUNBOOK.md`.
+- Behavior: `npm run release:preview` now uploads only `apps/offline-product` via `EAS_NO_VCS=1` (~6 MB archive).
+
 ### 2026-06-03 (offline: Luganda locale lg.json)
 - Focus: full Luganda translation (464 keys) added to offline field app language picker.
 - Files: `features/i18n/messages/lg.json`, `features/i18n/config.ts`, `messages/index.ts`, `scripts/build-app-locale-files.mjs`, `scripts/import-lg-locale.mjs`, `scripts/patch_lg_pass2.py`.
