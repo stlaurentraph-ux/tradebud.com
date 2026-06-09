@@ -139,6 +139,152 @@
       "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
       "cta": "Join the waitlist"
     },
+    "pricingSection": {
+      "label": "Pricing",
+      "headline": "Simple monthly pricing by network size.",
+      "description": "One price. No per-seat fees.",
+      "popularBadge": "Most popular",
+      "footerNote": "Extra shipments are billed separately.",
+      "cta": "Get started",
+      "table": {
+        "plan": "Plan",
+        "managedScale": "Managed scale",
+        "shipments": "Included shipments / month",
+        "monthlyBase": "Monthly base"
+      },
+      "plans": {
+        "starter": {
+          "name": "Starter"
+        },
+        "growth": {
+          "name": "Growth"
+        },
+        "scale": {
+          "name": "Scale"
+        },
+        "enterprise": {
+          "name": "Enterprise"
+        }
+      }
+    },
+    "pilot": {
+      "hero": {
+        "imageAlt": "Aerial view of farm fields",
+        "badge": "Pilot open until 30 September 2026",
+        "title": "Join the Tracebud Pilot",
+        "description": "We are inviting a small group of producers, cooperatives, exporters, and importers to test our traceability tools and help us build a fully EUDR-ready supply chain — together.",
+        "cta": "Apply to join the pilot"
+      },
+      "benefits": {
+        "eyebrow": "What you get",
+        "title": "What pilot partners get",
+        "items": {
+          "free": "Free for the duration of the pilot — no billing until you go live.",
+          "mapping": "Free mapping of farmers and fields during the pilot.",
+          "literacy": "Built for low digital literacy and self-serve onboarding.",
+          "pricing": "Lifelong preferential pricing for active early partners.",
+          "trust": "Designed for traceability, consent, and EU data residency."
+        }
+      },
+      "whoShouldApply": {
+        "eyebrow": "Who we want",
+        "title": "Who should apply",
+        "description": "We want a balanced group across the chain.",
+        "cards": {
+          "producer": "Producers & farmer groups",
+          "cooperative": "Cooperatives",
+          "exporter": "Exporters",
+          "importer": "Importers & roasters",
+          "sponsor": "Network sponsors"
+        },
+        "footnote": "If you can involve more than one role in the same chain, your application is especially valuable."
+      },
+      "included": {
+        "eyebrow": "Scope",
+        "title": "What's included",
+        "items": {
+          "onboarding": "Organisation onboarding.",
+          "mapping": "Producer and field mapping.",
+          "plotCapture": "Plot capture and evidence upload.",
+          "batchTesting": "Batch and shipment testing.",
+          "feedback": "Feedback sessions to improve the product fast."
+        }
+      },
+      "commitment": {
+        "eyebrow": "Commitment",
+        "title": "What we ask",
+        "items": {
+          "activeUse": "Use the product actively during the pilot.",
+          "honestFeedback": "Share honest feedback.",
+          "productImproving": "Accept that the product is still being improved.",
+          "reviewCall": "Join at least one short review call or provide written feedback."
+        }
+      },
+      "whyJoin": {
+        "imageAlt": "Aerial farm fields",
+        "eyebrow": "Why now",
+        "title": "Why join",
+        "description": "This pilot is not just a trial. It is a chance to shape a product built for real supply chains, while getting early access, lower risk, and better commercial terms later. Pilot projects work best when both sides are clear about scope, timing, and expectations."
+      },
+      "trust": {
+        "title": "Trust and compliance",
+        "description": "Tracebud is built with EU data residency, consent-based access, audit logs, and immutable compliance packages for shipments."
+      },
+      "mobileCta": {
+        "footnote": "No financial obligation. Open until 30 September 2026."
+      },
+      "form": {
+        "farmerImageAlt": "Farmer using Tracebud in the field",
+        "title": "Apply to join the pilot",
+        "subtitle": "No financial obligation. We will follow up within 5 business days.",
+        "submit": "Submit application",
+        "submitting": "Sending…",
+        "success": "Application received. We will follow up by email.",
+        "fields": {
+          "role": "Role in the chain",
+          "organizationName": "Organisation name",
+          "contactName": "Your name",
+          "email": "Work email",
+          "country": "Country",
+          "commodity": "Primary commodity",
+          "organizationScale": "Organisation scale",
+          "eudrReadiness": "EUDR readiness",
+          "earliestStart": "Earliest window to start",
+          "successCriteria": "Short note on why you want to join"
+        },
+        "placeholders": {
+          "role": "Select your role",
+          "commodity": "e.g. Coffee",
+          "organizationScale": "e.g. 200 producers",
+          "select": "Select…",
+          "successCriteria": "What you hope to get out of the pilot."
+        },
+        "roles": {
+          "producer": "Producer or farmer group",
+          "cooperative": "Cooperative",
+          "exporter": "Exporter",
+          "importer": "Importer or roaster",
+          "sponsor": "Network sponsor (brand, country, NGO)"
+        },
+        "eudrReadiness": {
+          "not_started": "Not started — need a clear path",
+          "in_progress": "In progress — partial tools or data",
+          "advanced": "Advanced — systems in place, tuning for EUDR"
+        },
+        "startWindows": {
+          "0-30d": "Within 30 days",
+          "30-90d": "1–3 months",
+          "90-180d": "3–6 months",
+          "flexible": "Flexible — fit matters more than date"
+        },
+        "errors": {
+          "roleRequired": "Please select your role in the chain.",
+          "noteRequired": "Please add a short note on why you want to join.",
+          "submitFailed": "Could not submit application.",
+          "unexpected": "Unexpected error."
+        }
+      }
+    },
     "thankYou": {
       "title": "You're on the list",
       "description": "Thank you for your interest in Tracebud. We review every submission personally.",
@@ -281,8 +427,11 @@
       "countries": "Negara"
     },
     "nav": {
-      "howItWorks": "Cara kerjanya",
       "whyTracebud": "Mengapa Tracebud",
+      "howItWorks": "Cara kerjanya",
+      "products": "Products",
+      "pricing": "Pricing",
+      "pilot": "Pilot",
       "faq": "FAQ"
     },
     "cta": {
