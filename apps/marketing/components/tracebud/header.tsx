@@ -22,7 +22,6 @@ export function Header() {
   const locale = useLocale();
   const pathname = usePathname();
   const homePath = `/${locale}`;
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const waitlist = useWaitlistDialog();
 
@@ -43,12 +42,6 @@ export function Header() {
   };
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 24);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
@@ -57,16 +50,7 @@ export function Header() {
 
   return (
     <>
-      <motion.header
-        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? "border-b border-[var(--forest-canopy)]/10 bg-[var(--forest-canopy)] shadow-md"
-            : "bg-transparent"
-        }`}
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-      >
+      <header className="border-b border-white/10 bg-[var(--forest-canopy)] shadow-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           {/* Logo */}
           <Link href={homePath} className="group flex items-center gap-2.5" aria-label="Tracebud home">
@@ -152,7 +136,7 @@ export function Header() {
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.header>
+      </header>
     </>
   );
 }

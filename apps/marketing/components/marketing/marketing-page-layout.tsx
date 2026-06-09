@@ -11,8 +11,11 @@ type MarketingPageLayoutProps = {
 export function MarketingPageLayout({ children, routeId }: MarketingPageLayoutProps) {
   return (
     <main className="min-h-screen bg-background">
-      <DraftBanner routeId={routeId} />
-      <Header />
+      {/* Fixed top chrome: draft banner (if present) stacked above the nav bar */}
+      <div className="fixed left-0 right-0 top-0 z-50">
+        <DraftBanner routeId={routeId} />
+        <Header />
+      </div>
       {children}
       <Footer />
     </main>
