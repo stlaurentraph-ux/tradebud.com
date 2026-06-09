@@ -1,6 +1,8 @@
 import { Header } from "@/components/tracebud/header";
 import { Hero } from "@/components/tracebud/hero";
+import { Problem } from "@/components/tracebud/problem";
 import { Products } from "@/components/tracebud/products";
+import { Inclusiveness } from "@/components/tracebud/inclusiveness";
 import { WhoItIsFor } from "@/components/tracebud/who-it-is-for";
 import { Pricing } from "@/components/tracebud/pricing";
 import { ValueProp } from "@/components/tracebud/value-prop";
@@ -14,7 +16,9 @@ export default function Home() {
     <main id="main-content" className="min-h-screen bg-background">
       <Header />
       <Hero />
+      <Problem />
       <Products />
+      <Inclusiveness />
       <WhoItIsFor />
       <Pricing />
       <ValueProp />
