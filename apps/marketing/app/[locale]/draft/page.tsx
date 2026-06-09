@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { setRequestLocale } from 'next-intl/server';
 
@@ -57,21 +58,30 @@ export default async function DraftIndexPage({ params }: Props) {
   return (
     <MarketingPageLayout routeId="draft-index">
       {/* Header */}
-      <section className="bg-[var(--forest-canopy)] px-6 pb-16 pt-28 md:pt-36">
+      <section className="relative isolate overflow-hidden bg-[var(--forest-canopy)] px-6 pb-16 pt-28 md:pt-36">
+        <Image
+          src="/images/placeholders/hero-home.png"
+          alt=""
+          fill
+          className="absolute inset-0 -z-10 object-cover opacity-15"
+          sizes="100vw"
+          priority
+        />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-b from-[var(--forest-canopy)]/80 to-[var(--forest-canopy)]" />
         <div className="mx-auto max-w-4xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--data-emerald)]/30 bg-[var(--data-emerald)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--data-emerald)]">
             v0 handoff
           </p>
-          <h1 className="mb-4 text-4xl font-bold text-white text-balance md:text-5xl">
+          <h1 className="mb-4 text-balance text-4xl font-bold text-white md:text-5xl">
             Marketing site map
           </h1>
-          <p className="mb-6 text-lg leading-relaxed text-white/80">
+          <p className="mb-6 text-lg leading-relaxed text-white/75">
             Full information architecture — live styled pages and new draft routes. Use this index
             while designing in v0. Public nav stays unchanged until Stage B.
           </p>
           <Link
             href={`/${locale}/preview`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 transition-colors hover:bg-white/20"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 transition-colors hover:bg-white/20"
           >
             Homepage preview →
           </Link>

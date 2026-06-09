@@ -98,17 +98,18 @@ export default async function InsightArticlePage({ params }: Props) {
       {/* Article body */}
       <article className="bg-white px-6 py-16">
         <div className="mx-auto max-w-3xl">
-          {post.heroImage ? (
-            <div className="relative mb-12 aspect-[16/9] overflow-hidden rounded-2xl">
-              <Image
-                src={post.heroImage}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 768px"
-              />
-            </div>
-          ) : null}
+          {/* Hero image — use post's own image or a category-matched placeholder */}
+          <div className="relative mb-12 aspect-[16/9] overflow-hidden rounded-2xl shadow-md">
+            <Image
+              src={post.heroImage ?? '/images/placeholders/hero-insights.png'}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 768px"
+              priority
+            />
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
 
           <MarkdownContent content={post.body} />
 
