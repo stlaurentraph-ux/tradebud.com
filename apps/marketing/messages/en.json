@@ -355,6 +355,108 @@
     "description": "Regulatory updates, field notes, technology explainers, and practical playbooks for EUDR traceability.",
     "empty": "Articles are being prepared. Check back soon."
   },
+  "homeV2": {
+    "chooseYourPath": {
+      "title": "Choose your path",
+      "description": "Start with the workflow that matches your role in the chain.",
+      "farmers": {
+        "label": "Farmers & producers",
+        "description": "Map plots and build a compliance passport with the mobile app."
+      },
+      "cooperatives": {
+        "label": "Cooperatives",
+        "description": "Coordinate members and roll up verified evidence."
+      },
+      "exporters": {
+        "label": "Exporters",
+        "description": "Aggregate batches, run checks, and prepare DDS filing."
+      },
+      "importers": {
+        "label": "Importers & brands",
+        "description": "Gain upstream visibility and supplier risk signals."
+      },
+      "sponsors": {
+        "label": "Network sponsors",
+        "description": "Sponsor exporter and importer networks with centralised oversight."
+      },
+      "countries": {
+        "label": "Governments",
+        "description": "National traceability infrastructure without farmer lock-in."
+      }
+    },
+    "whatsPossible": {
+      "title": "What's possible",
+      "description": "Tracebud is a network — any node can start a workflow.",
+      "scenarios": {
+        "brand": {
+          "title": "A brand requests mapping from a cooperative abroad",
+          "description": "Outreach flows through the shared inbox; farmers grant access when ready."
+        },
+        "farmer": {
+          "title": "A farmer owns their GeoID",
+          "description": "One capture feeds multiple buyers without remapping the same plot."
+        },
+        "exporter": {
+          "title": "An exporter runs a pre-flight check",
+          "description": "The full batch pool is validated before TRACES submission unlocks."
+        },
+        "country": {
+          "title": "A country builds national DPI",
+          "description": "Open interoperability avoids locking smallholders into one vendor."
+        }
+      }
+    },
+    "whyTracebud": {
+      "title": "Why Tracebud",
+      "description": "Five principles that differentiate infrastructure from checkbox tools.",
+      "readMore": "Read the full comparison",
+      "items": {
+        "captureOnce": {
+          "title": "Capture once",
+          "description": "one map reused across markets"
+        },
+        "offline": {
+          "title": "Works offline",
+          "description": "built for field capture, not office Wi‑Fi"
+        },
+        "sovereignty": {
+          "title": "Farmer sovereignty",
+          "description": "explicit grants, no platform lock-in"
+        },
+        "identity": {
+          "title": "Identity preservation",
+          "description": "no mass-balance laundering of origins"
+        },
+        "network": {
+          "title": "Whole-chain network",
+          "description": "any actor can initiate workflows"
+        }
+      }
+    },
+    "socialProof": {
+      "stats": {
+        "commodities": {
+          "value": "7 commodities",
+          "label": "EUDR scope roadmap"
+        },
+        "offline": {
+          "value": "Offline-first",
+          "label": "Field capture"
+        },
+        "retention": {
+          "value": "5+ years",
+          "label": "Audit retention design"
+        }
+      },
+      "disclaimer": "Placeholder metrics — replace with pilot-approved numbers before launch."
+    },
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
+  },
   "homePreview": {
     "eyebrow": "Homepage preview",
     "title": "Future homepage assembly",
@@ -383,6 +485,7 @@
       "cooperatives": "Cooperatives",
       "exporters": "Exporters",
       "importers": "Importers & brands",
+      "sponsors": "Network sponsors",
       "countries": "Governments",
       "plotMapping": "Plot mapping & GeoID",
       "dueDiligence": "EUDR due diligence",

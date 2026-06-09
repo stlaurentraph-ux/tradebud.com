@@ -483,54 +483,58 @@ Build at **final URLs**, gated by publication registry. No nav/sitemap/homepage 
 
 #### A1 — Infrastructure
 
-- [ ] `lib/marketing-publication.ts` + `assertRoutePublished()` helper
-- [ ] Preview cookie middleware (optional `MARKETING_PREVIEW_SECRET`)
-- [ ] `lib/insights.ts` + `content/insights/` MDX loader
-- [ ] Shared page shells: `MarketingPageLayout`, draft banner in dev
-- [ ] i18n strings for future nav (can land early; unused until Stage B)
+- [x] `lib/marketing-publication.ts` + `assertRoutePublished()` helper
+- [x] Preview cookie middleware (optional `MARKETING_PREVIEW_SECRET`)
+- [x] `lib/insights.ts` + `content/insights/` markdown loader
+- [x] Shared page shells: `MarketingPageLayout`, draft banner in dev
+- [x] i18n strings for future nav (can land early; unused until Stage B)
+- [x] `/[locale]/insights` hub + `[slug]` article routes (gated)
+- [x] `/[locale]/preview` placeholder for homepage assembly
+- [x] 3 seed insight articles in `content/insights/`
 
 #### A2 — Insights (all content)
 
-- [ ] `/[locale]/insights` hub
-- [ ] `/[locale]/insights/[slug]` article template
-- [ ] Seed articles (minimum 3; target 6–8 before launch):
-  - [ ] EUDR simplified declarations
-  - [ ] Offline mapping under canopy
-  - [ ] Exporter EUDR checklist
-  - [ ] Identity preservation vs mass balance
-  - [ ] Farmer data wallet / sovereignty
-  - [ ] TRACES NT workflow overview
+- [x] `/[locale]/insights` hub
+- [x] `/[locale]/insights/[slug]` article template
+- [x] Seed articles (6 published; v0 can style article layout):
+  - [x] EUDR simplified declarations
+  - [x] Offline mapping under canopy
+  - [x] Exporter EUDR checklist
+  - [x] Identity preservation vs mass balance
+  - [x] Farmer data wallet / sovereignty
+  - [x] TRACES NT workflow overview
 
 #### A3 — Platform section
 
-- [ ] `/[locale]/platform` hub
-- [ ] `/[locale]/platform/offline-mapping`
-- [ ] `/[locale]/platform/ai-verification`
-- [ ] `/[locale]/platform/network`
-- [ ] `/[locale]/platform/integrations`
+- [x] `/[locale]/platform` hub
+- [x] `/[locale]/platform/offline-mapping`
+- [x] `/[locale]/platform/ai-verification`
+- [x] `/[locale]/platform/network`
+- [x] `/[locale]/platform/integrations`
 
 #### A4 — Compliance section
 
-- [ ] `/[locale]/compliance` hub
-- [ ] `/[locale]/compliance/eudr`
-- [ ] `/[locale]/compliance/due-diligence`
-- [ ] `/[locale]/compliance/guides`
-- [ ] `/[locale]/compliance/security`
+- [x] `/[locale]/compliance` hub
+- [x] `/[locale]/compliance/eudr`
+- [x] `/[locale]/compliance/due-diligence`
+- [x] `/[locale]/compliance/guides`
+- [x] `/[locale]/compliance/security`
 
 #### A5 — Solutions & positioning pages
 
-- [ ] `/[locale]/cooperatives` (if split from farmers)
-- [ ] `/[locale]/why-tracebud`
-- [ ] Refresh existing persona pages (internal cross-links only to other draft pages)
+- [x] `/[locale]/cooperatives`
+- [x] `/[locale]/why-tracebud`
+- [ ] Refresh existing persona pages (internal cross-links — defer to v0 pass)
 
 #### A6 — Homepage v2 (components only)
 
-- [ ] `ChooseYourPath` persona cards
-- [ ] `WhatsPossible` network section
-- [ ] `WhyTracebud` differentiators
-- [ ] `SocialProofStrip`
-- [ ] `LatestInsights` teaser
-- [ ] Preview assembly at `/[locale]/preview` **or** unmounted until Stage B
+- [x] `ChooseYourPath` persona cards
+- [x] `WhatsPossible` network section
+- [x] `WhyTracebud` differentiators
+- [x] `SocialProofStrip`
+- [x] `LatestInsights` teaser
+- [x] Preview assembly at `/[locale]/preview`
+- [x] `/[locale]/draft` internal index of all unpublished routes
 
 **Stage A acceptance criteria**
 
