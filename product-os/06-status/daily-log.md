@@ -1,3 +1,33 @@
+### 2026-06-03 (offline: Luganda locale lg.json)
+- Focus: full Luganda translation (464 keys) added to offline field app language picker.
+- Files: `features/i18n/messages/lg.json`, `features/i18n/config.ts`, `messages/index.ts`, `scripts/build-app-locale-files.mjs`, `scripts/import-lg-locale.mjs`, `scripts/patch_lg_pass2.py`.
+- Behavior: **Luganda** appears in language picker (LG pill); mixed Kinyarwanda/Swahili glitches corrected in pass-2 patch (backup/receipt terminology, plot/walk flows).
+
+### 2026-06-03 (offline: Kinyarwanda locale rw.json)
+- Focus: full Kinyarwanda translation (464 keys) added to offline field app language picker.
+- Files: `features/i18n/messages/rw.json`, `features/i18n/config.ts`, `messages/index.ts`, `scripts/build-app-locale-files.mjs`, `scripts/import-rw-locale.mjs`.
+- Behavior: **Ikinyarwanda** appears in language picker (RW pill); mixed Swahili/French glitches corrected (backup terminology, colons, retry-queue copy).
+
+### 2026-06-03 (offline: Kiswahili locale sw.json)
+- Focus: full Swahili translation (464 keys) added to offline field app language picker.
+- Files: `features/i18n/messages/sw.json`, `features/i18n/config.ts`, `messages/index.ts`, `scripts/build-app-locale-files.mjs`.
+- Behavior: **Kiswahili** appears in language picker (SW pill); minor typo fixes applied (och→na, mixed-script glitches).
+
+### 2026-06-03 (offline: en.json copy audit — backup + receipt)
+- Focus: unify farmer terminology before translation; prune dead keys.
+- Files: `features/i18n/messages/en.json` (467 keys), locale sync, `settings.tsx`, `SignInSheetContext.tsx`, `WalkPerimeterScreen.tsx`.
+- Behavior: farmer UI uses **backup** (not sync) and **receipt** (not voucher); removed ~40 unused keys; IHCAFE/backend jargon softened.
+
+### 2026-06-03 (offline: WalkPerimeter UI i18n + commodity-agnostic home_intro)
+- Focus: full WalkPerimeter farmer UI wired to `en.json`; `home_intro` de-coffeed in all 11 locales.
+- Files: `features/mapping/WalkPerimeterScreen.tsx`, `features/i18n/messages/*.json`.
+- Behavior: ~80 new walk_* keys (headers, capture methods, GPS, declarations, photos, completion); language pill opens picker; `home_intro` now “Walk your plot…” (not coffee-specific).
+
+### 2026-06-03 (offline: pre-i18n string extraction pass)
+- Focus: farmer-facing screens wired to `en.json` before full locale translation; dead My Plots UI removed.
+- Files: `app/(tabs)/explore.tsx` (slim list-only), `app/documents.tsx`, `app/plot/[id].tsx`, `features/mapping/WalkPerimeterScreen.tsx` (alerts), `features/auth/SignInSheetContext.tsx`, `features/i18n/messages/en.json` (+ locale sync).
+- Behavior: ~110 new English keys; non-English locales get English fallbacks via `npm run i18n:locales:sync`; documents `lang` bug fixed.
+
 ### 2026-06-03 (dashboard slice 6: backendApiUrl rollout across BFF routes)
 - Focus: all dashboard `app/api/**` proxies now use `backendApiUrl()` so prod `TRACEBUD_BACKEND_URL` values ending in `/api` do not double-prefix or drop `/api`.
 - Files: 37 route files under `app/api`, `integrations/coolfarm-sai/v2/_utils.ts`, gated-entry path resolver fix, API route test URL expectations.
@@ -12,6 +42,21 @@
 - Focus: document target IA for marketing site — nav, Insights blog, platform/compliance hubs, homepage funnel, phased rollout checklists.
 - Files: `apps/marketing/SITE_ARCHITECTURE.md`, `apps/marketing/REQUIREMENTS.md`, `apps/marketing/README.md`.
 - Behavior: no runtime changes; local blueprint for implementation.
+
+### 2026-06-09 (marketing: site map index + v0 branch)
+- Focus: unified `marketing-site-map.ts` indexing live pages (farmers, exporters, importers, countries, pricing, pilot, demo, get-started) + draft routes; sponsors page; `/en/draft` v0 handoff UI; branch `marketing/v0-site-restructure`.
+- Files: `lib/marketing-site-map.ts`, `V0_HANDOFF.md`, `app/[locale]/draft/page.tsx`, `app/[locale]/sponsors/page.tsx`.
+- Behavior: v0 styles draft shells; live pages marked "Live — styled"; Stage B unchanged.
+
+### 2026-06-08 (marketing: Stage A2–A6 stealth pages, content-only)
+- Focus: all draft routes at final URLs — platform, compliance, cooperatives, why-tracebud, 6 insights, home-v2 sections on `/preview`, `/draft` index; minimal shells for v0 styling later.
+- Files: `lib/marketing-draft-content.ts`, `components/marketing/draft-*`, `components/tracebud/home-v2/*`, `app/[locale]/platform|compliance|cooperatives|why-tracebud|draft/*`, `content/insights/*.md`.
+- Behavior: still 404 in production; live nav unchanged; edit copy in TS/markdown, restyle in v0 before Stage B.
+
+### 2026-06-08 (marketing: Stage A1 stealth infrastructure)
+- Focus: publication registry (404 in prod for draft routes), preview cookie middleware, insights markdown loader, gated `/insights` + `/preview` routes, 3 seed articles.
+- Files: `apps/marketing/lib/marketing-publication.ts`, `lib/insights.ts`, `lib/markdown.ts`, `middleware.ts`, `components/marketing/*`, `app/[locale]/insights/*`, `content/insights/*.md`, `messages/en.json`.
+- Behavior: draft routes visible in `npm run dev`; production 404 unless `MARKETING_PREVIEW_SECRET` cookie set; live nav/homepage unchanged.
 
 ### 2026-06-08 (marketing: stealth-build workflow)
 - Focus: agreed build order — Stage A build all pages at final URLs behind publication registry (404 in prod); Stage B flip flags + wire nav/footer/homepage/sitemap in one assembly PR.

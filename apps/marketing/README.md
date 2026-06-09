@@ -6,6 +6,25 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v
 
 Navigation, Insights (blog), platform/compliance hubs, and phased rollout: [SITE_ARCHITECTURE.md](./SITE_ARCHITECTURE.md).
 
+**v0 handoff:** [V0_HANDOFF.md](./V0_HANDOFF.md) — full site map, page status, and styling boundaries.
+
+### Stealth preview (Stage A)
+
+Draft routes return **404 in production** until publication flags flip in Stage B. Locally (`npm run dev`), all draft routes are visible.
+
+Optional deployed preview: set `MARKETING_PREVIEW_SECRET` in env, then visit any URL with `?marketing_preview=<secret>` to set a 7-day cookie.
+
+Site map for v0: **http://localhost:3000/en/draft** (live + draft pages indexed by section).
+
+| Section | Live (styled) | Draft (needs v0) |
+| --- | --- | --- |
+| Solutions | farmers, exporters, importers, countries | cooperatives, sponsors, why-tracebud |
+| Convert | pricing, get-started, pilot, demo | — |
+| Platform / Compliance / Insights | — | all routes |
+| Home | `/` | `/preview` |
+
+Content lives in `content/insights/*.md` and `lib/marketing-draft-content.ts`. **Style in v0** — pages use minimal layout shells (`DraftContentPage`, `DraftHubPage`).
+
 ## Built with v0
 
 This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
