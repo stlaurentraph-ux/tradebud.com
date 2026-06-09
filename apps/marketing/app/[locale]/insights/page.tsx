@@ -39,20 +39,35 @@ export default async function InsightsPage({ params }: Props) {
 
   return (
     <MarketingPageLayout routeId="insights">
-      <section className="bg-[var(--warm-stone)] px-6 pb-20 pt-28 md:pt-32">
+      {/* Hero */}
+      <section className="bg-[var(--forest-canopy)] px-6 pb-20 pt-28 md:pt-36">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 max-w-3xl">
-            <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--data-emerald)]">
+          <div className="max-w-3xl">
+            <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
               {t('eyebrow')}
             </p>
-            <h1 className="mb-4 text-4xl font-bold text-[var(--forest-canopy)] md:text-5xl">
+            <h1 className="mb-4 text-4xl font-bold leading-tight text-white text-balance md:text-5xl">
               {t('title')}
             </h1>
-            <p className="text-lg text-gray-600 md:text-xl">{t('description')}</p>
+            <p className="text-lg leading-relaxed text-white/80 md:text-xl">{t('description')}</p>
           </div>
+        </div>
+      </section>
 
+      {/* Count strip */}
+      <div className="border-b border-[var(--warm-stone-dark)] bg-white px-6 py-4">
+        <p className="mx-auto max-w-7xl text-sm text-gray-500">
+          {posts.length === 0
+            ? 'No articles yet'
+            : `${posts.length} article${posts.length === 1 ? '' : 's'}`}
+        </p>
+      </div>
+
+      {/* Grid */}
+      <section className="bg-[var(--warm-stone)] px-6 py-16">
+        <div className="mx-auto max-w-7xl">
           {posts.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-gray-600">
+            <p className="rounded-2xl border border-dashed border-[var(--warm-stone-dark)] bg-white p-10 text-center text-gray-500">
               {t('empty')}
             </p>
           ) : (
