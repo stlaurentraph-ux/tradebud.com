@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * Remove unused marketing PNGs and losslessly recompress referenced assets.
+ * Recompress marketing PNGs in place (never deletes files).
  * Run from apps/marketing: node scripts/optimize-public-pngs.mjs
+ *
+ * Pass 1: max width 2560, png level 9.
+ * Pass 2: files still > 5MB get max width 1920.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,17 +12,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const appDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-
-const KEEP = new Set([
-  'public/images/aerial-farm-jungle.png',
-  'public/images/farmer-app-homepage.png',
-  'public/images/tracebud-logo.png',
-  'public/images/tracebud-logo-email.png',
-  'public/og-image.png',
-  'public/tracebud-logo-v6.png',
-  'public/favicon-16x16-v6.png',
-  'public/favicon-32x32-v6.png',
-]);
+const LARGE_FILE_BYTES = 5 * 1024 * 1024;
 
 function walkPngs(dir, prefix = '') {
   const out = [];
@@ -39,64 +32,64 @@ function formatMb(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
-async function optimizePng(relPath) {
-  const fp = path.join(appDir, relPath);
+async function optimizePng(fp, maxWidth) {
   const before = fs.statSync(fp).size;
   const tmp = `${fp}.opt`;
   const image = sharp(fp);
   const meta = await image.metadata();
 
-  let pipeline = image.png({
-    compressionLevel: 9,
-    adaptiveFiltering: true,
-    palette: meta.hasAlpha ? false : true,
-  });
-
-  if ((meta.width ?? 0) > 1920) {
-    pipeline = pipeline.resize({ width: 1920, withoutEnlargement: true });
+  let pipeline = image;
+  if ((meta.width ?? 0) > maxWidth) {
+    pipeline = pipeline.resize({ width: maxWidth, withoutEnlargement: true });
   }
 
-  await pipeline.toFile(tmp);
+  await pipeline
+    .png({
+      compressionLevel: 9,
+      adaptiveFiltering: true,
+      palette: !meta.hasAlpha,
+      effort: 10,
+    })
+    .toFile(tmp);
+
   const after = fs.statSync(tmp).size;
   if (after < before) {
     fs.renameSync(tmp, fp);
-  } else {
-    fs.unlinkSync(tmp);
+    return { before, after };
   }
-  return { before, after: Math.min(before, after) };
+
+  fs.unlinkSync(tmp);
+  return { before, after: before };
 }
 
 async function main() {
-  const pngs = walkPngs(path.join(appDir, 'public'));
-  let removedBytes = 0;
-  let removedCount = 0;
+  const passes = [
+    { maxWidth: 2560, label: 'pass 1 (max 2560px)' },
+    { maxWidth: 1920, label: 'pass 2 (max 1920px, files > 5MB only)', minBytes: LARGE_FILE_BYTES },
+  ];
 
-  for (const png of pngs) {
-    if (KEEP.has(png.rel)) continue;
-    fs.unlinkSync(png.fp);
-    removedBytes += png.size;
-    removedCount += 1;
-    console.log(`removed ${png.rel} (${formatMb(png.size)})`);
-  }
+  let totalSaved = 0;
 
-  let savedBytes = 0;
-  for (const rel of [...KEEP].sort()) {
-    const fp = path.join(appDir, rel);
-    if (!fs.existsSync(fp)) {
-      console.warn(`skip missing ${rel}`);
-      continue;
+  for (const pass of passes) {
+    console.log(`\n${pass.label}`);
+    const pngs = walkPngs(path.join(appDir, 'public'))
+      .filter((png) => !pass.minBytes || png.size >= pass.minBytes)
+      .sort((a, b) => b.size - a.size);
+
+    for (const png of pngs) {
+      const { before, after } = await optimizePng(png.fp, pass.maxWidth);
+      if (after < before) {
+        totalSaved += before - after;
+        console.log(`${png.rel}: ${formatMb(before)} -> ${formatMb(after)}`);
+      }
     }
-    const { before, after } = await optimizePng(rel);
-    savedBytes += before - after;
-    console.log(`optimized ${rel}: ${formatMb(before)} -> ${formatMb(after)}`);
   }
 
   const remaining = walkPngs(path.join(appDir, 'public'));
   const remainingBytes = remaining.reduce((sum, p) => sum + p.size, 0);
   console.log('');
-  console.log(`Removed ${removedCount} unused PNGs (${formatMb(removedBytes)})`);
-  console.log(`Recompressed kept PNGs (saved ${formatMb(savedBytes)})`);
-  console.log(`Remaining PNG footprint: ${formatMb(remainingBytes)} (${remaining.length} files)`);
+  console.log(`Total saved: ${formatMb(totalSaved)}`);
+  console.log(`PNG footprint: ${formatMb(remainingBytes)} (${remaining.length} files)`);
 }
 
 main().catch((error) => {

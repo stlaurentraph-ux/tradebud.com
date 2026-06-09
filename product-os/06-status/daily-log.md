@@ -1,7 +1,9 @@
+### 2026-06-09 (marketing: restore + compress PNGs in place)
+- Corrected earlier mistake: restored all v0 stock PNGs from git; script now only recompresses (never deletes).
+- Two-pass sharp optimization (2560px then 1920px for files >5MB): images folder ~746MB → ~186MB, all 55 PNGs kept.
+
 ### 2026-06-09 (marketing: public PNG cleanup + recompress)
-- Focus: shrink marketing static assets after deploy trace fix (761MB images folder).
-- Removed 47 unused v0 stock PNGs (~742MB); kept 8 referenced PNGs; recompressed with `scripts/optimize-public-pngs.mjs` + sharp.
-- Remaining `public/` footprint ~6.6MB (was ~770MB+).
+- Superseded: files were restored; see entry above.
 
 ### 2026-06-09 (marketing: Vercel api/leads 749MB function fix)
 - Focus: production deploy blocked — `api/leads` serverless bundle traced at 749MB (300MB limit).
