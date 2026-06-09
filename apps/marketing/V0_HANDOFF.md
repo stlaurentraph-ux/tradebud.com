@@ -1,6 +1,6 @@
 # v0 handoff — marketing site restructure
 
-**Branch:** `marketing/v0-site-restructure`  
+**Branch for v0:** `v0/marketing-site-restructure` (or `main` — same content after PR #106)  
 **Package:** `apps/marketing`  
 **Status:** Stage A complete — style in v0, launch in Stage B
 
@@ -25,7 +25,7 @@ Open **http://localhost:3000/en/draft** — full site map with links to every pa
 ## Target navigation (Stage B — do not wire yet)
 
 ```
-Solutions ▾   Platform   Compliance   Pricing   Insights   [CTA]
+Solutions ▾   Platform   Compliance   Impact   Pricing   Insights   [CTA]
 ```
 
 ### Solutions menu
@@ -112,3 +112,32 @@ Preview on deploy: set `MARKETING_PREVIEW_SECRET`, visit `?marketing_preview=<se
 Stage B assembly (separate PR): publish flags, `SiteNav`, footer groups, mount home-v2 on `/`, expand `sitemap.ts`.
 
 See [SITE_ARCHITECTURE.md](./SITE_ARCHITECTURE.md) for full plan.
+
+---
+
+## Addendum — Impact section (Phase 2 for v0)
+
+**Do not restyle pages you already completed** unless asked. This slice is **new routes only** + one homepage block.
+
+### New routes (copy in `lib/marketing-draft-content.ts`)
+
+| Page | URL |
+| --- | --- |
+| Impact hub | `/impact` |
+| Farmer livelihood | `/impact/farmer-livelihood` |
+| Regenerative farming | `/impact/regenerative-farming` |
+| Climate & biodiversity | `/impact/climate-biodiversity` |
+| Why Tracebud (linked) | `/why-tracebud` |
+
+### Homepage preview
+
+- New block: `components/tracebud/home-v2/three-resilience.tsx` on `/preview` (between What's possible and Why Tracebud)
+- Style to match tokens you already applied elsewhere
+
+### Insights
+
+- 2 new articles in `content/insights/` with category `impact`
+
+### v0 prompt (paste into existing chat)
+
+> Style the **Impact** pages listed under `/en/draft` → Impact section. Use the same `DraftHubPage` / `DraftContentPage` patterns and design tokens as platform/compliance. Style `three-resilience.tsx` on `/preview`. Do not change farmers, pricing, pilot, or other finished pages.

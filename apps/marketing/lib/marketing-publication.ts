@@ -18,6 +18,10 @@ export type MarketingRouteId =
   | 'cooperatives'
   | 'sponsors'
   | 'why-tracebud'
+  | 'impact'
+  | 'impact-farmer-livelihood'
+  | 'impact-regenerative-farming'
+  | 'impact-climate-biodiversity'
   | 'home-preview'
   | 'draft-index';
 
@@ -44,6 +48,10 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   cooperatives: false,
   sponsors: false,
   'why-tracebud': false,
+  impact: false,
+  'impact-farmer-livelihood': false,
+  'impact-regenerative-farming': false,
+  'impact-climate-biodiversity': false,
   'home-preview': false,
   'draft-index': false,
 };

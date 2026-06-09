@@ -7,6 +7,7 @@ import { ChooseYourPath } from '@/components/tracebud/home-v2/choose-your-path';
 import { LatestInsights } from '@/components/tracebud/home-v2/latest-insights';
 import { SocialProofStrip } from '@/components/tracebud/home-v2/social-proof-strip';
 import { WhatsPossible } from '@/components/tracebud/home-v2/whats-possible';
+import { ThreeResilience } from '@/components/tracebud/home-v2/three-resilience';
 import { WhyTracebudBlock } from '@/components/tracebud/home-v2/why-tracebud-block';
 import { assertMarketingRoutePublished } from '@/lib/marketing-publication';
 
@@ -50,6 +51,7 @@ export default async function HomePreviewPage({ params }: Props) {
       <SocialProofStrip />
       <ChooseYourPath locale={locale} />
       <WhatsPossible />
+      <ThreeResilience locale={locale} />
       <WhyTracebudBlock locale={locale} />
       <LatestInsights locale={locale} />
     </MarketingPageLayout>
