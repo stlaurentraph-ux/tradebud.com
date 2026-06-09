@@ -43,6 +43,11 @@
 - Files: `apps/marketing/SITE_ARCHITECTURE.md`, `apps/marketing/REQUIREMENTS.md`, `apps/marketing/README.md`.
 - Behavior: no runtime changes; local blueprint for implementation.
 
+### 2026-06-09 (marketing: site map index + v0 branch)
+- Focus: unified `marketing-site-map.ts` indexing live pages (farmers, exporters, importers, countries, pricing, pilot, demo, get-started) + draft routes; sponsors page; `/en/draft` v0 handoff UI; branch `marketing/v0-site-restructure`.
+- Files: `lib/marketing-site-map.ts`, `V0_HANDOFF.md`, `app/[locale]/draft/page.tsx`, `app/[locale]/sponsors/page.tsx`.
+- Behavior: v0 styles draft shells; live pages marked "Live — styled"; Stage B unchanged.
+
 ### 2026-06-08 (marketing: Stage A2–A6 stealth pages, content-only)
 - Focus: all draft routes at final URLs — platform, compliance, cooperatives, why-tracebud, 6 insights, home-v2 sections on `/preview`, `/draft` index; minimal shells for v0 styling later.
 - Files: `lib/marketing-draft-content.ts`, `components/marketing/draft-*`, `components/tracebud/home-v2/*`, `app/[locale]/platform|compliance|cooperatives|why-tracebud|draft/*`, `content/insights/*.md`.
