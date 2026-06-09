@@ -30,11 +30,11 @@ import {
 } from "@/components/ui/select";
 
 const pilotRoles = [
-  { value: "producer", label: "Producer or farmer group" },
-  { value: "cooperative", label: "Cooperative" },
-  { value: "exporter", label: "Exporter" },
-  { value: "importer", label: "Importer or roaster" },
-  { value: "other", label: "Other" },
+  { value: "producer", label: "Producers & farmers" },
+  { value: "cooperative", label: "Cooperatives" },
+  { value: "exporter", label: "Exporters" },
+  { value: "importer", label: "Importers" },
+  { value: "sponsor", label: "Sponsors (countries and brands)" },
 ] as const;
 
 const eudrMaturity = [
@@ -169,7 +169,7 @@ export default function PilotPage() {
               Join the Tracebud Pilot
             </h1>
             <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mb-10">
-              We are inviting a small group of producers, cooperatives, exporters, and importers to test our traceability tools and help us build a fully EUDR-ready supply chain — together.
+              We are inviting a small group of producers, cooperatives, exporters, importers, and sponsors to test our traceability tools and help us build a fully EUDR-ready supply chain — together.
             </p>
             <a href="#apply">
               <Button
