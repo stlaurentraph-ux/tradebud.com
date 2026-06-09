@@ -523,6 +523,7 @@ Build at **final URLs**, gated by publication registry. No nav/sitemap/homepage 
 #### A5 — Solutions & positioning pages
 
 - [x] `/[locale]/cooperatives`
+- [x] `/[locale]/sponsors`
 - [x] `/[locale]/why-tracebud`
 - [ ] Refresh existing persona pages (internal cross-links — defer to v0 pass)
 

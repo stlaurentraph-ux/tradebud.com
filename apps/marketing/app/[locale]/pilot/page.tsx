@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   Calendar,
@@ -29,51 +30,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const pilotRoles = [
-  { value: "producer", label: "Producers & farmers" },
-  { value: "cooperative", label: "Cooperatives" },
-  { value: "exporter", label: "Exporters" },
-  { value: "importer", label: "Importers" },
-  { value: "sponsor", label: "Sponsors (countries and brands)" },
-] as const;
+const pilotRoleKeys = ["producer", "cooperative", "exporter", "importer", "sponsor"] as const;
+const eudrReadinessKeys = ["not_started", "in_progress", "advanced"] as const;
+const startWindowKeys = ["0-30d", "30-90d", "90-180d", "flexible"] as const;
+const benefitKeys = ["free", "mapping", "literacy", "pricing", "trust"] as const;
+const includedKeys = ["onboarding", "mapping", "plotCapture", "batchTesting", "feedback"] as const;
+const commitmentKeys = ["activeUse", "honestFeedback", "productImproving", "reviewCall"] as const;
 
-const eudrMaturity = [
-  { value: "not_started", label: "Not started — need a clear path" },
-  { value: "in_progress", label: "In progress — partial tools or data" },
-  { value: "advanced", label: "Advanced — systems in place, tuning for EUDR" },
-] as const;
+const benefitIcons = {
+  free: Gift,
+  mapping: MapPin,
+  literacy: Sprout,
+  pricing: Tag,
+  trust: ShieldCheck,
+} as const;
 
-const startWindows = [
-  { value: "0-30d", label: "Within 30 days" },
-  { value: "30-90d", label: "1–3 months" },
-  { value: "90-180d", label: "3–6 months" },
-  { value: "flexible", label: "Flexible — fit matters more than date" },
-] as const;
-
-const benefits = [
-  { icon: Gift, text: "Free for the duration of the pilot — no billing until you go live." },
-  { icon: MapPin, text: "Free mapping of farmers and fields during the pilot." },
-  { icon: Sprout, text: "Built for low digital literacy and self-serve onboarding." },
-  { icon: Tag, text: "Lifelong preferential pricing for active early partners." },
-  { icon: ShieldCheck, text: "Designed for traceability, consent, and EU data residency." },
-];
-
-const whatsIncluded = [
-  "Organisation onboarding.",
-  "Producer and field mapping.",
-  "Plot capture and evidence upload.",
-  "Batch and shipment testing.",
-  "Feedback sessions to improve the product fast.",
-];
-
-const whatWeAsk = [
-  "Use the product actively during the pilot.",
-  "Share honest feedback.",
-  "Accept that the product is still being improved.",
-  "Join at least one short review call or provide written feedback.",
+const whoCards = [
+  { key: "producer" as const, src: "/images/step-photos.jpg", objectPosition: "center 35%" },
+  { key: "cooperative" as const, src: "/images/pilot/cooperatives.jpg", objectPosition: "center 40%" },
+  { key: "exporter" as const, src: "/images/exporter-hero.jpg", objectPosition: "center center" },
+  { key: "importer" as const, src: "/images/pilot/importers-corporate.jpg", objectPosition: "center 35%" },
+  { key: "sponsor" as const, src: "/images/country-hero.jpg", objectPosition: "center center" },
 ];
 
 export default function PilotPage() {
+  const t = useTranslations("marketing.pilot");
   const [form, setForm] = useState({
     pilotRole: "",
     organizationName: "",
@@ -93,11 +74,11 @@ export default function PilotPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.pilotRole) {
-      setErr("Please select your role in the chain.");
+      setErr(t("form.errors.roleRequired"));
       return;
     }
     if (!form.successCriteria.trim()) {
-      setErr("Please add a short note on why you want to join.");
+      setErr(t("form.errors.noteRequired"));
       return;
     }
     setSubmitting(true);
@@ -119,8 +100,8 @@ export default function PilotPage() {
         }),
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !json?.ok) throw new Error(json?.error ?? "Could not submit application.");
-      setOk("Application received. We will follow up by email.");
+      if (!res.ok || !json?.ok) throw new Error(json?.error ?? t("form.errors.submitFailed"));
+      setOk(t("form.success"));
       setForm({
         pilotRole: "",
         organizationName: "",
@@ -134,7 +115,7 @@ export default function PilotPage() {
         successCriteria: "",
       });
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Unexpected error.");
+      setErr(error instanceof Error ? error.message : t("form.errors.unexpected"));
     } finally {
       setSubmitting(false);
     }
@@ -144,248 +125,220 @@ export default function PilotPage() {
     <main className="min-h-screen bg-background font-sans">
       <Header />
 
-      {/* Hero */}
-      <section className="relative pt-28 overflow-hidden bg-[var(--forest-canopy)]">
+      <section className="relative overflow-hidden bg-[var(--forest-canopy)] pt-28">
         <div className="absolute inset-0">
           <Image
             src="/images/aerial-farm-jungle.png"
-            alt="Aerial view of farm fields"
+            alt={t("hero.imageAlt")}
             fill
             className="object-cover opacity-20"
           />
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-6">
+        <div className="relative z-10 mx-auto max-w-7xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="pb-16 pt-8 max-w-3xl"
+            className="max-w-3xl pb-16 pt-8"
           >
-            <div className="inline-flex items-center gap-2 bg-[var(--data-emerald)]/20 border border-[var(--data-emerald)]/30 text-[var(--data-emerald)] px-4 py-1.5 rounded-full text-sm font-semibold mb-8">
-              <Calendar className="w-3.5 h-3.5" />
-              Pilot open until 30 September 2026
+            <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--data-emerald)]/30 bg-[var(--data-emerald)]/20 px-4 py-1.5 text-sm font-semibold text-[var(--data-emerald)]">
+              <Calendar className="h-3.5 w-3.5" />
+              {t("hero.badge")}
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 text-balance leading-[1.1]">
-              Join the Tracebud Pilot
+            <h1 className="mb-6 text-balance text-4xl font-bold leading-[1.1] text-white md:text-5xl lg:text-6xl">
+              {t("hero.title")}
             </h1>
-            <p className="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mb-10">
-              We are inviting a small group of producers, cooperatives, exporters, importers, and sponsors to test our traceability tools and help us build a fully EUDR-ready supply chain — together.
+            <p className="mb-10 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
+              {t("hero.description")}
             </p>
             <a href="#apply">
               <Button
                 size="lg"
-                className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-6 text-base rounded-full"
+                className="rounded-full bg-[var(--data-emerald)] px-8 py-6 text-base font-bold text-[var(--forest-canopy)] hover:bg-emerald-400"
               >
-                Apply to join the pilot
-                <ArrowRight className="ml-2 w-4 h-4" />
+                {t("hero.cta")}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </a>
           </motion.div>
         </div>
       </section>
 
-      {/* Main content + form side by side */}
-      <div className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-[1fr_480px] gap-16 items-start">
-
-          {/* Left column — all content sections */}
+      <div className="mx-auto max-w-7xl px-6 py-20">
+        <div className="grid items-start gap-16 lg:grid-cols-[1fr_480px]">
           <div className="space-y-16">
-
-            {/* Benefits */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-4">What you get</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-8">
-                What pilot partners get
+              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
+                {t("benefits.eyebrow")}
+              </p>
+              <h2 className="mb-8 text-2xl font-bold text-[var(--forest-canopy)] md:text-3xl">
+                {t("benefits.title")}
               </h2>
               <ul className="space-y-4">
-                {benefits.map((b) => (
-                  <li key={b.text} className="flex items-start gap-4">
-                    <div className="w-9 h-9 rounded-xl bg-[var(--data-emerald)]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <b.icon className="w-4 h-4 text-[var(--data-emerald)]" />
-                    </div>
-                    <span className="text-base text-gray-700 leading-relaxed pt-1.5">{b.text}</span>
-                  </li>
-                ))}
+                {benefitKeys.map((key) => {
+                  const Icon = benefitIcons[key];
+                  return (
+                    <li key={key} className="flex items-start gap-4">
+                      <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--data-emerald)]/10">
+                        <Icon className="h-4 w-4 text-[var(--data-emerald)]" />
+                      </div>
+                      <span className="pt-1.5 text-base leading-relaxed text-gray-700">
+                        {t(`benefits.items.${key}`)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </motion.div>
 
-            {/* Who should apply */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-4">Who we want</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-[var(--forest-canopy)] mb-4">
-                Who should apply
-              </h2>
-              <p className="text-gray-600 mb-6">We want a balanced group across the chain.</p>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                {[
-                  {
-                    src: "/images/step-photos.jpg",
-                    label: "Producers & farmers",
-                    objectPosition: "center 35%",
-                  },
-                  {
-                    src: "/images/pilot/cooperatives.jpg",
-                    label: "Cooperatives",
-                    objectPosition: "center 40%",
-                  },
-                  {
-                    src: "/images/exporter-hero.jpg",
-                    label: "Exporters",
-                    objectPosition: "center center",
-                  },
-                  {
-                    src: "/images/pilot/importers-corporate.jpg",
-                    label: "Importers",
-                    objectPosition: "center 35%",
-                  },
-                  {
-                    src: "/images/country-hero.jpg",
-                    label: "Sponsors (countries and brands)",
-                    objectPosition: "center center",
-                  },
-                ].map((card) => (
-                  <div key={card.label} className="relative aspect-[3/2] rounded-xl overflow-hidden group">
-                    <Image
-                      src={card.src}
-                      alt={card.label}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      style={{ objectPosition: card.objectPosition }}
-                      sizes="(max-width: 1024px) 50vw, 400px"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)]/80 via-[var(--forest-canopy)]/20 to-transparent" />
-                    <span className="absolute bottom-3 left-3 text-sm font-bold text-white">{card.label}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-gray-500 mt-4">
-                If you can involve more than one role in the same chain, your application is especially valuable.
+              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
+                {t("whoShouldApply.eyebrow")}
               </p>
+              <h2 className="mb-4 text-2xl font-bold text-[var(--forest-canopy)] md:text-3xl">
+                {t("whoShouldApply.title")}
+              </h2>
+              <p className="mb-6 text-gray-600">{t("whoShouldApply.description")}</p>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                {whoCards.map((card) => {
+                  const label = t(`whoShouldApply.cards.${card.key}`);
+                  return (
+                    <div key={card.key} className="group relative aspect-[3/2] overflow-hidden rounded-xl">
+                      <Image
+                        src={card.src}
+                        alt={label}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        style={{ objectPosition: card.objectPosition }}
+                        sizes="(max-width: 1024px) 50vw, 400px"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--forest-canopy)]/80 via-[var(--forest-canopy)]/20 to-transparent" />
+                      <span className="absolute bottom-3 left-3 text-sm font-bold text-white">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-sm text-gray-500">{t("whoShouldApply.footnote")}</p>
             </motion.div>
 
-            {/* What's included + what we ask — two columns */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="grid sm:grid-cols-2 gap-8"
+              className="grid gap-8 sm:grid-cols-2"
             >
               <div>
-                <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-4">Scope</p>
-                <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-5">{"What's included"}</h2>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
+                  {t("included.eyebrow")}
+                </p>
+                <h2 className="mb-5 text-xl font-bold text-[var(--forest-canopy)]">{t("included.title")}</h2>
                 <ul className="space-y-3">
-                  {whatsIncluded.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-[var(--data-emerald)] mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-600">{item}</span>
+                  {includedKeys.map((key) => (
+                    <li key={key} className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--data-emerald)]" />
+                      <span className="text-sm text-gray-600">{t(`included.items.${key}`)}</span>
                     </li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-xs font-semibold text-[var(--forest-canopy)]/50 tracking-widest uppercase mb-4">Commitment</p>
-                <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-5">What we ask</h2>
+                <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-[var(--forest-canopy)]/50">
+                  {t("commitment.eyebrow")}
+                </p>
+                <h2 className="mb-5 text-xl font-bold text-[var(--forest-canopy)]">{t("commitment.title")}</h2>
                 <ul className="space-y-3">
-                  {whatWeAsk.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <ChevronRight className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-600">{item}</span>
+                  {commitmentKeys.map((key) => (
+                    <li key={key} className="flex items-start gap-3">
+                      <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400" />
+                      <span className="text-sm text-gray-600">{t(`commitment.items.${key}`)}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </motion.div>
 
-            {/* Why join */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="bg-[var(--forest-canopy)] rounded-2xl overflow-hidden"
+              className="overflow-hidden rounded-2xl bg-[var(--forest-canopy)]"
             >
               <div className="relative h-44 w-full">
                 <Image
                   src="/images/gis-geolocation.jpg"
-                  alt="Aerial farm fields"
+                  alt={t("whyJoin.imageAlt")}
                   fill
                   className="object-cover opacity-60"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--forest-canopy)]" />
               </div>
-              <div className="p-8 -mt-8 relative z-10">
-                <p className="text-xs font-semibold text-[var(--data-emerald)] tracking-widest uppercase mb-3">Why now</p>
-                <h2 className="text-xl font-bold text-white mb-4">Why join</h2>
-                <p className="text-white/75 leading-relaxed text-sm">
-                  This pilot is not just a trial. It is a chance to shape a product built for real supply chains, while getting early access, lower risk, and better commercial terms later. Pilot projects work best when both sides are clear about scope, timing, and expectations.
+              <div className="relative z-10 -mt-8 p-8">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-[var(--data-emerald)]">
+                  {t("whyJoin.eyebrow")}
                 </p>
+                <h2 className="mb-4 text-xl font-bold text-white">{t("whyJoin.title")}</h2>
+                <p className="text-sm leading-relaxed text-white/75">{t("whyJoin.description")}</p>
               </div>
             </motion.div>
 
-            {/* Trust */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="flex items-start gap-4 p-6 border border-gray-200 rounded-2xl"
+              className="flex items-start gap-4 rounded-2xl border border-gray-200 p-6"
             >
-              <ShieldCheck className="w-8 h-8 text-[var(--data-emerald)] flex-shrink-0 mt-0.5" />
+              <ShieldCheck className="mt-0.5 h-8 w-8 flex-shrink-0 text-[var(--data-emerald)]" />
               <div>
-                <p className="font-bold text-[var(--forest-canopy)] mb-1">Trust and compliance</p>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Tracebud is built with EU data residency, consent-based access, audit logs, and immutable compliance packages for shipments.
-                </p>
+                <p className="mb-1 font-bold text-[var(--forest-canopy)]">{t("trust.title")}</p>
+                <p className="text-sm leading-relaxed text-gray-600">{t("trust.description")}</p>
               </div>
             </motion.div>
 
-            {/* Mobile-only closing CTA */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="lg:hidden text-center pt-4"
+              className="pt-4 text-center lg:hidden"
             >
               <a href="#apply">
                 <Button
                   size="lg"
-                  className="bg-[var(--data-emerald)] hover:bg-emerald-400 text-[var(--forest-canopy)] font-bold px-8 py-6 text-base rounded-full"
+                  className="rounded-full bg-[var(--data-emerald)] px-8 py-6 text-base font-bold text-[var(--forest-canopy)] hover:bg-emerald-400"
                 >
-                  Apply to join the pilot
-                  <ArrowRight className="ml-2 w-4 h-4" />
+                  {t("hero.cta")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </a>
-              <p className="text-sm text-gray-400 mt-3">No financial obligation. Open until 30 September 2026.</p>
+              <p className="mt-3 text-sm text-gray-400">{t("mobileCta.footnote")}</p>
             </motion.div>
-
           </div>
 
-          {/* Right column — sticky form */}
           <div className="lg:sticky lg:top-24" id="apply">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
-              className="bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden"
+              className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg"
             >
-              {/* Farmer image header */}
               <div className="relative h-64 w-full sm:h-72">
                 <Image
                   src="/images/inclusion-visual.jpg"
-                  alt="Farmer using Tracebud in the field"
+                  alt={t("form.farmerImageAlt")}
                   fill
                   className="object-cover object-[center_28%]"
                   sizes="(max-width: 1024px) 100vw, 480px"
@@ -394,167 +347,179 @@ export default function PilotPage() {
               </div>
 
               <div className="relative z-10 p-8">
-                <h2 className="text-xl font-bold text-[var(--forest-canopy)] mb-1">Apply to join the pilot</h2>
-                <p className="text-sm text-gray-500 mb-7">
-                  No financial obligation. We will follow up within 5 business days.
-                </p>
+                <h2 className="mb-1 text-xl font-bold text-[var(--forest-canopy)]">{t("form.title")}</h2>
+                <p className="mb-7 text-sm text-gray-500">{t("form.subtitle")}</p>
 
-              {ok ? (
-                <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-emerald-800 font-medium">{ok}</p>
-                </div>
-              ) : (
-                <form onSubmit={submit} className="space-y-5">
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pilotRole">Role in the chain <span className="text-red-500">*</span></Label>
-                    <Select
-                      value={form.pilotRole || undefined}
-                      onValueChange={(v) => setForm((f) => ({ ...f, pilotRole: v }))}
-                    >
-                      <SelectTrigger id="pilotRole" className="w-full">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pilotRoles.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {ok ? (
+                  <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" />
+                    <p className="text-sm font-medium text-emerald-800">{ok}</p>
                   </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="organizationName">Organisation name <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="organizationName"
-                      required
-                      autoComplete="organization"
-                      value={form.organizationName}
-                      onChange={(e) => setForm((f) => ({ ...f, organizationName: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="contactName">Your name <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="contactName"
-                      required
-                      autoComplete="name"
-                      value={form.contactName}
-                      onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">Work email <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      value={form.email}
-                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                ) : (
+                  <form onSubmit={submit} className="space-y-5">
                     <div className="space-y-1.5">
-                      <Label htmlFor="country">Country</Label>
+                      <Label htmlFor="pilotRole">
+                        {t("form.fields.role")} <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={form.pilotRole || undefined}
+                        onValueChange={(v) => setForm((f) => ({ ...f, pilotRole: v }))}
+                      >
+                        <SelectTrigger id="pilotRole" className="w-full">
+                          <SelectValue placeholder={t("form.placeholders.role")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pilotRoleKeys.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {t(`form.roles.${key}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="organizationName">
+                        {t("form.fields.organizationName")} <span className="text-red-500">*</span>
+                      </Label>
                       <Input
-                        id="country"
-                        autoComplete="country-name"
-                        value={form.country}
-                        onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                        id="organizationName"
+                        required
+                        autoComplete="organization"
+                        value={form.organizationName}
+                        onChange={(e) => setForm((f) => ({ ...f, organizationName: e.target.value }))}
                       />
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="primaryCommodity">Commodity</Label>
+                      <Label htmlFor="contactName">
+                        {t("form.fields.contactName")} <span className="text-red-500">*</span>
+                      </Label>
                       <Input
-                        id="primaryCommodity"
-                        placeholder="e.g. coffee"
-                        value={form.primaryCommodity}
-                        onChange={(e) => setForm((f) => ({ ...f, primaryCommodity: e.target.value }))}
+                        id="contactName"
+                        required
+                        autoComplete="name"
+                        value={form.contactName}
+                        onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))}
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="organizationScale">Approximate number of producers or shipments</Label>
-                    <Input
-                      id="organizationScale"
-                      placeholder="e.g. ~120 farmers, or 30 shipments/year"
-                      value={form.organizationScale}
-                      onChange={(e) => setForm((f) => ({ ...f, organizationScale: e.target.value }))}
-                    />
-                  </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">
+                        {t("form.fields.email")} <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        required
+                        autoComplete="email"
+                        value={form.email}
+                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="eudrReadiness">Where you are with EUDR today</Label>
-                    <Select
-                      value={form.eudrReadiness || undefined}
-                      onValueChange={(v) => setForm((f) => ({ ...f, eudrReadiness: v }))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="country">{t("form.fields.country")}</Label>
+                        <Input
+                          id="country"
+                          autoComplete="country-name"
+                          value={form.country}
+                          onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="primaryCommodity">{t("form.fields.commodity")}</Label>
+                        <Input
+                          id="primaryCommodity"
+                          placeholder={t("form.placeholders.commodity")}
+                          value={form.primaryCommodity}
+                          onChange={(e) => setForm((f) => ({ ...f, primaryCommodity: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="organizationScale">{t("form.fields.organizationScale")}</Label>
+                      <Input
+                        id="organizationScale"
+                        placeholder={t("form.placeholders.organizationScale")}
+                        value={form.organizationScale}
+                        onChange={(e) => setForm((f) => ({ ...f, organizationScale: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="eudrReadiness">{t("form.fields.eudrReadiness")}</Label>
+                      <Select
+                        value={form.eudrReadiness || undefined}
+                        onValueChange={(v) => setForm((f) => ({ ...f, eudrReadiness: v }))}
+                      >
+                        <SelectTrigger id="eudrReadiness" className="w-full">
+                          <SelectValue placeholder={t("form.placeholders.select")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eudrReadinessKeys.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {t(`form.eudrReadiness.${key}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="earliestStart">{t("form.fields.earliestStart")}</Label>
+                      <Select
+                        value={form.earliestStart || undefined}
+                        onValueChange={(v) => setForm((f) => ({ ...f, earliestStart: v }))}
+                      >
+                        <SelectTrigger id="earliestStart" className="w-full">
+                          <SelectValue placeholder={t("form.placeholders.select")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {startWindowKeys.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {t(`form.startWindows.${key}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="successCriteria">
+                        {t("form.fields.successCriteria")} <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="successCriteria"
+                        required
+                        rows={3}
+                        placeholder={t("form.placeholders.successCriteria")}
+                        value={form.successCriteria}
+                        onChange={(e) => setForm((f) => ({ ...f, successCriteria: e.target.value }))}
+                      />
+                    </div>
+
+                    {err && (
+                      <p className="text-sm text-red-600" role="alert">
+                        {err}
+                      </p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      size="lg"
+                      disabled={submitting}
+                      className="w-full rounded-full bg-[var(--forest-canopy)] py-6 font-bold text-white hover:bg-[var(--forest-light)]"
                     >
-                      <SelectTrigger id="eudrReadiness" className="w-full">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {eudrMaturity.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="earliestStart">Earliest window to start</Label>
-                    <Select
-                      value={form.earliestStart || undefined}
-                      onValueChange={(v) => setForm((f) => ({ ...f, earliestStart: v }))}
-                    >
-                      <SelectTrigger id="earliestStart" className="w-full">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {startWindows.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="successCriteria">
-                      Short note on why you want to join <span className="text-red-500">*</span>
-                    </Label>
-                    <Textarea
-                      id="successCriteria"
-                      required
-                      rows={3}
-                      placeholder="What you hope to get out of the pilot."
-                      value={form.successCriteria}
-                      onChange={(e) => setForm((f) => ({ ...f, successCriteria: e.target.value }))}
-                    />
-                  </div>
-
-                  {err && (
-                    <p className="text-sm text-red-600" role="alert">{err}</p>
-                  )}
-
-                  <Button
-                    type="submit"
-                    size="lg"
-                    disabled={submitting}
-                    className="w-full rounded-full bg-[var(--forest-canopy)] hover:bg-[var(--forest-light)] text-white font-bold py-6"
-                  >
-                    {submitting ? "Sending…" : "Submit application"}
-                  </Button>
-                </form>
-              )}
+                      {submitting ? t("form.submitting") : t("form.submit")}
+                    </Button>
+                  </form>
+                )}
               </div>
             </motion.div>
           </div>
-
         </div>
       </div>
 
