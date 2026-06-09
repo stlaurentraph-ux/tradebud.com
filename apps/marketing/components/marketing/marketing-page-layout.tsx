@@ -1,5 +1,5 @@
 import { Footer } from '@/components/tracebud/footer';
-import { Header } from '@/components/tracebud/header';
+import { SiteNav } from '@/components/site-nav';
 import { DraftBanner } from '@/components/marketing/draft-banner';
 import type { MarketingRouteId } from '@/lib/marketing-publication';
 
@@ -14,7 +14,7 @@ export function MarketingPageLayout({ children, routeId }: MarketingPageLayoutPr
       {/* Fixed top chrome: draft banner (if present) stacked above the nav bar */}
       <div className="fixed left-0 right-0 top-0 z-50">
         <DraftBanner routeId={routeId} />
-        <Header />
+        <SiteNav />
       </div>
       {children}
       <Footer />

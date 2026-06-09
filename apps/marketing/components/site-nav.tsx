@@ -236,7 +236,6 @@ export function SiteNav() {
   const t = useTranslations("siteNav");
   const locale = useLocale();
   const pathname = usePathname();
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const waitlist = useWaitlistDialog();
@@ -311,12 +310,6 @@ export function SiteNav() {
   ];
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 24);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
     document.body.style.overflow = isMobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isMobileOpen]);
@@ -332,15 +325,8 @@ export function SiteNav() {
 
   return (
     <>
-      <motion.header
-        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? "border-b border-[var(--forest-canopy)]/10 bg-[var(--forest-canopy)] shadow-md"
-            : "bg-transparent"
-        }`}
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
+      <header
+        className="border-b border-white/10 bg-[var(--forest-canopy)] shadow-md"
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           {/* Logo */}
@@ -392,7 +378,7 @@ export function SiteNav() {
             {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </motion.header>
+      </header>
 
       {/* Mobile full-screen drawer */}
       <AnimatePresence>
