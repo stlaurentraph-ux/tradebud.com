@@ -3,6 +3,7 @@ import { Hero } from "@/components/tracebud/hero";
 import { HomeProblemSection } from "@/components/tracebud/home-problem-section";
 import { HomeHowItWorks } from "@/components/tracebud/home-how-it-works";
 import { Products } from "@/components/tracebud/products";
+import { Pricing } from "@/components/tracebud/pricing";
 import { ValueProp } from "@/components/tracebud/value-prop";
 import { FAQ } from "@/components/tracebud/faq";
 import { Footer } from "@/components/tracebud/footer";
@@ -16,6 +17,7 @@ export default function Home() {
       <HomeProblemSection />
       <HomeHowItWorks />
       <Products />
+      <Pricing />
       <ValueProp />
       <FAQ />
       <Footer />
