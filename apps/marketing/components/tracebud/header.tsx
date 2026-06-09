@@ -27,15 +27,19 @@ export function Header() {
   const waitlist = useWaitlistDialog();
 
   const navLinks = [
-    { label: t("nav.whyTracebud"), href: "#why-tracebud" },
-    { label: t("nav.howItWorks"), href: "#how-it-works" },
     { label: t("nav.products"), href: "#products" },
-    { label: t("nav.faq"), href: "#faq" },
+    { label: t("nav.pricing"), href: "#pricing" },
+    { label: t("nav.pilot"), href: "/pilot" },
   ];
 
   const resolvedHref = (href: string) => {
-    if (!href.startsWith("#")) return href;
-    return isHomePath(pathname) ? href : `${homePath}${href}`;
+    if (href.startsWith("#")) {
+      return isHomePath(pathname) ? href : `${homePath}${href}`;
+    }
+    if (href.startsWith("/") && !href.startsWith(`/${locale}`)) {
+      return `/${locale}${href}`;
+    }
+    return href;
   };
 
   const linkClass = isScrolled

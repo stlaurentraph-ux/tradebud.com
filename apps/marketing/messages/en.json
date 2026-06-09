@@ -143,6 +143,34 @@
       "description": "Start with the network you already have, and give every actor a way to participate — without turning the process into paperwork theater.",
       "cta": "Join the waitlist"
     },
+    "pricingSection": {
+      "label": "Pricing",
+      "headline": "Simple monthly pricing by network size.",
+      "description": "One price. No per-seat fees.",
+      "popularBadge": "Most popular",
+      "footerNote": "Extra shipments are billed separately.",
+      "cta": "Get started",
+      "table": {
+        "plan": "Plan",
+        "managedScale": "Managed scale",
+        "shipments": "Included shipments / month",
+        "monthlyBase": "Monthly base"
+      },
+      "plans": {
+        "starter": {
+          "name": "Starter"
+        },
+        "growth": {
+          "name": "Growth"
+        },
+        "scale": {
+          "name": "Scale"
+        },
+        "enterprise": {
+          "name": "Enterprise"
+        }
+      }
+    },
     "thankYou": {
       "title": "You're on the list",
       "description": "Thank you for your interest in Tracebud. We review every submission personally.",
@@ -281,6 +309,8 @@
       "whyTracebud": "Why Tracebud",
       "howItWorks": "How it works",
       "products": "Products",
+      "pricing": "Pricing",
+      "pilot": "Pilot",
       "faq": "FAQ"
     },
     "cta": {
@@ -318,5 +348,60 @@
     "howLongAnswer": "Producers can start mapping with the offline app right away. Most cooperatives upload their network and send the first request within a week.",
     "support": "What support is available?",
     "supportAnswer": "Every waitlist member gets a personal follow-up by email. Once onboarded, you have direct access to our team for setup and compliance questions."
+  },
+  "insights": {
+    "eyebrow": "Insights",
+    "title": "Guidance for the whole chain",
+    "description": "Regulatory updates, field notes, technology explainers, and practical playbooks for EUDR traceability.",
+    "empty": "Articles are being prepared. Check back soon."
+  },
+  "homePreview": {
+    "eyebrow": "Homepage preview",
+    "title": "Future homepage assembly",
+    "description": "Draft sections for Stage B launch. Review individual pages here before we wire the live homepage.",
+    "comingSoon": "Coming in A6",
+    "view": "View",
+    "sections": {
+      "insights": "Latest insights",
+      "chooseYourPath": "Choose your path",
+      "whatsPossible": "What's possible",
+      "whyTracebud": "Why Tracebud"
+    }
+  },
+  "siteNav": {
+    "solutions": "Solutions",
+    "platform": "Platform",
+    "compliance": "Compliance",
+    "insights": "Insights",
+    "pricing": "Pricing",
+    "getStarted": "Get started",
+    "pilot": "Pilot",
+    "solutionsMenu": {
+      "byRole": "By role",
+      "byOutcome": "By outcome",
+      "farmers": "Farmers & producers",
+      "cooperatives": "Cooperatives",
+      "exporters": "Exporters",
+      "importers": "Importers & brands",
+      "countries": "Governments",
+      "plotMapping": "Plot mapping & GeoID",
+      "dueDiligence": "EUDR due diligence",
+      "batchTraceability": "Batch traceability",
+      "supplierOutreach": "Supplier outreach"
+    },
+    "platformMenu": {
+      "overview": "Platform overview",
+      "offlineMapping": "Offline mapping",
+      "aiVerification": "AI verification",
+      "network": "Network & sovereignty",
+      "integrations": "Integrations"
+    },
+    "complianceMenu": {
+      "hub": "Compliance hub",
+      "eudr": "EUDR hub",
+      "dueDiligence": "Due diligence workflow",
+      "guides": "Guides & checklists",
+      "security": "Security & audit"
+    }
   }
 }
