@@ -2,6 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
+- Marketing PNG optimization delivered: all stock images kept; two-pass in-place recompression (~746MB → ~186MB) via `scripts/optimize-public-pngs.mjs`.
+- Marketing Vercel deploy fix delivered: `outputFileTracingExcludes` prevents Turbopack from bundling `public/` static assets into `/api/*` serverless functions (749MB → ~2MB traced).
 ## Initial entries
 
 - FEAT-009 dashboard integrations hardening delivered: high-priority `dashboard-product` integration TODOs are now closed with live V2 API wiring (scheduler config/trigger, run summary/queue, claim/release/retry, stale release, and questionnaire run-history timeline) via fail-closed dashboard proxy routes under `app/api/integrations/coolfarm-sai/v2/*`.
