@@ -51,8 +51,8 @@ export async function LatestInsights({ locale, limit = 3 }: LatestInsightsProps)
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-3">
-            {posts.map((post) => (
-              <InsightsCard key={post.slug} post={post} locale={locale} />
+            {posts.map((post, i) => (
+              <InsightsCard key={post.slug} post={post} locale={locale} index={i} />
             ))}
           </div>
         )}

@@ -1,22 +1,32 @@
+import type React from 'react';
+
 import { getTranslations } from 'next-intl/server';
 
 const STAT_ICONS: Record<string, React.ReactNode> = {
+  // Leaf / plant — represents commodities
   commodities: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-      <path d="M12 22V12M12 12C12 7 8 4 3 4c0 5 3 8 9 8zM12 12c0-5 4-8 9-8-0 5-3 8-9 8z" />
+      <path d="M12 22V12" />
+      <path d="M12 12C12 7 8 4 3 4c0 5 3 8 9 8z" />
+      <path d="M12 12c0-5 4-8 9-8 0 5-3 8-9 8z" />
     </svg>
   ),
+  // Signal tower — represents offline-first / connectivity
   offline: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
-      <path d="M1.42 9a16 16 0 0 1 21.16 0M5 12.55a11 11 0 0 1 14.08 0M10.71 17.4l1.29 1.6 1.29-1.6a6 6 0 0 0-2.58 0z" />
-      <line x1="2" y1="2" x2="22" y2="22" />
+      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none" />
     </svg>
   ),
+  // Circular arrows — represents retention / reuse
   retention: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6" aria-hidden>
       <polyline points="23 4 23 10 17 10" />
       <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+      <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   ),
 };
