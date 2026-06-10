@@ -1,54 +1,36 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 
-type Pillar = {
-  number: string;
-  title: string;
-  description: string;
-  href: string;
-  linkLabel: string;
-  imageSrc: string;
-  imageAlt: string;
+const PILLAR_IMAGES: Record<string, { src: string; alt: string }> = {
+  livelihood: {
+    src: '/images/placeholders/hero-farmer.png',
+    alt: 'Smallholder farmer holding ripe coffee cherries',
+  },
+  farm: {
+    src: '/images/placeholders/hero-impact.png',
+    alt: 'Terraced farmland on a tropical hillside',
+  },
+  planet: {
+    src: '/images/placeholders/hero-forest.png',
+    alt: 'Aerial view of tropical forest canopy',
+  },
 };
 
-const PILLARS: Pillar[] = [
-  {
-    number: '01',
-    title: 'Smallholder livelihoods',
-    description:
-      'A single Tracebud GeoID unlocks premium-market access for small-scale farmers — captured once, reused across every buyer and certification they pursue.',
-    href: '/impact/smallholders',
-    linkLabel: 'How it works',
-    imageSrc: '/images/placeholders/hero-farmer.png',
-    imageAlt: 'Smallholder farmer holding ripe coffee cherries',
-  },
-  {
-    number: '02',
-    title: 'Forest protection',
-    description:
-      'Identity-preserved batches trace every shipment to a verified plot polygon. AI deforestation checks and photo-vault evidence close the loophole mass-balance chains leave open.',
-    href: '/impact/forests',
-    linkLabel: 'The evidence model',
-    imageSrc: '/images/placeholders/hero-forest.png',
-    imageAlt: 'Aerial view of tropical forest canopy',
-  },
-  {
-    number: '03',
-    title: 'Ethical supply chains',
-    description:
-      'Audit-ready due diligence records — GPS plots, signed consent, batch lineage — replace self-reported claims with independently verifiable proof at every tier.',
-    href: '/impact/supply-chains',
-    linkLabel: 'Chain-of-custody detail',
-    imageSrc: '/images/placeholders/hero-supply-chain.png',
-    imageAlt: 'Cacao beans being sorted at a cooperative',
-  },
-];
+const PILLAR_NUMBERS: Record<string, string> = {
+  livelihood: '01',
+  farm: '02',
+  planet: '03',
+};
 
 type ThreeResilienceProps = {
   locale: string;
 };
 
-export function ThreeResilience({ locale }: ThreeResilienceProps) {
+export async function ThreeResilience({ locale }: ThreeResilienceProps) {
+  const t = await getTranslations('homeV2.threeResilience');
+  const pillars = ['livelihood', 'farm', 'planet'] as const;
+
   return (
     <section className="bg-[var(--warm-stone)] px-6 py-20">
       <div className="mx-auto max-w-5xl">
@@ -59,66 +41,77 @@ export function ThreeResilience({ locale }: ThreeResilienceProps) {
             Impact
           </p>
           <h2 className="mb-4 text-balance text-3xl font-bold text-[var(--forest-canopy)] md:text-4xl">
-            Three pillars of resilience
+            {t('title')}
           </h2>
           <p className="text-lg leading-relaxed text-gray-600">
-            Compliance infrastructure that creates tangible outcomes — not just documentation.
+            {t('description')}
           </p>
         </div>
 
-        {/* Pillar cards with image thumbnails */}
+        {/* Pillar cards */}
         <ol className="grid gap-8 md:grid-cols-3">
-          {PILLARS.map((pillar) => (
-            <li
-              key={pillar.number}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--warm-stone-dark)] bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
-            >
-              {/* Image thumbnail */}
-              <div className="relative h-44 w-full overflow-hidden">
-                <Image
-                  src={pillar.imageSrc}
-                  alt={pillar.imageAlt}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-                {/* Number badge over image */}
-                <span
-                  aria-hidden
-                  className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--forest-canopy)] text-sm font-bold tabular-nums text-[var(--data-emerald)] shadow"
-                >
-                  {pillar.number}
-                </span>
-                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-              </div>
+          {pillars.map((key) => {
+            const img = PILLAR_IMAGES[key];
+            const num = PILLAR_NUMBERS[key];
+            const href = t(`pillars.${key}.href`);
 
-              {/* Content */}
-              <div className="flex flex-1 flex-col p-7">
-                <h3 className="mb-3 text-lg font-bold text-[var(--forest-canopy)]">
-                  {pillar.title}
-                </h3>
-                <p className="mb-7 flex-1 text-sm leading-relaxed text-gray-500">
-                  {pillar.description}
-                </p>
-                <Link
-                  href={`/${locale}${pillar.href}`}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--data-emerald)] transition-opacity hover:opacity-75"
-                >
-                  {pillar.linkLabel}
-                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
-                </Link>
-              </div>
-            </li>
-          ))}
+            return (
+              <li
+                key={key}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--warm-stone-dark,#e5e0d8)] bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
+              >
+                {/* Image thumbnail */}
+                <div className="relative h-44 w-full overflow-hidden">
+                  <Image
+                    src={img.src}
+                    alt={img.alt}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                  {/* Number badge */}
+                  <span
+                    aria-hidden
+                    className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--forest-canopy)] text-sm font-bold tabular-nums text-[var(--data-emerald)] shadow"
+                  >
+                    {num}
+                  </span>
+                  <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                </div>
+
+                {/* Content */}
+                <div className="flex flex-1 flex-col p-7">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[var(--data-emerald)]">
+                    {t(`pillars.${key}.eyebrow`)}
+                  </p>
+                  <h3 className="mb-3 text-lg font-bold text-[var(--forest-canopy)]">
+                    {t(`pillars.${key}.title`)}
+                  </h3>
+                  <p className="mb-7 flex-1 text-sm leading-relaxed text-gray-500">
+                    {t(`pillars.${key}.description`)}
+                  </p>
+                  <Link
+                    href={`/${locale}${href}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--data-emerald)] transition-opacity hover:opacity-75"
+                  >
+                    {t('learnMore')}
+                    <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                      →
+                    </span>
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ol>
 
         {/* Bottom CTA */}
         <div className="mt-12 flex justify-center">
           <Link
             href={`/${locale}/impact`}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--forest-canopy)] px-8 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--forest-light)]"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--forest-canopy)] px-8 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
           >
-            Explore all impact areas →
+            {t('exploreImpact')} →
           </Link>
         </div>
 

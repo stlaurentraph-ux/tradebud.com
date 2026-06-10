@@ -384,6 +384,32 @@
         "description": "National traceability infrastructure without farmer lock-in."
       }
     },
+    "threeResilience": {
+      "title": "Three kinds of resilience",
+      "description": "Compliance opens markets. Regenerative practice keeps them open. Tracebud connects both with proof the whole chain can trust.",
+      "learnMore": "Learn more",
+      "exploreImpact": "Explore our impact",
+      "pillars": {
+        "livelihood": {
+          "eyebrow": "People",
+          "title": "Farmer livelihood",
+          "description": "Own your data, access more markets, capture once.",
+          "href": "/impact/farmer-livelihood"
+        },
+        "farm": {
+          "eyebrow": "Land",
+          "title": "Farm resilience",
+          "description": "Regenerative practices verified at plot level.",
+          "href": "/impact/regenerative-farming"
+        },
+        "planet": {
+          "eyebrow": "Planet",
+          "title": "Climate & biodiversity",
+          "description": "Deforestation-free chains and pathways to nature evidence.",
+          "href": "/impact/climate-biodiversity"
+        }
+      }
+    },
     "whatsPossible": {
       "title": "What's possible",
       "description": "Tracebud is a network — any node can start a workflow.",
@@ -467,6 +493,7 @@
       "insights": "Latest insights",
       "chooseYourPath": "Choose your path",
       "whatsPossible": "What's possible",
+      "threeResilience": "Three kinds of resilience",
       "whyTracebud": "Why Tracebud"
     }
   },
@@ -474,6 +501,7 @@
     "solutions": "Solutions",
     "platform": "Platform",
     "compliance": "Compliance",
+    "impact": "Impact",
     "insights": "Insights",
     "pricing": "Pricing",
     "getStarted": "Get started",
@@ -505,6 +533,13 @@
       "dueDiligence": "Due diligence workflow",
       "guides": "Guides & checklists",
       "security": "Security & audit"
+    },
+    "impactMenu": {
+      "hub": "Impact hub",
+      "livelihood": "Farmer livelihood",
+      "regenerative": "Regenerative farming",
+      "climate": "Climate & biodiversity",
+      "whyTracebud": "Why Tracebud"
     }
   }
 }

@@ -293,18 +293,18 @@
     }
   },
   "footer": {
-    "startMapping": "Start Mapping",
-    "contactSales": "Contact Sales",
-    "joinWaitlist": "Join now",
-    "howItWorks": "How it works",
-    "privacy": "Privacy",
-    "terms": "Terms",
-    "contact": "Contact",
-    "tagline": "Simpler EUDR operations. Stronger market access.",
-    "whyTracebud": "Why Tracebud",
-    "products": "Products",
-    "waitlistPrompt": "Ready to join the waitlist?",
-    "waitlistSubline": "Be first to know when Tracebud opens for your network."
+    "startMapping": "ካርታ ማውራት ይጀምሩ",
+    "contactSales": "ሽያጭን ያግኙ",
+    "joinWaitlist": "አሁን ይቀላቀሉ",
+    "howItWorks": "እንዴት እንደሚሰራ",
+    "privacy": "ግላዊነት",
+    "terms": "ውሎች",
+    "contact": "እውቂያ",
+    "tagline": "ቀላል የEUDR ሂደቶች። ጠንካራ የገበያ መዳረሻ።",
+    "whyTracebud": "ለምን Tracebud",
+    "products": "ምርቶች",
+    "waitlistPrompt": "ወደ የመጠባበቂያ ዝርዝር ለመቀላቀል ዝግጁ ነዎት?",
+    "waitlistSubline": "Tracebud ለአውታረ መረብዎ ሲከፈት በመጀመሪያ ይወቁ።"
   },
   "impact": {
     "title": "ትሬበድ ለምን ይሰራል",

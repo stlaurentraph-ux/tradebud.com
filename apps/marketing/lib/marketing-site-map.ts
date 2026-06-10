@@ -12,6 +12,7 @@ export type SiteMapSectionId =
   | 'solutions'
   | 'platform'
   | 'compliance'
+  | 'impact'
   | 'insights'
   | 'impact'
   | 'convert'
@@ -60,6 +61,11 @@ export const siteMapSections: SiteMapSection[] = [
     id: 'compliance',
     label: 'Compliance',
     description: 'EUDR hub, workflows, guides, and security.',
+  },
+  {
+    id: 'impact',
+    label: 'Impact',
+    description: 'Livelihood, regenerative farming, climate & biodiversity — the brand spine.',
   },
   {
     id: 'insights',
@@ -262,6 +268,50 @@ export const marketingSiteMap: SiteMapEntry[] = [
     section: 'compliance',
     status: 'draft-needs-style',
     routeId: 'compliance-security',
+  },
+
+  // Impact
+  {
+    id: 'impact',
+    label: 'Impact hub',
+    href: '/impact',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact',
+    v0Notes: 'NEW — style after current v0 pass. Same DraftHubPage shell as platform. Three-pillar narrative.',
+  },
+  {
+    id: 'impact-livelihood',
+    label: 'Farmer livelihood',
+    href: '/impact/farmer-livelihood',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-farmer-livelihood',
+  },
+  {
+    id: 'impact-regenerative',
+    label: 'Regenerative farming',
+    href: '/impact/regenerative-farming',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-regenerative-farming',
+  },
+  {
+    id: 'impact-climate',
+    label: 'Climate & biodiversity',
+    href: '/impact/climate-biodiversity',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-climate-biodiversity',
+  },
+  {
+    id: 'impact-why',
+    label: 'Why Tracebud',
+    href: '/why-tracebud',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'why-tracebud',
+    v0Notes: 'Linked from Impact hub; may merge URL to /impact/why-tracebud at Stage B.',
   },
 
   // Insights

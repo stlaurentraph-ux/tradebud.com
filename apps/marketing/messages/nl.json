@@ -293,16 +293,16 @@
     }
   },
   "footer": {
-    "startMapping": "Start Mapping",
-    "contactSales": "Contact Sales",
+    "startMapping": "Begin met in kaart brengen",
+    "contactSales": "Contact opnemen met sales",
     "joinWaitlist": "Nu aanmelden",
-    "howItWorks": "How it works",
+    "howItWorks": "Hoe het werkt",
     "privacy": "Privacy",
-    "terms": "Terms",
+    "terms": "Voorwaarden",
     "contact": "Contact",
-    "tagline": "Simpler EUDR operations. Stronger market access.",
-    "whyTracebud": "Why Tracebud",
-    "products": "Products",
+    "tagline": "Eenvoudigere EUDR-processen. Sterkere markttoegang.",
+    "whyTracebud": "Waarom Tracebud",
+    "products": "Producten",
     "waitlistPrompt": "Klaar om u aan te sluiten?",
     "waitlistSubline": "Wees als eerste op de hoogte wanneer Tracebud opent voor uw netwerk."
   },
