@@ -14,6 +14,7 @@ export type SiteMapSectionId =
   | 'compliance'
   | 'impact'
   | 'insights'
+  | 'impact'
   | 'convert'
   | 'legal'
   | 'meta';
@@ -70,6 +71,11 @@ export const siteMapSections: SiteMapSection[] = [
     id: 'insights',
     label: 'Insights',
     description: 'Blog / thought leadership (markdown articles).',
+  },
+  {
+    id: 'impact',
+    label: 'Impact',
+    description: 'Smallholder livelihoods, forest protection, and ethical supply chains.',
   },
   {
     id: 'convert',
@@ -317,6 +323,40 @@ export const marketingSiteMap: SiteMapEntry[] = [
     status: 'draft-needs-style',
     routeId: 'insights',
     v0Notes: 'Hub + InsightsCard. Articles are markdown in content/insights/.',
+  },
+
+  // Impact
+  {
+    id: 'impact',
+    label: 'Impact hub',
+    href: '/impact',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact',
+  },
+  {
+    id: 'impact-smallholders',
+    label: 'Smallholder livelihoods',
+    href: '/impact/smallholders',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-smallholders',
+  },
+  {
+    id: 'impact-forests',
+    label: 'Forest protection',
+    href: '/impact/forests',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-forests',
+  },
+  {
+    id: 'impact-supply-chains',
+    label: 'Ethical supply chains',
+    href: '/impact/supply-chains',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-supply-chains',
   },
 
   // Convert

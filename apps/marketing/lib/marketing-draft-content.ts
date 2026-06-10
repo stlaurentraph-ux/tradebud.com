@@ -132,6 +132,34 @@ export const complianceHub: DraftHubContent = {
   ],
 };
 
+export const impactHub: DraftHubContent = {
+  routeId: 'impact',
+  eyebrow: 'Impact',
+  title: 'Real-world impact',
+  description:
+    'Tracebud links compliance infrastructure to outcomes that matter — fairer livelihoods for smallholders, healthier forests, and supply chains that hold up to scrutiny.',
+  links: [
+    {
+      routeId: 'impact-smallholders',
+      href: '/impact/smallholders',
+      title: 'Smallholder livelihoods',
+      description: 'How verified origin data unlocks premium markets for small-scale farmers.',
+    },
+    {
+      routeId: 'impact-forests',
+      href: '/impact/forests',
+      title: 'Forest protection',
+      description: 'Identity-preserved traceability as a direct tool for reducing deforestation.',
+    },
+    {
+      routeId: 'impact-supply-chains',
+      href: '/impact/supply-chains',
+      title: 'Ethical supply chains',
+      description: 'Structural transparency that goes beyond checkbox compliance.',
+    },
+  ],
+};
+
 export const draftPages: Record<string, DraftPageContent> = {
   'platform-offline-mapping': {
     routeId: 'platform-offline-mapping',
@@ -477,6 +505,87 @@ export const draftPages: Record<string, DraftPageContent> = {
         body: 'Brands, importers, exporters, cooperatives, and farmers can all start workflows in multiple directions.',
       },
     ],
+  },
+  'impact-smallholders': {
+    routeId: 'impact-smallholders',
+    eyebrow: 'Impact',
+    title: 'Smallholder livelihoods',
+    description:
+      'Verified origin data is not just a compliance mechanism — it is the entry key to premium markets that pay fairer prices to small-scale farmers.',
+    sections: [
+      {
+        heading: 'The premium market barrier',
+        body: "Specialty buyers, Fairtrade, and Rainforest Alliance premiums require documented origin. Without it, smallholders' high-quality output is sold into undifferentiated bulk channels at commodity prices.",
+      },
+      {
+        heading: 'One map, every market',
+        body: "A single Tracebud GeoID links a farmer's plots, photos, and consent records to every buyer relationship they form — eliminating the capture-once burden that shuts smallholders out of multi-buyer access.",
+        bullets: [
+          'Field capture in < 20 minutes per farm with offline support',
+          'Farmer-owned data wallet: grant or revoke per buyer',
+          'Reusable across EUDR, ESG, and certification workflows',
+        ],
+      },
+      {
+        heading: 'Income resilience',
+        body: 'Access to premium channels and multi-buyer price comparison helps smallholders reduce single-buyer dependency — a structural income resilience gain that compounds over seasons.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-smallholders'),
+  },
+  'impact-forests': {
+    routeId: 'impact-forests',
+    eyebrow: 'Impact',
+    title: 'Forest protection',
+    description:
+      'Identity-preserved traceability creates accountability at the plot level — the most direct lever available to reduce deforestation driven by agricultural expansion.',
+    sections: [
+      {
+        heading: 'Why identity preservation matters',
+        body: 'Mass-balance chains allow deforestation-linked commodity to be laundered into compliant batches. Identity-preserved supply chains — where each batch traces to a verified plot polygon — eliminate that pathway.',
+      },
+      {
+        heading: 'AI deforestation detection',
+        body: 'Geospatial foundation models evaluate each registered plot against satellite time series to surface conversion events. Agroforestry and shade-grown systems are distinguished from cleared canopy to avoid false positives that penalise regenerative practices.',
+        bullets: [
+          'Temporal analysis distinguishes seasonal pruning from conversion',
+          'Photo vault provides local evidence for manual flag review',
+          'Degradation checks catch non-deforestation forest damage',
+        ],
+      },
+      {
+        heading: 'Systemic pressure',
+        body: 'When buyers require identity-preserved, EUDR-compliant supply, deforestation-linked production loses its market outlet. Tracebud creates that market structure.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-forests'),
+  },
+  'impact-supply-chains': {
+    routeId: 'impact-supply-chains',
+    eyebrow: 'Impact',
+    title: 'Ethical supply chains',
+    description:
+      'Structural transparency — not self-reported claims — is the foundation of supply chains that hold up to independent scrutiny.',
+    sections: [
+      {
+        heading: 'Beyond checkbox compliance',
+        body: 'Most compliance frameworks accept self-declarations. Tracebud provides an independently auditable evidence trail: GPS-timestamped plot polygons, geo-tagged photos, signed consent records, and batch lineage logs.',
+      },
+      {
+        heading: 'Whole-chain network',
+        body: 'Brands, importers, exporters, cooperatives, and farmers can all initiate and respond to workflows in multiple directions. Visibility flows through explicit grants — not platform-controlled pipelines.',
+        bullets: [
+          'Brands request supply chain visibility without mandating farmer platforms',
+          'Exporters aggregate cooperative and direct-sourced vouchers into one DDS',
+          'Importers verify upstream readiness before shipment commitment',
+        ],
+      },
+      {
+        heading: 'Audit-ready retention',
+        body: 'Due diligence records are retained for five years with immutable audit references and lifecycle tiering — ready for competent authority inspection without manual retrieval.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-supply-chains'),
   },
 };
 

@@ -23,7 +23,11 @@ export type MarketingRouteId =
   | 'impact-regenerative-farming'
   | 'impact-climate-biodiversity'
   | 'home-preview'
-  | 'draft-index';
+  | 'draft-index'
+  | 'impact'
+  | 'impact-smallholders'
+  | 'impact-forests'
+  | 'impact-supply-chains';
 
 export const MARKETING_PREVIEW_COOKIE = 'marketing_preview';
 export const MARKETING_PREVIEW_PARAM = 'marketing_preview';
@@ -54,6 +58,10 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   'impact-climate-biodiversity': false,
   'home-preview': false,
   'draft-index': false,
+  impact: false,
+  'impact-smallholders': false,
+  'impact-forests': false,
+  'impact-supply-chains': false,
 };
 
 export function isDevelopmentPreview(): boolean {
