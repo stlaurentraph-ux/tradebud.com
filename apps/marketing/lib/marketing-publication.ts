@@ -6,10 +6,24 @@ export type MarketingRouteId =
   | 'insights'
   | 'insights-article'
   | 'platform'
+  | 'platform-field-app'
+  | 'platform-dashboard'
   | 'platform-offline-mapping'
   | 'platform-ai-verification'
   | 'platform-network'
   | 'platform-integrations'
+  | 'solutions'
+  | 'solutions-eudr-compliance'
+  | 'solutions-esg-carbon-reporting'
+  | 'solutions-regenerative-agriculture'
+  | 'solutions-child-labor-monitoring'
+  | 'solutions-open-chain-model'
+  | 'solutions-direct-trade-marketplace'
+  | 'who-we-serve'
+  | 'resources'
+  | 'resources-data-sovereignty-security'
+  | 'resources-verification-standards'
+  | 'resources-api-docs'
   | 'compliance'
   | 'compliance-eudr'
   | 'compliance-due-diligence'
@@ -36,10 +50,24 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   insights: false,
   'insights-article': false,
   platform: false,
+  'platform-field-app': false,
+  'platform-dashboard': false,
   'platform-offline-mapping': false,
   'platform-ai-verification': false,
   'platform-network': false,
   'platform-integrations': false,
+  solutions: false,
+  'solutions-eudr-compliance': false,
+  'solutions-esg-carbon-reporting': false,
+  'solutions-regenerative-agriculture': false,
+  'solutions-child-labor-monitoring': false,
+  'solutions-open-chain-model': false,
+  'solutions-direct-trade-marketplace': false,
+  'who-we-serve': false,
+  resources: false,
+  'resources-data-sovereignty-security': false,
+  'resources-verification-standards': false,
+  'resources-api-docs': false,
   compliance: false,
   'compliance-eudr': false,
   'compliance-due-diligence': false,

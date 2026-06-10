@@ -474,6 +474,13 @@
     "empty": "Articles are being prepared. Check back soon."
   },
   "homeV2": {
+    "hero": {
+      "headline": "The agrifood operating system for equitable, verified, and compliant supply chains.",
+      "subhead": "Farmer-first field capture and a collaboration dashboard — with modular solutions for compliance, sustainability, and trade.",
+      "primaryCta": "Onboard your first shipment free",
+      "secondaryCta": "Watch 2-min product demo",
+      "fieldTagline": "One Map. One Passport. Every Market."
+    },
     "chooseYourPath": {
       "title": "Choose your path",
       "description": "Start with the workflow that matches your role in the chain.",
@@ -658,6 +665,54 @@
       "regenerative": "Regenerative farming",
       "climate": "Climate & biodiversity",
       "whyTracebud": "Why Tracebud"
+    },
+    "june2026": {
+      "solutions": "Solutions",
+      "platform": "Platform",
+      "whoWeServe": "Who we serve",
+      "outcomes": "Outcomes",
+      "resources": "Resources",
+      "pricing": "Pricing",
+      "primaryCta": "Onboard your first shipment free",
+      "secondaryCta": "Watch 2-min product demo",
+      "badgeStartHere": "Start here",
+      "badgeRoadmap": "Roadmap",
+      "badgePilot": "Pilot",
+      "solutionsMenu": {
+        "hub": "All solutions",
+        "eudr": "EUDR compliance",
+        "esgCarbon": "ESG & carbon reporting",
+        "regenerative": "Regenerative agriculture",
+        "childLabor": "Child labor monitoring",
+        "openChain": "Open Chain model",
+        "marketplace": "Direct trade marketplace"
+      },
+      "platformMenu": {
+        "overview": "Platform overview",
+        "fieldApp": "Field App",
+        "dashboard": "Dashboard"
+      },
+      "whoWeServeMenu": {
+        "hub": "Who we serve",
+        "producers": "Producers & cooperatives",
+        "exporters": "Exporters & processors",
+        "brands": "Brands & roasters",
+        "sponsors": "Network sponsors",
+        "governments": "Governments"
+      },
+      "outcomesMenu": {
+        "hub": "Outcomes",
+        "supplyChains": "Resilient supply chains",
+        "livelihoods": "Farmer livelihoods",
+        "climate": "Nature-positive & climate"
+      },
+      "resourcesMenu": {
+        "hub": "Resources",
+        "insights": "Insights & regulatory tracker",
+        "sovereignty": "Data sovereignty & security",
+        "standards": "Verification standards",
+        "apiDocs": "API documentation"
+      }
     }
   }
 }

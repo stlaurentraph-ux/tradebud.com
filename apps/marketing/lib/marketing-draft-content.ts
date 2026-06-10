@@ -7,7 +7,8 @@ export type DraftPageSection = {
 };
 
 export type DraftHubLink = {
-  routeId: MarketingRouteId;
+  /** Omitted for live (ungated) persona pages linked from definition hubs. */
+  routeId?: MarketingRouteId;
   href: string;
   title: string;
   description: string;
@@ -33,33 +34,154 @@ export type DraftHubContent = {
 export const platformHub: DraftHubContent = {
   routeId: 'platform',
   eyebrow: 'Platform',
-  title: 'Tracebud platform',
+  title: 'The agrifood operating system',
   description:
-    'Mobile field capture and a multi-tenant dashboard share one data model for origin evidence, consent, lineage, and compliance records.',
+    'Two core products power every module: offline Field App capture and a collaboration Dashboard on one shared data model.',
   links: [
+    {
+      routeId: 'platform-field-app',
+      href: '/platform/field-app',
+      title: 'Field App',
+      description: 'Zero-friction, offline-first georeferencing and first-mile capture.',
+    },
+    {
+      routeId: 'platform-dashboard',
+      href: '/platform/dashboard',
+      title: 'Dashboard',
+      description: 'Visualize, validate, and share supply chain data across roles.',
+    },
     {
       routeId: 'platform-offline-mapping',
       href: '/platform/offline-mapping',
-      title: 'Offline mapping',
-      description: 'Plot capture without connectivity or perfect GNSS lock.',
+      title: 'Offline mapping (legacy URL)',
+      description: 'Detailed field-capture story — merges into Field App at launch.',
     },
     {
       routeId: 'platform-ai-verification',
       href: '/platform/ai-verification',
-      title: 'AI verification',
-      description: 'Satellite foundation models plus ground-truth photo vault.',
+      title: 'AI verification (legacy URL)',
+      description: 'Satellite models and photo vault — referenced from Field App + EUDR solution.',
+    },
+  ],
+};
+
+export const solutionsHub: DraftHubContent = {
+  routeId: 'solutions',
+  eyebrow: 'Solutions',
+  title: 'Modular solutions marketplace',
+  description:
+    'Toggle only what you need. Start with EUDR compliance; add sustainability, ethical sourcing, and trade modules as you grow.',
+  links: [
+    {
+      routeId: 'solutions-eudr-compliance',
+      href: '/solutions/eudr-compliance',
+      title: 'EUDR compliance',
+      description: 'Automated DDS prep, satellite calibration, TRACES filing — start here.',
     },
     {
-      routeId: 'platform-network',
-      href: '/platform/network',
-      title: 'Network & sovereignty',
-      description: 'Request-grant workflows and farmer-owned data wallets.',
+      routeId: 'solutions-esg-carbon-reporting',
+      href: '/solutions/esg-carbon-reporting',
+      title: 'ESG & carbon reporting',
+      description: 'Scope 3 visibility and Cool Farm Tool integration (roadmap where noted).',
     },
     {
-      routeId: 'platform-integrations',
-      href: '/platform/integrations',
-      title: 'Integrations',
-      description: 'TRACES NT, national registries, and ESG connectors.',
+      routeId: 'solutions-regenerative-agriculture',
+      href: '/solutions/regenerative-agriculture',
+      title: 'Regenerative agriculture',
+      description: 'FSA digital wizard, continuous improvement, auditor portal.',
+    },
+    {
+      routeId: 'solutions-child-labor-monitoring',
+      href: '/solutions/child-labor-monitoring',
+      title: 'Child labor & ethical sourcing',
+      description: 'CLMRS surveys and remediation tracking in the Field App.',
+    },
+    {
+      routeId: 'solutions-open-chain-model',
+      href: '/solutions/open-chain-model',
+      title: 'Open Chain model',
+      description: 'Shared-risk sourcing with LIRP + 20% premium and 5-year MoUs.',
+    },
+    {
+      routeId: 'solutions-direct-trade-marketplace',
+      href: '/solutions/direct-trade-marketplace',
+      title: 'Direct trade marketplace',
+      description: 'Verified listings, milestone escrow, farmer data sovereignty.',
+    },
+  ],
+};
+
+export const whoWeServeHub: DraftHubContent = {
+  routeId: 'who-we-serve',
+  eyebrow: 'Who we serve',
+  title: 'Every actor in the chain',
+  description:
+    'Self-serve onboarding for producers, cooperatives, exporters, brands, sponsors, and governments — bidirectional workflows from any entry point.',
+  links: [
+    {
+      href: '/farmers',
+      title: 'Producers & cooperatives',
+      description: 'Field App + cooperative roll-up — free for farmers.',
+    },
+    {
+      routeId: 'cooperatives',
+      href: '/cooperatives',
+      title: 'Cooperatives (draft)',
+      description: 'Member coordination and evidence roll-up.',
+    },
+    {
+      href: '/exporters',
+      title: 'Exporters & processors',
+      description: 'Dashboard-led batch preparation and DDS packaging.',
+    },
+    {
+      href: '/importers',
+      title: 'Brands & roasters',
+      description: 'Downstream visibility, TRACES submission, supplier risk.',
+    },
+    {
+      routeId: 'sponsors',
+      href: '/sponsors',
+      title: 'Network sponsors',
+      description: 'Programmes sponsoring exporter and importer networks.',
+    },
+    {
+      href: '/countries',
+      title: 'Governments & countries',
+      description: 'National DPI and regional auditor portals.',
+    },
+  ],
+};
+
+export const resourcesHub: DraftHubContent = {
+  routeId: 'resources',
+  eyebrow: 'Resources',
+  title: 'Trust, standards, and knowledge',
+  description: 'Regulatory insights, data sovereignty, verification standards, and developer APIs.',
+  links: [
+    {
+      routeId: 'insights',
+      href: '/insights',
+      title: 'Insights & regulatory tracker',
+      description: 'Articles on EUDR, field capture, and supply chain resilience.',
+    },
+    {
+      routeId: 'resources-data-sovereignty-security',
+      href: '/resources/data-sovereignty-security',
+      title: 'Data sovereignty & security',
+      description: 'Farmer wallets, tenant isolation, retention, and encryption.',
+    },
+    {
+      routeId: 'resources-verification-standards',
+      href: '/resources/verification-standards',
+      title: 'Verification standards',
+      description: 'Geometry rules, identity preservation, and audit lineage.',
+    },
+    {
+      routeId: 'resources-api-docs',
+      href: '/resources/api-docs',
+      title: 'API documentation',
+      description: 'Integrations, TRACES middleware, and ESG connectors.',
     },
   ],
 };
@@ -477,6 +599,243 @@ export const draftPages: Record<string, DraftPageContent> = {
         body: 'Brands, importers, exporters, cooperatives, and farmers can all start workflows in multiple directions.',
       },
     ],
+  },
+  'platform-field-app': {
+    routeId: 'platform-field-app',
+    eyebrow: 'Platform',
+    title: 'Field App',
+    description:
+      'Zero-friction, offline-first georeferencing and first-mile capture for producers and field teams.',
+    sections: [
+      {
+        heading: 'Offline-first',
+        body: 'Local cache with sync on connectivity. Field work continues without signal or perfect GNSS lock under canopy.',
+      },
+      {
+        heading: 'Adaptive geometry',
+        body: 'Point capture below 4 hectares; walk-boundary polygon at 4 hectares and above. Six decimal places minimum on all coordinates.',
+        bullets: [
+          'Waypoint averaging at vertices (60–120 seconds)',
+          'Manual trace on cached imagery when GNSS fails',
+          'HLC-ordered sync for conflict-safe offline edits',
+        ],
+      },
+      {
+        heading: 'Low-literacy onboarding',
+        body: 'Phone number or magic link sign-in — designed for enumerator and farmer-first workflows, not office-only SaaS.',
+      },
+    ],
+    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-field-app'),
+  },
+  'platform-dashboard': {
+    routeId: 'platform-dashboard',
+    eyebrow: 'Platform',
+    title: 'Dashboard',
+    description: 'Unified command center to visualize, validate, and share supply chain data across tenants and roles.',
+    sections: [
+      {
+        heading: 'Multi-role access',
+        body: 'Tenant-scoped RBAC for cooperatives, exporters, importers, brands, sponsors, and reviewers in one product surface.',
+      },
+      {
+        heading: 'Automated plausibility checks',
+        body: 'Duplicate detection, yield-cap validation, and missing-document flags before batches reach submission.',
+      },
+      {
+        heading: 'One-click export',
+        body: 'Compliance packages as PDF, CSV, and TRACES-compatible payloads through purpose-built middleware.',
+      },
+    ],
+    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-dashboard'),
+  },
+  'solutions-eudr-compliance': {
+    routeId: 'solutions-eudr-compliance',
+    eyebrow: 'Solutions',
+    title: 'EUDR compliance',
+    description: 'Start here — automated due diligence preparation, satellite calibration, and TRACES NT filing.',
+    sections: [
+      {
+        heading: 'Why start with EUDR',
+        body: 'EU market access requires deforestation-free, legally produced commodities with auditable geolocation. Tracebud packages plot evidence into operator-ready DDS artifacts.',
+      },
+      {
+        heading: 'Coffee-first differentiation',
+        body: 'Multi-temporal satellite analysis and ground-truth photo vault reduce false positives on shade-grown and agroforestry systems.',
+      },
+      {
+        heading: 'Identity preservation',
+        body: 'Batches stay traceable to origin coordinates — no mass-balance laundering. Yield-cap validation flags over-claim before submission.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-eudr-compliance'),
+  },
+  'solutions-esg-carbon-reporting': {
+    routeId: 'solutions-esg-carbon-reporting',
+    eyebrow: 'Solutions',
+    title: 'ESG & carbon reporting',
+    description: 'Scope 3 visibility and farm-level environmental metrics — roadmap-labelled where not yet in MVP.',
+    sections: [
+      {
+        heading: 'Scope 3 from verified origin',
+        body: 'Downstream buyers need emissions visibility tied to real plots — not spreadsheet estimates.',
+      },
+      {
+        heading: 'Cool Farm Tool conduit',
+        body: 'FSA questionnaire data and GeoIDs route to CFT API for carbon scores (pilot / roadmap per MVP boundary).',
+      },
+      {
+        heading: 'ESRS-aligned mapping',
+        body: 'Data structures map toward E1–E5 indicators for future corporate reporting connectors.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-esg-carbon-reporting'),
+  },
+  'solutions-regenerative-agriculture': {
+    routeId: 'solutions-regenerative-agriculture',
+    eyebrow: 'Solutions',
+    title: 'Regenerative agriculture',
+    description: 'FSA digital wizard, continuous improvement plans, and auditor-ready practice evidence at plot level.',
+    sections: [
+      {
+        heading: 'Practice + place',
+        body: 'Regenerative outcomes link to specific plots in identity-preserved batches.',
+      },
+      {
+        heading: 'FSA alignment',
+        body: 'Digital questionnaires aligned with SAI Platform Farm Sustainability Assessment.',
+      },
+      {
+        heading: 'Auditor portal',
+        body: 'Review practice evidence without breaking farmer data sovereignty grants.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-regenerative-agriculture'),
+  },
+  'solutions-child-labor-monitoring': {
+    routeId: 'solutions-child-labor-monitoring',
+    eyebrow: 'Solutions',
+    title: 'Child labor & ethical sourcing',
+    description: 'CLMRS surveys and remediation tracking integrated in field workflows.',
+    sections: [
+      {
+        heading: 'CLMRS in the Field App',
+        body: 'Enumerators capture survey responses offline with the same sync model as plot capture.',
+      },
+      {
+        heading: 'Remediation tracking',
+        body: 'Follow-up actions and evidence attach to producer records for audit review.',
+      },
+      {
+        heading: 'Roadmap',
+        body: 'Full CLMRS module ships per MVP phasing — label pilot deployments honestly on sales calls.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-child-labor-monitoring'),
+  },
+  'solutions-open-chain-model': {
+    routeId: 'solutions-open-chain-model',
+    eyebrow: 'Solutions',
+    title: 'Open Chain model',
+    description: 'Shared-risk sourcing — traceability, LIRP + 20% premium, and multi-year mutual commitments.',
+    sections: [
+      {
+        heading: '100% operational traceability',
+        body: 'Segregated bean-to-brand or administrative matching with volume alignment — never obscuring origins.',
+      },
+      {
+        heading: '20% livelihood premium',
+        body: 'Pricing intent above Living Income Reference Price for farmer resilience.',
+      },
+      {
+        heading: '5-year MoUs',
+        body: 'Mutual commitments between roasters and cooperatives reduce boom-bust sourcing cycles.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-open-chain-model'),
+  },
+  'solutions-direct-trade-marketplace': {
+    routeId: 'solutions-direct-trade-marketplace',
+    eyebrow: 'Solutions',
+    title: 'Direct trade marketplace',
+    description: 'Verified listings, milestone escrow, and farmer-controlled data sharing.',
+    sections: [
+      {
+        heading: 'Verified listings',
+        body: 'Only plots and batches with completed compliance evidence appear in marketplace discovery.',
+      },
+      {
+        heading: 'Milestone escrow',
+        body: 'Payment release tied to delivery and verification milestones (roadmap).',
+      },
+      {
+        heading: 'Farmer data sovereignty',
+        body: 'Farmers grant access to buyers — they are not passive rows in an exporter database.',
+      },
+    ],
+    relatedLinks: solutionsHub.links.filter((l) => l.routeId !== 'solutions-direct-trade-marketplace'),
+  },
+  'resources-data-sovereignty-security': {
+    routeId: 'resources-data-sovereignty-security',
+    eyebrow: 'Resources',
+    title: 'Data sovereignty & security',
+    description: 'Farmer wallets, request-grant sharing, tenant isolation, and five-year retention.',
+    sections: [
+      {
+        heading: 'Farmer data wallet',
+        body: 'Producers own GeoIDs and grant or revoke access without vendor lock-in.',
+      },
+      {
+        heading: 'Tenant isolation',
+        body: 'Strict multi-tenant boundaries with delegated administration per organization.',
+      },
+      {
+        heading: 'Retention & encryption',
+        body: 'Symmetric encryption for PII; lifecycle tiering for five-year EUDR retention.',
+      },
+    ],
+    relatedLinks: resourcesHub.links.filter((l) => l.routeId !== 'resources-data-sovereignty-security'),
+  },
+  'resources-verification-standards': {
+    routeId: 'resources-verification-standards',
+    eyebrow: 'Resources',
+    title: 'Verification standards',
+    description: 'Geometry rules, identity preservation, and audit lineage expectations.',
+    sections: [
+      {
+        heading: 'Geometry',
+        body: 'GEOGRAPHY storage, ST_MakeValid with area variance guard, six-decimal coordinate minimum.',
+      },
+      {
+        heading: 'Lineage',
+        body: 'O(1) runtime traversal via materialized root plot arrays — no mass-balance laundering.',
+      },
+      {
+        heading: 'Evidence chain',
+        body: 'Immutable audit references with forward-chained supersession — no silent overwrites.',
+      },
+    ],
+    relatedLinks: resourcesHub.links.filter((l) => l.routeId !== 'resources-verification-standards'),
+  },
+  'resources-api-docs': {
+    routeId: 'resources-api-docs',
+    eyebrow: 'Resources',
+    title: 'API documentation',
+    description: 'Developer integrations — TRACES middleware, registries, and ESG connectors.',
+    sections: [
+      {
+        heading: 'TRACES NT adapter',
+        body: 'SOAP/XML with WS-Security — not simple REST. Payload chunking when size or vertex limits apply.',
+      },
+      {
+        heading: 'National registries',
+        body: 'Inbound sync for baseline boundaries where institutes expose APIs.',
+      },
+      {
+        heading: 'Developer docs',
+        body: 'Full OpenAPI surface ships with product — this page is the marketing entry point.',
+      },
+    ],
+    relatedLinks: resourcesHub.links.filter((l) => l.routeId !== 'resources-api-docs'),
   },
 };
 

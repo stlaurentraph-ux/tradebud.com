@@ -6,7 +6,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v
 
 Navigation, Insights (blog), platform/compliance hubs, and phased rollout: [SITE_ARCHITECTURE.md](./SITE_ARCHITECTURE.md).
 
-**v0 handoff:** [V0_HANDOFF.md](./V0_HANDOFF.md) — full site map, page status, and styling boundaries.
+**v0 handoff:** [V0_HANDOFF.md](./V0_HANDOFF.md) — full site map, phased work order, and styling boundaries.  
+**v0 paste brief (June 2026):** [V0_JUNE_2026_INSTRUCTIONS.md](./V0_JUNE_2026_INSTRUCTIONS.md) — paste into v0 chat to implement the new IA.
 
 ### Stealth preview (Stage A)
 
@@ -18,10 +19,15 @@ Site map for v0: **http://localhost:3000/en/draft** (live + draft pages indexed 
 
 | Section | Live (styled) | Draft (needs v0) |
 | --- | --- | --- |
-| Solutions | farmers, exporters, importers, countries | cooperatives, sponsors, why-tracebud |
+| Who we serve | farmers, exporters, importers, countries | cooperatives, sponsors, `/who-we-serve` hub |
+| Solutions (modules) | — | `/solutions/*` (6 modules + hub) |
+| Platform | — | Field App, Dashboard, legacy `/platform/*` |
+| Outcomes | — | `/impact/*` (rename to `/outcomes` at launch) |
+| Resources | — | `/resources/*`, `/insights` |
 | Convert | pricing, get-started, pilot, demo | — |
-| Platform / Compliance / Insights | — | all routes |
-| Home | `/` | `/preview` |
+| Home | `/` | `/preview` (June 2026 hero + new blocks) |
+
+See [V0_JUNE_2026_INSTRUCTIONS.md](./V0_JUNE_2026_INSTRUCTIONS.md) for the target nav and phased v0 work order.
 
 Content lives in `content/insights/*.md` and `lib/marketing-draft-content.ts`. **Style in v0** — pages use minimal layout shells (`DraftContentPage`, `DraftHubPage`).
 

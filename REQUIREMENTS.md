@@ -7,6 +7,18 @@ MVP release scope and v1 boundaries are maintained in `MVP_PRD.md`.
 Role-based activation and remediation jobs-to-be-done are maintained in `JTBD_PRD.md`.
 Build-readiness delivery artifacts are maintained in `BUILD_READINESS_ARTIFACTS.md`.
 
+**June 2026 product & marketing definition:** [TRACEBUD_DEFINITION_JUNE_2026.md](./TRACEBUD_DEFINITION_JUNE_2026.md) — farmer-first agrifood OS, modular solutions marketplace, Open Chain roadmap, and target website IA. Where this definition conflicts with engineering normative text in the spec on lineage or mass balance, the spec wins.
+
+## 0. Product positioning (June 2026)
+
+- **Category:** Farmer-first, self-serve, **bidirectional** agrifood operating system — not a closed compliance silo.
+- **Platform core:** Two products only — **Field App** (offline-first capture) and **Dashboard** (validation, collaboration, export).
+- **Modular solutions:** Toggleable modules (EUDR compliance first; ESG/carbon, regenerative agriculture, child-labor monitoring, Open Chain, direct trade marketplace on roadmap per `MVP_PRD.md`).
+- **Coffee-first:** Initial commodity focus for shade-grown / false-positive complexity; schema remains commodity-agnostic.
+- **Outcomes narrative:** Resilient supply chains, farmer livelihoods, nature-positive climate — marketing organizes impact as outcomes, not a separate product SKU.
+- **Open Chain (roadmap):** Shared-risk sourcing — 100% traceability, LIRP + 20% premium, 5-year MoUs, cooperative strengthening, productivity coaching via IFDPs.
+- **Website IA:** Target sitemap and route migration in `apps/marketing/lib/marketing-route-migration.ts` and `apps/marketing/SITE_ARCHITECTURE.md`.
+
 ## I. Strategic Framework & Regulatory Alignment
 
 - **EUDR Core:** The system is explicitly built to comply with the EU Deforestation Regulation (EUDR). The compliance deadlines are **December 30, 2026**, for large/medium enterprises and **June 30, 2027**, for micro/small enterprises.
