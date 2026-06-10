@@ -1,7 +1,7 @@
 # Marketing Site Architecture & Rollout Plan
 
 **Status:** Planning — stealth build, then public launch  
-**Last updated:** 2026-06-08  
+**Last updated:** 2026-06-08 (June 2026 definition integrated)  
 **Owner:** Marketing / product  
 **Package:** `apps/marketing`
 
@@ -27,6 +27,43 @@ Do **not** wire new routes into header, footer, homepage, or sitemap until Stage
 | [README.md](./README.md) | Dev setup, lead forms, analytics |
 | [../../REQUIREMENTS.md](../../REQUIREMENTS.md) | Strategic positioning (EUDR, sovereignty, network) |
 | [../../MVP_PRD.md](../../MVP_PRD.md) | Release boundary for v1 messaging |
+| [../../TRACEBUD_DEFINITION_JUNE_2026.md](../../TRACEBUD_DEFINITION_JUNE_2026.md) | **Canonical** product definition + target website IA (June 2026) |
+| [lib/marketing-route-migration.ts](./lib/marketing-route-migration.ts) | Current stealth URL → definition target URL map |
+
+---
+
+## June 2026 definition — target IA
+
+Founder definition (June 2026) reframes Tracebud as a **farmer-first agrifood OS** with **Field App + Dashboard** core and a **modular solutions marketplace**. Marketing outcomes replace a separate “impact product” SKU.
+
+### Target top-level navigation (Stage B+)
+
+```
+Logo    Solutions ▾    Platform ▾    Who we serve ▾    Outcomes ▾    Resources ▾    Pricing    [CTA]
+```
+
+### Target sitemap (canonical)
+
+See full tree in [TRACEBUD_DEFINITION_JUNE_2026.md](../../TRACEBUD_DEFINITION_JUNE_2026.md). Key groups:
+
+| Group | Target hub | MVP / stealth status |
+| --- | --- | --- |
+| Platform | `/platform/field-app`, `/platform/dashboard` | Draft pages live; legacy `/platform/offline-mapping` etc. until merge |
+| Solutions | `/solutions/*` (6 modules) | Draft hub + pages gated; EUDR = start here |
+| Who we serve | `/who-we-serve/*` | Hub draft; persona pages stay at `/farmers`, `/exporters`, … until rename |
+| Outcomes | `/outcomes/*` (3 pillars) | v0 styles `/impact/*` on branch `v0/stlaurentraph-4260-3ace7b2a`; rename at launch |
+| Resources | `/resources/*` | Draft hub; `/insights` → `/resources/insights` at launch |
+
+### Migration strategy (do not block v0)
+
+1. **Now:** Definition in repo docs; stealth draft routes at **target URLs** (`/solutions`, `/who-we-serve`, `/resources`, `/platform/field-app`).
+2. **v0 pass:** Continue styling **current** URLs on `v0/stlaurentraph-4260-3ace7b2a` (impact, compliance, personas).
+3. **Stage B:** Flip publication flags; wire nav; add **301 redirects** per `marketing-route-migration.ts` (`/impact` → `/outcomes`, `/farmers` → `/who-we-serve/producers-cooperatives`, etc.).
+
+### v0 branch coordination
+
+Active styling: `https://github.com/stlaurentraph-ux/tradebud.com/tree/v0/stlaurentraph-4260-3ace7b2a`  
+Do **not** restyle finished persona/pricing pages. New definition routes appear under **June 2026 definition** on `/en/draft`.
 
 ---
 

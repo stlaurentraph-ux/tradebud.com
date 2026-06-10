@@ -9,6 +9,10 @@ _Canonical v1.6 specification stored in legacy filename `TRACEBUD_V1_2_EUDR_SPEC
 
 **This specification is normative unless a section is explicitly marked informative.**
 
+### Informative — June 2026 commercial definition
+
+Product positioning, modular solutions packaging, Open Chain commercial model, target marketing sitemap, and homepage messaging are maintained in [TRACEBUD_DEFINITION_JUNE_2026.md](./TRACEBUD_DEFINITION_JUNE_2026.md). That document is **informative** for engineering: build-signoff behavior in this spec (identity preservation, GEOGRAPHY, HLC sync, TRACES adapter, GDPR shredding) overrides any marketing shorthand. Route migration from stealth `/impact/*` and `/compliance/*` URLs to definition-aligned `/outcomes/*` and `/solutions/*` is tracked in `apps/marketing/lib/marketing-route-migration.ts`.
+
 ---
 
 ## TABLE OF CONTENTS
@@ -87,7 +91,7 @@ v1.6 hardens the v1.5 data model against physical, mathematical, and regulatory 
 
 ## 2. Product Thesis
 
-Tracebud is the compliance operating system for fragmented and smallholder-heavy EUDR supply chains.
+Tracebud is the compliance operating system for fragmented and smallholder-heavy EUDR supply chains. Commercially (June 2026), Tracebud is positioned as a **farmer-first agrifood operating system** with a Field App + Dashboard core and toggleable solution modules — see informative [TRACEBUD_DEFINITION_JUNE_2026.md](./TRACEBUD_DEFINITION_JUNE_2026.md).
 
 The product must do all of the following reliably:
 - capture producer, plot, and evidence data in low-connectivity environments

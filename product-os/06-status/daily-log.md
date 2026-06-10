@@ -1,3 +1,15 @@
+### 2026-06-08 (marketing: v0 instructions for June 2026 IA)
+- Expanded `apps/marketing/V0_HANDOFF.md` — phased work order, target nav wireframes, paste prompts, do-not list.
+- Added `apps/marketing/V0_JUNE_2026_INSTRUCTIONS.md` — paste-into-v0 brief with URLs, deliverables, and chat opener.
+- Added `messages/en.json` → `siteNav.june2026` + `homeV2.hero` for v0 nav/homepage copy.
+
+### 2026-06-08 (docs + marketing: June 2026 Tracebud definition)
+- Integrated founder definition doc into repo: `TRACEBUD_DEFINITION_JUNE_2026.md` (positioning, modular solutions, Open Chain, target IA).
+- Updated `REQUIREMENTS.md` §0, `TRACEBUD_V1_2_EUDR_SPEC.md` informative cross-ref, `apps/marketing/SITE_ARCHITECTURE.md`, `V0_HANDOFF.md`.
+- Added `apps/marketing/lib/marketing-route-migration.ts` (current → target URL map for v0 + Stage B).
+- Scaffolded stealth draft routes: `/solutions/*`, `/who-we-serve`, `/platform/field-app`, `/platform/dashboard`, `/resources/*` (gated; 404 in prod).
+- Site map section `definition-june-2026` on `/en/draft`; v0 branch `v0/stlaurentraph-4260-3ace7b2a` can keep styling `/impact/*` until rename.
+
 ### 2026-06-09 (marketing: i18n MISSING_MESSAGE build fix)
 - Fixed production build failures: `marketing.pricingSection.*`, `header.nav.{products,pricing,pilot}`, and full `marketing.pilot` namespace were missing from non-English locale files.
 - Added `marketing.pilot` copy to `en.json` (from v0 pilot page); extended `merge-marketing-i18n.mjs` to backfill `header` keys from English.

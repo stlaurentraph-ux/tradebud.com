@@ -16,7 +16,8 @@ export type SiteMapSectionId =
   | 'insights'
   | 'convert'
   | 'legal'
-  | 'meta';
+  | 'meta'
+  | 'definition-june-2026';
 
 export type SiteMapSection = {
   id: SiteMapSectionId;
@@ -32,6 +33,8 @@ export type SiteMapEntry = {
   status: SiteMapPageStatus;
   /** Set when route is behind publication gate in production. */
   routeId?: MarketingRouteId;
+  /** Canonical URL from TRACEBUD_DEFINITION_JUNE_2026.md when different from href. */
+  definitionTarget?: string;
   v0Notes?: string;
 };
 
@@ -80,6 +83,12 @@ export const siteMapSections: SiteMapSection[] = [
     id: 'legal',
     label: 'Legal',
     description: 'Privacy and terms.',
+  },
+  {
+    id: 'definition-june-2026',
+    label: 'June 2026 definition (target IA)',
+    description:
+      'Canonical URLs from TRACEBUD_DEFINITION_JUNE_2026.md — scaffolded as stealth drafts. v0 may keep styling current URLs until Stage B renames.',
   },
 ];
 
@@ -365,6 +374,95 @@ export const marketingSiteMap: SiteMapEntry[] = [
     href: '/terms',
     section: 'legal',
     status: 'legal',
+  },
+
+  // June 2026 definition — target IA (stealth drafts)
+  {
+    id: 'def-solutions',
+    label: 'Solutions hub',
+    href: '/solutions',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'solutions',
+    definitionTarget: '/solutions',
+    v0Notes: 'Modular marketplace hub. Style after v0 pass on impact/compliance unless prioritised.',
+  },
+  {
+    id: 'def-solutions-eudr',
+    label: 'EUDR compliance (solution)',
+    href: '/solutions/eudr-compliance',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'solutions-eudr-compliance',
+    definitionTarget: '/solutions/eudr-compliance',
+    v0Notes: 'Merges compliance/eudr narrative at Stage B rename.',
+  },
+  {
+    id: 'def-platform-field-app',
+    label: 'Field App',
+    href: '/platform/field-app',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'platform-field-app',
+    definitionTarget: '/platform/field-app',
+    v0Notes: 'Absorbs offline-mapping + field capture story.',
+  },
+  {
+    id: 'def-platform-dashboard',
+    label: 'Dashboard',
+    href: '/platform/dashboard',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'platform-dashboard',
+    definitionTarget: '/platform/dashboard',
+  },
+  {
+    id: 'def-who-we-serve',
+    label: 'Who we serve hub',
+    href: '/who-we-serve',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve',
+    definitionTarget: '/who-we-serve',
+    v0Notes: 'Links to live persona pages until rename redirects.',
+  },
+  {
+    id: 'def-resources',
+    label: 'Resources hub',
+    href: '/resources',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'resources',
+    definitionTarget: '/resources',
+  },
+  {
+    id: 'def-outcomes-supply',
+    label: 'Resilient supply chains (target)',
+    href: '/impact/supply-chains',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    definitionTarget: '/outcomes/resilient-supply-chains',
+    v0Notes: 'v0 branch: style /impact/supply-chains; rename at Stage B.',
+  },
+  {
+    id: 'def-outcomes-livelihood',
+    label: 'Farmer livelihoods (target)',
+    href: '/impact/farmer-livelihood',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'impact-farmer-livelihood',
+    definitionTarget: '/outcomes/farmer-livelihoods',
+    v0Notes: 'v0: also /impact/smallholders on styling branch.',
+  },
+  {
+    id: 'def-outcomes-climate',
+    label: 'Nature-positive climate (target)',
+    href: '/impact/climate-biodiversity',
+    section: 'definition-june-2026',
+    status: 'draft-needs-style',
+    routeId: 'impact-climate-biodiversity',
+    definitionTarget: '/outcomes/nature-positive-climate',
+    v0Notes: 'v0: also /impact/forests on styling branch.',
   },
 ];
 
