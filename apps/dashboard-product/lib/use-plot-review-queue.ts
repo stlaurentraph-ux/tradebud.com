@@ -33,6 +33,11 @@ function getAuthHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function parseReviewPriority(value: unknown): PlotReviewQueueItem['reviewPriority'] {
+  if (value === 'high' || value === 'medium' || value === 'low') return value;
+  return 'low';
+}
+
 function normalizeQueue(payload: unknown): PlotReviewQueueItem[] {
   if (!Array.isArray(payload)) return [];
   return payload
@@ -49,10 +54,7 @@ function normalizeQueue(payload: unknown): PlotReviewQueueItem[] {
         typeof row.production_system === 'string' ? row.production_system : null,
       sinaph_overlap: row.sinaph_overlap === true,
       indigenous_overlap: row.indigenous_overlap === true,
-      reviewPriority:
-        row.reviewPriority === 'high' || row.reviewPriority === 'medium'
-          ? row.reviewPriority
-          : 'low',
+      reviewPriority: parseReviewPriority(row.reviewPriority),
       autoClearanceEligible: row.autoClearanceEligible === true,
       deforestation_screening: row.deforestation_screening,
       groundTruthPhotos:

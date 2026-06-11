@@ -4,6 +4,7 @@ import React, { Component, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DASHBOARD_EVENTS, reportErrorToSentry, trackDashboardEvent } from '@/lib/observability/analytics';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -37,11 +38,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log to console in development
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
 
-    // Call optional error handler (for analytics/monitoring)
-    this.props.onError?.(error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+      return;
+    }
+
+    reportErrorToSentry(error, { componentStack: errorInfo.componentStack });
+    trackDashboardEvent(DASHBOARD_EVENTS.REACT_RENDER_ERROR, {
+      message: error.message,
+    });
   }
 
   handleRetry = (): void => {
@@ -112,6 +119,16 @@ export function DashboardErrorBoundary({
     <ErrorBoundary
       title={sectionName ? `${sectionName} failed to load` : 'Dashboard section failed'}
       description="This dashboard widget encountered an error. Your other data is still available."
+      onError={(error, errorInfo) => {
+        reportErrorToSentry(error, {
+          componentStack: errorInfo.componentStack,
+          section: sectionName ?? 'unknown',
+        });
+        trackDashboardEvent(DASHBOARD_EVENTS.REACT_RENDER_ERROR, {
+          message: error.message,
+          section: sectionName ?? 'unknown',
+        });
+      }}
     >
       {children}
     </ErrorBoundary>

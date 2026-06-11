@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { User, TenantRole } from '@/types';
 import { clearAuthTokens, setAuthTokens } from '@/lib/auth-session';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -179,6 +180,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthTokens(payload.access_token, payload.refresh_token);
       sessionStorage.setItem('tracebud_user', JSON.stringify(derivedUser));
       setUser(derivedUser);
+      trackDashboardEvent(DASHBOARD_EVENTS.SIGN_IN_SUCCESS, {
+        role: derivedUser.active_role,
+      });
+    } catch (error) {
+      trackDashboardEvent(DASHBOARD_EVENTS.SIGN_IN_FAILURE, {
+        reason: error instanceof Error ? error.message : 'sign_in_failed',
+      });
+      throw error;
     } finally {
       setIsLoading(false);
     }

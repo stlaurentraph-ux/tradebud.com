@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import { Toaster } from 'sonner';
+import { DashboardRootBoundary } from '@/components/observability/dashboard-root-boundary';
+import { ObservabilityBootstrap } from '@/components/observability/observability-bootstrap';
 import { AuthProvider } from '@/lib/auth-context';
 import { LocaleProvider } from '@/lib/locale-context';
 import { OnboardingProvider } from '@/lib/onboarding-context';
@@ -59,15 +62,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
-          <LocaleProvider>
-            <OnboardingProvider>
-              <DashboardLayout>{children}</DashboardLayout>
-              <OnboardingWelcomeModal />
-              <GuidedTourOverlay />
-            </OnboardingProvider>
-          </LocaleProvider>
+          <ObservabilityBootstrap />
+          <DashboardRootBoundary>
+            <LocaleProvider>
+              <OnboardingProvider>
+                <DashboardLayout>{children}</DashboardLayout>
+                <OnboardingWelcomeModal />
+                <GuidedTourOverlay />
+              </OnboardingProvider>
+            </LocaleProvider>
+          </DashboardRootBoundary>
           <Toaster richColors position="top-right" />
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

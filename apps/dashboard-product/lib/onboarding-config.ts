@@ -5,6 +5,7 @@
 
 import type { TenantRole } from '@/types';
 import type { CommercialPermission } from '@/lib/rbac';
+import { trackDashboardEvent } from '@/lib/observability/analytics';
 
 export type OnboardingPersona = 'cooperative' | 'exporter' | 'importer' | 'sponsor';
 
@@ -399,10 +400,13 @@ export interface OnboardingAnalyticsPayload {
   totalSteps?: number;
 }
 
-/** Fire analytics events (no-op stub — swap for real impl). */
+/** Onboarding funnel events → Vercel Analytics + Sentry breadcrumbs. */
 export function trackOnboardingEvent(payload: OnboardingAnalyticsPayload): void {
   if (typeof window === 'undefined') return;
-  // Replace with your analytics provider (PostHog, Segment, etc.)
-  // eslint-disable-next-line no-console
-  console.log('[onboarding]', payload.event, payload);
+  trackDashboardEvent(payload.event, {
+    persona: payload.persona,
+    stepKey: payload.stepKey,
+    stepIndex: payload.stepIndex,
+    totalSteps: payload.totalSteps,
+  });
 }

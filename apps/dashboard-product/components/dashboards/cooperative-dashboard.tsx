@@ -222,7 +222,7 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
                 <ClipboardList className="h-4 w-4 text-amber-700" />
                 <span className="font-medium text-amber-800">Boundary capture follow-up</span>
               </div>
-              {metrics.geometry_remediation_count > 0 ? (
+              {(metrics.geometry_remediation_count ?? 0) > 0 ? (
                 <Badge variant="outline">{metrics.geometry_remediation_count}</Badge>
               ) : (
                 <ArrowRight className="h-4 w-4 text-amber-700" />
