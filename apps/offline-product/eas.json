@@ -10,7 +10,8 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6c2t0YWpsbm9mb3N4ZXF3ZHdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDI1MzksImV4cCI6MjA4ODIxODUzOX0.YbCLbF9FUIugUqhEv1bgD5ZUMG8HZ69I9duqWBp5Lmo"
       }
     },
     "production": {
@@ -18,7 +19,8 @@
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
-        "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6c2t0YWpsbm9mb3N4ZXF3ZHdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDI1MzksImV4cCI6MjA4ODIxODUzOX0.YbCLbF9FUIugUqhEv1bgD5ZUMG8HZ69I9duqWBp5Lmo"
       }
     }
   },
