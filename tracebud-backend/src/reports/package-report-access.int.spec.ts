@@ -113,7 +113,7 @@ describeIfDb('API integration: package/report access policy', () => {
     harvestController = new HarvestController(
       new HarvestService(pool, createBillingServiceMock()),
       createLaunchServiceMock(),
-      new ConsentService(pool),
+      new ConsentService(pool, { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() } as any),
     );
     reportsController = new ReportsController(pool, createLaunchServiceMock());
   }, 20_000);

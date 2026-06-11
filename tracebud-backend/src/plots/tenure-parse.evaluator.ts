@@ -33,7 +33,14 @@ export function evaluateTenureParseResult(result: TenureParseResultV1): {
     return { parse_status: 'MANUAL_REQUIRED', parse_confidence: 0 };
   }
 
-  if (parse_confidence < MANUAL_CONFIDENCE_THRESHOLD || missingCritical) {
+  const crossCheckRequiresReview =
+    result.cadastral_cross_check?.requires_manual_review === true;
+
+  if (
+    parse_confidence < MANUAL_CONFIDENCE_THRESHOLD ||
+    missingCritical ||
+    crossCheckRequiresReview
+  ) {
     return { parse_status: 'MANUAL_REQUIRED', parse_confidence };
   }
 

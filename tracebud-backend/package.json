@@ -23,7 +23,6 @@
     "db:verify:consent-grants": "node scripts/run-with-root-test-db.mjs node scripts/apply-consent-grants-migration.mjs --verify-only",
     "db:apply:consent-sovereignty-v11": "node scripts/apply-consent-sovereignty-v11-migration.mjs",
     "db:verify:consent-sovereignty-v11": "node scripts/apply-consent-sovereignty-v11-migration.mjs --verify-only",
-    "check:push": "node scripts/check-expo-push-readiness.mjs",
     "smoke:consent": "node scripts/smoke-consent-sovereignty.mjs",
     "test:integration:consent": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/consent/consent-lineage-revoke.int.spec.ts",
     "db:apply:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs",
@@ -35,8 +34,16 @@
     "db:migrate": "drizzle-kit migrate",
     "check:deploy-health": "node scripts/check-deploy-health.mjs",
     "check:gfw": "node scripts/check-gfw-connectivity.mjs",
+    "check:push": "node scripts/check-expo-push-readiness.mjs",
+    "check:tenure-parse": "node scripts/check-tenure-parse-readiness.mjs",
+    "check:tenure-parse:smoke": "node scripts/check-tenure-parse-readiness.mjs --smoke",
+    "db:apply:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs",
+    "db:verify:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs --verify-only",
+    "db:apply:evidence-documents-phase2": "node scripts/apply-evidence-documents-phase2-migration.mjs",
+    "db:verify:evidence-documents-phase2": "node scripts/apply-evidence-documents-phase2-migration.mjs --verify-only",
     "railway:preflight:local": "node scripts/railway-local-preflight.mjs",
-    "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs"
+    "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs",
+    "billing:finalize-period-cron": "node scripts/billing-finalize-period-cron.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

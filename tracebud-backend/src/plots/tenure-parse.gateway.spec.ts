@@ -1,5 +1,7 @@
 import {
   buildTenureParseRequestBody,
+  extractJsonFromLlmContent,
+  modelSupportsJsonResponseFormat,
   normalizeGatewayModel,
   resolveTenureParseLlmConfig,
 } from './tenure-parse.gateway';
@@ -36,6 +38,7 @@ describe('tenure-parse.gateway', () => {
       userContent: [{ type: 'text', text: 'hi' }],
     });
     expect(body.store).toBe(false);
+    expect(body.response_format).toBeUndefined();
     expect(body.providerOptions).toEqual({
       gateway: {
         zeroDataRetention: true,
@@ -43,6 +46,22 @@ describe('tenure-parse.gateway', () => {
         tags: ['tenure-parse', 'eudr-tenure', 'producer-in-possession'],
       },
     });
+  });
+
+  it('uses json_object mode for OpenAI models', () => {
+    process.env.AI_GATEWAY_API_KEY = 'gateway-key';
+    process.env.AI_TENURE_PARSE_MODEL = 'openai/gpt-4o-mini';
+    const config = resolveTenureParseLlmConfig();
+    const body = buildTenureParseRequestBody({
+      config: config!,
+      systemPrompt: 'sys',
+      userContent: [],
+    });
+    expect(body.response_format).toEqual({ type: 'json_object' });
+  });
+
+  it('extracts JSON from fenced gemini output', () => {
+    expect(extractJsonFromLlmContent('```json\n{"ok":true}\n```')).toBe('{"ok":true}');
   });
 
   it('can disable per-request ZDR while keeping no-training', () => {
@@ -61,5 +80,10 @@ describe('tenure-parse.gateway', () => {
   it('normalizes bare OpenAI model slugs for gateway', () => {
     expect(normalizeGatewayModel('gpt-4o-mini')).toBe('openai/gpt-4o-mini');
     expect(normalizeGatewayModel('openai/gpt-5.4')).toBe('openai/gpt-5.4');
+  });
+
+  it('knows gemini does not support json response_format', () => {
+    expect(modelSupportsJsonResponseFormat('google/gemini-2.5-flash')).toBe(false);
+    expect(modelSupportsJsonResponseFormat('openai/gpt-4o-mini')).toBe(true);
   });
 });

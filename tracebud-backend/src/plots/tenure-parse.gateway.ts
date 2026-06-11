@@ -64,6 +64,22 @@ export function resolveTenureParseLlmConfig(): TenureParseLlmConfig | null {
   };
 }
 
+export function modelSupportsJsonResponseFormat(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  // Gemini via AI Gateway rejects OpenAI-style response_format (smoke-tested 2026-06).
+  if (normalized.startsWith('google/') || normalized.startsWith('gemini-')) return false;
+  return true;
+}
+
+export function extractJsonFromLlmContent(raw: string): string {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced?.[1]) return fenced[1].trim();
+  const inline = trimmed.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (inline?.[1]) return inline[1].trim();
+  return trimmed;
+}
+
 export function buildTenureParseRequestBody(params: {
   config: TenureParseLlmConfig;
   systemPrompt: string;
@@ -72,13 +88,16 @@ export function buildTenureParseRequestBody(params: {
   const body: Record<string, unknown> = {
     model: params.config.model,
     temperature: 0.1,
-    response_format: { type: 'json_object' },
     store: false,
     messages: [
       { role: 'system', content: params.systemPrompt },
       { role: 'user', content: params.userContent },
     ],
   };
+
+  if (modelSupportsJsonResponseFormat(params.config.model)) {
+    body.response_format = { type: 'json_object' };
+  }
 
   if (params.config.privacy.viaGateway) {
     body.providerOptions = {

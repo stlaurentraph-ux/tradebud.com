@@ -12,13 +12,33 @@ export type TenureType =
   | 'POSSESSION_DECLARATION'
   | 'UNKNOWN';
 
+export type CadastralCrossCheck = {
+  declared_cadastral_key: string | null;
+  extracted_parcel_reference: string | null;
+  normalized_declared: string | null;
+  normalized_extracted: string | null;
+  keys_match: boolean | null;
+  holder_name_match: boolean | null;
+  informal_tenure_conflict: boolean;
+  issues: string[];
+  requires_manual_review: boolean;
+  country_pack?: string | null;
+  country_label?: string | null;
+};
+
+export type TenureDocumentSource = 'tenure_evidence' | 'land_title';
+
 export type TenureParseResultV1 = {
   tenure_type: TenureType;
   holder_name: string | null;
   community_or_issuer: string | null;
   parcel_reference: string | null;
+  /** Formal title number / Clave Catastral when distinct from parcel_reference. */
+  title_number?: string | null;
   issue_date: string | null;
   country_iso: string | null;
+  document_source?: TenureDocumentSource | null;
+  cadastral_cross_check?: CadastralCrossCheck | null;
   clauses_found: string[];
   clauses_missing: string[];
   anti_fraud: {

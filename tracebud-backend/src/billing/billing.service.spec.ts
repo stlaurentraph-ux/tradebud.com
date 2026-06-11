@@ -144,6 +144,68 @@ describe('BillingService', () => {
     );
   });
 
+  it('marks invoice paid from Stripe webhook', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            id: 'inv_1',
+            tenant_id: 'tenant_exporter',
+            billing_period: '2026-06',
+            subscription_amount_eur: 20,
+            origin_seal_count: 1,
+            origin_seal_amount_eur: 1,
+            destination_submit_count: 0,
+            destination_submit_amount_eur: 0,
+            marketplace_fee_amount_eur: 0,
+            total_amount_eur: 21,
+            currency: 'EUR',
+            invoice_status: 'PAID',
+            stripe_invoice_id: 'in_123',
+            finalized_at: new Date().toISOString(),
+            paid_at: new Date().toISOString(),
+          },
+        ],
+      }),
+    };
+    const service = makeBillingService(pool);
+
+    const invoice = await service.applyStripeInvoicePaid('in_123');
+    expect(invoice?.invoice_status).toBe('PAID');
+  });
+
+  it('marks invoice failed from Stripe webhook', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            id: 'inv_2',
+            tenant_id: 'tenant_exporter',
+            billing_period: '2026-05',
+            subscription_amount_eur: 20,
+            origin_seal_count: 2,
+            origin_seal_amount_eur: 2,
+            destination_submit_count: 0,
+            destination_submit_amount_eur: 0,
+            marketplace_fee_amount_eur: 0,
+            total_amount_eur: 22,
+            currency: 'EUR',
+            invoice_status: 'FAILED',
+            stripe_invoice_id: 'in_failed',
+            finalized_at: new Date().toISOString(),
+            paid_at: null,
+          },
+        ],
+      }),
+    };
+    const service = makeBillingService(pool);
+
+    const invoice = await service.applyStripeInvoicePaymentFailed('in_failed');
+    expect(invoice?.invoice_status).toBe('FAILED');
+  });
+
   it('finalizes monthly invoice with subscription plus usage counts', async () => {
     const invoiceRow = {
       id: 'inv_1',

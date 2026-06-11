@@ -1122,6 +1122,21 @@ export class HarvestService {
       }
     }
 
+    const plotIds = [
+      ...new Set(
+        vouchers
+          .map((voucher: { plot_id?: string | null }) => voucher?.plot_id)
+          .filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+      ),
+    ];
+    for (const reason of await this.evaluatePlotTenurePackageReasons(plotIds)) {
+      if (reason.severity === 'blocker') {
+        blockers.push(reason);
+      } else {
+        warnings.push(reason);
+      }
+    }
+
     const status: DdsPackageReadinessResult['status'] =
       blockers.length > 0 ? 'blocked' : warnings.length > 0 ? 'warning_review' : 'ready_to_submit';
 
@@ -1170,6 +1185,86 @@ export class HarvestService {
         capturedAt: voucher?.harvest_date ?? voucher?.created_at ?? null,
       };
     });
+  }
+
+  private async evaluatePlotTenurePackageReasons(plotIds: string[]): Promise<ReadinessIssue[]> {
+    if (plotIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const res = await this.pool.query<{
+        plot_id: string;
+        plot_name: string | null;
+        parse_status: string;
+      }>(
+        `
+          SELECT DISTINCT ON (ptv.plot_id)
+            ptv.plot_id::text,
+            p.name AS plot_name,
+            ptv.parse_status
+          FROM plot_tenure_verification ptv
+          JOIN plot p ON p.id = ptv.plot_id
+          WHERE ptv.plot_id = ANY($1::uuid[])
+          ORDER BY ptv.plot_id, ptv.updated_at DESC
+        `,
+        [plotIds],
+      );
+
+      const reasons: ReadinessIssue[] = [];
+      for (const row of res.rows) {
+        const label = row.plot_name?.trim() || `Plot ${row.plot_id.slice(0, 8)}`;
+        if (row.parse_status === 'MANUAL_REQUIRED' || row.parse_status === 'FAILED') {
+          reasons.push({
+            code: 'TENURE_REVIEW_REQUIRED',
+            severity: 'blocker',
+            message: `${label}: land tenure document requires exporter review before package submission.`,
+          });
+        } else if (row.parse_status === 'PENDING' || row.parse_status === 'IN_PROGRESS') {
+          reasons.push({
+            code: 'TENURE_PARSE_PENDING',
+            severity: 'warning',
+            message: `${label}: tenure document AI review is still in progress.`,
+          });
+        }
+      }
+
+      const openIssues = await this.pool.query<{ plot_name: string | null }>(
+        `
+          SELECT DISTINCT p.name AS plot_name
+          FROM compliance_issues ci
+          JOIN plot_tenure_verification ptv
+            ON ptv.id::text = ci.linked_entity_id
+            AND ci.linked_entity_type = 'tenure_verification'
+          JOIN plot p ON p.id = ptv.plot_id
+          WHERE ci.status = 'open'
+            AND ptv.plot_id = ANY($1::uuid[])
+        `,
+        [plotIds],
+      );
+      if (openIssues.rows.length > 0 && !reasons.some((r) => r.code === 'TENURE_REVIEW_REQUIRED')) {
+        reasons.push({
+          code: 'TENURE_REVIEW_REQUIRED',
+          severity: 'blocker',
+          message:
+            'One or more package plots has open land tenure compliance issues awaiting exporter review.',
+        });
+      }
+
+      const dedup = new Map<string, ReadinessIssue>();
+      for (const reason of reasons) {
+        if (!dedup.has(reason.code)) {
+          dedup.set(reason.code, reason);
+        }
+      }
+      return [...dedup.values()];
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
   }
 
   private evaluateComplianceDocumentReasons(vouchers: any[]): ReadinessIssue[] {

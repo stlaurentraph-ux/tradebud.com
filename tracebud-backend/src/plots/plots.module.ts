@@ -6,6 +6,7 @@ import { PlotGeometryValidationService } from './plot-geometry-validation.servic
 import { PlotsService } from './plots.service';
 import { TenureParseService } from './tenure-parse.service';
 import { EvidenceDocumentsService } from './evidence-documents.service';
+import { TenureReviewAlertService } from './tenure-review-alert.service';
 import { GfwContextService } from '../compliance/gfw-context.service';
 import { GfwService } from '../compliance/gfw.service';
 
@@ -16,6 +17,7 @@ import { GfwService } from '../compliance/gfw.service';
     PlotsService,
     TenureParseService,
     EvidenceDocumentsService,
+    TenureReviewAlertService,
     PlotGeometryValidationService,
     GfwService,
     GfwContextService,

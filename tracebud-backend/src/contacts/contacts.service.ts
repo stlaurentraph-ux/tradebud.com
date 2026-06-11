@@ -25,6 +25,7 @@ export interface ContactRecord {
   country: string | null;
   tags: string[];
   consent_status: 'unknown' | 'granted' | 'revoked';
+  farmer_profile_id: string | null;
   last_activity_at: string | null;
   created_at: string;
   updated_at: string;
@@ -51,10 +52,73 @@ export class ContactsService {
   private mapRow(row: ContactRecord): ContactRecord {
     return {
       ...row,
+      farmer_profile_id: row.farmer_profile_id ?? null,
       last_activity_at: row.last_activity_at ? new Date(row.last_activity_at).toISOString() : null,
       created_at: new Date(row.created_at).toISOString(),
       updated_at: new Date(row.updated_at).toISOString(),
     };
+  }
+
+  private async resolveFarmerProfileId(tenantId: string, email: string): Promise<string | null> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    try {
+      const res = await this.pool.query<{ id: string }>(
+        `
+          SELECT fp.id
+          FROM farmer_profile fp
+          INNER JOIN tenant_signup_contacts tsc
+            ON NULLIF(tsc.user_id, '')::uuid = fp.user_id
+          WHERE tsc.tenant_id = $1
+            AND lower(tsc.email) = $2
+          LIMIT 1
+        `,
+        [tenantId, normalized],
+      );
+      return res.rows[0]?.id ?? null;
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async ensureFarmerProfileLink(
+    tenantId: string,
+    contact: ContactRecord,
+  ): Promise<ContactRecord> {
+    if (contact.contact_type !== 'farmer') {
+      return contact;
+    }
+    if (contact.farmer_profile_id) {
+      return contact;
+    }
+    const farmerProfileId = await this.resolveFarmerProfileId(tenantId, contact.email);
+    if (!farmerProfileId) {
+      return contact;
+    }
+    try {
+      const updated = await this.pool.query<ContactRecord>(
+        `
+          UPDATE crm_contacts
+          SET farmer_profile_id = $1, updated_at = NOW()
+          WHERE tenant_id = $2 AND id = $3
+          RETURNING *
+        `,
+        [farmerProfileId, tenantId, contact.id],
+      );
+      return updated.rows[0] ? this.mapRow(updated.rows[0]) : { ...contact, farmer_profile_id: farmerProfileId };
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42703') {
+        return { ...contact, farmer_profile_id: farmerProfileId };
+      }
+      throw error;
+    }
   }
 
   private async emitAudit(eventType: string, payload: Record<string, unknown>): Promise<void> {
@@ -75,7 +139,10 @@ export class ContactsService {
         `,
         [tenantId],
       );
-      return result.rows.map((row) => this.mapRow(row));
+      const rows = await Promise.all(
+        result.rows.map(async (row) => this.ensureFarmerProfileLink(tenantId, this.mapRow(row))),
+      );
+      return rows;
     } catch (error) {
       this.mapDatabaseError(error);
     }
@@ -153,7 +220,8 @@ export class ContactsService {
           input.consent_status ?? 'unknown',
         ],
       );
-      const contact = this.mapRow(result.rows[0]);
+      let contact = this.mapRow(result.rows[0]);
+      contact = await this.ensureFarmerProfileLink(tenantId, contact);
       await this.emitAudit('contact_created_or_updated', {
         tenantId,
         contactId: contact.id,

@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { BillingInvoiceRecord } from './billing.service';
 
 type StripeInvoiceResponse = {
@@ -6,12 +7,92 @@ type StripeInvoiceResponse = {
   status?: string;
 };
 
+export type StripeWebhookEvent = {
+  id: string;
+  type: string;
+  data: {
+    object: {
+      id?: string;
+      metadata?: Record<string, string>;
+      status_transitions?: { paid_at?: number };
+    };
+  };
+};
+
+const STRIPE_WEBHOOK_TOLERANCE_SECONDS = 300;
+
 @Injectable()
 export class StripeBillingService {
   private readonly logger = new Logger(StripeBillingService.name);
 
   isEnabled(): boolean {
     return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+  }
+
+  isWebhookEnabled(): boolean {
+    return Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim());
+  }
+
+  private getWebhookSecret(): string {
+    const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+    if (!secret) {
+      throw new BadRequestException('STRIPE_WEBHOOK_SECRET is not configured.');
+    }
+    return secret;
+  }
+
+  constructWebhookEvent(rawBody: Buffer | string, signatureHeader: string | undefined): StripeWebhookEvent {
+    if (!signatureHeader?.trim()) {
+      throw new BadRequestException('Missing Stripe-Signature header.');
+    }
+
+    const payload = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
+    const secret = this.getWebhookSecret();
+    const parts = signatureHeader.split(',').map((part) => part.trim());
+    let timestamp = '';
+    const signatures: string[] = [];
+
+    for (const part of parts) {
+      const [key, value] = part.split('=');
+      if (key === 't') {
+        timestamp = value ?? '';
+      } else if (key === 'v1' && value) {
+        signatures.push(value);
+      }
+    }
+
+    if (!timestamp || signatures.length === 0) {
+      throw new BadRequestException('Invalid Stripe-Signature header.');
+    }
+
+    const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+    if (!Number.isFinite(ageSeconds) || ageSeconds > STRIPE_WEBHOOK_TOLERANCE_SECONDS) {
+      throw new BadRequestException('Stripe webhook timestamp outside tolerance.');
+    }
+
+    const signedPayload = `${timestamp}.${payload}`;
+    const expected = createHmac('sha256', secret).update(signedPayload, 'utf8').digest('hex');
+    const expectedBuffer = Buffer.from(expected, 'hex');
+    const verified = signatures.some((signature) => {
+      try {
+        const received = Buffer.from(signature, 'hex');
+        return (
+          received.length === expectedBuffer.length && timingSafeEqual(received, expectedBuffer)
+        );
+      } catch {
+        return false;
+      }
+    });
+
+    if (!verified) {
+      throw new BadRequestException('Stripe webhook signature verification failed.');
+    }
+
+    try {
+      return JSON.parse(payload) as StripeWebhookEvent;
+    } catch {
+      throw new BadRequestException('Stripe webhook payload is not valid JSON.');
+    }
   }
 
   private getSecretKey(): string {

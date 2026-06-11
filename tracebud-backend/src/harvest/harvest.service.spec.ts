@@ -76,7 +76,14 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
   });
 
   it('returns ready_to_submit when no blockers or warnings are found', async () => {
-    const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        if (String(sql).includes('plot_tenure_verification')) {
+          return { rows: [], rowCount: 0 };
+        }
+        return { rows: [], rowCount: 1 };
+      }),
+    };
     const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_3' },
@@ -87,6 +94,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
           harvest_date: '2026-04-16',
           declared_area_ha: 1.1,
           plot_name: 'North Parcel',
+          plot_id: 'plot_3',
         },
       ],
     } as any);
@@ -99,6 +107,50 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO audit_log'),
       expect.arrayContaining([null, 'dds_package_readiness_passed']),
+    );
+  });
+
+  it('blocks package when linked plot tenure review is required', async () => {
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        if (String(sql).includes('plot_tenure_verification')) {
+          return {
+            rows: [
+              {
+                plot_id: 'plot_tenure_1',
+                plot_name: 'Hill Plot',
+                parse_status: 'MANUAL_REQUIRED',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (String(sql).includes('compliance_issues')) {
+          return { rows: [], rowCount: 0 };
+        }
+        return { rows: [], rowCount: 1 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+    jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
+      package: { id: 'pkg_tenure_1' },
+      vouchers: [
+        {
+          id: 'v_tenure_1',
+          kg: 30,
+          harvest_date: '2026-04-16',
+          declared_area_ha: 1.1,
+          plot_name: 'Hill Plot',
+          plot_id: 'plot_tenure_1',
+        },
+      ],
+    } as any);
+
+    const result = await service.evaluateDdsPackageReadiness('pkg_tenure_1');
+
+    expect(result.status).toBe('blocked');
+    expect(result.blockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'TENURE_REVIEW_REQUIRED' })]),
     );
   });
 

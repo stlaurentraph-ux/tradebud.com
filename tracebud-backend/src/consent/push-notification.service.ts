@@ -83,6 +83,43 @@ export class PushNotificationService {
     }
   }
 
+  async notifyTenureReviewRequired(params: {
+    tenantId: string;
+    plotId: string;
+    verificationId: string;
+    title: string;
+    body: string;
+  }): Promise<void> {
+    const staffUserIds = await this.resolveTenantStaffUserIds(params.tenantId);
+    await this.notifyUsersWithTokens({
+      userIds: staffUserIds,
+      title: params.title,
+      body: params.body,
+      data: {
+        screen: 'tenure-review',
+        plotId: params.plotId,
+        verificationId: params.verificationId,
+      },
+    });
+  }
+
+  async notifyFarmerTenureReviewUpdate(params: {
+    farmerId: string;
+    plotId: string;
+    title: string;
+    body: string;
+  }): Promise<void> {
+    await this.notifyUsersWithTokens({
+      userIds: await this.resolveFarmerUserId(params.farmerId),
+      title: params.title,
+      body: params.body,
+      data: {
+        screen: 'plots',
+        plotId: params.plotId,
+      },
+    });
+  }
+
   async notifyGeometryQualityRejected(params: {
     farmerId: string;
     tenantId?: string | null;

@@ -548,6 +548,139 @@ export class BillingService {
     }
   }
 
+  async applyStripeInvoicePaid(stripeInvoiceId: string, paidAt?: Date): Promise<BillingInvoiceRecord | null> {
+    const normalizedStripeId = stripeInvoiceId.trim();
+    if (!normalizedStripeId) {
+      return null;
+    }
+
+    try {
+      const res = await this.pool.query(
+        `
+          UPDATE billing_invoices
+          SET invoice_status = $2,
+              paid_at = COALESCE($3, NOW()),
+              updated_at = NOW()
+          WHERE stripe_invoice_id = $1
+          RETURNING *
+        `,
+        [normalizedStripeId, BILLING_INVOICE_STATUS_PAID, paidAt ?? null],
+      );
+
+      if (!res.rowCount) {
+        return null;
+      }
+
+      const row = res.rows[0];
+      return {
+        id: String(row.id),
+        tenant_id: String(row.tenant_id),
+        billing_period: String(row.billing_period),
+        subscription_amount_eur: Number(row.subscription_amount_eur),
+        origin_seal_count: Number(row.origin_seal_count),
+        origin_seal_amount_eur: Number(row.origin_seal_amount_eur),
+        destination_submit_count: Number(row.destination_submit_count),
+        destination_submit_amount_eur: Number(row.destination_submit_amount_eur),
+        marketplace_fee_amount_eur: Number(row.marketplace_fee_amount_eur ?? 0),
+        total_amount_eur: Number(row.total_amount_eur),
+        currency: String(row.currency),
+        invoice_status: String(row.invoice_status),
+        stripe_invoice_id: row.stripe_invoice_id != null ? String(row.stripe_invoice_id) : null,
+        finalized_at: row.finalized_at != null ? new Date(String(row.finalized_at)).toISOString() : null,
+        paid_at: row.paid_at != null ? new Date(String(row.paid_at)).toISOString() : null,
+      };
+    } catch (error) {
+      if (this.isBillingSchemaMissing(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async applyStripeInvoicePaymentFailed(stripeInvoiceId: string): Promise<BillingInvoiceRecord | null> {
+    const normalizedStripeId = stripeInvoiceId.trim();
+    if (!normalizedStripeId) {
+      return null;
+    }
+
+    try {
+      const res = await this.pool.query(
+        `
+          UPDATE billing_invoices
+          SET invoice_status = $2,
+              updated_at = NOW()
+          WHERE stripe_invoice_id = $1
+            AND invoice_status <> $3
+          RETURNING *
+        `,
+        [normalizedStripeId, BILLING_INVOICE_STATUS_FAILED, BILLING_INVOICE_STATUS_PAID],
+      );
+
+      if (!res.rowCount) {
+        return null;
+      }
+
+      const row = res.rows[0];
+      return {
+        id: String(row.id),
+        tenant_id: String(row.tenant_id),
+        billing_period: String(row.billing_period),
+        subscription_amount_eur: Number(row.subscription_amount_eur),
+        origin_seal_count: Number(row.origin_seal_count),
+        origin_seal_amount_eur: Number(row.origin_seal_amount_eur),
+        destination_submit_count: Number(row.destination_submit_count),
+        destination_submit_amount_eur: Number(row.destination_submit_amount_eur),
+        marketplace_fee_amount_eur: Number(row.marketplace_fee_amount_eur ?? 0),
+        total_amount_eur: Number(row.total_amount_eur),
+        currency: String(row.currency),
+        invoice_status: String(row.invoice_status),
+        stripe_invoice_id: row.stripe_invoice_id != null ? String(row.stripe_invoice_id) : null,
+        finalized_at: row.finalized_at != null ? new Date(String(row.finalized_at)).toISOString() : null,
+        paid_at: row.paid_at != null ? new Date(String(row.paid_at)).toISOString() : null,
+      };
+    } catch (error) {
+      if (this.isBillingSchemaMissing(error)) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async handleStripeWebhookEvent(event: {
+    type: string;
+    data: { object: { id?: string; metadata?: Record<string, string>; status_transitions?: { paid_at?: number } } };
+  }): Promise<{ handled: boolean; invoiceId?: string; eventType: string }> {
+    const stripeInvoiceId = event.data.object.id?.trim();
+    if (!stripeInvoiceId) {
+      return { handled: false, eventType: event.type };
+    }
+
+    if (event.type === 'invoice.paid') {
+      const paidAtSeconds = event.data.object.status_transitions?.paid_at;
+      const paidAt =
+        paidAtSeconds != null && Number.isFinite(paidAtSeconds)
+          ? new Date(paidAtSeconds * 1000)
+          : undefined;
+      const invoice = await this.applyStripeInvoicePaid(stripeInvoiceId, paidAt);
+      return {
+        handled: Boolean(invoice),
+        invoiceId: invoice?.id,
+        eventType: event.type,
+      };
+    }
+
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = await this.applyStripeInvoicePaymentFailed(stripeInvoiceId);
+      return {
+        handled: Boolean(invoice),
+        invoiceId: invoice?.id,
+        eventType: event.type,
+      };
+    }
+
+    return { handled: false, eventType: event.type };
+  }
+
   async finalizeMonthlyInvoice(
     tenantId: string,
     billingPeriod: string,
