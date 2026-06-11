@@ -11,6 +11,7 @@ export type BackendPackageRow = {
   compliant_plot_count?: number;
   sender_tenant_id?: string;
   sender_org?: string;
+  total_kg?: number | null;
 };
 
 function mapBackendStatus(status?: string | null): ShipmentStatus {
@@ -95,6 +96,8 @@ export function mapBackendPackageToDdsPackage(row: BackendPackageRow, fallbackTe
     submitted_at: status === 'SUBMITTED' ? createdAt : undefined,
     created_at: createdAt,
     updated_at: createdAt,
+    total_weight_kg:
+      row.total_kg != null && Number.isFinite(Number(row.total_kg)) ? Number(row.total_kg) : undefined,
   };
 }
 

@@ -8,6 +8,7 @@ describe('validatePackageCreateForm', () => {
       season: 'A',
       year: 2019,
       notes: '',
+      voucherIds: [],
     });
     expect(errors.supplier_name).toBeTruthy();
     expect(errors.year).toBeTruthy();
@@ -20,7 +21,19 @@ describe('validatePackageCreateForm', () => {
       season: 'B',
       year: 2026,
       notes: 'Pilot season',
+      voucherIds: ['voucher-1'],
     });
     expect(hasPackageCreateErrors(errors)).toBe(false);
+  });
+
+  it('requires at least one voucher', () => {
+    const errors = validatePackageCreateForm({
+      supplier_name: 'Rwanda Coffee Cooperative',
+      season: 'A',
+      year: 2026,
+      notes: '',
+      voucherIds: [],
+    });
+    expect(errors.voucherIds).toBeTruthy();
   });
 });

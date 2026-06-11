@@ -3,6 +3,7 @@ export type PackageCreateForm = {
   season: string;
   year: number;
   notes: string;
+  voucherIds: string[];
 };
 
 export type PackageCreateFieldErrors = Partial<Record<keyof PackageCreateForm, string>>;
@@ -32,6 +33,10 @@ export function validatePackageCreateForm(form: PackageCreateForm): PackageCreat
 
   if (form.notes.trim().length > MAX_NOTES_LENGTH) {
     errors.notes = `Notes must be ${MAX_NOTES_LENGTH} characters or fewer.`;
+  }
+
+  if (!Array.isArray(form.voucherIds) || form.voucherIds.length === 0) {
+    errors.voucherIds = 'Select at least one eligible harvest voucher.';
   }
 
   return errors;

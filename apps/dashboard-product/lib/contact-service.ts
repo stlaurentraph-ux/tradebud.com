@@ -12,6 +12,7 @@ export interface ContactRecord {
   country: string | null;
   tags: string[];
   consent_status: 'unknown' | 'granted' | 'revoked';
+  farmer_profile_id: string | null;
   last_activity_at: string | null;
   created_at: string;
   updated_at: string;

@@ -183,6 +183,16 @@ export default function PlotReviewQueuePage() {
         />
 
         <div className="flex-1 space-y-6 p-6">
+          <div className="rounded-md border bg-secondary/20 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground">
+              Producer-in-possession tenure files with low AI confidence route to the tenure document
+              review queue.
+            </p>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/compliance/tenure-review">Open tenure review queue</Link>
+            </Button>
+          </div>
+
           {error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {error}

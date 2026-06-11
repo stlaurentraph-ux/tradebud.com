@@ -185,6 +185,7 @@ export interface DDSPackage {
   regulatory_profile_version?: string;
   created_at: string;
   updated_at: string;
+  total_weight_kg?: number;
 }
 
 // ============================================================

@@ -36,9 +36,11 @@ export const NOTIFICATION_CAPABILITIES: NotificationCapability[] = [
   {
     id: 'compliance_alerts',
     title: 'Compliance alerts',
-    description: 'Notifications for new blockers, yield failures, or readiness regressions.',
-    status: 'planned',
-    deliveries: { email: true, in_app: true },
+    description:
+      'Email and mobile push when land tenure documents need exporter review or package readiness regresses.',
+    status: 'active',
+    deliveries: { email: true, in_app: true, push: true },
+    note: 'Tenure MANUAL_REQUIRED/FAILED alerts are sent to cooperative staff and farmers when push tokens are registered.',
   },
   {
     id: 'traces_submissions',

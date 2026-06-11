@@ -3,6 +3,7 @@ import { backendApiUrl } from '@/lib/backend-api-url';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
+  const plotId = new URL(request.url).searchParams.get('plotId');
   try {
     const backendBase = process.env.TRACEBUD_BACKEND_URL?.replace(/\/$/, '');
     if (!backendBase) {
@@ -11,7 +12,11 @@ export async function GET(request: Request) {
         { status: 503 },
       );
     }
-    const backendResponse = await fetch(backendApiUrl(backendBase, '/v1/requests/evidence-feed'), {
+    const path =
+      plotId && plotId.trim()
+        ? `/v1/requests/evidence-feed?plotId=${encodeURIComponent(plotId.trim())}`
+        : '/v1/requests/evidence-feed';
+    const backendResponse = await fetch(backendApiUrl(backendBase, path), {
       method: 'GET',
       headers: authHeader ? { Authorization: authHeader } : undefined,
       cache: 'no-store',

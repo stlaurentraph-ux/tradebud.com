@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import {
   MoreHorizontal,
   Archive,
   FileText,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,25 +30,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
-
-// Canonical shipment states per spec
-type ShipmentStatus = 'DRAFT' | 'READY' | 'SEALED' | 'SUBMITTED' | 'ACCEPTED' | 'REJECTED' | 'ARCHIVED' | 'ON_HOLD';
-
-interface Shipment {
-  id: string;
-  code: string;
-  status: ShipmentStatus;
-  org_name: string;
-  created_at: string;
-  modified_at: string;
-  owner: string;
-  plots_count: number;
-  farmers_count: number;
-  days_in_status: number;
-  has_blocking_issues: boolean;
-}
-
-const mockShipments: Shipment[] = [];
+import { useShipmentHeaders } from '@/lib/use-shipment-headers';
+import {
+  getNewShipmentLabel,
+  getShipmentNavLabel,
+  getShipmentPageSubtitle,
+} from '@/lib/supply-chain-terminology';
+import type { ShipmentStatus } from '@/types';
 
 const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon: typeof Clock }> = {
   DRAFT: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: Clock },
@@ -63,62 +52,64 @@ const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon
 export default function ShipmentsPage() {
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
+  const tenantId = user?.tenant_id ?? null;
+  const { shipments, isLoading, error } = useShipmentHeaders(tenantId);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'all' | ShipmentStatus>('all');
   const [selectedOrg, setSelectedOrg] = useState<'all' | string>('all');
 
-  // Get unique organizations
-  const organizations = useMemo(() => {
-    return [...new Set(mockShipments.map((s) => s.org_name))];
-  }, []);
+  const organizations = useMemo(
+    () => [...new Set(shipments.map((shipment) => shipment.org_name))],
+    [shipments],
+  );
 
-  // Filter shipments
   const filteredShipments = useMemo(() => {
-    return mockShipments.filter((shipment) => {
+    return shipments.filter((shipment) => {
       if (selectedStatus !== 'all' && shipment.status !== selectedStatus) return false;
       if (selectedOrg !== 'all' && shipment.org_name !== selectedOrg) return false;
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
         return (
           shipment.code.toLowerCase().includes(search) ||
+          shipment.label.toLowerCase().includes(search) ||
           shipment.owner.toLowerCase().includes(search) ||
           shipment.org_name.toLowerCase().includes(search)
         );
       }
       return true;
     });
-  }, [searchTerm, selectedStatus, selectedOrg]);
+  }, [searchTerm, selectedOrg, selectedStatus, shipments]);
 
-  // Calculate stats
   const stats = useMemo(() => {
     return {
-      draft: mockShipments.filter((s) => s.status === 'DRAFT').length,
-      ready: mockShipments.filter((s) => s.status === 'READY').length,
-      sealed: mockShipments.filter((s) => s.status === 'SEALED').length,
-      submitted: mockShipments.filter((s) => s.status === 'SUBMITTED').length,
-      accepted: mockShipments.filter((s) => s.status === 'ACCEPTED').length,
-      onHold: mockShipments.filter((s) => s.status === 'ON_HOLD').length,
-      total: mockShipments.length,
+      draft: shipments.filter((shipment) => shipment.status === 'DRAFT').length,
+      ready: shipments.filter((shipment) => shipment.status === 'READY').length,
+      sealed: shipments.filter((shipment) => shipment.status === 'SEALED').length,
+      submitted: shipments.filter((shipment) => shipment.status === 'SUBMITTED').length,
+      accepted: shipments.filter((shipment) => shipment.status === 'ACCEPTED').length,
+      onHold: shipments.filter((shipment) => shipment.status === 'ON_HOLD').length,
+      total: shipments.length,
     };
-  }, []);
+  }, [shipments]);
 
   return (
     <PermissionGate permission="packages:view">
       <div className="flex flex-col">
         <AppHeader
-          title="Shipments"
-          subtitle="Manage shipment assembly, readiness, and downstream handoff"
+          title={getShipmentNavLabel(user?.active_role)}
+          subtitle={getShipmentPageSubtitle(user?.active_role)}
           breadcrumbs={[
             { label: 'Dashboard', href: '/' },
             { label: 'Operations' },
-            { label: 'Shipments' },
+            { label: getShipmentNavLabel(user?.active_role) },
           ]}
           actions={
             <PermissionGate permission="packages:create">
               <Button asChild>
-                <Link href="/packages/new">
+                <Link href="/shipments/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  New Shipment
+                  {getNewShipmentLabel(user?.active_role)}
                 </Link>
               </Button>
             </PermissionGate>
@@ -126,33 +117,40 @@ export default function ShipmentsPage() {
         />
 
         <div className="flex-1 space-y-6 p-6">
-          {/* Pipeline Stats */}
+          {error ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
-            {(['DRAFT', 'READY', 'SEALED', 'SUBMITTED', 'ACCEPTED', 'ON_HOLD'] as ShipmentStatus[]).map((status) => {
-              const config = STATUS_CONFIG[status];
-              const count = mockShipments.filter((s) => s.status === status).length;
-              const Icon = config.icon;
-              return (
-                <Card
-                  key={status}
-                  className={cn(
-                    'cursor-pointer transition-shadow hover:shadow-md',
-                    selectedStatus === status && 'ring-2 ring-primary'
-                  )}
-                  onClick={() => setSelectedStatus(selectedStatus === status ? 'all' : status)}
-                >
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">{config.label}</p>
-                        <p className="text-2xl font-bold mt-1">{count}</p>
+            {(['DRAFT', 'READY', 'SEALED', 'SUBMITTED', 'ACCEPTED', 'ON_HOLD'] as ShipmentStatus[]).map(
+              (status) => {
+                const config = STATUS_CONFIG[status];
+                const count = shipments.filter((shipment) => shipment.status === status).length;
+                const Icon = config.icon;
+                return (
+                  <Card
+                    key={status}
+                    className={cn(
+                      'cursor-pointer transition-shadow hover:shadow-md',
+                      selectedStatus === status && 'ring-2 ring-primary',
+                    )}
+                    onClick={() => setSelectedStatus(selectedStatus === status ? 'all' : status)}
+                  >
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">{config.label}</p>
+                          <p className="text-2xl font-bold mt-1">{count}</p>
+                        </div>
+                        <Icon className={cn('h-5 w-5', config.color.replace('bg-', 'text-').split(' ')[0])} />
                       </div>
-                      <Icon className={cn('h-5 w-5', config.color.replace('bg-', 'text-').split(' ')[0])} />
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              },
+            )}
             <Card>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-center justify-between">
@@ -166,7 +164,6 @@ export default function ShipmentsPage() {
             </Card>
           </div>
 
-          {/* Filters */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-4">
@@ -207,12 +204,20 @@ export default function ShipmentsPage() {
             </CardContent>
           </Card>
 
-          {/* Shipments Table */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                {filteredShipments.length} Shipment{filteredShipments.length !== 1 ? 's' : ''}
-                {selectedStatus !== 'all' && ` in ${STATUS_CONFIG[selectedStatus].label}`}
+                {isLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading shipments…
+                  </span>
+                ) : (
+                  <>
+                    {filteredShipments.length} Shipment{filteredShipments.length !== 1 ? 's' : ''}
+                    {selectedStatus !== 'all' && ` in ${STATUS_CONFIG[selectedStatus].label}`}
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -220,10 +225,11 @@ export default function ShipmentsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Code</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Reference</th>
                       <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Organization</th>
-                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Owner</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Supplier</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Batches</th>
+                      <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Weight</th>
                       <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Plots</th>
                       <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Modified</th>
                       <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">SLA</th>
@@ -231,38 +237,52 @@ export default function ShipmentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredShipments.length === 0 ? (
+                    {isLoading ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                          No shipments match the selected filters
+                        <td colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
+                          Loading shipment headers…
+                        </td>
+                      </tr>
+                    ) : filteredShipments.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
+                          {shipments.length === 0
+                            ? 'No shipments yet. Create one from batches to begin assembly.'
+                            : 'No shipments match the selected filters'}
                         </td>
                       </tr>
                     ) : (
                       filteredShipments.map((shipment) => {
                         const config = STATUS_CONFIG[shipment.status];
-                        const slaWarning = shipment.days_in_status >= 7 && ['DRAFT', 'READY'].includes(shipment.status);
+                        const slaWarning =
+                          shipment.days_in_status >= 7 && ['DRAFT', 'READY'].includes(shipment.status);
                         return (
                           <tr key={shipment.id} className="border-b last:border-0 hover:bg-secondary/30">
                             <td className="py-4 pr-4">
                               <Link
-                                href={`/packages/${shipment.id}`}
+                                href={`/shipments/${shipment.id}`}
                                 className="font-medium text-primary hover:underline"
                               >
                                 {shipment.code}
                               </Link>
+                              <p className="text-xs text-muted-foreground mt-0.5">{shipment.label}</p>
                             </td>
                             <td className="py-4 pr-4">
                               <div className="flex items-center gap-2">
                                 <Badge className={cn('text-xs', config.color)}>{config.label}</Badge>
-                                {shipment.has_blocking_issues && (
+                                {shipment.has_blocking_issues ? (
                                   <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                )}
+                                ) : null}
                               </div>
                             </td>
                             <td className="py-4 pr-4 text-sm text-muted-foreground">{shipment.org_name}</td>
-                            <td className="py-4 pr-4 text-sm">{shipment.owner}</td>
+                            <td className="py-4 pr-4 text-sm">{shipment.batch_count}</td>
                             <td className="py-4 pr-4 text-sm text-muted-foreground">
-                              {shipment.plots_count} plots / {shipment.farmers_count} {isCooperative ? 'members' : 'producers'}
+                              {shipment.declared_quantity_kg.toLocaleString()} kg
+                            </td>
+                            <td className="py-4 pr-4 text-sm text-muted-foreground">
+                              {shipment.plots_count} plots / {shipment.farmers_count}{' '}
+                              {isCooperative ? 'members' : 'producers'}
                             </td>
                             <td className="py-4 pr-4 text-sm text-muted-foreground">
                               {new Date(shipment.modified_at).toLocaleDateString()}
@@ -271,7 +291,7 @@ export default function ShipmentsPage() {
                               <span
                                 className={cn(
                                   'text-xs font-medium',
-                                  slaWarning ? 'text-red-600' : 'text-muted-foreground'
+                                  slaWarning ? 'text-red-600' : 'text-muted-foreground',
                                 )}
                               >
                                 {shipment.days_in_status}d
@@ -280,7 +300,7 @@ export default function ShipmentsPage() {
                             <td className="py-4">
                               <div className="flex items-center gap-2">
                                 <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/packages/${shipment.id}`}>
+                                  <Link href={`/shipments/${shipment.id}`}>
                                     View
                                     <ChevronRight className="ml-1 h-3 w-3" />
                                   </Link>
@@ -292,11 +312,11 @@ export default function ShipmentsPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>
-                                      <Link href={`/packages/${shipment.id}/timeline`}>View Timeline</Link>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/shipments/${shipment.id}/assemble`}>
+                                        Assemble &amp; Seal
+                                      </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>Export PDF</DropdownMenuItem>
-                                    <DropdownMenuItem>Archive</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>

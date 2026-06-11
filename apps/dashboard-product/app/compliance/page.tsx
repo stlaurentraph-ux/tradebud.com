@@ -15,6 +15,7 @@ import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { usePackageEvidenceDocuments } from '@/lib/use-package-evidence-documents';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { ComplianceReviewHub } from '@/components/compliance/compliance-review-hub';
 
 export default function CompliancePage() {
   const { user } = useAuth();
@@ -36,6 +37,10 @@ export default function CompliancePage() {
     DOC_REJECTED: 'Upload corrected documents and request a fresh review.',
     DOC_STALE: 'Refresh outdated documents with current evidence versions.',
     DOC_SOURCE_MISSING: 'Attach source metadata for audit traceability.',
+    TENURE_REVIEW_REQUIRED:
+      'Open Tenure review and confirm AI tenure extractions for affected plots before submitting this package.',
+    TENURE_PARSE_PENDING:
+      'Wait for tenure document AI review to finish, or refresh plot tenure status after farmers sync evidence.',
   };
 
   const backendChecks = readiness
@@ -135,13 +140,16 @@ export default function CompliancePage() {
           </Button>
         )}
         {!packageId ? (
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground">
-              {isImporter
-                ? 'Select a shipment from `Shipments` to run declaration readiness checks.'
-                : 'Select a shipment from `Shipments` to run compliance checks.'}
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <ComplianceReviewHub />
+            <Card>
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                {isImporter
+                  ? 'Select a shipment from Shipments to run declaration readiness checks.'
+                  : 'Select a shipment from Shipments to run package compliance checks, or use the review queues above for field evidence.'}
+              </CardContent>
+            </Card>
+          </div>
         ) : null}
         {/* Package Info */}
         <Card>

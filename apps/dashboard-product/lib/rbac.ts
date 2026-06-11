@@ -390,6 +390,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Delegated Admin', href: '/delegated-admin', icon: 'Scale', permission: 'admin:view', mvp: true },
   { name: 'Billing & Coverage', href: '/billing-coverage', icon: 'Package', permission: 'packages:view', mvp: true },
   { name: 'Issues', href: '/compliance/issues', icon: 'Shield', permission: 'compliance:view', mvp: true },
+  { name: 'Tenure review', href: '/compliance/tenure-review', icon: 'FileCheck', permission: 'compliance:view', mvp: true },
   { name: 'DDS Packages', href: '/packages', icon: 'Package', permission: 'packages:view', mvp: true },
   { name: 'Harvests', href: '/harvests', icon: 'Wheat', permission: 'harvests:view', mvp: true },
   { name: 'Lots & Batches', href: '/harvests', icon: 'Wheat', permission: 'harvests:view', mvp: true },

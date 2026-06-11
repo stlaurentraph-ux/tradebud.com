@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlotGeometryHistoryPanel } from '@/components/plots/plot-geometry-history-panel';
 import { PlotAssignmentLifecyclePanel } from '@/components/plots/plot-assignment-lifecycle-panel';
 import { PlotDeforestationDecisionHistoryPanel } from '@/components/plots/plot-deforestation-decision-history-panel';
+import { PlotTenureStatusPanel } from '@/components/plots/plot-tenure-status-panel';
+import { PlotEvidencePanel } from '@/components/evidence/plot-evidence-panel';
 
 export default function PlotDetailPage() {
   const params = useParams<{ id: string }>();
@@ -31,6 +33,10 @@ export default function PlotDetailPage() {
             Route enabled and ready for detailed plot data wiring.
           </CardContent>
         </Card>
+        <PlotTenureStatusPanel plotId={id} />
+        <div id="plot-evidence">
+          <PlotEvidencePanel plotId={id} />
+        </div>
         <PlotDeforestationDecisionHistoryPanel plotId={id} />
         <PlotGeometryHistoryPanel plotId={id} />
         <PlotAssignmentLifecyclePanel plotId={id} />

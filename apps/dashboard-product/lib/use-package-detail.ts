@@ -5,6 +5,7 @@ import type { DDSPackage } from '@/types';
 import {
   mapBackendPackageDetailToDdsPackage,
   type BackendPackageDetail,
+  type BackendPackageDetailVoucher,
 } from '@/lib/harvest-package-mapper';
 
 function getAuthHeaders(): HeadersInit {
@@ -13,8 +14,16 @@ function getAuthHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export function sumPackageVoucherKg(vouchers: BackendPackageDetailVoucher[]): number {
+  return vouchers.reduce((sum, voucher) => {
+    const kg = Number(voucher.kg ?? 0);
+    return sum + (Number.isFinite(kg) ? kg : 0);
+  }, 0);
+}
+
 export function usePackageDetail(packageId: string | null, fallbackTenantId: string | null) {
   const [pkg, setPkg] = useState<DDSPackage | null>(null);
+  const [vouchers, setVouchers] = useState<BackendPackageDetailVoucher[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -27,6 +36,7 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
     if (!packageId) {
       startTransition(() => {
         setPkg(null);
+        setVouchers([]);
         setError(null);
         setIsLoading(false);
       });
@@ -56,21 +66,27 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
         if (!body.package?.id) {
           throw new Error('Package not found.');
         }
+        const detailVouchers = body.vouchers ?? [];
         if (!cancelled) {
-          setPkg(
-            mapBackendPackageDetailToDdsPackage(
-              {
-                package: body.package,
-                vouchers: body.vouchers ?? [],
-              },
-              fallbackTenantId ?? 'unknown_tenant',
-            ),
+          setVouchers(detailVouchers);
+          const mapped = mapBackendPackageDetailToDdsPackage(
+            {
+              package: body.package,
+              vouchers: detailVouchers,
+            },
+            fallbackTenantId ?? 'unknown_tenant',
           );
+          const voucherKg = sumPackageVoucherKg(detailVouchers);
+          setPkg({
+            ...mapped,
+            total_weight_kg: voucherKg > 0 ? voucherKg : mapped.total_weight_kg,
+          });
         }
       })
       .catch((err) => {
         if (!cancelled) {
           setPkg(null);
+          setVouchers([]);
           setError(err instanceof Error ? err.message : 'Failed to load package details.');
         }
       })
@@ -85,5 +101,5 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
     };
   }, [packageId, fallbackTenantId, refreshToken]);
 
-  return { pkg, isLoading, error, refetch };
+  return { pkg, vouchers, isLoading, error, refetch };
 }

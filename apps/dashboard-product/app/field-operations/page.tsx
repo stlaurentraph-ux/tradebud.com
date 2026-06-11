@@ -5,7 +5,9 @@ import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Smartphone, Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { MapPin, Smartphone, Users, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import { useTenureReviewQueue } from '@/lib/use-tenure-review-queue';
 import { useAuth } from '@/lib/auth-context';
 import { GeometryRemediationPanel } from '@/components/field-operations/geometry-remediation-panel';
 
@@ -18,6 +20,8 @@ const queueItems = [
 
 export default function FieldOperationsPage() {
   const { user } = useAuth();
+  const { items: tenureReviewItems } = useTenureReviewQueue();
+  const tenureManualCount = tenureReviewItems.filter((item) => item.parse_status === 'MANUAL_REQUIRED').length;
   const [insights, setInsights] = useState<{
     total_farmers: number;
     total_plots: number;
@@ -107,6 +111,24 @@ export default function FieldOperationsPage() {
         </div>
 
         <GeometryRemediationPanel />
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Tenure document review
+            </CardTitle>
+            {tenureManualCount > 0 ? (
+              <Badge variant="destructive">{tenureManualCount} awaiting</Badge>
+            ) : null}
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+            <p>Confirm AI tenure extractions after farmers sync land documents from the field app.</p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/compliance/tenure-review">Open tenure review queue</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
