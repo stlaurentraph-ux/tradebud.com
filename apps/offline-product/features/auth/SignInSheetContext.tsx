@@ -22,11 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Radius, Spacing } from '@/constants/theme';
+import { getAuthCredentials } from '@/features/api/postPlot';
 import {
-  getAuthCredentials,
+  hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
-} from '@/features/api/postPlot';
+} from '@/features/api/syncAuthSession';
 import { signInAndSyncPlots } from '@/features/auth/signInSync';
+import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 
@@ -61,9 +63,13 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
   const refreshAuth = useCallback(async () => {
     await hydrateSyncAuthFromSettings();
-    const { email: savedEmail, password: savedPassword } = getAuthCredentials();
+    const { email: savedEmail } = getAuthCredentials();
     if (savedEmail) setEmail(savedEmail);
-    setIsSignedIn(Boolean(savedEmail?.trim() && savedPassword));
+    const signedIn = hasSyncAuthSession();
+    setIsSignedIn(signedIn);
+    if (signedIn) {
+      void registerFarmerPushToken();
+    }
   }, []);
 
   useEffect(() => {
@@ -122,6 +128,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       }
       setIsSignedIn(true);
       setPassword('');
+      void registerFarmerPushToken();
       const onSuccess = onSuccessRef.current;
       closeSignIn();
       if (onSuccess) await onSuccess();

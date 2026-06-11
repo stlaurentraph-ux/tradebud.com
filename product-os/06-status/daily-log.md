@@ -1,9 +1,23 @@
+### 2026-06-11 (push production enablement: health + mobile registration bridge)
+- Backend: `/api/health` exposes `pushNotifications` (EXPO token configured, supported roles); `npm run check:push`.
+- Field app: `PushRegistrationBridge` re-registers Expo token on cold start + foreground; OAuth sign-in registers push; tap routes geometry alerts to plots/field-ops.
+- `DEPLOY_PRODUCTION.md` §2c.1 — Expo token on Railway, verify script, physical-device requirement.
+
+### 2026-06-11 (tenure alerts, package gating, cadastral packs, locales)
+- Backend: `TenureReviewAlertService` — email (Resend) + Expo push to tenant staff and farmers on `MANUAL_REQUIRED`/`FAILED`; deduped via `tenure_review_alert_sent` audit.
+- Backend: `cadastral-country-packs.ts` — HN/GT/CO/BR/PE/NI/SV/CR/PA normalization; cross-check uses farmer `country_code`.
+- Backend: DDS package readiness blocks on `TENURE_REVIEW_REQUIRED`, warns on `TENURE_PARSE_PENDING`.
+- Dashboard: compliance remediation copy for tenure reason codes; compliance alerts capability marked active.
+- Offline: `build-app-locale-files.mjs` run — tenure/evidence keys propagated to de/pt/hi/ar/etc. (English fallback for gaps).
+
 ### 2026-06-11 (tenure verification UX wiring — pre-redeploy)
 - Offline plot detail: replaced demo documents UI with `PlotTenureStatusCard`, `PlotEvidencePanel` (file upload sync), and formal land-title sync (Clave + photos).
-- My Plots: evidence sync uses `syncPlotEvidenceWithFiles`; checklist includes server tenure parse status; refresh after sync.
+- My Plots: evidence repository uses shared `PlotEvidencePanel`; checklist includes server tenure parse status; refresh after sync.
 - Pending sync queue: `evidence_sync` and `land_title` `photos_sync` upload files before API calls.
-- Dashboard: `PlotTenureStatusPanel` on `/plots/[id]`; tenure review queue hook sends auth headers.
-- i18n: tenure/evidence/document strings added to `en.json`.
+- Offline: auto-poll tenure verification while AI pending; farmer copy for cooperative manual review; Clave sync order hint.
+- Dashboard: `PlotTenureStatusPanel` + `PlotEvidencePanel` on `/plots/[id]`; confirm review on plot panel; compliance/field-ops hubs; sidebar Tenure review nav.
+- Dashboard: `useEvidenceFeed` plot filter + extended document fields; tenure verification polling on plot panel.
+- i18n: tenure/evidence strings in `en.json`, `fr.json`, `es.json`.
 
 ### 2026-06-11 (geometry quality follow-up: push, full i18n, sync translate)
 - Expo push on geometry reject: farmer + cooperative staff (agent/coop/exporter/compliance_manager) with registered devices.

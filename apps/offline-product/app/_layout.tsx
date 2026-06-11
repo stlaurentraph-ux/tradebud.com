@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AutoPlotUploadBridge } from '@/components/AutoPlotUploadBridge';
+import { ConsentPushBridge } from '@/components/ConsentPushBridge';
+import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { AppStateProvider } from '@/features/state/AppStateContext';
@@ -21,6 +23,8 @@ export default function RootLayout() {
       <AppStateProvider>
         <SignInProvider>
           <AutoPlotUploadBridge />
+          <PushRegistrationBridge />
+          <ConsentPushBridge />
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -46,6 +46,7 @@ In Railway → **Variables**, add (from `tracebud-backend/.env.production.exampl
 | `GFW_DATASET` | `gfw_integrated_alerts` |
 | `GFW_RADD_DATASET` | `umd_glad_dist_alerts` |
 | `GFW_CONTEXT_ENABLED` | `true` — optional canopy/loss context layers (see `.env.production.example`) |
+| `EXPO_ACCESS_TOKEN` | [expo.dev access token](https://expo.dev/settings/access-tokens) — recommended for geometry/consent push alerts (see §2c.1) |
 | `PORT` | Railway injects this automatically; optional `4001` |
 
 After deploy, confirm deforestation screening is configured:
@@ -116,7 +117,43 @@ This adds:
 - RLS policies on `consent_grants` (defense-in-depth)
 - `farmer_push_devices` (Expo push tokens for consent-request alerts)
 
-Optional on Railway: `EXPO_ACCESS_TOKEN` for higher Expo push rate limits.
+### 2c.1 Enable Expo push (geometry + consent alerts)
+
+**1. Database** — same step as above (`farmer_push_devices` via `db:apply:consent-sovereignty-v11`).
+
+**2. Expo access token**
+
+1. Sign in at [expo.dev](https://expo.dev) with the account that owns EAS project `f7e2b0c7-bb72-4d87-b6d4-3fceeaebd969`.
+2. **Account settings → Access tokens → Create token** (name e.g. `tracebud-production-push`).
+3. Railway → **Variables** → add:
+
+   | Variable | Value |
+   |----------|--------|
+   | `EXPO_ACCESS_TOKEN` | token from step 2 |
+
+4. Redeploy the API service.
+
+**3. Verify**
+
+```bash
+cd tracebud-backend
+npm run check:push -- https://api.tracebud.com
+```
+
+Expect `EXPO_ACCESS_TOKEN is set locally` only if you exported it in your shell; the remote health check should report `expoAccessTokenConfigured: true` after Railway deploy.
+
+Optional smoke to a physical device token (from Metro logs after sign-in: `ExponentPushToken[...]`):
+
+```bash
+EXPO_ACCESS_TOKEN=your_token node scripts/check-expo-push-readiness.mjs --smoke 'ExponentPushToken[xxxxxxxx]'
+```
+
+**4. Field app**
+
+- Users must **sign in on a physical device** (not simulator) and **allow notifications** when prompted.
+- Push re-registers on sign-in and when the app returns to foreground.
+- Farmers get *Boundary needs a fix*; cooperative staff (agent/coop roles on the same app) get *Member boundary rejected*.
+- Tapping the notification opens **My Plots** (or plot detail when `plotId` is known).
 
 Supabase CLI alternative: apply `supabase/migrations/202606130001_*` through `202606130003_*`.
 
