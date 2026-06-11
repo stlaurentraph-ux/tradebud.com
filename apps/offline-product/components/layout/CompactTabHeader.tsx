@@ -112,11 +112,9 @@ export function HomeHeaderBrandLeft({
         <ThemedText type="default" style={homeBrandStyles.title}>
           Tracebud
         </ThemedText>
-        {subtitle.trim().length > 0 ? (
-          <ThemedText type="caption" style={homeBrandStyles.subtitle}>
-            {subtitle}
-          </ThemedText>
-        ) : null}
+        <ThemedText type="caption" style={homeBrandStyles.subtitle}>
+          {subtitle}
+        </ThemedText>
       </View>
     </View>
   );
