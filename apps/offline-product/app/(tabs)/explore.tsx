@@ -824,7 +824,10 @@ export default function PlotsScreen() {
                         setUploadPlotBusy(true);
                         setSyncMessage(null);
                         try {
-                          const geometry = buildGeometryFromLocalPlot(selectedPlot);
+                          const geometry = buildGeometryFromLocalPlot(selectedPlot, {
+                            declaredAreaHectares:
+                              selectedPlot.declaredAreaHectares ?? selectedPlot.areaHectares ?? null,
+                          });
                           const r = await postPlotToBackend({
                             farmerId: farmer.id,
                             clientPlotId: selectedPlot.name,

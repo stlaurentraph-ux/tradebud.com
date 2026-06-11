@@ -88,7 +88,9 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
 
     let geometry;
     try {
-      geometry = buildGeometryFromLocalPlot(plot);
+      geometry = buildGeometryFromLocalPlot(plot, {
+        declaredAreaHectares: plot.declaredAreaHectares ?? plot.areaHectares ?? null,
+      });
     } catch {
       failed += 1;
       firstError = firstError ?? `Plot "${plot.name}" has invalid geometry.`;

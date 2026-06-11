@@ -21,6 +21,11 @@ import {
   buildGroundTruthPhotoVerification,
   type GroundTruthPhotoVerification,
 } from '../compliance/ground-truth-photo-verification';
+import {
+  assertPointGeometryAllowed,
+  pointBufferRadiusMeters,
+  resolvePointBufferHa,
+} from './plot-geometry-policy';
 import { TenureParseService } from './tenure-parse.service';
 import {
   applyReviewClearanceGate,
@@ -274,6 +279,7 @@ export class PlotsService {
     let polygonWkt: string | null = null;
 
     if (geometry.type === 'Point') {
+      assertPointGeometryAllowed({ declaredAreaHa: declaredAreaHa ?? null });
       const [lon, lat] = geometry.coordinates.map(ensureSixDecimals) as [number, number];
       geometrySql = `ST_SetSRID(ST_Point(${lon}, ${lat}), 4326)`;
       kind = 'point';
@@ -619,20 +625,21 @@ export class PlotsService {
   }
 
   private async getPlotGeometryForCompliance(plotId: string) {
+    const pointBufferM = pointBufferRadiusMeters(resolvePointBufferHa());
     const geoRes = await this.pool.query(
       `
         SELECT
           id,
           kind,
-          -- Buffer point plots into a small polygon for queries that require polygons.
+          -- Buffer point plots to the configured risk-engine footprint (default 1.0 ha).
           CASE
-            WHEN kind = 'point' THEN ST_AsGeoJSON(ST_Buffer(geometry::geography, 200)::geometry)
+            WHEN kind = 'point' THEN ST_AsGeoJSON(ST_Buffer(geometry::geography, $2)::geometry)
             ELSE ST_AsGeoJSON(geometry)
           END AS geojson
         FROM plot
         WHERE id = $1
       `,
-      [plotId],
+      [plotId, pointBufferM],
     );
 
     if (geoRes.rowCount === 0) {
@@ -2089,7 +2096,7 @@ export class PlotsService {
   async updateGeometry(plotId: string, dto: UpdatePlotGeometryDto, userId: string | undefined) {
     const existingRes = await this.pool.query(
       `
-        SELECT id, kind, ST_AsGeoJSON(geometry) AS geometry_geojson
+        SELECT id, kind, declared_area_ha, area_ha, ST_AsGeoJSON(geometry) AS geometry_geojson
         FROM plot
         WHERE id = $1
       `,
@@ -2098,12 +2105,22 @@ export class PlotsService {
     if (existingRes.rowCount === 0) {
       throw new BadRequestException('Plot not found');
     }
+    const existing = existingRes.rows[0] as {
+      declared_area_ha: number | null;
+      area_ha: number | null;
+    };
+    const revisionDeclaredAreaHa =
+      dto.declaredAreaHa ?? existing.declared_area_ha ?? existing.area_ha ?? null;
 
     const ensureSixDecimals = (value: number) => Number(value.toFixed(6));
     let geometrySql: string;
     let kind: (typeof plotKindEnum.enumValues)[number];
 
     if (dto.geometry?.type === 'Point') {
+      assertPointGeometryAllowed({
+        declaredAreaHa: revisionDeclaredAreaHa,
+        computedAreaHa: existing.area_ha,
+      });
       const [lon, lat] = dto.geometry.coordinates.map(ensureSixDecimals) as [number, number];
       geometrySql = `ST_SetSRID(ST_Point(${lon}, ${lat}), 4326)`;
       kind = 'point';

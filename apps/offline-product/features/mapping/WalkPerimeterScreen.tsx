@@ -529,10 +529,13 @@ export function WalkPerimeterScreen() {
     const pointPointsPayload = [{ latitude: last.latitude, longitude: last.longitude }];
     let pointGeometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
     try {
-      pointGeometryForUpload = buildGeometryFromLocalPlot({
-        kind: 'point',
-        points: pointPointsPayload,
-      });
+      pointGeometryForUpload = buildGeometryFromLocalPlot(
+        {
+          kind: 'point',
+          points: pointPointsPayload,
+        },
+        { declaredAreaHectares },
+      );
     } catch (e) {
       Alert.alert(
         t('plot_geometry_error_title'),
@@ -652,7 +655,10 @@ export function WalkPerimeterScreen() {
 
     let geometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
     try {
-      geometryForUpload = buildGeometryFromLocalPlot({ kind, points: pointsPayload });
+      geometryForUpload = buildGeometryFromLocalPlot(
+        { kind, points: pointsPayload },
+        { declaredAreaHectares },
+      );
     } catch (e) {
       Alert.alert(
         t('plot_geometry_error_title'),

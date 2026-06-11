@@ -71,6 +71,31 @@ function makePolygonDto(): CreatePlotDto {
   } as CreatePlotDto;
 }
 
+describe('PlotsService.create geometry policy', () => {
+  it('rejects point geometry when declared area is >= 4 ha (GEO-103)', async () => {
+    const pool = makePoolMock([
+      { rows: [] },
+      { rows: [] },
+      { rows: [] },
+    ]);
+    const service = makePlotsService(pool);
+    await expect(
+      service.create(
+        {
+          farmerId: '11111111-1111-1111-1111-111111111111',
+          clientPlotId: 'large-point',
+          declaredAreaHa: 4.2,
+          geometry: {
+            type: 'Point',
+            coordinates: [-86.15, 14.15],
+          },
+        } as CreatePlotDto,
+        'user-1',
+      ),
+    ).rejects.toThrow('GEO-103');
+  });
+});
+
 describe('PlotsService.create polygon normalization', () => {
   it('accepts polygon when correction variance is <= 5%', async () => {
     const pool = makePoolMock([

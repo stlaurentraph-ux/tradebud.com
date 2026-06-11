@@ -1,3 +1,7 @@
+### 2026-06-11 (geometry policy: 4 ha polygon gate + 1.0 ha point buffer)
+- Backend `GEO-103`: reject point uploads when declared/computed area ≥ 4 ha; aligned GFW screening buffer from 200 m to spec **1.0 ha** (~56.4 m radius).
+- Offline upload path mirrors gate via `buildGeometryFromLocalPlot`; env `POINT_BUFFER_HA_DEFAULT`.
+
 ### 2026-06-11 (backend: GFW context layers for agroforestry amber plots)
 - Added `GfwContextService` querying `wri_tropical_tree_cover`, `umd_tree_cover_loss`, `sbtn_natural_forests_map` via same GFW Data API.
 - Fusion in `gfw-context-fusion.ts`: amber + stable canopy + low Hansen loss + `shade_grown`/`agroforestry` → `compliant` (context auto-clear without 4 photos).

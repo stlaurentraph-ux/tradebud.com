@@ -4,60 +4,14 @@
  */
 
 import { getAccessTokenFromSupabase } from './auth';
-import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
 
-type GeoJSONPoint = {
-  type: 'Point';
-  coordinates: [number, number]; // [lon, lat]
-};
-
-type GeoJSONPolygon = {
-  type: 'Polygon';
-  coordinates: [number, number][][]; // [[[lon, lat], ...]]
-};
-
-/** Minimal plot shape for building GeoJSON to POST /v1/plots */
-export type LocalPlotForUpload = {
-  kind: 'point' | 'polygon';
-  points: { latitude: number; longitude: number }[];
-};
-
-/** Build GeoJSON from a locally saved plot (same rules as Record / walk flow) */
-export function buildGeometryFromLocalPlot(plot: LocalPlotForUpload): GeoJSONPoint | GeoJSONPolygon {
-  if (!plot.points.length) {
-    throw new Error('Plot has no GPS points to upload.');
-  }
-
-  if (plot.kind === 'point') {
-    const last = normalizeWgs84Point(plot.points[plot.points.length - 1]);
-    if (!isValidWgs84LatLng(last.latitude, last.longitude)) {
-      throw new Error('Plot has invalid GPS coordinates.');
-    }
-    return {
-      type: 'Point',
-      coordinates: [last.longitude, last.latitude],
-    };
-  }
-
-  const pts = plot.points.map(normalizeWgs84Point);
-  for (const p of pts) {
-    if (!isValidWgs84LatLng(p.latitude, p.longitude)) {
-      throw new Error('Plot has invalid GPS coordinates.');
-    }
-  }
-
-  return {
-    type: 'Polygon',
-    coordinates: [
-      [
-        ...pts.map((p) => [p.longitude, p.latitude] as [number, number]),
-        [pts[0].longitude, pts[0].latitude],
-      ],
-    ],
-  };
-}
+export {
+  buildGeometryFromLocalPlot,
+  POLYGON_REQUIRED_MIN_AREA_HA,
+  type LocalPlotForUpload,
+} from './postPlot';
 
 export type PostPlotToBackendResult =
   | { ok: true }

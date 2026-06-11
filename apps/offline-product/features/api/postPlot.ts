@@ -24,12 +24,27 @@ export type LocalPlotForUpload = {
   points: { latitude: number; longitude: number }[];
 };
 
+/** EUDR / Tracebud — polygon required at or above this declared area. */
+export const POLYGON_REQUIRED_MIN_AREA_HA = 4;
+
 /** Build GeoJSON from a locally saved plot (same rules as Record / walk flow). */
-export function buildGeometryFromLocalPlot(plot: LocalPlotForUpload): GeoJSONPoint | GeoJSONPolygon {
+export function buildGeometryFromLocalPlot(
+  plot: LocalPlotForUpload,
+  options?: { declaredAreaHectares?: number | null },
+): GeoJSONPoint | GeoJSONPolygon {
   if (!plot.points.length) {
     throw new Error('Plot has no GPS points to upload.');
   }
   if (plot.kind === 'point') {
+    if (
+      options?.declaredAreaHectares != null &&
+      Number.isFinite(options.declaredAreaHectares) &&
+      options.declaredAreaHectares >= POLYGON_REQUIRED_MIN_AREA_HA
+    ) {
+      throw new Error(
+        'Plots of 4 hectares or more must use a walked or drawn polygon boundary, not a point centroid.',
+      );
+    }
     const last = normalizeWgs84Point(plot.points[plot.points.length - 1]);
     if (!isValidWgs84LatLng(last.latitude, last.longitude)) {
       throw new Error('Plot has invalid GPS coordinates.');
