@@ -31,6 +31,7 @@
     "ios:simulator": "bash ./scripts/setup-ios-simulator.sh",
     "build:simulator": "bash ./scripts/build-ios-simulator.sh",
     "run:simulator": "bash ./scripts/run-ios-simulator.sh",
+    "open:simulator": "bash ./scripts/open-tracebud-simulator.sh",
     "capture:screenshot": "bash ./scripts/capture-simulator-screenshot.sh",
     "start:store-demo": "EXPO_PUBLIC_STORE_DEMO=1 expo start"
   },
