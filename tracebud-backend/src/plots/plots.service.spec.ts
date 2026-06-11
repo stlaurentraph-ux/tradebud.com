@@ -45,6 +45,11 @@ const evidenceDocumentsMock = {
   upsertFromEvidenceSync: jest.fn().mockResolvedValue(undefined),
 };
 
+const pushNotificationMock = {
+  notifyGeometryQualityRejected: jest.fn().mockResolvedValue(undefined),
+  notifyFarmerConsentRequest: jest.fn().mockResolvedValue(undefined),
+};
+
 const gfwContextMock = {
   queryForGeometry: jest.fn().mockResolvedValue({
     summary: {
@@ -67,6 +72,7 @@ function makePlotsService(pool: { query: jest.Mock } | ReturnType<typeof makePoo
     geometryValidationMock as any,
     tenureParseMock as any,
     evidenceDocumentsMock as any,
+    pushNotificationMock as any,
   );
 }
 

@@ -84,7 +84,8 @@ describe('ConsentService', () => {
         },
       ],
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessFarmerNewData(farmerId, tenantA)).resolves.toBe(true);
   });
 
@@ -101,7 +102,8 @@ describe('ConsentService', () => {
       ],
       farmerInTenant: true,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessFarmerNewData(farmerId, tenantA)).resolves.toBe(false);
     await expect(service.canTenantAccessPlot(plotId, tenantA)).resolves.toBe(false);
   });
@@ -120,7 +122,8 @@ describe('ConsentService', () => {
       ],
       farmerInTenant: true,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessFarmerNewData(farmerId, tenantA)).resolves.toBe(false);
   });
 
@@ -139,7 +142,8 @@ describe('ConsentService', () => {
       farmerInTenant: true,
       plotInSoldLineage: true,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessPlot(plotId, tenantA)).resolves.toBe(true);
   });
 
@@ -158,7 +162,8 @@ describe('ConsentService', () => {
       farmerInTenant: true,
       plotInSoldLineage: false,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessPlot(plotId, tenantA)).resolves.toBe(false);
   });
 
@@ -177,7 +182,8 @@ describe('ConsentService', () => {
       farmerInTenant: true,
       hasSoldLineage: true,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessFarmer(farmerId, tenantA)).resolves.toBe(true);
   });
 
@@ -196,7 +202,8 @@ describe('ConsentService', () => {
       farmerInTenant: true,
       voucherInSoldLineage: true,
     });
-    const service = new ConsentService(pool);
+    const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+    const service = new ConsentService(pool, push as any);
     await expect(service.canTenantAccessVoucher(voucherId, tenantA)).resolves.toBe(true);
   });
 });

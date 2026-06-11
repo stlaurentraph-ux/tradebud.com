@@ -1,3 +1,5 @@
+import type { TranslateFn } from '@/features/i18n/translate';
+
 export type LatLng = {
   latitude: number;
   longitude: number;
@@ -283,8 +285,6 @@ export function formatLocalGeometryQualityMessage(
       return 'Invalid boundary. Please walk or redraw the perimeter.';
   }
 }
-
-type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
 export function resolveLocalGeometryQualityMessage(
   t: TranslateFn,

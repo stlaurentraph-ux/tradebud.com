@@ -16,6 +16,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConsentPurposeCode, ConsentService } from './consent.service';
+import { PushNotificationService } from './push-notification.service';
 
 const ORG_CONSENT_ROLES = [
   'admin',
@@ -31,7 +32,10 @@ const ORG_CONSENT_ROLES = [
 @UseGuards(SupabaseAuthGuard)
 @Controller()
 export class ConsentController {
-  constructor(private readonly consentService: ConsentService) {}
+  constructor(
+    private readonly consentService: ConsentService,
+    private readonly pushNotifications: PushNotificationService,
+  ) {}
 
   private requireOrgConsentRole(req: any): void {
     const role = deriveRoleFromSupabaseUser(req.user);
@@ -138,7 +142,51 @@ export class ConsentController {
       throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
     const items = await this.consentService.listForTenantAndFarmer(tenantId, farmerId);
-    return { items };
+    return {
+      items: items.map((grant) => this.consentService.enrichGrantWithRetention(grant)),
+      sold_lineage_retention_years: 5,
+    };
+  }
+
+  @Post('v1/me/push-devices')
+  async registerPushDevice(
+    @Body() body: { push_token?: string; platform?: string },
+    @Req() req: any,
+  ) {
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const allowedRoles = new Set([
+      'farmer',
+      'agent',
+      'cooperative',
+      'exporter',
+      'compliance_manager',
+    ]);
+    if (!role || !allowedRoles.has(role)) {
+      throw new ForbiddenException('This account cannot register push devices');
+    }
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    const pushToken = body?.push_token?.trim();
+    if (!pushToken) {
+      throw new BadRequestException('push_token is required');
+    }
+    await this.pushNotifications.registerDevice(userId, pushToken, body?.platform ?? 'unknown');
+    return { registered: true };
+  }
+
+  @Post('v1/me/gdpr-erasure-request')
+  async requestGdprErasure(@Body() body: { details?: string }, @Req() req: any) {
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role !== 'farmer') {
+      throw new ForbiddenException('Only producers can request GDPR erasure');
+    }
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.consentService.recordGdprErasureRequest(userId, body?.details ?? '');
   }
 
   @Post('v1/farmers/:farmerId/consent-requests')

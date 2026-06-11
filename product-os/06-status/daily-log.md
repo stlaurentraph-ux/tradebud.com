@@ -1,3 +1,15 @@
+### 2026-06-11 (tenure verification UX wiring — pre-redeploy)
+- Offline plot detail: replaced demo documents UI with `PlotTenureStatusCard`, `PlotEvidencePanel` (file upload sync), and formal land-title sync (Clave + photos).
+- My Plots: evidence sync uses `syncPlotEvidenceWithFiles`; checklist includes server tenure parse status; refresh after sync.
+- Pending sync queue: `evidence_sync` and `land_title` `photos_sync` upload files before API calls.
+- Dashboard: `PlotTenureStatusPanel` on `/plots/[id]`; tenure review queue hook sends auth headers.
+- i18n: tenure/evidence/document strings added to `en.json`.
+
+### 2026-06-11 (geometry quality follow-up: push, full i18n, sync translate)
+- Expo push on geometry reject: farmer + cooperative staff (agent/coop/exporter/compliance_manager) with registered devices.
+- `geo_quality_*` + `sync_plot_*` strings in all 15 field-app locales; auto-sync resolves language from stored preference.
+- Cooperative insights exposes `geometry_remediation_count` badge on dashboard.
+
 ### 2026-06-11 (geometry quality UX: farmer copy, audit on reject, coop queue)
 - Farmer-friendly messages (no GEO prefix); overlap names the conflicting plot; API 400 returns `{ code, message, details }`.
 - Failed geometry checks audited with `ok: false`; cooperative `GET /v1/plots/geometry-remediation-queue` + dashboard Field Operations panel.

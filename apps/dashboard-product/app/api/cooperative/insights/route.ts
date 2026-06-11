@@ -65,11 +65,12 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
 
   try {
-    const [contactsRaw, plotsRaw, inboxRaw, campaignsRaw] = await Promise.allSettled([
+    const [contactsRaw, plotsRaw, inboxRaw, campaignsRaw, geometryRaw] = await Promise.allSettled([
       fetchBackendJson('/v1/contacts', authHeader),
       fetchBackendJson('/v1/plots?scope=tenant', authHeader),
       fetchBackendJson('/v1/inbox-requests', authHeader),
       fetchBackendJson('/v1/requests/campaigns', authHeader),
+      fetchBackendJson('/v1/plots/geometry-remediation-queue?limit=50', authHeader),
     ]);
 
     const contacts = contactsRaw.status === 'fulfilled' ? normalizeArray<ContactRecord>(contactsRaw.value) : [];
@@ -104,6 +105,14 @@ export async function GET(request: Request) {
       (item.request_type ?? '').toUpperCase().includes('PORTABILITY'),
     ).length;
 
+    const geometryRemediation =
+      geometryRaw.status === 'fulfilled' &&
+      geometryRaw.value &&
+      typeof geometryRaw.value === 'object' &&
+      'total' in (geometryRaw.value as object)
+        ? Number((geometryRaw.value as { total?: number }).total ?? 0)
+        : 0;
+
     const metrics = {
       total_farmers: contacts.length,
       members_missing_consent: contacts.filter((contact) => contact.consent_status !== 'granted').length,
@@ -113,6 +122,7 @@ export async function GET(request: Request) {
       requests_overdue: overdueInbox.length,
       active_campaigns: activeCampaigns.length,
       portability_reviews_pending: portabilityPending,
+      geometry_remediation_count: Number.isFinite(geometryRemediation) ? geometryRemediation : 0,
       blocking_issues_count: blockedOrHighRiskPlots + overdueInbox.length,
     };
 

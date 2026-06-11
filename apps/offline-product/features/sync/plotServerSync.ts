@@ -8,7 +8,12 @@ import {
   assessLocalPolygonQuality,
   localPolygonQualityMessage,
 } from '@/features/compliance/plotGeometryQuality';
+import { createTranslator, type TranslateFn } from '@/features/i18n/translate';
+import { defaultLocale, isSupportedLanguage } from '@/features/i18n/config';
+import { getSetting } from '@/features/state/persistence';
 import { loadPlotCadastralKey } from '@/features/state/persistence';
+
+const LANG_STORAGE_KEY = 'tracebudAppLanguage';
 
 function polygonPlotRefs(plots: Plot[], excludePlotId?: string) {
   return plots
@@ -21,7 +26,24 @@ function polygonPlotRefs(plots: Plot[], excludePlotId?: string) {
     }));
 }
 
-function uploadGeometryQualityError(plot: Plot, localPlots: Plot[]): string | null {
+async function resolveTranslator(t?: TranslateFn): Promise<TranslateFn> {
+  if (t) return t;
+  try {
+    const stored = await getSetting(LANG_STORAGE_KEY);
+    if (stored && isSupportedLanguage(stored)) {
+      return createTranslator(stored);
+    }
+  } catch {
+    // ignore
+  }
+  return createTranslator(defaultLocale);
+}
+
+function uploadGeometryQualityError(
+  plot: Plot,
+  localPlots: Plot[],
+  t: TranslateFn,
+): string | null {
   if (plot.kind !== 'polygon' || plot.points.length < 3) return null;
   const quality = assessLocalPolygonQuality({
     points: plot.points,
@@ -31,7 +53,10 @@ function uploadGeometryQualityError(plot: Plot, localPlots: Plot[]): string | nu
     phase: 'upload',
   });
   if (quality.allIssues.length === 0) return null;
-  return localPolygonQualityMessage(quality.allIssues);
+  return t('sync_plot_geometry_block', {
+    name: plot.name,
+    message: localPolygonQualityMessage(quality.allIssues, t),
+  });
 }
 
 /** Same matching rule as My Plots: server row `name` equals local plot display name. */
@@ -82,8 +107,12 @@ export type UploadUnsyncedPlotsResult = {
 export async function uploadUnsyncedPlotsForFarmer(params: {
   farmerId: string;
   localPlots: Plot[];
+  /** When provided (e.g. Settings sync), uses active UI language for error strings. */
+  t?: TranslateFn;
 }): Promise<UploadUnsyncedPlotsResult> {
   const { farmerId, localPlots } = params;
+  const t = await resolveTranslator(params.t);
+
   if (localPlots.length === 0) {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
   }
@@ -114,10 +143,10 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     }
     const ck = cadastralKey?.trim() ? cadastralKey.trim() : null;
 
-    const geometryQualityError = uploadGeometryQualityError(plot, localPlots);
+    const geometryQualityError = uploadGeometryQualityError(plot, localPlots, t);
     if (geometryQualityError) {
       failed += 1;
-      firstError = firstError ?? `Plot "${plot.name}": ${geometryQualityError}`;
+      firstError = firstError ?? geometryQualityError;
       continue;
     }
 
@@ -128,7 +157,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       });
     } catch {
       failed += 1;
-      firstError = firstError ?? `Plot "${plot.name}" has invalid geometry.`;
+      firstError = firstError ?? t('sync_plot_invalid_geometry', { name: plot.name });
       continue;
     }
 
@@ -147,12 +176,14 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     }
     if (r.reason === 'no_access_token') {
       stoppedForAuth = true;
-      firstError = firstError ?? 'No access token. Sign in again under Settings.';
+      firstError = firstError ?? t('sync_no_access_token_plot');
       break;
     }
     failed += 1;
-    firstError = firstError ?? r.message ?? `Upload failed for plot "${plot.name}".`;
-    // network_error / server_error: try remaining plots (e.g. one bad geometry)
+    firstError =
+      firstError ??
+      r.message ??
+      t('sync_plot_upload_failed', { name: plot.name });
   }
 
   if (uploaded > 0) {

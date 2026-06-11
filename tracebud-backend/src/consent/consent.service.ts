@@ -16,6 +16,8 @@ import {
   resolveTenantConsentGate,
   type TenantConsentGate,
 } from './consent-lineage-access';
+import { SOLD_LINEAGE_RETENTION_YEARS, soldLineageRetentionUntil } from './consent-retention';
+import { PushNotificationService } from './push-notification.service';
 
 export type ConsentGrantStatus = 'pending' | 'active' | 'revoked' | 'denied';
 export type ConsentPurposeCode =
@@ -47,7 +49,10 @@ const DEFAULT_DATA_SCOPE = ['identity', 'plots', 'evidence'];
 
 @Injectable()
 export class ConsentService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly pushNotifications: PushNotificationService,
+  ) {}
 
   private mapDatabaseError(error: unknown): never {
     const pgError = error as { code?: string; message?: string } | null;
@@ -401,6 +406,11 @@ export class ConsentService {
         purpose_code: purposeCode,
         data_scope: dataScope,
       });
+      void this.pushNotifications.notifyFarmerConsentRequest({
+        farmerId,
+        granteeOrgName: params.granteeOrgName ?? null,
+        grantId: row.id,
+      });
       return this.mapRow(row);
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -408,6 +418,50 @@ export class ConsentService {
       }
       this.mapDatabaseError(error);
     }
+  }
+
+  enrichGrantWithRetention<T extends ConsentGrantRow>(grant: T): T & {
+    sold_lineage_retention_years: number;
+    sold_lineage_retention_until: string | null;
+  } {
+    const anchor = grant.revoked_at ?? grant.granted_at ?? grant.created_at;
+    return {
+      ...grant,
+      sold_lineage_retention_years: SOLD_LINEAGE_RETENTION_YEARS,
+      sold_lineage_retention_until:
+        grant.status === 'revoked' && anchor ? soldLineageRetentionUntil(anchor) : null,
+    };
+  }
+
+  async recordGdprErasureRequest(
+    userId: string,
+    details: string,
+  ): Promise<{
+    recorded: true;
+    sold_lineage_retention_years: number;
+    message: string;
+  }> {
+    const reason = details?.trim();
+    if (!reason) {
+      throw new BadRequestException('details is required');
+    }
+    const farmerId = await this.resolveFarmerIdForUser(userId);
+    if (!farmerId) {
+      throw new ForbiddenException('No producer profile linked to this account');
+    }
+    await this.emitAudit('gdpr_erasure_requested', {
+      farmer_id: farmerId,
+      requested_by_user_id: userId,
+      details: reason,
+      sold_lineage_retention_years: SOLD_LINEAGE_RETENTION_YEARS,
+      policy: 'sold_batch_lineage_retained_for_legal_window',
+    });
+    return {
+      recorded: true,
+      sold_lineage_retention_years: SOLD_LINEAGE_RETENTION_YEARS,
+      message:
+        'Your erasure request is recorded. Data already sold in batches or shipments may be retained for up to 5 years for EU compliance and cannot be withdrawn retrospectively.',
+    };
   }
 
   async getTenantConsentGate(farmerId: string, tenantId: string): Promise<TenantConsentGate> {

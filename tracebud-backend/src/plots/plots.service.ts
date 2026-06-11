@@ -29,6 +29,7 @@ import {
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { TenureParseService } from './tenure-parse.service';
 import { EvidenceDocumentsService } from './evidence-documents.service';
+import { PushNotificationService } from '../consent/push-notification.service';
 import {
   applyReviewClearanceGate,
   EUDR_DEFORESTATION_CUTOFF,
@@ -116,6 +117,7 @@ export class PlotsService {
     private readonly geometryValidation: PlotGeometryValidationService,
     private readonly tenureParse: TenureParseService,
     private readonly evidenceDocuments: EvidenceDocumentsService,
+    private readonly pushNotifications: PushNotificationService,
   ) {}
 
   private static parseNumeric(value: unknown): number | null {
@@ -264,10 +266,21 @@ export class PlotsService {
 
     if (!result.ok) {
       const blocking = result.issues.find((issue) => issue.severity === 'error');
+      const message = blocking?.message ?? 'Invalid boundary. Please walk or redraw the perimeter.';
+      void this.pushNotifications
+        .notifyGeometryQualityRejected({
+          farmerId: params.farmerId,
+          tenantId: params.tenantId ?? null,
+          clientPlotId: params.audit.clientPlotId ?? null,
+          plotId: params.audit.plotId ?? null,
+          code: blocking?.code ?? 'GEO-104',
+          message,
+        })
+        .catch(() => undefined);
       throw new BadRequestException({
         statusCode: 400,
         code: blocking?.code ?? 'GEO-104',
-        message: blocking?.message ?? 'Invalid boundary. Please walk or redraw the perimeter.',
+        message,
         details: blocking?.details ?? null,
       });
     }

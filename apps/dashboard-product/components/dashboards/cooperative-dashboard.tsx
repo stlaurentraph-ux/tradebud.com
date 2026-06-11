@@ -32,6 +32,7 @@ interface CooperativeDashboardProps {
     requests_overdue?: number;
     portability_reviews_pending?: number;
     blocking_issues_count?: number;
+    geometry_remediation_count?: number;
     packages_by_status?: Partial<Record<ShipmentStatus, number>>;
   };
 }
@@ -221,7 +222,11 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
                 <ClipboardList className="h-4 w-4 text-amber-700" />
                 <span className="font-medium text-amber-800">Boundary capture follow-up</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-amber-700" />
+              {metrics.geometry_remediation_count > 0 ? (
+                <Badge variant="outline">{metrics.geometry_remediation_count}</Badge>
+              ) : (
+                <ArrowRight className="h-4 w-4 text-amber-700" />
+              )}
             </Link>
             <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <div className="flex items-center gap-2">

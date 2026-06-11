@@ -522,6 +522,7 @@ export default function SettingsScreen() {
         const syncRes = await uploadUnsyncedPlotsForFarmer({
           farmerId: farmer.id,
           localPlots: plots,
+          t,
         });
         if (syncRes.stoppedForAuth) {
           parts.push(t('sync_session_expired_short'));
@@ -958,6 +959,36 @@ export default function SettingsScreen() {
             </View>
           </CardContent>
         </Card>
+
+        {!profileEditing ? (
+          <Card variant="outlined" padding="none" style={styles.card}>
+            <CardContent style={styles.cardInner}>
+              <Pressable
+                onPress={() => router.push('/data-sharing')}
+                style={styles.dataSharingRow}
+                accessibilityRole="button"
+              >
+                <View style={styles.dataSharingRowMain}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="shield-checkmark-outline" size={20} color={Brand.primary} />
+                    <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                      {t('data_sharing_title')}
+                    </ThemedText>
+                  </View>
+                  <ThemedText type="caption" style={styles.mutedText}>
+                    {t('data_sharing_settings_body')}
+                  </ThemedText>
+                </View>
+                <View style={styles.dataSharingRowAction}>
+                  <ThemedText type="defaultSemiBold" style={styles.greenText}>
+                    {t('data_sharing_manage')}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={18} color="#0A7F59" />
+                </View>
+              </Pressable>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card variant="outlined" padding="none" style={styles.card}>
           <CardContent style={styles.cardInner}>
@@ -1443,6 +1474,18 @@ const styles = StyleSheet.create({
     marginTop: 0,
     fontSize: 15,
     lineHeight: 22,
+  },
+  dataSharingRow: {
+    gap: 12,
+  },
+  dataSharingRowMain: {
+    gap: 6,
+  },
+  dataSharingRowAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
   greenText: {
     color: '#0A7F59',
