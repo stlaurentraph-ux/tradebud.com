@@ -31,7 +31,9 @@ Release label: **Beta** (evaluation use only; not legal/compliance advice)
 
 | Item | Mitigation |
 |------|------------|
-| `/packages/new` create flow | Client validation only; backend `POST` with `voucherIds` not wired |
+| `/packages/new` create flow | Wired to `GET /v1/harvest/vouchers` + `POST /v1/harvest/packages` with voucher multi-select |
+| `/packages/[id]/assemble` | Wired to `shipment_headers` create + seal; weight guardrail + readiness blockers |
+| `/shipments` list + detail | Wired to `GET /v1/shipment-headers`; legacy audit assembly fallback on detail/assemble |
 | `integrations-mock-data.ts` | Deprecated; do not use for ops UI |
 | Backend unit suite role drift | 37 tests need email/role fixture alignment (non-blocking for staging smoke) |
 | `TEST_DATABASE_URL` not set locally | Ownership integration suite skipped until pooler URL configured |

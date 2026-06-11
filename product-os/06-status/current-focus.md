@@ -578,6 +578,20 @@
 - Backend Supabase claim trust hardening is now implemented (`app_metadata`-only tenant/role trust path, email fallback removed); next execution step is adding explicit regression tests for missing-claim `403` and user-metadata privilege escalation denial paths.
 - Supabase RLS remediation pack (PostGIS + TB-V16-030 + leaked-password) executed on live project; optional follow-up: phase-4 explicit deny policies for INFO-only internal tables if a clean advisor score is required.
 
+## Deferred — billing production activation (env vars later)
+
+Code is shipped (metering, month-end finalize endpoint, Stripe webhook handler, marketing pricing). **Do not set billing secrets until first paid invoicing is required.**
+
+When ready, complete in order:
+
+1. **Railway env** (`tracebud-backend`): `BILLING_SCHEDULER_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — see `tracebud-backend/.env.production.example` and `DEPLOY_PRODUCTION.md` §2d.
+2. **Stripe webhook**: register `https://api.tracebud.com/api/v1/billing/stripe/webhook` for `invoice.paid` + `invoice.payment_failed`; paste signing secret into `STRIPE_WEBHOOK_SECRET`.
+3. **Month-end cron**: schedule `npm run billing:finalize-period-cron` (1st of month ~02:00 UTC) with `TRACEBUD_API_BASE` + `BILLING_SCHEDULER_TOKEN`.
+4. **Per-tenant billing**: set `tenant_billing_subscription.stripe_customer_id` for orgs that should be card-charged at finalize.
+5. **Smoke**: seal one shipment (origin meter) + submit one DDS (destination meter) → run manual finalize for current period → confirm webhook moves invoice to `PAID` or `FAILED` gate behavior.
+
+Until then: usage meters and invoices work without Stripe; failed-payment gate only applies after webhooks are live.
+
 ## Priority migration lanes (v1.6)
 
 - Spatial lane: enforce `GEOGRAPHY` + `ST_MakeValid` + area variance guard.

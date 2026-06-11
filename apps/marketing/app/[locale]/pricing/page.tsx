@@ -7,6 +7,11 @@ import { Header } from "@/components/tracebud/header";
 import { Footer } from "@/components/tracebud/footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  COMPLIANCE_STARTER_BANDS,
+  DESTINATION_SHIPMENT_USAGE_FEE,
+  ORIGIN_SHIPMENT_USAGE_FEE,
+} from "@/lib/pricing-spec";
 
 const DASHBOARD_URL = "https://dashboard.tracebud.com";
 const APP_STORE_URL = "https://apps.apple.com/app/tracebud";
@@ -31,13 +36,8 @@ const plans = [
   },
   {
     name: "Exporters & Cooperatives",
-    description: "Aggregate for free. Unlock Pro analytics and the ability to ship to Europe.",
-    priceTiers: [
-      { label: "Starter", sublabel: "1-50 farmers", price: "€19" },
-      { label: "Growth", sublabel: "51-500 farmers", price: "€49" },
-      { label: "Scale", sublabel: "501-3,000 farmers", price: "€99" },
-      { label: "Enterprise", sublabel: "3,000+ farmers", price: "Custom" },
-    ],
+    description: "Modular dashboard subscription by managed contacts, plus metered origin seal usage at month-end.",
+    priceTiers: [...COMPLIANCE_STARTER_BANDS],
     subPrice: null,
     highlights: [
       "Aggregate unlimited farmers & cooperative data",
@@ -51,13 +51,8 @@ const plans = [
   },
   {
     name: "EU Importers & Roasters",
-    priceTiers: [
-      { label: "Starter", sublabel: "1-5 suppliers", price: "€49" },
-      { label: "Growth", sublabel: "6-25 suppliers", price: "€99" },
-      { label: "Scale", sublabel: "26-100 suppliers", price: "€149" },
-      { label: "Enterprise", sublabel: "100+ suppliers", price: "Custom" },
-    ],
-    description: "Stay EUDR-compliant. Your data retained and audit-ready, as required by law.",
+    priceTiers: [...COMPLIANCE_STARTER_BANDS],
+    description: "Same modular bands by managed contacts, plus metered destination TRACES submit usage at month-end.",
     subPrice: null,
     highlights: [
       "Automated TRACES NT submission to the EU system",
@@ -121,7 +116,7 @@ const comparisonFeatures = [
   { group: "Supply Chain", name: "Automated Batch Management", tier1: false, tier2: true, tier3: true, tier4: true },
   { group: "EUDR Compliance", name: "Simplified Declaration (micro/low-risk)", tier1: true, tier2: false, tier3: false, tier4: false },
   { group: "EUDR Compliance", name: "Pre-Export EUDR Data Preparation", tier1: false, tier2: true, tier3: true, tier4: true },
-  { group: "EUDR Compliance", name: "Per-Shipment DDS (€0.50)", tier1: false, tier2: true, tier3: true, tier4: true },
+  { group: "EUDR Compliance", name: "Shipment usage (€1 origin seal + €1 destination submit)", tier1: false, tier2: true, tier3: true, tier4: true },
   { group: "EUDR Compliance", name: "TRACES NT Submission Middleware", tier1: false, tier2: false, tier3: true, tier4: true },
   { group: "EUDR Compliance", name: "Zero-Risk Pre-Flight Check", tier1: false, tier2: false, tier3: true, tier4: true },
   { group: "EUDR Compliance", name: "EUDR 5-Year Data Retention", tier1: false, tier2: false, tier3: true, tier4: true },
@@ -137,17 +132,17 @@ const faqs = [
   {
     question: "How does pricing work across the supply chain?",
     answer:
-      "Tracebud combines a monthly plan with usage-based shipment fees. Exporters and importers choose a tier based on network size, then pay +€0.50 per shipment at their side of the workflow.",
+      "Dashboard organisations pay a monthly module subscription based on managed contacts (Starter, Growth, Scale, or Enterprise). Usage is metered at €1 when the origin actor seals a shipment and €1 when the destination actor submits DDS to TRACES — invoiced together at month-end (€2 total per completed cross-border workflow).",
   },
   {
-    question: "What does the exporter-side +€0.50 per shipment include?",
+    question: "What does the origin €1 shipment seal include?",
     answer:
-      "Exporter-side shipment fees cover DDS package generation steps such as satellite deforestation checks, yield-cap validation, and document parsing before submission.",
+      "Origin usage covers DDS packaging, satellite deforestation checks, yield-cap validation, and upstream shipment sealing before EU handoff.",
   },
   {
-    question: "What does the importer-side +€0.50 per shipment include?",
+    question: "What does the destination €1 TRACES submit include?",
     answer:
-      "Importer-side shipment fees cover TRACES NT submission workflow, pre-flight risk checks, EU filing operations, and 5-year audit retention handling.",
+      "Destination usage covers TRACES NT submission, pre-flight checks, EU filing operations, and 5-year audit retention for that shipment.",
   },
   {
     question: "Do farmers and micro-producers pay subscription fees?",
@@ -162,7 +157,12 @@ const faqs = [
   {
     question: "What is included in Network Sponsors (Tier 4)?",
     answer:
-      "Tier 4 is for organizations sponsoring networks of exporter and importer partners. Pricing is custom and typically starts from €19/month per sponsored organization, with centralized oversight, SLA-backed support, and tailored onboarding.",
+      "Tier 4 is for export boards, certifiers, and large traders sponsoring exporter and importer networks. Sponsors may cover member subscriptions and/or one or both shipment usage legs per policy. Pricing is custom with centralized oversight and SLA-backed support.",
+  },
+  {
+    question: "What adoption benefits do new dashboard orgs receive?",
+    answer:
+      "New organisations can get 3 months subscription-free OR waive their first origin seal and/or first destination submit — redeeming a free shipment leg ends the 3-month subscription-free window at the end of that calendar month.",
   },
   {
     question: "Can importers access ESG connectors and sponsored network management?",
@@ -268,30 +268,35 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Trial Clarity Banner */}
+      {/* Adoption banner */}
       <section className="py-8 px-6 bg-[var(--data-emerald)]/10 border-y border-[var(--data-emerald)]/20">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
             <div className="text-center md:text-left">
-              <h3 className="font-bold text-lg text-foreground mb-1">Free Trial includes everything</h3>
-              <p className="text-sm text-muted-foreground">Full dashboard access. All features. No restrictions.</p>
+              <h3 className="font-bold text-lg text-foreground mb-1">New dashboard org adoption offer</h3>
+              <p className="text-sm text-muted-foreground">
+                3 months subscription-free, or waive your first shipment leg — not both long-term.
+              </p>
             </div>
             <div className="hidden md:block w-px h-12 bg-border" />
             <div className="grid grid-cols-3 gap-6 text-center">
               <div>
-                <div className="text-2xl font-bold text-[var(--data-emerald)]">30</div>
-                <div className="text-xs text-muted-foreground">Days free</div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">3</div>
+                <div className="text-xs text-muted-foreground">Months sub-free*</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[var(--data-emerald)]">0</div>
-                <div className="text-xs text-muted-foreground">Credit card</div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">€1</div>
+                <div className="text-xs text-muted-foreground">Per usage leg / mo</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-[var(--data-emerald)]">All</div>
-                <div className="text-xs text-muted-foreground">Features</div>
+                <div className="text-2xl font-bold text-[var(--data-emerald)]">90</div>
+                <div className="text-xs text-muted-foreground">Day platform trial</div>
               </div>
             </div>
           </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            *Using a free first origin seal or destination submit ends the 3-month subscription-free window at month-end.
+          </p>
         </div>
       </section>
 
@@ -325,9 +330,9 @@ export default function PricingPage() {
                           onChange={plan.tier === "Tier 2" ? setExporterBand : setImporterBand}
                           feeNote={
                             plan.tier === "Tier 2"
-                              ? "+€0.50 / shipment*"
+                              ? `+${ORIGIN_SHIPMENT_USAGE_FEE} / origin seal*`
                               : plan.tier === "Tier 3"
-                                ? "+€0.50 / shipment**"
+                                ? `+${DESTINATION_SHIPMENT_USAGE_FEE} / TRACES submit**`
                                 : undefined
                           }
                         />
@@ -419,10 +424,13 @@ export default function PricingPage() {
           </div>
           <div className="mt-4 text-center space-y-1">
             <p className="text-xs text-muted-foreground">
-              * Exporter-side shipment fee includes DDS package generation, satellite deforestation checks, yield-cap validation, and document parsing.
+              * Origin seal usage ({ORIGIN_SHIPMENT_USAGE_FEE}) is metered when exporters or cooperatives seal a shipment; billed on the monthly invoice.
             </p>
             <p className="text-xs text-muted-foreground">
-              ** Importer-side shipment fee includes TRACES NT submission, pre-flight risk checks, EU filing, and 5-year audit retention.
+              ** Destination submit usage ({DESTINATION_SHIPMENT_USAGE_FEE}) is metered when importers submit DDS to TRACES; billed on the monthly invoice.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Shown subscription bands use the Compliance Starter bundle (Foundation + EUDR). Modular add-ons available in-dashboard.
             </p>
           </div>
         </div>
