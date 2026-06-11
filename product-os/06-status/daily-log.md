@@ -1,6 +1,16 @@
+### 2026-06-11 (geometry quality UX: farmer copy, audit on reject, coop queue)
+- Farmer-friendly messages (no GEO prefix); overlap names the conflicting plot; API 400 returns `{ code, message, details }`.
+- Failed geometry checks audited with `ok: false`; cooperative `GET /v1/plots/geometry-remediation-queue` + dashboard Field Operations panel.
+- Offline i18n keys `geo_quality_*` (en/fr); translated alerts on save/upload.
+
 ### 2026-06-11 (geometry quality: GEO-104–106 server + offline pre-sync)
 - Backend: `PlotGeometryValidationService` — `ST_IsSimple`, parcel overlap (farmer + cooperative tenant scope), compactness/area sliver rules; audit `plot_geometry_quality_checked` on polygon create/update.
 - Offline: shared `plotGeometryQuality.ts` — self-intersect block, local overlap block, sliver warning on save / block on upload; wired in walk perimeter, explore upload, and auto-sync.
+
+### 2026-06-11 (Phase 3: Clave Catastral OCR + formal title cross-link)
+- Backend: formal cadastral vision prompt, `cadastral-cross-check.ts` (Honduras Clave normalize, holder match), land_title photo parse enqueue, legal-sync re-evaluation.
+- Offline: `syncLandTitlePhotosWithFiles` uploads land title photos to storage before photos-sync.
+- Dashboard/offline UI: cadastral cross-check labels on tenure panels and tenure review queue.
 
 ### 2026-06-11 (Phase 2: tenure evidence_documents + review queue + checklist gating)
 - Migration `tb_v16_043`: `evidence_documents`, `document_provenance_events`, `compliance_issues`; links `plot_tenure_verification.evidence_document_id`.

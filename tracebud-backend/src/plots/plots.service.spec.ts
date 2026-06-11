@@ -29,6 +29,11 @@ const gfwMock = {
 };
 
 const geometryValidationMock = {
+  validatePolygonCandidate: jest.fn().mockResolvedValue({
+    ok: true,
+    issues: [],
+    metrics: { areaHa: 1, perimeterM: 400, vertexCount: 5, compactness: 0.5, isSimple: true },
+  }),
   assertPolygonCandidateAllowed: jest.fn().mockResolvedValue({
     ok: true,
     issues: [],

@@ -55,7 +55,12 @@ export class PlotGeometryValidationService {
     const result = await this.validatePolygonCandidate(params);
     const blocking = result.issues.find((issue) => issue.severity === 'error');
     if (blocking) {
-      throw new BadRequestException(blocking.message);
+      throw new BadRequestException({
+        statusCode: 400,
+        code: blocking.code,
+        message: blocking.message,
+        details: blocking.details ?? null,
+      });
     }
     return result;
   }

@@ -609,7 +609,7 @@ export function WalkPerimeterScreen() {
     if (polygonQuality.blockingIssues.length > 0) {
       Alert.alert(
         t('plot_geometry_error_title'),
-        localPolygonQualityMessage(polygonQuality.blockingIssues),
+        localPolygonQualityMessage(polygonQuality.blockingIssues, t),
       );
       return;
     }
@@ -730,7 +730,7 @@ export function WalkPerimeterScreen() {
     if (polygonQuality.warnings.length > 0) {
       Alert.alert(
         t('plot_geometry_warning_title'),
-        localPolygonQualityMessage(polygonQuality.warnings),
+        localPolygonQualityMessage(polygonQuality.warnings, t),
         [
           { text: t('plot_geometry_warning_fix'), style: 'cancel' },
           { text: t('plot_geometry_warning_save'), onPress: persistPolygon },

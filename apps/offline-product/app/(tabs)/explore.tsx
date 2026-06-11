@@ -80,6 +80,7 @@ import {
   syncPlotLegalToBackend,
   syncPlotEvidenceToBackend,
 } from '@/features/api/postPlot';
+import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import {
   listUnsyncedLocalPlots,
   subscribeServerPlotSyncChanged,
@@ -849,7 +850,7 @@ export default function PlotsScreen() {
                               phase: 'upload',
                             });
                             if (quality.allIssues.length > 0) {
-                              setSyncMessage(localPolygonQualityMessage(quality.allIssues));
+                              setSyncMessage(localPolygonQualityMessage(quality.allIssues, t));
                               return;
                             }
                           }
@@ -1688,17 +1689,20 @@ export default function PlotsScreen() {
                           })),
                           note: 'Ground-truth photos sync from device',
                         });
-                        await syncPlotPhotosToBackend({
-                          plotId: serverPlotId,
-                          kind: 'land_title',
-                          photos: titlePhotos.map((p) => ({
-                            ...baseMeta,
-                            uri: p.uri,
-                            takenAt: p.takenAt,
-                          })),
+                        const landTitleSummary = await syncLandTitlePhotosWithFiles({
+                          serverPlotId,
+                          farmerId: farmer.id,
+                          photos: titlePhotos,
+                          cadastralKey: cadastralKey.trim() || null,
+                          informalTenure: informalTenure ? true : null,
+                          informalTenureNote: informalTenureNote.trim() || null,
                           note: 'Land title photos sync from device',
                         });
-                        setSyncMessage('Legality data synced to backend.');
+                        setSyncMessage(
+                          landTitleSummary.uploadedCount > 0
+                            ? `Legality synced. ${landTitleSummary.uploadedCount} land title file(s) sent for cadastral AI review.`
+                            : 'Legality data synced to backend.',
+                        );
                       } catch (e) {
                       // queue for retry
                       enqueuePendingSync({

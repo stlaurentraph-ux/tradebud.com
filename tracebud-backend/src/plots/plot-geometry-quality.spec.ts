@@ -17,6 +17,16 @@ describe('plot-geometry-quality', () => {
       ],
     });
     expect(issues.some((i) => i.code === 'GEO-105')).toBe(true);
+    expect(issues.find((i) => i.code === 'GEO-105')?.message).toContain('Other');
+  });
+
+  it('uses farmer-friendly copy without GEO code prefix', () => {
+    const issues = buildPolygonQualityIssues({
+      metrics: { areaHa: 1, perimeterM: 500, vertexCount: 6, compactness: 0.5, isSimple: false },
+      overlaps: [],
+    });
+    expect(issues[0]?.message).not.toMatch(/^GEO-/);
+    expect(issues[0]?.message).toContain('crosses itself');
   });
 
   it('computes compactness for near-circle shapes', () => {

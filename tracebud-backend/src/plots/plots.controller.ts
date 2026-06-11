@@ -12,6 +12,7 @@ import { CreatePlotAssignmentDto } from './dto/create-plot-assignment.dto';
 import { UpdatePlotAssignmentStatusDto } from './dto/update-plot-assignment-status.dto';
 import { PlotGeometryHistoryEventDto } from './dto/plot-geometry-history-response.dto';
 import { PlotReviewDecisionDto } from './dto/plot-review-decision.dto';
+import { TenureReviewConfirmDto } from './dto/tenure-review-confirm.dto';
 import { ConsentService } from '../consent/consent.service';
 import { PlotsService } from './plots.service';
 
@@ -89,6 +90,47 @@ export class PlotsController {
     return tenantId;
   }
 
+  @Get('tenure-review-queue')
+  @ApiOperation({
+    summary: 'List tenure documents awaiting human review for the active tenant',
+    description:
+      'Returns tenure_evidence parse rows in MANUAL_REQUIRED or FAILED with linked compliance issues.',
+  })
+  async listTenureReviewQueue(@Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role === 'farmer' || role === 'agent') {
+      throw new ForbiddenException('Not allowed');
+    }
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    return this.plotsService.listTenureReviewQueue(tenantId, (plotId) =>
+      this.consentService.canTenantAccessPlot(plotId, tenantId),
+    );
+  }
+
+  @Get('geometry-remediation-queue')
+  @ApiOperation({
+    summary: 'List recent polygon geometry rejections for cooperative field follow-up',
+    description:
+      'Returns audit events where mobile or API upload failed geometry quality checks (self-intersection, overlap, sliver).',
+  })
+  async listGeometryRemediationQueue(@Req() req: any, @Query('limit') limitRaw?: string) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role === 'farmer' || role === 'agent') {
+      throw new ForbiddenException('Not allowed');
+    }
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    const limit = limitRaw ? Number(limitRaw) : 50;
+    return this.plotsService.listGeometryRemediationQueue(tenantId, limit);
+  }
+
   @Get('review-queue')
   @ApiOperation({
     summary: 'List plots awaiting compliance review for the active tenant',
@@ -154,7 +196,8 @@ export class PlotsController {
     if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
       throw new ForbiddenException('Only farmers, agents, or exporters can create plots');
     }
-    const row = await this.plotsService.create(dto, userId);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    const row = await this.plotsService.create(dto, userId, tenantId);
     return row;
   }
 
@@ -281,7 +324,8 @@ export class PlotsController {
         throw new ForbiddenException('Plot scope violation');
       }
     }
-    return this.plotsService.updateGeometry(id, dto, userId);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    return this.plotsService.updateGeometry(id, dto, userId, tenantId);
   }
 
   @Post(':id/photos-sync')
@@ -297,8 +341,9 @@ export class PlotsController {
     @Req() req: any,
   ) {
     this.requireTenantClaim(req);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
-    return this.plotsService.syncPhotos(id, dto, userId);
+    return this.plotsService.syncPhotos(id, dto, userId, tenantId);
   }
 
   @Post(':id/legal-sync')
@@ -522,6 +567,25 @@ export class PlotsController {
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async complianceHistory(@Param('id') id: string) {
     return this.plotsService.getComplianceHistory(id);
+  }
+
+  @Post(':id/tenure-verification/:verificationId/confirm-review')
+  @ApiOperation({
+    summary: 'Confirm human review for a tenure document parse result',
+    description:
+      'Exporter/compliance reviewer accepts a MANUAL_REQUIRED or FAILED tenure parse after document review.',
+  })
+  async confirmTenureReview(
+    @Param('id') plotId: string,
+    @Param('verificationId') verificationId: string,
+    @Body() dto: TenureReviewConfirmDto,
+    @Req() req: any,
+  ) {
+    this.requireTenantClaim(req);
+    this.enforcePlotReviewRole(req);
+    await this.enforcePlotTenantAccess(plotId, req);
+    const userId = req.user?.id as string | undefined;
+    return this.plotsService.confirmTenureReview(plotId, verificationId, dto, userId);
   }
 
   @Get(':id/tenure-verification')

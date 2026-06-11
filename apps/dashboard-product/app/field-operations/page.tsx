@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Smartphone, Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { GeometryRemediationPanel } from '@/components/field-operations/geometry-remediation-panel';
 
 const queueItems = [
   { name: 'Missing member profile', count: 12, severity: 'high' },
@@ -104,6 +105,8 @@ export default function FieldOperationsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <GeometryRemediationPanel />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

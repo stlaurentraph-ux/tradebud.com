@@ -92,8 +92,13 @@ export function getTracebudApiBaseUrl(): string {
 /** NestJS often returns `{ message: string | string[] }` on 4xx/5xx. */
 function messageFromBackendJson(body: unknown): string | undefined {
   if (!body || typeof body !== 'object') return undefined;
-  const raw = (body as { message?: unknown }).message;
+  const record = body as { message?: unknown; code?: unknown };
+  const raw = record.message;
   if (typeof raw === 'string') return raw;
+  if (raw && typeof raw === 'object' && 'message' in (raw as object)) {
+    const nested = (raw as { message?: unknown }).message;
+    if (typeof nested === 'string') return nested;
+  }
   if (Array.isArray(raw) && raw.every((x) => typeof x === 'string')) {
     return raw.join(' ');
   }
@@ -679,6 +684,49 @@ export async function syncPlotLegalToBackend(params: {
   }
 
   return res.json();
+}
+
+export type PlotTenureParseStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'MANUAL_REQUIRED';
+
+export type PlotTenureVerificationRecord = {
+  id: string;
+  plot_id: string;
+  storage_path: string;
+  mime_type: string | null;
+  evidence_label: string | null;
+  parse_status: PlotTenureParseStatus;
+  parse_result: Record<string, unknown> | null;
+  parse_confidence: number | null;
+  parse_reviewed_by: string | null;
+  parse_reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchPlotTenureVerification(
+  plotId: string,
+): Promise<PlotTenureVerificationRecord[]> {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    return [];
+  }
+
+  const res = await fetch(
+    `${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/tenure-verification`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+  if (!res.ok) {
+    return [];
+  }
+  const body = await res.json().catch(() => []);
+  return Array.isArray(body) ? body : [];
 }
 
 export async function syncPlotEvidenceToBackend(params: {

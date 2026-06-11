@@ -224,6 +224,55 @@ export class PlotsService {
    * The offline app generates a local farmer UUID. Plot rows reference farmer_profile.id;
    * ensure a row exists and is owned by the authenticated Supabase user (fixes FK plot_farmer_id_fkey).
    */
+  private async runPolygonGeometryQualityGate(params: {
+    geometrySql: string;
+    farmerId: string;
+    excludePlotId?: string;
+    userId?: string;
+    tenantId?: string | null;
+    audit: {
+      phase: 'create' | 'geometry_update';
+      clientPlotId?: string;
+      plotId?: string;
+      reason?: string;
+    };
+  }): Promise<void> {
+    const result = await this.geometryValidation.validatePolygonCandidate({
+      geometrySql: params.geometrySql,
+      farmerId: params.farmerId,
+      excludePlotId: params.excludePlotId,
+    });
+
+    await this.pool.query(
+      `INSERT INTO audit_log (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
+      [
+        params.userId ?? null,
+        'plot_geometry_quality_checked',
+        JSON.stringify({
+          ok: result.ok,
+          tenantId: params.tenantId ?? null,
+          farmerId: params.farmerId,
+          clientPlotId: params.audit.clientPlotId ?? null,
+          plotId: params.audit.plotId ?? null,
+          phase: params.audit.phase,
+          reason: params.audit.reason ?? null,
+          issues: result.issues,
+          metrics: result.metrics,
+        }),
+      ],
+    );
+
+    if (!result.ok) {
+      const blocking = result.issues.find((issue) => issue.severity === 'error');
+      throw new BadRequestException({
+        statusCode: 400,
+        code: blocking?.code ?? 'GEO-104',
+        message: blocking?.message ?? 'Invalid boundary. Please walk or redraw the perimeter.',
+        details: blocking?.details ?? null,
+      });
+    }
+  }
+
   private async ensureFarmerProfileForPlot(farmerId: string, authUserId: string | undefined): Promise<void> {
     if (!authUserId) {
       throw new BadRequestException('Missing authenticated user for plot creation');
@@ -260,7 +309,7 @@ export class PlotsService {
     );
   }
 
-  async create(createDto: CreatePlotDto, userId: string | undefined) {
+  async create(createDto: CreatePlotDto, userId: string | undefined, tenantId?: string | null) {
     const {
       geometry,
       declaredAreaHa,
@@ -308,24 +357,13 @@ export class PlotsService {
       polygonWkt = `POLYGON((${coordText}))`;
       geometrySql = `ST_SetSRID(ST_GeomFromText('${polygonWkt}'), 4326)`;
       kind = 'polygon';
-      const geometryQuality = await this.geometryValidation.assertPolygonCandidateAllowed({
+      await this.runPolygonGeometryQualityGate({
         geometrySql,
         farmerId,
+        userId,
+        tenantId,
+        audit: { phase: 'create', clientPlotId },
       });
-      await this.pool.query(
-        `INSERT INTO audit_log (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
-        [
-          userId ?? null,
-          'plot_geometry_quality_checked',
-          JSON.stringify({
-            farmerId,
-            clientPlotId,
-            phase: 'create',
-            issues: geometryQuality.issues,
-            metrics: geometryQuality.metrics,
-          }),
-        ],
-      );
     } else {
       throw new BadRequestException('Unsupported geometry type');
     }
@@ -506,7 +544,12 @@ export class PlotsService {
     });
   }
 
-  async syncPhotos(plotId: string, dto: SyncPlotPhotosDto, userId: string | undefined) {
+  async syncPhotos(
+    plotId: string,
+    dto: SyncPlotPhotosDto,
+    userId: string | undefined,
+    tenantId?: string | null,
+  ) {
     // Ensure plot exists (lightweight guard so we do not accept orphaned photos)
     const existing = await this.pool.query(
       `
@@ -553,6 +596,36 @@ export class PlotsService {
       }
     }
 
+    if (dto.kind === 'land_title') {
+      const withStorage = photosArray
+        .filter(
+          (photo) =>
+            typeof photo?.storagePath === 'string' && String(photo.storagePath).trim().length > 0,
+        )
+        .map((photo) => ({
+          storagePath: String(photo.storagePath).trim(),
+          mimeType: typeof photo?.mimeType === 'string' ? photo.mimeType : null,
+          label: typeof photo?.label === 'string' ? photo.label : 'land_title_photo',
+        }));
+
+      for (const item of withStorage) {
+        await this.evidenceDocuments.upsertFromEvidenceSync({
+          plotId,
+          tenantId: tenantId ?? null,
+          userId: userId ?? null,
+          kind: 'land_title',
+          item,
+        });
+      }
+
+      if (withStorage.length > 0) {
+        await this.tenureParse.enqueueFromLandTitleSync(plotId, withStorage, {
+          tenantId: tenantId ?? null,
+          userId: userId ?? null,
+        });
+      }
+    }
+
     return { ok: true };
   }
 
@@ -590,6 +663,8 @@ export class PlotsService {
         }),
       ],
     );
+
+    void this.tenureParse.reevaluateCadastralCrossChecksForPlot(plotId).catch(() => undefined);
 
     return { ok: true };
   }
@@ -1613,6 +1688,67 @@ export class PlotsService {
     return items;
   }
 
+  async listGeometryRemediationQueue(tenantId: string, limit = 50) {
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    if (farmerIds.length === 0) {
+      return { total: 0, items: [] as Array<Record<string, unknown>> };
+    }
+
+    const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 200) : 50;
+
+    try {
+      const res = await this.pool.query(
+        `
+          SELECT id, timestamp, user_id, payload
+          FROM audit_log
+          WHERE event_type = 'plot_geometry_quality_checked'
+            AND COALESCE((payload->>'ok')::boolean, false) = false
+            AND payload->>'farmerId' = ANY($1::text[])
+          ORDER BY timestamp DESC
+          LIMIT $2
+        `,
+        [farmerIds, safeLimit],
+      );
+
+      const items = res.rows.map((row) => {
+        const payload =
+          row.payload && typeof row.payload === 'object'
+            ? (row.payload as Record<string, unknown>)
+            : {};
+        const issues = Array.isArray(payload.issues) ? payload.issues : [];
+        const blocking = issues.find(
+          (issue) =>
+            issue &&
+            typeof issue === 'object' &&
+            (issue as { severity?: string }).severity === 'error',
+        ) as { code?: string; message?: string; details?: Record<string, unknown> } | undefined;
+
+        return {
+          id: row.id,
+          timestamp: row.timestamp,
+          userId: row.user_id,
+          farmerId: payload.farmerId ?? null,
+          clientPlotId: payload.clientPlotId ?? null,
+          plotId: payload.plotId ?? null,
+          phase: payload.phase ?? null,
+          code: blocking?.code ?? null,
+          message: blocking?.message ?? 'Boundary rejected during upload.',
+          details: blocking?.details ?? null,
+          issues,
+          metrics: payload.metrics ?? null,
+        };
+      });
+
+      return { total: items.length, items };
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return { total: 0, items: [] };
+      }
+      throw error;
+    }
+  }
+
   async clearPlotReview(
     plotId: string,
     params: { reason: string; note?: string | null },
@@ -2153,7 +2289,12 @@ export class PlotsService {
     };
   }
 
-  async updateGeometry(plotId: string, dto: UpdatePlotGeometryDto, userId: string | undefined) {
+  async updateGeometry(
+    plotId: string,
+    dto: UpdatePlotGeometryDto,
+    userId: string | undefined,
+    tenantId?: string | null,
+  ) {
     const existingRes = await this.pool.query(
       `
         SELECT id, kind, declared_area_ha, area_ha, ST_AsGeoJSON(geometry) AS geometry_geojson
@@ -2205,25 +2346,14 @@ export class PlotsService {
       geometrySql = `ST_SetSRID(ST_GeomFromText('${polygonWkt}'), 4326)`;
       kind = 'polygon';
       const farmerId = (await this.getPlotTenantScope(plotId)).farmerId;
-      const geometryQuality = await this.geometryValidation.assertPolygonCandidateAllowed({
+      await this.runPolygonGeometryQualityGate({
         geometrySql,
         farmerId,
         excludePlotId: plotId,
+        userId,
+        tenantId,
+        audit: { phase: 'geometry_update', plotId, reason: dto.reason },
       });
-      await this.pool.query(
-        `INSERT INTO audit_log (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
-        [
-          userId ?? null,
-          'plot_geometry_quality_checked',
-          JSON.stringify({
-            plotId,
-            phase: 'geometry_update',
-            issues: geometryQuality.issues,
-            metrics: geometryQuality.metrics,
-            reason: dto.reason,
-          }),
-        ],
-      );
     } else {
       throw new BadRequestException('Unsupported geometry type');
     }

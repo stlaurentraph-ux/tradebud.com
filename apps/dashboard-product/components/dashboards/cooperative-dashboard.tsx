@@ -216,6 +216,13 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
               <span className="font-medium">Plot registry and map review</span>
               <Badge variant="outline">{metrics.total_plots} plots</Badge>
             </Link>
+            <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-amber-700" />
+                <span className="font-medium text-amber-800">Boundary capture follow-up</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-amber-700" />
+            </Link>
             <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4" />

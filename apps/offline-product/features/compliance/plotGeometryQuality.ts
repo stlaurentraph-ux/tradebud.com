@@ -264,6 +264,46 @@ export function findLocalPlotOverlaps(params: {
   return overlaps;
 }
 
+export function formatLocalGeometryQualityMessage(
+  issue: Pick<LocalGeometryQualityIssue, 'code' | 'details'>,
+): string {
+  switch (issue.code) {
+    case 'GEO-104':
+      return 'Your boundary crosses itself. Walk the perimeter again without cutting across your path.';
+    case 'GEO-105': {
+      const plotName = String(issue.details?.overlapPlotName ?? 'another plot');
+      return `This boundary overlaps "${plotName}". Move the line or remove the duplicate parcel.`;
+    }
+    case 'GEO-106':
+      if (issue.details?.areaHa != null) {
+        return 'This parcel is too small for a walked boundary. Use a single GPS point for very small plots, or walk the edge again.';
+      }
+      return 'This shape looks like a bad GPS walk (thin sliver). Walk the perimeter again at a steady pace.';
+    default:
+      return 'Invalid boundary. Please walk or redraw the perimeter.';
+  }
+}
+
+type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function resolveLocalGeometryQualityMessage(
+  t: TranslateFn,
+  issue: LocalGeometryQualityIssue,
+): string {
+  switch (issue.code) {
+    case 'GEO-104':
+      return t('geo_quality_self_intersect');
+    case 'GEO-105':
+      return t('geo_quality_overlap', {
+        plotName: String(issue.details?.overlapPlotName ?? t('geo_quality_overlap_unknown')),
+      });
+    case 'GEO-106':
+      return issue.details?.areaHa != null ? t('geo_quality_micro_area') : t('geo_quality_sliver');
+    default:
+      return issue.message;
+  }
+}
+
 function buildLocalPolygonQualityIssues(params: {
   points: LatLng[];
   areaHa: number;
@@ -276,11 +316,12 @@ function buildLocalPolygonQualityIssues(params: {
   const issues: LocalGeometryQualityIssue[] = [];
 
   if (hasSelfIntersection(params.points)) {
+    const details = { kind: 'self_intersection' as const };
     issues.push({
       code: 'GEO-104',
       severity: 'error',
-      message:
-        'GEO-104: Polygon boundary self-intersects. Walk or draw the perimeter again without crossing your own path.',
+      message: formatLocalGeometryQualityMessage({ code: 'GEO-104', details }),
+      details,
     });
   }
 
@@ -288,28 +329,28 @@ function buildLocalPolygonQualityIssues(params: {
     const ratio =
       overlap.smallerAreaHa > 0 ? overlap.overlapHa / overlap.smallerAreaHa : overlap.overlapHa;
     if (overlap.overlapHa >= MIN_PARCEL_OVERLAP_HA || ratio >= MIN_PARCEL_OVERLAP_RATIO) {
+      const details = {
+        overlapPlotId: overlap.plotId,
+        overlapPlotName: overlap.plotName,
+        overlapHa: overlap.overlapHa,
+        overlapRatio: ratio,
+      };
       issues.push({
         code: 'GEO-105',
         severity: 'error',
-        message:
-          'GEO-105: Polygon overlaps another plot on this device. Adjust the boundary or retire the duplicate parcel.',
-        details: {
-          overlapPlotId: overlap.plotId,
-          overlapPlotName: overlap.plotName,
-          overlapHa: overlap.overlapHa,
-          overlapRatio: ratio,
-        },
+        message: formatLocalGeometryQualityMessage({ code: 'GEO-105', details }),
+        details,
       });
     }
   }
 
   if (params.areaHa > 0 && params.areaHa < MIN_POLYGON_AREA_HA) {
+    const details = { areaHa: params.areaHa, minAreaHa: MIN_POLYGON_AREA_HA, kind: 'micro_area' as const };
     issues.push({
       code: 'GEO-106',
       severity: params.sliverSeverity,
-      message:
-        'GEO-106: Captured area is too small for a reliable polygon. Re-walk the boundary or use centroid capture for micro-plots.',
-      details: { areaHa: params.areaHa, minAreaHa: MIN_POLYGON_AREA_HA },
+      message: formatLocalGeometryQualityMessage({ code: 'GEO-106', details }),
+      details,
     });
   }
 
@@ -318,12 +359,16 @@ function buildLocalPolygonQualityIssues(params: {
     compactness < MIN_POLYGON_COMPACTNESS &&
     params.areaHa >= MIN_POLYGON_AREA_HA
   ) {
+    const details = {
+      compactness,
+      minCompactness: MIN_POLYGON_COMPACTNESS,
+      kind: 'sliver' as const,
+    };
     issues.push({
       code: 'GEO-106',
       severity: params.sliverSeverity,
-      message:
-        'GEO-106: Polygon shape looks like a GPS sliver (bad capture). Re-walk the perimeter with steady pacing.',
-      details: { compactness, minCompactness: MIN_POLYGON_COMPACTNESS },
+      message: formatLocalGeometryQualityMessage({ code: 'GEO-106', details }),
+      details,
     });
   }
 
@@ -360,6 +405,11 @@ export function assessLocalPolygonQuality(params: {
   return { blockingIssues, warnings, allIssues };
 }
 
-export function localPolygonQualityMessage(issues: LocalGeometryQualityIssue[]): string {
-  return issues.map((issue) => issue.message).join('\n\n');
+export function localPolygonQualityMessage(
+  issues: LocalGeometryQualityIssue[],
+  t?: TranslateFn,
+): string {
+  return issues
+    .map((issue) => (t ? resolveLocalGeometryQualityMessage(t, issue) : issue.message))
+    .join('\n\n');
 }
