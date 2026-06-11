@@ -188,5 +188,66 @@ export class GfwService {
       cutoffDate: params.cutoffDate,
     };
   }
+
+  async runDatasetQuery(params: {
+    dataset: string;
+    version?: string;
+    geometry: any;
+    sql: string;
+  }) {
+    const dataset = params.dataset;
+    const version = params.version ?? this.version();
+    const url = `${this.baseUrl()}/dataset/${encodeURIComponent(dataset)}/${encodeURIComponent(
+      version,
+    )}/query/json`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    const key = this.apiKey();
+    if (key) {
+      headers['x-api-key'] = key;
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        geometry: params.geometry,
+        sql: params.sql,
+      }),
+    });
+
+    const bodyText = await res.text().catch(() => '');
+    let bodyJson: any = null;
+    try {
+      bodyJson = bodyText ? JSON.parse(bodyText) : null;
+    } catch {
+      bodyJson = bodyText;
+    }
+
+    if (!res.ok) {
+      throw new Error(
+        `GFW dataset query failed (${res.status}). ${
+          typeof bodyJson === 'string' ? bodyJson : JSON.stringify(bodyJson)
+        }`,
+      );
+    }
+
+    if (typeof bodyJson === 'string') {
+      try {
+        bodyJson = JSON.parse(bodyJson);
+      } catch {
+        // keep string
+      }
+    }
+
+    return {
+      dataset,
+      version,
+      sql: params.sql,
+      result: bodyJson,
+    };
+  }
 }
 

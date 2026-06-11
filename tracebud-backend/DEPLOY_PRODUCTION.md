@@ -45,6 +45,7 @@ In Railway → **Variables**, add (from `tracebud-backend/.env.production.exampl
 | `GFW_BASE_URL` | `https://data-api.globalforestwatch.org` |
 | `GFW_DATASET` | `gfw_integrated_alerts` |
 | `GFW_RADD_DATASET` | `umd_glad_dist_alerts` |
+| `GFW_CONTEXT_ENABLED` | `true` — optional canopy/loss context layers (see `.env.production.example`) |
 | `PORT` | Railway injects this automatically; optional `4001` |
 
 After deploy, confirm deforestation screening is configured:
@@ -97,6 +98,64 @@ Integration test (CI / local with `TEST_DATABASE_URL`):
 
 ```bash
 npm run test:integration:consent
+```
+
+### 2c. Apply farmer consent sovereignty v1.1 (push, CRM link, RLS)
+
+After v1 `consent_grants` is live, apply TB-V16-040 through 042 on the same `DATABASE_URL`:
+
+```bash
+cd tracebud-backend
+npm run db:apply:consent-sovereignty-v11
+npm run db:verify:consent-sovereignty-v11
+```
+
+This adds:
+
+- `crm_contacts.farmer_profile_id` (directory ↔ field-app link)
+- RLS policies on `consent_grants` (defense-in-depth)
+- `farmer_push_devices` (Expo push tokens for consent-request alerts)
+
+Optional on Railway: `EXPO_ACCESS_TOKEN` for higher Expo push rate limits.
+
+Supabase CLI alternative: apply `supabase/migrations/202606130001_*` through `202606130003_*`.
+
+### 2d. Month-end billing cron + Stripe webhooks
+
+Apply billing migrations (`tb_v16_035`–`039`, adoption promo `037`–`038`) on the Supabase DB behind `DATABASE_URL` before enabling production billing.
+
+**Railway variables**
+
+| Variable | Purpose |
+|----------|---------|
+| `BILLING_SCHEDULER_TOKEN` | Shared secret for `POST /api/v1/billing/invoices/finalize-period-cron` |
+| `STRIPE_SECRET_KEY` | Optional — create/finalize Stripe invoices at month-end |
+| `STRIPE_WEBHOOK_SECRET` | Stripe signing secret for `POST /api/v1/billing/stripe/webhook` |
+
+**Stripe webhook endpoint (production)**
+
+```text
+https://api.tracebud.com/api/v1/billing/stripe/webhook
+```
+
+Subscribe to at least: `invoice.paid`, `invoice.payment_failed`.
+
+**Month-end cron (1st of month, 02:00 UTC recommended)**
+
+Railway → service → **Cron** (or external scheduler):
+
+```bash
+cd tracebud-backend
+TRACEBUD_API_BASE=https://api.tracebud.com/api \
+BILLING_SCHEDULER_TOKEN="<secret>" \
+npm run billing:finalize-period-cron
+```
+
+Manual smoke:
+
+```bash
+curl -sS -X POST "https://api.tracebud.com/api/v1/billing/invoices/finalize-period-cron" \
+  -H "x-tracebud-billing-token: $BILLING_SCHEDULER_TOKEN"
 ```
 
 ### 3. Deploy and smoke test

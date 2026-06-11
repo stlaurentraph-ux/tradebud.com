@@ -10,6 +10,12 @@ import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
 import { UpdatePlotDto } from './dto/update-plot.dto';
 import { UpdatePlotGeometryDto } from './dto/update-plot-geometry.dto';
 import { PlotGeometryHistoryEventDto } from './dto/plot-geometry-history-response.dto';
+import { GfwContextService } from '../compliance/gfw-context.service';
+import {
+  applyGfwContextToPlotStatus,
+  contextSupportsAutoReviewClear,
+  type GfwContextScreening,
+} from '../compliance/gfw-context-fusion';
 import { GfwService } from '../compliance/gfw.service';
 import {
   buildGroundTruthPhotoVerification,
@@ -23,6 +29,7 @@ import {
   gfwSummaryToSignalTier,
   mergePlotComplianceStatus,
   overlapToPlotStatus,
+  type DeforestationScreeningContextSnapshot,
   type DeforestationScreeningSnapshot,
   type GfwAlertSummary,
   type PlotComplianceStatus,
@@ -98,6 +105,7 @@ export class PlotsService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly gfw: GfwService,
+    private readonly gfwContext: GfwContextService,
     private readonly tenureParse: TenureParseService,
   ) {}
 
@@ -660,11 +668,12 @@ export class PlotsService {
 
   private async getPlotStatusRow(plotId: string): Promise<{
     status: PlotComplianceStatus;
+    production_system: string | null;
     deforestation_screening: unknown;
   }> {
     const res = await this.pool.query(
       `
-        SELECT status, deforestation_screening
+        SELECT status, production_system, deforestation_screening
         FROM plot
         WHERE id = $1
       `,
@@ -675,6 +684,8 @@ export class PlotsService {
     }
     return {
       status: (res.rows[0].status ?? 'pending_check') as PlotComplianceStatus,
+      production_system:
+        typeof res.rows[0].production_system === 'string' ? res.rows[0].production_system : null,
       deforestation_screening: res.rows[0].deforestation_screening ?? null,
     };
   }
@@ -822,17 +833,21 @@ export class PlotsService {
     plotId: string;
     proposedStatus: PlotComplianceStatus;
     gfwSummary: GfwAlertSummary;
+    contextAutoClear?: boolean;
+    currentStatus?: PlotComplianceStatus;
   }): Promise<{
     status: PlotComplianceStatus;
     reviewClearanceBlocked: boolean;
     groundTruthPhotos: GroundTruthPhotoVerification;
   }> {
-    const { status: currentStatus } = await this.getPlotStatusRow(params.plotId);
+    const currentStatus =
+      params.currentStatus ?? (await this.getPlotStatusRow(params.plotId)).status;
     const groundTruthPhotos = await this.getGroundTruthPhotoVerification(params.plotId);
     const status = applyReviewClearanceGate({
       proposedStatus: params.proposedStatus,
       currentStatus,
       clearanceVerifiedGroundTruthPhotoCount: groundTruthPhotos.clearanceVerifiedCount,
+      contextAutoClear: params.contextAutoClear,
     });
     return {
       status,
@@ -863,6 +878,23 @@ export class PlotsService {
     };
   }
 
+  private buildContextSnapshot(context: GfwContextScreening): DeforestationScreeningContextSnapshot {
+    return {
+      signal: context.signal,
+      tropicalTreeCoverAvgPct: context.summary.tropicalTreeCoverAvgPct,
+      tropicalTreeCoverAreaHa: context.summary.tropicalTreeCoverAreaHa,
+      treeCoverLossHa: context.summary.treeCoverLossHa,
+      naturalForestHa: context.summary.naturalForestHa,
+      layers: context.layers.map((layer) => ({
+        dataset: layer.dataset,
+        version: layer.version,
+        ok: layer.ok,
+        error: layer.error,
+      })),
+      queriedAt: context.queriedAt,
+    };
+  }
+
   private buildDeforestationScreeningSnapshot(params: {
     summary: GfwAlertSummary;
     signalTier: ReturnType<typeof gfwSummaryToSignalTier>;
@@ -870,6 +902,8 @@ export class PlotsService {
       cutoffDate: string;
       usedFallback: boolean;
       gfwResult: Record<string, unknown>;
+      context?: GfwContextScreening;
+      contextAdjusted?: boolean;
     };
   }): DeforestationScreeningSnapshot {
     return {
@@ -881,6 +915,8 @@ export class PlotsService {
       dataset: typeof params.screening.gfwResult.dataset === 'string' ? params.screening.gfwResult.dataset : null,
       version: typeof params.screening.gfwResult.version === 'string' ? params.screening.gfwResult.version : null,
       screenedAt: new Date().toISOString(),
+      context: params.screening.context ? this.buildContextSnapshot(params.screening.context) : undefined,
+      contextAdjusted: params.screening.contextAdjusted === true,
     };
   }
 
@@ -923,28 +959,39 @@ export class PlotsService {
     usedFallback: boolean;
     cutoffDate: string;
     historicalSqlApplied: boolean;
+    context: GfwContextScreening;
   }> {
-    let gfwResult: Record<string, unknown> = await this.gfw.runHistoricalDeforestationQuery({
-      geometry,
-      cutoffDate,
-    });
-    let summary = this.normalizeGfwResult(gfwResult.result);
-    let usedFallback = false;
-    if (summary.alertCount == null) {
-      gfwResult = {
-        ...(await this.gfw.runRaddFallback({ geometry, cutoffDate })),
-        cutoffDate,
-      };
-      summary = this.normalizeGfwResult(gfwResult.result);
-      usedFallback = true;
-    }
+    const [alertsOutcome, context] = await Promise.all([
+      (async () => {
+        let gfwResult: Record<string, unknown> = await this.gfw.runHistoricalDeforestationQuery({
+          geometry,
+          cutoffDate,
+        });
+        let summary = this.normalizeGfwResult(gfwResult.result);
+        let usedFallback = false;
+        if (summary.alertCount == null) {
+          gfwResult = {
+            ...(await this.gfw.runRaddFallback({ geometry, cutoffDate })),
+            cutoffDate,
+          };
+          summary = this.normalizeGfwResult(gfwResult.result);
+          usedFallback = true;
+        }
+
+        return {
+          summary,
+          gfwResult,
+          usedFallback,
+          historicalSqlApplied: Boolean(gfwResult.historicalSqlApplied),
+        };
+      })(),
+      this.gfwContext.queryForGeometry(geometry, cutoffDate),
+    ]);
 
     return {
-      summary,
-      gfwResult,
-      usedFallback,
+      ...alertsOutcome,
       cutoffDate,
-      historicalSqlApplied: Boolean(gfwResult.historicalSqlApplied),
+      context,
     };
   }
 
@@ -952,36 +999,68 @@ export class PlotsService {
     gfwSummary: GfwAlertSummary;
     sinaphOverlap: boolean;
     indigenousOverlap: boolean;
-  }): PlotComplianceStatus {
-    return mergePlotComplianceStatus(
-      gfwSummaryToPlotStatus(params.gfwSummary),
-      overlapToPlotStatus(params.sinaphOverlap, params.indigenousOverlap),
-    );
+    productionSystem?: string | null;
+    context?: GfwContextScreening;
+  }): { status: PlotComplianceStatus; contextAdjusted: boolean } {
+    const alertStatus = gfwSummaryToPlotStatus(params.gfwSummary);
+    const contextAdjustedStatus = params.context
+      ? applyGfwContextToPlotStatus({
+          alertSummary: params.gfwSummary,
+          context: params.context.summary,
+          contextSignal: params.context.signal,
+          productionSystem: params.productionSystem,
+          baseStatus: alertStatus,
+        })
+      : alertStatus;
+
+    return {
+      status: mergePlotComplianceStatus(
+        contextAdjustedStatus,
+        overlapToPlotStatus(params.sinaphOverlap, params.indigenousOverlap),
+      ),
+      contextAdjusted: contextAdjustedStatus !== alertStatus,
+    };
   }
 
   async runGfwCheck(plotId: string, userId: string | undefined) {
     const geometry = await this.getPlotGeometryForCompliance(plotId);
     const overlaps = await this.getPlotOverlapFlags(plotId);
+    const plotMeta = await this.getPlotStatusRow(plotId);
 
     try {
       const screening = await this.queryGfwAlertsForGeometry(geometry);
       const signalTier = gfwSummaryToSignalTier(screening.summary);
-      const proposedStatus = this.resolveMergedPlotStatus({
+      const mergeResult = this.resolveMergedPlotStatus({
         gfwSummary: screening.summary,
         sinaphOverlap: overlaps.sinaph_overlap,
         indigenousOverlap: overlaps.indigenous_overlap,
+        productionSystem: plotMeta.production_system,
+        context: screening.context,
+      });
+      const contextAutoClear = contextSupportsAutoReviewClear({
+        contextSignal: screening.context.signal,
+        productionSystem: plotMeta.production_system,
+        proposedStatus: mergeResult.status,
       });
       const finalized = await this.finalizePlotComplianceStatus({
         plotId,
-        proposedStatus,
+        proposedStatus: mergeResult.status,
         gfwSummary: screening.summary,
+        contextAutoClear,
+        currentStatus: plotMeta.status,
       });
       const plotStatus = finalized.status;
 
       const screeningSnapshot = this.buildDeforestationScreeningSnapshot({
         summary: screening.summary,
         signalTier,
-        screening,
+        screening: {
+          cutoffDate: screening.cutoffDate,
+          usedFallback: screening.usedFallback,
+          gfwResult: screening.gfwResult,
+          context: screening.context,
+          contextAdjusted: mergeResult.contextAdjusted,
+        },
       });
 
       await this.persistPlotComplianceStatus(plotId, plotStatus, screeningSnapshot);
@@ -1000,7 +1079,10 @@ export class PlotsService {
             providerMode: screeningSnapshot.providerMode,
             cutoffDate: screening.cutoffDate,
             plotStatus,
-            proposedStatus,
+            proposedStatus: mergeResult.status,
+            contextAdjusted: mergeResult.contextAdjusted,
+            contextSignal: screening.context.signal,
+            contextAutoClear,
             reviewClearanceBlocked: finalized.reviewClearanceBlocked,
             groundTruthPhotos: finalized.groundTruthPhotos,
             screening: screeningSnapshot,
@@ -1021,6 +1103,8 @@ export class PlotsService {
         plotStatus,
         reviewClearanceBlocked: finalized.reviewClearanceBlocked,
         groundTruthPhotos: finalized.groundTruthPhotos,
+        contextAdjusted: mergeResult.contextAdjusted,
+        contextSignal: screening.context.signal,
         usedFallback: screening.usedFallback,
         cutoffDate: screening.cutoffDate,
         summary: { status: signalTier, ...screening.summary },
@@ -1066,6 +1150,7 @@ export class PlotsService {
 
     const geometry = await this.getPlotGeometryForCompliance(plotId);
     const overlaps = await this.getPlotOverlapFlags(plotId);
+    const plotMeta = await this.getPlotStatusRow(plotId);
     const screening = await this.queryGfwAlertsForGeometry(geometry, cutoffDate);
 
     const verdict =
@@ -1075,14 +1160,25 @@ export class PlotsService {
           ? 'no_deforestation_detected'
           : 'possible_deforestation_detected';
 
-    const proposedStatus = mergePlotComplianceStatus(
-      verdictToPlotStatus(verdict, screening.summary),
-      overlapToPlotStatus(overlaps.sinaph_overlap, overlaps.indigenous_overlap),
-    );
+    const mergeResult = this.resolveMergedPlotStatus({
+      gfwSummary: screening.summary,
+      sinaphOverlap: overlaps.sinaph_overlap,
+      indigenousOverlap: overlaps.indigenous_overlap,
+      productionSystem: plotMeta.production_system,
+      context: screening.context,
+    });
+    const proposedStatus = verdict === 'unknown' ? ('pending_check' as const) : mergeResult.status;
+    const contextAutoClear = contextSupportsAutoReviewClear({
+      contextSignal: screening.context.signal,
+      productionSystem: plotMeta.production_system,
+      proposedStatus,
+    });
     const finalized = await this.finalizePlotComplianceStatus({
       plotId,
       proposedStatus,
       gfwSummary: screening.summary,
+      contextAutoClear,
+      currentStatus: plotMeta.status,
     });
     const plotStatus = finalized.status;
 
@@ -1090,7 +1186,13 @@ export class PlotsService {
     const screeningSnapshot = this.buildDeforestationScreeningSnapshot({
       summary: screening.summary,
       signalTier,
-      screening,
+      screening: {
+        cutoffDate: screening.cutoffDate,
+        usedFallback: screening.usedFallback,
+        gfwResult: screening.gfwResult,
+        context: screening.context,
+        contextAdjusted: mergeResult.contextAdjusted,
+      },
     });
 
     await this.persistPlotComplianceStatus(plotId, plotStatus, screeningSnapshot);
@@ -1772,7 +1874,7 @@ export class PlotsService {
   async runComplianceCheck(plotId: string) {
     const plotRes = await this.pool.query(
       `
-        SELECT id, area_ha, geometry
+        SELECT id, area_ha, geometry, production_system
         FROM plot
         WHERE id = $1
       `,
@@ -1817,6 +1919,10 @@ export class PlotsService {
     let gfwSignalTier: ReturnType<typeof gfwSummaryToSignalTier> = 'unknown';
     let gfwProviderMode: 'glad_s2_primary' | 'radd_fallback' | 'unavailable' = 'unavailable';
     let gfwError: string | null = null;
+    let contextScreening: GfwContextScreening | null = null;
+    let contextAdjusted = false;
+    const productionSystem =
+      typeof row.production_system === 'string' ? row.production_system : null;
 
     try {
       const geometry = await this.getPlotGeometryForCompliance(plotId);
@@ -1824,19 +1930,29 @@ export class PlotsService {
       gfwSummary = screening.summary;
       gfwSignalTier = gfwSummaryToSignalTier(screening.summary);
       gfwProviderMode = screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary';
+      contextScreening = screening.context;
     } catch (error) {
       gfwError = error instanceof Error ? error.message : String(error);
     }
 
-    const proposedStatus = this.resolveMergedPlotStatus({
+    const mergeResult = this.resolveMergedPlotStatus({
       gfwSummary,
       sinaphOverlap: overlaps.sinaph_overlap === true,
       indigenousOverlap: overlaps.indigenous_overlap === true,
+      productionSystem,
+      context: contextScreening ?? undefined,
+    });
+    contextAdjusted = mergeResult.contextAdjusted;
+    const contextAutoClear = contextSupportsAutoReviewClear({
+      contextSignal: contextScreening?.signal ?? 'unknown',
+      productionSystem,
+      proposedStatus: mergeResult.status,
     });
     const finalized = await this.finalizePlotComplianceStatus({
       plotId,
-      proposedStatus,
+      proposedStatus: mergeResult.status,
       gfwSummary,
+      contextAutoClear,
     });
     const status = finalized.status;
 
@@ -1852,6 +1968,8 @@ export class PlotsService {
                 dataset: process.env.GFW_DATASET ?? 'gfw_integrated_alerts',
                 version: process.env.GFW_VERSION ?? 'latest',
               },
+              context: contextScreening ?? undefined,
+              contextAdjusted,
             },
           })
         : null;
@@ -1891,7 +2009,10 @@ export class PlotsService {
           status,
           sinaphOverlap: overlaps.sinaph_overlap,
           indigenousOverlap: overlaps.indigenous_overlap,
-          proposedStatus,
+          proposedStatus: mergeResult.status,
+          contextAdjusted,
+          contextSignal: contextScreening?.signal ?? 'unknown',
+          contextAutoClear,
           reviewClearanceBlocked: finalized.reviewClearanceBlocked,
           groundTruthPhotos: finalized.groundTruthPhotos,
           gfw: {

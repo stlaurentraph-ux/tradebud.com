@@ -1,3 +1,46 @@
+### 2026-06-11 (backend: GFW context layers for agroforestry amber plots)
+- Added `GfwContextService` querying `wri_tropical_tree_cover`, `umd_tree_cover_loss`, `sbtn_natural_forests_map` via same GFW Data API.
+- Fusion in `gfw-context-fusion.ts`: amber + stable canopy + low Hansen loss + `shade_grown`/`agroforestry` → `compliant` (context auto-clear without 4 photos).
+- `deforestation_screening` snapshot now stores `context` + `contextAdjusted`; offline parser extended.
+
+### 2026-06-13 (offline: locales — add hi/ar/rw/lg/sw, suppress Norwegian)
+- Field app language picker: **15 locales** (en, fr, es, pt, id, vi, de, nl, it, am, hi, ar, rw, lg, sw). **Norwegian (`no`) removed** from picker; stored `no` preference migrates to English. `no.json` kept for tooling only.
+- Consent/sharing strings patched for all active locales via `patch-consent-i18n-locales.mjs` + `consent-i18n-asia-africa-patches.mjs`.
+
+### 2026-06-13 (offline: data sharing discoverability + i18n)
+- Settings → **Manage data sharing** links to `/data-sharing`; push tap opens same screen.
+- Backfilled `data_sharing_*` and `backup_consent_*` in en/fr + European/LatAm locales.
+
+### 2026-06-13 (consent sovereignty v1.1)
+- TB-V16-040–042: `crm_contacts.farmer_profile_id`, `consent_grants` RLS, `farmer_push_devices`; apply script `db:apply:consent-sovereignty-v11`.
+- Backend: Expo push on consent request; `POST /v1/me/push-devices`; GDPR erasure request audit endpoint; retention metadata on org grant list.
+- Dashboard: `/farmers/[id]` wired to CRM + `ProducerConsentPanel` (partial-revoke copy); BFF routes `/api/farmers/*` + vitest.
+- Offline: push token registration on sign-in; GDPR erasure form on Data sharing.
+
+### 2026-06-11 (billing backlog: Stripe webhooks + cron + marketing pricing)
+- Added `POST /v1/billing/stripe/webhook` with signature verification (`invoice.paid` / `invoice.payment_failed` → `billing_invoices` status).
+- Added `scripts/billing-finalize-period-cron.mjs`, `DEPLOY_PRODUCTION.md` §2d, `STRIPE_WEBHOOK_SECRET` env example.
+- Synced marketing `/pricing` to `TRACEBUD_PRICING_SPEC.md` (Compliance Starter bands, €1/leg usage, adoption promo).
+
+### 2026-06-11 (dashboard slice 3: shipments list from backend)
+- Replaced empty `/shipments` mocks with `GET /v1/shipment-headers` via `useShipmentHeaders` + mapper enrichment from batches.
+- Added `GET /api/shipment-headers/[id]`; updated shipment detail/assemble to load canonical headers with audit fallback.
+- Files: `app/shipments/page.tsx`, `app/shipments/[id]/page.tsx`, `lib/shipment-header-mapper.ts`, `lib/use-shipment-headers.ts`, tests.
+
+### 2026-06-11 (dashboard slice 2: package assemble + seal)
+- Wired `/packages/[id]/assemble` to canonical `shipment_headers` create/seal, voucher weight totals, readiness blockers, and adoption promo copy.
+- Extended `usePackageDetail` with vouchers + `total_weight_kg`; added `listCanonicalShipmentHeaders` / `findCanonicalShipmentHeaderForPackage`.
+- Files: `app/packages/[id]/assemble/page.tsx`, `lib/shipment-headers-client.ts`, `lib/use-package-detail.ts`, `lib/harvest-package-mapper.ts`, tests.
+
+### 2026-06-11 (dashboard slice 1: package create from vouchers)
+- Wired `/packages/new` to `GET /api/harvest/vouchers` and `POST /api/harvest/packages` (BFF → `POST /v1/harvest/packages`).
+- Added voucher multi-select UI, label builder from supplier/season/year, redirect to `/packages/[id]` on success.
+- Files: `apps/dashboard-product/app/packages/new/page.tsx`, `lib/harvest-voucher-client.ts`, `lib/package-create-validation.ts`, API routes + tests; `beta-scope-matrix.md` updated.
+
+### 2026-06-11 (Phase 1: tenure parse ops — migration + readiness)
+- Applied `plot_tenure_verification` on Supabase CRM + Test projects via migration.
+- Added `check:tenure-parse`, `check:tenure-parse:smoke`, `db:apply|verify:tenure-verification` scripts; `/health` returns `tenureParse` block.
+
 ### 2026-06-08 (marketing: v0 instructions for June 2026 IA)
 - Expanded `apps/marketing/V0_HANDOFF.md` — phased work order, target nav wireframes, paste prompts, do-not list.
 - Added `apps/marketing/V0_JUNE_2026_INSTRUCTIONS.md` — paste-into-v0 brief with URLs, deliverables, and chat opener.

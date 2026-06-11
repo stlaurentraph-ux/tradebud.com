@@ -10,7 +10,8 @@ import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { ConsentService } from '../consent/consent.service';
 
 function makeConsentPassthrough(pool: Pool) {
-  return new ConsentService(pool);
+  const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
+  return new ConsentService(pool, push as any);
 }
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
@@ -116,7 +117,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     `);
 
     harvestService = new HarvestService(pool, createBillingServiceMock());
-    plotsService = new PlotsService(pool, {} as any);
+    plotsService = new PlotsService(pool, {} as any, {} as any, {} as any);
     const consentService = makeConsentPassthrough(pool);
     harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
     plotsController = new PlotsController(plotsService, consentService);

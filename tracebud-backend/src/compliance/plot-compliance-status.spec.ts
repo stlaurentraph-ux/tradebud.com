@@ -55,6 +55,14 @@ describe('plot-compliance-status', () => {
         clearanceVerifiedGroundTruthPhotoCount: 0,
       }),
     ).toBe('compliant');
+    expect(
+      applyReviewClearanceGate({
+        proposedStatus: 'compliant',
+        currentStatus: 'under_review',
+        clearanceVerifiedGroundTruthPhotoCount: 0,
+        contextAutoClear: true,
+      }),
+    ).toBe('compliant');
   });
 
   it('maps deforestation verdicts to plot status', () => {

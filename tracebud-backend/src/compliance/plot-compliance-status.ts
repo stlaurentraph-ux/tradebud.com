@@ -41,6 +41,21 @@ export function gfwSummaryToPlotStatus(summary: GfwAlertSummary): PlotCompliance
   return 'pending_check';
 }
 
+export type DeforestationScreeningContextSnapshot = {
+  signal: 'unknown' | 'canopy_stable' | 'mixed' | 'loss_confirmed';
+  tropicalTreeCoverAvgPct: number | null;
+  tropicalTreeCoverAreaHa: number | null;
+  treeCoverLossHa: number | null;
+  naturalForestHa: number | null;
+  layers: Array<{
+    dataset: string;
+    version: string;
+    ok: boolean;
+    error?: string;
+  }>;
+  queriedAt: string;
+};
+
 export type DeforestationScreeningSnapshot = {
   cutoffDate: string;
   alertCount: number | null;
@@ -50,6 +65,8 @@ export type DeforestationScreeningSnapshot = {
   dataset: string | null;
   version: string | null;
   screenedAt: string;
+  context?: DeforestationScreeningContextSnapshot;
+  contextAdjusted?: boolean;
 };
 
 export function overlapToPlotStatus(sinaphOverlap: boolean, indigenousOverlap: boolean): PlotComplianceStatus {
@@ -77,12 +94,17 @@ export function applyReviewClearanceGate(params: {
   /** Photos with GPS inside plot and taken after EUDR cutoff. */
   clearanceVerifiedGroundTruthPhotoCount: number;
   minGroundTruthPhotos?: number;
+  /** GFW canopy context + agroforestry production system can clear amber without photos. */
+  contextAutoClear?: boolean;
 }): PlotComplianceStatus {
   const min = params.minGroundTruthPhotos ?? MIN_GROUND_TRUTH_PHOTOS_FOR_REVIEW_CLEARANCE;
   if (params.proposedStatus !== 'compliant') {
     return params.proposedStatus;
   }
   if (params.currentStatus !== 'under_review') {
+    return 'compliant';
+  }
+  if (params.contextAutoClear) {
     return 'compliant';
   }
   if (params.clearanceVerifiedGroundTruthPhotoCount >= min) {

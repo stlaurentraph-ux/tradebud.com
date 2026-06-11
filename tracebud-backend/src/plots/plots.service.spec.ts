@@ -25,7 +25,26 @@ const gfwMock = {
   runGeometryQuery: jest.fn(),
   runRaddFallback: jest.fn(),
   runHistoricalDeforestationQuery: jest.fn(),
+  runDatasetQuery: jest.fn(),
 };
+
+const gfwContextMock = {
+  queryForGeometry: jest.fn().mockResolvedValue({
+    summary: {
+      tropicalTreeCoverAvgPct: null,
+      tropicalTreeCoverAreaHa: null,
+      treeCoverLossHa: null,
+      naturalForestHa: null,
+    },
+    signal: 'unknown',
+    layers: [],
+    queriedAt: new Date().toISOString(),
+  }),
+};
+
+function makePlotsService(pool: { query: jest.Mock } | ReturnType<typeof makePoolMock>) {
+  return new PlotsService(pool as any, gfwMock as any, gfwContextMock as any, tenureParseMock as any);
+}
 
 const tenureParseMock = {
   enqueueFromEvidenceSync: jest.fn().mockResolvedValue(undefined),
@@ -71,7 +90,7 @@ describe('PlotsService.create polygon normalization', () => {
       }, // main insert/select CTE
       { rows: [] }, // audit insert
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const row = await service.create(makePolygonDto(), '33333333-3333-3333-3333-333333333333');
     expect(row).toBeTruthy();
@@ -86,7 +105,7 @@ describe('PlotsService.create polygon normalization', () => {
       { rows: [] }, // main insert/select CTE returns nothing
       { rows: [{ correction_variance_pct: 12.34 }] }, // variance probe
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(
       service.create(makePolygonDto(), '33333333-3333-3333-3333-333333333333'),
@@ -101,7 +120,7 @@ describe('PlotsService.create polygon normalization', () => {
       { rows: [] }, // main insert/select CTE returns nothing
       { rows: [{ correction_variance_pct: null }] }, // variance probe indicates no valid normalized geometry
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(
       service.create(makePolygonDto(), '33333333-3333-3333-3333-333333333333'),
@@ -134,7 +153,7 @@ describe('PlotsService.updateGeometry polygon normalization', () => {
       { rows: [] }, // update CTE returns nothing
       { rows: [{ correction_variance_pct: 8.12 }] }, // variance probe
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.updateGeometry('plot_1', updateDto as any, 'user_1')).rejects.toThrow(
       'GEO-102',
@@ -149,7 +168,7 @@ describe('PlotsService.updateGeometry polygon normalization', () => {
       { rows: [] }, // update CTE returns nothing
       { rows: [{ correction_variance_pct: null }] }, // normalization failed
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.updateGeometry('plot_1', updateDto as any, 'user_1')).rejects.toThrow(
       'GEO-101',
@@ -166,14 +185,14 @@ describe('PlotsService.isAgentAssignedToPlot', () => {
         throw error;
       }),
     };
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.isAgentAssignedToPlot('plot_1', 'agent_1', 'assign_1')).resolves.toBe(false);
   });
 
   it('returns true when active assignment exists for plot and agent', async () => {
     const pool = makePoolMock([{ rows: [{}] }]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.isAgentAssignedToPlot('plot_1', 'agent_1', 'assign_1')).resolves.toBe(true);
   });
@@ -195,7 +214,7 @@ describe('PlotsService assignment lifecycle transitions', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.createAssignment('plot_1', 'assign_1', 'agent_1')).resolves.toEqual(
       expect.objectContaining({ assignmentId: 'assign_1', status: 'active' }),
@@ -207,7 +226,7 @@ describe('PlotsService assignment lifecycle transitions', () => {
       { rows: [] }, // update no-op
       { rows: [{ status: 'completed' }] }, // existing assignment status probe
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.completeAssignment('assign_1')).rejects.toThrow('ASN-003');
   });
@@ -230,7 +249,7 @@ describe('PlotsService.listAssignmentsByPlot', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(
       service.listAssignmentsByPlot('plot_1', {
@@ -257,7 +276,7 @@ describe('PlotsService.listAssignmentsByPlot', () => {
 describe('PlotsService.appendAssignmentExportAuditEvent', () => {
   it('persists assignment export payload fields aligned with diagnostics contract', async () => {
     const pool = makePoolMock([{ rows: [] }]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await service.appendAssignmentExportAuditEvent({
       phase: 'succeeded',
@@ -292,7 +311,7 @@ describe('PlotsService.appendAssignmentExportAuditEvent', () => {
 
   it('normalizes optional assignment export payload fields to null when omitted', async () => {
     const pool = makePoolMock([{ rows: [] }]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await service.appendAssignmentExportAuditEvent({
       phase: 'failed',
@@ -345,7 +364,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_1');
 
@@ -399,7 +418,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_1');
 
@@ -422,7 +441,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_fallback');
 
@@ -446,7 +465,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_1', 10, 0, 'asc');
 
@@ -483,7 +502,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
         ],
       },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_1', 20, 0, 'desc');
 
@@ -529,8 +548,8 @@ describe('PlotsService.getGeometryHistory mapping', () => {
     const strictPool = makePoolMock([{ rows: [{ total: 2 }] }, { rows }]);
     const lenientPool = makePoolMock([{ rows: [{ total: 2 }] }, { rows }]);
 
-    const strictService = new PlotsService(strictPool as any, gfwMock as any, tenureParseMock as any);
-    const lenientService = new PlotsService(lenientPool as any, gfwMock as any, tenureParseMock as any);
+    const strictService = makePlotsService(strictPool);
+    const lenientService = makePlotsService(lenientPool);
 
     const strict = await strictService.getGeometryHistory('plot_1', 20, 0, 'desc', 'strict');
     const lenient = await lenientService.getGeometryHistory('plot_1', 20, 0, 'desc', 'lenient');
@@ -572,7 +591,7 @@ describe('PlotsService.getGeometryHistory mapping', () => {
       },
     ];
     const pool = makePoolMock([{ rows }]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     const result = await service.getGeometryHistory('plot_1', 1, 1, 'desc', 'balanced', true);
 
@@ -603,7 +622,7 @@ describe('PlotsService.runDeforestationDecision', () => {
       { rows: [] },
       { rows: [] },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
     gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
       dataset: 'umd_glad_s2_alerts',
       version: 'latest',
@@ -640,7 +659,7 @@ describe('PlotsService.runDeforestationDecision', () => {
       { rows: [] },
       { rows: [] },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
     gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
       dataset: 'umd_glad_s2_alerts',
       version: 'latest',
@@ -668,7 +687,7 @@ describe('PlotsService.runDeforestationDecision', () => {
 
   it('rejects malformed cutoff date', async () => {
     const pool = makePoolMock([]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
 
     await expect(service.runDeforestationDecision('plot_1', 'user_1', '31-12-2020')).rejects.toThrow(
       'Invalid cutoffDate. Use YYYY-MM-DD.',
@@ -688,11 +707,11 @@ describe('PlotsService.runGfwCheck', () => {
         rows: [{ id: 'plot_1', kind: 'polygon', geojson: '{"type":"Polygon","coordinates":[]}' }],
       },
       { rows: [{ sinaph_overlap: false, indigenous_overlap: false }] },
-      { rows: [{ status: 'pending_check', deforestation_screening: null }] },
+      { rows: [{ status: 'pending_check', production_system: null, deforestation_screening: null }] },
       { rows: [] },
       { rows: [] },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
     gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
       dataset: 'umd_glad_s2_alerts',
       version: 'latest',
@@ -717,6 +736,56 @@ describe('PlotsService.runGfwCheck', () => {
     expect(typeof updateCall?.[1]?.[2]).toBe('string');
   });
 
+  it('auto-clears amber shade-grown plots when GFW context shows stable canopy', async () => {
+    const pool = makePoolMock([
+      {
+        rows: [{ id: 'plot_1', kind: 'polygon', geojson: '{"type":"Polygon","coordinates":[]}' }],
+      },
+      { rows: [{ sinaph_overlap: false, indigenous_overlap: false }] },
+      {
+        rows: [
+          {
+            status: 'under_review',
+            production_system: 'shade_grown',
+            deforestation_screening: null,
+          },
+        ],
+      },
+      { rows: [] },
+      { rows: [] },
+      { rows: [] },
+    ]);
+    const service = makePlotsService(pool);
+    gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
+      dataset: 'gfw_integrated_alerts',
+      version: 'latest',
+      historicalSqlApplied: true,
+      result: [{ count: 2, area_ha: 0.01 }],
+    });
+    gfwContextMock.queryForGeometry.mockResolvedValueOnce({
+      summary: {
+        tropicalTreeCoverAvgPct: 72,
+        tropicalTreeCoverAreaHa: 1.2,
+        treeCoverLossHa: 0,
+        naturalForestHa: null,
+      },
+      signal: 'canopy_stable',
+      layers: [],
+      queriedAt: new Date().toISOString(),
+    });
+
+    const result = await service.runGfwCheck('plot_1', 'user_1');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: true,
+        plotStatus: 'compliant',
+        contextAdjusted: true,
+        contextSignal: 'canopy_stable',
+      }),
+    );
+  });
+
   it('merges GFW red signal with overlap degradation into deforestation_detected', async () => {
     const pool = makePoolMock([
       {
@@ -727,7 +796,7 @@ describe('PlotsService.runGfwCheck', () => {
       { rows: [] },
       { rows: [] },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
     gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
       dataset: 'umd_glad_s2_alerts',
       version: 'latest',
@@ -773,7 +842,7 @@ describe('PlotsService.runGfwCheck', () => {
       { rows: [] },
       { rows: [] },
     ]);
-    const service = new PlotsService(pool as any, gfwMock as any, tenureParseMock as any);
+    const service = makePlotsService(pool);
     gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
       dataset: 'gfw_integrated_alerts',
       version: 'latest',

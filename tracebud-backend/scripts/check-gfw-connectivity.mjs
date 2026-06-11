@@ -86,6 +86,57 @@ async function main() {
   console.log(`    dataset: ${dataset}/${version}`);
   console.log(`    cutoff:  after ${cutoffDate}`);
   console.log(`    sample:  alert count = ${count ?? 'n/a'}`);
+
+  if ((process.env.GFW_CONTEXT_ENABLED ?? 'true').toLowerCase() !== 'false') {
+    const cutoffYear = String(new Date(`${cutoffDate}T00:00:00.000Z`).getUTCFullYear());
+    const contextChecks = [
+      {
+        label: 'tropical tree cover',
+        dataset: process.env.GFW_CONTEXT_TROPICAL_TREE_COVER_DATASET ?? 'wri_tropical_tree_cover',
+        sql:
+          process.env.GFW_CONTEXT_TROPICAL_TREE_COVER_SQL ??
+          'SELECT AVG(wri_tropical_tree_cover__percent) AS avg_pct FROM data',
+      },
+      {
+        label: 'tree cover loss',
+        dataset: process.env.GFW_CONTEXT_TREE_COVER_LOSS_DATASET ?? 'umd_tree_cover_loss',
+        sql: (
+          process.env.GFW_CONTEXT_TREE_COVER_LOSS_SQL_TEMPLATE ??
+          'SELECT SUM(area__ha) AS loss_ha FROM data WHERE umd_tree_cover_loss__year > {{cutoffYear}}'
+        ).split('{{cutoffYear}}').join(cutoffYear),
+      },
+    ];
+
+    for (const check of contextChecks) {
+      const contextUrl = `${baseUrl}/dataset/${encodeURIComponent(check.dataset)}/latest/query/json`;
+      const contextRes = await fetch(contextUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({ geometry, sql: check.sql }),
+      });
+      const contextText = await contextRes.text();
+      let contextBody;
+      try {
+        contextBody = JSON.parse(contextText);
+      } catch {
+        contextBody = contextText;
+      }
+      if (!contextRes.ok) {
+        console.error(`FAIL GFW context (${check.label}) HTTP ${contextRes.status}`);
+        console.error(
+          typeof contextBody === 'string'
+            ? contextBody.slice(0, 500)
+            : JSON.stringify(contextBody).slice(0, 500),
+        );
+        process.exit(1);
+      }
+      const contextRow = Array.isArray(contextBody?.data) ? contextBody.data[0] : null;
+      console.log(`OK GFW context ${check.label}: ${JSON.stringify(contextRow ?? contextBody).slice(0, 120)}`);
+    }
+  }
 }
 
 main().catch((err) => {
