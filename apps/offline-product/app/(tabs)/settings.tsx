@@ -58,6 +58,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { signInAndSyncPlots } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { localeNames } from '@/features/i18n/config';
+import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+import { seedStoreScreenshotDemo } from '@/features/demo/storeScreenshotDemo';
 import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
@@ -78,7 +80,7 @@ const fsAny = FileSystem as unknown as {
 
 export default function SettingsScreen() {
   const { lang, languageCode, openLanguagePicker, t } = useLanguage();
-  const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
+  const { farmer, plots, setFarmer, updateFarmerProfilePhoto, reloadFromDisk } = useAppState();
   const { refreshAuth } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
@@ -118,6 +120,8 @@ export default function SettingsScreen() {
     evidence_sync: true,
   });
   const [queueAttemptScope, setQueueAttemptScope] = useState<PendingSyncAttemptScope>('all');
+  const [storeDemoBusy, setStoreDemoBusy] = useState(false);
+  const [storeDemoMessage, setStoreDemoMessage] = useState<string | null>(null);
   const [queueSmartSweepEnabled, setQueueSmartSweepEnabled] = useState(false);
   const [queueSmartSweepCap, setQueueSmartSweepCap] = useState<25 | 50 | 100 | 200>(100);
 
@@ -682,6 +686,20 @@ export default function SettingsScreen() {
       Alert.alert(t('declaration_sync_ok_title'), t('declaration_sync_ok_body'));
     } finally {
       setDeclarationBusy(false);
+    }
+  };
+
+  const loadStoreDemoData = async () => {
+    setStoreDemoBusy(true);
+    setStoreDemoMessage(null);
+    try {
+      await seedStoreScreenshotDemo();
+      await reloadFromDisk();
+      setStoreDemoMessage(t('settings_store_demo_loaded'));
+    } catch {
+      setStoreDemoMessage(t('settings_store_demo_failed'));
+    } finally {
+      setStoreDemoBusy(false);
     }
   };
 
@@ -1268,6 +1286,39 @@ export default function SettingsScreen() {
             </ThemedText>
           </CardContent>
         </Card>
+
+        {storeDemoToolsEnabled ? (
+          <Card variant="outlined" padding="none" style={styles.card}>
+            <CardContent style={styles.cardInner}>
+              <View style={styles.sectionHeaderRow}>
+                <Ionicons name="camera-outline" size={20} color={Brand.primary} />
+                <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                  {t('settings_store_demo_title')}
+                </ThemedText>
+              </View>
+              <ThemedText type="default" style={styles.mutedText}>
+                {t('settings_store_demo_body')}
+              </ThemedText>
+              <View style={styles.btnWrap}>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  loading={storeDemoBusy}
+                  disabled={storeDemoBusy}
+                  onPress={() => void loadStoreDemoData()}
+                >
+                  {t('settings_store_demo_load')}
+                </Button>
+              </View>
+              {storeDemoMessage ? (
+                <ThemedText type="default" style={styles.greenText}>
+                  {storeDemoMessage}
+                </ThemedText>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card variant="outlined" padding="none" style={[styles.card, styles.helpCard]}>
           <CardContent style={styles.cardInner}>

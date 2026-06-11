@@ -27,7 +27,12 @@
     "release:production:safe": "npm run release:preflight:production && npm run release:production",
     "submit:production": "eas submit --platform all --profile production",
     "update:preview": "eas update --branch preview --message \"preview ota\"",
-    "update:production": "eas update --branch production --message \"production ota\""
+    "update:production": "eas update --branch production --message \"production ota\"",
+    "ios:simulator": "bash ./scripts/setup-ios-simulator.sh",
+    "build:simulator": "bash ./scripts/build-ios-simulator.sh",
+    "run:simulator": "bash ./scripts/run-ios-simulator.sh",
+    "capture:screenshot": "bash ./scripts/capture-simulator-screenshot.sh",
+    "start:store-demo": "EXPO_PUBLIC_STORE_DEMO=1 expo start"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

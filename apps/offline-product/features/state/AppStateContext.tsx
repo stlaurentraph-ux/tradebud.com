@@ -12,7 +12,8 @@
  */
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { hydrateSyncAuthFromSettings } from '@/features/api/postPlot';
+import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
+import { seedStoreScreenshotDemo } from '@/features/demo/storeScreenshotDemo';
 import {
   deletePlotLocalData,
   initDatabase,
@@ -79,6 +80,8 @@ type AppStateContextValue = {
   updatePlot: (plotId: string, patch: Partial<Plot>) => void;
   removePlot: (plotId: string) => void;
   updateFarmerProfilePhoto: (uri: string | null) => void;
+  /** Reload farmer + plots from SQLite (e.g. after seeding store screenshot demo). */
+  reloadFromDisk: () => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -88,19 +91,39 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [plots, setPlots] = useState<Plot[]>([]);
 
   useEffect(() => {
-    initDatabase()
-      .then(() => hydrateSyncAuthFromSettings())
-      .then(() => loadAppState())
-      .then((loaded) => {
-        if (loaded.farmer) {
-          setFarmerState(loaded.farmer);
+    let cancelled = false;
+    void (async () => {
+      try {
+        await initDatabase();
+        await hydrateSyncAuthFromSettings();
+        const loaded = await loadAppState();
+        if (!cancelled) {
+          if (loaded.farmer) setFarmerState(loaded.farmer);
+          if (loaded.plots.length > 0) setPlots(loaded.plots);
         }
-        if (loaded.plots.length > 0) {
-          setPlots(loaded.plots);
+        if (process.env.EXPO_PUBLIC_STORE_DEMO === '1') {
+          const demo = await seedStoreScreenshotDemo();
+          if (!cancelled) {
+            setFarmerState(demo.farmer);
+            setPlots(demo.plots);
+          }
         }
-      })
-      .catch(() => undefined);
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[AppState] boot failed', error);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const reloadFromDisk = async () => {
+    const loaded = await loadAppState();
+    setFarmerState(loaded.farmer);
+    setPlots(loaded.plots);
+  };
 
   const setFarmer = (nextFarmer: FarmerProfile) => {
     setFarmerState((prev) => {
@@ -211,6 +234,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           });
         },
         updateFarmerProfilePhoto,
+        reloadFromDisk,
         removePlot: (plotId: string) => {
           setPlots((prev) => {
             const target = prev.find((p) => p.id === plotId);

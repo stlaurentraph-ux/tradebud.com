@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [loadingBackend, setLoadingBackend] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
+  const [, setBackendError] = useState<string | null>(null);
   const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
   const [assessmentRequests, setAssessmentRequests] = useState<FarmerAssessmentRequest[]>([]);
@@ -173,9 +173,6 @@ export default function HomeScreen() {
     return { plotsCount, compliant, pending };
   }, [plots, backendPlots, plotChecklistDoneById]);
 
-  const backendConfigured =
-    !!process.env.EXPO_PUBLIC_SUPABASE_URL && !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
     if (plots.length > 0) return null;
@@ -183,7 +180,6 @@ export default function HomeScreen() {
     return 'register_plot';
   }, [plots.length, farmer]);
 
-  const isOnline = backendConfigured && !loadingBackend && !backendError;
   const nextAssessment =
     assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
     null;
@@ -207,11 +203,13 @@ export default function HomeScreen() {
       <CompactTabHeader
         paddingTop={insets.top}
         badge={
-          <Badge variant={isOnline ? 'success' : 'warning'} size="sm">
-            {isOnline ? t('online') : t('offline')}
-          </Badge>
+          pendingCount > 0 ? (
+            <Badge variant="warning" size="sm">
+              {t('pending_count', { n: pendingCount })}
+            </Badge>
+          ) : null
         }
-        left={<HomeHeaderBrandLeft subtitle={t('home_subtitle')} />}
+        left={<HomeHeaderBrandLeft subtitle="" />}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
         textInverseColor={colors.textInverse}

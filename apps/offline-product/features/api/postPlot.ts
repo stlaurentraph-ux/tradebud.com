@@ -6,6 +6,12 @@ import {
   loadSyncAuthCredentials,
   saveSyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
+import {
+  getStoreDemoBackendPlots,
+  getStoreDemoHarvestVouchers,
+  isStoreDemoFarmer,
+} from '@/features/demo/storeDemoApiFixtures';
+import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 type GeoJSONPoint = {
@@ -365,6 +371,10 @@ export async function updatePlotMetadataOnBackend(params: {
 }
 
 export async function fetchPlotsForFarmer(farmerId: string) {
+  if (storeDemoToolsEnabled && isStoreDemoFarmer(farmerId)) {
+    return getStoreDemoBackendPlots();
+  }
+
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
     throw new Error('No access token available for plot sync');
@@ -427,6 +437,10 @@ export async function postHarvestToBackend(params: {
 }
 
 export async function fetchVouchersForFarmer(farmerId: string) {
+  if (storeDemoToolsEnabled && isStoreDemoFarmer(farmerId)) {
+    return getStoreDemoHarvestVouchers();
+  }
+
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
     throw new Error('No access token available for vouchers');

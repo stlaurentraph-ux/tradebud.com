@@ -18,6 +18,7 @@ if ! xcrun simctl list runtimes 2>/dev/null | grep -q iOS; then
 fi
 
 IPHONE_NAME="${IPHONE_DEVICE:-iPhone 17 Pro Max}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEVICE_ID="$(xcrun simctl list devices available | grep "$IPHONE_NAME" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')"
 
 if [[ -z "$DEVICE_ID" ]]; then
@@ -33,23 +34,19 @@ xcrun simctl bootstatus "$DEVICE_ID" -b
 
 if ! command -v pod >/dev/null 2>&1; then
   echo ""
-  echo "CocoaPods is required for the native build. Install it once:"
-  echo "  brew install cocoapods"
-  echo "If Homebrew is missing: https://brew.sh"
+  echo "CocoaPods is not installed — using EAS simulator build instead (pixel-perfect, same as TestFlight UI)."
   echo ""
-  echo "Then re-run: npm run ios:simulator"
-  exit 1
+  exec bash "$SCRIPT_DIR/run-ios-simulator.sh"
 fi
 
 export EXPO_PUBLIC_STORE_DEMO=1
-echo "==> Building Tracebud (first run may take 10–15 min)…"
+echo "==> Building Tracebud locally (first run may take 10–15 min)…"
 npx expo run:ios --device "$DEVICE_ID"
 
 cat <<EOF
 
 Tracebud should be open in Simulator.
 
-1. Settings → App Store screenshots → Load demo data
-2. Capture: ⌘S in Simulator, or: npm run capture:screenshot -- iphone-01-home.png
+Demo data loads on launch. Capture: ⌘S or npm run capture:screenshot -- iphone-01-home.png
 
 EOF

@@ -384,7 +384,6 @@ export default function PlotsScreen() {
       setPhotos([]);
       setTitlePhotos([]);
       setEvidence([]);
-      setEvidenceReason('');
       setCadastralKey('');
       setInformalTenure(false);
       setInformalTenureNote('');

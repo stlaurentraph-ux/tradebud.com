@@ -8,10 +8,20 @@ For App Store Connect, **screenshots from the real app are better** (and what Ap
 
 ## 1. Install the app (not Expo Go)
 
-Expo Go shows the Expo icon and a different shell. Use your **preview or production build**:
+Expo Go shows the Expo icon and a different shell. For **pixel-perfect** Simulator screenshots use the **native Tracebud .app**:
 
-- **EAS build:** install the `.ipa` via TestFlight or the EAS install link from `npm run release:preview`.
-- **Local dev client:** `npx expo run:ios` (after a dev build).
+```bash
+cd apps/offline-product
+npm run build:simulator    # once: EAS cloud build for Simulator (~10 min)
+npm run run:simulator      # installs on iPhone 17 Pro Max simulator
+```
+
+Requires Xcode + Simulator only (no CocoaPods on your Mac). The `simulator` profile bundles `EXPO_PUBLIC_STORE_DEMO=1` so Maria Santos demo data loads on launch.
+
+Alternatives:
+
+- **TestFlight on a physical device** (same UI as production).
+- **Local build** (needs `brew install cocoapods`): `npm run ios:simulator`.
 
 ---
 
