@@ -14,12 +14,12 @@ export class GfwService {
   }
 
   private dataset() {
-    // User can override with a specific dataset slug.
-    return this.config.get<string>('GFW_DATASET') ?? 'umd_glad_s2_alerts';
+    // `umd_glad_s2_alerts` / `radd_alerts` slugs are retired on the public GFW Data API.
+    return this.config.get<string>('GFW_DATASET') ?? 'gfw_integrated_alerts';
   }
 
   private raddDataset() {
-    return this.config.get<string>('GFW_RADD_DATASET') ?? 'radd_alerts';
+    return this.config.get<string>('GFW_RADD_DATASET') ?? 'umd_glad_dist_alerts';
   }
 
   private version() {
@@ -35,7 +35,23 @@ export class GfwService {
   }
 
   private deforestationSqlTemplate() {
-    return this.config.get<string>('GFW_DEFORESTATION_SQL_TEMPLATE') ?? null;
+    return (
+      this.config.get<string>('GFW_DEFORESTATION_SQL_TEMPLATE') ??
+      "SELECT COUNT(*) AS count, SUM(area__ha) AS area_ha FROM data WHERE gfw_integrated_alerts__date > '{{cutoffDate}}'"
+    );
+  }
+
+  private fallbackDeforestationSqlTemplate() {
+    return (
+      this.config.get<string>('GFW_FALLBACK_DEFORESTATION_SQL_TEMPLATE') ??
+      "SELECT COUNT(*) AS count, SUM(area__ha) AS area_ha FROM data WHERE umd_glad_landsat_alerts__date > '{{cutoffDate}}'"
+    );
+  }
+
+  private resolveSqlTemplate(template: string, cutoffDate: string) {
+    return template.includes('{{cutoffDate}}')
+      ? template.split('{{cutoffDate}}').join(cutoffDate)
+      : template;
   }
 
   async runGeometryQuery(params: { geometry: any; sql?: string }) {
@@ -95,9 +111,14 @@ export class GfwService {
     };
   }
 
-  async runRaddFallback(params: { geometry: any; sql?: string }) {
+  async runRaddFallback(params: { geometry: any; sql?: string; cutoffDate?: string }) {
     const dataset = this.raddDataset();
     const version = this.version();
+    const sql =
+      params.sql ??
+      (params.cutoffDate
+        ? this.resolveSqlTemplate(this.fallbackDeforestationSqlTemplate(), params.cutoffDate)
+        : this.sql());
     const url = `${this.baseUrl()}/dataset/${encodeURIComponent(dataset)}/${encodeURIComponent(
       version,
     )}/query/json`;
@@ -115,7 +136,7 @@ export class GfwService {
       headers,
       body: JSON.stringify({
         geometry: params.geometry,
-        sql: params.sql ?? this.sql(),
+        sql,
       }),
     });
 
@@ -129,7 +150,7 @@ export class GfwService {
 
     if (!res.ok) {
       throw new Error(
-        `GFW RADD query failed (${res.status}). ${
+        `GFW fallback query failed (${res.status}). ${
           typeof bodyJson === 'string' ? bodyJson : JSON.stringify(bodyJson)
         }`,
       );
@@ -146,17 +167,15 @@ export class GfwService {
     return {
       dataset,
       version,
-      sql: params.sql ?? this.sql(),
+      sql,
       result: bodyJson,
+      historicalSqlApplied: Boolean(params.cutoffDate),
+      cutoffDate: params.cutoffDate ?? null,
     };
   }
 
   async runHistoricalDeforestationQuery(params: { geometry: any; cutoffDate: string }) {
-    const sqlTemplate = this.deforestationSqlTemplate();
-    const resolvedSql =
-      typeof sqlTemplate === 'string' && sqlTemplate.includes('{{cutoffDate}}')
-        ? sqlTemplate.split('{{cutoffDate}}').join(params.cutoffDate)
-        : this.sql();
+    const resolvedSql = this.resolveSqlTemplate(this.deforestationSqlTemplate(), params.cutoffDate);
 
     const response = await this.runGeometryQuery({
       geometry: params.geometry,

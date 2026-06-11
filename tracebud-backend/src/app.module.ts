@@ -13,6 +13,9 @@ import { LaunchModule } from './launch/launch.module';
 import { AdminModule } from './admin/admin.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { RequestsModule } from './requests/requests.module';
+import { ConsentModule } from './consent/consent.module';
+import { BillingModule } from './billing/billing.module';
+import { ShipmentHeadersModule } from './shipment-headers/shipment-headers.module';
 
 @Module({
   imports: [
@@ -33,6 +36,9 @@ import { RequestsModule } from './requests/requests.module';
     AdminModule,
     ContactsModule,
     RequestsModule,
+    ConsentModule,
+    BillingModule,
+    ShipmentHeadersModule,
   ],
 })
 export class AppModule {}

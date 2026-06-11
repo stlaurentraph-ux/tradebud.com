@@ -5,7 +5,13 @@ import { HarvestController } from './harvest.controller';
 import { HarvestService } from './harvest.service';
 import { PlotsController } from '../plots/plots.controller';
 import { PlotsService } from '../plots/plots.service';
+import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import { ConsentService } from '../consent/consent.service';
+
+function makeConsentPassthrough(pool: Pool) {
+  return new ConsentService(pool);
+}
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
@@ -109,10 +115,11 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       )
     `);
 
-    harvestService = new HarvestService(pool);
+    harvestService = new HarvestService(pool, createBillingServiceMock());
     plotsService = new PlotsService(pool, {} as any);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock());
-    plotsController = new PlotsController(plotsService);
+    const consentService = makeConsentPassthrough(pool);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
+    plotsController = new PlotsController(plotsService, consentService);
   }, 20_000);
 
   afterAll(async () => {
@@ -165,13 +172,13 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     const listSpy = jest.spyOn(harvestService, 'listVouchersForFarmer').mockResolvedValue([]);
 
     await expect(
-      harvestController.listVouchers(farmerB, {
+      harvestController.listVouchers(farmerB, 'farmer', {
         user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
-      harvestController.listVouchers(farmerA, {
+      harvestController.listVouchers(farmerA, 'farmer', {
         user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
     ).resolves.toEqual([]);

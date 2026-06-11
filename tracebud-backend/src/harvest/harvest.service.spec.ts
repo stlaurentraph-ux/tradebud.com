@@ -1,9 +1,22 @@
+import type { BillingService } from '../billing/billing.service';
 import { HarvestService } from './harvest.service';
+
+function makeBillingServiceMock(): BillingService {
+  return {
+    recordOriginSealMeter: jest.fn().mockResolvedValue({}),
+    recordDestinationSubmitMeter: jest.fn().mockResolvedValue({}),
+    assertBillingGateClear: jest.fn().mockResolvedValue(undefined),
+  } as unknown as BillingService;
+}
+
+function makeHarvestService(pool: unknown): HarvestService {
+  return new HarvestService(pool as any, makeBillingServiceMock());
+}
 
 describe('HarvestService.evaluateDdsPackageReadiness', () => {
   it('returns blocked when package has no vouchers', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_1' },
       vouchers: [],
@@ -32,7 +45,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
 
   it('returns warning_review when only warning rules are triggered', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_2' },
       vouchers: [
@@ -64,7 +77,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
 
   it('returns ready_to_submit when no blockers or warnings are found', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_3' },
       vouchers: [
@@ -91,7 +104,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
 
   it('adds deterministic compliance doc reason codes from voucher state', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_doc_1' },
       vouchers: [
@@ -123,7 +136,7 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
 describe('HarvestService.evaluateDdsPackageRiskScore', () => {
   it('returns high risk when no vouchers are linked', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_risk_1' },
       vouchers: [],
@@ -151,7 +164,7 @@ describe('HarvestService.evaluateDdsPackageRiskScore', () => {
 
   it('returns low risk when warning-like quality gaps exist', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_risk_2' },
       vouchers: [
@@ -172,7 +185,7 @@ describe('HarvestService.evaluateDdsPackageRiskScore', () => {
 
   it('returns medium risk when yield density exceeds benchmark cap only', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_risk_3' },
       vouchers: [{ id: 'v_3', kg: 10000, area_ha: 1, harvest_date: '2026-04-16', declared_area_ha: 1 }],
@@ -193,7 +206,7 @@ describe('HarvestService.evaluateDdsPackageRiskScore', () => {
 describe('HarvestService.evaluateDdsPackageFilingPreflight', () => {
   it('returns preflight_blocked when readiness is blocked', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_file_1' },
       vouchers: [],
@@ -211,7 +224,7 @@ describe('HarvestService.evaluateDdsPackageFilingPreflight', () => {
 
   it('returns preflight_ready when readiness is not blocked', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 1 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_file_2' },
       vouchers: [
@@ -246,7 +259,7 @@ describe('HarvestService filing generation and idempotent submit', () => {
         .mockResolvedValueOnce({ rows: [{ id: 'pkg_gen_1' }], rowCount: 1 })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'evaluateDdsPackageFilingPreflight').mockResolvedValue({
       packageId: 'pkg_gen_1',
       status: 'preflight_ready',
@@ -283,7 +296,7 @@ describe('HarvestService filing generation and idempotent submit', () => {
         })
         .mockResolvedValueOnce({ rows: [], rowCount: 1 }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
 
     const result = await service.submitDdsPackage('pkg_sub_1', 'idem-1', { tenantId: 'tenant_1' });
     expect(result.replayed).toBe(true);
@@ -298,7 +311,7 @@ describe('HarvestService filing generation and idempotent submit', () => {
 describe('HarvestService.listDdsPackageEvidenceDocuments', () => {
   it('maps vouchers into typed evidence-document rows', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }) };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
     jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_ev_1' },
       vouchers: [
@@ -345,7 +358,7 @@ describe('HarvestService yield-cap benchmark resolution', () => {
         rowCount: 1,
       }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
 
     const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'HN');
     expect(pool.query).toHaveBeenCalledWith(expect.any(String), [
@@ -376,7 +389,7 @@ describe('HarvestService yield-cap benchmark resolution', () => {
         rowCount: 1,
       }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
 
     const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'EC');
 
@@ -398,7 +411,7 @@ describe('HarvestService yield-cap benchmark resolution', () => {
         rowCount: 0,
       }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
 
     const result = await (service as any).resolveYieldCapKgPerHa('coffee', 'PE');
 
@@ -428,7 +441,7 @@ describe('HarvestService yield-cap benchmark resolution', () => {
         rowCount: 1,
       }),
     };
-    const service = new HarvestService(pool as any);
+    const service = makeHarvestService(pool as any);
 
     const result = await (service as any).resolveYieldCapKgPerHa('coffee', '95');
 
@@ -441,5 +454,119 @@ describe('HarvestService yield-cap benchmark resolution', () => {
         capKgPerHa: 1500,
       }),
     );
+  });
+});
+
+describe('HarvestService.createDdsPackage', () => {
+  it('allows vouchers from multiple producers when plots are verified deforestation-free', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'v_1',
+              farmer_id: 'farmer_a',
+              dds_package_id: null,
+              plot_id: 'plot_1',
+              plot_name: 'Plot A',
+              plot_status: 'compliant',
+            },
+            {
+              id: 'v_2',
+              farmer_id: 'farmer_b',
+              dds_package_id: null,
+              plot_id: 'plot_2',
+              plot_name: 'Plot B',
+              plot_status: 'verified',
+            },
+          ],
+          rowCount: 2,
+        })
+        .mockResolvedValueOnce({ rows: [{ farmer_id: 'farmer_a' }] })
+        .mockResolvedValueOnce({ rows: [{ farmer_id: 'farmer_b' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'pkg_1', farmer_id: 'farmer_a', status: 'draft' }] })
+        .mockResolvedValueOnce({ rowCount: 2 }),
+    };
+    const service = makeHarvestService(pool as any);
+    jest.spyOn(service, 'isFarmerInTenant').mockResolvedValue(true);
+
+    const result = await service.createDdsPackage(
+      { voucherIds: ['v_1', 'v_2'], label: 'Coop intake' },
+      { tenantId: 'tenant_1' },
+    );
+
+    expect(result).toEqual(expect.objectContaining({ id: 'pkg_1', status: 'draft' }));
+  });
+
+  it('rejects vouchers from non-verified plots', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'v_1',
+            farmer_id: 'farmer_a',
+            dds_package_id: null,
+            plot_id: 'plot_1',
+            plot_name: 'Risk Plot',
+            plot_status: 'degradation_risk',
+          },
+        ],
+        rowCount: 1,
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    await expect(
+      service.createDdsPackage({ voucherIds: ['v_1'] }, { tenantId: 'tenant_1' }),
+    ).rejects.toThrow('not from verified deforestation-free plots');
+  });
+});
+
+describe('HarvestService.validateShipmentDeclaredWeight', () => {
+  it('rejects when declared weight exceeds batch voucher totals', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ farmer_id: 'farmer_1' }] })
+        .mockResolvedValueOnce({
+          rows: [
+            { id: 'pkg_1', farmer_id: 'farmer_1', total_kg: '100' },
+            { id: 'pkg_2', farmer_id: 'farmer_1', total_kg: '100' },
+          ],
+          rowCount: 2,
+        }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const result = await service.validateShipmentDeclaredWeight(
+      'tenant_1',
+      ['pkg_1', 'pkg_2'],
+      2000,
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.covered_quantity_kg).toBe(200);
+    expect(result.declared_quantity_kg).toBe(2000);
+    expect(result.error).toContain('2000');
+    expect(result.error).toContain('200');
+  });
+
+  it('passes when declared weight matches summed voucher kg', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ farmer_id: 'farmer_1' }] })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'pkg_1', farmer_id: 'farmer_1', total_kg: '1000' }],
+          rowCount: 1,
+        }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const result = await service.validateShipmentDeclaredWeight('tenant_1', ['pkg_1'], 1000);
+
+    expect(result.ok).toBe(true);
+    expect(result.covered_quantity_kg).toBe(1000);
   });
 });

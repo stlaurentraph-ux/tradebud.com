@@ -19,6 +19,10 @@
     "db:verify:audit-index": "node scripts/run-with-root-test-db.mjs node scripts/apply-audit-gated-entry-index.mjs --verify-only",
     "db:apply:crm-contacts": "node scripts/run-with-root-test-db.mjs node scripts/apply-crm-contacts-migration.mjs",
     "db:verify:crm-contacts": "node scripts/run-with-root-test-db.mjs node scripts/apply-crm-contacts-migration.mjs --verify-only",
+    "db:apply:consent-grants": "node scripts/run-with-root-test-db.mjs node scripts/apply-consent-grants-migration.mjs",
+    "db:verify:consent-grants": "node scripts/run-with-root-test-db.mjs node scripts/apply-consent-grants-migration.mjs --verify-only",
+    "smoke:consent": "node scripts/smoke-consent-sovereignty.mjs",
+    "test:integration:consent": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/consent/consent-lineage-revoke.int.spec.ts",
     "db:apply:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs",
     "db:verify:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs --verify-only",
     "db:apply:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs",
@@ -27,7 +31,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "check:deploy-health": "node scripts/check-deploy-health.mjs",
-    "railway:preflight:local": "node scripts/railway-local-preflight.mjs"
+    "check:gfw": "node scripts/check-gfw-connectivity.mjs",
+    "railway:preflight:local": "node scripts/railway-local-preflight.mjs",
+    "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

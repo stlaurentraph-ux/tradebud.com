@@ -11,6 +11,8 @@ import { UpdatePlotGeometryDto } from './dto/update-plot-geometry.dto';
 import { CreatePlotAssignmentDto } from './dto/create-plot-assignment.dto';
 import { UpdatePlotAssignmentStatusDto } from './dto/update-plot-assignment-status.dto';
 import { PlotGeometryHistoryEventDto } from './dto/plot-geometry-history-response.dto';
+import { PlotReviewDecisionDto } from './dto/plot-review-decision.dto';
+import { ConsentService } from '../consent/consent.service';
 import { PlotsService } from './plots.service';
 
 @ApiTags('Plots')
@@ -18,7 +20,10 @@ import { PlotsService } from './plots.service';
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/plots')
 export class PlotsController {
-  constructor(private readonly plotsService: PlotsService) {}
+  constructor(
+    private readonly plotsService: PlotsService,
+    private readonly consentService: ConsentService,
+  ) {}
 
   private requireTenantClaim(req: any) {
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
@@ -60,6 +65,87 @@ export class PlotsController {
     }
   }
 
+  private enforcePlotReviewRole(req: any) {
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (
+      role !== 'exporter' &&
+      role !== 'compliance_manager' &&
+      role !== 'country_reviewer' &&
+      role !== 'admin'
+    ) {
+      throw new ForbiddenException('Not allowed to adjudicate plot reviews');
+    }
+  }
+
+  private async enforcePlotTenantAccess(plotId: string, req: any): Promise<string> {
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    const allowed = await this.consentService.canTenantAccessPlot(plotId, tenantId);
+    if (!allowed) {
+      throw new ForbiddenException('CONSENT_REQUIRED');
+    }
+    return tenantId;
+  }
+
+  @Get('review-queue')
+  @ApiOperation({
+    summary: 'List plots awaiting compliance review for the active tenant',
+    description:
+      'Returns plots in under_review, degradation_risk, or deforestation_detected with ground-truth photo verification summary.',
+  })
+  async listReviewQueue(@Req() req: any) {
+    this.requireTenantClaim(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (role === 'farmer' || role === 'agent') {
+      throw new ForbiddenException('Not allowed');
+    }
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (!tenantId) {
+      throw new ForbiddenException('Missing tenant claim in app_metadata');
+    }
+    return this.plotsService.listReviewQueue(tenantId, (plotId) =>
+      this.consentService.canTenantAccessPlot(plotId, tenantId),
+    );
+  }
+
+  @Post(':id/clear-review')
+  @ApiOperation({
+    summary: 'Manually clear a plot compliance review to compliant',
+    description:
+      'Human adjudication path for under_review/degradation_risk/deforestation_detected plots. Writes plot_review_cleared audit event.',
+  })
+  async clearPlotReview(
+    @Param('id') id: string,
+    @Body() dto: PlotReviewDecisionDto,
+    @Req() req: any,
+  ) {
+    this.requireTenantClaim(req);
+    this.enforcePlotReviewRole(req);
+    await this.enforcePlotTenantAccess(id, req);
+    const userId = req.user?.id as string | undefined;
+    return this.plotsService.clearPlotReview(id, dto, userId);
+  }
+
+  @Post(':id/uphold-review')
+  @ApiOperation({
+    summary: 'Uphold or escalate a plot compliance review block',
+    description:
+      'Keeps or escalates a blocked plot after human review. Writes plot_review_upheld audit event.',
+  })
+  async upholdPlotReview(
+    @Param('id') id: string,
+    @Body() dto: PlotReviewDecisionDto,
+    @Req() req: any,
+  ) {
+    this.requireTenantClaim(req);
+    this.enforcePlotReviewRole(req);
+    await this.enforcePlotTenantAccess(id, req);
+    const userId = req.user?.id as string | undefined;
+    return this.plotsService.upholdPlotReview(id, dto, userId);
+  }
+
   @Post()
   async create(@Body() dto: CreatePlotDto, @Req() req: any) {
     this.requireTenantClaim(req);
@@ -92,7 +178,9 @@ export class PlotsController {
       if (!tenantId) {
         throw new ForbiddenException('Missing tenant claim in app_metadata');
       }
-      return this.plotsService.listForTenant(tenantId);
+      return this.plotsService.listForTenant(tenantId, (plotId) =>
+        this.consentService.canTenantAccessPlot(plotId, tenantId),
+      );
     }
 
     const scopedFarmerId = farmerId?.trim();
@@ -108,6 +196,23 @@ export class PlotsController {
       if (!owned) {
         throw new ForbiddenException('Farmer scope violation');
       }
+    } else {
+      const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+      if (!tenantId) {
+        throw new ForbiddenException('Missing tenant claim in app_metadata');
+      }
+      const plots = await this.plotsService.listByFarmer(scopedFarmerId);
+      const allowedPlots = await Promise.all(
+        plots.map(async (plot) => ({
+          plot,
+          allowed: await this.consentService.canTenantAccessPlot(plot.id as string, tenantId),
+        })),
+      );
+      const filtered = allowedPlots.filter((row) => row.allowed).map((row) => row.plot);
+      if (filtered.length === 0 && plots.length > 0) {
+        throw new ForbiddenException('CONSENT_REQUIRED');
+      }
+      return filtered;
     }
     return this.plotsService.listByFarmer(scopedFarmerId);
   }
@@ -377,7 +482,7 @@ export class PlotsController {
   @ApiOperation({
     summary: 'Run a Global Forest Watch (GFW) check for a plot',
     description:
-      'Runs a GFW Data API query for the plot geometry and writes an immutable gfw_check_run event to the audit log.',
+      'Runs a post-cutoff GFW alert query for the plot geometry, updates plot.status from the screening result (merged with overlap flags), and writes an immutable gfw_check_run audit event.',
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async runGfwCheck(@Param('id') id: string, @Req() req: any) {
@@ -417,6 +522,17 @@ export class PlotsController {
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async complianceHistory(@Param('id') id: string) {
     return this.plotsService.getComplianceHistory(id);
+  }
+
+  @Get(':id/tenure-verification')
+  @ApiOperation({
+    summary: 'List AI tenure parse results for plot evidence files',
+    description:
+      'Returns async parse status and structured extraction for tenure_evidence uploads (producer-in-possession path).',
+  })
+  @ApiParam({ name: 'id', description: 'Plot ID' })
+  async tenureVerification(@Param('id') id: string) {
+    return this.plotsService.listTenureVerification(id);
   }
 
   @Get(':id/deforestation-decision-history')

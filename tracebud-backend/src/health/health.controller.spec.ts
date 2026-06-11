@@ -6,6 +6,7 @@ describe('HealthController', () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     delete process.env.BENCHMARK_ADMIN_ROLE_CLAIMS;
+    process.env.GFW_API_KEY = 'test-gfw-key';
   });
 
   afterEach(() => {
@@ -25,6 +26,15 @@ describe('HealthController', () => {
           requiredClaims: ['ADMIN', 'COMPLIANCE_MANAGER'],
         },
       }),
+    );
+  });
+
+  it('warns when GFW_API_KEY is missing', () => {
+    delete process.env.GFW_API_KEY;
+    const controller = new HealthController();
+    const result = controller.getHealth();
+    expect(result.warnings).toContain(
+      'GFW_API_KEY is not configured; plot deforestation screening will stay pending_check until set.',
     );
   });
 

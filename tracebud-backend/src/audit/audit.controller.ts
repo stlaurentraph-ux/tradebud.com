@@ -111,6 +111,21 @@ export class AuditController {
     const role = deriveRoleFromSupabaseUser(req.user);
     const eventType = dto.eventType?.trim() ?? '';
     const isDashboardEvent = eventType.startsWith('dashboard_');
+    if (eventType === 'offline_declaration_bundle' && role !== 'farmer') {
+      throw new ForbiddenException(
+        'Producer declaration bundles may only be submitted by the farmer app account',
+      );
+    }
+    const payloadSchema =
+      typeof dto.payload?.schema === 'string' ? dto.payload.schema.trim() : '';
+    if (
+      payloadSchema === 'tracebud.offline.declaration_bundle.v1' &&
+      role !== 'farmer'
+    ) {
+      throw new ForbiddenException(
+        'Personal portability exports cannot be ingested by organisations; use consent grants and plot sync',
+      );
+    }
     if (
       !isDashboardEvent &&
       role !== 'farmer' &&

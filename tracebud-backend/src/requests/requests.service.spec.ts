@@ -15,8 +15,11 @@ function createRequestsService(pool: unknown) {
       skippedSelfTenant: 0,
     }),
   };
+  const consentService = {
+    canTenantAccessFarmerEvidence: jest.fn().mockResolvedValue(true),
+  };
   return {
-    service: new RequestsService(pool as any, inboxService as any),
+    service: new RequestsService(pool as any, inboxService as any, consentService as any),
     inboxService,
   };
 }

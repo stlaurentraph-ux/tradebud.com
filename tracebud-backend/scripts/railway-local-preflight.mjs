@@ -52,6 +52,11 @@ const required = [
     sources: ['SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'EXPO_PUBLIC_SUPABASE_ANON_KEY'],
     hint: 'Supabase → Settings → API → anon public',
   },
+  {
+    railway: 'GFW_API_KEY',
+    sources: ['GFW_API_KEY'],
+    hint: 'https://data-api.globalforestwatch.org/user/login → API keys',
+  },
 ];
 
 loadEnvFile(path.join(backendRoot, '.env'));
@@ -81,6 +86,7 @@ for (const item of required) {
 
 console.log('Also set in Railway:');
 console.log('  NODE_ENV=production');
+console.log('  GFW_BASE_URL, GFW_DATASET, GFW_RADD_DATASET (or run: npm run railway:sync:gfw)');
 console.log('(PORT is injected by Railway; do not set EXPO_PUBLIC_* on the API service.)\n');
 
 if (process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1') {
@@ -92,5 +98,7 @@ if (!ok) {
   process.exit(1);
 }
 
-console.log('Local preflight passed. Copy the three secrets into Railway → Variables, then deploy.');
+console.log('Local preflight passed. Copy secrets into Railway → Variables, then deploy.');
+console.log('GFW sync shortcut (after railway login + link): npm run railway:sync:gfw');
+console.log('Verify GFW: npm run check:gfw');
 console.log('Guide: tracebud-backend/RAILWAY_QUICKSTART.md');

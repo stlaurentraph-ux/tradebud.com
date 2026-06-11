@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Pool } from 'pg';
+import { BillingSubscriptionBandService } from '../billing/billing-subscription-band.service';
+import { MANAGED_CONTACT_ACTIVE_STATUSES } from '../billing/billing-subscription-pricing';
 import { PG_POOL } from '../db/db.module';
 
 export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
@@ -30,7 +32,10 @@ export interface ContactRecord {
 
 @Injectable()
 export class ContactsService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly subscriptionBandService: BillingSubscriptionBandService,
+  ) {}
 
   private mapDatabaseError(error: unknown): never {
     const pgError = error as { code?: string; message?: string } | null;
@@ -99,6 +104,24 @@ export class ContactsService {
     }
 
     try {
+      const existingRes = await this.pool.query<Pick<ContactRecord, 'status'>>(
+        `
+          SELECT status
+          FROM crm_contacts
+          WHERE tenant_id = $1
+            AND email = $2
+          LIMIT 1
+        `,
+        [tenantId, email],
+      );
+      const existingStatus = existingRes.rows[0]?.status;
+      const existingCounts =
+        existingStatus != null &&
+        (MANAGED_CONTACT_ACTIVE_STATUSES as readonly string[]).includes(existingStatus);
+      if (!existingCounts) {
+        await this.subscriptionBandService.assertCanAddContacts(tenantId, 1);
+      }
+
       const result = await this.pool.query<ContactRecord>(
         `
           INSERT INTO crm_contacts (
@@ -164,6 +187,13 @@ export class ContactsService {
       }
       if (!transitions[current.status].includes(nextStatus)) {
         throw new BadRequestException(`Invalid status transition from ${current.status} to ${nextStatus}.`);
+      }
+
+      const activatingManagedContact =
+        !(MANAGED_CONTACT_ACTIVE_STATUSES as readonly string[]).includes(current.status) &&
+        (MANAGED_CONTACT_ACTIVE_STATUSES as readonly string[]).includes(nextStatus);
+      if (activatingManagedContact) {
+        await this.subscriptionBandService.assertCanAddContacts(tenantId, 1);
       }
 
       const result = await this.pool.query<ContactRecord>(

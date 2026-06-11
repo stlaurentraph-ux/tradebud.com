@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsIn, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+
+const PRODUCTION_SYSTEMS = ['monoculture', 'agroforestry', 'shade_grown', 'silvopasture'] as const;
 
 export class CreatePlotDto {
   @ApiProperty()
@@ -48,5 +50,15 @@ export class CreatePlotDto {
   @IsOptional()
   @IsArray()
   landTitlePhotos?: any[];
+
+  @ApiProperty({
+    required: false,
+    enum: PRODUCTION_SYSTEMS,
+    description: 'How the plot is farmed (context for deforestation review).',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn([...PRODUCTION_SYSTEMS])
+  productionSystem?: (typeof PRODUCTION_SYSTEMS)[number];
 }
 

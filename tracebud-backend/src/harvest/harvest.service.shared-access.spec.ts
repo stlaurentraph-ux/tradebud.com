@@ -1,3 +1,4 @@
+import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { HarvestService } from './harvest.service';
 
 describe('HarvestService shared package access', () => {
@@ -12,7 +13,7 @@ describe('HarvestService shared package access', () => {
       }
       return { rows: [] };
     });
-    const service = new HarvestService({ query } as any);
+    const service = new HarvestService({ query } as any, createBillingServiceMock());
     await expect(service.canReadPackageForTenant('pkg_1', 'tenant_exporter')).resolves.toBe(true);
   });
 
@@ -30,7 +31,7 @@ describe('HarvestService shared package access', () => {
       }
       return { rows: [] };
     });
-    const service = new HarvestService({ query } as any);
+    const service = new HarvestService({ query } as any, createBillingServiceMock());
     await expect(service.canReadPackageForTenant('pkg_shared', 'tenant_importer')).resolves.toBe(true);
   });
 });

@@ -1,5 +1,7 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
+import { BillingService } from '../billing/billing.service';
+import { isPlotDeforestationFreeVerified } from '../compliance/plot-compliance-status';
 import { isFarmerInTenant, resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
@@ -88,8 +90,19 @@ export interface DdsPackageListItem {
   traces_reference?: string | null;
   plot_count: number;
   compliant_plot_count: number;
+  total_kg: number;
   sender_tenant_id?: string;
   sender_org?: string;
+}
+
+export const SHIPMENT_WEIGHT_EPSILON_KG = 0.001;
+
+export interface ShipmentWeightValidationResult {
+  ok: boolean;
+  covered_quantity_kg: number;
+  declared_quantity_kg: number;
+  package_weights: Array<{ package_id: string; total_kg: number }>;
+  error?: string;
 }
 
 export type DdsPackageEvidenceDocument = DdsPackageEvidenceDocumentDto;
@@ -111,9 +124,34 @@ type DdsPackageFilingPreflightAuditPhase = 'requested' | 'evaluated' | 'blocked'
 type DdsPackageGenerationAuditPhase = 'requested' | 'generated';
 type DdsPackageSubmissionAuditPhase = 'requested' | 'accepted' | 'replayed';
 
+export interface CreateDdsPackageContext {
+  tenantId?: string;
+  userId?: string;
+}
+
+export interface TenantHarvestVoucherRow {
+  id: string;
+  farmer_id: string;
+  transaction_id: string;
+  qr_code_ref: string;
+  status: string | null;
+  created_at: string;
+  plot_id: string | null;
+  plot_name: string | null;
+  plot_status: string | null;
+  kg: number | null;
+  harvest_date: string | null;
+  dds_package_id: string | null;
+  dds_package_status: string | null;
+  eligible_for_package: boolean;
+}
+
 @Injectable()
 export class HarvestService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly billingService: BillingService,
+  ) {}
 
   async create(dto: CreateHarvestDto, userId: string | undefined) {
     const { farmerId, plotId, kg, harvestDate, note, hlcTimestamp, clientEventId } = dto;
@@ -302,6 +340,47 @@ export class HarvestService {
     return res.rows;
   }
 
+  async listVouchersForTenant(tenantId: string): Promise<TenantHarvestVoucherRow[]> {
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    if (farmerIds.length === 0) {
+      return [];
+    }
+
+    const res = await this.pool.query<TenantHarvestVoucherRow>(
+      `
+        SELECT
+          v.id,
+          v.farmer_id,
+          v.transaction_id,
+          v.qr_code_ref,
+          v.status,
+          v.created_at,
+          tx.plot_id,
+          p.name AS plot_name,
+          p.status AS plot_status,
+          tx.kg,
+          tx.harvest_date,
+          dpv.dds_package_id,
+          dp.status AS dds_package_status,
+          (
+            dpv.dds_package_id IS NULL
+            AND tx.plot_id IS NOT NULL
+            AND COALESCE(p.status, '') IN ('verified', 'compliant')
+          ) AS eligible_for_package
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        LEFT JOIN dds_package dp ON dp.id = dpv.dds_package_id
+        WHERE v.farmer_id = ANY($1::uuid[])
+        ORDER BY v.created_at DESC
+      `,
+      [farmerIds],
+    );
+
+    return res.rows;
+  }
+
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
     const res = await this.pool.query(
       `
@@ -368,23 +447,75 @@ export class HarvestService {
     };
   }
 
-  async createDdsPackage(dto: CreateDdsPackageDto) {
+  async createDdsPackage(dto: CreateDdsPackageDto, context: CreateDdsPackageContext = {}) {
     const { voucherIds, label } = dto;
+    const { tenantId, userId } = context;
 
-    const vouchersRes = await this.pool.query(
+    const vouchersRes = await this.pool.query<{
+      id: string;
+      farmer_id: string;
+      dds_package_id: string | null;
+      plot_id: string | null;
+      plot_name: string | null;
+      plot_status: string | null;
+    }>(
       `
-        SELECT id, farmer_id
-        FROM voucher
-        WHERE id = ANY($1::uuid[])
+        SELECT
+          v.id,
+          v.farmer_id,
+          dpv.dds_package_id,
+          tx.plot_id,
+          p.name AS plot_name,
+          p.status AS plot_status
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        WHERE v.id = ANY($1::uuid[])
       `,
       [voucherIds],
     );
 
-    if (vouchersRes.rowCount === 0) {
-      throw new BadRequestException('No vouchers found for given IDs');
+    if (vouchersRes.rowCount === 0 || vouchersRes.rows.length !== voucherIds.length) {
+      throw new BadRequestException('One or more vouchers were not found');
     }
 
-    const farmerId = vouchersRes.rows[0].farmer_id as string;
+    const alreadyPackaged = vouchersRes.rows.filter((row) => row.dds_package_id);
+    if (alreadyPackaged.length > 0) {
+      throw new BadRequestException('One or more vouchers are already linked to a package');
+    }
+
+    const ineligiblePlots = vouchersRes.rows.filter(
+      (row) => !row.plot_id || !isPlotDeforestationFreeVerified(row.plot_status),
+    );
+    if (ineligiblePlots.length > 0) {
+      const plotLabels = ineligiblePlots
+        .map((row) => row.plot_name?.trim() || row.plot_id || 'unknown plot')
+        .join(', ');
+      throw new BadRequestException(
+        `One or more vouchers are not from verified deforestation-free plots: ${plotLabels}`,
+      );
+    }
+
+    const uniqueFarmerIds = [...new Set(vouchersRes.rows.map((row) => row.farmer_id))];
+
+    if (tenantId) {
+      for (const scopedFarmerId of uniqueFarmerIds) {
+        const inTenant = await isFarmerInTenant(this.pool, scopedFarmerId, tenantId);
+        if (!inTenant) {
+          throw new ForbiddenException('One or more vouchers are outside your organisation scope');
+        }
+      }
+    } else if (userId) {
+      for (const scopedFarmerId of uniqueFarmerIds) {
+        const owned = await this.isFarmerOwnedByUser(scopedFarmerId, userId);
+        if (!owned) {
+          throw new ForbiddenException('Farmer scope violation');
+        }
+      }
+    }
+
+    const farmerId = [...uniqueFarmerIds].sort()[0];
 
     const pkgRes = await this.pool.query(
       `
@@ -513,7 +644,8 @@ export class HarvestService {
             sf.sender_tenant_id,
             sf.from_org AS sender_org,
             COALESCE(plot_stats.plot_count, 0)::int AS plot_count,
-            COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count
+            COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count,
+            COALESCE(voucher_weight_stats.total_kg, 0)::numeric AS total_kg
           FROM dds_package dp
           INNER JOIN sender_farmers sf ON sf.farmer_id = dp.farmer_id
           LEFT JOIN LATERAL (
@@ -529,6 +661,13 @@ export class HarvestService {
             JOIN plot p ON p.id = ht.plot_id
             WHERE dpv.dds_package_id = dp.id
           ) plot_stats ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT COALESCE(SUM(ht.kg), 0) AS total_kg
+            FROM dds_package_voucher dpv
+            JOIN voucher v ON v.id = dpv.voucher_id
+            JOIN harvest_transaction ht ON ht.id = v.transaction_id
+            WHERE dpv.dds_package_id = dp.id
+          ) voucher_weight_stats ON TRUE
           ORDER BY dp.created_at DESC
         `,
         [recipientTenantId],
@@ -558,7 +697,8 @@ export class HarvestService {
           dp.created_at,
           dp.traces_reference,
           COALESCE(plot_stats.plot_count, 0)::int AS plot_count,
-          COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count
+          COALESCE(plot_stats.compliant_plot_count, 0)::int AS compliant_plot_count,
+          COALESCE(voucher_weight_stats.total_kg, 0)::numeric AS total_kg
         FROM dds_package dp
         LEFT JOIN LATERAL (
           SELECT
@@ -573,6 +713,13 @@ export class HarvestService {
           JOIN plot p ON p.id = ht.plot_id
           WHERE dpv.dds_package_id = dp.id
         ) plot_stats ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(SUM(ht.kg), 0) AS total_kg
+          FROM dds_package_voucher dpv
+          JOIN voucher v ON v.id = dpv.voucher_id
+          JOIN harvest_transaction ht ON ht.id = v.transaction_id
+          WHERE dpv.dds_package_id = dp.id
+        ) voucher_weight_stats ON TRUE
         WHERE dp.farmer_id = ANY($1::uuid[])
         ORDER BY dp.created_at DESC
       `,
@@ -628,6 +775,87 @@ export class HarvestService {
     return {
       package: pkgRes.rows[0],
       vouchers: vouchersRes.rows,
+    };
+  }
+
+  async validateShipmentDeclaredWeight(
+    tenantId: string,
+    packageIds: string[],
+    declaredQuantityKg: number,
+  ): Promise<ShipmentWeightValidationResult> {
+    const uniquePackageIds = [...new Set(packageIds.map((id) => id.trim()).filter(Boolean))];
+    if (uniquePackageIds.length === 0) {
+      throw new BadRequestException('At least one batch is required for shipment weight validation.');
+    }
+    if (!Number.isFinite(declaredQuantityKg) || declaredQuantityKg <= 0) {
+      throw new BadRequestException('Declared shipment weight must be a positive number.');
+    }
+
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    if (farmerIds.length === 0) {
+      throw new ForbiddenException('No producers found for this tenant.');
+    }
+
+    const weightRes = await this.pool.query<{ id: string; farmer_id: string; total_kg: string }>(
+      `
+        SELECT
+          dp.id,
+          dp.farmer_id,
+          COALESCE(SUM(ht.kg), 0)::numeric AS total_kg
+        FROM dds_package dp
+        LEFT JOIN dds_package_voucher dpv ON dpv.dds_package_id = dp.id
+        LEFT JOIN voucher v ON v.id = dpv.voucher_id
+        LEFT JOIN harvest_transaction ht ON ht.id = v.transaction_id
+        WHERE dp.id = ANY($1::uuid[])
+        GROUP BY dp.id, dp.farmer_id
+      `,
+      [uniquePackageIds],
+    );
+
+    if (weightRes.rowCount !== uniquePackageIds.length) {
+      throw new BadRequestException('One or more selected batches were not found.');
+    }
+
+    const outOfScope = weightRes.rows.filter((row) => !farmerIds.includes(row.farmer_id));
+    if (outOfScope.length > 0) {
+      throw new ForbiddenException('One or more selected batches are outside your tenant scope.');
+    }
+
+    const packageWeights = weightRes.rows.map((row) => ({
+      package_id: row.id,
+      total_kg: Number(row.total_kg),
+    }));
+    const coveredQuantityKg = packageWeights.reduce(
+      (sum, row) => sum + (Number.isFinite(row.total_kg) ? row.total_kg : 0),
+      0,
+    );
+
+    if (coveredQuantityKg <= 0) {
+      return {
+        ok: false,
+        covered_quantity_kg: coveredQuantityKg,
+        declared_quantity_kg: declaredQuantityKg,
+        package_weights: packageWeights,
+        error: 'Selected batches have no harvest weight recorded on their vouchers.',
+      };
+    }
+
+    const weightDelta = Math.abs(declaredQuantityKg - coveredQuantityKg);
+    if (weightDelta > SHIPMENT_WEIGHT_EPSILON_KG) {
+      return {
+        ok: false,
+        covered_quantity_kg: coveredQuantityKg,
+        declared_quantity_kg: declaredQuantityKg,
+        package_weights: packageWeights,
+        error: `Declared shipment weight (${declaredQuantityKg} kg) must match batch lineage total (${coveredQuantityKg} kg).`,
+      };
+    }
+
+    return {
+      ok: true,
+      covered_quantity_kg: coveredQuantityKg,
+      declared_quantity_kg: declaredQuantityKg,
+      package_weights: packageWeights,
     };
   }
 
@@ -702,10 +930,33 @@ export class HarvestService {
     return result;
   }
 
+  private async resolveShipmentHeaderIdForPackage(packageId: string): Promise<string | null> {
+    try {
+      const res = await this.pool.query<{ shipment_header_id: string }>(
+        `
+          SELECT shipment_header_id::text
+          FROM shipment_header_packages
+          WHERE dds_package_id = $1::uuid
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+        [packageId],
+      );
+      return res.rows[0]?.shipment_header_id ?? null;
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async submitDdsPackage(
     id: string,
     idempotencyKey: string,
     context: DdsPackageRiskScoreAuditContext,
+    options?: { meterDestinationSubmit?: boolean },
   ): Promise<SubmitDdsPackageResult> {
     const key = String(idempotencyKey ?? '').trim();
     if (!key) {
@@ -778,6 +1029,35 @@ export class HarvestService {
       persistedAt: new Date().toISOString(),
     };
     await this.appendPackageSubmissionAuditEvent(id, key, context, 'accepted', result);
+
+    if (options?.meterDestinationSubmit && context.tenantId) {
+      const shipmentHeaderId = await this.resolveShipmentHeaderIdForPackage(id);
+      if (!shipmentHeaderId) {
+        throw new BadRequestException(
+          'Destination billing requires the batch to be linked to a sealed shipment header.',
+        );
+      }
+      const sealedRes = await this.pool.query<{ status: string }>(
+        `
+          SELECT status
+          FROM shipment_headers
+          WHERE id = $1::uuid
+            AND tenant_id = $2
+          LIMIT 1
+        `,
+        [shipmentHeaderId, context.tenantId],
+      );
+      const status = sealedRes.rows[0]?.status;
+      if (!status || !['SEALED', 'SUBMITTED', 'ACCEPTED'].includes(status)) {
+        throw new BadRequestException('Destination DDS submit requires a sealed upstream shipment.');
+      }
+      await this.billingService.recordDestinationSubmitMeter(
+        context.tenantId,
+        shipmentHeaderId,
+        id,
+      );
+    }
+
     return result;
   }
 

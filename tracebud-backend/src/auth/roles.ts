@@ -1,4 +1,11 @@
-export type AppRole = 'farmer' | 'agent' | 'exporter' | 'admin' | 'compliance_manager';
+export type AppRole =
+  | 'farmer'
+  | 'agent'
+  | 'exporter'
+  | 'cooperative'
+  | 'admin'
+  | 'compliance_manager'
+  | 'country_reviewer';
 
 function parseClaimRole(user: any): AppRole | null {
   const rawClaimRole = (user?.app_metadata?.role as string | undefined) ?? '';
@@ -13,8 +20,14 @@ function parseClaimRole(user: any): AppRole | null {
   if (claimRole === 'compliance_manager' || claimRole === 'compliance-manager') {
     return 'compliance_manager';
   }
+  if (claimRole === 'country_reviewer' || claimRole === 'country-reviewer') {
+    return 'country_reviewer';
+  }
   if (claimRole === 'exporter') {
     return 'exporter';
+  }
+  if (claimRole === 'cooperative' || claimRole === 'coop') {
+    return 'cooperative';
   }
   if (claimRole === 'agent') {
     return 'agent';

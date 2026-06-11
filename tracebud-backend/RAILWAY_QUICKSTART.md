@@ -30,6 +30,22 @@ Use the **transaction** or **session** pooler URL; not the service role key in `
 | `DATABASE_URL` | from Supabase (pooler URI) |
 | `SUPABASE_URL` | `https://uzsktajlnofosxeqwdwl.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
+| `GFW_API_KEY` | GFW Data API key (deforestation screening) |
+| `GFW_BASE_URL` | `https://data-api.globalforestwatch.org` |
+| `GFW_DATASET` | `gfw_integrated_alerts` |
+| `GFW_RADD_DATASET` | `umd_glad_dist_alerts` |
+
+Shortcut after login + link (copies from local `tracebud-backend/.env`):
+
+```bash
+cd tracebud-backend   # skip if you are already in this folder
+npx @railway/cli login
+npx @railway/cli link -p dynamic-perception -s tradebud.com
+npm run railway:sync:gfw
+```
+
+`-s tradebud.com` selects the API service (`api.tracebud.com`) without the interactive picker.
+Do not paste shell comments on the same line as `railway link` — `#` is passed as an argument.
 
 5. **Deploy** (or push to `main` if auto-deploy is on).
 6. **Settings** → **Networking** → generate **Public domain** if none yet.
@@ -42,7 +58,13 @@ Replace with your Railway URL:
 npm run check:deploy-health -- "https://YOUR-SERVICE.up.railway.app"
 ```
 
-Expect: `OK …/api/health`
+Expect: `OK …/api/health` (no `GFW_API_KEY` warning in JSON).
+
+Verify GFW credentials locally before/after Railway sync:
+
+```bash
+npm run check:gfw
+```
 
 ## 3) Custom domain + Namecheap
 
@@ -64,7 +86,17 @@ curl -sS -X POST "https://api.tracebud.com/api/v1/launch/onboarding/remind-incom
 ```
 
 Railway **Cron** or external scheduler: run once per day. Requires `RESEND_*`, `LAUNCH_ONBOARDING_CRON_TOKEN`, and `SUPABASE_SERVICE_ROLE_KEY` for magic-link resume URLs.
+
+### Month-end billing cron (optional)
+
+Run on the **1st of each month** (UTC) to finalize the **previous** calendar month:
+
+```bash
+curl -sS -X POST "https://api.tracebud.com/api/v1/billing/invoices/finalize-period-cron" \
+  -H "x-tracebud-billing-token: YOUR_BILLING_SCHEDULER_TOKEN"
 ```
+
+Requires `BILLING_SCHEDULER_TOKEN`. Optional `STRIPE_SECRET_KEY` + per-tenant `tenant_billing_subscription.stripe_customer_id` for card charges.
 
 ## 4) Clients
 

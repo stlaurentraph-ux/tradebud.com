@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { HarvestService } from './harvest.service';
 import { PlotsService } from '../plots/plots.service';
 
@@ -56,7 +57,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
       )
     `);
 
-    harvestService = new HarvestService(pool);
+    harvestService = new HarvestService(pool, createBillingServiceMock());
     plotsService = new PlotsService(pool, {} as any);
   }, 20_000);
 

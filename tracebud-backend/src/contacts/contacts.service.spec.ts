@@ -1,12 +1,23 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BillingSubscriptionBandService } from '../billing/billing-subscription-band.service';
 import { ContactsService } from './contacts.service';
+
+function createBandServiceMock(): BillingSubscriptionBandService {
+  return {
+    assertCanAddContacts: jest.fn().mockResolvedValue(undefined),
+  } as unknown as BillingSubscriptionBandService;
+}
+
+function makeContactsService(pool: unknown): ContactsService {
+  return new ContactsService(pool as any, createBandServiceMock());
+}
 
 describe('ContactsService', () => {
   it('returns actionable migration error when crm_contacts table is missing', async () => {
     const pool = {
       query: jest.fn().mockRejectedValue({ code: '42P01', message: 'relation "crm_contacts" does not exist' }),
     };
-    const service = new ContactsService(pool as any);
+    const service = makeContactsService(pool);
 
     await expect(service.list('tenant_1')).rejects.toThrow(
       'Contacts tables are not available. Apply TB-V16-024 migration first.',
@@ -17,6 +28,7 @@ describe('ContactsService', () => {
     const pool = {
       query: jest
         .fn()
+        .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({
           rows: [
             {
@@ -39,7 +51,7 @@ describe('ContactsService', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const service = new ContactsService(pool as any);
+    const service = makeContactsService(pool);
 
     const created = await service.create('tenant_1', {
       full_name: 'Jane Doe',
@@ -55,7 +67,7 @@ describe('ContactsService', () => {
       status: 'new',
       country: 'BR',
     });
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(pool.query).toHaveBeenCalledTimes(3);
     expect(pool.query).toHaveBeenLastCalledWith(
       expect.stringContaining('INSERT INTO audit_log'),
       expect.arrayContaining(['contact_created_or_updated']),
@@ -76,7 +88,7 @@ describe('ContactsService', () => {
         ],
       }),
     };
-    const service = new ContactsService(pool as any);
+    const service = makeContactsService(pool);
 
     await expect(service.updateStatus('tenant_1', 'contact_1', 'submitted')).rejects.toBeInstanceOf(
       BadRequestException,
@@ -129,7 +141,7 @@ describe('ContactsService', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const service = new ContactsService(pool as any);
+    const service = makeContactsService(pool);
 
     const updated = await service.updateStatus('tenant_1', 'contact_1', 'engaged');
 
@@ -145,7 +157,7 @@ describe('ContactsService', () => {
     const pool = {
       query: jest.fn().mockResolvedValue({ rows: [] }),
     };
-    const service = new ContactsService(pool as any);
+    const service = makeContactsService(pool);
 
     await expect(service.updateStatus('tenant_1', 'contact_missing', 'invited')).rejects.toBeInstanceOf(
       NotFoundException,

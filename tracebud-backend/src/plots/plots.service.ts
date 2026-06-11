@@ -11,6 +11,23 @@ import { UpdatePlotDto } from './dto/update-plot.dto';
 import { UpdatePlotGeometryDto } from './dto/update-plot-geometry.dto';
 import { PlotGeometryHistoryEventDto } from './dto/plot-geometry-history-response.dto';
 import { GfwService } from '../compliance/gfw.service';
+import {
+  buildGroundTruthPhotoVerification,
+  type GroundTruthPhotoVerification,
+} from '../compliance/ground-truth-photo-verification';
+import { TenureParseService } from './tenure-parse.service';
+import {
+  applyReviewClearanceGate,
+  EUDR_DEFORESTATION_CUTOFF,
+  gfwSummaryToPlotStatus,
+  gfwSummaryToSignalTier,
+  mergePlotComplianceStatus,
+  overlapToPlotStatus,
+  type DeforestationScreeningSnapshot,
+  type GfwAlertSummary,
+  type PlotComplianceStatus,
+  verdictToPlotStatus,
+} from '../compliance/plot-compliance-status';
 
 export interface PlotGeometryHistoryPage {
   items: PlotGeometryHistoryEventDto[];
@@ -81,6 +98,7 @@ export class PlotsService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly gfw: GfwService,
+    private readonly tenureParse: TenureParseService,
   ) {}
 
   private static parseNumeric(value: unknown): number | null {
@@ -235,6 +253,7 @@ export class PlotsService {
       clientPlotId,
       cadastralKey,
       landTitlePhotos,
+      productionSystem,
     } = createDto;
 
     await this.ensureFarmerProfileForPlot(farmerId, userId);
@@ -320,7 +339,8 @@ export class PlotsService {
           area_ha,
           declared_area_ha,
           precision_m_at_capture,
-          hdop_at_capture
+          hdop_at_capture,
+          production_system
         )
         SELECT
           $1,
@@ -332,7 +352,8 @@ export class PlotsService {
           ST_Area(v.geom::geography) / 10000.0,
           $4,
           $5,
-          $6
+          $6,
+          $8
         FROM validated v
         WHERE (
           $7::text <> 'polygon'
@@ -361,6 +382,7 @@ export class PlotsService {
       precisionMeters ?? null,
       hdop ?? null,
       kind,
+      productionSystem ?? null,
     ]);
 
     if (result.rowCount === 0 && kind === 'polygon') {
@@ -437,7 +459,15 @@ export class PlotsService {
       ],
     );
 
+    void this.scheduleDeforestationScreening(row.id, userId);
+
     return row;
+  }
+
+  private scheduleDeforestationScreening(plotId: string, userId: string | undefined): void {
+    void this.runGfwCheck(plotId, userId).catch(() => {
+      // Screening failures are audited inside runGfwCheck; plot creation must not fail.
+    });
   }
 
   async syncPhotos(plotId: string, dto: SyncPlotPhotosDto, userId: string | undefined) {
@@ -476,6 +506,16 @@ export class PlotsService {
         }),
       ],
     );
+
+    if (dto.kind === 'ground_truth') {
+      const plotRow = await this.getPlotStatusRow(plotId).catch(() => null);
+      const verification = await this.verifyGroundTruthPhotosOnPlot(plotId, photosArray);
+      if (plotRow?.status === 'under_review' && verification.clearanceEligible) {
+        void this.runGfwCheck(plotId, userId).catch(() => {
+          // Re-screen after geo-verified photo gate; failures are audited in runGfwCheck.
+        });
+      }
+    }
 
     return { ok: true };
   }
@@ -561,7 +601,13 @@ export class PlotsService {
       ],
     );
 
+    await this.tenureParse.enqueueFromEvidenceSync(plotId, dto.kind, itemsArray);
+
     return { ok: true };
+  }
+
+  async listTenureVerification(plotId: string) {
+    return this.tenureParse.listForPlot(plotId);
   }
 
   private async getPlotGeometryForCompliance(plotId: string) {
@@ -594,7 +640,7 @@ export class PlotsService {
     return geometry;
   }
 
-  private normalizeGfwResult(result: any): { alertCount: number | null; alertAreaHa: number | null } {
+  private normalizeGfwResult(result: any): GfwAlertSummary {
     // We expect SQL like: SELECT COUNT(*) AS count, SUM(area__ha) AS area_ha FROM data
     if (!result) return { alertCount: null, alertAreaHa: null };
     const r = result?.data ?? result;
@@ -612,52 +658,401 @@ export class PlotsService {
     };
   }
 
-  async runGfwCheck(plotId: string, userId: string | undefined) {
-    const geometry = await this.getPlotGeometryForCompliance(plotId);
+  private async getPlotStatusRow(plotId: string): Promise<{
+    status: PlotComplianceStatus;
+    deforestation_screening: unknown;
+  }> {
+    const res = await this.pool.query(
+      `
+        SELECT status, deforestation_screening
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+    return {
+      status: (res.rows[0].status ?? 'pending_check') as PlotComplianceStatus,
+      deforestation_screening: res.rows[0].deforestation_screening ?? null,
+    };
+  }
 
-    let gfwResult = await this.gfw.runGeometryQuery({ geometry });
+  private async getLatestGroundTruthPhotos(plotId: string): Promise<unknown[]> {
+    const res = await this.pool.query(
+      `
+        SELECT payload
+        FROM audit_log
+        WHERE payload ->> 'plotId' = $1
+          AND event_type = 'plot_photos_synced'
+          AND payload ->> 'kind' = 'ground_truth'
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `,
+      [plotId],
+    );
+    if (res.rowCount === 0) {
+      return [];
+    }
+    const payload = res.rows[0].payload ?? {};
+    const photos = payload.photos;
+    return Array.isArray(photos) ? photos : [];
+  }
+
+  private async verifyGroundTruthPhotosOnPlot(
+    plotId: string,
+    photos: unknown[],
+  ): Promise<GroundTruthPhotoVerification> {
+    const totalCount = photos.length;
+    if (totalCount === 0) {
+      return buildGroundTruthPhotoVerification({
+        totalCount: 0,
+        geoTaggedCount: 0,
+        geoVerifiedCount: 0,
+        timestampVerifiedCount: 0,
+        clearanceVerifiedCount: 0,
+      });
+    }
+
+    const res = await this.pool.query(
+      `
+        WITH photos AS (
+          SELECT elem AS photo
+          FROM jsonb_array_elements($2::jsonb) AS elem
+        ),
+        parsed AS (
+          SELECT
+            photo,
+            COALESCE(
+              NULLIF(photo ->> 'latitude', '')::double precision,
+              NULLIF(photo ->> 'lat', '')::double precision
+            ) AS lat,
+            COALESCE(
+              NULLIF(photo ->> 'longitude', '')::double precision,
+              NULLIF(photo ->> 'lng', '')::double precision,
+              NULLIF(photo ->> 'lon', '')::double precision
+            ) AS lon,
+            CASE
+              WHEN COALESCE(photo ->> 'takenAt', photo ->> 'taken_at', '') ~ '^\\d{10,16}$'
+                THEN to_timestamp(
+                  (COALESCE(photo ->> 'takenAt', photo ->> 'taken_at'))::bigint /
+                  CASE
+                    WHEN length(COALESCE(photo ->> 'takenAt', photo ->> 'taken_at')) > 10 THEN 1000.0
+                    ELSE 1.0
+                  END
+                )
+              WHEN COALESCE(photo ->> 'takenAt', photo ->> 'taken_at', '') <> ''
+                THEN (COALESCE(photo ->> 'takenAt', photo ->> 'taken_at'))::timestamptz
+              ELSE NULL
+            END AS taken_at
+          FROM photos
+        ),
+        plot_row AS (
+          SELECT id, kind, geography, precision_m_at_capture
+          FROM plot
+          WHERE id = $1
+        ),
+        geo_verified AS (
+          SELECT p.*
+          FROM parsed p
+          CROSS JOIN plot_row pr
+          WHERE pr.id IS NOT NULL
+            AND p.lat BETWEEN -90 AND 90
+            AND p.lon BETWEEN -180 AND 180
+            AND (
+              (
+                pr.kind = 'polygon'
+                AND ST_Covers(
+                  pr.geography::geometry,
+                  ST_SetSRID(ST_Point(p.lon, p.lat), 4326)
+                )
+              )
+              OR (
+                pr.kind = 'point'
+                AND ST_DWithin(
+                  pr.geography,
+                  ST_SetSRID(ST_Point(p.lon, p.lat), 4326)::geography,
+                  COALESCE(pr.precision_m_at_capture, 25)
+                )
+              )
+            )
+        )
+        SELECT
+          (SELECT COUNT(*)::int FROM parsed) AS total_count,
+          (
+            SELECT COUNT(*)::int
+            FROM parsed
+            WHERE lat BETWEEN -90 AND 90
+              AND lon BETWEEN -180 AND 180
+          ) AS geo_tagged_count,
+          (SELECT COUNT(*)::int FROM geo_verified) AS geo_verified_count,
+          (
+            SELECT COUNT(*)::int
+            FROM parsed
+            WHERE taken_at IS NOT NULL
+              AND taken_at::date > $3::date
+          ) AS timestamp_verified_count,
+          (
+            SELECT COUNT(*)::int
+            FROM geo_verified
+            WHERE taken_at IS NOT NULL
+              AND taken_at::date > $3::date
+          ) AS clearance_verified_count
+      `,
+      [plotId, JSON.stringify(photos), EUDR_DEFORESTATION_CUTOFF],
+    );
+
+    const row = res.rows[0] ?? {};
+    return buildGroundTruthPhotoVerification({
+      totalCount: Number(row.total_count) || 0,
+      geoTaggedCount: Number(row.geo_tagged_count) || 0,
+      geoVerifiedCount: Number(row.geo_verified_count) || 0,
+      timestampVerifiedCount: Number(row.timestamp_verified_count) || 0,
+      clearanceVerifiedCount: Number(row.clearance_verified_count) || 0,
+    });
+  }
+
+  private async getGroundTruthPhotoVerification(plotId: string): Promise<GroundTruthPhotoVerification> {
+    const photos = await this.getLatestGroundTruthPhotos(plotId);
+    return this.verifyGroundTruthPhotosOnPlot(plotId, photos);
+  }
+
+  private async finalizePlotComplianceStatus(params: {
+    plotId: string;
+    proposedStatus: PlotComplianceStatus;
+    gfwSummary: GfwAlertSummary;
+  }): Promise<{
+    status: PlotComplianceStatus;
+    reviewClearanceBlocked: boolean;
+    groundTruthPhotos: GroundTruthPhotoVerification;
+  }> {
+    const { status: currentStatus } = await this.getPlotStatusRow(params.plotId);
+    const groundTruthPhotos = await this.getGroundTruthPhotoVerification(params.plotId);
+    const status = applyReviewClearanceGate({
+      proposedStatus: params.proposedStatus,
+      currentStatus,
+      clearanceVerifiedGroundTruthPhotoCount: groundTruthPhotos.clearanceVerifiedCount,
+    });
+    return {
+      status,
+      reviewClearanceBlocked: status === 'under_review' && params.proposedStatus === 'compliant',
+      groundTruthPhotos,
+    };
+  }
+
+  private async getPlotOverlapFlags(plotId: string): Promise<{
+    sinaph_overlap: boolean;
+    indigenous_overlap: boolean;
+  }> {
+    const res = await this.pool.query(
+      `
+        SELECT sinaph_overlap, indigenous_overlap
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+    const row = res.rows[0];
+    return {
+      sinaph_overlap: row.sinaph_overlap === true,
+      indigenous_overlap: row.indigenous_overlap === true,
+    };
+  }
+
+  private buildDeforestationScreeningSnapshot(params: {
+    summary: GfwAlertSummary;
+    signalTier: ReturnType<typeof gfwSummaryToSignalTier>;
+    screening: {
+      cutoffDate: string;
+      usedFallback: boolean;
+      gfwResult: Record<string, unknown>;
+    };
+  }): DeforestationScreeningSnapshot {
+    return {
+      cutoffDate: params.screening.cutoffDate,
+      alertCount: params.summary.alertCount,
+      alertAreaHa: params.summary.alertAreaHa,
+      signalTier: params.signalTier,
+      providerMode: params.screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary',
+      dataset: typeof params.screening.gfwResult.dataset === 'string' ? params.screening.gfwResult.dataset : null,
+      version: typeof params.screening.gfwResult.version === 'string' ? params.screening.gfwResult.version : null,
+      screenedAt: new Date().toISOString(),
+    };
+  }
+
+  private async persistPlotComplianceStatus(
+    plotId: string,
+    status: PlotComplianceStatus,
+    screening?: DeforestationScreeningSnapshot | null,
+  ): Promise<void> {
+    if (screening) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET status = $2,
+              deforestation_screening = $3::jsonb,
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [plotId, status, JSON.stringify(screening)],
+      );
+      return;
+    }
+
+    await this.pool.query(
+      `
+        UPDATE plot
+        SET status = $2,
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [plotId, status],
+    );
+  }
+
+  private async queryGfwAlertsForGeometry(
+    geometry: any,
+    cutoffDate: string = EUDR_DEFORESTATION_CUTOFF,
+  ): Promise<{
+    summary: GfwAlertSummary;
+    gfwResult: Record<string, unknown>;
+    usedFallback: boolean;
+    cutoffDate: string;
+    historicalSqlApplied: boolean;
+  }> {
+    let gfwResult: Record<string, unknown> = await this.gfw.runHistoricalDeforestationQuery({
+      geometry,
+      cutoffDate,
+    });
     let summary = this.normalizeGfwResult(gfwResult.result);
     let usedFallback = false;
     if (summary.alertCount == null) {
-      // Fallback to radar-based alerts (better in cloudy tropics).
-      gfwResult = await this.gfw.runRaddFallback({ geometry });
+      gfwResult = {
+        ...(await this.gfw.runRaddFallback({ geometry, cutoffDate })),
+        cutoffDate,
+      };
       summary = this.normalizeGfwResult(gfwResult.result);
       usedFallback = true;
     }
 
-    const status =
-      summary.alertCount == null
-        ? 'unknown'
-        : summary.alertCount === 0
-          ? 'green'
-          : summary.alertAreaHa != null && summary.alertAreaHa < 0.05
-            ? 'amber'
-            : 'red';
+    return {
+      summary,
+      gfwResult,
+      usedFallback,
+      cutoffDate,
+      historicalSqlApplied: Boolean(gfwResult.historicalSqlApplied),
+    };
+  }
 
-    await this.pool.query(
-      `
-        INSERT INTO audit_log (user_id, event_type, payload)
-        VALUES ($1, $2, $3::jsonb)
-      `,
-      [
-        userId ?? null,
-        'gfw_check_run',
-        JSON.stringify({
-          plotId,
-          provider: 'gfw',
-          providerMode: usedFallback ? 'radd_fallback' : 'glad_s2_primary',
-          summary: {
-            status,
-            alertCount: summary.alertCount,
-            alertAreaHa: summary.alertAreaHa,
-          },
-          ...gfwResult,
-          runAt: new Date().toISOString(),
-        }),
-      ],
+  private resolveMergedPlotStatus(params: {
+    gfwSummary: GfwAlertSummary;
+    sinaphOverlap: boolean;
+    indigenousOverlap: boolean;
+  }): PlotComplianceStatus {
+    return mergePlotComplianceStatus(
+      gfwSummaryToPlotStatus(params.gfwSummary),
+      overlapToPlotStatus(params.sinaphOverlap, params.indigenousOverlap),
     );
+  }
 
-    return { ok: true, usedFallback, summary: { status, ...summary }, ...gfwResult };
+  async runGfwCheck(plotId: string, userId: string | undefined) {
+    const geometry = await this.getPlotGeometryForCompliance(plotId);
+    const overlaps = await this.getPlotOverlapFlags(plotId);
+
+    try {
+      const screening = await this.queryGfwAlertsForGeometry(geometry);
+      const signalTier = gfwSummaryToSignalTier(screening.summary);
+      const proposedStatus = this.resolveMergedPlotStatus({
+        gfwSummary: screening.summary,
+        sinaphOverlap: overlaps.sinaph_overlap,
+        indigenousOverlap: overlaps.indigenous_overlap,
+      });
+      const finalized = await this.finalizePlotComplianceStatus({
+        plotId,
+        proposedStatus,
+        gfwSummary: screening.summary,
+      });
+      const plotStatus = finalized.status;
+
+      const screeningSnapshot = this.buildDeforestationScreeningSnapshot({
+        summary: screening.summary,
+        signalTier,
+        screening,
+      });
+
+      await this.persistPlotComplianceStatus(plotId, plotStatus, screeningSnapshot);
+
+      await this.pool.query(
+        `
+          INSERT INTO audit_log (user_id, event_type, payload)
+          VALUES ($1, $2, $3::jsonb)
+        `,
+        [
+          userId ?? null,
+          'gfw_check_run',
+          JSON.stringify({
+            plotId,
+            provider: 'gfw',
+            providerMode: screeningSnapshot.providerMode,
+            cutoffDate: screening.cutoffDate,
+            plotStatus,
+            proposedStatus,
+            reviewClearanceBlocked: finalized.reviewClearanceBlocked,
+            groundTruthPhotos: finalized.groundTruthPhotos,
+            screening: screeningSnapshot,
+            summary: {
+              status: signalTier,
+              alertCount: screening.summary.alertCount,
+              alertAreaHa: screening.summary.alertAreaHa,
+            },
+            ...screening.gfwResult,
+            historicalSqlApplied: screening.historicalSqlApplied,
+            runAt: new Date().toISOString(),
+          }),
+        ],
+      );
+
+      return {
+        ok: true,
+        plotStatus,
+        reviewClearanceBlocked: finalized.reviewClearanceBlocked,
+        groundTruthPhotos: finalized.groundTruthPhotos,
+        usedFallback: screening.usedFallback,
+        cutoffDate: screening.cutoffDate,
+        summary: { status: signalTier, ...screening.summary },
+        ...screening.gfwResult,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.pool.query(
+        `
+          INSERT INTO audit_log (user_id, event_type, payload)
+          VALUES ($1, $2, $3::jsonb)
+        `,
+        [
+          userId ?? null,
+          'gfw_check_failed',
+          JSON.stringify({
+            plotId,
+            provider: 'gfw',
+            cutoffDate: EUDR_DEFORESTATION_CUTOFF,
+            error: message,
+            runAt: new Date().toISOString(),
+          }),
+        ],
+      );
+
+      return {
+        ok: false,
+        plotStatus: 'pending_check' as const,
+        error: message,
+        cutoffDate: EUDR_DEFORESTATION_CUTOFF,
+      };
+    }
   }
 
   async runDeforestationDecision(plotId: string, userId: string | undefined, cutoffDate: string) {
@@ -670,25 +1065,35 @@ export class PlotsService {
     }
 
     const geometry = await this.getPlotGeometryForCompliance(plotId);
-    let gfwResult = await this.gfw.runHistoricalDeforestationQuery({ geometry, cutoffDate });
-    let summary = this.normalizeGfwResult(gfwResult.result);
-    let usedFallback = false;
-    if (summary.alertCount == null) {
-      gfwResult = {
-        ...(await this.gfw.runRaddFallback({ geometry })),
-        cutoffDate,
-        historicalSqlApplied: false,
-      };
-      summary = this.normalizeGfwResult(gfwResult.result);
-      usedFallback = true;
-    }
+    const overlaps = await this.getPlotOverlapFlags(plotId);
+    const screening = await this.queryGfwAlertsForGeometry(geometry, cutoffDate);
 
     const verdict =
-      summary.alertCount == null
+      screening.summary.alertCount == null
         ? 'unknown'
-        : summary.alertCount === 0
+        : screening.summary.alertCount === 0
           ? 'no_deforestation_detected'
           : 'possible_deforestation_detected';
+
+    const proposedStatus = mergePlotComplianceStatus(
+      verdictToPlotStatus(verdict, screening.summary),
+      overlapToPlotStatus(overlaps.sinaph_overlap, overlaps.indigenous_overlap),
+    );
+    const finalized = await this.finalizePlotComplianceStatus({
+      plotId,
+      proposedStatus,
+      gfwSummary: screening.summary,
+    });
+    const plotStatus = finalized.status;
+
+    const signalTier = gfwSummaryToSignalTier(screening.summary);
+    const screeningSnapshot = this.buildDeforestationScreeningSnapshot({
+      summary: screening.summary,
+      signalTier,
+      screening,
+    });
+
+    await this.persistPlotComplianceStatus(plotId, plotStatus, screeningSnapshot);
 
     await this.pool.query(
       `
@@ -699,17 +1104,18 @@ export class PlotsService {
         userId ?? null,
         'plot_deforestation_decision_recorded',
         JSON.stringify({
-          ...(gfwResult as Record<string, unknown>),
+          ...screening.gfwResult,
           plotId,
           provider: 'gfw',
-          providerMode: usedFallback ? 'radd_fallback' : 'glad_s2_primary',
+          providerMode: screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary',
           cutoffDate,
           verdict,
+          plotStatus,
           summary: {
-            alertCount: summary.alertCount,
-            alertAreaHa: summary.alertAreaHa,
+            alertCount: screening.summary.alertCount,
+            alertAreaHa: screening.summary.alertAreaHa,
           },
-          historicalSqlApplied: Boolean((gfwResult as any)?.historicalSqlApplied),
+          historicalSqlApplied: screening.historicalSqlApplied,
           runAt: new Date().toISOString(),
         }),
       ],
@@ -720,17 +1126,18 @@ export class PlotsService {
       plotId,
       cutoffDate,
       verdict,
-      usedFallback,
+      plotStatus,
+      usedFallback: screening.usedFallback,
       summary: {
-        alertCount: summary.alertCount,
-        alertAreaHa: summary.alertAreaHa,
+        alertCount: screening.summary.alertCount,
+        alertAreaHa: screening.summary.alertAreaHa,
       },
-      historicalSqlApplied: Boolean((gfwResult as any)?.historicalSqlApplied),
+      historicalSqlApplied: screening.historicalSqlApplied,
       provider: 'gfw',
-      providerMode: usedFallback ? 'radd_fallback' : 'glad_s2_primary',
+      providerMode: screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary',
       source: {
-        dataset: (gfwResult as any)?.dataset ?? null,
-        version: (gfwResult as any)?.version ?? null,
+        dataset: screening.gfwResult.dataset ?? null,
+        version: screening.gfwResult.version ?? null,
       },
     };
   }
@@ -892,6 +1299,8 @@ export class PlotsService {
           precision_m_at_capture,
           sinaph_overlap,
           indigenous_overlap,
+          production_system,
+          deforestation_screening,
           status,
           created_at
         FROM plot
@@ -904,7 +1313,10 @@ export class PlotsService {
     return result.rows;
   }
 
-  async listForTenant(tenantId: string) {
+  async listForTenant(
+    tenantId: string,
+    canAccessPlot?: (plotId: string, farmerId: string) => Promise<boolean>,
+  ) {
     const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
     if (farmerIds.length === 0) {
       return [];
@@ -931,7 +1343,202 @@ export class PlotsService {
       [farmerIds],
     );
 
-    return result.rows;
+    if (!canAccessPlot) {
+      return result.rows;
+    }
+
+    const allowed: typeof result.rows = [];
+    for (const row of result.rows) {
+      if (await canAccessPlot(row.id as string, row.farmer_id as string)) {
+        allowed.push(row);
+      }
+    }
+    return allowed;
+  }
+
+  async getPlotTenantScope(plotId: string): Promise<{ farmerId: string }> {
+    const res = await this.pool.query(
+      `
+        SELECT farmer_id
+        FROM plot
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+    return { farmerId: res.rows[0].farmer_id as string };
+  }
+
+  async listReviewQueue(
+    tenantId: string,
+    canAccessPlot?: (plotId: string) => Promise<boolean>,
+  ) {
+    const farmerIds = await resolveFarmerIdsForTenant(this.pool, tenantId);
+    if (farmerIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.pool.query(
+      `
+        SELECT
+          p.id,
+          p.farmer_id,
+          p.name,
+          p.kind,
+          p.area_ha,
+          p.status,
+          p.production_system,
+          p.deforestation_screening,
+          p.sinaph_overlap,
+          p.indigenous_overlap,
+          p.updated_at,
+          COALESCE(ua.name, LEFT(fp.id::text, 8)) AS farmer_name
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        LEFT JOIN user_account ua ON ua.id = fp.user_id
+        WHERE p.farmer_id = ANY($1::uuid[])
+          AND p.status IN ('under_review', 'degradation_risk', 'deforestation_detected')
+        ORDER BY
+          CASE p.status
+            WHEN 'deforestation_detected' THEN 0
+            WHEN 'degradation_risk' THEN 1
+            ELSE 2
+          END,
+          p.updated_at DESC
+      `,
+      [farmerIds],
+    );
+
+    const scopedRows = canAccessPlot
+      ? (
+          await Promise.all(
+            result.rows.map(async (row) => ({
+              row,
+              allowed: await canAccessPlot(row.id as string),
+            })),
+          )
+        )
+          .filter((entry) => entry.allowed)
+          .map((entry) => entry.row)
+      : result.rows;
+
+    const items = await Promise.all(
+      scopedRows.map(async (row) => {
+        const groundTruthPhotos = await this.getGroundTruthPhotoVerification(row.id);
+        return {
+          ...row,
+          reviewPriority:
+            row.status === 'deforestation_detected'
+              ? 'high'
+              : row.status === 'degradation_risk'
+                ? 'medium'
+                : 'low',
+          autoClearanceEligible: groundTruthPhotos.clearanceEligible,
+          groundTruthPhotos,
+        };
+      }),
+    );
+
+    return items;
+  }
+
+  async clearPlotReview(
+    plotId: string,
+    params: { reason: string; note?: string | null },
+    userId: string | undefined,
+  ) {
+    const { status: currentStatus } = await this.getPlotStatusRow(plotId);
+    if (
+      currentStatus !== 'under_review' &&
+      currentStatus !== 'degradation_risk' &&
+      currentStatus !== 'deforestation_detected'
+    ) {
+      throw new BadRequestException('Plot is not in a reviewable status');
+    }
+
+    await this.pool.query(
+      `
+        UPDATE plot
+        SET status = 'compliant',
+            updated_at = NOW()
+        WHERE id = $1
+      `,
+      [plotId],
+    );
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'plot_review_cleared',
+        JSON.stringify({
+          plotId,
+          previousStatus: currentStatus,
+          newStatus: 'compliant',
+          reason: params.reason,
+          note: params.note ?? null,
+          clearedAt: new Date().toISOString(),
+        }),
+      ],
+    );
+
+    return { ok: true, plotId, plotStatus: 'compliant' as const, previousStatus: currentStatus };
+  }
+
+  async upholdPlotReview(
+    plotId: string,
+    params: { reason: string; note?: string | null },
+    userId: string | undefined,
+  ) {
+    const { status: currentStatus } = await this.getPlotStatusRow(plotId);
+    if (
+      currentStatus !== 'under_review' &&
+      currentStatus !== 'degradation_risk' &&
+      currentStatus !== 'deforestation_detected'
+    ) {
+      throw new BadRequestException('Plot is not in a reviewable status');
+    }
+
+    const nextStatus: PlotComplianceStatus =
+      currentStatus === 'under_review' ? 'deforestation_detected' : currentStatus;
+
+    if (nextStatus !== currentStatus) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET status = $2,
+              updated_at = NOW()
+          WHERE id = $1
+        `,
+        [plotId, nextStatus],
+      );
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'plot_review_upheld',
+        JSON.stringify({
+          plotId,
+          previousStatus: currentStatus,
+          newStatus: nextStatus,
+          reason: params.reason,
+          note: params.note ?? null,
+          upheldAt: new Date().toISOString(),
+        }),
+      ],
+    );
+
+    return { ok: true, plotId, plotStatus: nextStatus, previousStatus: currentStatus };
   }
 
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
@@ -1206,24 +1813,66 @@ export class PlotsService {
       indigenous_overlap: false,
     };
 
-    let status: string = 'compliant';
+    let gfwSummary: GfwAlertSummary = { alertCount: null, alertAreaHa: null };
+    let gfwSignalTier: ReturnType<typeof gfwSummaryToSignalTier> = 'unknown';
+    let gfwProviderMode: 'glad_s2_primary' | 'radd_fallback' | 'unavailable' = 'unavailable';
+    let gfwError: string | null = null;
 
-    if (overlaps.sinaph_overlap && overlaps.indigenous_overlap) {
-      status = 'deforestation_detected';
-    } else if (overlaps.sinaph_overlap || overlaps.indigenous_overlap) {
-      status = 'degradation_risk';
+    try {
+      const geometry = await this.getPlotGeometryForCompliance(plotId);
+      const screening = await this.queryGfwAlertsForGeometry(geometry);
+      gfwSummary = screening.summary;
+      gfwSignalTier = gfwSummaryToSignalTier(screening.summary);
+      gfwProviderMode = screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary';
+    } catch (error) {
+      gfwError = error instanceof Error ? error.message : String(error);
     }
+
+    const proposedStatus = this.resolveMergedPlotStatus({
+      gfwSummary,
+      sinaphOverlap: overlaps.sinaph_overlap === true,
+      indigenousOverlap: overlaps.indigenous_overlap === true,
+    });
+    const finalized = await this.finalizePlotComplianceStatus({
+      plotId,
+      proposedStatus,
+      gfwSummary,
+    });
+    const status = finalized.status;
+
+    const screeningSnapshot =
+      gfwSignalTier !== 'unknown'
+        ? this.buildDeforestationScreeningSnapshot({
+            summary: gfwSummary,
+            signalTier: gfwSignalTier,
+            screening: {
+              cutoffDate: EUDR_DEFORESTATION_CUTOFF,
+              usedFallback: gfwProviderMode === 'radd_fallback',
+              gfwResult: {
+                dataset: process.env.GFW_DATASET ?? 'gfw_integrated_alerts',
+                version: process.env.GFW_VERSION ?? 'latest',
+              },
+            },
+          })
+        : null;
 
     const updateRes = await this.pool.query(
       `
         UPDATE plot
         SET status = $2,
             sinaph_overlap = $3,
-            indigenous_overlap = $4
+            indigenous_overlap = $4,
+            deforestation_screening = COALESCE($5::jsonb, deforestation_screening)
         WHERE id = $1
         RETURNING *
       `,
-      [plotId, status, overlaps.sinaph_overlap, overlaps.indigenous_overlap],
+      [
+        plotId,
+        status,
+        overlaps.sinaph_overlap,
+        overlaps.indigenous_overlap,
+        screeningSnapshot ? JSON.stringify(screeningSnapshot) : null,
+      ],
     );
 
     const updated = updateRes.rows[0];
@@ -1242,6 +1891,17 @@ export class PlotsService {
           status,
           sinaphOverlap: overlaps.sinaph_overlap,
           indigenousOverlap: overlaps.indigenous_overlap,
+          proposedStatus,
+          reviewClearanceBlocked: finalized.reviewClearanceBlocked,
+          groundTruthPhotos: finalized.groundTruthPhotos,
+          gfw: {
+            cutoffDate: EUDR_DEFORESTATION_CUTOFF,
+            providerMode: gfwProviderMode,
+            signalTier: gfwSignalTier,
+            alertCount: gfwSummary.alertCount,
+            alertAreaHa: gfwSummary.alertAreaHa,
+            error: gfwError,
+          },
         }),
       ],
     );

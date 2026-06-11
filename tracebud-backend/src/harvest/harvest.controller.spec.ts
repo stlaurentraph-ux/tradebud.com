@@ -1,7 +1,26 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { HarvestController } from './harvest.controller';
 import type { HarvestService } from './harvest.service';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import type { ConsentService } from '../consent/consent.service';
+
+function makeConsentMock(): jest.Mocked<Pick<ConsentService, 'canTenantAccessVoucher'>> {
+  return {
+    canTenantAccessVoucher: jest.fn().mockResolvedValue(true),
+  };
+}
+
+function makeController(
+  service: ReturnType<typeof makeServiceMock>,
+  launch = createLaunchServiceMock(),
+  consent = makeConsentMock(),
+) {
+  return new HarvestController(
+    service as unknown as HarvestService,
+    launch,
+    consent as unknown as ConsentService,
+  );
+}
 
 function makeServiceMock(): jest.Mocked<
   Pick<
@@ -9,6 +28,8 @@ function makeServiceMock(): jest.Mocked<
     | 'isFarmerOwnedByUser'
     | 'create'
     | 'listVouchersForFarmer'
+    | 'listVouchersForTenant'
+    | 'isFarmerInTenant'
     | 'createDdsPackage'
     | 'listDdsPackagesForFarmer'
     | 'canReadPackageForTenant'
@@ -20,12 +41,15 @@ function makeServiceMock(): jest.Mocked<
     | 'generateDdsPackageArtifacts'
     | 'getDdsPackageTracesJson'
     | 'submitDdsPackage'
+    | 'validateShipmentDeclaredWeight'
   >
 > {
   return {
     isFarmerOwnedByUser: jest.fn(),
     create: jest.fn(),
     listVouchersForFarmer: jest.fn(),
+    listVouchersForTenant: jest.fn(),
+    isFarmerInTenant: jest.fn().mockResolvedValue(true),
     createDdsPackage: jest.fn(),
     listDdsPackagesForFarmer: jest.fn(),
     canReadPackageForTenant: jest.fn().mockResolvedValue(true),
@@ -37,13 +61,14 @@ function makeServiceMock(): jest.Mocked<
     generateDdsPackageArtifacts: jest.fn(),
     getDdsPackageTracesJson: jest.fn(),
     submitDdsPackage: jest.fn(),
+    validateShipmentDeclaredWeight: jest.fn(),
   };
 }
 
 describe('HarvestController scope and role boundaries', () => {
   it('rejects when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackage('pkg_1', { user: { id: 'user_1', email: 'exporter+demo@tracebud.com' } }),
@@ -53,7 +78,7 @@ describe('HarvestController scope and role boundaries', () => {
   it('rejects farmer create on another farmer profile', async () => {
     const service = makeServiceMock();
     service.isFarmerOwnedByUser.mockResolvedValue(false);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.create(
@@ -66,10 +91,10 @@ describe('HarvestController scope and role boundaries', () => {
   it('rejects farmer voucher list for another farmerId', async () => {
     const service = makeServiceMock();
     service.isFarmerOwnedByUser.mockResolvedValue(false);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
-      controller.listVouchers('farmer_other', {
+      controller.listVouchers('farmer_other', 'farmer', {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
       }),
     ).rejects.toThrow(ForbiddenException);
@@ -77,7 +102,7 @@ describe('HarvestController scope and role boundaries', () => {
 
   it('rejects non-exporter package detail access', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackage('pkg_1', {
@@ -88,7 +113,7 @@ describe('HarvestController scope and role boundaries', () => {
 
   it('rejects non-exporter package readiness access', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageReadiness('pkg_1', {
@@ -99,7 +124,7 @@ describe('HarvestController scope and role boundaries', () => {
 
   it('rejects non-exporter package evidence-documents access', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageEvidenceDocuments('pkg_1', {
@@ -122,7 +147,7 @@ describe('HarvestController scope and role boundaries', () => {
         capturedAt: '2026-04-16',
       },
     ] as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageEvidenceDocuments('pkg_1', {
@@ -146,7 +171,7 @@ describe('HarvestController scope and role boundaries', () => {
       warnings: [{ code: 'RULE-MISSING-HARVEST-DATE', message: 'missing date', severity: 'warning' }],
       checkedAt: '2026-01-01T00:00:00.000Z',
     } as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageReadiness('pkg_1', {
@@ -161,7 +186,7 @@ describe('HarvestController scope and role boundaries', () => {
 
   it('rejects non-exporter package risk score access', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageRiskScore('pkg_1', {
@@ -180,7 +205,7 @@ describe('HarvestController scope and role boundaries', () => {
       reasons: [{ code: 'RISK-MISSING-HARVEST-DATE', message: 'missing date', weight: 10 }],
       scoredAt: '2026-01-01T00:00:00.000Z',
     } as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageRiskScore('pkg_1', {
@@ -203,7 +228,7 @@ describe('HarvestController scope and role boundaries', () => {
 
   it('rejects non-exporter filing preflight access', async () => {
     const service = makeServiceMock();
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageFilingPreflight('pkg_1', {
@@ -224,7 +249,7 @@ describe('HarvestController scope and role boundaries', () => {
       warningCount: 1,
       checkedAt: '2026-01-01T00:00:00.000Z',
     } as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.getPackageFilingPreflight('pkg_1', {
@@ -246,7 +271,7 @@ describe('HarvestController scope and role boundaries', () => {
       lotCount: 2,
       generatedAt: '2026-01-01T00:00:00.000Z',
     } as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.generatePackage('pkg_1', {
@@ -270,7 +295,7 @@ describe('HarvestController scope and role boundaries', () => {
       replayed: false,
       persistedAt: '2026-01-01T00:00:00.000Z',
     } as any);
-    const controller = new HarvestController(service as unknown as HarvestService, createLaunchServiceMock());
+    const controller = makeController(service);
 
     await expect(
       controller.submitPackage(
@@ -285,5 +310,73 @@ describe('HarvestController scope and role boundaries', () => {
         },
       ),
     ).resolves.toEqual(expect.objectContaining({ packageId: 'pkg_1', status: 'submitted' }));
+  });
+
+  it('returns tenant vouchers for cooperative role', async () => {
+    const service = makeServiceMock();
+    service.listVouchersForTenant.mockResolvedValue([{ id: 'v_1', qr_code_ref: 'V-ABC12345' }] as any);
+    const controller = makeController(service);
+
+    await expect(
+      controller.listVouchers(undefined, 'tenant', {
+        user: {
+          id: 'user_1',
+          email: 'coop@tracebud.com',
+          app_metadata: { tenant_id: 'tenant_1', role: 'cooperative' },
+        },
+      }),
+    ).resolves.toEqual({ vouchers: [{ id: 'v_1', qr_code_ref: 'V-ABC12345' }] });
+
+    expect(service.listVouchersForTenant).toHaveBeenCalledWith('tenant_1');
+  });
+
+  it('creates package from vouchers for cooperative role with tenant scope', async () => {
+    const service = makeServiceMock();
+    service.createDdsPackage.mockResolvedValue({ id: 'pkg_1', status: 'draft' } as any);
+    const launch = createLaunchServiceMock();
+    const controller = makeController(service, launch);
+
+    await expect(
+      controller.createPackage(
+        { voucherIds: ['11111111-1111-4111-8111-111111111111'] } as any,
+        {
+          user: {
+            id: 'user_1',
+            email: 'coop@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'cooperative' },
+          },
+        },
+      ),
+    ).resolves.toEqual({ id: 'pkg_1', status: 'draft' });
+
+    expect(service.createDdsPackage).toHaveBeenCalledWith(
+      { voucherIds: ['11111111-1111-4111-8111-111111111111'] },
+      { tenantId: 'tenant_1' },
+    );
+  });
+
+  it('rejects shipment weight validation when declared kg does not match batch totals', async () => {
+    const service = makeServiceMock();
+    service.validateShipmentDeclaredWeight.mockResolvedValue({
+      ok: false,
+      covered_quantity_kg: 1000,
+      declared_quantity_kg: 2000,
+      package_weights: [],
+      error: 'Declared shipment weight (2000 kg) must match batch lineage total (1000 kg).',
+    });
+    const controller = makeController(service);
+
+    await expect(
+      controller.validateShipmentWeight(
+        { packageIds: ['pkg_1'], declaredQuantityKg: 2000 },
+        {
+          user: {
+            id: 'user_1',
+            email: 'exporter@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
+          },
+        },
+      ),
+    ).rejects.toThrow(BadRequestException);
   });
 });

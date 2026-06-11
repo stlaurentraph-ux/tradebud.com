@@ -1,7 +1,15 @@
-import { BadRequestException, Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { createClient } from '@supabase/supabase-js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
+import { ConsentService } from '../consent/consent.service';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
 
@@ -74,15 +82,23 @@ export interface EvidenceFeedRecord {
   sha256_hash: string;
   uploader_name: string;
   uploader_org: string;
+  storage_path: string | null;
+  mime_type: string | null;
+  evidence_kind: string | null;
+  has_file: boolean;
+  metadata_only: boolean;
 }
 
 type DecisionFilter = 'all' | 'accept' | 'refuse';
+
+const EVIDENCE_SIGNED_URL_TTL_SECONDS = 60 * 60;
 
 @Injectable()
 export class RequestsService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly inboxService: InboxService,
+    private readonly consentService: ConsentService,
   ) {}
 
   private mapDatabaseError(error: unknown): never {
@@ -1086,7 +1102,8 @@ export class RequestsService {
     }
   }
 
-  async listEvidenceFeed(tenantId: string): Promise<EvidenceFeedRecord[]> {
+  async listEvidenceFeed(tenantId: string, plotId?: string | null): Promise<EvidenceFeedRecord[]> {
+    const scopedPlotId = plotId?.trim() || null;
     try {
       const result = await this.pool.query<EvidenceFeedRecord>(
         `
@@ -1119,7 +1136,12 @@ export class RequestsService {
             1.0::float8 AS file_size_mb,
             md5(CONCAT(al.id::text, ':', item.value::text, ':', al.timestamp::text)) AS sha256_hash,
             COALESCE(al.user_id::text, 'Tracebud User') AS uploader_name,
-            $1::text AS uploader_org
+            $1::text AS uploader_org,
+            NULLIF(item.value ->> 'storagePath', '') AS storage_path,
+            NULLIF(item.value ->> 'mimeType', '') AS mime_type,
+            NULLIF(al.payload ->> 'kind', '') AS evidence_kind,
+            (NULLIF(item.value ->> 'storagePath', '') IS NOT NULL) AS has_file,
+            (NULLIF(item.value ->> 'storagePath', '') IS NULL) AS metadata_only
           FROM audit_log al
           LEFT JOIN LATERAL jsonb_array_elements(
             CASE
@@ -1129,17 +1151,31 @@ export class RequestsService {
           ) WITH ORDINALITY AS item(value, ordinality) ON TRUE
           WHERE al.event_type = 'plot_evidence_synced'
             AND COALESCE(al.payload ->> 'tenantId', '') = $1
+            AND ($2::text IS NULL OR NULLIF(al.payload ->> 'plotId', '') = $2)
             AND item.value IS NOT NULL
           ORDER BY al.timestamp DESC, item.ordinality ASC
           LIMIT 100
         `,
-        [tenantId],
+        [tenantId, scopedPlotId],
       );
-      return result.rows.map((row) => ({
+      const rows = result.rows.map((row) => ({
         ...row,
         upload_date: new Date(row.upload_date).toISOString(),
         expiry_date: new Date(row.expiry_date).toISOString(),
+        has_file: row.has_file === true,
+        metadata_only: row.metadata_only === true,
       }));
+
+      const scoped: EvidenceFeedRecord[] = [];
+      for (const row of rows) {
+        if (!row.plot_id?.trim()) {
+          continue;
+        }
+        if (await this.consentService.canTenantAccessPlot(row.plot_id.trim(), tenantId)) {
+          scoped.push(row);
+        }
+      }
+      return scoped;
     } catch (error) {
       const pgError = error as { code?: string } | null;
       if (pgError?.code === '42P01') {
@@ -1147,6 +1183,57 @@ export class RequestsService {
       }
       throw error;
     }
+  }
+
+  async createEvidenceSignedUrl(
+    tenantId: string,
+    storagePath: string,
+  ): Promise<{ signed_url: string; expires_in: number }> {
+    const normalized = storagePath.trim().replace(/^\/+/, '');
+    if (!normalized || normalized.includes('..')) {
+      throw new BadRequestException('Invalid evidence storage path.');
+    }
+
+    const segments = normalized.split('/').filter(Boolean);
+    const authUserId = segments[0];
+    if (!authUserId || !/^[0-9a-f-]{36}$/i.test(authUserId)) {
+      throw new BadRequestException('Evidence storage path must start with a producer auth user id.');
+    }
+
+    const farmerRes = await this.pool.query<{ id: string }>(
+      `SELECT id FROM farmer_profile WHERE user_id = $1::uuid LIMIT 1`,
+      [authUserId],
+    );
+    const farmerId = farmerRes.rows[0]?.id;
+    if (!farmerId) {
+      throw new ForbiddenException('Producer profile not found for this evidence file.');
+    }
+
+    const allowed = await this.consentService.canTenantAccessFarmerEvidence(farmerId, tenantId);
+    if (!allowed) {
+      throw new ForbiddenException('Tenant does not have consent to view this evidence file.');
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL?.trim();
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new InternalServerErrorException('Evidence storage signing is not configured.');
+    }
+
+    const bucket = process.env.EVIDENCE_STORAGE_BUCKET?.trim() || 'plot-evidence';
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(normalized, EVIDENCE_SIGNED_URL_TTL_SECONDS);
+
+    if (error || !data?.signedUrl) {
+      throw new BadRequestException(error?.message ?? 'Could not create signed URL for evidence file.');
+    }
+
+    return { signed_url: data.signedUrl, expires_in: EVIDENCE_SIGNED_URL_TTL_SECONDS };
   }
 }
 

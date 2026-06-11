@@ -39,6 +39,21 @@ export class RequestsController {
     }
   }
 
+  private resolveDashboardRole(req: any): string {
+    const raw =
+      (req?.user?.app_metadata?.role as string | undefined) ??
+      (req?.user?.user_metadata?.role as string | undefined) ??
+      deriveRoleFromSupabaseUser(req?.user);
+    return String(raw ?? '').trim().toLowerCase();
+  }
+
+  private requireEvidenceAccess(req: any): void {
+    const role = this.resolveDashboardRole(req);
+    if (!['admin', 'exporter', 'compliance_manager', 'cooperative'].includes(role)) {
+      throw new ForbiddenException('This role cannot access evidence files.');
+    }
+  }
+
   @Get('campaigns')
   async list(@Req() req: any) {
     this.requireRequestsAccess(req);
@@ -54,10 +69,20 @@ export class RequestsController {
   }
 
   @Get('evidence-feed')
-  async listEvidenceFeed(@Req() req: any) {
-    this.requireRequestsAccess(req);
+  async listEvidenceFeed(@Req() req: any, @Query('plotId') plotId?: string) {
+    this.requireEvidenceAccess(req);
     const tenantId = this.getTenantId(req);
-    return this.requestsService.listEvidenceFeed(tenantId);
+    return this.requestsService.listEvidenceFeed(tenantId, plotId);
+  }
+
+  @Get('evidence-signed-url')
+  async getEvidenceSignedUrl(@Req() req: any, @Query('storagePath') storagePath?: string) {
+    this.requireEvidenceAccess(req);
+    const tenantId = this.getTenantId(req);
+    if (!storagePath?.trim()) {
+      throw new BadRequestException('storagePath query parameter is required.');
+    }
+    return this.requestsService.createEvidenceSignedUrl(tenantId, storagePath);
   }
 
   @Post('campaigns')

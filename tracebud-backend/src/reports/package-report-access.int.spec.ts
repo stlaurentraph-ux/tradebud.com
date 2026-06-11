@@ -1,8 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { HarvestController } from '../harvest/harvest.controller';
+import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { HarvestService } from '../harvest/harvest.service';
+import { ConsentService } from '../consent/consent.service';
 import { ReportsController } from './reports.controller';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
@@ -108,7 +110,11 @@ describeIfDb('API integration: package/report access policy', () => {
       )
     `);
 
-    harvestController = new HarvestController(new HarvestService(pool), createLaunchServiceMock());
+    harvestController = new HarvestController(
+      new HarvestService(pool, createBillingServiceMock()),
+      createLaunchServiceMock(),
+      new ConsentService(pool),
+    );
     reportsController = new ReportsController(pool, createLaunchServiceMock());
   }, 20_000);
 

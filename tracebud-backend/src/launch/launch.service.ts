@@ -270,8 +270,78 @@ export class LaunchService {
     return result.rows[0] ?? null;
   }
 
+  private async ensureBillingSubscriptionForTenant(tenantId: string): Promise<void> {
+    try {
+      const profileRes = await this.pool.query<{ team_size: string | null }>(
+        `
+          SELECT team_size
+          FROM tenant_commercial_profiles
+          WHERE tenant_id = $1
+          LIMIT 1
+        `,
+        [tenantId],
+      );
+      const teamSize = profileRes.rows[0]?.team_size ?? null;
+      const billingBand =
+        teamSize?.includes('51') || teamSize?.includes('100')
+          ? 'growth'
+          : teamSize?.includes('501') || teamSize?.includes('3000')
+            ? 'scale'
+            : teamSize?.includes('3001')
+              ? 'enterprise'
+              : 'starter';
+
+      await this.pool.query(
+        `
+          INSERT INTO tenant_billing_subscription (
+            tenant_id,
+            billing_band,
+            subscription_bundle,
+            enabled_modules,
+            subscription_billing_enabled,
+            updated_at
+          )
+          VALUES ($1, $2, 'compliance_starter', ARRAY['foundation', 'eudr']::TEXT[], TRUE, NOW())
+          ON CONFLICT (tenant_id) DO NOTHING
+        `,
+        [tenantId, billingBand],
+      );
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async ensureAdoptionPromoForTenant(tenantId: string): Promise<void> {
+    try {
+      await this.pool.query(
+        `
+          INSERT INTO tenant_billing_adoption_promo (
+            tenant_id,
+            adoption_started_at,
+            subscription_free_until
+          )
+          VALUES ($1, NOW(), NOW() + INTERVAL '3 months')
+          ON CONFLICT (tenant_id) DO NOTHING
+        `,
+        [tenantId],
+      );
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return;
+      }
+      throw error;
+    }
+  }
+
   async getOrCreateTrialState(tenantId: string): Promise<TrialRow> {
     await this.ensureSchema();
+    await this.ensureAdoptionPromoForTenant(tenantId);
+    await this.ensureBillingSubscriptionForTenant(tenantId);
     const nowIso = new Date().toISOString();
     const insertRes = await this.pool.query<TrialRow>(
       `
@@ -286,7 +356,7 @@ export class LaunchService {
           $1,
           'trial_active',
           NOW(),
-          NOW() + INTERVAL '30 days',
+          NOW() + INTERVAL '90 days',
           NOW()
         )
         ON CONFLICT (tenant_id) DO NOTHING
@@ -385,7 +455,7 @@ export class LaunchService {
           $1,
           'paid_active',
           NOW(),
-          NOW() + INTERVAL '30 days',
+          NOW() + INTERVAL '90 days',
           NOW(),
           NOW()
         )

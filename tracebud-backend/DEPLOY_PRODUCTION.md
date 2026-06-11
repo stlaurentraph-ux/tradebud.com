@@ -41,9 +41,63 @@ In Railway → **Variables**, add (from `tracebud-backend/.env.production.exampl
 | `DATABASE_URL` | Supabase → Settings → Database → **Connection string** (pooler, same as local) |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
+| `GFW_API_KEY` | [GFW Data API](https://data-api.globalforestwatch.org/user/login) → API keys |
+| `GFW_BASE_URL` | `https://data-api.globalforestwatch.org` |
+| `GFW_DATASET` | `gfw_integrated_alerts` |
+| `GFW_RADD_DATASET` | `umd_glad_dist_alerts` |
 | `PORT` | Railway injects this automatically; optional `4001` |
 
+After deploy, confirm deforestation screening is configured:
+
+```bash
+npm run check:deploy-health -- "https://api.tracebud.com"
+# Health JSON should NOT include a GFW_API_KEY warning.
+
+npm run check:gfw   # local key smoke test (uses tracebud-backend/.env)
+```
+
+From a machine with Railway CLI (login once, then link the API service):
+
+```bash
+cd tracebud-backend
+npx @railway/cli login
+npx @railway/cli link -p dynamic-perception -s tradebud.com
+npm run railway:sync:gfw
+```
+
 Add optional vars when you enable email / integrations (see `.env.production.example`).
+
+### 2b. Apply farmer consent migration (sovereignty v1)
+
+Before enabling dashboard **Request data access** / field-app **Data sharing**, apply `consent_grants` on the Supabase DB used by `DATABASE_URL`:
+
+```bash
+cd tracebud-backend
+# Put the real Supabase pooler URL in tracebud-backend/.env.local as DATABASE_URL=
+# (Dashboard → Settings → Database → Connection string). Do NOT paste the docs placeholder.
+npm run db:apply:consent-grants
+npm run db:verify:consent-grants
+```
+
+Supabase CLI alternative: apply `supabase/migrations/202606120001_consent_grants.sql` on the linked project.
+
+After deploy, smoke consent API paths (cooperative JWT required):
+
+```bash
+TRACEBUD_API_BASE=https://api.tracebud.com/api \
+TRACEBUD_COOP_TOKEN="<coop-jwt>" \
+TRACEBUD_FARMER_PROFILE_ID="<farmer_profile-uuid>" \
+TRACEBUD_FARMER_EMAIL="farmer@example.com" \
+npm run smoke:consent
+```
+
+Manual E2E: dashboard `/farmers/[id]` → **Request data access** → field app **Data sharing** → approve → coop lists plots → farmer **Revoke future access** → unsold plots blocked, sold-batch lineage still readable.
+
+Integration test (CI / local with `TEST_DATABASE_URL`):
+
+```bash
+npm run test:integration:consent
+```
 
 ### 3. Deploy and smoke test
 

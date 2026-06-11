@@ -1,4 +1,16 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
@@ -8,6 +20,10 @@ import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import { SubmitDdsPackageDto } from './dto/submit-dds-package.dto';
 import { DdsPackageEvidenceDocumentDto } from './dto/dds-package-evidence-document.dto';
 import { LaunchService } from '../launch/launch.service';
+import { resolveDashboardRole } from '../billing/billing-access';
+import { ConsentService } from '../consent/consent.service';
+
+const DASHBOARD_HARVEST_ROLES = new Set(['exporter', 'cooperative', 'compliance_manager', 'admin']);
 
 @ApiTags('Harvest')
 @ApiBearerAuth()
@@ -17,7 +33,27 @@ export class HarvestController {
   constructor(
     private readonly harvestService: HarvestService,
     private readonly launchService: LaunchService,
+    private readonly consentService: ConsentService,
   ) {}
+
+  private async filterVouchersForTenantAccess(
+    tenantId: string,
+    vouchers: Array<{ id: string }>,
+  ): Promise<typeof vouchers> {
+    const allowed = await Promise.all(
+      vouchers.map(async (voucher) => ({
+        voucher,
+        ok: await this.consentService.canTenantAccessVoucher(voucher.id, tenantId),
+      })),
+    );
+    return allowed.filter((row) => row.ok).map((row) => row.voucher);
+  }
+
+  private assertDashboardHarvestRole(role: string): void {
+    if (!DASHBOARD_HARVEST_ROLES.has(role)) {
+      throw new ForbiddenException('Only organisation operators can access tenant harvest data');
+    }
+  }
 
   private requireTenantClaim(req: any) {
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
@@ -37,8 +73,8 @@ export class HarvestController {
   private async enforcePackageReadAccess(packageId: string, req: any): Promise<void> {
     const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
-    if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
-      throw new ForbiddenException('Only exporters can view DDS package details');
+    if (!['exporter', 'cooperative', 'admin', 'compliance_manager'].includes(role)) {
+      throw new ForbiddenException('Only organisation operators can view DDS package details');
     }
     if (role === 'admin') {
       return;
@@ -70,21 +106,56 @@ export class HarvestController {
   }
 
   @Get('vouchers')
-  @ApiQuery({ name: 'farmerId', required: true })
-  async listVouchers(@Query('farmerId') farmerId: string, @Req() req: any) {
-    this.requireTenantClaim(req);
+  @ApiQuery({ name: 'farmerId', required: false })
+  @ApiQuery({ name: 'scope', required: false, enum: ['tenant', 'farmer'] })
+  async listVouchers(
+    @Query('farmerId') farmerId: string | undefined,
+    @Query('scope') scope: string | undefined,
+    @Req() req: any,
+  ) {
+    const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
+    const resolvedScope = scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
+
+    if (resolvedScope === 'tenant') {
+      if (role === 'farmer') {
+        throw new ForbiddenException('Farmers must provide farmerId scope');
+      }
+      this.assertDashboardHarvestRole(role);
+      const vouchers = await this.harvestService.listVouchersForTenant(tenantId);
+      const scoped = await this.filterVouchersForTenantAccess(tenantId, vouchers);
+      return { vouchers: scoped };
+    }
+
+    const scopedFarmerId = farmerId?.trim();
+    if (!scopedFarmerId) {
+      throw new ForbiddenException('farmerId is required when scope=farmer');
+    }
+
     if (role === 'farmer') {
       const userId = req.user?.id as string | undefined;
       if (!userId) {
         throw new ForbiddenException('Missing authenticated user');
       }
-      const owned = await this.harvestService.isFarmerOwnedByUser(farmerId, userId);
+      const owned = await this.harvestService.isFarmerOwnedByUser(scopedFarmerId, userId);
       if (!owned) {
         throw new ForbiddenException('Farmer scope violation');
       }
+    } else if (role !== 'admin') {
+      this.assertDashboardHarvestRole(role);
+      const inTenant = await this.harvestService.isFarmerInTenant(scopedFarmerId, tenantId);
+      if (!inTenant) {
+        throw new ForbiddenException('Farmer scope violation');
+      }
+      const vouchers = await this.harvestService.listVouchersForFarmer(scopedFarmerId);
+      const scoped = await this.filterVouchersForTenantAccess(tenantId, vouchers);
+      if (scoped.length === 0 && vouchers.length > 0) {
+        throw new ForbiddenException('CONSENT_REQUIRED');
+      }
+      return { vouchers: scoped };
     }
-    return this.harvestService.listVouchersForFarmer(farmerId);
+
+    return this.harvestService.listVouchersForFarmer(scopedFarmerId);
   }
 
   @Get('vouchers/by-qr')
@@ -102,11 +173,51 @@ export class HarvestController {
   async createPackage(@Body() dto: CreateDdsPackageDto, @Req() req: any) {
     const tenantId = this.getTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can create DDS packages');
+    const userId = req.user?.id as string | undefined;
+
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      return this.harvestService.createDdsPackage(dto, { userId });
     }
+
+    if (!DASHBOARD_HARVEST_ROLES.has(role)) {
+      throw new ForbiddenException('Only organisation operators can create DDS packages');
+    }
+
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_campaigns');
-    return this.harvestService.createDdsPackage(dto);
+    return this.harvestService.createDdsPackage(dto, { tenantId });
+  }
+
+  @Post('shipment-weight/validate')
+  @ApiOperation({
+    summary: 'Validate declared shipment weight against batch voucher totals',
+    description:
+      'Ensures the exporter-declared shipment quantity matches the sum of harvest kg on vouchers in the selected batches.',
+  })
+  async validateShipmentWeight(
+    @Body() body: { packageIds?: string[]; declaredQuantityKg?: number },
+    @Req() req: any,
+  ) {
+    const tenantId = this.getTenantId(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    this.assertDashboardHarvestRole(role);
+
+    const packageIds = Array.isArray(body.packageIds) ? body.packageIds : [];
+    const declaredQuantityKg = Number(body.declaredQuantityKg);
+
+    const result = await this.harvestService.validateShipmentDeclaredWeight(
+      tenantId,
+      packageIds,
+      declaredQuantityKg,
+    );
+
+    if (!result.ok) {
+      throw new BadRequestException(result.error ?? 'Shipment weight does not match batch lineage.');
+    }
+
+    return result;
   }
 
   @Get('packages')
@@ -132,8 +243,8 @@ export class HarvestController {
       if (!scopedFarmerId) {
         throw new ForbiddenException('farmerId is required when scope=farmer');
       }
-      if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
-        throw new ForbiddenException('Only exporters can list DDS packages');
+      if (!['exporter', 'cooperative', 'admin', 'compliance_manager'].includes(role)) {
+        throw new ForbiddenException('Only organisation operators can list DDS packages');
       }
       if (role !== 'admin') {
         const inTenant = await this.harvestService.isFarmerInTenant(scopedFarmerId, tenantId);
@@ -145,8 +256,8 @@ export class HarvestController {
       return { packages };
     }
 
-    if (!['exporter', 'admin', 'compliance_manager'].includes(role)) {
-      throw new ForbiddenException('Only exporters can list DDS packages');
+    if (!['exporter', 'cooperative', 'admin', 'compliance_manager'].includes(role)) {
+      throw new ForbiddenException('Only organisation operators can list DDS packages');
     }
     const packages = await this.harvestService.listDdsPackagesForTenant(tenantId);
     return { packages };
@@ -275,18 +386,25 @@ export class HarvestController {
   @Patch('packages/:id/submit')
   async submitPackage(@Param('id') id: string, @Body() dto: SubmitDdsPackageDto, @Req() req: any) {
     const tenantId = this.getTenantId(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'exporter') {
-      throw new ForbiddenException('Only exporters can submit DDS packages');
+    const role = resolveDashboardRole(req.user);
+    const destinationRoles = new Set(['importer', 'compliance_manager']);
+    const originRoles = new Set(['exporter', 'cooperative', 'admin']);
+    if (!destinationRoles.has(role) && !originRoles.has(role)) {
+      throw new ForbiddenException('Insufficient permissions to submit DDS packages');
     }
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
-    return this.harvestService.submitDdsPackage(id, dto.idempotencyKey, {
-      tenantId,
-      userId: (req?.user?.id as string | undefined) ?? null,
-      exportedBy:
-        (req?.user?.email as string | undefined) ??
-        ((req?.user?.id as string | undefined) ? `user:${String(req.user.id)}` : null),
-    });
+    return this.harvestService.submitDdsPackage(
+      id,
+      dto.idempotencyKey,
+      {
+        tenantId,
+        userId: (req?.user?.id as string | undefined) ?? null,
+        exportedBy:
+          (req?.user?.email as string | undefined) ??
+          ((req?.user?.id as string | undefined) ? `user:${String(req.user.id)}` : null),
+      },
+      { meterDestinationSubmit: destinationRoles.has(role) },
+    );
   }
 }
 

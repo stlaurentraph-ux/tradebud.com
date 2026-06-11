@@ -1,6 +1,23 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PlotsController } from './plots.controller';
 import type { PlotsService } from './plots.service';
+import type { ConsentService } from '../consent/consent.service';
+
+function makeConsentMock(): jest.Mocked<
+  Pick<ConsentService, 'canTenantAccessPlot' | 'canTenantAccessFarmer'>
+> {
+  return {
+    canTenantAccessPlot: jest.fn().mockResolvedValue(true),
+    canTenantAccessFarmer: jest.fn().mockResolvedValue(true),
+  };
+}
+
+function makePlotsController(
+  service: ReturnType<typeof makeServiceMock>,
+  consent: ReturnType<typeof makeConsentMock> = makeConsentMock(),
+) {
+  return new PlotsController(service as unknown as PlotsService, consent as unknown as ConsentService);
+}
 
 function makeServiceMock(): jest.Mocked<
   Pick<
@@ -56,7 +73,7 @@ function makeServiceMock(): jest.Mocked<
 describe('PlotsController scope boundaries', () => {
   it('rejects create when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.create({} as any, { user: { id: 'user_1', email: 'farmer@example.com' } }),
@@ -65,7 +82,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.listByFarmer('farmer_1', undefined, { user: { id: 'user_1', email: 'farmer@example.com' } }),
@@ -75,7 +92,7 @@ describe('PlotsController scope boundaries', () => {
   it('rejects farmer list for another farmerId', async () => {
     const service = makeServiceMock();
     service.isFarmerOwnedByUser.mockResolvedValue(false);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.listByFarmer('farmer_other', undefined, {
@@ -87,7 +104,7 @@ describe('PlotsController scope boundaries', () => {
   it('rejects farmer plot metadata update for foreign plot', async () => {
     const service = makeServiceMock();
     service.isPlotOwnedByUser.mockResolvedValue(false);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.updateMetadata(
@@ -100,7 +117,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects geometry update when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.updateGeometry('plot_1', { reason: 'boundary fix', geometry: {} } as any, {
@@ -111,7 +128,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects photos/legal/evidence sync when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
@@ -135,7 +152,7 @@ describe('PlotsController scope boundaries', () => {
   it('rejects farmer sync for foreign plot ownership', async () => {
     const service = makeServiceMock();
     service.isPlotOwnedByUser.mockResolvedValue(false);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
@@ -149,7 +166,7 @@ describe('PlotsController scope boundaries', () => {
     service.isPlotOwnedByUser.mockResolvedValue(true);
     service.isAgentAssignedToPlot.mockResolvedValue(true);
     service.syncPhotos.mockResolvedValue({ ok: true } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.syncPhotos('plot_1', { kind: 'ground_truth', photos: [] } as any, {
@@ -173,7 +190,7 @@ describe('PlotsController scope boundaries', () => {
   it('rejects agent sync when assignment scope is missing', async () => {
     const service = makeServiceMock();
     service.isAgentAssignedToPlot.mockResolvedValue(false);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.syncPhotos(
@@ -188,7 +205,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects assignment lifecycle management for farmer role', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.createAssignment(
@@ -217,7 +234,7 @@ describe('PlotsController scope boundaries', () => {
       assignmentId: 'assign_2',
       status: 'cancelled',
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.createAssignment(
@@ -255,7 +272,7 @@ describe('PlotsController scope boundaries', () => {
       fromDays: 14,
       agentUserId: 'agent_1',
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.listAssignments('plot_1', undefined, undefined, undefined, undefined, undefined, undefined, {
@@ -304,7 +321,7 @@ describe('PlotsController scope boundaries', () => {
       offset: 0,
     } as any);
     const setHeader = jest.fn();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     const result = await controller.listAssignments(
       'plot_1',
@@ -332,7 +349,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects geometry history when tenant claim is missing', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, undefined, { user: { id: 'user_1', email: 'farmer@example.com' } }),
@@ -342,7 +359,7 @@ describe('PlotsController scope boundaries', () => {
   it('rejects farmer geometry history for foreign plot', async () => {
     const service = makeServiceMock();
     service.isPlotOwnedByUser.mockResolvedValue(false);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, undefined, {
@@ -373,7 +390,7 @@ describe('PlotsController scope boundaries', () => {
       anomalyProfile: 'balanced',
       signalsOnly: false,
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     const result = await controller.geometryHistory('plot_1', '25', '50', 'asc', undefined, undefined, {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
@@ -397,7 +414,7 @@ describe('PlotsController scope boundaries', () => {
       anomalyProfile: 'strict',
       signalsOnly: false,
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await controller.geometryHistory('plot_1', undefined, undefined, undefined, 'strict', undefined, {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
@@ -419,7 +436,7 @@ describe('PlotsController scope boundaries', () => {
       anomalyProfile: 'balanced',
       signalsOnly: true,
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, 'true', {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
@@ -460,7 +477,7 @@ describe('PlotsController scope boundaries', () => {
       anomalyProfile: 'balanced',
       signalsOnly: false,
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     const result = await controller.geometryHistory('plot_1', undefined, undefined, undefined, undefined, undefined, {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
@@ -492,7 +509,7 @@ describe('PlotsController scope boundaries', () => {
 
   it('rejects deforestation decision for farmer role', async () => {
     const service = makeServiceMock();
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     await expect(
       controller.runDeforestationDecision('plot_1', '2020-12-31', {
@@ -509,7 +526,7 @@ describe('PlotsController scope boundaries', () => {
       cutoffDate: '2020-12-31',
       verdict: 'no_deforestation_detected',
     } as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     const result = await controller.runDeforestationDecision('plot_1', '2020-12-31', {
       user: { id: 'exp_1', email: 'exporter+ops@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
@@ -533,7 +550,7 @@ describe('PlotsController scope boundaries', () => {
         payload: { plotId: 'plot_1', cutoffDate: '2020-12-31', verdict: 'no_deforestation_detected' },
       },
     ] as any);
-    const controller = new PlotsController(service as unknown as PlotsService);
+    const controller = makePlotsController(service);
 
     const result = await controller.deforestationDecisionHistory('plot_1');
 

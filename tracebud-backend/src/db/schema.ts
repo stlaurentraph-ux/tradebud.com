@@ -36,6 +36,7 @@ export const farmerProfile = pgTable('farmer_profile', {
 export const plotStatusEnum = pgEnum('plot_status', [
   'pending_check',
   'compliant',
+  'under_review',
   'degradation_risk',
   'deforestation_detected',
 ]);
@@ -56,6 +57,8 @@ export const plot = pgTable('plot', {
   hdopAtCapture: numeric('hdop_at_capture', { precision: 4, scale: 2 }),
   sinaphOverlap: boolean('sinaph_overlap').notNull().default(false),
   indigenousOverlap: boolean('indigenous_overlap').notNull().default(false),
+  productionSystem: text('production_system'),
+  deforestationScreening: jsonb('deforestation_screening'),
   status: plotStatusEnum('status').notNull().default('pending_check'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

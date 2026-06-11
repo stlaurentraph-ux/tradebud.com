@@ -40,7 +40,8 @@ describeIfDb('RequestsController integration: decision timeline', () => {
     `);
 
     const inboxService = new InboxService(pool as any);
-    const service = new RequestsService(pool as any, inboxService);
+    const consentService = { canTenantAccessFarmerEvidence: jest.fn().mockResolvedValue(true) };
+    const service = new RequestsService(pool as any, inboxService, consentService as any);
     controller = new RequestsController(service);
   }, 20_000);
 
