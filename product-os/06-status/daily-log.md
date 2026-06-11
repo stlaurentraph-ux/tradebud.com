@@ -1,3 +1,17 @@
+### 2026-06-11 (geometry quality: GEO-104–106 server + offline pre-sync)
+- Backend: `PlotGeometryValidationService` — `ST_IsSimple`, parcel overlap (farmer + cooperative tenant scope), compactness/area sliver rules; audit `plot_geometry_quality_checked` on polygon create/update.
+- Offline: shared `plotGeometryQuality.ts` — self-intersect block, local overlap block, sliver warning on save / block on upload; wired in walk perimeter, explore upload, and auto-sync.
+
+### 2026-06-11 (Phase 2: tenure evidence_documents + review queue + checklist gating)
+- Migration `tb_v16_043`: `evidence_documents`, `document_provenance_events`, `compliance_issues`; links `plot_tenure_verification.evidence_document_id`.
+- Backend: `EvidenceDocumentsService`, `GET /v1/plots/tenure-review-queue`, `POST .../confirm-review`; MANUAL_REQUIRED opens WARNING compliance issue.
+- Dashboard: `/compliance/tenure-review` + BFF routes; link from plot review queue.
+- Offline: `plotChecklist` blocks `landOk` on FAILED/MANUAL_REQUIRED parse; plot detail fetches tenure verification when backed up.
+- Feature doc: `product-os/02-features/FEAT-tenure-document-ai-review.md`.
+
+### 2026-06-11 (dashboard: Sentry + Vercel Analytics)
+- `dashboard-product`: `@sentry/nextjs` (client/server/edge), root + global error boundaries, Vercel Analytics mounted, onboarding/sign-in/package-create events.
+
 ### 2026-06-11 (geometry policy: 4 ha polygon gate + 1.0 ha point buffer)
 - Backend `GEO-103`: reject point uploads when declared/computed area ≥ 4 ha; aligned GFW screening buffer from 200 m to spec **1.0 ha** (~56.4 m radius).
 - Offline upload path mirrors gate via `buildGeometryFromLocalPlot`; env `POINT_BUFFER_HA_DEFAULT`.

@@ -58,6 +58,10 @@ import {
 } from '@/features/offlineTiles/offlineTiles';
 import * as ImagePicker from 'expo-image-picker';
 import {
+  assessLocalPolygonQuality,
+  localPolygonQualityMessage,
+} from '@/features/compliance/plotGeometryQuality';
+import {
   buildGeometryFromLocalPlot,
   createDdsPackageForFarmer,
   fetchDdsPackagesForFarmer,
@@ -824,6 +828,31 @@ export default function PlotsScreen() {
                         setUploadPlotBusy(true);
                         setSyncMessage(null);
                         try {
+                          if (selectedPlot.kind === 'polygon' && selectedPlot.points.length >= 3) {
+                            const quality = assessLocalPolygonQuality({
+                              points: selectedPlot.points,
+                              areaHa: selectedPlot.areaHectares,
+                              otherPlots: plots
+                                .filter(
+                                  (p) =>
+                                    p.kind === 'polygon' &&
+                                    p.points.length >= 3 &&
+                                    p.id !== selectedPlot.id,
+                                )
+                                .map((p) => ({
+                                  id: p.id,
+                                  name: p.name,
+                                  points: p.points,
+                                  areaHectares: p.areaHectares,
+                                })),
+                              excludePlotId: selectedPlot.id,
+                              phase: 'upload',
+                            });
+                            if (quality.allIssues.length > 0) {
+                              setSyncMessage(localPolygonQualityMessage(quality.allIssues));
+                              return;
+                            }
+                          }
                           const geometry = buildGeometryFromLocalPlot(selectedPlot, {
                             declaredAreaHectares:
                               selectedPlot.declaredAreaHectares ?? selectedPlot.areaHectares ?? null,

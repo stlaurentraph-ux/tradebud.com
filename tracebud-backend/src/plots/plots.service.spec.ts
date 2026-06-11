@@ -28,6 +28,18 @@ const gfwMock = {
   runDatasetQuery: jest.fn(),
 };
 
+const geometryValidationMock = {
+  assertPolygonCandidateAllowed: jest.fn().mockResolvedValue({
+    ok: true,
+    issues: [],
+    metrics: { areaHa: 1, perimeterM: 400, vertexCount: 5, compactness: 0.5, isSimple: true },
+  }),
+};
+
+const evidenceDocumentsMock = {
+  upsertFromEvidenceSync: jest.fn().mockResolvedValue(undefined),
+};
+
 const gfwContextMock = {
   queryForGeometry: jest.fn().mockResolvedValue({
     summary: {
@@ -43,7 +55,14 @@ const gfwContextMock = {
 };
 
 function makePlotsService(pool: { query: jest.Mock } | ReturnType<typeof makePoolMock>) {
-  return new PlotsService(pool as any, gfwMock as any, gfwContextMock as any, tenureParseMock as any);
+  return new PlotsService(
+    pool as any,
+    gfwMock as any,
+    gfwContextMock as any,
+    geometryValidationMock as any,
+    tenureParseMock as any,
+    evidenceDocumentsMock as any,
+  );
 }
 
 const tenureParseMock = {
@@ -102,6 +121,7 @@ describe('PlotsService.create polygon normalization', () => {
       { rows: [] }, // ensureFarmerProfileForPlot existing check
       { rows: [] }, // user_account upsert
       { rows: [] }, // farmer_profile insert
+      { rows: [] }, // plot_geometry_quality_checked audit
       {
         rows: [
           {
@@ -113,7 +133,7 @@ describe('PlotsService.create polygon normalization', () => {
           },
         ],
       }, // main insert/select CTE
-      { rows: [] }, // audit insert
+      { rows: [] }, // plot_created audit
     ]);
     const service = makePlotsService(pool);
 
@@ -127,6 +147,7 @@ describe('PlotsService.create polygon normalization', () => {
       { rows: [] }, // ensureFarmerProfileForPlot existing check
       { rows: [] }, // user_account upsert
       { rows: [] }, // farmer_profile insert
+      { rows: [] }, // plot_geometry_quality_checked audit
       { rows: [] }, // main insert/select CTE returns nothing
       { rows: [{ correction_variance_pct: 12.34 }] }, // variance probe
     ]);
@@ -142,6 +163,7 @@ describe('PlotsService.create polygon normalization', () => {
       { rows: [] }, // ensureFarmerProfileForPlot existing check
       { rows: [] }, // user_account upsert
       { rows: [] }, // farmer_profile insert
+      { rows: [] }, // plot_geometry_quality_checked audit
       { rows: [] }, // main insert/select CTE returns nothing
       { rows: [{ correction_variance_pct: null }] }, // variance probe indicates no valid normalized geometry
     ]);
@@ -175,6 +197,8 @@ describe('PlotsService.updateGeometry polygon normalization', () => {
       {
         rows: [{ id: 'plot_1', kind: 'polygon', geometry_geojson: '{"type":"Polygon","coordinates":[]}' }],
       }, // existing plot
+      { rows: [{ farmer_id: '11111111-1111-1111-1111-111111111111' }] }, // getPlotTenantScope
+      { rows: [] }, // plot_geometry_quality_checked audit
       { rows: [] }, // update CTE returns nothing
       { rows: [{ correction_variance_pct: 8.12 }] }, // variance probe
     ]);
@@ -190,6 +214,8 @@ describe('PlotsService.updateGeometry polygon normalization', () => {
       {
         rows: [{ id: 'plot_1', kind: 'polygon', geometry_geojson: '{"type":"Polygon","coordinates":[]}' }],
       }, // existing plot
+      { rows: [{ farmer_id: '11111111-1111-1111-1111-111111111111' }] }, // getPlotTenantScope
+      { rows: [] }, // plot_geometry_quality_checked audit
       { rows: [] }, // update CTE returns nothing
       { rows: [{ correction_variance_pct: null }] }, // normalization failed
     ]);

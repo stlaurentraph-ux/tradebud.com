@@ -4,7 +4,35 @@ import {
   fetchPlotsForFarmer,
   postPlotToBackend,
 } from '@/features/api/postPlot';
+import {
+  assessLocalPolygonQuality,
+  localPolygonQualityMessage,
+} from '@/features/compliance/plotGeometryQuality';
 import { loadPlotCadastralKey } from '@/features/state/persistence';
+
+function polygonPlotRefs(plots: Plot[], excludePlotId?: string) {
+  return plots
+    .filter((p) => p.kind === 'polygon' && p.points.length >= 3 && p.id !== excludePlotId)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      points: p.points,
+      areaHectares: p.areaHectares,
+    }));
+}
+
+function uploadGeometryQualityError(plot: Plot, localPlots: Plot[]): string | null {
+  if (plot.kind !== 'polygon' || plot.points.length < 3) return null;
+  const quality = assessLocalPolygonQuality({
+    points: plot.points,
+    areaHa: plot.areaHectares,
+    otherPlots: polygonPlotRefs(localPlots, plot.id),
+    excludePlotId: plot.id,
+    phase: 'upload',
+  });
+  if (quality.allIssues.length === 0) return null;
+  return localPolygonQualityMessage(quality.allIssues);
+}
 
 /** Same matching rule as My Plots: server row `name` equals local plot display name. */
 export function backendHasMatchingPlot(localPlot: Plot, backendPlots: unknown[]): boolean {
@@ -85,6 +113,13 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       cadastralKey = null;
     }
     const ck = cadastralKey?.trim() ? cadastralKey.trim() : null;
+
+    const geometryQualityError = uploadGeometryQualityError(plot, localPlots);
+    if (geometryQualityError) {
+      failed += 1;
+      firstError = firstError ?? `Plot "${plot.name}": ${geometryQualityError}`;
+      continue;
+    }
 
     let geometry;
     try {

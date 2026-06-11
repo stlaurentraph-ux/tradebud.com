@@ -58,7 +58,7 @@ describeIfDb('Ownership scope integration: farmer/profile joins', () => {
     `);
 
     harvestService = new HarvestService(pool, createBillingServiceMock());
-    plotsService = new PlotsService(pool, {} as any, {} as any, {} as any);
+    plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any);
   }, 20_000);
 
   afterAll(async () => {

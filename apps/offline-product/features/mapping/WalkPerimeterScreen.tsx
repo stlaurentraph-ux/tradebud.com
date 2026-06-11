@@ -27,67 +27,16 @@ import {
   persistPlotPhoto,
 } from '@/features/state/persistence';
 import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
+import {
+  assessLocalPolygonQuality,
+  localPolygonQualityMessage,
+} from '@/features/compliance/plotGeometryQuality';
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-type LatLng = {
-  latitude: number;
-  longitude: number;
-};
-
-function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): boolean {
-  const cross = (ax: number, ay: number, bx: number, by: number) => ax * by - ay * bx;
-
-  const d1x = p2.latitude - p1.latitude;
-  const d1y = p2.longitude - p1.longitude;
-  const d2x = p4.latitude - p3.latitude;
-  const d2y = p4.longitude - p3.longitude;
-
-  const denominator = cross(d1x, d1y, d2x, d2y);
-  if (denominator === 0) {
-    return false;
-  }
-
-  const dx = p3.latitude - p1.latitude;
-  const dy = p3.longitude - p1.longitude;
-
-  const t = cross(dx, dy, d2x, d2y) / denominator;
-  const u = cross(dx, dy, d1x, d1y) / denominator;
-
-  return t > 0 && t < 1 && u > 0 && u < 1;
-}
-
-function hasSelfIntersection(points: LatLng[]): boolean {
-  if (points.length < 4) {
-    return false;
-  }
-
-  const n = points.length;
-
-  for (let i = 0; i < n; i++) {
-    const a1 = points[i];
-    const a2 = points[(i + 1) % n];
-
-    for (let j = i + 1; j < n; j++) {
-      const b1 = points[j];
-      const b2 = points[(j + 1) % n];
-
-      if (a1 === b1 || a1 === b2 || a2 === b1 || a2 === b2) {
-        continue;
-      }
-
-      if (segmentsIntersect(a1, a2, b1, b2)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
 
 export function WalkPerimeterScreen() {
   const insets = useSafeAreaInsets();
@@ -603,14 +552,6 @@ export function WalkPerimeterScreen() {
       );
     }
 
-    if (hasSelfIntersection(points)) {
-      Alert.alert(
-        'Invalid boundary',
-        'The polygon self-intersects. Please walk the perimeter again.',
-      );
-      return;
-    }
-
     // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
     // This path always has a walked perimeter (≥3 vertices) — store as polygon even if area <4 ha.
     const kind: 'polygon' = 'polygon';
@@ -648,6 +589,32 @@ export function WalkPerimeterScreen() {
       discrepancyPercent = pct;
     }
 
+    const otherPolygonPlots = plots
+      .filter((p) => p.kind === 'polygon' && p.points.length >= 3)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        points: p.points,
+        areaHectares: p.areaHectares,
+      }));
+
+    const polygonQuality = assessLocalPolygonQuality({
+      points,
+      areaHa: area.hectares,
+      otherPlots: otherPolygonPlots,
+      excludePlotId: editingPlot?.id,
+      phase: 'save',
+    });
+
+    if (polygonQuality.blockingIssues.length > 0) {
+      Alert.alert(
+        t('plot_geometry_error_title'),
+        localPolygonQualityMessage(polygonQuality.blockingIssues),
+      );
+      return;
+    }
+
+    const persistPolygon = () => {
     const pointsPayload = points.map((p) => ({
       latitude: p.latitude,
       longitude: p.longitude,
@@ -758,6 +725,21 @@ export function WalkPerimeterScreen() {
       };
       finishNewPlotSave(name, tryServerUpload);
     }
+    };
+
+    if (polygonQuality.warnings.length > 0) {
+      Alert.alert(
+        t('plot_geometry_warning_title'),
+        localPolygonQualityMessage(polygonQuality.warnings),
+        [
+          { text: t('plot_geometry_warning_fix'), style: 'cancel' },
+          { text: t('plot_geometry_warning_save'), onPress: persistPolygon },
+        ],
+      );
+      return;
+    }
+
+    persistPolygon();
   };
 
   const finalizeGeolocationAfterDeclarations = () => {

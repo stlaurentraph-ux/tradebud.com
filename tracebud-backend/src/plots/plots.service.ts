@@ -26,7 +26,9 @@ import {
   pointBufferRadiusMeters,
   resolvePointBufferHa,
 } from './plot-geometry-policy';
+import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { TenureParseService } from './tenure-parse.service';
+import { EvidenceDocumentsService } from './evidence-documents.service';
 import {
   applyReviewClearanceGate,
   EUDR_DEFORESTATION_CUTOFF,
@@ -111,7 +113,9 @@ export class PlotsService {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly gfw: GfwService,
     private readonly gfwContext: GfwContextService,
+    private readonly geometryValidation: PlotGeometryValidationService,
     private readonly tenureParse: TenureParseService,
+    private readonly evidenceDocuments: EvidenceDocumentsService,
   ) {}
 
   private static parseNumeric(value: unknown): number | null {
@@ -304,6 +308,24 @@ export class PlotsService {
       polygonWkt = `POLYGON((${coordText}))`;
       geometrySql = `ST_SetSRID(ST_GeomFromText('${polygonWkt}'), 4326)`;
       kind = 'polygon';
+      const geometryQuality = await this.geometryValidation.assertPolygonCandidateAllowed({
+        geometrySql,
+        farmerId,
+      });
+      await this.pool.query(
+        `INSERT INTO audit_log (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
+        [
+          userId ?? null,
+          'plot_geometry_quality_checked',
+          JSON.stringify({
+            farmerId,
+            clientPlotId,
+            phase: 'create',
+            issues: geometryQuality.issues,
+            metrics: geometryQuality.metrics,
+          }),
+        ],
+      );
     } else {
       throw new BadRequestException('Unsupported geometry type');
     }
@@ -615,13 +637,51 @@ export class PlotsService {
       ],
     );
 
-    await this.tenureParse.enqueueFromEvidenceSync(plotId, dto.kind, itemsArray);
+    for (const item of itemsArray) {
+      await this.evidenceDocuments.upsertFromEvidenceSync({
+        plotId,
+        tenantId: tenantId ?? null,
+        userId: userId ?? null,
+        kind: dto.kind,
+        item,
+      });
+    }
+
+    await this.tenureParse.enqueueFromEvidenceSync(plotId, dto.kind, itemsArray, {
+      tenantId: tenantId ?? null,
+      userId: userId ?? null,
+    });
 
     return { ok: true };
   }
 
   async listTenureVerification(plotId: string) {
     return this.tenureParse.listForPlot(plotId);
+  }
+
+  async listTenureReviewQueue(
+    tenantId: string,
+    canAccessPlot?: (plotId: string) => Promise<boolean>,
+  ) {
+    return this.tenureParse.listReviewQueue(tenantId, canAccessPlot);
+  }
+
+  async confirmTenureReview(
+    plotId: string,
+    verificationId: string,
+    params: { reason: string; note?: string | null },
+    userId: string | undefined,
+  ) {
+    if (!userId) {
+      throw new BadRequestException('Authenticated reviewer required');
+    }
+    return this.tenureParse.confirmTenureReview({
+      plotId,
+      verificationId,
+      userId,
+      reason: params.reason,
+      note: params.note ?? null,
+    });
   }
 
   private async getPlotGeometryForCompliance(plotId: string) {
@@ -2144,6 +2204,26 @@ export class PlotsService {
       const polygonWkt = `POLYGON((${coordText}))`;
       geometrySql = `ST_SetSRID(ST_GeomFromText('${polygonWkt}'), 4326)`;
       kind = 'polygon';
+      const farmerId = (await this.getPlotTenantScope(plotId)).farmerId;
+      const geometryQuality = await this.geometryValidation.assertPolygonCandidateAllowed({
+        geometrySql,
+        farmerId,
+        excludePlotId: plotId,
+      });
+      await this.pool.query(
+        `INSERT INTO audit_log (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
+        [
+          userId ?? null,
+          'plot_geometry_quality_checked',
+          JSON.stringify({
+            plotId,
+            phase: 'geometry_update',
+            issues: geometryQuality.issues,
+            metrics: geometryQuality.metrics,
+            reason: dto.reason,
+          }),
+        ],
+      );
     } else {
       throw new BadRequestException('Unsupported geometry type');
     }
