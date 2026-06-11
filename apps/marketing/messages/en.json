@@ -356,6 +356,65 @@
     "empty": "Articles are being prepared. Check back soon."
   },
   "homeV2": {
+    "hero": {
+      "eyebrow": "June 2026 — New structure",
+      "headline": "The agrifood operating system for equitable, verified, and compliant supply chains.",
+      "description": "Modular solutions for EUDR compliance, sustainability, and trade — built on offline field capture and a shared collaboration dashboard.",
+      "primaryCta": "Onboard your first shipment free",
+      "secondaryCta": "Watch 2-min product demo"
+    },
+    "modularSolutions": {
+      "eyebrow": "Solutions",
+      "title": "One platform. Modular solutions.",
+      "description": "Start with EUDR compliance and add capabilities as your network grows.",
+      "startHere": "Start here",
+      "roadmap": "Roadmap",
+      "solutions": {
+        "eudrCompliance": {
+          "title": "EUDR compliance",
+          "description": "Automated due diligence statements, satellite deforestation calibration, and TRACES filing."
+        },
+        "esgCarbon": {
+          "title": "ESG & carbon reporting",
+          "description": "Scope 3 emissions, Cool Farm Tool integration, and sustainability clusters."
+        },
+        "regenAg": {
+          "title": "Regenerative agriculture",
+          "description": "FSA digital wizard, continuous improvement tracking, and auditor portal access."
+        },
+        "childLabor": {
+          "title": "Child labor monitoring",
+          "description": "CLMRS-aligned surveys, incident flagging, and remediation workflow tracking."
+        },
+        "openChain": {
+          "title": "Open Chain model",
+          "description": "Shared-risk sourcing with LIRP premiums, 5-year MoUs, and cooperative economics."
+        },
+        "directTrade": {
+          "title": "Direct trade marketplace",
+          "description": "Verified listings, milestone-based escrow, and forward supply security."
+        }
+      }
+    },
+    "platformCore": {
+      "eyebrow": "Platform",
+      "title": "Two components. Every solution runs on both.",
+      "description": "All modular solutions are built on the same shared infrastructure — offline field capture and a collaboration dashboard.",
+      "fieldApp": {
+        "label": "Field App",
+        "headline": "Zero-friction, offline-first field capture.",
+        "description": "Map plots, record consent, and capture evidence in the field — no connectivity required. Data syncs automatically and feeds every downstream workflow.",
+        "features": ["Offline-first local cache", "Adaptive geolocation to six decimal places", "Waypoint averaging under canopy", "Low-literacy onboarding via phone or magic link"]
+      },
+      "dashboard": {
+        "label": "Dashboard",
+        "headline": "Unified command center for your supply chain.",
+        "description": "Visualize your network, validate evidence, run automated checks, and export compliance-ready records — from one shared operating layer.",
+        "features": ["Multi-role tenant-scoped access", "Automated plausibility checks", "One-click compliance export", "TRACES-compatible payloads"]
+      },
+      "exploreFieldApp": "Explore Field App",
+      "exploreDashboard": "Explore Dashboard"
+    },
     "chooseYourPath": {
       "title": "Choose your path",
       "description": "Start with the workflow that matches your role in the chain.",
@@ -506,6 +565,58 @@
     "pricing": "Pricing",
     "getStarted": "Get started",
     "pilot": "Pilot",
+    "june2026": {
+      "solutions": "Solutions",
+      "platform": "Platform",
+      "whoWeServe": "Who we serve",
+      "outcomes": "Outcomes",
+      "resources": "Resources",
+      "pricing": "Pricing",
+      "getStarted": "Get started",
+      "solutionsMenu": {
+        "allSolutions": "All solutions",
+        "eudrCompliance": "EUDR compliance",
+        "eudrDescription": "Automated DDS prep, satellite calibration, TRACES filing",
+        "esgCarbon": "ESG & carbon reporting",
+        "esgDescription": "Scope 3, Cool Farm Tool integration, SACP clusters",
+        "regenAg": "Regenerative agriculture",
+        "regenDescription": "FSA digital wizard, continuous improvement, auditor portal",
+        "childLabor": "Child labor monitoring",
+        "childDescription": "CLMRS surveys, remediation tracking",
+        "openChain": "Open Chain model",
+        "openChainDescription": "Shared-risk sourcing, LIRP + 20%, 5-year MoUs",
+        "directTrade": "Direct trade marketplace",
+        "directTradeDescription": "Verified listings, milestone escrow, FSS privacy"
+      },
+      "platformMenu": {
+        "overview": "Platform overview",
+        "fieldApp": "Field App",
+        "fieldAppDescription": "Zero-friction offline georeferencing and first-mile capture",
+        "dashboard": "Dashboard",
+        "dashboardDescription": "Unified command center to visualize, validate, and share supply chain data"
+      },
+      "whoWeServeMenu": {
+        "hub": "Who we serve",
+        "producers": "Producers & cooperatives",
+        "exporters": "Exporters & processors",
+        "brands": "Brands & roasters",
+        "sponsors": "Network sponsors",
+        "governments": "Governments"
+      },
+      "outcomesMenu": {
+        "hub": "Outcomes hub",
+        "supplyChains": "Resilient supply chains",
+        "livelihoods": "Farmer livelihoods",
+        "climate": "Nature-positive & climate"
+      },
+      "resourcesMenu": {
+        "hub": "Resources hub",
+        "insights": "Insights",
+        "dataSovereignty": "Data sovereignty & security",
+        "standards": "Verification standards",
+        "apiDocs": "API docs"
+      }
+    },
     "solutionsMenu": {
       "byRole": "By role",
       "byOutcome": "By outcome",
