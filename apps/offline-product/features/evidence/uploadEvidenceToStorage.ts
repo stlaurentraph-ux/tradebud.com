@@ -1,0 +1,103 @@
+import {
+  getAuthenticatedSupabaseClient,
+  getAuthenticatedSupabaseUserId,
+} from '@/features/api/syncAuthSession';
+
+const EVIDENCE_BUCKET = process.env.EXPO_PUBLIC_EVIDENCE_STORAGE_BUCKET ?? 'plot-evidence';
+
+/** Signed URL lifetime sent to Tracebud audit metadata (1 year). */
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
+
+export type EvidenceUploadResult =
+  | { ok: true; remoteUrl: string; storagePath: string }
+  | { ok: false; reason: 'not_configured' | 'not_signed_in' | 'not_local_file' | 'read_failed' | 'upload_failed'; message?: string };
+
+function isLocalEvidenceUri(uri: string): boolean {
+  if (uri.startsWith('text:')) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+function guessContentType(mimeType: string | null, label: string | null): string {
+  if (mimeType && mimeType.length > 0) return mimeType;
+  const name = (label ?? '').toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
+
+/**
+ * Upload a local evidence file to Supabase Storage (`plot-evidence` bucket).
+ * Path: `{farmerId}/{plotId}/{kind}/{timestamp}-{filename}` — must match RLS (farmerId = auth.uid()).
+ * Returns a signed URL for private bucket access.
+ */
+export async function uploadEvidenceFileToStorage(params: {
+  localUri: string;
+  mimeType: string | null;
+  label: string | null;
+  farmerId: string;
+  plotId: string;
+  kind: string;
+}): Promise<EvidenceUploadResult> {
+  if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    return { ok: false, reason: 'not_configured' };
+  }
+  if (!isLocalEvidenceUri(params.localUri)) {
+    return { ok: false, reason: 'not_local_file' };
+  }
+
+  const supabase = await getAuthenticatedSupabaseClient();
+  const authUserId = await getAuthenticatedSupabaseUserId();
+  if (!supabase || !authUserId) {
+    return { ok: false, reason: 'not_signed_in', message: 'Sign in to upload evidence files.' };
+  }
+
+  let body: Blob | ArrayBuffer;
+  try {
+    const response = await fetch(params.localUri);
+    body = await response.blob();
+  } catch (e) {
+    return {
+      ok: false,
+      reason: 'read_failed',
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+
+  const safeName = (params.label ?? 'evidence')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .slice(0, 80);
+  const storagePath = `${authUserId}/${params.plotId}/${params.kind}/${Date.now()}-${safeName}`;
+  const contentType = guessContentType(params.mimeType, params.label);
+
+  try {
+    const { error } = await supabase.storage.from(EVIDENCE_BUCKET).upload(storagePath, body, {
+      contentType,
+      upsert: false,
+    });
+    if (error) {
+      return { ok: false, reason: 'upload_failed', message: error.message };
+    }
+
+    const { data: signed, error: signError } = await supabase.storage
+      .from(EVIDENCE_BUCKET)
+      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+
+    if (signError || !signed?.signedUrl) {
+      return {
+        ok: false,
+        reason: 'upload_failed',
+        message: signError?.message ?? 'Could not create signed URL for uploaded file',
+      };
+    }
+
+    return { ok: true, remoteUrl: signed.signedUrl, storagePath };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: 'upload_failed',
+      message: e instanceof Error ? e.message : String(e),
+    };
+  }
+}

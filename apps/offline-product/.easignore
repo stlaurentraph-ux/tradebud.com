@@ -1,0 +1,33 @@
+# Upload only what EAS needs for apps/offline-product (used with EAS_NO_VCS=1).
+# https://docs.expo.dev/build-reference/easignore/
+
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+/ios
+/android
+app-example
+design/v0-prototype
+.env
+.env*.local
+.DS_Store
+*.tsbuildinfo
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.pem
+queue-i18n-*.json
+queue-i18n-*.zip
+scripts/*-user-raw.json
+scripts/import-*-locale.mjs
+scripts/lg-*.json
+scripts/patch_*.py
+scripts/build_*_locale*.py
+**/*.test.ts
+**/*.test.tsx
+**/*.smoke.mjs
+**/*-assert.mjs
+coverage/

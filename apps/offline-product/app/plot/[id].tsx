@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -20,7 +20,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
@@ -34,18 +33,32 @@ import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { fetchPlotsForFarmer, fetchVouchersForFarmer, updatePlotMetadataOnBackend } from '@/features/api/postPlot';
+import {
+  fetchPlotTenureVerification,
+  fetchPlotsForFarmer,
+  fetchVouchersForFarmer,
+  updatePlotMetadataOnBackend,
+  type PlotTenureVerificationRecord,
+} from '@/features/api/postPlot';
 import {
   loadPhotosForPlot,
+  loadPlotCadastralKey,
+  loadPlotTenure,
   loadTitlePhotosForPlot,
   loadEvidenceForPlot,
   persistPlotPhoto,
-  persistPlotEvidenceItem,
+  persistPlotTitlePhoto,
+  savePlotCadastralKey,
+  savePlotTenure,
+  enqueuePendingSync,
   type PlotPhoto,
   type PlotTitlePhoto,
   type PlotEvidenceItem,
-  type PlotEvidenceKind,
 } from '@/features/state/persistence';
+import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
+import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
+import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
+import { syncPlotLegalToBackend } from '@/features/api/postPlot';
 import {
   MIN_GROUND_TRUTH_PHOTOS,
   computePlotReadinessChecklist,
@@ -76,6 +89,7 @@ export default function PlotDetailScreen() {
   const [loadingBackend, setLoadingBackend] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [backendPlotId, setBackendPlotId] = useState<string | null>(null);
+  const [tenureVerifications, setTenureVerifications] = useState<PlotTenureVerificationRecord[]>([]);
   const [overlapFlags, setOverlapFlags] = useState<{ sinaph: boolean; indigenous: boolean }>({
     sinaph: false,
     indigenous: false,
@@ -85,12 +99,30 @@ export default function PlotDetailScreen() {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
   const [declaredHaDraft, setDeclaredHaDraft] = useState('');
+  const [cadastralKey, setCadastralKey] = useState('');
+  const [informalTenure, setInformalTenure] = useState(false);
+  const [informalTenureNote, setInformalTenureNote] = useState('');
+  const [legalSyncReason, setLegalSyncReason] = useState('');
+  const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
+  const [legalitySyncBusy, setLegalitySyncBusy] = useState(false);
 
   useEffect(() => {
     if (!plotId) return;
     loadPhotosForPlot(plotId).then(setPhotos).catch(() => setPhotos([]));
     loadTitlePhotosForPlot(plotId).then(setTitlePhotos).catch(() => setTitlePhotos([]));
     loadEvidenceForPlot(plotId).then(setEvidence).catch(() => setEvidence([]));
+    loadPlotCadastralKey(plotId)
+      .then((key) => setCadastralKey(key ?? ''))
+      .catch(() => setCadastralKey(''));
+    loadPlotTenure(plotId)
+      .then((row) => {
+        setInformalTenure(row.informalTenure);
+        setInformalTenureNote(row.informalTenureNote ?? '');
+      })
+      .catch(() => {
+        setInformalTenure(false);
+        setInformalTenureNote('');
+      });
   }, [plotId]);
 
   useEffect(() => {
@@ -130,6 +162,37 @@ export default function PlotDetailScreen() {
       indigenous: match?.indigenous_overlap === true,
     });
   }, [backendPlots, plot]);
+
+  const refreshTenureVerification = useCallback(async () => {
+    if (!backendPlotId) return;
+    try {
+      const rows = await fetchPlotTenureVerification(backendPlotId);
+      setTenureVerifications(rows ?? []);
+    } catch {
+      setTenureVerifications([]);
+    }
+  }, [backendPlotId]);
+
+  useEffect(() => {
+    void refreshTenureVerification();
+  }, [refreshTenureVerification]);
+
+  useEffect(() => {
+    if (!backendPlotId) return;
+    const hasUploaded =
+      evidence.some((e) => e.kind === 'tenure_evidence') || titlePhotos.length > 0;
+    const needsPoll =
+      hasUploaded &&
+      (tenureVerifications.length === 0 ||
+        tenureVerifications.some(
+          (v) => v.parse_status === 'PENDING' || v.parse_status === 'IN_PROGRESS',
+        ));
+    if (!needsPoll) return;
+    const timer = setInterval(() => {
+      void refreshTenureVerification();
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [backendPlotId, evidence, titlePhotos, tenureVerifications, refreshTenureVerification]);
 
   useEffect(() => {
     if (!farmer?.id) {
@@ -224,19 +287,21 @@ export default function PlotDetailScreen() {
     const evidenceKinds = evidence
       .map((e) => e.kind)
       .filter((k): k is string => typeof k === 'string' && k.length > 0);
-    const { groundOk, landOk, fpicOk, permitOk, syncOk } = computePlotReadinessChecklist({
-      groundTruthPhotoCount: photos.length,
-      titlePhotoCount: titlePhotos.length,
-      evidenceKinds,
-      isSyncedToServer: Boolean(backendPlotId),
-      backendFlags:
-        backendPlotId != null
-          ? {
-              sinaph_overlap: overlapFlags.sinaph,
-              indigenous_overlap: overlapFlags.indigenous,
-            }
-          : null,
-    });
+    const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
+      computePlotReadinessChecklist({
+        groundTruthPhotoCount: photos.length,
+        titlePhotoCount: titlePhotos.length,
+        evidenceKinds,
+        isSyncedToServer: Boolean(backendPlotId),
+        tenureVerifications,
+        backendFlags:
+          backendPlotId != null
+            ? {
+                sinaph_overlap: overlapFlags.sinaph,
+                indigenous_overlap: overlapFlags.indigenous,
+              }
+            : null,
+      });
     const minG = MIN_GROUND_TRUTH_PHOTOS;
 
     const rows: {
@@ -256,7 +321,12 @@ export default function PlotDetailScreen() {
       {
         id: 'land',
         title: t('plot_status_land'),
-        hint: t('plot_status_land_hint'),
+        hint:
+          tenureParseGate === 'blocked'
+            ? t('plot_status_land_parse_blocked')
+            : tenureParseGate === 'pending'
+              ? t('plot_status_land_parse_pending')
+              : t('plot_status_land_hint'),
         done: landOk,
         target: 'documents',
       },
@@ -294,6 +364,7 @@ export default function PlotDetailScreen() {
     overlapFlags.indigenous,
     overlapFlags.sinaph,
     backendPlotId,
+    tenureVerifications,
     t,
   ]);
 
@@ -330,26 +401,92 @@ export default function PlotDetailScreen() {
     setPhotos(updated);
   };
 
-  const addEvidence = async (kind: PlotEvidenceKind, label: string) => {
+  const syncLegalityAndTitlePhotos = async () => {
+    if (!plot || !farmer?.id) return;
+    const reason = legalSyncReason.trim();
+    if (!reason) {
+      setDocSyncMessage(t('plot_documents_legality_need_reason'));
+      return;
+    }
+    if (!backendPlotId) {
+      setDocSyncMessage(t('evidence_sync_need_plot'));
+      return;
+    }
+    setLegalitySyncBusy(true);
+    setDocSyncMessage(null);
+    try {
+      await savePlotCadastralKey(plot.id, cadastralKey.trim() || null);
+      await savePlotTenure(plot.id, {
+        informalTenure,
+        informalTenureNote: informalTenureNote.trim() || null,
+      });
+      await syncPlotLegalToBackend({
+        plotId: backendPlotId,
+        cadastralKey: cadastralKey.trim() || null,
+        informalTenure: informalTenure ? true : null,
+        informalTenureNote: informalTenureNote.trim() || null,
+        reason,
+      });
+      const summary = await syncLandTitlePhotosWithFiles({
+        serverPlotId: backendPlotId,
+        farmerId: farmer.id,
+        photos: titlePhotos,
+        cadastralKey: cadastralKey.trim() || null,
+        informalTenure: informalTenure ? true : null,
+        informalTenureNote: informalTenureNote.trim() || null,
+        note: 'Land title photos sync from plot detail',
+      });
+      setDocSyncMessage(
+        summary.uploadedCount > 0
+          ? t('plot_documents_legality_sync_ok_files', { n: summary.uploadedCount })
+          : t('plot_documents_legality_sync_ok'),
+      );
+      await refreshTenureVerification();
+    } catch (e) {
+      enqueuePendingSync({
+        createdAt: Date.now(),
+        actionType: 'photos_sync',
+        payloadJson: JSON.stringify({
+          legal: {
+            cadastralKey: cadastralKey.trim() || null,
+            informalTenure: informalTenure ? true : null,
+            informalTenureNote: informalTenureNote.trim() || null,
+            reason,
+          },
+          plotId: plot.id,
+          kind: 'land_title',
+          photos: titlePhotos.map((p) => ({
+            cadastralKey: cadastralKey.trim() || null,
+            informalTenure: informalTenure ? true : null,
+            informalTenureNote: informalTenureNote.trim() || null,
+            uri: p.uri,
+            takenAt: p.takenAt,
+          })),
+          note: 'Land title photos sync from plot detail',
+        }),
+        lastError: e instanceof Error ? e.message : String(e),
+      });
+      setDocSyncMessage(
+        e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short'),
+      );
+    } finally {
+      setLegalitySyncBusy(false);
+    }
+  };
+
+  const addLandTitlePhoto = async () => {
     if (!plot) return;
-    setNote(null);
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: ['image/*', 'application/pdf', '*/*'],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (picked.canceled || !picked.assets?.[0]?.uri) return;
-    const asset = picked.assets[0];
-    persistPlotEvidenceItem({
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') return;
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    persistPlotTitlePhoto({
       plotId: plot.id,
-      kind,
-      uri: asset.uri,
-      mimeType: asset.mimeType ?? null,
-      label: asset.name ?? label,
+      uri: result.assets[0].uri,
       takenAt: Date.now(),
     });
-    const updated = await loadEvidenceForPlot(plot.id);
-    setEvidence(updated);
+    const updated = await loadTitlePhotosForPlot(plot.id);
+    setTitlePhotos(updated);
   };
 
   return (
@@ -622,50 +759,81 @@ export default function PlotDetailScreen() {
           </>
         ) : null}
 
-        {active === 'documents' ? (
+        {active === 'documents' && plot ? (
           <>
-            <Card variant="outlined" style={styles.docCard}>
-              <View style={styles.docRow}>
-                <View style={styles.docIconWrapGreen}>
-                  <Ionicons name="bookmark-outline" size={24} color="#0A7F59" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText type="subtitle">Clave Catastral</ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.docVerifiedText}>
-                    Verified
-                  </ThemedText>
-                </View>
+            <PlotTenureStatusCard
+              plot={plot}
+              cadastralKey={cadastralKey.trim() || null}
+              informalTenure={informalTenure}
+              informalTenureNote={informalTenureNote.trim() || null}
+              titlePhotoCount={titlePhotos.length}
+              tenureEvidenceCount={evidence.filter((e) => e.kind === 'tenure_evidence').length}
+              tenureVerifications={tenureVerifications}
+            />
+
+            <Card variant="elevated" style={styles.docCard}>
+              <ThemedText type="defaultSemiBold">{t('plot_documents_land_title_section')}</ThemedText>
+              <ThemedText type="caption" style={{ marginTop: 4 }}>
+                {t('plot_documents_land_title_body')}
+              </ThemedText>
+              <ThemedText type="caption" style={{ marginTop: 6, opacity: 0.85 }}>
+                {t('plot_documents_clave_order_hint')}
+              </ThemedText>
+              <Input
+                label={t('plot_documents_cadastral_label')}
+                placeholder={t('plot_documents_cadastral_ph')}
+                value={cadastralKey}
+                onChangeText={setCadastralKey}
+                containerStyle={{ marginTop: 10 }}
+              />
+              <View style={{ marginTop: 10 }}>
+                <Button
+                  title={t('plot_documents_add_land_title')}
+                  variant="secondary"
+                  onPress={() => void addLandTitlePhoto()}
+                />
               </View>
-              <View style={styles.docCodeWrap}>
-                <ThemedText type="defaultSemiBold" style={styles.docCodeText}>
-                  {plot ? `HN-COP-0401-${new Date(plot.createdAt).getFullYear()}-00142` : 'HN-COP-0401-2024-00142'}
-                </ThemedText>
+              {titlePhotos.length > 0 ? (
+                <View style={styles.photoRow}>
+                  {titlePhotos.slice(0, 4).map((p) => (
+                    <Image key={p.id} source={{ uri: p.uri }} style={styles.photoThumb} />
+                  ))}
+                </View>
+              ) : null}
+              <Input
+                label={t('plot_documents_legality_reason_label')}
+                placeholder={t('plot_documents_legality_reason_ph')}
+                value={legalSyncReason}
+                onChangeText={setLegalSyncReason}
+                containerStyle={{ marginTop: 10 }}
+              />
+              <View style={{ marginTop: 10 }}>
+                <Button
+                  title={legalitySyncBusy ? t('evidence_sync_busy') : t('plot_documents_legality_sync_button')}
+                  disabled={legalitySyncBusy || titlePhotos.length === 0}
+                  onPress={() => void syncLegalityAndTitlePhotos()}
+                />
               </View>
             </Card>
 
-            <Card variant="outlined" style={styles.docCard}>
-              <View style={styles.docRow}>
-                <View style={styles.docIconWrapBlue}>
-                  <Ionicons name="document-text-outline" size={22} color="#2D5FD4" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText type="subtitle">Productor en Posesion</ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.docPendingText}>
-                    Pending verification
-                  </ThemedText>
-                </View>
-              </View>
-              <ThemedText type="default" style={styles.docSubText}>
-                {evidence.length > 0 || titlePhotos.length > 0 ? 'Municipal attestation uploaded' : 'Upload municipal attestation'}
-              </ThemedText>
-            </Card>
+            <PlotEvidencePanel
+              scopeId={plot.id}
+              farmerId={farmer?.id}
+              evidence={evidence}
+              onEvidenceChange={setEvidence}
+              overlapFlags={overlapFlags}
+              serverPlotId={backendPlotId}
+              showFpicStructured={overlapFlags.indigenous}
+              showSync
+              onSyncMessage={setDocSyncMessage}
+              onSyncComplete={refreshTenureVerification}
+            />
 
-            <Pressable style={styles.uploadDocCta} onPress={() => addEvidence('tenure_evidence', 'municipal-attestation')}>
-              <Ionicons name="arrow-up-outline" size={22} color="#0A7F59" />
-              <ThemedText type="subtitle" style={styles.uploadDocText}>
-                Upload Document
+            {docSyncMessage ? (
+              <ThemedText type="caption" style={{ marginTop: 8 }}>
+                {docSyncMessage}
               </ThemedText>
-            </Pressable>
+            ) : null}
           </>
         ) : null}
 

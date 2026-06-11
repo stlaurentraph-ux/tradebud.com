@@ -1,28 +1,23 @@
 import {
   fetchPlotsForFarmer,
   postHarvestToBackend,
-  syncPlotEvidenceToBackend,
+  syncPlotLegalToBackend,
   syncPlotPhotosToBackend,
 } from '@/features/api/postPlot';
+import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
+import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   deletePendingSyncAction,
   loadEvidenceForPlot,
   loadPendingSyncActions,
+  loadTitlePhotosForPlot,
   logAuditEvent,
   markPendingSyncAttempt,
   type PendingSyncAction,
-  type PlotEvidenceKind,
 } from '@/features/state/persistence';
 import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
-
-const EVIDENCE_KINDS: PlotEvidenceKind[] = [
-  'fpic_repository',
-  'protected_area_permit',
-  'labor_evidence',
-  'tenure_evidence',
-];
 
 export type ProcessPendingSyncQueueResult = {
   /** Actions removed from the queue after successful API calls. */
@@ -169,9 +164,58 @@ export async function processPendingSyncQueue(params: {
           });
           continue;
         }
-        await syncPlotPhotosToBackend({ ...payload, plotId: sid, hlcTimestamp: a.hlcTimestamp, clientEventId: `pending-sync-${a.id}` } as Parameters<
-          typeof syncPlotPhotosToBackend
-        >[0]);
+        const kind = payload?.kind === 'land_title' ? 'land_title' : 'ground_truth';
+        const legal = payload?.legal as
+          | {
+              cadastralKey?: string | null;
+              informalTenure?: boolean | null;
+              informalTenureNote?: string | null;
+              reason?: string | null;
+            }
+          | undefined;
+        if (legal?.reason && String(legal.reason).trim().length > 0) {
+          await syncPlotLegalToBackend({
+            plotId: sid,
+            cadastralKey: legal.cadastralKey ?? null,
+            informalTenure: legal.informalTenure ?? null,
+            informalTenureNote: legal.informalTenureNote ?? null,
+            reason: String(legal.reason).trim(),
+            hlcTimestamp: a.hlcTimestamp,
+            clientEventId: `pending-sync-${a.id}-legal`,
+          });
+        }
+        if (kind === 'land_title') {
+          const titlePhotos = await loadTitlePhotosForPlot(localId);
+          const payloadPhotos = Array.isArray(payload.photos) ? payload.photos : [];
+          const firstMeta = payloadPhotos[0] as Record<string, unknown> | undefined;
+          await syncLandTitlePhotosWithFiles({
+            serverPlotId: sid,
+            farmerId: params.farmerId,
+            photos: titlePhotos,
+            cadastralKey:
+              typeof firstMeta?.cadastralKey === 'string' ? firstMeta.cadastralKey : legal?.cadastralKey ?? null,
+            informalTenure:
+              typeof firstMeta?.informalTenure === 'boolean'
+                ? firstMeta.informalTenure
+                : legal?.informalTenure ?? null,
+            informalTenureNote:
+              typeof firstMeta?.informalTenureNote === 'string'
+                ? firstMeta.informalTenureNote
+                : legal?.informalTenureNote ?? null,
+            note: typeof payload?.note === 'string' ? payload.note : 'Land title photos sync from pending queue',
+            hlcTimestamp: a.hlcTimestamp,
+            clientEventId: `pending-sync-${a.id}`,
+          });
+        } else {
+          await syncPlotPhotosToBackend({
+            plotId: sid,
+            kind: 'ground_truth',
+            photos: Array.isArray(payload.photos) ? payload.photos : [],
+            note: typeof payload?.note === 'string' ? payload.note : undefined,
+            hlcTimestamp: a.hlcTimestamp,
+            clientEventId: `pending-sync-${a.id}`,
+          });
+        }
       } else if (a.actionType === 'evidence_sync') {
         const plotIdRaw = payload?.plotId as string | undefined;
         const reason = String(payload?.reason ?? '').trim();
@@ -198,27 +242,21 @@ export async function processPendingSyncQueue(params: {
           continue;
         }
         const items = await loadEvidenceForPlot(plotIdRaw);
-        for (const k of EVIDENCE_KINDS) {
-          const subset = items
-            .filter((ev) => ev.kind === k)
-            .map((ev) => ({
-              kind: ev.kind,
-              uri: ev.uri,
-              label: ev.label ?? null,
-              mimeType: ev.mimeType ?? null,
-              takenAt: ev.takenAt,
-            }));
-          if (subset.length === 0) continue;
-          await syncPlotEvidenceToBackend({
-            plotId: sid,
-            kind: k,
-            items: subset,
-            reason,
-            note: 'Evidence repository sync from pending queue',
-            hlcTimestamp: a.hlcTimestamp,
-            clientEventId: `pending-sync-${a.id}-${k}`,
-          });
+        if (items.length === 0) {
+          await deletePendingSyncAction(a.id);
+          droppedInvalid += 1;
+          continue;
         }
+        await syncPlotEvidenceWithFiles({
+          localPlotId: plotIdRaw,
+          serverPlotId: sid,
+          farmerId: params.farmerId,
+          items,
+          reason,
+          note: 'Evidence repository sync from pending queue',
+          hlcTimestamp: a.hlcTimestamp,
+          clientEventId: `pending-sync-${a.id}`,
+        });
       } else {
         await deletePendingSyncAction(a.id);
         await logAuditEvent({

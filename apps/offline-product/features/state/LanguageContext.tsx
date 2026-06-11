@@ -44,6 +44,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       .then(() => getSetting(LANG_STORAGE_KEY))
       .then((v) => {
         if (cancelled || !v) return;
+        if (v === 'no') {
+          setSetting(LANG_STORAGE_KEY, defaultLocale).catch(() => undefined);
+          return;
+        }
         if (isSupportedLanguage(v)) setLangState(v);
       })
       .catch(() => undefined);

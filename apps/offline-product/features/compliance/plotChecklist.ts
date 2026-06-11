@@ -4,7 +4,17 @@
  * and server-sync rules aligned.
  */
 
+import { summarizeTenureAiParseStatus } from '@/features/compliance/plotTenureAiReview';
+import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
+
 export const MIN_GROUND_TRUTH_PHOTOS = 4;
+
+export type TenureParseGateStatus =
+  | 'not_applicable'
+  | 'not_synced'
+  | 'pending'
+  | 'blocked'
+  | 'cleared';
 
 export type BackendOverlapFlags = {
   sinaph_overlap?: boolean;
@@ -14,6 +24,7 @@ export type BackendOverlapFlags = {
 export type PlotReadinessChecklist = {
   groundOk: boolean;
   landOk: boolean;
+  tenureParseGate: TenureParseGateStatus;
   needsFpic: boolean;
   needsPermit: boolean;
   fpicOk: boolean;
@@ -22,6 +33,19 @@ export type PlotReadinessChecklist = {
   /** All required items satisfied for this plot. */
   done: boolean;
 };
+
+export function evaluateTenureParseGate(params: {
+  hasTenureEvidence: boolean;
+  isSyncedToServer: boolean;
+  tenureVerifications?: PlotTenureVerificationRecord[];
+}): TenureParseGateStatus {
+  if (!params.hasTenureEvidence) return 'not_applicable';
+  if (!params.isSyncedToServer) return 'not_synced';
+  const status = summarizeTenureAiParseStatus(params.tenureVerifications ?? []);
+  if (!status || status === 'PENDING' || status === 'IN_PROGRESS') return 'pending';
+  if (status === 'FAILED' || status === 'MANUAL_REQUIRED') return 'blocked';
+  return 'cleared';
+}
 
 function evidenceHasKind(kinds: readonly string[], kind: string): boolean {
   return kinds.some((k) => k === kind);
@@ -39,12 +63,19 @@ export function computePlotReadinessChecklist(params: {
   isSyncedToServer: boolean;
   backendFlags?: BackendOverlapFlags | null;
   minGroundTruthPhotos?: number;
+  tenureVerifications?: PlotTenureVerificationRecord[];
 }): PlotReadinessChecklist {
   const minG = params.minGroundTruthPhotos ?? MIN_GROUND_TRUTH_PHOTOS;
   const flags = params.backendFlags ?? null;
   const groundOk = params.groundTruthPhotoCount >= minG;
-  const landOk =
-    params.titlePhotoCount > 0 || evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
+  const hasTenureEvidence = evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
+  const hasLandEvidence = params.titlePhotoCount > 0 || hasTenureEvidence;
+  const tenureParseGate = evaluateTenureParseGate({
+    hasTenureEvidence,
+    isSyncedToServer: params.isSyncedToServer,
+    tenureVerifications: params.tenureVerifications,
+  });
+  const landOk = hasLandEvidence && tenureParseGate !== 'blocked';
   const needsFpic = flags?.indigenous_overlap === true;
   const needsPermit = flags?.sinaph_overlap === true;
   const fpicOk = evidenceHasKind(params.evidenceKinds, 'fpic_repository');
@@ -60,6 +91,7 @@ export function computePlotReadinessChecklist(params: {
   return {
     groundOk,
     landOk,
+    tenureParseGate,
     needsFpic,
     needsPermit,
     fpicOk,

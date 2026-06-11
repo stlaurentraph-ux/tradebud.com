@@ -352,6 +352,8 @@
   "plot_documents_legality_need_reason": "Reason is required to sync legality data.",
   "plot_documents_legality_sync_ok": "Legality data synced to Tracebud.",
   "plot_documents_legality_sync_ok_files": "Legality synced — {n} title file(s) sent for AI review.",
+  "plot_documents_clave_order_hint": "Enter your Clave Catastral and add title photos, then sync once. AI cross-checks the key against the deed after sync.",
+  "plot_tenure_manual_review_body": "Your cooperative will confirm this document. You can keep working on other checklist items; land tenure clears after their review.",
   "documents_add_tenure": "Add tenure document",
   "documents_add_fpic": "Add FPIC document",
   "documents_add_permit": "Add permit document",

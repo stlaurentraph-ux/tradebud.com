@@ -12,7 +12,8 @@ const messagesDir = resolve(root, 'features/i18n/messages');
 const en = JSON.parse(readFileSync(resolve(messagesDir, 'en.json'), 'utf8'));
 const enKeys = Object.keys(en);
 
-const locales = ['fr', 'es', 'pt', 'id', 'vi', 'de', 'nl', 'it', 'am', 'no'];
+// Norwegian (no) is intentionally excluded from the field app picker — file kept for tooling only.
+const locales = ['fr', 'es', 'pt', 'id', 'vi', 'de', 'nl', 'it', 'am', 'hi', 'ar', 'rw', 'lg', 'sw'];
 
 for (const locale of locales) {
   const path = resolve(messagesDir, `${locale}.json`);

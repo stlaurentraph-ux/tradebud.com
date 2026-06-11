@@ -10,7 +10,11 @@ export const locales = [
   'nl',
   'it',
   'am',
-  'no',
+  'hi',
+  'ar',
+  'rw',
+  'lg',
+  'sw',
 ] as const;
 
 export type SupportedLanguage = (typeof locales)[number];
@@ -32,7 +36,11 @@ export const localeNames: Record<SupportedLanguage, string> = {
   nl: 'Nederlands',
   it: 'Italiano',
   am: 'አማርኛ',
-  no: 'Norsk',
+  hi: 'हिन्दी',
+  ar: 'العربية',
+  rw: 'Kinyarwanda',
+  lg: 'Luganda',
+  sw: 'Kiswahili',
 };
 
 /** Short code shown in the header pill */
@@ -47,5 +55,9 @@ export const localeCodes: Record<SupportedLanguage, string> = {
   nl: 'NL',
   it: 'IT',
   am: 'AM',
-  no: 'NO',
+  hi: 'HI',
+  ar: 'AR',
+  rw: 'RW',
+  lg: 'LG',
+  sw: 'SW',
 };

@@ -38,7 +38,6 @@ import {
   enqueuePendingSync,
   persistPlotPhoto,
   persistPlotTitlePhoto,
-  persistPlotEvidenceItem,
   savePlotCadastralKey,
   savePlotTenure,
   getSetting,
@@ -49,7 +48,6 @@ import {
   type PlotPhoto,
   type PlotTitlePhoto,
   type PlotEvidenceItem,
-  type PlotEvidenceKind,
 } from '@/features/state/persistence';
 import {
   downloadOfflineTilePack,
@@ -78,9 +76,11 @@ import {
   updatePlotMetadataOnBackend,
   fetchDdsPackageTracesJson,
   syncPlotLegalToBackend,
-  syncPlotEvidenceToBackend,
+  fetchPlotTenureVerification,
+  type PlotTenureVerificationRecord,
 } from '@/features/api/postPlot';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
+import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import {
   listUnsyncedLocalPlots,
   subscribeServerPlotSyncChanged,
@@ -90,7 +90,6 @@ import { computePlotReadinessChecklist } from '@/features/compliance/plotCheckli
 import { indicativeMaxKgForPlot } from '@/features/compliance/commodityCatalog';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
-import * as DocumentPicker from 'expo-document-picker';
 import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
 import { PlotMap } from '@/components/plot-map/PlotMap';
 import { compactTabHeaderStyles } from '@/constants/compactTabHeader';
@@ -171,8 +170,6 @@ export default function PlotsScreen() {
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
   const [titlePhotos, setTitlePhotos] = useState<PlotTitlePhoto[]>([]);
   const [evidence, setEvidence] = useState<PlotEvidenceItem[]>([]);
-  const [evidenceReason, setEvidenceReason] = useState('');
-  const [fpicSignerName, setFpicSignerName] = useState('');
   const [cadastralKey, setCadastralKey] = useState('');
   const [informalTenure, setInformalTenure] = useState(false);
   const [informalTenureNote, setInformalTenureNote] = useState('');
@@ -200,6 +197,7 @@ export default function PlotsScreen() {
   const [pendingBusy, setPendingBusy] = useState(false);
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
+  const [checklistRefreshKey, setChecklistRefreshKey] = useState(0);
   const [uploadPlotBusy, setUploadPlotBusy] = useState(false);
   const isAuthMissing =
     !!backendError &&
@@ -424,6 +422,25 @@ export default function PlotsScreen() {
           return [p.id, rows.length] as const;
         }),
       );
+      const tenureVerificationEntries = await Promise.all(
+        plots.map(async (p) => {
+          const backendMatch = findBackendPlotForLocal(p, backendPlots) as { id?: unknown } | undefined;
+          const serverId =
+            backendMatch?.id != null && String(backendMatch.id).length > 0
+              ? String(backendMatch.id)
+              : null;
+          if (!serverId) return [p.id, [] as PlotTenureVerificationRecord[]] as const;
+          const [titleRows, evidenceRows] = await Promise.all([
+            loadTitlePhotosForPlot(p.id).catch(() => []),
+            loadEvidenceForPlot(p.id).catch(() => []),
+          ]);
+          const hasTenureSignal =
+            titleRows.length > 0 || evidenceRows.some((e) => e.kind === 'tenure_evidence');
+          if (!hasTenureSignal) return [p.id, [] as PlotTenureVerificationRecord[]] as const;
+          const rows = await fetchPlotTenureVerification(serverId).catch(() => []);
+          return [p.id, rows ?? []] as const;
+        }),
+      );
       const checklistEntries = await Promise.all(
         plots.map(async (p) => {
           const backendMatch = findBackendPlotForLocal(p, backendPlots) as
@@ -437,12 +454,15 @@ export default function PlotsScreen() {
           const evidenceKinds = evidenceRows
             .map((e: { kind?: string }) => e.kind)
             .filter((k): k is string => typeof k === 'string' && k.length > 0);
+          const tenureVerifications =
+            tenureVerificationEntries.find(([pid]) => pid === p.id)?.[1] ?? [];
           const { done } = computePlotReadinessChecklist({
             groundTruthPhotoCount: photoCount,
             titlePhotoCount: titleRows.length,
             evidenceKinds,
             isSyncedToServer: Boolean(backendMatch),
             backendFlags: backendMatch,
+            tenureVerifications,
           });
           return [p.id, done] as const;
         }),
@@ -454,7 +474,7 @@ export default function PlotsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [plots, backendPlots]);
+  }, [plots, backendPlots, checklistRefreshKey]);
 
   useEffect(() => {
     if (selectedPlot) {
@@ -1274,8 +1294,8 @@ export default function PlotsScreen() {
 
                 <View style={{ marginTop: 12 }}>
                   <SectionHeader
-                    title="Evidence repository"
-                    subtitle="Attach FPIC, permits, labor, and tenure evidence (stored on-device; sync as metadata)."
+                    title={t('evidence_upload_prompt_title')}
+                    subtitle={t('evidence_sync_body')}
                   />
                   <View
                     onLayout={(e) => {
@@ -1283,305 +1303,27 @@ export default function PlotsScreen() {
                       setSectionY((prev) => ({ ...prev, documents: y }));
                     }}
                   />
-
-                  <Card variant="elevated" style={styles.card}>
-                    <ThemedText type="defaultSemiBold">FPIC module (structured)</ThemedText>
-                    <ThemedText type="caption">
-                      Minutes, mapping, agreements + a signature record.
-                    </ThemedText>
-                    <View style={{ gap: 10, marginTop: 10 }}>
-                      <Button
-                        title="Add FPIC minutes (PDF/photo)"
-                        variant="secondary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const picked = await DocumentPicker.getDocumentAsync({
-                            type: ['image/*', 'application/pdf', '*/*'],
-                            copyToCacheDirectory: true,
-                            multiple: false,
-                          });
-                          if (picked.canceled || !picked.assets?.[0]?.uri) return;
-                          const asset = picked.assets[0];
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: 'fpic_repository',
-                            uri: asset.uri,
-                            mimeType: asset.mimeType ?? null,
-                            label: asset.name ?? 'fpic_minutes',
-                            takenAt: Date.now(),
-                          });
-                          setEvidence(await loadEvidenceForPlot(selectedPlot.id));
-                        }}
-                      />
-                      <Button
-                        title="Add participatory mapping evidence"
-                        variant="secondary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const picked = await DocumentPicker.getDocumentAsync({
-                            type: ['image/*', 'application/pdf', '*/*'],
-                            copyToCacheDirectory: true,
-                            multiple: false,
-                          });
-                          if (picked.canceled || !picked.assets?.[0]?.uri) return;
-                          const asset = picked.assets[0];
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: 'fpic_repository',
-                            uri: asset.uri,
-                            mimeType: asset.mimeType ?? null,
-                            label: asset.name ?? 'fpic_participatory_mapping',
-                            takenAt: Date.now(),
-                          });
-                          setEvidence(await loadEvidenceForPlot(selectedPlot.id));
-                        }}
-                      />
-                      <Button
-                        title="Add social agreement evidence"
-                        variant="secondary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const picked = await DocumentPicker.getDocumentAsync({
-                            type: ['image/*', 'application/pdf', '*/*'],
-                            copyToCacheDirectory: true,
-                            multiple: false,
-                          });
-                          if (picked.canceled || !picked.assets?.[0]?.uri) return;
-                          const asset = picked.assets[0];
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: 'fpic_repository',
-                            uri: asset.uri,
-                            mimeType: asset.mimeType ?? null,
-                            label: asset.name ?? 'fpic_social_agreement',
-                            takenAt: Date.now(),
-                          });
-                          setEvidence(await loadEvidenceForPlot(selectedPlot.id));
-                        }}
-                      />
-                    </View>
-                    <Input
-                      label="FPIC signature record (typed)"
-                      placeholder="Signer name (community representative)"
-                      value={fpicSignerName}
-                      onChangeText={setFpicSignerName}
-                      containerStyle={{ marginTop: 10 }}
-                    />
-                    <View style={{ marginTop: 10 }}>
-                      <Button
-                        title="Add signature record"
-                        variant="primary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const name = fpicSignerName.trim();
-                          if (name.length === 0) return;
-                          const takenAt = Date.now();
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: 'fpic_repository',
-                            uri: `text:fpic_signature:${encodeURIComponent(name)}:${takenAt}`,
-                            mimeType: 'text/plain',
-                            label: `FPIC signature: ${name}`,
-                            takenAt,
-                          });
-                          setFpicSignerName('');
-                          setEvidence(await loadEvidenceForPlot(selectedPlot.id));
-                          logAuditEvent({
-                            userId: farmer?.id,
-                            eventType: 'plot_fpic_signed',
-                            payload: { plotId: selectedPlot.id, signerName: name, takenAt },
-                          }).catch(() => undefined);
-                        }}
-                      />
-                    </View>
-                  </Card>
-
-                  <Card variant="elevated" style={styles.card}>
-                    <ThemedText type="defaultSemiBold">Labor evidence</ThemedText>
-                    <ThemedText type="caption">Attach photos/docs of working conditions.</ThemedText>
-                    <View style={{ marginTop: 10 }}>
-                      <Button
-                        title="Attach labor evidence (photo/PDF)"
-                        variant="secondary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const picked = await DocumentPicker.getDocumentAsync({
-                            type: ['image/*', 'application/pdf', '*/*'],
-                            copyToCacheDirectory: true,
-                            multiple: false,
-                          });
-                          if (picked.canceled || !picked.assets?.[0]?.uri) return;
-                          const asset = picked.assets[0];
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: 'labor_evidence',
-                            uri: asset.uri,
-                            mimeType: asset.mimeType ?? null,
-                            label: asset.name ?? 'labor_evidence',
-                            takenAt: Date.now(),
-                          });
-                          setEvidence(await loadEvidenceForPlot(selectedPlot.id));
-                          logAuditEvent({
-                            userId: farmer?.id,
-                            eventType: 'plot_labor_evidence_added',
-                            payload: {
-                              plotId: selectedPlot.id,
-                              uri: asset.uri,
-                              mimeType: asset.mimeType ?? null,
-                            },
-                          }).catch(() => undefined);
-                        }}
-                      />
-                    </View>
-                  </Card>
-
-                  <Input
-                    label="Reason for evidence sync (required)"
-                    placeholder="e.g. collected during community meeting, permit reviewed, field verification…"
-                    value={evidenceReason}
-                    onChangeText={setEvidenceReason}
-                    containerStyle={{ marginTop: 10 }}
-                  />
-
-                  {(
-                    [
-                      ['fpic_repository', 'Add FPIC doc/photo'],
-                      ['protected_area_permit', 'Add permit / management plan'],
-                      ['labor_evidence', 'Add labor evidence'],
-                      ['tenure_evidence', 'Add tenure evidence'],
-                    ] as const
-                  ).map(([kind, label]) => (
-                    <View key={kind} style={{ marginTop: 8 }}>
-                      <Button
-                        title={label}
-                        variant="secondary"
-                        onPress={async () => {
-                          if (!selectedPlot) return;
-                          const picked = await DocumentPicker.getDocumentAsync({
-                            type: ['image/*', 'application/pdf', '*/*'],
-                            copyToCacheDirectory: true,
-                            multiple: false,
-                          });
-                          if (picked.canceled || !picked.assets?.[0]?.uri) return;
-                          const asset = picked.assets[0];
-                          persistPlotEvidenceItem({
-                            plotId: selectedPlot.id,
-                            kind: kind as PlotEvidenceKind,
-                            uri: asset.uri,
-                            mimeType: asset.mimeType ?? null,
-                            label: asset.name ?? null,
-                            takenAt: Date.now(),
-                          });
-                          const updated = await loadEvidenceForPlot(selectedPlot.id);
-                          setEvidence(updated);
-                          logAuditEvent({
-                            userId: farmer?.id,
-                            eventType: 'plot_evidence_added',
-                            payload: {
-                              plotId: selectedPlot.id,
-                              kind,
-                              uri: asset.uri,
-                              name: asset.name ?? null,
-                              mimeType: asset.mimeType ?? null,
-                            },
-                          });
-                          loadLocalAuditEvents({ limit: 50 })
-                            .then(setLocalAuditEvents)
-                            .catch(() => undefined);
-                        }}
-                      />
-                    </View>
-                  ))}
-
-                  {evidence.length > 0 ? (
-                    <View style={{ marginTop: 8 }}>
-                      <ThemedText type="defaultSemiBold">Latest evidence</ThemedText>
-                      <View style={{ gap: 10, marginTop: 10 }}>
-                        {evidence.slice(0, 6).map((ev) => (
-                          <Card key={ev.id} variant="outlined" style={styles.rowCard}>
-                            <View style={styles.rowHeader}>
-                              <ThemedText type="defaultSemiBold">
-                                {ev.label ?? ev.mimeType ?? 'Evidence item'}
-                              </ThemedText>
-                              <Badge variant="default" size="sm">
-                                {String(ev.kind)}
-                              </Badge>
-                            </View>
-                            <ThemedText type="caption">
-                              {new Date(ev.takenAt).toLocaleDateString()}
-                            </ThemedText>
-                          </Card>
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
-
-                  <View style={{ marginTop: 8 }}>
-                    <Button
-                      title="Sync evidence metadata to backend"
-                      onPress={async () => {
-                        if (!selectedPlot) return;
-                        if (evidenceReason.trim().length === 0) {
-                          setSyncMessage('Reason is required to sync evidence metadata.');
-                          return;
-                        }
-                        setSyncMessage(null);
-                        try {
-                          if (!serverPlotId) {
-                            setSyncMessage(
-                              'Upload this plot to Tracebud first (Tracebud server card above), then sync evidence.',
-                            );
-                            return;
-                          }
-                          const items = evidence
-                            .filter((ev) => ev.plotId === selectedPlot.id)
-                            .map((ev) => ({
-                              kind: ev.kind,
-                              uri: ev.uri,
-                              label: ev.label ?? null,
-                              mimeType: ev.mimeType ?? null,
-                              takenAt: ev.takenAt,
-                            }));
-
-                          // Sync per-kind so server audit stays structured.
-                          const kinds: PlotEvidenceKind[] = [
-                            'fpic_repository',
-                            'protected_area_permit',
-                            'labor_evidence',
-                            'tenure_evidence',
-                          ];
-                          for (const k of kinds) {
-                            const subset = items.filter((i) => i.kind === k);
-                            if (subset.length === 0) continue;
-                            await syncPlotEvidenceToBackend({
-                              plotId: serverPlotId,
-                              kind: k,
-                              items: subset,
-                              reason: evidenceReason.trim(),
-                              note: 'Evidence repository sync from device',
-                            });
-                          }
-                          setSyncMessage('Evidence metadata synced to backend.');
-                        } catch (e) {
-                          enqueuePendingSync({
-                            createdAt: Date.now(),
-                            actionType: 'evidence_sync',
-                            payloadJson: JSON.stringify({
-                              plotId: selectedPlot.id,
-                              reason: evidenceReason.trim(),
-                            }),
-                            lastError: e instanceof Error ? e.message : String(e),
-                          });
-                          setSyncMessage(
-                            e instanceof Error
-                              ? `Offline: queued evidence sync. (${e.message})`
-                              : 'Offline: queued evidence sync.',
-                          );
-                        }
+                  {selectedPlot ? (
+                    <PlotEvidencePanel
+                      scopeId={selectedPlot.id}
+                      farmerId={farmer?.id}
+                      evidence={evidence}
+                      onEvidenceChange={setEvidence}
+                      overlapFlags={{
+                        sinaph: selectedBackendPlot?.sinaph_overlap === true,
+                        indigenous: selectedBackendPlot?.indigenous_overlap === true,
                       }}
+                      serverPlotId={serverPlotId}
+                      showFpicStructured
+                      showSync
+                      onSyncMessage={setSyncMessage}
+                      onSyncComplete={() => setChecklistRefreshKey((k) => k + 1)}
                     />
-                  </View>
+                  ) : null}
                 </View>
+                <ThemedText type="caption" style={{ marginTop: 8 }}>
+                  {t('plot_documents_clave_order_hint')}
+                </ThemedText>
                 <Input
                   label="Reason for backend sync (required to sync legality)"
                   placeholder="e.g. land title verified, corrected entry…"
@@ -1700,9 +1442,12 @@ export default function PlotsScreen() {
                         });
                         setSyncMessage(
                           landTitleSummary.uploadedCount > 0
-                            ? `Legality synced. ${landTitleSummary.uploadedCount} land title file(s) sent for cadastral AI review.`
-                            : 'Legality data synced to backend.',
+                            ? t('plot_documents_legality_sync_ok_files', {
+                                n: landTitleSummary.uploadedCount,
+                              })
+                            : t('plot_documents_legality_sync_ok'),
                         );
+                        setChecklistRefreshKey((k) => k + 1);
                       } catch (e) {
                       // queue for retry
                       enqueuePendingSync({
