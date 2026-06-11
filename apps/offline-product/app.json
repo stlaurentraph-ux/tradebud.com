@@ -10,6 +10,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Tracebud needs your location to record farm boundaries while you walk around the plot.",
         "NSPhotoLibraryUsageDescription": "Tracebud uses your photo library so you can set a profile picture.",
