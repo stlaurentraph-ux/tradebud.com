@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polygon, Polyline, Region, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,9 +44,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { Brand, Colors } from '@/constants/theme';
 import { isStoreDemoFarmer } from '@/features/demo/storeDemoApiFixtures';
 import {
+  DEMO_WALK_FIELD_CENTER,
   DEMO_WALK_MAP_REGION,
-  DEMO_WALK_PREVIEW_RING,
 } from '@/features/demo/storeScreenshotDemo.constants';
+
+const STORE_DEMO_WALK_FIELD_MAP = require('@/assets/images/store-demo-walk-field-map.png');
 import { scaleText } from '@/features/demo/storeUiScale';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -2129,84 +2131,58 @@ export function WalkPerimeterScreen() {
                 </Card>
 
                 <View style={styles.walkMapPanel}>
-                  <MapView
-                    key={showWalkFieldPreview ? 'walk-demo-map' : 'walk-live-map'}
-                    style={styles.walkMap}
-                    initialRegion={mapAnchorRegion}
-                    region={points.length === 0 ? mapAnchorRegion : undefined}
-                    mapType={walkMapType}
-                  >
-                    {offlineTilesEnabled && !showWalkFieldPreview ? (
-                      <UrlTile
-                        urlTemplate={getOfflineTilesUrlTemplate(offlineTilesPackId ?? undefined)}
-                        maximumZ={18}
-                        flipY={false}
-                      />
-                    ) : null}
-                    {showWalkFieldPreview && points.length === 0 ? (
-                      <>
-                        <Polygon
-                          coordinates={DEMO_WALK_PREVIEW_RING.map((p) => ({ ...p }))}
-                          fillColor="rgba(16, 185, 129, 0.2)"
-                          strokeColor="transparent"
+                  {showWalkFieldPreview && points.length === 0 ? (
+                    <Image
+                      source={STORE_DEMO_WALK_FIELD_MAP}
+                      style={styles.walkMapDemo}
+                      resizeMode="cover"
+                      accessibilityLabel={t('walk_title')}
+                    />
+                  ) : (
+                    <MapView
+                      style={styles.walkMap}
+                      initialRegion={mapAnchorRegion}
+                      region={points.length === 0 ? mapAnchorRegion : undefined}
+                      mapType={walkMapType}
+                    >
+                      {offlineTilesEnabled ? (
+                        <UrlTile
+                          urlTemplate={getOfflineTilesUrlTemplate(offlineTilesPackId ?? undefined)}
+                          maximumZ={18}
+                          flipY={false}
                         />
-                        <Polyline
-                          coordinates={DEMO_WALK_PREVIEW_RING.map((p) => ({ ...p }))}
-                          strokeColor={Brand.primary}
-                          strokeWidth={4}
-                        />
-                        <Polyline
-                          coordinates={[
-                            DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1],
-                            {
-                              latitude:
-                                DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].latitude +
-                                (DEMO_WALK_PREVIEW_RING[0].latitude -
-                                  DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].latitude) *
-                                  0.78,
-                              longitude:
-                                DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].longitude +
-                                (DEMO_WALK_PREVIEW_RING[0].longitude -
-                                  DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].longitude) *
-                                  0.78,
-                            },
-                          ]}
-                          strokeColor={Brand.accent}
-                          strokeWidth={3}
-                          lineDashPattern={[8, 6]}
-                        />
-                        <Marker
-                          coordinate={DEMO_WALK_PREVIEW_RING[0]}
-                          title={t('walk_last_point')}
-                          pinColor={Brand.primary}
-                        />
-                      </>
-                    ) : null}
-                    {points.length > 0 ? (
-                      <>
-                        <Polyline
-                          coordinates={[
-                            ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-                            ...(points.length > 2
-                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                              : []),
-                          ]}
-                          strokeColor={Brand.primary}
-                          strokeWidth={3}
-                        />
-                        <Marker
-                          coordinate={{
-                            latitude: points[points.length - 1].latitude,
-                            longitude: points[points.length - 1].longitude,
-                          }}
-                          title={t('walk_last_point')}
-                        />
-                      </>
-                    ) : null}
-                  </MapView>
+                      ) : null}
+                      {points.length > 0 ? (
+                        <>
+                          <Polyline
+                            coordinates={[
+                              ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+                              ...(points.length > 2
+                                ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
+                                : []),
+                            ]}
+                            strokeColor={Brand.primary}
+                            strokeWidth={3}
+                          />
+                          <Marker
+                            coordinate={{
+                              latitude: points[points.length - 1].latitude,
+                              longitude: points[points.length - 1].longitude,
+                            }}
+                            title={t('walk_last_point')}
+                          />
+                        </>
+                      ) : null}
+                    </MapView>
+                  )}
                   <View style={styles.coordChip}>
                     <ThemedText type="caption">
-                      {formatLatLon(mapAnchorRegion.latitude, mapAnchorRegion.longitude)}
+                      {showWalkFieldPreview && points.length === 0
+                        ? formatLatLon(
+                            DEMO_WALK_FIELD_CENTER.latitude,
+                            DEMO_WALK_FIELD_CENTER.longitude,
+                          )
+                        : formatLatLon(mapAnchorRegion.latitude, mapAnchorRegion.longitude)}
                     </ThemedText>
                   </View>
                 </View>
@@ -2969,7 +2945,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: '#B8CBC5',
-    minHeight: 206,
+    minHeight: 248,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -2977,6 +2953,10 @@ const styles = StyleSheet.create({
   walkMap: {
     width: '100%',
     height: 206,
+  },
+  walkMapDemo: {
+    width: '100%',
+    height: 248,
   },
   walkMapPlaceholder: {
     width: '100%',
