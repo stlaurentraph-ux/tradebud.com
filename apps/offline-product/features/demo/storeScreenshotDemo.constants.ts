@@ -8,7 +8,7 @@ export const DEMO_SERVER_PLOT_FINCA_ID = 'b0000000-0000-4000-8000-000000000011';
 export const DEMO_SERVER_PLOT_ROBLE_ID = 'b0000000-0000-4000-8000-000000000012';
 export const DEMO_SERVER_PLOT_COLINA_ID = 'b0000000-0000-4000-8000-000000000013';
 
-/** Almost-closed field boundary for walk-perimeter store screenshots. */
+/** Almost-closed field boundary for walk-perimeter store screenshots (Finca Norte area). */
 export const DEMO_WALK_PREVIEW_RING = [
   { latitude: 14.072, longitude: -87.212 },
   { latitude: 14.092, longitude: -87.188 },
@@ -19,7 +19,7 @@ export const DEMO_WALK_PREVIEW_RING = [
 
 export const DEMO_WALK_MAP_REGION = {
   latitude: 14.075,
-  longitude: -87.195,
-  latitudeDelta: 0.004,
-  longitudeDelta: 0.004,
+  longitude: -87.192,
+  latitudeDelta: 0.028,
+  longitudeDelta: 0.028,
 } as const;

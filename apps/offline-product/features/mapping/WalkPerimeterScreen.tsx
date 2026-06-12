@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
-import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Polygon, Polyline, Region, UrlTile } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,14 +42,13 @@ import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Brand, Colors } from '@/constants/theme';
+import { isStoreDemoFarmer } from '@/features/demo/storeDemoApiFixtures';
 import {
   DEMO_WALK_MAP_REGION,
   DEMO_WALK_PREVIEW_RING,
 } from '@/features/demo/storeScreenshotDemo.constants';
 import { scaleText } from '@/features/demo/storeUiScale';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const storeDemoWalkPreview = process.env.EXPO_PUBLIC_STORE_DEMO === '1';
 
 type LatLng = {
   latitude: number;
@@ -303,6 +302,13 @@ export function WalkPerimeterScreen() {
     return `${Math.abs(lat).toFixed(6)}°${ns}, ${Math.abs(lon).toFixed(6)}°${ew}`;
   };
 
+  const showWalkFieldPreview = useMemo(
+    () =>
+      process.env.EXPO_PUBLIC_STORE_DEMO === '1' ||
+      Boolean(farmer?.id && isStoreDemoFarmer(farmer.id)),
+    [farmer?.id],
+  );
+
   const mapAnchorRegion = useMemo((): Region => {
     if (points.length > 0) {
       const lats = points.map((p) => p.latitude);
@@ -313,6 +319,9 @@ export function WalkPerimeterScreen() {
         latitudeDelta: 0.003,
         longitudeDelta: 0.003,
       };
+    }
+    if (showWalkFieldPreview) {
+      return { ...DEMO_WALK_MAP_REGION };
     }
     if (deviceRegion) return deviceRegion;
     if (simplifiedDeclarationGeo) {
@@ -342,16 +351,19 @@ export function WalkPerimeterScreen() {
         longitudeDelta: 0.003,
       };
     }
-    if (storeDemoWalkPreview) {
-      return { ...DEMO_WALK_MAP_REGION };
-    }
     return {
       latitude: 14.0818,
       longitude: -87.2068,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     };
-  }, [points, deviceRegion, simplifiedDeclarationGeo, farmer, editingPlot, plots]);
+  }, [points, showWalkFieldPreview, deviceRegion, simplifiedDeclarationGeo, farmer, editingPlot, plots]);
+
+  const walkMapType = useMemo(() => {
+    if (showWalkFieldPreview) return 'hybrid' as const;
+    if (offlineTilesEnabled || lowDataMap) return 'none' as const;
+    return 'standard' as const;
+  }, [showWalkFieldPreview, offlineTilesEnabled, lowDataMap]);
 
   const hasFarmerAccess = farmer?.selfDeclared === true;
 
@@ -560,6 +572,7 @@ export function WalkPerimeterScreen() {
   };
 
   useEffect(() => {
+    if (process.env.EXPO_PUBLIC_STORE_DEMO === '1') return;
     void (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -2117,27 +2130,55 @@ export function WalkPerimeterScreen() {
 
                 <View style={styles.walkMapPanel}>
                   <MapView
+                    key={showWalkFieldPreview ? 'walk-demo-map' : 'walk-live-map'}
                     style={styles.walkMap}
                     initialRegion={mapAnchorRegion}
-                    mapType={offlineTilesEnabled || lowDataMap ? 'none' : 'standard'}
+                    region={points.length === 0 ? mapAnchorRegion : undefined}
+                    mapType={walkMapType}
                   >
-                    {offlineTilesEnabled ? (
+                    {offlineTilesEnabled && !showWalkFieldPreview ? (
                       <UrlTile
                         urlTemplate={getOfflineTilesUrlTemplate(offlineTilesPackId ?? undefined)}
                         maximumZ={18}
                         flipY={false}
                       />
                     ) : null}
-                    {storeDemoWalkPreview && points.length === 0 && !isRecording ? (
+                    {showWalkFieldPreview && points.length === 0 ? (
                       <>
+                        <Polygon
+                          coordinates={DEMO_WALK_PREVIEW_RING.map((p) => ({ ...p }))}
+                          fillColor="rgba(16, 185, 129, 0.2)"
+                          strokeColor="transparent"
+                        />
                         <Polyline
                           coordinates={DEMO_WALK_PREVIEW_RING.map((p) => ({ ...p }))}
-                          strokeColor="rgba(6, 78, 59, 0.7)"
+                          strokeColor={Brand.primary}
+                          strokeWidth={4}
+                        />
+                        <Polyline
+                          coordinates={[
+                            DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1],
+                            {
+                              latitude:
+                                DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].latitude +
+                                (DEMO_WALK_PREVIEW_RING[0].latitude -
+                                  DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].latitude) *
+                                  0.78,
+                              longitude:
+                                DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].longitude +
+                                (DEMO_WALK_PREVIEW_RING[0].longitude -
+                                  DEMO_WALK_PREVIEW_RING[DEMO_WALK_PREVIEW_RING.length - 1].longitude) *
+                                  0.78,
+                            },
+                          ]}
+                          strokeColor={Brand.accent}
                           strokeWidth={3}
+                          lineDashPattern={[8, 6]}
                         />
                         <Marker
                           coordinate={DEMO_WALK_PREVIEW_RING[0]}
                           title={t('walk_last_point')}
+                          pinColor={Brand.primary}
                         />
                       </>
                     ) : null}
