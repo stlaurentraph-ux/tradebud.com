@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { setRequestLocale } from 'next-intl/server';
 
 import { MarketingPageLayout } from '@/components/marketing/marketing-page-layout';
+import { SiteNavPreview } from '@/components/marketing/site-nav-preview';
 import type { Locale } from '@/i18n.config';
 import { getInsightPosts } from '@/lib/insights';
 import { assertMarketingRoutePublished } from '@/lib/marketing-publication';
@@ -56,7 +57,7 @@ export default async function DraftIndexPage({ params }: Props) {
   const insights = getInsightPosts(locale as Locale, { includeDrafts: true });
 
   return (
-    <MarketingPageLayout routeId="draft-index">
+    <MarketingPageLayout routeId="draft-index" nav={<SiteNavPreview locale={locale} />}>
       {/* Header */}
       <section className="relative isolate overflow-hidden bg-[var(--forest-canopy)] px-6 pb-16 pt-28 md:pt-36">
         <Image

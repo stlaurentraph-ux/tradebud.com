@@ -34,10 +34,7 @@ export default async function HomePreviewPage({ params }: Props) {
   const t = await getTranslations('homeV2.hero');
 
   return (
-    <MarketingPageLayout routeId="home-preview">
-      {/* Preview navigation (June 2026 IA — preview/draft only) */}
-      <SiteNavPreview locale={locale} />
-
+    <MarketingPageLayout routeId="home-preview" nav={<SiteNavPreview locale={locale} />}>
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <section className="relative isolate overflow-hidden bg-[var(--forest-canopy)] px-6 pb-28 pt-36 md:pt-48">
         <Image
