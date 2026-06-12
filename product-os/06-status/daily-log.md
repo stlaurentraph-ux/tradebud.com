@@ -1,3 +1,7 @@
+### 2026-06-12 (field app: i18n + walk perimeter polish for screenshots)
+- Rebuilt `en.json` (673 keys) — fixes raw keys like `backup_up_to_date`, `walk_continue`.
+- Walk perimeter: removed header Offline pill; capture-method step uses 1.2× text + i18n; store-demo shows field map with almost-closed preview polygon before recording.
+
 ### 2026-06-12 (field app: store-demo screenshot scale + mock data consistency)
 - Store-demo: text-only 1.2× scale (`scaleText`); layout/widgets unchanged unless text needs room.
 - My Plots: demo compliance + harvest counts from `storeDemoPlotLookup` (no API fetch); header badge 1 pending not 3 sync.

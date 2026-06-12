@@ -42,7 +42,14 @@ import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Brand, Colors } from '@/constants/theme';
+import {
+  DEMO_WALK_MAP_REGION,
+  DEMO_WALK_PREVIEW_RING,
+} from '@/features/demo/storeScreenshotDemo.constants';
+import { scaleText } from '@/features/demo/storeUiScale';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+const storeDemoWalkPreview = process.env.EXPO_PUBLIC_STORE_DEMO === '1';
 
 type LatLng = {
   latitude: number;
@@ -185,6 +192,7 @@ export function WalkPerimeterScreen() {
     longitude: number;
     capturedAt: number;
   } | null>(null);
+  const [deviceRegion, setDeviceRegion] = useState<Region | null>(null);
 
   const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
 
@@ -295,15 +303,55 @@ export function WalkPerimeterScreen() {
     return `${Math.abs(lat).toFixed(6)}°${ns}, ${Math.abs(lon).toFixed(6)}°${ew}`;
   };
 
-  const initialRegion: Region | undefined =
-    points.length > 0
-      ? {
-          latitude: points[0].latitude,
-          longitude: points[0].longitude,
-          latitudeDelta: 0.001,
-          longitudeDelta: 0.001,
-        }
-      : undefined;
+  const mapAnchorRegion = useMemo((): Region => {
+    if (points.length > 0) {
+      const lats = points.map((p) => p.latitude);
+      const lons = points.map((p) => p.longitude);
+      return {
+        latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+        longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+        latitudeDelta: 0.003,
+        longitudeDelta: 0.003,
+      };
+    }
+    if (deviceRegion) return deviceRegion;
+    if (simplifiedDeclarationGeo) {
+      return {
+        latitude: simplifiedDeclarationGeo.latitude,
+        longitude: simplifiedDeclarationGeo.longitude,
+        latitudeDelta: 0.002,
+        longitudeDelta: 0.002,
+      };
+    }
+    if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null) {
+      return {
+        latitude: farmer.declarationLatitude,
+        longitude: farmer.declarationLongitude,
+        latitudeDelta: 0.002,
+        longitudeDelta: 0.002,
+      };
+    }
+    const anchorPlot = editingPlot ?? plots[0];
+    if (anchorPlot?.points?.length) {
+      const lats = anchorPlot.points.map((p) => p.latitude);
+      const lons = anchorPlot.points.map((p) => p.longitude);
+      return {
+        latitude: lats.reduce((sum, v) => sum + v, 0) / lats.length,
+        longitude: lons.reduce((sum, v) => sum + v, 0) / lons.length,
+        latitudeDelta: 0.003,
+        longitudeDelta: 0.003,
+      };
+    }
+    if (storeDemoWalkPreview) {
+      return { ...DEMO_WALK_MAP_REGION };
+    }
+    return {
+      latitude: 14.0818,
+      longitude: -87.2068,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+  }, [points, deviceRegion, simplifiedDeclarationGeo, farmer, editingPlot, plots]);
 
   const hasFarmerAccess = farmer?.selfDeclared === true;
 
@@ -510,6 +558,26 @@ export function WalkPerimeterScreen() {
       ...mergeDeclarationGeoForProfile(id),
     });
   };
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        setDeviceRegion({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          latitudeDelta: 0.002,
+          longitudeDelta: 0.002,
+        });
+      } catch {
+        // Map falls back to plot / demo region.
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     getSetting('offlineTilesEnabled')
@@ -995,15 +1063,6 @@ export function WalkPerimeterScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
-        <View style={styles.headerTopRow}>
-          <View style={styles.statusPill}>
-            <Ionicons name="wifi-outline" size={12} color="#F2C94C" />
-            <ThemedText type="caption" style={styles.statusPillText}>
-              Offline
-            </ThemedText>
-          </View>
-        </View>
-
         <View style={styles.headerRowCompact}>
           <Pressable
             onPress={() => {
@@ -1203,7 +1262,7 @@ export function WalkPerimeterScreen() {
         {selectedMethodPage === null ? (
         <View style={styles.captureMethodsSection}>
           <ThemedText type="caption" style={styles.captureMethodsIntro}>
-            Choose how to capture your plot boundaries:
+            {t('walk_capture_intro')}
           </ThemedText>
           <View style={{ gap: 10 }}>
               <Pressable
@@ -1222,15 +1281,17 @@ export function WalkPerimeterScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.captureTitleRow}>
-                    <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>{'Walk\nPerimeter'}</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>
+                      {t('walk_method_walk')}
+                    </ThemedText>
                     <View style={styles.recommendedPill}>
                       <ThemedText numberOfLines={1} type="caption" style={styles.recommendedPillText}>
-                        Recommended
+                        {t('walk_method_walk_recommended')}
                       </ThemedText>
                     </View>
                   </View>
                   <ThemedText type="caption" style={styles.captureBodyText}>
-                    Walk around your plot while GPS records waypoints with averaging to filter canopy interference.
+                    {t('walk_method_walk_body')}
                   </ThemedText>
                 </View>
               </Pressable>
@@ -1251,16 +1312,18 @@ export function WalkPerimeterScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={styles.captureTitleRow}>
-                    <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>Draw on Map</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>
+                      {t('walk_method_draw')}
+                    </ThemedText>
                     <View style={styles.fallbackPill}>
                       <ThemedText type="caption" style={styles.fallbackPillText}>
-                        Fallback
+                        {t('walk_method_draw_fallback')}
                       </ThemedText>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#A3A3A3" style={styles.captureChevron} />
                   </View>
                   <ThemedText type="caption" style={styles.captureBodyText}>
-                    Manually trace your plot boundary on offline satellite imagery when GPS is unavailable.
+                    {t('walk_method_draw_body')}
                   </ThemedText>
                 </View>
               </Pressable>
@@ -1281,11 +1344,13 @@ export function WalkPerimeterScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.captureTitleRow}>
-                      <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>Centroid Only</ThemedText>
+                      <ThemedText type="defaultSemiBold" style={styles.captureTitleText}>
+                        {t('walk_method_centroid')}
+                      </ThemedText>
                       <Ionicons name="chevron-forward" size={20} color="#A3A3A3" style={styles.captureChevron} />
                     </View>
                     <ThemedText type="caption" style={styles.captureBodyText}>
-                      For plots under 4ha, capture a single averaged center point instead of full perimeter.
+                      {t('walk_method_centroid_body')}
                     </ThemedText>
                   </View>
                 </Pressable>
@@ -2051,54 +2116,56 @@ export function WalkPerimeterScreen() {
                 </Card>
 
                 <View style={styles.walkMapPanel}>
-                  {initialRegion ? (
-                    <MapView
-                      style={styles.walkMap}
-                      initialRegion={initialRegion}
-                      mapType={offlineTilesEnabled || lowDataMap ? 'none' : 'standard'}
-                    >
-                      {offlineTilesEnabled ? (
-                        <UrlTile
-                          urlTemplate={getOfflineTilesUrlTemplate(offlineTilesPackId ?? undefined)}
-                          maximumZ={18}
-                          flipY={false}
+                  <MapView
+                    style={styles.walkMap}
+                    initialRegion={mapAnchorRegion}
+                    mapType={offlineTilesEnabled || lowDataMap ? 'none' : 'standard'}
+                  >
+                    {offlineTilesEnabled ? (
+                      <UrlTile
+                        urlTemplate={getOfflineTilesUrlTemplate(offlineTilesPackId ?? undefined)}
+                        maximumZ={18}
+                        flipY={false}
+                      />
+                    ) : null}
+                    {storeDemoWalkPreview && points.length === 0 && !isRecording ? (
+                      <>
+                        <Polyline
+                          coordinates={DEMO_WALK_PREVIEW_RING.map((p) => ({ ...p }))}
+                          strokeColor="rgba(6, 78, 59, 0.7)"
+                          strokeWidth={3}
                         />
-                      ) : null}
-                      {points.length > 0 ? (
-                        <>
-                          <Polyline
-                            coordinates={[
-                              ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-                              ...(points.length > 2
-                                ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                                : []),
-                            ]}
-                            strokeColor={Brand.primary}
-                            strokeWidth={3}
-                          />
-                          <Marker
-                            coordinate={{
-                              latitude: points[points.length - 1].latitude,
-                              longitude: points[points.length - 1].longitude,
-                            }}
-                            title="Last point"
-                          />
-                        </>
-                      ) : null}
-                    </MapView>
-                  ) : (
-                    <View style={styles.walkMapPlaceholder}>
-                      <Ionicons name="locate-outline" size={56} color="#9FA5A9" />
-                      <ThemedText type="defaultSemiBold" style={{ color: '#4B5563', marginTop: 8 }}>
-                        Start to begin capture
-                      </ThemedText>
-                    </View>
-                  )}
+                        <Marker
+                          coordinate={DEMO_WALK_PREVIEW_RING[0]}
+                          title={t('walk_last_point')}
+                        />
+                      </>
+                    ) : null}
+                    {points.length > 0 ? (
+                      <>
+                        <Polyline
+                          coordinates={[
+                            ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+                            ...(points.length > 2
+                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
+                              : []),
+                          ]}
+                          strokeColor={Brand.primary}
+                          strokeWidth={3}
+                        />
+                        <Marker
+                          coordinate={{
+                            latitude: points[points.length - 1].latitude,
+                            longitude: points[points.length - 1].longitude,
+                          }}
+                          title={t('walk_last_point')}
+                        />
+                      </>
+                    ) : null}
+                  </MapView>
                   <View style={styles.coordChip}>
                     <ThemedText type="caption">
-                      {initialRegion
-                        ? formatLatLon(initialRegion.latitude, initialRegion.longitude)
-                        : 'No coordinates yet'}
+                      {formatLatLon(mapAnchorRegion.latitude, mapAnchorRegion.longitude)}
                     </ThemedText>
                   </View>
                 </View>
@@ -2154,14 +2221,7 @@ export function WalkPerimeterScreen() {
                 <View style={styles.drawMapPanel}>
                   <MapView
                     style={styles.drawMap}
-                    initialRegion={
-                      initialRegion ?? {
-                        latitude: 0,
-                        longitude: 0,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                      }
-                    }
+                    initialRegion={mapAnchorRegion}
                     mapType={offlineTilesEnabled || lowDataMap ? 'none' : 'standard'}
                     onPress={(e) => {
                       const c = e.nativeEvent.coordinate;
@@ -2500,8 +2560,8 @@ const styles = StyleSheet.create({
   },
   headerTitleCompact: {
     color: '#FFFFFF',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: scaleText(18),
+    lineHeight: scaleText(24),
     flexGrow: 1,
     flexShrink: 1,
     textAlign: 'center',
@@ -2586,8 +2646,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   captureMethodsIntro: {
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: scaleText(18),
+    lineHeight: scaleText(28),
     color: '#4B4B4B',
     marginBottom: 12,
   },
@@ -3103,8 +3163,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   captureTitleText: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: scaleText(18),
+    lineHeight: scaleText(24),
     color: '#171717',
     flexGrow: 1,
     flexShrink: 1,
@@ -3112,8 +3172,8 @@ const styles = StyleSheet.create({
   },
   captureBodyText: {
     marginTop: 6,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: scaleText(14),
+    lineHeight: scaleText(20),
     color: '#55514E',
   },
   recommendedPill: {
@@ -3129,7 +3189,7 @@ const styles = StyleSheet.create({
   recommendedPillText: {
     color: '#157E64',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: scaleText(12),
   },
   fallbackPill: {
     backgroundColor: '#F7E7B7',
@@ -3144,7 +3204,7 @@ const styles = StyleSheet.create({
   fallbackPillText: {
     color: '#A85900',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: scaleText(12),
   },
   captureChevron: {
     marginLeft: 'auto',

@@ -133,6 +133,11 @@ en.storage_footprint_breakdown =
   OVERRIDES.storage_footprint_breakdown ??
   '{photos} MB photos · {maps} MB offline maps · {data} MB data';
 
+// walk_*, backup_up_to_date, and other keys present only in canonical-en-overrides.json
+for (const [key, value] of Object.entries(OVERRIDES)) {
+  en[key] = value;
+}
+
 const sorted = Object.fromEntries(Object.keys(en).sort().map((k) => [k, en[k]]));
 writeFileSync(resolve(messagesDir, 'en.json'), `${JSON.stringify(sorted, null, 2)}\n`);
 
