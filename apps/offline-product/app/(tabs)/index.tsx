@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import { CompactTabHeader, HomeHeaderBrandLeft } from '@/components/layout/CompactTabHeader';
@@ -10,6 +11,7 @@ import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { Brand, Colors, Radius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
@@ -30,7 +32,13 @@ import {
   type FarmerAssessmentRequest,
 } from '@/features/api/postPlot';
 
+const HOME_SCREEN_PAD = 16;
+const HOME_TILE_GAP = 12;
+const HOME_TILE_MIN_HEIGHT = 120;
+
 export default function HomeScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const tileWidth = Math.floor((windowWidth - HOME_SCREEN_PAD * 2 - HOME_TILE_GAP) / 2);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -40,13 +48,12 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [loadingBackend, setLoadingBackend] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
   const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
   const [assessmentRequests, setAssessmentRequests] = useState<FarmerAssessmentRequest[]>([]);
   const [assessmentError, setAssessmentError] = useState<string | null>(null);
   const [assessmentSavingId, setAssessmentSavingId] = useState<string | null>(null);
-  const { openSignIn, isSignedIn, refreshAuth } = useSignInSheet();
+  const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
 
   useFocusEffect(
     useCallback(() => {
@@ -61,21 +68,17 @@ export default function HomeScreen() {
   }, [plots.length, farmer?.id]);
 
   useEffect(() => {
-    if (!farmer) {
+    if (!farmer || !isSignedIn) {
       setBackendPlots([]);
-      setBackendError(null);
+      setLoadingBackend(false);
       return;
     }
     setLoadingBackend(true);
-    setBackendError(null);
     fetchPlotsForFarmer(farmer.id)
       .then((rows) => setBackendPlots(rows ?? []))
-      .catch((err) => {
-        setBackendPlots([]);
-        setBackendError(err instanceof Error ? err.message : t('backend_unreachable'));
-      })
+      .catch(() => setBackendPlots([]))
       .finally(() => setLoadingBackend(false));
-  }, [farmer, t]);
+  }, [farmer, isSignedIn, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,20 +176,92 @@ export default function HomeScreen() {
     return { plotsCount, compliant, pending };
   }, [plots, backendPlots, plotChecklistDoneById]);
 
-  const backendConfigured =
-    !!process.env.EXPO_PUBLIC_SUPABASE_URL && !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
     if (plots.length > 0) return null;
     if (farmer && !farmer.name?.trim()) return 'add_name';
     return 'register_plot';
   }, [plots.length, farmer]);
-
-  const isOnline = backendConfigured && !loadingBackend && !backendError;
   const nextAssessment =
     assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
     null;
+
+  const homeTiles = useMemo(
+    () => [
+      {
+        key: 'register_plot',
+        title: t('register_plot_tile'),
+        subtitle: t('walk_perimeter_sub'),
+        icon: 'location-outline' as const,
+        tint: '#BFEEDB',
+        iconColor: '#0B7B59',
+        onPress: () => router.navigate('/(tabs)/record'),
+      },
+      {
+        key: 'log_harvest',
+        title: t('log_harvest_tile'),
+        subtitle: t('record_delivery_sub'),
+        icon: 'scale-outline' as const,
+        tint: '#F8EDC8',
+        iconColor: '#B45A00',
+        onPress: () => router.navigate('/(tabs)/harvests'),
+      },
+      {
+        key: 'documents',
+        title: t('documents_tile'),
+        subtitle: t('land_permits_sub'),
+        icon: 'document-text-outline' as const,
+        tint: '#DCE9FF',
+        iconColor: '#2454D7',
+        onPress: () => {
+          const first = plots[0];
+          if (first?.id) {
+            router.push(`/plot/${encodeURIComponent(first.id)}?sub=documents`);
+            return;
+          }
+          router.push('/documents');
+        },
+      },
+      {
+        key: 'vouchers',
+        title: t('my_vouchers_tile'),
+        subtitle: t('compliance_qr_sub'),
+        icon: 'qr-code-outline' as const,
+        tint: '#F0E3FF',
+        iconColor: '#7A1FD1',
+        onPress: () => {
+          const first = plots[0];
+          if (first?.id) {
+            router.push(`/plot/${encodeURIComponent(first.id)}?sub=voucher`);
+            return;
+          }
+          router.navigate('/(tabs)/harvests');
+        },
+      },
+    ],
+    [t, plots],
+  );
+
+  const homeTileLabelsKey = useMemo(
+    () => homeTiles.map((tile) => `${tile.title}\0${tile.subtitle}`).join('\n'),
+    [homeTiles],
+  );
+
+  const [uniformTileHeight, setUniformTileHeight] = useState<number | null>(null);
+  const tileHeightsRef = useRef([0, 0, 0, 0]);
+
+  useEffect(() => {
+    tileHeightsRef.current = [0, 0, 0, 0];
+    setUniformTileHeight(null);
+  }, [homeTileLabelsKey, tileWidth]);
+
+  const reportTileHeight = useCallback((index: number, height: number) => {
+    if (height <= 0) return;
+    tileHeightsRef.current[index] = height;
+    if (tileHeightsRef.current.some((h) => h <= 0)) return;
+    const max = Math.max(...tileHeightsRef.current, HOME_TILE_MIN_HEIGHT);
+    setUniformTileHeight((prev) => (prev === max ? prev : max));
+  }, []);
 
   const markAssessmentProgress = async (requestId: string, status: 'opened' | 'in_progress' | 'submitted') => {
     setAssessmentSavingId(requestId);
@@ -207,11 +282,13 @@ export default function HomeScreen() {
       <CompactTabHeader
         paddingTop={insets.top}
         badge={
-          <Badge variant={isOnline ? 'success' : 'warning'} size="sm">
-            {isOnline ? t('online') : t('offline')}
-          </Badge>
+          pendingCount > 0 ? (
+            <Badge variant="warning" size="sm">
+              {t('pending_count', { n: pendingCount })}
+            </Badge>
+          ) : null
         }
-        left={<HomeHeaderBrandLeft subtitle={t('home_subtitle')} />}
+        left={<HomeHeaderBrandLeft />}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
         textInverseColor={colors.textInverse}
@@ -247,17 +324,27 @@ export default function HomeScreen() {
               </View>
             </View>
             {onboardingStep === 'register_plot' && !isSignedIn ? (
-              <Pressable onPress={() => openSignIn({ variant: 'general' })} hitSlop={8}>
-                <ThemedText type="caption" style={styles.onboardingLink}>
-                  {t('already_have_account')}
+              <View style={styles.onboardingAccountLinks}>
+                <Pressable onPress={() => void openCreateAccount()} hitSlop={8}>
+                  <ThemedText type="caption" style={styles.onboardingLink}>
+                    {t('create_account')}
+                  </ThemedText>
+                </Pressable>
+                <ThemedText type="caption" style={styles.onboardingLinkSep}>
+                  ·
                 </ThemedText>
-              </Pressable>
+                <Pressable onPress={() => openSignIn({ variant: 'general' })} hitSlop={8}>
+                  <ThemedText type="caption" style={styles.onboardingLink}>
+                    {t('already_have_account')}
+                  </ThemedText>
+                </Pressable>
+              </View>
             ) : null}
             <Pressable
               onPress={() =>
                 onboardingStep === 'add_name'
-                  ? router.push('/(tabs)/settings')
-                  : router.push('/record')
+                  ? router.navigate('/(tabs)/settings')
+                  : router.navigate('/(tabs)/record')
               }
               style={({ pressed }) => [
                 styles.onboardingCta,
@@ -275,103 +362,64 @@ export default function HomeScreen() {
             </Pressable>
           </Card>
         ) : null}
-        <Card variant="outlined" style={styles.welcomeCard}>
-          <ThemedText type="caption" style={{ color: '#2C6B57', opacity: 0.95 }}>
+        <LinearGradient
+          colors={[...HEADER_GRADIENT_COLORS]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.welcomeCard}
+        >
+          <ThemedText type="caption" style={styles.welcomeBack}>
             {t('welcome_back')}
           </ThemedText>
-          <ThemedText type="title" style={{ color: '#0B4F3B' }}>
+          <ThemedText type="title" style={styles.welcomeName}>
             {farmer?.name || t('farmer_fallback')}
           </ThemedText>
           <View style={styles.statsRow}>
-            <View style={[styles.statBox, styles.statBoxPlots]}>
-              <ThemedText
-                type="caption"
-                numberOfLines={1}
-                style={{ color: '#2C6B57', opacity: 0.95, fontSize: 11, lineHeight: 14 }}
-              >
+            <View style={styles.statBox}>
+              <ThemedText type="caption" style={styles.statLabel}>
                 {t('plots_stat')}
               </ThemedText>
-              <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B', fontSize: 18 }}>
+              <ThemedText type="defaultSemiBold" style={styles.statValue}>
                 {counts.plotsCount}
               </ThemedText>
             </View>
-            <View style={[styles.statBox, styles.statBoxCompliant]}>
-              <ThemedText
-                type="caption"
-                numberOfLines={1}
-                style={{ color: '#2C6B57', opacity: 0.95, fontSize: 11, lineHeight: 14 }}
-              >
+            <View style={styles.statBox}>
+              <ThemedText type="caption" style={styles.statLabel}>
                 {t('compliant_stat')}
               </ThemedText>
-              <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B', fontSize: 18 }}>
+              <ThemedText type="defaultSemiBold" style={styles.statValue}>
                 {loadingBackend ? '…' : counts.compliant}
               </ThemedText>
             </View>
-            <View style={[styles.statBox, styles.statBoxPending]}>
-              <ThemedText
-                type="caption"
-                numberOfLines={1}
-                style={{ color: '#2C6B57', opacity: 0.95, fontSize: 11, lineHeight: 14 }}
-              >
+            <View style={styles.statBox}>
+              <ThemedText type="caption" style={styles.statLabel}>
                 {t('pending_stat')}
               </ThemedText>
               <ThemedText
                 type="defaultSemiBold"
-                style={{ color: pendingCount > 0 ? '#C47A00' : '#0B4F3B', fontSize: 18 }}
+                style={[styles.statValue, counts.pending > 0 && styles.statValuePending]}
               >
                 {loadingBackend ? '…' : counts.pending}
               </ThemedText>
             </View>
           </View>
-        </Card>
+        </LinearGradient>
 
         <View style={styles.tilesGrid}>
-          <HomeTile
-            title={t('register_plot_tile')}
-            subtitle={t('walk_perimeter_sub')}
-            icon="location-outline"
-            tint="#BFEEDB"
-            iconColor="#0B7B59"
-            onPress={() => router.push('/record')}
-          />
-          <HomeTile
-            title={t('log_harvest_tile')}
-            subtitle={t('record_delivery_sub')}
-            icon="scale-outline"
-            tint="#F8EDC8"
-            iconColor="#B45A00"
-            onPress={() => router.push('/harvests')}
-          />
-          <HomeTile
-            title={t('documents_tile')}
-            subtitle={t('land_permits_sub')}
-            icon="document-text-outline"
-            tint="#DCE9FF"
-            iconColor="#2454D7"
-            onPress={() => {
-              const first = plots[0];
-              if (first?.id) {
-                router.push(`/plot/${encodeURIComponent(first.id)}?sub=documents`);
-                return;
-              }
-              router.push('/documents');
-            }}
-          />
-          <HomeTile
-            title={t('my_vouchers_tile')}
-            subtitle={t('compliance_qr_sub')}
-            icon="qr-code-outline"
-            tint="#F0E3FF"
-            iconColor="#7A1FD1"
-            onPress={() => {
-              const first = plots[0];
-              if (first?.id) {
-                router.push(`/plot/${encodeURIComponent(first.id)}?sub=voucher`);
-                return;
-              }
-              router.push('/harvests');
-            }}
-          />
+          {homeTiles.map((tile, index) => (
+            <HomeTile
+              key={tile.key}
+              width={tileWidth}
+              height={uniformTileHeight}
+              title={tile.title}
+              subtitle={tile.subtitle}
+              icon={tile.icon}
+              tint={tile.tint}
+              iconColor={tile.iconColor}
+              onPress={tile.onPress}
+              onMeasure={(height) => reportTileHeight(index, height)}
+            />
+          ))}
         </View>
 
         {actionRequired ? (
@@ -387,7 +435,9 @@ export default function HomeScreen() {
             </ThemedText>
             <Pressable
               onPress={() =>
-                router.push(`/explore?plotId=${encodeURIComponent(actionRequired.plotId)}&focus=photos`)
+                router.navigate(
+                  `/(tabs)/explore?plotId=${encodeURIComponent(actionRequired.plotId)}&focus=photos`,
+                )
               }
               style={styles.completeNowRow}
             >
@@ -399,39 +449,65 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        <Card variant="outlined" style={styles.syncCard}>
-          <View style={styles.syncHeader}>
-            <View style={styles.syncTitleRow}>
-              <Ionicons name="cloud-upload-outline" size={16} color={colors.textSecondary} />
-              <ThemedText type="defaultSemiBold">{t('sync_status')}</ThemedText>
+        <Pressable
+          onPress={pendingCount > 0 ? () => router.navigate('/(tabs)/settings?focus=backup') : undefined}
+          disabled={pendingCount === 0}
+          accessibilityRole={pendingCount > 0 ? 'button' : undefined}
+          accessibilityLabel={pendingCount > 0 ? t('home_backup_tap') : undefined}
+          style={({ pressed }) => [pendingCount > 0 && pressed && styles.syncCardPressed]}
+        >
+          <Card variant="outlined" style={styles.syncCard}>
+            <View style={styles.syncHeader}>
+              <View style={styles.syncTitleRow}>
+                <Ionicons
+                  name={pendingCount > 0 ? 'cloud-upload-outline' : 'cloud-done-outline'}
+                  size={16}
+                  color={pendingCount > 0 ? Brand.warning : Brand.success}
+                />
+                <ThemedText type="defaultSemiBold">{t('sync_status')}</ThemedText>
+              </View>
+              <View style={styles.syncHeaderTrailing}>
+                <View
+                  style={[
+                    styles.pendingPill,
+                    { backgroundColor: pendingCount > 0 ? 'rgba(221,107,32,0.14)' : 'rgba(56,161,105,0.14)' },
+                  ]}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={{ color: pendingCount > 0 ? Brand.warning : Brand.success }}
+                  >
+                    {t('pending_count', { n: pendingCount })}
+                  </ThemedText>
+                </View>
+                {pendingCount > 0 ? (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                ) : null}
+              </View>
             </View>
-            <View
+            {pendingCount === 0 ? (
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressFill, styles.progressFillComplete]} />
+              </View>
+            ) : null}
+            <ThemedText
+              type="caption"
               style={[
-                styles.pendingPill,
-                { backgroundColor: pendingCount > 0 ? 'rgba(221,107,32,0.14)' : 'rgba(56,161,105,0.14)' },
+                styles.syncCaption,
+                pendingCount > 0 ? styles.syncCaptionPending : styles.syncCaptionComplete,
               ]}
             >
-              <ThemedText
-                type="caption"
-                style={{ color: pendingCount > 0 ? Brand.warning : Brand.success }}
-              >
-                {t('pending_count', { n: pendingCount })}
+              {pendingCount > 0 ? t('backup_waiting', { n: pendingCount }) : t('backup_up_to_date')}
+            </ThemedText>
+            {pendingCount > 0 ? (
+              <ThemedText type="caption" style={styles.syncTapHint}>
+                {t('home_backup_tap')}
               </ThemedText>
-            </View>
-          </View>
-          <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: pendingCount > 0 ? '35%' : '85%', backgroundColor: Brand.primary },
-              ]}
-            />
-          </View>
-          <ThemedText type="caption" style={{ marginTop: 6 }}>
-            {pendingCount > 0 ? t('last_sync_pending') : t('last_sync_now')}
-          </ThemedText>
-        </Card>
+            ) : null}
+          </Card>
+        </Pressable>
 
+        {__DEV__ ? (
         <Card variant="outlined" style={styles.syncCard}>
           <View style={styles.syncHeader}>
             <View style={styles.syncTitleRow}>
@@ -494,44 +570,63 @@ export default function HomeScreen() {
             </ThemedText>
           )}
         </Card>
+        ) : null}
       </ThemedScrollView>
     </ThemedView>
   );
 }
 
 function HomeTile(props: {
+  width: number;
+  height: number | null;
   title: string;
   subtitle: string;
-  icon: any;
+  icon: ComponentProps<typeof Ionicons>['name'];
   tint: string;
   iconColor: string;
   highlighted?: boolean;
   onPress: () => void;
+  onMeasure: (height: number) => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const measuring = props.height == null;
+
   return (
     <Pressable
       onPress={props.onPress}
       style={({ pressed }) => [
         styles.tileWrapper,
+        {
+          width: props.width,
+          ...(measuring ? { minHeight: HOME_TILE_MIN_HEIGHT } : { height: props.height }),
+        },
         pressed && styles.tilePressed,
       ]}
     >
       <Card
         variant="outlined"
+        padding="none"
+        onLayout={
+          measuring
+            ? (event) => {
+                props.onMeasure(event.nativeEvent.layout.height);
+              }
+            : undefined
+        }
         style={[
           styles.tileCard,
+          measuring ? styles.tileCardMeasuring : styles.tileCardSized,
           props.highlighted && styles.tileCardHighlighted,
         ]}
       >
         <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
           <Ionicons name={props.icon} size={22} color={props.iconColor} />
         </View>
-        <ThemedText type="defaultSemiBold" numberOfLines={2} ellipsizeMode="tail">
+        <ThemedText type="defaultSemiBold" style={styles.tileTitle}>
           {props.title}
         </ThemedText>
-        <ThemedText type="caption" numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={[styles.tileSubtitle, { color: colors.textSecondary }]}>
           {props.subtitle}
         </ThemedText>
       </Card>
@@ -551,52 +646,88 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F3',
   },
   welcomeCard: {
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 20,
-    backgroundColor: '#DDEFE8',
-    borderColor: '#86DDBE',
+    overflow: 'hidden',
+  },
+  welcomeBack: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  welcomeName: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
+    marginTop: 14,
   },
   statBox: {
     flex: 1,
-    borderRadius: Radius.lg,
-    backgroundColor: '#ECF5F1',
-    borderWidth: 1,
-    borderColor: '#D6E7DF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    minHeight: 72,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.24)',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    minHeight: 68,
+    justifyContent: 'space-between',
   },
-  statBoxPlots: {
-    flex: 1,
+  statLabel: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    lineHeight: 14,
   },
-  statBoxCompliant: {
-    flex: 1.35,
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 24,
+    marginTop: 6,
   },
-  statBoxPending: {
-    flex: 1.35,
+  statValuePending: {
+    color: '#FFE08A',
   },
   tilesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'flex-start',
+    gap: HOME_TILE_GAP,
+    justifyContent: 'space-between',
   },
   tileWrapper: {
-    flexBasis: '48%',
-    flexGrow: 1,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   tileCard: {
-    padding: 14,
+    padding: 16,
     borderRadius: 18,
     borderColor: '#CDD2D6',
     borderWidth: 1.4,
     backgroundColor: '#FFFFFF',
-    minHeight: 120,
+    justifyContent: 'flex-start',
+  },
+  tileCardMeasuring: {
+    flex: 1,
+    minHeight: HOME_TILE_MIN_HEIGHT,
+  },
+  tileCardSized: {
+    flex: 1,
+    height: '100%',
+  },
+  tileTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#0F172A',
+    marginTop: 2,
+    flexShrink: 1,
+  },
+  tileSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+    flexShrink: 1,
   },
   tileCardHighlighted: {
     borderColor: '#5ED6AB',
@@ -657,11 +788,20 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     gap: 8,
   },
+  syncCardPressed: {
+    opacity: 0.92,
+  },
   syncHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  syncHeaderTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
   },
   syncTitleRow: {
     flexDirection: 'row',
@@ -673,14 +813,33 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.full,
   },
-  progressBar: {
+  progressBarTrack: {
     height: 8,
     borderRadius: Radius.full,
     overflow: 'hidden',
+    backgroundColor: 'rgba(56,161,105,0.18)',
   },
   progressFill: {
     height: 8,
     borderRadius: Radius.full,
+  },
+  progressFillComplete: {
+    width: '100%',
+    backgroundColor: Brand.success,
+  },
+  syncCaption: {
+    marginTop: 2,
+  },
+  syncCaptionComplete: {
+    color: '#2F6B4F',
+  },
+  syncCaptionPending: {
+    color: '#B45309',
+  },
+  syncTapHint: {
+    color: '#0B7B59',
+    fontWeight: '600',
+    marginTop: 2,
   },
   onboardingCard: {
     borderRadius: 18,
@@ -702,9 +861,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  onboardingAccountLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   onboardingLink: {
     color: Brand.primary,
     textDecorationLine: 'underline',
+  },
+  onboardingLinkSep: {
+    color: '#9CA3AF',
   },
   onboardingCta: {
     flexDirection: 'row',

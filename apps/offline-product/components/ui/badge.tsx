@@ -90,13 +90,25 @@ export function ComplianceBadge({
   status,
   size = 'md',
 }: {
-  status: 'compliant' | 'degradation_risk' | 'deforestation_detected' | 'pending';
+  status:
+    | 'compliant'
+    | 'under_review'
+    | 'degradation_risk'
+    | 'deforestation_detected'
+    | 'pending'
+    | 'pending_check'
+    | string;
   size?: BadgeSize;
 }) {
+  const normalized =
+    status === 'pending_check' || !status ? 'pending' : status;
+
   const getVariant = (): BadgeVariant => {
-    switch (status) {
+    switch (normalized) {
       case 'compliant':
         return 'success';
+      case 'under_review':
+        return 'warning';
       case 'degradation_risk':
         return 'warning';
       case 'deforestation_detected':
@@ -107,9 +119,11 @@ export function ComplianceBadge({
   };
 
   const getLabel = () => {
-    switch (status) {
+    switch (normalized) {
       case 'compliant':
         return 'Compliant';
+      case 'under_review':
+        return 'Review';
       case 'degradation_risk':
         return 'At Risk';
       case 'deforestation_detected':

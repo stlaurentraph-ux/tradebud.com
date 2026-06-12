@@ -1,3 +1,10 @@
+### 2026-06-12 (field app: restore prod home UI polish from stash)
+- Recovered polished home screen from `stash@{0}` onto branch `feat/restore-prod-home-ui-polish`: gradient welcome card (`HEADER_GRADIENT_COLORS`), equal-height 2×2 tiles (`uniformTileHeight`), pending-only header badge, no language-pill dot.
+- Extended header polish to Settings, My Plots compact list, harvests, plot detail, and walk-perimeter lang pill.
+- Restored `SignInSheetContext` create-account flow; added `create_account` / `home_backup_tap` en strings.
+- Restored stash `WalkPerimeterScreen` landing (plot name + size grid + contiguity; no inline producer-profile card); wired real `measureTracebudStorageFootprint` in Settings; added `expo-auth-session` dependency.
+- Kept committed tenure/AI/evidence UI on plot detail (`PlotTenureStatusCard`, `PlotEvidencePanel`) and geometry quality from `main` — stash predated those commits.
+
 ### 2026-06-11 (push production enablement: health + mobile registration bridge)
 - Backend: `/api/health` exposes `pushNotifications` (EXPO token configured, supported roles); `npm run check:push`.
 - Field app: `PushRegistrationBridge` re-registers Expo token on cold start + foreground; OAuth sign-in registers push; tap routes geometry alerts to plots/field-ops.

@@ -86,8 +86,8 @@ export default function PlotDetailScreen() {
   const [note, setNote] = useState<string | null>(null);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
-  const [loadingBackend, setLoadingBackend] = useState(false);
-  const [backendError, setBackendError] = useState<string | null>(null);
+  const [, setLoadingBackend] = useState(false);
+  const [, setBackendError] = useState<string | null>(null);
   const [backendPlotId, setBackendPlotId] = useState<string | null>(null);
   const [tenureVerifications, setTenureVerifications] = useState<PlotTenureVerificationRecord[]>([]);
   const [overlapFlags, setOverlapFlags] = useState<{ sinaph: boolean; indigenous: boolean }>({
@@ -220,8 +220,6 @@ export default function PlotDetailScreen() {
     const v = plot.declaredAreaHectares;
     setDeclaredHaDraft(v != null && Number.isFinite(v) ? String(v) : '');
   }, [plot]);
-
-  const isOnline = !!farmer?.id && !loadingBackend && !backendError;
 
   const showDeclaredFieldInModal = Boolean(
     plot && (plot.kind === 'point' || plot.areaHectares < 4),
@@ -497,11 +495,6 @@ export default function PlotDetailScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
-        <View style={styles.headerTopRow}>
-          <Badge variant={isOnline ? 'success' : 'warning'} size="sm">
-            {isOnline ? t('online') : t('offline')}
-          </Badge>
-        </View>
         <View style={styles.headerRowCompact}>
           <Pressable onPress={() => (active ? setActive(null) : router.back())} style={styles.backPill}>
             <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
@@ -523,7 +516,6 @@ export default function PlotDetailScreen() {
             </ThemedText>
           </View>
           <View style={styles.langPillCompact}>
-            <View style={styles.langDot} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {String(lang).toUpperCase()}
             </ThemedText>

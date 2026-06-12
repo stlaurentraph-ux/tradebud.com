@@ -21,22 +21,83 @@ import { isSyncSignedIn } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
+  applyProducerAttestationsToFarmer,
+  buildPlotAttestationFields,
+  hasProducerAttestationsComplete,
+} from '@/features/compliance/farmerDeclarations';
+import { isProducerProfileComplete } from '@/features/compliance/producerProfileComplete';
+import {
+  PRODUCTION_SYSTEM_OPTIONS,
+  type ProductionSystemId,
+} from '@/features/compliance/productionSystem';
+import { navigateHome } from '@/features/navigation/routes';
+import {
   getSetting,
   logAuditEvent,
   persistPlotEvidenceItem,
   persistPlotPhoto,
 } from '@/features/state/persistence';
-import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
-import {
-  assessLocalPolygonQuality,
-  localPolygonQualityMessage,
-} from '@/features/compliance/plotGeometryQuality';
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+type LatLng = {
+  latitude: number;
+  longitude: number;
+};
+
+function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): boolean {
+  const cross = (ax: number, ay: number, bx: number, by: number) => ax * by - ay * bx;
+
+  const d1x = p2.latitude - p1.latitude;
+  const d1y = p2.longitude - p1.longitude;
+  const d2x = p4.latitude - p3.latitude;
+  const d2y = p4.longitude - p3.longitude;
+
+  const denominator = cross(d1x, d1y, d2x, d2y);
+  if (denominator === 0) {
+    return false;
+  }
+
+  const dx = p3.latitude - p1.latitude;
+  const dy = p3.longitude - p1.longitude;
+
+  const t = cross(dx, dy, d2x, d2y) / denominator;
+  const u = cross(dx, dy, d1x, d1y) / denominator;
+
+  return t > 0 && t < 1 && u > 0 && u < 1;
+}
+
+function hasSelfIntersection(points: LatLng[]): boolean {
+  if (points.length < 4) {
+    return false;
+  }
+
+  const n = points.length;
+
+  for (let i = 0; i < n; i++) {
+    const a1 = points[i];
+    const a2 = points[(i + 1) % n];
+
+    for (let j = i + 1; j < n; j++) {
+      const b1 = points[j];
+      const b2 = points[(j + 1) % n];
+
+      if (a1 === b1 || a1 === b2 || a2 === b1 || a2 === b2) {
+        continue;
+      }
+
+      if (segmentsIntersect(a1, a2, b1, b2)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 export function WalkPerimeterScreen() {
   const insets = useSafeAreaInsets();
@@ -89,7 +150,9 @@ export function WalkPerimeterScreen() {
   const [showDetailedForm, setShowDetailedForm] = useState(false);
   const [selectedMethodPage, setSelectedMethodPage] = useState<'walk' | 'draw' | 'centroid' | null>(null);
   const [showRegistrationPage, setShowRegistrationPage] = useState(false);
+  const [showProducerProfilePage, setShowProducerProfilePage] = useState(false);
   const [showDeclarationsPage, setShowDeclarationsPage] = useState(false);
+  const [declarationMode, setDeclarationMode] = useState<'full' | 'plot-only'>('full');
   const [showPhotosPage, setShowPhotosPage] = useState(false);
   const [showCompletionPage, setShowCompletionPage] = useState(false);
   type GroundPhoto = {
@@ -105,6 +168,9 @@ export function WalkPerimeterScreen() {
     west: GroundPhoto | null;
   }>({ north: null, east: null, south: null, west: null });
   const lastRegisteredPlotIdRef = useRef<string | null>(null);
+  const pendingPlotAttestationsRef = useRef<ReturnType<typeof buildPlotAttestationFields> | null>(null);
+  const pendingProductionSystemRef = useRef<ProductionSystemId | null>(null);
+  const [productionSystem, setProductionSystem] = useState<ProductionSystemId>('agroforestry');
   const [vertexCycleSeconds, setVertexCycleSeconds] = useState<60 | 120>(120);
   const [captureMethod, setCaptureMethod] = useState<'walk' | 'draw' | 'centroid'>('walk');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -124,21 +190,13 @@ export function WalkPerimeterScreen() {
 
   const COMMODITY_OPTIONS = useMemo(
     () =>
-      (
-        [
-          { code: 'coffee', label: t('commodity_coffee') },
-          { code: 'cocoa', label: t('commodity_cocoa') },
-          { code: 'rubber', label: t('commodity_rubber') },
-          { code: 'soy', label: t('commodity_soy') },
-          { code: 'timber', label: t('commodity_timber') },
-        ] as const
-      ).map((o) => {
-        const hs = getCommodityDefinition(o.code)?.hsCode;
-        return {
-          ...o,
-          hsLabel: hs ? `HS ${formatHsHeading(hs)}` : '',
-        };
-      }),
+      [
+        { code: 'coffee' as const, label: t('commodity_coffee') },
+        { code: 'cocoa' as const, label: t('commodity_cocoa') },
+        { code: 'rubber' as const, label: t('commodity_rubber') },
+        { code: 'soy' as const, label: t('commodity_soy') },
+        { code: 'timber' as const, label: t('commodity_timber') },
+      ],
     [t],
   );
 
@@ -251,12 +309,29 @@ export function WalkPerimeterScreen() {
 
   const finishNewPlotSave = useCallback(
     (name: string, tryServerUpload: () => void) => {
-      if (!isSyncSignedIn()) {
-        openSignIn({ variant: 'after_plot', onSuccess: tryServerUpload });
-        return;
+      const buttons: {
+        text: string;
+        onPress?: () => void;
+        style?: 'cancel' | 'default' | 'destructive';
+      }[] = [
+        {
+          text: t('plot_saved_view_my_plots'),
+          onPress: () => router.replace('/(tabs)/explore'),
+        },
+      ];
+      if (isSyncSignedIn()) {
+        buttons.push({
+          text: t('plot_saved_continue'),
+          onPress: tryServerUpload,
+        });
+      } else {
+        buttons.push({
+          text: t('sign_in_to_backup_title'),
+          onPress: () => openSignIn({ variant: 'after_plot', onSuccess: tryServerUpload }),
+        });
+        buttons.push({ text: t('sign_in_skip'), style: 'cancel' });
       }
-      Alert.alert(t('plot_saved_title'), t('plot_saved_message', { name }));
-      tryServerUpload();
+      Alert.alert(t('plot_saved_title'), t('plot_saved_message', { name }), buttons);
     },
     [openSignIn, t],
   );
@@ -283,6 +358,24 @@ export function WalkPerimeterScreen() {
 
   const isUuid = (value: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+  const createLocalFarmerId = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  const resolveProfileId = useCallback((): string => {
+    const typed = farmerIdInput.trim();
+    if (isUuid(typed)) return typed;
+    if (farmer?.id && isUuid(farmer.id)) return farmer.id;
+    return createLocalFarmerId();
+  }, [farmer?.id, farmerIdInput]);
 
   useEffect(() => {
     const id = farmerIdInput.trim();
@@ -343,10 +436,9 @@ export function WalkPerimeterScreen() {
   };
 
   const captureSimplifiedDeclarationGeo = async () => {
-    const id = farmerIdInput.trim();
-    if (!isUuid(id)) {
-      Alert.alert(t('producer_profile_error_title'), t('producer_profile_error_uuid'));
-      return;
+    const id = resolveProfileId();
+    if (!isUuid(farmerIdInput.trim())) {
+      setFarmerIdInput(id);
     }
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -446,15 +538,83 @@ export function WalkPerimeterScreen() {
 
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
-  const canContinueToCaptureMethod = estimatedSize != null && isUuid(farmerIdInput.trim());
+  const canContinueToCaptureMethod = estimatedSize != null;
   const gpsStrength =
     precisionMeters == null ? 'Unknown' : precisionMeters <= 6 ? 'Strong' : precisionMeters <= 10 ? 'Fair' : 'Weak';
   const satelliteCount =
     precisionMeters == null ? 12 : Math.max(8, Math.min(20, Math.round(24 - precisionMeters)));
   const isWalkLandingState =
     captureMethod === 'walk' && selectedMethodPage === 'walk' && !isRecording && points.length === 0;
+  const producerProfileComplete = isProducerProfileComplete(farmer);
+  const producerAttestationsComplete = hasProducerAttestationsComplete(farmer);
+
+  const openDeclarationsPage = useCallback(() => {
+    setDeclLandTenure(false);
+    setDeclNoDeforestation(false);
+    setFpicConsent(farmer?.fpicConsent ?? false);
+    setLaborNoChildLabor(farmer?.laborNoChildLabor ?? false);
+    setLaborNoForcedLabor(farmer?.laborNoForcedLabor ?? false);
+    setDeclarationMode(hasProducerAttestationsComplete(farmer) ? 'plot-only' : 'full');
+    setShowDeclarationsPage(true);
+  }, [farmer]);
+
+  const canCompleteProducerProfileForm = useMemo(() => {
+    const hasPostal = postalInput.trim().length > 0;
+    const hasGeo = simplifiedDeclarationGeo != null;
+    return Boolean(commodityCode) && (hasPostal || hasGeo);
+  }, [commodityCode, postalInput, simplifiedDeclarationGeo]);
+
+  const ensureMinimalFarmerForPlot = useCallback(() => {
+    const id = resolveProfileId();
+    setFarmerIdInput(id);
+    const name = farmer?.name?.trim() || farmerNameInput.trim() || undefined;
+    if (farmer?.id === id) {
+      if (!farmer.name?.trim() && name) {
+        setFarmer({ ...farmer, name });
+      }
+      return;
+    }
+    setFarmer({
+      id,
+      name,
+      role: 'farmer',
+      selfDeclared: false,
+      profilePhotoUri: farmer?.profilePhotoUri,
+    });
+  }, [farmer, farmerNameInput, resolveProfileId]);
+
+  const saveProducerProfileFromForm = useCallback(() => {
+    const id = resolveProfileId();
+    setFarmerIdInput(id);
+    setFarmer({
+      id,
+      name: farmerNameInput.trim() || farmer?.name?.trim() || undefined,
+      role: 'farmer',
+      selfDeclared: farmer?.selfDeclared ?? false,
+      selfDeclaredAt: farmer?.selfDeclaredAt,
+      fpicConsent: farmer?.fpicConsent ?? false,
+      laborNoChildLabor: farmer?.laborNoChildLabor ?? false,
+      laborNoForcedLabor: farmer?.laborNoForcedLabor ?? false,
+      postalAddress: postalInput.trim() || undefined,
+      commodityCode,
+      profilePhotoUri: farmer?.profilePhotoUri,
+      ...mergeDeclarationGeoForProfile(id),
+    });
+  }, [
+    commodityCode,
+    farmer,
+    farmerNameInput,
+    mergeDeclarationGeoForProfile,
+    postalInput,
+    resolveProfileId,
+  ]);
+
   const showCapturePage =
-    !showRegistrationPage && !showDeclarationsPage && !showPhotosPage && !showCompletionPage;
+    !showRegistrationPage &&
+    !showProducerProfilePage &&
+    !showDeclarationsPage &&
+    !showPhotosPage &&
+    !showCompletionPage;
   const photosCapturedCount = Object.values(photoSlots).filter(Boolean).length;
 
   const handleSavePointPlot = () => {
@@ -478,13 +638,10 @@ export function WalkPerimeterScreen() {
     const pointPointsPayload = [{ latitude: last.latitude, longitude: last.longitude }];
     let pointGeometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
     try {
-      pointGeometryForUpload = buildGeometryFromLocalPlot(
-        {
-          kind: 'point',
-          points: pointPointsPayload,
-        },
-        { declaredAreaHectares },
-      );
+      pointGeometryForUpload = buildGeometryFromLocalPlot({
+        kind: 'point',
+        points: pointPointsPayload,
+      });
     } catch (e) {
       Alert.alert(
         t('plot_geometry_error_title'),
@@ -521,8 +678,17 @@ export function WalkPerimeterScreen() {
       declaredAreaHectares,
       discrepancyPercent: undefined,
       precisionMetersAtSave: precisionMeters ?? null,
+      ...(pendingPlotAttestationsRef.current ?? {}),
+      ...(pendingProductionSystemRef.current
+        ? { productionSystem: pendingProductionSystemRef.current }
+        : {}),
     });
-    if (newPlotId) lastRegisteredPlotIdRef.current = newPlotId;
+    pendingPlotAttestationsRef.current = null;
+    pendingProductionSystemRef.current = null;
+    if (newPlotId) {
+      lastRegisteredPlotIdRef.current = newPlotId;
+      logPlotComplianceDeclared(newPlotId, name);
+    }
 
     if (farmer) {
       const tryServerUpload = () => {
@@ -532,6 +698,7 @@ export function WalkPerimeterScreen() {
           geometry: pointGeometryForUpload,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
+          productionSystem: productionSystem ?? null,
         }).then((r) => handlePlotUploadResult(r, tryServerUpload));
       };
       finishNewPlotSave(name, tryServerUpload);
@@ -550,6 +717,14 @@ export function WalkPerimeterScreen() {
         'Poor GPS (Amber)',
         'GPS precision is poor. You can still save, but consider vertex averaging or manual trace for better accuracy.',
       );
+    }
+
+    if (hasSelfIntersection(points)) {
+      Alert.alert(
+        'Invalid boundary',
+        'The polygon self-intersects. Please walk the perimeter again.',
+      );
+      return;
     }
 
     // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
@@ -589,32 +764,6 @@ export function WalkPerimeterScreen() {
       discrepancyPercent = pct;
     }
 
-    const otherPolygonPlots = plots
-      .filter((p) => p.kind === 'polygon' && p.points.length >= 3)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        points: p.points,
-        areaHectares: p.areaHectares,
-      }));
-
-    const polygonQuality = assessLocalPolygonQuality({
-      points,
-      areaHa: area.hectares,
-      otherPlots: otherPolygonPlots,
-      excludePlotId: editingPlot?.id,
-      phase: 'save',
-    });
-
-    if (polygonQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        t('plot_geometry_error_title'),
-        localPolygonQualityMessage(polygonQuality.blockingIssues, t),
-      );
-      return;
-    }
-
-    const persistPolygon = () => {
     const pointsPayload = points.map((p) => ({
       latitude: p.latitude,
       longitude: p.longitude,
@@ -622,10 +771,7 @@ export function WalkPerimeterScreen() {
 
     let geometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
     try {
-      geometryForUpload = buildGeometryFromLocalPlot(
-        { kind, points: pointsPayload },
-        { declaredAreaHectares },
-      );
+      geometryForUpload = buildGeometryFromLocalPlot({ kind, points: pointsPayload });
     } catch (e) {
       Alert.alert(
         t('plot_geometry_error_title'),
@@ -662,8 +808,17 @@ export function WalkPerimeterScreen() {
       declaredAreaHectares,
       discrepancyPercent,
       precisionMetersAtSave: precisionMeters ?? null,
+      ...(pendingPlotAttestationsRef.current ?? {}),
+      ...(pendingProductionSystemRef.current
+        ? { productionSystem: pendingProductionSystemRef.current }
+        : {}),
     });
-    if (newPlotId) lastRegisteredPlotIdRef.current = newPlotId;
+    pendingPlotAttestationsRef.current = null;
+    pendingProductionSystemRef.current = null;
+    if (newPlotId) {
+      lastRegisteredPlotIdRef.current = newPlotId;
+      logPlotComplianceDeclared(newPlotId, name);
+    }
 
     // Log raw GNSS capture metadata for GIS review (best-effort, local only).
     try {
@@ -693,26 +848,6 @@ export function WalkPerimeterScreen() {
       // ignore
     }
 
-    // Prototype parity: log compliance declarations captured during registration (local audit only).
-    try {
-      logAuditEvent({
-        userId: farmer?.id,
-        eventType: 'plot_compliance_declared',
-        payload: {
-          plotId: name,
-          declarations: {
-            fpicConsent,
-            laborNoChildLabor,
-            laborNoForcedLabor,
-            landTenure: declLandTenure,
-            noDeforestation: declNoDeforestation,
-          },
-        },
-      }).catch(() => undefined);
-    } catch {
-      // ignore
-    }
-
     if (farmer && points.length > 0 && !editingPlot) {
       const tryServerUpload = () => {
         postPlotToBackend({
@@ -721,28 +856,49 @@ export function WalkPerimeterScreen() {
           geometry: geometryForUpload,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
+          productionSystem: productionSystem ?? null,
         }).then((r) => handlePlotUploadResult(r, tryServerUpload));
       };
       finishNewPlotSave(name, tryServerUpload);
     }
-    };
+  };
 
-    if (polygonQuality.warnings.length > 0) {
-      Alert.alert(
-        t('plot_geometry_warning_title'),
-        localPolygonQualityMessage(polygonQuality.warnings, t),
-        [
-          { text: t('plot_geometry_warning_fix'), style: 'cancel' },
-          { text: t('plot_geometry_warning_save'), onPress: persistPolygon },
-        ],
-      );
-      return;
+  const logPlotComplianceDeclared = (plotId: string, plotName: string) => {
+    try {
+      logAuditEvent({
+        userId: farmer?.id,
+        eventType: 'plot_compliance_declared',
+        payload: {
+          plotId,
+          plotName,
+          producerAttestations: {
+            fpicConsent: farmer?.fpicConsent ?? fpicConsent,
+            laborNoChildLabor: farmer?.laborNoChildLabor ?? laborNoChildLabor,
+            laborNoForcedLabor: farmer?.laborNoForcedLabor ?? laborNoForcedLabor,
+            producerLevel: producerAttestationsComplete || declarationMode === 'full',
+          },
+          plotAttestations: {
+            landTenure: declLandTenure,
+            noDeforestation: declNoDeforestation,
+          },
+        },
+      }).catch(() => undefined);
+    } catch {
+      // ignore
     }
-
-    persistPolygon();
   };
 
   const finalizeGeolocationAfterDeclarations = () => {
+    if (!isProducerProfileComplete(farmer)) {
+      setShowDeclarationsPage(false);
+      setShowProducerProfilePage(true);
+      return;
+    }
+    if (!farmer?.id) {
+      ensureMinimalFarmerForPlot();
+      Alert.alert(t('producer_profile_error_title'), t('producer_profile_missing_farmer'));
+      return;
+    }
     if (estimatedSize === 'gte4' && points.length < 3) {
       Alert.alert(t('plot_boundary_required_title'), t('plot_boundary_required_body'));
       return;
@@ -751,6 +907,52 @@ export function WalkPerimeterScreen() {
       handleSavePointPlot();
     } else {
       handleSavePlot();
+    }
+  };
+
+  const handleDeclarationsContinue = () => {
+    if (!farmer?.id) {
+      Alert.alert(t('producer_profile_error_title'), t('producer_profile_missing_farmer'));
+      return;
+    }
+    const now = Date.now();
+    pendingPlotAttestationsRef.current = buildPlotAttestationFields(
+      { landTenure: declLandTenure, noDeforestation: declNoDeforestation },
+      now,
+    );
+    pendingProductionSystemRef.current = productionSystem;
+    if (declarationMode === 'full') {
+      setFarmer(
+        applyProducerAttestationsToFarmer(
+          farmer,
+          { fpicConsent, laborNoChildLabor, laborNoForcedLabor },
+          now,
+        ),
+      );
+    }
+    finalizeGeolocationAfterDeclarations();
+    setShowDeclarationsPage(false);
+    const shouldPromptDocs = declLandTenure || (declarationMode === 'full' && fpicConsent);
+    if (shouldPromptDocs) {
+      Alert.alert(t('evidence_upload_prompt_title'), t('evidence_upload_prompt_body'), [
+        {
+          text: t('declarations_upload_now'),
+          onPress: () => {
+            const pid = lastRegisteredPlotIdRef.current;
+            if (pid) {
+              router.push(`/plot/${encodeURIComponent(pid)}?sub=documents`);
+            } else {
+              router.push('/documents');
+            }
+          },
+        },
+        {
+          text: t('declarations_continue_photos'),
+          onPress: () => setShowPhotosPage(true),
+        },
+      ]);
+    } else {
+      setShowPhotosPage(true);
     }
   };
 
@@ -821,6 +1023,12 @@ export function WalkPerimeterScreen() {
               }
               if (showDeclarationsPage) {
                 setShowDeclarationsPage(false);
+                setShowProducerProfilePage(true);
+                return;
+              }
+              if (showProducerProfilePage) {
+                setShowProducerProfilePage(false);
+                setShowRegistrationPage(true);
                 return;
               }
               if (selectedMethodPage) {
@@ -839,7 +1047,7 @@ export function WalkPerimeterScreen() {
                 router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
                 return;
               }
-              router.push('/(tabs)/index');
+              navigateHome(router);
             }}
             style={styles.backButton}
           >
@@ -851,6 +1059,8 @@ export function WalkPerimeterScreen() {
           <ThemedText numberOfLines={1} type="defaultSemiBold" style={styles.headerTitleCompact}>
             {showRegistrationPage
               ? 'Registration'
+              : showProducerProfilePage
+              ? t('plot_register_producer_later_title')
               : showCompletionPage
               ? 'Registration Complete'
               : showPhotosPage
@@ -870,7 +1080,6 @@ export function WalkPerimeterScreen() {
               : 'Register Plot'}
           </ThemedText>
           <View style={styles.langPill}>
-            <View style={styles.langDot} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {String(lang).toUpperCase()}
             </ThemedText>
@@ -908,106 +1117,11 @@ export function WalkPerimeterScreen() {
                   value={plotName}
                   onChangeText={setPlotName}
                 />
-              </CardContent>
-            </Card>
-
-            <Card variant="elevated" style={styles.card}>
-              <CardHeader>
-                <ThemedText type="subtitle">{t('producer_profile_card_title')}</ThemedText>
-              </CardHeader>
-              <CardContent>
-                <Input
-                  label={t('farmer_id_label')}
-                  placeholder={t('farmer_id_placeholder')}
-                  value={farmerIdInput}
-                  onChangeText={setFarmerIdInput}
-                  autoCapitalize="none"
-                />
-                {farmerIdInput.trim().length > 0 && !isUuid(farmerIdInput.trim()) ? (
-                  <ThemedText type="caption" style={{ marginTop: 8, color: Brand.warning }}>
-                    {t('farmer_uuid_hint')}
+                {farmer?.name?.trim() ? (
+                  <ThemedText type="caption" style={{ marginTop: 8, color: '#6B7280' }}>
+                    {t('plot_register_recording_as', { name: farmer.name.trim() })}
                   </ThemedText>
                 ) : null}
-                <Input
-                  label={t('farmer_name_label')}
-                  placeholder={t('farmer_name_placeholder')}
-                  value={farmerNameInput}
-                  onChangeText={setFarmerNameInput}
-                  containerStyle={{ marginTop: 10 }}
-                />
-                <Input
-                  label={t('simplified_declaration_postal_label')}
-                  placeholder={t('simplified_declaration_postal_ph')}
-                  value={postalInput}
-                  onChangeText={setPostalInput}
-                  multiline
-                  containerStyle={{ marginTop: 10 }}
-                />
-                <ThemedText type="caption" style={{ marginTop: 12, marginBottom: 4 }}>
-                  {t('simplified_declaration_geo_label')}
-                </ThemedText>
-                <ThemedText type="caption" style={{ marginBottom: 8, color: '#6B7280' }}>
-                  {t('simplified_declaration_geo_body')}
-                </ThemedText>
-                {simplifiedDeclarationGeo ? (
-                  <ThemedText type="caption" style={{ marginBottom: 8 }}>
-                    {formatLatLon(simplifiedDeclarationGeo.latitude, simplifiedDeclarationGeo.longitude)}
-                  </ThemedText>
-                ) : null}
-                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onPress={() => void captureSimplifiedDeclarationGeo()}
-                    disabled={!isUuid(farmerIdInput.trim())}
-                  >
-                    {t('simplified_declaration_capture_gps')}
-                  </Button>
-                  {simplifiedDeclarationGeo ? (
-                    <Button variant="outline" size="sm" onPress={clearSimplifiedDeclarationGeo}>
-                      {t('simplified_declaration_clear_gps')}
-                    </Button>
-                  ) : null}
-                </View>
-                <ThemedText type="caption" style={{ marginTop: 10, marginBottom: 6 }}>
-                  {t('commodity_primary_label')}
-                </ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {COMMODITY_OPTIONS.map((opt) => (
-                    <Pressable
-                      key={opt.code}
-                      onPress={() => setCommodityCode(opt.code)}
-                      style={[
-                        styles.commodityChip,
-                        commodityCode === opt.code && styles.commodityChipSelected,
-                      ]}
-                    >
-                      <View style={{ alignItems: 'center' }}>
-                        <ThemedText
-                          type="caption"
-                          style={{
-                            color: commodityCode === opt.code ? '#FFFFFF' : '#374151',
-                            fontWeight: '600',
-                          }}
-                        >
-                          {opt.label}
-                        </ThemedText>
-                        {opt.hsLabel ? (
-                          <ThemedText
-                            type="caption"
-                            style={{
-                              marginTop: 2,
-                              fontSize: 10,
-                              color: commodityCode === opt.code ? 'rgba(255,255,255,0.85)' : '#6B7280',
-                            }}
-                          >
-                            {opt.hsLabel}
-                          </ThemedText>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
               </CardContent>
             </Card>
 
@@ -1073,30 +1187,12 @@ export function WalkPerimeterScreen() {
                   if (!plotName.trim()) {
                     setPlotName(defaultPlotName);
                   }
-                  if (!isUuid(farmerIdInput.trim())) {
-                    Alert.alert(t('producer_profile_error_title'), t('producer_profile_error_uuid'));
-                    return;
-                  }
-                  const id = farmerIdInput.trim();
-                  const now = Date.now();
-                  setFarmer({
-                    id,
-                    name: farmerNameInput.trim() || undefined,
-                    role: 'farmer',
-                    selfDeclared: true,
-                    selfDeclaredAt: now,
-                    fpicConsent: farmer?.fpicConsent ?? false,
-                    laborNoChildLabor: farmer?.laborNoChildLabor ?? false,
-                    laborNoForcedLabor: farmer?.laborNoForcedLabor ?? false,
-                    postalAddress: postalInput.trim() || undefined,
-                    commodityCode,
-                    ...mergeDeclarationGeoForProfile(id),
-                  });
+                  ensureMinimalFarmerForPlot();
                   setShowDetailedForm(true);
                   setSelectedMethodPage(null);
                 }}
               >
-                Continue
+                {t('walk_continue')}
               </Button>
             </View>
           </>
@@ -1399,6 +1495,23 @@ export function WalkPerimeterScreen() {
                   </View>
                 </Card>
 
+                {lastRegisteredPlotIdRef.current ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      onPress={() => {
+                        const pid = lastRegisteredPlotIdRef.current;
+                        if (pid) {
+                          router.push(`/plot/${encodeURIComponent(pid)}?sub=documents`);
+                        }
+                      }}
+                    >
+                      {t('plot_completion_upload_docs')}
+                    </Button>
+                  </View>
+                ) : null}
+
                 <View style={{ marginTop: 12 }}>
                   <Button
                     variant="secondary"
@@ -1409,6 +1522,7 @@ export function WalkPerimeterScreen() {
                       setShowDetailedForm(false);
                       setSelectedMethodPage(null);
                       setShowRegistrationPage(false);
+                      setShowProducerProfilePage(false);
                       setShowDeclarationsPage(false);
                       setShowPhotosPage(false);
                       setPhotoSlots({ north: null, east: null, south: null, west: null });
@@ -1424,7 +1538,7 @@ export function WalkPerimeterScreen() {
                     variant="ghost"
                     fullWidth
                     style={{ backgroundColor: '#E5E7EB', borderWidth: 1, borderColor: '#D1D5DB' }}
-                    onPress={() => router.push('/(tabs)/index')}
+                    onPress={() => navigateHome(router)}
                   >
                     Back to Home
                   </Button>
@@ -1587,10 +1701,142 @@ export function WalkPerimeterScreen() {
                     style={{ backgroundColor: '#0A7F59' }}
                     onPress={() => {
                       setShowRegistrationPage(false);
-                      setShowDeclarationsPage(true);
+                      if (producerProfileComplete) {
+                        openDeclarationsPage();
+                      } else {
+                        setShowProducerProfilePage(true);
+                      }
                     }}
                   >
                     Continue
+                  </Button>
+                </View>
+              </>
+            ) : showProducerProfilePage ? (
+              <>
+                <Card variant="outlined" style={styles.declarationsIntroCard}>
+                  <View style={styles.declarationsIntroRow}>
+                    <Ionicons name="person-circle-outline" size={22} color="#0A7F59" />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B' }}>
+                        {t('plot_register_producer_later_title')}
+                      </ThemedText>
+                      <ThemedText type="caption" style={{ marginTop: 4, color: '#1F6B57' }}>
+                        {t('plot_register_producer_later_body')}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </Card>
+
+                <Card variant="elevated" style={styles.card}>
+                  <CardContent>
+                    {__DEV__ ? (
+                      <>
+                        <Input
+                          label={t('farmer_id_label')}
+                          placeholder={t('farmer_id_placeholder')}
+                          value={farmerIdInput}
+                          onChangeText={setFarmerIdInput}
+                          autoCapitalize="none"
+                        />
+                        {farmerIdInput.trim().length > 0 && !isUuid(farmerIdInput.trim()) ? (
+                          <ThemedText type="caption" style={{ marginTop: 8, color: Brand.warning }}>
+                            Use a UUID or leave blank — a local ID is created automatically.
+                          </ThemedText>
+                        ) : null}
+                      </>
+                    ) : null}
+                    <Input
+                      label={t('farmer_name_label')}
+                      placeholder={t('farmer_name_placeholder')}
+                      value={farmerNameInput}
+                      onChangeText={setFarmerNameInput}
+                      containerStyle={{ marginTop: 10 }}
+                    />
+                    <Input
+                      label={t('simplified_declaration_postal_label')}
+                      placeholder={t('simplified_declaration_postal_ph')}
+                      value={postalInput}
+                      onChangeText={setPostalInput}
+                      multiline
+                      containerStyle={{ marginTop: 10 }}
+                    />
+                    <ThemedText type="caption" style={{ marginTop: 12, marginBottom: 4 }}>
+                      {t('simplified_declaration_geo_label')}
+                    </ThemedText>
+                    <ThemedText type="caption" style={{ marginBottom: 8, color: '#6B7280' }}>
+                      {t('simplified_declaration_geo_body')}
+                    </ThemedText>
+                    {simplifiedDeclarationGeo ? (
+                      <ThemedText type="caption" style={{ marginBottom: 8 }}>
+                        {formatLatLon(
+                          simplifiedDeclarationGeo.latitude,
+                          simplifiedDeclarationGeo.longitude,
+                        )}
+                      </ThemedText>
+                    ) : null}
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onPress={() => void captureSimplifiedDeclarationGeo()}
+                      >
+                        {t('simplified_declaration_capture_gps')}
+                      </Button>
+                      {simplifiedDeclarationGeo ? (
+                        <Button variant="outline" size="sm" onPress={clearSimplifiedDeclarationGeo}>
+                          {t('simplified_declaration_clear_gps')}
+                        </Button>
+                      ) : null}
+                    </View>
+                    <ThemedText type="caption" style={{ marginTop: 10, marginBottom: 6 }}>
+                      {t('commodity_primary_label')}
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {COMMODITY_OPTIONS.map((opt) => (
+                        <Pressable
+                          key={opt.code}
+                          onPress={() => setCommodityCode(opt.code)}
+                          style={[
+                            styles.commodityChip,
+                            commodityCode === opt.code && styles.commodityChipSelected,
+                          ]}
+                        >
+                          <View style={{ alignItems: 'center' }}>
+                            <ThemedText
+                              type="caption"
+                              style={{
+                                color: commodityCode === opt.code ? '#FFFFFF' : '#374151',
+                                fontWeight: '600',
+                              }}
+                            >
+                              {opt.label}
+                            </ThemedText>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
+                    {!canCompleteProducerProfileForm ? (
+                      <ThemedText type="caption" style={{ marginTop: 10, color: Brand.warning }}>
+                        {t('plot_register_producer_incomplete')}
+                      </ThemedText>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <View style={{ marginTop: 10 }}>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    style={{ backgroundColor: '#0A7F59' }}
+                    disabled={!canCompleteProducerProfileForm}
+                    onPress={() => {
+                      saveProducerProfileFromForm();
+                      setShowProducerProfilePage(false);
+                      openDeclarationsPage();
+                    }}
+                  >
+                    {t('walk_continue')}
                   </Button>
                 </View>
               </>
@@ -1601,12 +1847,61 @@ export function WalkPerimeterScreen() {
                     <Ionicons name="shield-outline" size={22} color="#D47B0B" />
                     <View style={{ flex: 1 }}>
                       <ThemedText type="defaultSemiBold" style={styles.declarationsIntroTitle}>
-                        Required Declarations
+                        {declarationMode === 'plot-only'
+                          ? t('declarations_plot_intro_title')
+                          : t('declarations_intro_title')}
                       </ThemedText>
                       <ThemedText type="caption" style={styles.declarationsIntroBody}>
-                        These attestations are required for EUDR compliance and EU market access.
+                        {declarationMode === 'plot-only'
+                          ? t('declarations_plot_intro_body')
+                          : t('declarations_intro_body')}
                       </ThemedText>
                     </View>
+                  </View>
+                </Card>
+
+                {declarationMode === 'plot-only' ? (
+                  <Card variant="outlined" style={styles.declarationNoteCard}>
+                    <ThemedText type="defaultSemiBold">{t('declarations_producer_on_file_title')}</ThemedText>
+                    <View style={{ gap: 6, marginTop: 8 }}>
+                      <View style={styles.completionListRow}>
+                        <View style={[styles.completionDot, { backgroundColor: '#10B981' }]} />
+                        <ThemedText type="caption">{t('declarations_fpic_title')}</ThemedText>
+                      </View>
+                      <View style={styles.completionListRow}>
+                        <View style={[styles.completionDot, { backgroundColor: '#10B981' }]} />
+                        <ThemedText type="caption">{t('declarations_labor_title')}</ThemedText>
+                      </View>
+                    </View>
+                  </Card>
+                ) : null}
+
+                <Card variant="outlined" style={styles.declarationNoteCard}>
+                  <ThemedText type="defaultSemiBold">{t('production_system_label')}</ThemedText>
+                  <ThemedText type="caption" style={{ marginTop: 6, marginBottom: 10, color: '#4B5563' }}>
+                    {t('production_system_hint')}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {PRODUCTION_SYSTEM_OPTIONS.map((opt) => (
+                      <Pressable
+                        key={opt.id}
+                        onPress={() => setProductionSystem(opt.id)}
+                        style={[
+                          styles.commodityChip,
+                          productionSystem === opt.id && styles.commodityChipSelected,
+                        ]}
+                      >
+                        <ThemedText
+                          type="caption"
+                          style={{
+                            color: productionSystem === opt.id ? '#FFFFFF' : '#374151',
+                            fontWeight: '600',
+                          }}
+                        >
+                          {t(opt.labelKey)}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
                   </View>
                 </Card>
 
@@ -1614,9 +1909,9 @@ export function WalkPerimeterScreen() {
                   <View style={styles.declarationItemRow}>
                     <Checkbox checked={declLandTenure} onChange={setDeclLandTenure} />
                     <View style={styles.declarationItemContent}>
-                      <ThemedText type="defaultSemiBold">Land Tenure Declaration</ThemedText>
+                      <ThemedText type="defaultSemiBold">{t('declarations_land_tenure_title')}</ThemedText>
                       <ThemedText type="caption" style={styles.declarationItemBody}>
-                        I have legal right to use this land (deed, possession, or customary agreement)
+                        {t('declarations_land_tenure_body')}
                       </ThemedText>
                     </View>
                   </View>
@@ -1629,54 +1924,58 @@ export function WalkPerimeterScreen() {
                   <View style={styles.declarationItemRow}>
                     <Checkbox checked={declNoDeforestation} onChange={setDeclNoDeforestation} />
                     <View style={styles.declarationItemContent}>
-                      <ThemedText type="defaultSemiBold">Deforestation-Free Declaration</ThemedText>
+                      <ThemedText type="defaultSemiBold">{t('declarations_no_deforestation_title')}</ThemedText>
                       <ThemedText type="caption" style={styles.declarationItemBody}>
-                        This plot has not been deforested after December 31, 2020
+                        {t('declarations_no_deforestation_body')}
                       </ThemedText>
                     </View>
                   </View>
                 </Pressable>
 
-                <Pressable style={styles.declarationItemCard} onPress={() => setFpicConsent(!fpicConsent)}>
-                  <View style={styles.declarationItemRow}>
-                    <Checkbox checked={fpicConsent} onChange={setFpicConsent} />
-                    <View style={styles.declarationItemContent}>
-                      <ThemedText type="defaultSemiBold">FPIC Consent</ThemedText>
-                      <ThemedText type="caption" style={styles.declarationItemBody}>
-                        Free, Prior, and Informed Consent obtained from affected communities
-                      </ThemedText>
-                    </View>
-                  </View>
-                </Pressable>
+                {declarationMode === 'full' ? (
+                  <>
+                    <Pressable style={styles.declarationItemCard} onPress={() => setFpicConsent(!fpicConsent)}>
+                      <View style={styles.declarationItemRow}>
+                        <Checkbox checked={fpicConsent} onChange={setFpicConsent} />
+                        <View style={styles.declarationItemContent}>
+                          <ThemedText type="defaultSemiBold">{t('declarations_fpic_title')}</ThemedText>
+                          <ThemedText type="caption" style={styles.declarationItemBody}>
+                            {t('declarations_fpic_body')}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </Pressable>
 
-                <Pressable
-                  style={styles.declarationItemCard}
-                  onPress={() => {
-                    const next = !(laborNoChildLabor && laborNoForcedLabor);
-                    setLaborNoChildLabor(next);
-                    setLaborNoForcedLabor(next);
-                  }}
-                >
-                  <View style={styles.declarationItemRow}>
-                    <Checkbox
-                      checked={laborNoChildLabor && laborNoForcedLabor}
-                      onChange={(checked) => {
-                        setLaborNoChildLabor(checked);
-                        setLaborNoForcedLabor(checked);
+                    <Pressable
+                      style={styles.declarationItemCard}
+                      onPress={() => {
+                        const next = !(laborNoChildLabor && laborNoForcedLabor);
+                        setLaborNoChildLabor(next);
+                        setLaborNoForcedLabor(next);
                       }}
-                    />
-                    <View style={styles.declarationItemContent}>
-                      <ThemedText type="defaultSemiBold">Labor Standards</ThemedText>
-                      <ThemedText type="caption" style={styles.declarationItemBody}>
-                        No child labor, forced labor, or unsafe working conditions
-                      </ThemedText>
-                    </View>
-                  </View>
-                </Pressable>
+                    >
+                      <View style={styles.declarationItemRow}>
+                        <Checkbox
+                          checked={laborNoChildLabor && laborNoForcedLabor}
+                          onChange={(checked) => {
+                            setLaborNoChildLabor(checked);
+                            setLaborNoForcedLabor(checked);
+                          }}
+                        />
+                        <View style={styles.declarationItemContent}>
+                          <ThemedText type="defaultSemiBold">{t('declarations_labor_title')}</ThemedText>
+                          <ThemedText type="caption" style={styles.declarationItemBody}>
+                            {t('declarations_labor_body')}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </>
+                ) : null}
 
                 <Card variant="outlined" style={styles.declarationNoteCard}>
                   <ThemedText type="caption" style={styles.declarationNoteText}>
-                    Supporting documents can be uploaded in the Documents section after registration.
+                    {t('declarations_supporting_docs_note')}
                   </ThemedText>
                 </Card>
 
@@ -1688,26 +1987,12 @@ export function WalkPerimeterScreen() {
                     disabled={
                       !declLandTenure ||
                       !declNoDeforestation ||
-                      !fpicConsent ||
-                      !(laborNoChildLabor && laborNoForcedLabor)
+                      (declarationMode === 'full' &&
+                        (!fpicConsent || !(laborNoChildLabor && laborNoForcedLabor)))
                     }
-                    onPress={() => {
-                      if (!farmer?.id) {
-                        Alert.alert(t('producer_profile_error_title'), t('producer_profile_missing_farmer'));
-                        return;
-                      }
-                      setFarmer({
-                        ...farmer,
-                        fpicConsent,
-                        laborNoChildLabor,
-                        laborNoForcedLabor,
-                      });
-                      finalizeGeolocationAfterDeclarations();
-                      setShowDeclarationsPage(false);
-                      setShowPhotosPage(true);
-                    }}
+                    onPress={handleDeclarationsContinue}
                   >
-                    Continue to Photos
+                    {t('declarations_continue_photos')}
                   </Button>
                 </View>
               </>

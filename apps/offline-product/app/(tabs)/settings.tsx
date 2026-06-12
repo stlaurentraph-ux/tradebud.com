@@ -60,6 +60,11 @@ import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { localeNames } from '@/features/i18n/config';
 import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
 import { seedStoreScreenshotDemo } from '@/features/demo/storeScreenshotDemo';
+import {
+  footprintBytesToMb,
+  measureTracebudStorageFootprint,
+  type TracebudStorageFootprint,
+} from '@/features/storage/measureTracebudFootprint';
 import { useAppState } from '@/features/state/AppStateContext';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
@@ -122,6 +127,8 @@ export default function SettingsScreen() {
   const [queueAttemptScope, setQueueAttemptScope] = useState<PendingSyncAttemptScope>('all');
   const [storeDemoBusy, setStoreDemoBusy] = useState(false);
   const [storeDemoMessage, setStoreDemoMessage] = useState<string | null>(null);
+  const [storageFootprint, setStorageFootprint] = useState<TracebudStorageFootprint | null>(null);
+  const [storageMeasuring, setStorageMeasuring] = useState(false);
   const [queueSmartSweepEnabled, setQueueSmartSweepEnabled] = useState(false);
   const [queueSmartSweepCap, setQueueSmartSweepCap] = useState<25 | 50 | 100 | 200>(100);
 
@@ -260,9 +267,33 @@ export default function SettingsScreen() {
     void setSetting('syncQueueSmartSweepEnabled', '0');
     void setSetting('syncQueueSmartSweepCap', '100');
   };
-  const usedMb = Math.max(24, 120 + totalSyncPending * 6);
-  const totalMb = 500;
-  const usagePct = Math.min(1, usedMb / totalMb);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setStorageMeasuring(true);
+      void measureTracebudStorageFootprint()
+        .then((footprint) => {
+          if (!cancelled) setStorageFootprint(footprint);
+        })
+        .finally(() => {
+          if (!cancelled) setStorageMeasuring(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const usedMb = storageFootprint ? footprintBytesToMb(storageFootprint.totalBytes) : 0;
+  const storageBreakdown = useMemo(() => {
+    if (!storageFootprint || storageFootprint.totalBytes <= 0) return null;
+    const photosMb = footprintBytesToMb(storageFootprint.mediaBytes);
+    const mapsMb = footprintBytesToMb(storageFootprint.offlineTilesBytes);
+    const dataMb = footprintBytesToMb(storageFootprint.sqliteBytes);
+    if (photosMb + mapsMb + dataMb <= 0) return null;
+    return { photos: photosMb, maps: mapsMb, data: dataMb };
+  }, [storageFootprint]);
 
   const persistPickedImage = async (uri: string) => {
     let out = uri;
@@ -708,9 +739,11 @@ export default function SettingsScreen() {
       <CompactTabHeader
         paddingTop={insets.top}
         badge={
-          <Badge variant={totalSyncPending > 0 ? 'warning' : 'success'} size="sm">
-            {totalSyncPending > 0 ? t('pending_count', { n: totalSyncPending }) : t('online')}
-          </Badge>
+          totalSyncPending > 0 ? (
+            <Badge variant="warning" size="sm">
+              {t('pending_count', { n: totalSyncPending })}
+            </Badge>
+          ) : null
         }
         left={
           <Pressable onPress={() => router.push('/')} style={compactTabHeaderStyles.backButton}>
@@ -1279,11 +1312,48 @@ export default function SettingsScreen() {
               </ThemedText>
             </View>
             <View style={styles.storageBarTrack}>
-              <View style={[styles.storageBarFill, { width: `${usagePct * 100}%` }]} />
+              {storageFootprint && storageFootprint.totalBytes > 0 ? (
+                <>
+                  {storageFootprint.mediaBytes > 0 ? (
+                    <View style={[styles.storageBarSegment, { flex: storageFootprint.mediaBytes }]} />
+                  ) : null}
+                  {storageFootprint.offlineTilesBytes > 0 ? (
+                    <View
+                      style={[
+                        styles.storageBarSegment,
+                        styles.storageBarSegmentMaps,
+                        { flex: storageFootprint.offlineTilesBytes },
+                      ]}
+                    />
+                  ) : null}
+                  {storageFootprint.sqliteBytes > 0 ? (
+                    <View
+                      style={[
+                        styles.storageBarSegment,
+                        styles.storageBarSegmentData,
+                        { flex: storageFootprint.sqliteBytes },
+                      ]}
+                    />
+                  ) : null}
+                </>
+              ) : null}
             </View>
-            <ThemedText type="default" style={styles.mutedText}>
-              {t('mb_used', { used: usedMb, total: totalMb })}
-            </ThemedText>
+            {storageMeasuring ? (
+              <ThemedText type="default" style={styles.mutedText}>
+                {t('storage_footprint_measuring')}
+              </ThemedText>
+            ) : (
+              <>
+                <ThemedText type="default" style={styles.mutedText}>
+                  {t('mb_used', { used: usedMb })}
+                </ThemedText>
+                {storageBreakdown ? (
+                  <ThemedText type="default" style={styles.storageBreakdownText}>
+                    {t('storage_footprint_breakdown', storageBreakdown)}
+                  </ThemedText>
+                ) : null}
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -1550,11 +1620,23 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#E5E5E5',
     overflow: 'hidden',
+    flexDirection: 'row',
   },
-  storageBarFill: {
+  storageBarSegment: {
     height: '100%',
-    borderRadius: 999,
     backgroundColor: '#1CC08B',
+  },
+  storageBarSegmentMaps: {
+    backgroundColor: '#3B82F6',
+  },
+  storageBarSegmentData: {
+    backgroundColor: '#8B5CF6',
+  },
+  storageBreakdownText: {
+    color: '#666666',
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
   },
   helpCard: {
     backgroundColor: '#EAF8F2',

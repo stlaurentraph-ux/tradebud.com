@@ -10,6 +10,9 @@ import { StyleSheet } from 'react-native';
  */
 export const HOME_HEADER_LOGO_PX = 42;
 
+/** Shared with welcome card and tab headers — keep in sync with mockup green. */
+export const HEADER_GRADIENT_COLORS = ['#0A7F59', '#0B6F50'] as const;
+
 export const compactTabHeaderStyles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
@@ -74,11 +77,5 @@ export const compactTabHeaderStyles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.16)',
     minWidth: 54,
     justifyContent: 'center',
-  },
-  langDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#9FE6C9',
   },
 });

@@ -3,14 +3,16 @@ import type { ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
-import { HOME_HEADER_LOGO_PX, compactTabHeaderStyles } from '@/constants/compactTabHeader';
-
-const GRADIENT_COLORS = ['#0A7F59', '#0B6F50'] as const;
+import {
+  HEADER_GRADIENT_COLORS,
+  HOME_HEADER_LOGO_PX,
+  compactTabHeaderStyles,
+} from '@/constants/compactTabHeader';
 
 export type CompactTabHeaderProps = {
   paddingTop: number;
-  /** Connection / sync badge — top-right, same on all tabs */
-  badge: ReactNode;
+  /** Optional sync badge — only when there is pending work (omit online/offline noise). */
+  badge?: ReactNode;
   /** Left slot: Home = brand; Settings / My Plots = back button */
   left: ReactNode;
   /** When set, shows the standard centered title (Settings, My Plots). Home omits this. */
@@ -38,7 +40,7 @@ export function CompactTabHeader({
 }: CompactTabHeaderProps) {
   return (
     <LinearGradient
-      colors={GRADIENT_COLORS}
+      colors={[...HEADER_GRADIENT_COLORS]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[compactTabHeaderStyles.header, { paddingTop }]}
@@ -50,7 +52,6 @@ export function CompactTabHeader({
             {badge}
             <Pressable onPress={onLanguagePress} hitSlop={10}>
               <View style={compactTabHeaderStyles.langPillCompact}>
-                <View style={compactTabHeaderStyles.langDot} />
                 <ThemedText type="caption" style={{ color: textInverseColor }}>
                   {languageLabel.toUpperCase()}
                 </ThemedText>
@@ -60,7 +61,7 @@ export function CompactTabHeader({
         </View>
       ) : (
         <>
-          <View style={compactTabHeaderStyles.headerTopRow}>{badge}</View>
+          {badge ? <View style={compactTabHeaderStyles.headerTopRow}>{badge}</View> : null}
           <View style={compactTabHeaderStyles.headerRowCompact}>
             <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideLeft]}>
               {left}
@@ -68,7 +69,6 @@ export function CompactTabHeader({
             <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideRight]}>
               <Pressable onPress={onLanguagePress} hitSlop={10}>
                 <View style={compactTabHeaderStyles.langPillCompact}>
-                  <View style={compactTabHeaderStyles.langDot} />
                   <ThemedText type="caption" style={{ color: textInverseColor }}>
                     {languageLabel.toUpperCase()}
                   </ThemedText>
@@ -94,28 +94,17 @@ export function CompactTabHeader({
 }
 
 /** Home only: logo + Tracebud + subtitle, left-aligned; logo size from `HOME_HEADER_LOGO_PX`. */
-export function HomeHeaderBrandLeft({
-  subtitle,
-  logoSize = HOME_HEADER_LOGO_PX,
-}: {
-  subtitle: string;
-  logoSize?: number;
-}) {
+export function HomeHeaderBrandLeft({ logoSize = HOME_HEADER_LOGO_PX }: { logoSize?: number }) {
   return (
-      <View style={homeBrandStyles.row}>
+    <View style={homeBrandStyles.row}>
       <Image
         source={require('../../assets/images/tracebud-logo.png')}
         style={[homeBrandStyles.logo, { width: logoSize, height: logoSize }]}
         resizeMode="contain"
       />
-      <View style={homeBrandStyles.textCol}>
-        <ThemedText type="default" style={homeBrandStyles.title}>
-          Tracebud
-        </ThemedText>
-        <ThemedText type="caption" style={homeBrandStyles.subtitle}>
-          {subtitle}
-        </ThemedText>
-      </View>
+      <ThemedText type="default" style={homeBrandStyles.title}>
+        Tracebud
+      </ThemedText>
     </View>
   );
 }
@@ -146,24 +135,20 @@ const homeHeaderUnifiedStyles = StyleSheet.create({
 const homeBrandStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
     minWidth: 0,
   },
   logo: {
     flexShrink: 0,
   },
-  textCol: {
-    flexShrink: 1,
-    minWidth: 0,
-    justifyContent: 'flex-start',
-    alignSelf: 'stretch',
-  },
   title: {
     color: '#FFFFFF',
     fontSize: 21,
     lineHeight: 26,
     fontWeight: '700',
+    includeFontPadding: false,
+    marginTop: 2,
   },
   subtitle: {
     color: '#FFFFFF',

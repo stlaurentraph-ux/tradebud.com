@@ -534,9 +534,11 @@ export default function PlotsScreen() {
         <CompactTabHeader
           paddingTop={insets.top}
           badge={
-            <Badge variant={totalPendingSync > 0 ? 'warning' : 'success'} size="sm">
-              {totalPendingSync > 0 ? t('pending_count', { n: totalPendingSync }) : t('online')}
-            </Badge>
+            totalPendingSync > 0 ? (
+              <Badge variant="warning" size="sm">
+                {t('pending_count', { n: totalPendingSync })}
+              </Badge>
+            ) : null
           }
           left={
             <Pressable onPress={() => router.push('/')} style={compactTabHeaderStyles.backButton}>

@@ -1,4 +1,3 @@
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -18,8 +17,24 @@ export function getOAuthRedirectUri(): string {
   });
 }
 
+function getQueryParams(input: string): {
+  errorCode: string | null;
+  params: Record<string, string>;
+} {
+  const parsed = new URL(input, 'https://phony.example');
+  const errorCode = parsed.searchParams.get('errorCode');
+  parsed.searchParams.delete('errorCode');
+  const params = Object.fromEntries(parsed.searchParams.entries());
+  if (parsed.hash) {
+    new URLSearchParams(parsed.hash.replace(/^#/, '')).forEach((value, key) => {
+      params[key] = value;
+    });
+  }
+  return { errorCode, params };
+}
+
 async function sessionFromCallbackUrl(url: string): Promise<Session> {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
+  const { params, errorCode } = getQueryParams(url);
   if (errorCode) {
     const description =
       typeof params.error_description === 'string' ? params.error_description : errorCode;

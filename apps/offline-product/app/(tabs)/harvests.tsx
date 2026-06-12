@@ -168,11 +168,13 @@ export default function HarvestsScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
-        <View style={styles.headerTopRow}>
-          <Badge variant={totalSyncPending > 0 ? 'warning' : 'success'} size="sm">
-            {totalSyncPending > 0 ? t('pending_count', { n: totalSyncPending }) : t('online')}
-          </Badge>
-        </View>
+        {totalSyncPending > 0 ? (
+          <View style={styles.headerTopRow}>
+            <Badge variant="warning" size="sm">
+              {t('pending_count', { n: totalSyncPending })}
+            </Badge>
+          </View>
+        ) : null}
         <View style={styles.headerRowCompact}>
           <View style={[styles.headerSideSlot, styles.headerSideLeft]}>
             <Pressable
@@ -201,7 +203,6 @@ export default function HarvestsScreen() {
           </View>
           <View style={[styles.headerSideSlot, styles.headerSideRight]}>
             <View style={styles.langPillCompact}>
-              <View style={styles.langDot} />
               <ThemedText type="caption" style={{ color: colors.textInverse }}>
                 {String(lang).toUpperCase()}
               </ThemedText>
