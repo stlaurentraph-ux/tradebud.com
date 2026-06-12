@@ -25,6 +25,13 @@ import { loadPendingSyncActions } from '@/features/state/persistence';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { logError } from '@/features/errors/ErrorLogger';
+import {
+  countStoreDemoHarvestVouchers,
+  isStoreDemoFarmer,
+} from '@/features/demo/storeDemoApiFixtures';
+import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
+import { scaleUi } from '@/features/demo/storeUiScale';
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
@@ -137,6 +144,23 @@ export default function HarvestsScreen() {
     });
     return acc;
   }, [vouchers]);
+  const demoFarmerActive =
+    Boolean(farmer) && storeDemoToolsEnabled && isStoreDemoFarmer(farmer!.id);
+
+  const harvestCountForMergedPlot = useCallback(
+    (plot: { id: string; localOnly?: boolean }) => {
+      if (demoFarmerActive && !plot.localOnly) {
+        return countStoreDemoHarvestVouchers(plot.id);
+      }
+      return countVouchersForPlot({
+        vouchers,
+        backendPlotId: plot.localOnly ? null : plot.id,
+        localPlotId: plot.id,
+      });
+    },
+    [demoFarmerActive, vouchers],
+  );
+
   const recentDeliveries = useMemo(() => {
     return vouchers
       .slice()
@@ -437,6 +461,20 @@ export default function HarvestsScreen() {
           {t('start_new_harvest')}
         </Button>
 
+        {mergedHarvestPlots.length > 0 ? (
+          <View style={styles.plotHarvestSummary}>
+            {mergedHarvestPlots.map((p) => {
+              const count = harvestCountForMergedPlot(p);
+              return (
+                <View key={p.id} style={styles.plotHarvestSummaryRow}>
+                  <ThemedText type="defaultSemiBold">{String(p.name ?? t('plot_fallback'))}</ThemedText>
+                  <ThemedText type="caption">{t('harvests_meta', { n: count })}</ThemedText>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         <SectionHeader title={t('recent_deliveries')} />
         {recentDeliveries.length === 0 ? (
           <Card variant="outlined" style={styles.card}>
@@ -483,7 +521,21 @@ export default function HarvestsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  container: { padding: 16, paddingBottom: 32, gap: 16 },
+  container: { padding: scaleUi(16), paddingBottom: scaleUi(32), gap: scaleUi(16) },
+  plotHarvestSummary: {
+    gap: scaleUi(8),
+    borderRadius: scaleUi(14),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    padding: scaleUi(14),
+  },
+  plotHarvestSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: scaleUi(12),
+  },
   header: {
     paddingHorizontal: 16,
     paddingBottom: 6,

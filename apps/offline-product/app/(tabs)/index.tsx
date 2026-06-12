@@ -31,10 +31,16 @@ import {
   updateAssessmentRequestStatus,
   type FarmerAssessmentRequest,
 } from '@/features/api/postPlot';
+import {
+  getStoreDemoBackendPlots,
+  isStoreDemoFarmer,
+} from '@/features/demo/storeDemoApiFixtures';
+import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+import { scaleUi } from '@/features/demo/storeUiScale';
 
-const HOME_SCREEN_PAD = 16;
-const HOME_TILE_GAP = 12;
-const HOME_TILE_MIN_HEIGHT = 120;
+const HOME_SCREEN_PAD = scaleUi(16);
+const HOME_TILE_GAP = scaleUi(12);
+const HOME_TILE_MIN_HEIGHT = scaleUi(120);
 
 export default function HomeScreen() {
   const { width: windowWidth } = useWindowDimensions();
@@ -67,8 +73,11 @@ export default function HomeScreen() {
       .catch(() => undefined);
   }, [plots.length, farmer?.id]);
 
+  const demoFarmerActive =
+    Boolean(farmer) && storeDemoToolsEnabled && isStoreDemoFarmer(farmer!.id);
+
   useEffect(() => {
-    if (!farmer || !isSignedIn) {
+    if (!farmer || (!isSignedIn && !demoFarmerActive)) {
       setBackendPlots([]);
       setLoadingBackend(false);
       return;
@@ -78,7 +87,7 @@ export default function HomeScreen() {
       .then((rows) => setBackendPlots(rows ?? []))
       .catch(() => setBackendPlots([]))
       .finally(() => setLoadingBackend(false));
-  }, [farmer, isSignedIn, t]);
+  }, [farmer, isSignedIn, demoFarmerActive, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +175,15 @@ export default function HomeScreen() {
   }, [farmer?.id]);
 
   const counts = useMemo(() => {
+    if (demoFarmerActive) {
+      const demoRows = getStoreDemoBackendPlots();
+      const compliant = demoRows.filter((p) => p.status === 'compliant').length;
+      return {
+        plotsCount: demoRows.length,
+        compliant,
+        pending: Math.max(0, demoRows.length - compliant),
+      };
+    }
     const plotsCount = plots.length;
     const compliant = plots.filter((p) => {
       if (plotChecklistDoneById[p.id] === true) return true;
@@ -174,7 +192,7 @@ export default function HomeScreen() {
     }).length;
     const pending = Math.max(0, plotsCount - compliant);
     return { plotsCount, compliant, pending };
-  }, [plots, backendPlots, plotChecklistDoneById]);
+  }, [plots, backendPlots, plotChecklistDoneById, demoFarmerActive]);
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
@@ -621,7 +639,7 @@ function HomeTile(props: {
         ]}
       >
         <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
-          <Ionicons name={props.icon} size={22} color={props.iconColor} />
+          <Ionicons name={props.icon} size={scaleUi(22)} color={props.iconColor} />
         </View>
         <ThemedText type="defaultSemiBold" style={styles.tileTitle}>
           {props.title}
@@ -640,52 +658,52 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F3',
   },
   container: {
-    padding: 16,
-    paddingBottom: 48,
-    gap: 16,
+    padding: HOME_SCREEN_PAD,
+    paddingBottom: scaleUi(48),
+    gap: scaleUi(16),
     backgroundColor: '#F4F5F3',
   },
   welcomeCard: {
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: scaleUi(20),
+    padding: scaleUi(20),
     overflow: 'hidden',
   },
   welcomeBack: {
     color: 'rgba(255,255,255,0.92)',
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: scaleUi(14),
+    lineHeight: scaleUi(18),
   },
   welcomeName: {
     color: '#FFFFFF',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: scaleUi(28),
+    lineHeight: scaleUi(34),
     fontWeight: '700',
     marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
+    gap: scaleUi(8),
+    marginTop: scaleUi(14),
   },
   statBox: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: scaleUi(14),
     backgroundColor: 'rgba(255,255,255,0.24)',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    minHeight: 68,
+    paddingVertical: scaleUi(10),
+    paddingHorizontal: scaleUi(10),
+    minHeight: scaleUi(68),
     justifyContent: 'space-between',
   },
   statLabel: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: scaleUi(11),
+    lineHeight: scaleUi(14),
   },
   statValue: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 24,
-    marginTop: 6,
+    fontSize: scaleUi(20),
+    lineHeight: scaleUi(24),
+    marginTop: scaleUi(6),
   },
   statValuePending: {
     color: '#FFE08A',
@@ -701,8 +719,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   tileCard: {
-    padding: 16,
-    borderRadius: 18,
+    padding: scaleUi(16),
+    borderRadius: scaleUi(18),
     borderColor: '#CDD2D6',
     borderWidth: 1.4,
     backgroundColor: '#FFFFFF',
@@ -717,15 +735,15 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tileTitle: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: scaleUi(15),
+    lineHeight: scaleUi(20),
     color: '#0F172A',
     marginTop: 2,
     flexShrink: 1,
   },
   tileSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: scaleUi(13),
+    lineHeight: scaleUi(18),
     marginTop: 4,
     flexShrink: 1,
   },
@@ -739,12 +757,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.995 }],
   },
   tileIcon: {
-    width: 40,
-    height: 40,
+    width: scaleUi(40),
+    height: scaleUi(40),
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: scaleUi(10),
   },
   actionRequired: {
     padding: 18,

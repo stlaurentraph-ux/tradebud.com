@@ -1,5 +1,7 @@
 import { StyleSheet } from 'react-native';
 
+import { scaleUi } from '@/features/demo/storeUiScale';
+
 /**
  * Single source of truth for the green gradient tab headers (Home, Settings, My Plots, etc.).
  *
@@ -8,7 +10,7 @@ import { StyleSheet } from 'react-native';
  *
  * Home uses `HOME_HEADER_LOGO_PX` and a single unified row in `CompactTabHeader` (`homeBrandLayout`).
  */
-export const HOME_HEADER_LOGO_PX = 42;
+export const HOME_HEADER_LOGO_PX = scaleUi(42);
 
 /** Shared with welcome card and tab headers — keep in sync with mockup green. */
 export const HEADER_GRADIENT_COLORS = ['#0A7F59', '#0B6F50'] as const;
@@ -28,7 +30,7 @@ export const compactTabHeaderStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 42,
+    minHeight: scaleUi(42),
     paddingTop: 6,
     paddingBottom: 4,
   },
@@ -62,8 +64,8 @@ export const compactTabHeaderStyles = StyleSheet.create({
   },
   headerTitleCompact: {
     color: '#FFFFFF',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: scaleUi(18),
+    lineHeight: scaleUi(24),
     textAlign: 'center',
     maxWidth: '100%',
   },

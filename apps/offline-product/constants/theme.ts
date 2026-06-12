@@ -11,6 +11,15 @@
 
 import { Platform } from 'react-native';
 
+import { scaleUi } from '@/features/demo/storeUiScale';
+
+function scaleTextSize(size: { fontSize: number; lineHeight: number }) {
+  return {
+    fontSize: scaleUi(size.fontSize),
+    lineHeight: scaleUi(size.lineHeight),
+  };
+}
+
 // Primary brand colors aligned with BRANDING.md ("High-Tech Organic")
 export const Brand = {
   // Forest canopy
@@ -144,14 +153,14 @@ export const Colors = {
 export const Typography = {
   // Font sizes with line heights
   sizes: {
-    xs: { fontSize: 12, lineHeight: 16 },
-    sm: { fontSize: 14, lineHeight: 20 },
-    base: { fontSize: 16, lineHeight: 24 },
-    lg: { fontSize: 18, lineHeight: 28 },
-    xl: { fontSize: 20, lineHeight: 28 },
-    '2xl': { fontSize: 24, lineHeight: 32 },
-    '3xl': { fontSize: 28, lineHeight: 36 },
-    '4xl': { fontSize: 32, lineHeight: 40 },
+    xs: scaleTextSize({ fontSize: 12, lineHeight: 16 }),
+    sm: scaleTextSize({ fontSize: 14, lineHeight: 20 }),
+    base: scaleTextSize({ fontSize: 16, lineHeight: 24 }),
+    lg: scaleTextSize({ fontSize: 18, lineHeight: 28 }),
+    xl: scaleTextSize({ fontSize: 20, lineHeight: 28 }),
+    '2xl': scaleTextSize({ fontSize: 24, lineHeight: 32 }),
+    '3xl': scaleTextSize({ fontSize: 28, lineHeight: 36 }),
+    '4xl': scaleTextSize({ fontSize: 32, lineHeight: 40 }),
   },
 
   // Font weights
@@ -165,15 +174,15 @@ export const Typography = {
 
 // Spacing scale (in pixels)
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  '2xl': 48,
-  '3xl': 64,
-  '4xl': 80,
-  '5xl': 96,
+  xs: scaleUi(4),
+  sm: scaleUi(8),
+  md: scaleUi(16),
+  lg: scaleUi(24),
+  xl: scaleUi(32),
+  '2xl': scaleUi(48),
+  '3xl': scaleUi(64),
+  '4xl': scaleUi(80),
+  '5xl': scaleUi(96),
 };
 
 // Border radius

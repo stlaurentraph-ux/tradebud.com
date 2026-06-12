@@ -42,6 +42,12 @@ export function getStoreDemoBackendPlots() {
   ];
 }
 
+export function countStoreDemoHarvestVouchers(plotServerId: string): number {
+  return getStoreDemoHarvestVouchers().filter(
+    (v) => String(v.plot_id) === String(plotServerId),
+  ).length;
+}
+
 /** Mock harvest vouchers — varied per plot for My Plots + Harvest tab screenshots. */
 export function getStoreDemoHarvestVouchers() {
   return [

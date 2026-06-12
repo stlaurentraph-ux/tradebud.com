@@ -88,6 +88,13 @@ import {
 } from '@/features/sync/plotServerSync';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { indicativeMaxKgForPlot } from '@/features/compliance/commodityCatalog';
+import {
+  countStoreDemoHarvestVouchers,
+  isStoreDemoFarmer,
+} from '@/features/demo/storeDemoApiFixtures';
+import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
+import { scaleUi } from '@/features/demo/storeUiScale';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
 import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
@@ -491,21 +498,30 @@ export default function PlotsScreen() {
     }
   }, [scannerActive, cameraPermission?.granted, requestCameraPermission]);
 
+  const demoFarmerActive =
+    Boolean(farmer) && storeDemoToolsEnabled && isStoreDemoFarmer(farmer!.id);
+
   const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' => {
     const p = findBackendPlotForLocal(plot, backendPlots) as { status?: string } | null;
+    if (demoFarmerActive) {
+      return p?.status === 'compliant' ? 'Compliant' : 'Action Needed';
+    }
     const checklistDone = plotChecklistDoneByPlotId[plot.id] === true;
     if (checklistDone) return 'Compliant';
     if (!p) return 'Action Needed';
     return p.status === 'compliant' ? 'Compliant' : 'Action Needed';
   };
-  const harvestCountForPlot = (plotName: string) => {
-    const local = plots.find((lp) => String(lp.name ?? '') === String(plotName));
-    const backend = local
-      ? findBackendPlotForLocal(local, backendPlots)
-      : (backendPlots as { name?: string }[]).find((bp) => String(bp?.name ?? '') === plotName);
-    const row = backend as { id?: unknown } | null | undefined;
-    if (!row?.id) return 0;
-    return vouchers.filter((v) => String(v?.plot_id ?? '') === String(row.id)).length;
+  const harvestCountForPlot = (plot: Plot) => {
+    const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
+    const backendId = backend?.id != null ? String(backend.id) : null;
+    if (demoFarmerActive && backendId) {
+      return countStoreDemoHarvestVouchers(backendId);
+    }
+    return countVouchersForPlot({
+      vouchers,
+      backendPlotId: backendId,
+      localPlotId: plot.id,
+    });
   };
   const confirmDeletePlot = (plot: Plot) => {
     Alert.alert(
@@ -560,7 +576,7 @@ export default function PlotsScreen() {
             const statusLabel = status === 'Compliant' ? t('status_compliant') : t('status_action_needed');
             const badgeVariant = status === 'Compliant' ? 'success' : 'warning';
             const photosCount = photoCountByPlotId[plot.id] ?? 0;
-            const harvestCount = harvestCountForPlot(plot.name);
+            const harvestCount = harvestCountForPlot(plot);
             return (
               <Pressable
                 key={plot.id}
@@ -597,11 +613,11 @@ export default function PlotsScreen() {
                   {renderPlotListAreaCaption(plot, t)}
                   <View style={styles.plotMetaRow}>
                     <View style={styles.plotMetaItem}>
-                      <Ionicons name="camera-outline" size={16} color="#8A8A8A" />
+                      <Ionicons name="camera-outline" size={scaleUi(16)} color="#8A8A8A" />
                       <ThemedText type="caption">{t('photos_meta', { n: photosCount })}</ThemedText>
                     </View>
                     <View style={styles.plotMetaItem}>
-                      <Ionicons name="scale-outline" size={16} color="#8A8A8A" />
+                      <Ionicons name="scale-outline" size={scaleUi(16)} color="#8A8A8A" />
                       <ThemedText type="caption">{t('harvests_meta', { n: harvestCount })}</ThemedText>
                     </View>
                   </View>
