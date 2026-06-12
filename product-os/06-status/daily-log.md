@@ -1,7 +1,7 @@
 ### 2026-06-12 (field app: store-demo screenshot scale + mock data consistency)
-- Store-demo builds (`EXPO_PUBLIC_STORE_DEMO=1`): global UI scale 1.14× via `storeUiScale` (typography, spacing, home welcome/tiles, headers).
-- Home + My Plots: demo farmer loads backend fixtures without sign-in; welcome stats fixed to 2 compliant / 1 pending (La Colina).
-- My Plots + Harvest tab share `voucherPlotCounts` / demo fixture counts — Finca 3, El Roble 1, La Colina 0 harvests.
+- Store-demo: text-only 1.2× scale (`scaleText`); layout/widgets unchanged unless text needs room.
+- My Plots: demo compliance + harvest counts from `storeDemoPlotLookup` (no API fetch); header badge 1 pending not 3 sync.
+- Removed duplicate harvest summary widget on Harvest tab; My Plots shows Finca 3 / El Roble 1 / La Colina 0 harvests.
 
 ### 2026-06-12 (field app: restore prod home UI polish from stash)
 - Recovered polished home screen from `stash@{0}` onto branch `feat/restore-prod-home-ui-polish`: gradient welcome card (`HEADER_GRADIENT_COLORS`), equal-height 2×2 tiles (`uniformTileHeight`), pending-only header badge, no language-pill dot.

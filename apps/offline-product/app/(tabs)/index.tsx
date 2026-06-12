@@ -35,12 +35,11 @@ import {
   getStoreDemoBackendPlots,
   isStoreDemoFarmer,
 } from '@/features/demo/storeDemoApiFixtures';
-import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
-import { scaleUi } from '@/features/demo/storeUiScale';
+import { scaleText } from '@/features/demo/storeUiScale';
 
-const HOME_SCREEN_PAD = scaleUi(16);
-const HOME_TILE_GAP = scaleUi(12);
-const HOME_TILE_MIN_HEIGHT = scaleUi(120);
+const HOME_SCREEN_PAD = 16;
+const HOME_TILE_GAP = 12;
+const HOME_TILE_MIN_HEIGHT = 120;
 
 export default function HomeScreen() {
   const { width: windowWidth } = useWindowDimensions();
@@ -73,8 +72,7 @@ export default function HomeScreen() {
       .catch(() => undefined);
   }, [plots.length, farmer?.id]);
 
-  const demoFarmerActive =
-    Boolean(farmer) && storeDemoToolsEnabled && isStoreDemoFarmer(farmer!.id);
+  const demoFarmerActive = Boolean(farmer && isStoreDemoFarmer(farmer.id));
 
   useEffect(() => {
     if (!farmer || (!isSignedIn && !demoFarmerActive)) {
@@ -639,7 +637,7 @@ function HomeTile(props: {
         ]}
       >
         <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
-          <Ionicons name={props.icon} size={scaleUi(22)} color={props.iconColor} />
+          <Ionicons name={props.icon} size={22} color={props.iconColor} />
         </View>
         <ThemedText type="defaultSemiBold" style={styles.tileTitle}>
           {props.title}
@@ -659,51 +657,51 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: HOME_SCREEN_PAD,
-    paddingBottom: scaleUi(48),
-    gap: scaleUi(16),
+    paddingBottom: 48,
+    gap: 16,
     backgroundColor: '#F4F5F3',
   },
   welcomeCard: {
-    borderRadius: scaleUi(20),
-    padding: scaleUi(20),
+    borderRadius: 20,
+    padding: 20,
     overflow: 'hidden',
   },
   welcomeBack: {
     color: 'rgba(255,255,255,0.92)',
-    fontSize: scaleUi(14),
-    lineHeight: scaleUi(18),
+    fontSize: scaleText(14),
+    lineHeight: scaleText(18),
   },
   welcomeName: {
     color: '#FFFFFF',
-    fontSize: scaleUi(28),
-    lineHeight: scaleUi(34),
+    fontSize: scaleText(28),
+    lineHeight: scaleText(34),
     fontWeight: '700',
     marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: scaleUi(8),
-    marginTop: scaleUi(14),
+    gap: 8,
+    marginTop: 14,
   },
   statBox: {
     flex: 1,
-    borderRadius: scaleUi(14),
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.24)',
-    paddingVertical: scaleUi(10),
-    paddingHorizontal: scaleUi(10),
-    minHeight: scaleUi(68),
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    minHeight: 68,
     justifyContent: 'space-between',
   },
   statLabel: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: scaleUi(11),
-    lineHeight: scaleUi(14),
+    fontSize: scaleText(11),
+    lineHeight: scaleText(14),
   },
   statValue: {
     color: '#FFFFFF',
-    fontSize: scaleUi(20),
-    lineHeight: scaleUi(24),
-    marginTop: scaleUi(6),
+    fontSize: scaleText(20),
+    lineHeight: scaleText(24),
+    marginTop: 6,
   },
   statValuePending: {
     color: '#FFE08A',
@@ -719,8 +717,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   tileCard: {
-    padding: scaleUi(16),
-    borderRadius: scaleUi(18),
+    padding: 16,
+    borderRadius: 18,
     borderColor: '#CDD2D6',
     borderWidth: 1.4,
     backgroundColor: '#FFFFFF',
@@ -735,15 +733,15 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   tileTitle: {
-    fontSize: scaleUi(15),
-    lineHeight: scaleUi(20),
+    fontSize: scaleText(15),
+    lineHeight: scaleText(20),
     color: '#0F172A',
     marginTop: 2,
     flexShrink: 1,
   },
   tileSubtitle: {
-    fontSize: scaleUi(13),
-    lineHeight: scaleUi(18),
+    fontSize: scaleText(13),
+    lineHeight: scaleText(18),
     marginTop: 4,
     flexShrink: 1,
   },
@@ -757,12 +755,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.995 }],
   },
   tileIcon: {
-    width: scaleUi(40),
-    height: scaleUi(40),
+    width: 40,
+    height: 40,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scaleUi(10),
+    marginBottom: 10,
   },
   actionRequired: {
     padding: 18,

@@ -11,12 +11,12 @@
 
 import { Platform } from 'react-native';
 
-import { scaleUi } from '@/features/demo/storeUiScale';
+import { scaleText } from '@/features/demo/storeUiScale';
 
 function scaleTextSize(size: { fontSize: number; lineHeight: number }) {
   return {
-    fontSize: scaleUi(size.fontSize),
-    lineHeight: scaleUi(size.lineHeight),
+    fontSize: scaleText(size.fontSize),
+    lineHeight: scaleText(size.lineHeight),
   };
 }
 
@@ -174,15 +174,15 @@ export const Typography = {
 
 // Spacing scale (in pixels)
 export const Spacing = {
-  xs: scaleUi(4),
-  sm: scaleUi(8),
-  md: scaleUi(16),
-  lg: scaleUi(24),
-  xl: scaleUi(32),
-  '2xl': scaleUi(48),
-  '3xl': scaleUi(64),
-  '4xl': scaleUi(80),
-  '5xl': scaleUi(96),
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  '2xl': 48,
+  '3xl': 64,
+  '4xl': 80,
+  '5xl': 96,
 };
 
 // Border radius

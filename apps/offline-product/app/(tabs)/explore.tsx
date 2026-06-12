@@ -88,13 +88,12 @@ import {
 } from '@/features/sync/plotServerSync';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { indicativeMaxKgForPlot } from '@/features/compliance/commodityCatalog';
+import { isStoreDemoFarmer } from '@/features/demo/storeDemoApiFixtures';
 import {
-  countStoreDemoHarvestVouchers,
-  isStoreDemoFarmer,
-} from '@/features/demo/storeDemoApiFixtures';
-import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+  storeDemoHarvestCount,
+  storeDemoPlotIsCompliant,
+} from '@/features/demo/storeDemoPlotLookup';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
-import { scaleUi } from '@/features/demo/storeUiScale';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
 import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
@@ -498,25 +497,29 @@ export default function PlotsScreen() {
     }
   }, [scannerActive, cameraPermission?.granted, requestCameraPermission]);
 
-  const demoFarmerActive =
-    Boolean(farmer) && storeDemoToolsEnabled && isStoreDemoFarmer(farmer!.id);
+  const demoFarmerActive = Boolean(farmer && isStoreDemoFarmer(farmer.id));
+
+  const demoCompliancePendingCount = useMemo(() => {
+    if (!demoFarmerActive) return 0;
+    return plots.filter((p) => !storeDemoPlotIsCompliant(p)).length;
+  }, [demoFarmerActive, plots]);
 
   const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' => {
-    const p = findBackendPlotForLocal(plot, backendPlots) as { status?: string } | null;
     if (demoFarmerActive) {
-      return p?.status === 'compliant' ? 'Compliant' : 'Action Needed';
+      return storeDemoPlotIsCompliant(plot) ? 'Compliant' : 'Action Needed';
     }
+    const p = findBackendPlotForLocal(plot, backendPlots) as { status?: string } | null;
     const checklistDone = plotChecklistDoneByPlotId[plot.id] === true;
     if (checklistDone) return 'Compliant';
     if (!p) return 'Action Needed';
     return p.status === 'compliant' ? 'Compliant' : 'Action Needed';
   };
   const harvestCountForPlot = (plot: Plot) => {
+    if (demoFarmerActive) {
+      return storeDemoHarvestCount(plot);
+    }
     const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
     const backendId = backend?.id != null ? String(backend.id) : null;
-    if (demoFarmerActive && backendId) {
-      return countStoreDemoHarvestVouchers(backendId);
-    }
     return countVouchersForPlot({
       vouchers,
       backendPlotId: backendId,
@@ -550,7 +553,13 @@ export default function PlotsScreen() {
         <CompactTabHeader
           paddingTop={insets.top}
           badge={
-            totalPendingSync > 0 ? (
+            demoFarmerActive ? (
+              demoCompliancePendingCount > 0 ? (
+                <Badge variant="warning" size="sm">
+                  {t('pending_count', { n: demoCompliancePendingCount })}
+                </Badge>
+              ) : null
+            ) : totalPendingSync > 0 ? (
               <Badge variant="warning" size="sm">
                 {t('pending_count', { n: totalPendingSync })}
               </Badge>
@@ -613,11 +622,11 @@ export default function PlotsScreen() {
                   {renderPlotListAreaCaption(plot, t)}
                   <View style={styles.plotMetaRow}>
                     <View style={styles.plotMetaItem}>
-                      <Ionicons name="camera-outline" size={scaleUi(16)} color="#8A8A8A" />
+                      <Ionicons name="camera-outline" size={16} color="#8A8A8A" />
                       <ThemedText type="caption">{t('photos_meta', { n: photosCount })}</ThemedText>
                     </View>
                     <View style={styles.plotMetaItem}>
-                      <Ionicons name="scale-outline" size={scaleUi(16)} color="#8A8A8A" />
+                      <Ionicons name="scale-outline" size={16} color="#8A8A8A" />
                       <ThemedText type="caption">{t('harvests_meta', { n: harvestCount })}</ThemedText>
                     </View>
                   </View>
