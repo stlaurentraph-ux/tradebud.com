@@ -36,7 +36,9 @@
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
         "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6c2t0YWpsbm9mb3N4ZXF3ZHdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NDI1MzksImV4cCI6MjA4ODIxODUzOX0.YbCLbF9FUIugUqhEv1bgD5ZUMG8HZ69I9duqWBp5Lmo",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production",
+        "SENTRY_ORG": "tracebud",
+        "SENTRY_PROJECT": "react-native"
       }
     }
   },
@@ -45,6 +47,14 @@
     "version": ">= 10.0.0"
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6778796166"
+      },
+      "android": {
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }

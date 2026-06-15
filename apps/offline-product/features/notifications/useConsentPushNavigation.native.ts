@@ -37,6 +37,8 @@ export function useConsentPushNavigation(): void {
   }, []);
 
   useEffect(() => {
-    void Notifications.getLastNotificationResponseAsync().then(openScreenFromNotification);
+    const getLast = Notifications.getLastNotificationResponseAsync;
+    if (typeof getLast !== 'function') return;
+    void getLast.call(Notifications).then(openScreenFromNotification).catch(() => undefined);
   }, []);
 }

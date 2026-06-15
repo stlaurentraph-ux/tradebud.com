@@ -96,6 +96,16 @@ function main() {
     if (allowTestAuth) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_TEST_AUTH=1.');
     if (allowLocalhostApi) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_LOCALHOST_API=1.');
     if (allowInsecureApi) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_INSECURE_API=1.');
+    if (!process.env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+      issues.push(
+        'Production preflight requires EXPO_PUBLIC_SENTRY_DSN (set in .env.local or EAS env/secrets).',
+      );
+    }
+    if (!process.env.SENTRY_AUTH_TOKEN?.trim()) {
+      warnings.push(
+        'SENTRY_AUTH_TOKEN is unset; production builds will not upload source maps to Sentry. Run: eas secret:create --name SENTRY_AUTH_TOKEN',
+      );
+    }
   } else {
     if (allowTestAuth) warnings.push('Preview is using EXPO_PUBLIC_ALLOW_TEST_AUTH=1 (testing-only).');
     if (allowLocalhostApi) warnings.push('Preview allows localhost API; ensure testers can still reach backend.');

@@ -13,16 +13,20 @@ export function PushRegistrationBridge() {
 
   useEffect(() => {
     const registerIfSignedIn = async () => {
-      await hydrateSyncAuthFromSettings();
-      if (!hasSyncAuthSession()) {
-        return;
+      try {
+        await hydrateSyncAuthFromSettings();
+        if (!hasSyncAuthSession()) {
+          return;
+        }
+        const now = Date.now();
+        if (now - lastRegisterAtRef.current < 30_000) {
+          return;
+        }
+        lastRegisterAtRef.current = now;
+        await registerFarmerPushToken();
+      } catch {
+        // Push registration is best-effort (preview builds may omit native push setup).
       }
-      const now = Date.now();
-      if (now - lastRegisterAtRef.current < 30_000) {
-        return;
-      }
-      lastRegisterAtRef.current = now;
-      await registerFarmerPushToken();
     };
 
     void registerIfSignedIn();

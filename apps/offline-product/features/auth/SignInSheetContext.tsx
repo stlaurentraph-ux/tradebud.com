@@ -79,7 +79,7 @@ type SignInSheetContextValue = {
 const SignInSheetContext = createContext<SignInSheetContextValue | undefined>(undefined);
 
 export function SignInProvider({ children }: { children: ReactNode }) {
-  const { farmer, plots, setFarmer, reloadAppState } = useAppState();
+  const { farmer, plots, setFarmer, reloadFromDisk } = useAppState();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
@@ -193,11 +193,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (rekeyed || shouldUpdateBootstrappedFarmer(farmer, aligned)) {
         setFarmer(aligned);
         if (rekeyed) {
-          await reloadAppState();
+          await reloadFromDisk();
         }
       }
     },
-    [farmer, plots, setFarmer, reloadAppState],
+    [farmer, plots, setFarmer, reloadFromDisk],
   );
 
   const refreshAuth = useCallback(async () => {
@@ -216,7 +216,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       return;
     }
     setIsSignedIn(true);
-    await syncLocalFarmerFromAuth();
+    try {
+      await syncLocalFarmerFromAuth();
+    } catch {
+      // Auth session is valid; local farmer alignment is best-effort on refresh.
+    }
   }, [syncLocalFarmerFromAuth]);
 
   useEffect(() => {

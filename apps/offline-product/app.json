@@ -10,9 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "entitlements": {
-        "aps-environment": "production"
-      },
+      "appleTeamId": "6RT8K5RM6Z",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Tracebud needs your location to record farm boundaries while you walk around the plot.",
         "NSPhotoLibraryUsageDescription": "Tracebud uses your photo library so you can set a profile picture.",
@@ -68,15 +66,7 @@
       "expo-camera",
       "expo-secure-store",
       "expo-font",
-      "expo-web-browser",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#0B4F3B"
-        }
-      ],
-      "@sentry/react-native"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

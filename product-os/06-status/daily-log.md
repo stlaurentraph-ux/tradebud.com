@@ -1,3 +1,9 @@
+### 2026-06-15 (field app: REACT-NATIVE-1 production crash fix + Sentry wiring)
+- Root cause: `SignInSheetContext` called nonexistent `reloadAppState()` after `alignFarmerWithAuthUser` rekey → unhandled `TypeError: undefined is not a function` on signed-in refresh (63 events / 7 users in Sentry `REACT-NATIVE-1`).
+- Fix: use `reloadFromDisk` from `AppStateContext`; harden push notification bridges; align Sentry Expo plugin project slug to `react-native`.
+- Shipped OTA: `eas update` preview + production (`Fix REACT-NATIVE-1: reloadFromDisk after auth rekey`).
+- Sentry MCP connected for tracebud org; issue marked `resolvedInNextRelease`.
+
 ### 2026-06-12 (field app: i18n + walk perimeter polish for screenshots)
 - Rebuilt `en.json` (673 keys) — fixes raw keys like `backup_up_to_date`, `walk_continue`.
 - Walk perimeter: removed header Offline pill; capture-method step uses 1.2× text + i18n; store-demo shows field map with almost-closed preview polygon before recording.

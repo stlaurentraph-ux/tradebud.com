@@ -40,6 +40,14 @@ Use entity model in `MVP_PRD.md` and `PRODUCT_PRD.md`.
 
 Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFACTS.md`.
 
+## Production hardening (2026-06-15)
+
+Prod diagnostic identified copy, auth, and sync gaps. Phased execution plan:
+
+→ **`product-os/01-roadmap/offline-prod-hardening-execution-plan.md`**
+
+Priority: i18n copy fix → auth unification (Google/Apple/email) → sync reliability → observability → CI/release gates.
+
 ## Tasks checklist
 
 - [x] Confirm permissions and tenant boundaries
@@ -1097,6 +1105,23 @@ Verification commands:
 Verification commands:
 
 - `npm run release:slo:gate -- --report=release-health-report.example.json` (from `apps/offline-product`)
+
+### S1 post-closeout hardening slice 71 - Sentry production crash fix (`REACT-NATIVE-1`)
+
+- Fixed signed-in refresh crash: `SignInSheetContext` called undefined `reloadAppState()` after `alignFarmerWithAuthUser` rekey; now uses `reloadFromDisk`.
+- Hardened push notification bridges (`PushRegistrationBridge`, `useConsentPushNavigation`) so preview builds without full native push setup do not leak unhandled rejections.
+- Wired Sentry Expo plugin via `app.config.js` (`tracebud` / `react-native`); production preflight requires `EXPO_PUBLIC_SENTRY_DSN`.
+- Shipped OTA to `preview` + `production` branches (`Fix REACT-NATIVE-1: reloadFromDisk after auth rekey`).
+- **Permissions/tenant boundaries:** unchanged.
+- **State transitions:** auth refresh → farmer rekey → disk reload path now completes without throwing.
+- **Exception/recovery:** `refreshAuth` treats local farmer alignment as best-effort on failure.
+- **Analytics/events:** existing Sentry client captures; issue `REACT-NATIVE-1` resolved in Sentry after OTA publish.
+- **Acceptance mapping:** restores stable signed-in session for field operators on production/preview OTA builds.
+
+Verification commands:
+
+- `npm run lint` (from `apps/offline-product`)
+- Confirm Sentry issue `REACT-NATIVE-1` stops receiving events after devices pull OTA.
 
 ## Acceptance criteria
 

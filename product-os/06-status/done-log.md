@@ -2,7 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
-- Marketing PNG optimization delivered: all stock images kept; two-pass in-place recompression (~746MB → ~186MB) via `scripts/optimize-public-pngs.mjs`.
+- Field app production crash fix delivered (`REACT-NATIVE-1`): `SignInSheetContext` now calls `reloadFromDisk` after auth rekey instead of undefined `reloadAppState`; push bridges hardened; Sentry Expo config aligned to `tracebud/react-native`; OTA published to preview + production.
 - Marketing Vercel deploy fix delivered: `outputFileTracingExcludes` prevents Turbopack from bundling `public/` static assets into `/api/*` serverless functions (749MB → ~2MB traced).
 ## Initial entries
 
