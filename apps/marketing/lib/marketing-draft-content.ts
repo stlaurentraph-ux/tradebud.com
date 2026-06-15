@@ -33,67 +33,21 @@ export type DraftHubContent = {
 export const platformHub: DraftHubContent = {
   routeId: 'platform',
   eyebrow: 'Platform',
-  title: 'Tracebud platform',
+  title: 'Two components. Every solution runs on both.',
   description:
-    'Mobile field capture and a multi-tenant dashboard share one data model for origin evidence, consent, lineage, and compliance records.',
+    'All modular solutions are built on the same shared infrastructure — offline field capture and a unified collaboration dashboard. Start with one; the other is already there.',
   links: [
     {
-      routeId: 'platform-offline-mapping',
-      href: '/platform/offline-mapping',
-      title: 'Offline mapping',
-      description: 'Plot capture without connectivity or perfect GNSS lock.',
+      routeId: 'platform-field-app',
+      href: '/platform/field-app',
+      title: 'Field App',
+      description: 'Zero-friction offline georeferencing, consent capture, and first-mile evidence collection.',
     },
     {
-      routeId: 'platform-ai-verification',
-      href: '/platform/ai-verification',
-      title: 'AI verification',
-      description: 'Satellite foundation models plus ground-truth photo vault.',
-    },
-    {
-      routeId: 'platform-network',
-      href: '/platform/network',
-      title: 'Network & sovereignty',
-      description: 'Request-grant workflows and farmer-owned data wallets.',
-    },
-    {
-      routeId: 'platform-integrations',
-      href: '/platform/integrations',
-      title: 'Integrations',
-      description: 'TRACES NT, national registries, and ESG connectors.',
-    },
-  ],
-};
-
-export const impactHub: DraftHubContent = {
-  routeId: 'impact',
-  eyebrow: 'Impact',
-  title: 'People, land, and planet',
-  description:
-    'Compliance opens markets. Regenerative practice keeps them open. Tracebud connects both with proof the whole chain can trust.',
-  links: [
-    {
-      routeId: 'impact-farmer-livelihood',
-      href: '/impact/farmer-livelihood',
-      title: 'Farmer livelihood',
-      description: 'Ownership, market access, and income resilience for smallholders.',
-    },
-    {
-      routeId: 'impact-regenerative-farming',
-      href: '/impact/regenerative-farming',
-      title: 'Regenerative farming',
-      description: 'Farm resilience through practices verified at plot level.',
-    },
-    {
-      routeId: 'impact-climate-biodiversity',
-      href: '/impact/climate-biodiversity',
-      title: 'Climate & biodiversity',
-      description: 'Deforestation-free supply chains and pathways to ESRS-aligned evidence.',
-    },
-    {
-      routeId: 'why-tracebud',
-      href: '/why-tracebud',
-      title: 'Why Tracebud',
-      description: 'Infrastructure principles — not another closed compliance silo.',
+      routeId: 'platform-dashboard',
+      href: '/platform/dashboard',
+      title: 'Dashboard',
+      description: 'Unified command center to visualize, validate, automate checks, and share supply chain data.',
     },
   ],
 };
@@ -161,94 +115,95 @@ export const impactHub: DraftHubContent = {
 };
 
 export const draftPages: Record<string, DraftPageContent> = {
-  'platform-offline-mapping': {
-    routeId: 'platform-offline-mapping',
+  'platform-field-app': {
+    routeId: 'platform-field-app',
     eyebrow: 'Platform',
-    title: 'Offline-first mapping',
-    description: 'Capture plot boundaries where signal is unreliable and GNSS accuracy drops under canopy.',
+    title: 'Field App',
+    description:
+      'Zero-friction, offline-first capture of farm plots, consent records, and evidence — designed for real field conditions, not office assumptions.',
     sections: [
       {
-        heading: 'Built for field conditions',
-        body: 'Tropical canopy causes multipath interference. Smartphone GPS often drifts to 5–15 meters. Tracebud does not hard-lock on HDOP thresholds that reject real captures.',
-      },
-      {
-        heading: 'Waypoint averaging',
-        body: 'At each vertex the app records a coordinate stream for 60–120 seconds and computes a mean position to filter error.',
+        heading: 'Built for where farms actually are',
+        body: 'Tropical canopy causes multipath interference and drops GPS accuracy to 5–15 meters. The Field App does not hard-lock on HDOP thresholds or require connectivity to function. All data is queued locally and syncs with conflict-safe ordering when a connection is available.',
         bullets: [
-          'Dual-frequency GNSS when hardware supports it',
+          'Offline-first local cache — works with zero signal',
+          'Adaptive geolocation to six decimal places',
+          'Waypoint averaging at each vertex (60–120 s coordinate stream)',
+          'Dual-frequency GNSS support where hardware allows',
           'Manual perimeter trace on cached satellite imagery when GNSS fails',
-          'Sync when connectivity returns with conflict-safe ordering',
         ],
       },
       {
-        heading: 'Geometry rules',
-        body: 'Plots under 4 hectares may use a centroid point or polygon. Plots of 4 hectares or more require a complete perimeter polygon. All coordinates use six decimal places minimum.',
+        heading: 'Low-literacy onboarding',
+        body: 'Farmer enrollment uses phone-number magic links and icon-led workflows. No app store install required. The same device a farmer already owns is enough to complete a full plot capture in under 20 minutes.',
+        bullets: [
+          'Phone or magic link — no account creation',
+          'Icon-led field walkthrough',
+          'Consent recorded with GPS-timestamped signature',
+          'Photo vault attached to plot polygon at capture time',
+        ],
+      },
+      {
+        heading: 'Geometry standards',
+        body: 'Plots under 4 hectares may use a centroid point or polygon. Plots of 4 hectares or more require a complete perimeter polygon. All coordinates are stored to six decimal places — meeting EUDR Article 9 precision requirements.',
+      },
+      {
+        heading: 'Data sovereignty by default',
+        body: "Each plot and consent record is owned by the farmer. A GeoID is issued at capture time and grants the farmer an explicit record they control. Buyers, exporters, and certification bodies access data through request-and-grant — not platform-controlled pipelines.",
       },
     ],
-    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-offline-mapping'),
+    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-field-app'),
   },
-  'platform-ai-verification': {
-    routeId: 'platform-ai-verification',
+  'platform-dashboard': {
+    routeId: 'platform-dashboard',
     eyebrow: 'Platform',
-    title: 'AI verification',
-    description: 'Geospatial foundation models and ground-truth evidence reduce false positives on shade-grown and agroforestry systems.',
+    title: 'Dashboard',
+    description:
+      'The unified command center for your supply chain — visualize your network, validate evidence, run automated checks, and export compliance-ready records.',
     sections: [
       {
-        heading: 'Geospatial foundation models',
-        body: 'Batch inference on cost-efficient GPU infrastructure evaluates spatial and temporal signals together — distinguishing deforestation from seasonal pruning where rigid algorithms fail.',
+        heading: 'One operating layer for the whole chain',
+        body: 'The Dashboard is multi-tenant and multi-role. Brands, importers, exporters, cooperatives, and certification auditors each see a scoped view of the same underlying data — without platform-controlled visibility gates.',
+        bullets: [
+          'Multi-role tenant-scoped access (brand, exporter, cooperative, auditor)',
+          'Request-and-grant visibility model — not forced pipelines',
+          'Shared batch lineage from plot through to DDS',
+          'Real-time supply network map',
+        ],
       },
       {
-        heading: 'Photo vault',
-        body: 'Timestamped, geo-tagged field photos provide localized evidence to override automated satellite false positives during manual review.',
+        heading: 'Automated plausibility checks',
+        body: 'AI verification runs as a background layer against every registered plot. Geospatial foundation models evaluate satellite time series to surface deforestation events, distinguishing cleared canopy from seasonal pruning and shade-grown agroforestry.',
+        bullets: [
+          'Satellite deforestation detection (post-2020 cutoff)',
+          'Temporal analysis — seasonal vs. conversion events',
+          'Agroforestry and shade-grown false-positive mitigation',
+          'Photo vault evidence linked to flag review',
+          'Degradation checks (non-deforestation forest damage)',
+        ],
       },
       {
-        heading: 'Degradation checks',
-        body: 'Structural forest cover changes — including conversion to plantation — surface as reviewable flags rather than silent passes.',
+        heading: 'Compliance export',
+        body: 'When a batch is ready, the Dashboard generates TRACES NT-compatible payloads and due diligence statement packages in one click. Records are retained for five years with immutable audit references.',
+        bullets: [
+          'One-click EUDR due diligence statement export',
+          'TRACES NT-compatible payloads',
+          'Five-year immutable retention with lifecycle tiering',
+          'Competent authority inspection package generation',
+        ],
+      },
+      {
+        heading: 'Integrations',
+        body: "TRACES NT, national producer registries, ESG frameworks (Cool Farm Tool, SACP), and certification body portals connect via open APIs. Tracebud does not require buyers or exporters to force their suppliers onto a proprietary platform — the network model is request-based.",
+        bullets: [
+          'TRACES NT & national registry connectors',
+          'Cool Farm Tool integration for Scope 3 / ESG',
+          'SACP cluster support',
+          'Open API for ERP and certification system connections',
+        ],
       },
     ],
-    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-ai-verification'),
-  },
-  'platform-network': {
-    routeId: 'platform-network',
-    eyebrow: 'Platform',
-    title: 'Network & data sovereignty',
-    description: 'An open network where any actor can start a workflow — with farmers in control of their compliance data.',
-    sections: [
-      {
-        heading: 'Request-grant architecture',
-        body: 'Brands, importers, exporters, cooperatives, and farmers enter independently. Data moves through explicit grants instead of forced hierarchical uploads.',
-      },
-      {
-        heading: 'Farmer data wallet',
-        body: 'Farmers own their GeoID and compliance passport. They grant or revoke access to cooperatives and buyers without vendor lock-in.',
-      },
-      {
-        heading: 'Multi-tenant isolation',
-        body: 'Every organization is a tenant. Data is scoped by active organization context with strict isolation between tenants unless permission is granted.',
-      },
-    ],
-    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-network'),
-  },
-  'platform-integrations': {
-    routeId: 'platform-integrations',
-    eyebrow: 'Platform',
-    title: 'Integrations',
-    description: 'Inbound registry sync and outbound regulatory filing through purpose-built middleware.',
-    sections: [
-      {
-        heading: 'TRACES NT',
-        body: 'EU filing uses legacy SOAP/XML with WS-Security — not simple REST. Tracebud middleware translates internal JSON into compliant payloads with digest computation and polygon chunking when limits are exceeded.',
-      },
-      {
-        heading: 'National registries',
-        body: 'Inbound endpoints can sync baseline boundaries from institutes such as ICF and IHCAFE to reduce duplicate capture work.',
-      },
-      {
-        heading: 'ESG platforms',
-        body: 'REST APIs push verified supply chain data toward corporate ESG workflows (EcoVadis, Sustainalytics) without manual re-entry — roadmap where not yet live in pilot.',
-      },
-    ],
-    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-integrations'),
+    relatedLinks: platformHub.links.filter((l) => l.routeId !== 'platform-dashboard'),
   },
   'compliance-eudr': {
     routeId: 'compliance-eudr',

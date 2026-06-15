@@ -6,6 +6,8 @@ export type MarketingRouteId =
   | 'insights'
   | 'insights-article'
   | 'platform'
+  | 'platform-field-app'
+  | 'platform-dashboard'
   | 'platform-offline-mapping'
   | 'platform-ai-verification'
   | 'platform-network'
@@ -24,7 +26,6 @@ export type MarketingRouteId =
   | 'impact-climate-biodiversity'
   | 'home-preview'
   | 'draft-index'
-  | 'impact'
   | 'impact-smallholders'
   | 'impact-forests'
   | 'impact-supply-chains';
@@ -40,6 +41,8 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   insights: false,
   'insights-article': false,
   platform: false,
+  'platform-field-app': false,
+  'platform-dashboard': false,
   'platform-offline-mapping': false,
   'platform-ai-verification': false,
   'platform-network': false,
@@ -58,7 +61,6 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   'impact-climate-biodiversity': false,
   'home-preview': false,
   'draft-index': false,
-  impact: false,
   'impact-smallholders': false,
   'impact-forests': false,
   'impact-supply-chains': false,

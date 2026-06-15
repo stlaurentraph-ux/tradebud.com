@@ -6,26 +6,29 @@ import type { DraftPageContent } from '@/lib/marketing-draft-content';
 
 // Hero image per routeId — extend as new content pages are added
 const HERO_IMAGES: Record<string, string> = {
-  'impact-smallholders':       '/images/placeholders/hero-farmer.png',
-  'impact-forests':            '/images/placeholders/hero-forest.png',
-  'impact-supply-chains':      '/images/placeholders/hero-supply-chain.png',
-  'platform-offline-mapping':  '/images/placeholders/section-resilience.png',
-  'platform-ai-verification':  '/images/placeholders/hero-forest.png',
-  'platform-network':          '/images/placeholders/hero-home.png',
-  'platform-integrations':     '/images/placeholders/hero-supply-chain.png',
-  'compliance-eudr':           '/images/placeholders/hero-supply-chain.png',
-  'compliance-due-diligence':  '/images/placeholders/section-paths.png',
-  'compliance-guides':         '/images/placeholders/hero-insights.png',
-  'compliance-security':       '/images/placeholders/hero-home.png',
+  'impact-smallholders':    '/images/placeholders/hero-farmer.png',
+  'impact-forests':         '/images/placeholders/hero-forest.png',
+  'impact-supply-chains':   '/images/placeholders/hero-supply-chain.png',
+  'platform-field-app':     '/images/placeholders/platform-field-app.png',
+  'platform-dashboard':     '/images/placeholders/platform-dashboard.png',
+  'compliance-eudr':        '/images/placeholders/hero-supply-chain.png',
+  'compliance-due-diligence': '/images/placeholders/section-paths.png',
+  'compliance-guides':      '/images/placeholders/hero-insights.png',
+  'compliance-security':    '/images/placeholders/hero-home.png',
 };
 
 type DraftContentPageProps = {
   content: DraftPageContent;
   locale: string;
+  /** Optional override — takes precedence over the HERO_IMAGES lookup. */
+  heroImage?: string;
+  /** Optional breadcrumb back-link — hub href and label. */
+  hubHref?: string;
+  hubLabel?: string;
 };
 
-export function DraftContentPage({ content, locale }: DraftContentPageProps) {
-  const heroSrc = HERO_IMAGES[content.routeId] ?? null;
+export function DraftContentPage({ content, locale, heroImage, hubHref, hubLabel }: DraftContentPageProps) {
+  const heroSrc = heroImage ?? HERO_IMAGES[content.routeId] ?? null;
 
   return (
     <MarketingPageLayout routeId={content.routeId}>
@@ -36,6 +39,17 @@ export function DraftContentPage({ content, locale }: DraftContentPageProps) {
 
           {/* Left: text */}
           <div className="flex flex-col justify-center pb-20 pr-0 pt-8 lg:pb-28 lg:pr-16">
+            {/* Breadcrumb */}
+            {hubHref && hubLabel ? (
+              <Link
+                href={hubHref}
+                className="mb-5 inline-flex w-fit items-center gap-1.5 text-xs font-medium text-white/50 transition-colors hover:text-white/80"
+              >
+                <span aria-hidden className="text-[10px]">←</span>
+                {hubLabel}
+              </Link>
+            ) : null}
+
             {content.eyebrow ? (
               <p className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-[var(--data-emerald)]/30 bg-[var(--data-emerald)]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[var(--data-emerald)]">
                 {content.eyebrow}

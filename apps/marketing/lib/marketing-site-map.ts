@@ -14,7 +14,6 @@ export type SiteMapSectionId =
   | 'compliance'
   | 'impact'
   | 'insights'
-  | 'impact'
   | 'convert'
   | 'legal'
   | 'meta';
@@ -55,7 +54,7 @@ export const siteMapSections: SiteMapSection[] = [
   {
     id: 'platform',
     label: 'Platform',
-    description: 'Product depth — mobile, dashboard, AI, network, integrations.',
+    description: 'Product depth — Field App and Dashboard.',
   },
   {
     id: 'compliance',
@@ -65,17 +64,12 @@ export const siteMapSections: SiteMapSection[] = [
   {
     id: 'impact',
     label: 'Impact',
-    description: 'Livelihood, regenerative farming, climate & biodiversity — the brand spine.',
+    description: 'Smallholder livelihoods, forest protection, and ethical supply chains.',
   },
   {
     id: 'insights',
     label: 'Insights',
     description: 'Blog / thought leadership (markdown articles).',
-  },
-  {
-    id: 'impact',
-    label: 'Impact',
-    description: 'Smallholder livelihoods, forest protection, and ethical supply chains.',
   },
   {
     id: 'convert',
@@ -91,11 +85,12 @@ export const siteMapSections: SiteMapSection[] = [
 
 /**
  * Canonical site map for v0 and Stage B assembly.
- * `live-styled` = existing pages already designed — v0 may polish only.
- * `draft-needs-style` = structure + copy in place; hand to v0 for layout/visual design.
+ * `live-styled`        = existing pages already designed — v0 may polish only.
+ * `draft-needs-style`  = structure + copy in place; hand to v0 for layout/visual design.
+ * `preview-assembly`   = internal preview wiring only, not for production nav.
  */
 export const marketingSiteMap: SiteMapEntry[] = [
-  // Meta
+  // ── Meta ──────────────────────────────────────────────────────────────────
   {
     id: 'draft-index',
     label: 'Draft site index',
@@ -106,7 +101,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     v0Notes: 'Keep as internal QA map; hide from public nav at launch.',
   },
 
-  // Home
+  // ── Home ──────────────────────────────────────────────────────────────────
   {
     id: 'home-live',
     label: 'Homepage (live)',
@@ -125,7 +120,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     v0Notes: 'Style hero + wire home-v2 blocks. Components in components/tracebud/home-v2/.',
   },
 
-  // Solutions — live persona pages
+  // ── Solutions ─────────────────────────────────────────────────────────────
   {
     id: 'farmers',
     label: 'Farmers & producers',
@@ -186,7 +181,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     v0Notes: 'Principles comparison page — five differentiators.',
   },
 
-  // Platform
+  // ── Platform ──────────────────────────────────────────────────────────────
   {
     id: 'platform',
     label: 'Platform hub',
@@ -194,41 +189,28 @@ export const marketingSiteMap: SiteMapEntry[] = [
     section: 'platform',
     status: 'draft-needs-style',
     routeId: 'platform',
+    v0Notes: 'June 2026 IA: hub introduces Field App + Dashboard. Old four children folded in.',
   },
   {
-    id: 'platform-offline',
-    label: 'Offline mapping',
-    href: '/platform/offline-mapping',
+    id: 'platform-field-app',
+    label: 'Field App',
+    href: '/platform/field-app',
     section: 'platform',
     status: 'draft-needs-style',
-    routeId: 'platform-offline-mapping',
+    routeId: 'platform-field-app',
+    v0Notes: 'Absorbs offline-mapping capability. Zero-friction offline-first georeferencing.',
   },
   {
-    id: 'platform-ai',
-    label: 'AI verification',
-    href: '/platform/ai-verification',
+    id: 'platform-dashboard',
+    label: 'Dashboard',
+    href: '/platform/dashboard',
     section: 'platform',
     status: 'draft-needs-style',
-    routeId: 'platform-ai-verification',
-  },
-  {
-    id: 'platform-network',
-    label: 'Network & sovereignty',
-    href: '/platform/network',
-    section: 'platform',
-    status: 'draft-needs-style',
-    routeId: 'platform-network',
-  },
-  {
-    id: 'platform-integrations',
-    label: 'Integrations',
-    href: '/platform/integrations',
-    section: 'platform',
-    status: 'draft-needs-style',
-    routeId: 'platform-integrations',
+    routeId: 'platform-dashboard',
+    v0Notes: 'Absorbs AI verification, integrations, and network capabilities.',
   },
 
-  // Compliance
+  // ── Compliance ────────────────────────────────────────────────────────────
   {
     id: 'compliance',
     label: 'Compliance hub',
@@ -270,7 +252,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     routeId: 'compliance-security',
   },
 
-  // Impact
+  // ── Impact ────────────────────────────────────────────────────────────────
   {
     id: 'impact',
     label: 'Impact hub',
@@ -278,61 +260,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     section: 'impact',
     status: 'draft-needs-style',
     routeId: 'impact',
-    v0Notes: 'NEW — style after current v0 pass. Same DraftHubPage shell as platform. Three-pillar narrative.',
-  },
-  {
-    id: 'impact-livelihood',
-    label: 'Farmer livelihood',
-    href: '/impact/farmer-livelihood',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact-farmer-livelihood',
-  },
-  {
-    id: 'impact-regenerative',
-    label: 'Regenerative farming',
-    href: '/impact/regenerative-farming',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact-regenerative-farming',
-  },
-  {
-    id: 'impact-climate',
-    label: 'Climate & biodiversity',
-    href: '/impact/climate-biodiversity',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact-climate-biodiversity',
-  },
-  {
-    id: 'impact-why',
-    label: 'Why Tracebud',
-    href: '/why-tracebud',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'why-tracebud',
-    v0Notes: 'Linked from Impact hub; may merge URL to /impact/why-tracebud at Stage B.',
-  },
-
-  // Insights
-  {
-    id: 'insights',
-    label: 'Insights hub',
-    href: '/insights',
-    section: 'insights',
-    status: 'draft-needs-style',
-    routeId: 'insights',
-    v0Notes: 'Hub + InsightsCard. Articles are markdown in content/insights/.',
-  },
-
-  // Impact
-  {
-    id: 'impact',
-    label: 'Impact hub',
-    href: '/impact',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact',
+    v0Notes: 'Three-pillar narrative hub.',
   },
   {
     id: 'impact-smallholders',
@@ -359,7 +287,18 @@ export const marketingSiteMap: SiteMapEntry[] = [
     routeId: 'impact-supply-chains',
   },
 
-  // Convert
+  // ── Insights ──────────────────────────────────────────────────────────────
+  {
+    id: 'insights',
+    label: 'Insights hub',
+    href: '/insights',
+    section: 'insights',
+    status: 'draft-needs-style',
+    routeId: 'insights',
+    v0Notes: 'Hub + InsightsCard. Articles are markdown in content/insights/.',
+  },
+
+  // ── Convert ───────────────────────────────────────────────────────────────
   {
     id: 'pricing',
     label: 'Pricing',
@@ -391,7 +330,7 @@ export const marketingSiteMap: SiteMapEntry[] = [
     status: 'live-styled',
   },
 
-  // Legal
+  // ── Legal ─────────────────────────────────────────────────────────────────
   {
     id: 'privacy',
     label: 'Privacy',
