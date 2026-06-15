@@ -35,6 +35,16 @@ Use the **transaction** or **session** pooler URL; not the service role key in `
 | `GFW_DATASET` | `gfw_integrated_alerts` |
 | `GFW_RADD_DATASET` | `umd_glad_dist_alerts` |
 
+**Campaign outreach emails** (exporter/importer Send Request wizard):
+
+| Key | Value |
+|-----|--------|
+| `RESEND_API_KEY` | Resend API key |
+| `RESEND_FROM_EMAIL` | Verified sender, e.g. `hello@tracebud.com` |
+| `RESEND_FROM_NAME` | `Tracebud` (optional) |
+| `TRACEBUD_DASHBOARD_PUBLIC_URL` | `https://dashboard.tracebud.com` |
+| `RESEND_DECISION_SECRET` | Long random string for Accept/Refuse email links (optional if `RESEND_API_KEY` is set — API falls back to that key) |
+
 Shortcut after login + link (copies from local `tracebud-backend/.env`):
 
 ```bash

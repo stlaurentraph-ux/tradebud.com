@@ -98,7 +98,15 @@ export function getMockInboxRequests(tenantId: string): InboxRequest[] {
   ];
 }
 
-export const mockCooperativeInsights = {
+export type CooperativeInsightsOverlay = {
+  members_missing_consent?: number;
+  requests_overdue?: number;
+  portability_reviews_pending?: number;
+  geometry_remediation_count?: number;
+  active_campaigns?: number;
+};
+
+export const mockCooperativeInsights: CooperativeInsightsOverlay = {
   members_missing_consent: 3,
   requests_overdue: 2,
   portability_reviews_pending: 1,

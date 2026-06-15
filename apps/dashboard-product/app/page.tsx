@@ -34,7 +34,7 @@ import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useInboxRequests, useRequestCampaigns } from '@/lib/use-requests';
 import { useDemoData } from '@/lib/demo-data-context';
-import { mockCooperativeInsights } from '@/lib/mocks/requests';
+import { mockCooperativeInsights, type CooperativeInsightsOverlay } from '@/lib/mocks/requests';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
 import type { ShipmentStatus, TenantRole } from '@/types';
 
@@ -239,8 +239,10 @@ const VIRGIN_DASHBOARD_METRICS: {
   recent_activity: [],
 };
 
+type CooperativeInsightsMetrics = Partial<typeof VIRGIN_DASHBOARD_METRICS> & CooperativeInsightsOverlay;
+
 type CooperativeInsightsResponse = {
-  metrics?: Partial<typeof VIRGIN_DASHBOARD_METRICS>;
+  metrics?: CooperativeInsightsMetrics;
 };
 
 export default function DashboardPage() {
@@ -259,7 +261,7 @@ export default function DashboardPage() {
   const [onboardingNavigationNotice, setOnboardingNavigationNotice] = useState<string | null>(null);
   const [welcomeAcknowledged, setWelcomeAcknowledged] = useState(false);
   const [cooperativeInsightsMetrics, setCooperativeInsightsMetrics] = useState<
-    Partial<typeof VIRGIN_DASHBOARD_METRICS> | null
+    CooperativeInsightsMetrics | null
   >(null);
   const [pendingOnboardingResume, setPendingOnboardingResume] = useState(false);
 

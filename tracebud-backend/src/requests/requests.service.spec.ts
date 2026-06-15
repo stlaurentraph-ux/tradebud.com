@@ -241,6 +241,53 @@ describe('RequestsService', () => {
     delete process.env.RESEND_DECISION_SECRET;
   });
 
+  it('accepts decision tokens signed with RESEND_API_KEY when RESEND_DECISION_SECRET is unset', async () => {
+    delete process.env.RESEND_DECISION_SECRET;
+    process.env.RESEND_API_KEY = 're_test_api_key';
+    const campaignRow = {
+      id: 'camp_1',
+      tenant_id: 'tenant_importer',
+      title: 'Evidence request',
+      description: '',
+      request_type: 'GENERAL_EVIDENCE',
+      status: 'RUNNING',
+      target_organization_ids: [],
+      target_farmer_ids: [],
+      target_plot_ids: [],
+      target_contact_emails: ['exporter@tracebud.test'],
+      due_at: '2026-05-01T00:00:00.000Z',
+      reminder_sent_at: null,
+      accepted_count: 1,
+      pending_count: 0,
+      expired_count: 0,
+      created_by: 'user_1',
+      idempotency_key: null,
+      created_at: '2026-04-01T00:00:00.000Z',
+      updated_at: '2026-04-22T12:00:00.000Z',
+    };
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
+        .mockResolvedValueOnce({ rows: [campaignRow] }),
+    };
+    const { service, inboxService } = createRequestsService(pool);
+    const token = createHmac('sha256', 're_test_api_key')
+      .update('camp_1:exporter@tracebud.test')
+      .digest('hex');
+
+    const result = await service.recordDecisionIntentPublic({
+      campaignId: 'camp_1',
+      recipientEmail: 'exporter@tracebud.test',
+      decision: 'accept',
+      token,
+    });
+
+    expect(result.recorded).toBe(true);
+    expect(inboxService.ensureInboxFromEmailCtaAccept).toHaveBeenCalled();
+    delete process.env.RESEND_API_KEY;
+  });
+
   it('returns migration guidance when decision ledger table is missing', async () => {
     const pool = {
       query: jest

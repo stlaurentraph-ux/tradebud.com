@@ -12,4 +12,7 @@ export default withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
   disableLogger: true,
   automaticVercelMonitors: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
 });

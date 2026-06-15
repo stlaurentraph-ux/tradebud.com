@@ -190,9 +190,12 @@ export class RequestsService {
   }
 
   private getDecisionSecret(): string {
-    const secret = process.env.RESEND_DECISION_SECRET?.trim();
+    const secret =
+      process.env.RESEND_DECISION_SECRET?.trim() || process.env.RESEND_API_KEY?.trim();
     if (!secret) {
-      throw new BadRequestException('RESEND_DECISION_SECRET is not configured.');
+      throw new BadRequestException(
+        'RESEND_DECISION_SECRET is not configured. Set it on the API service, or configure RESEND_API_KEY so decision links can be signed.',
+      );
     }
     return secret;
   }
