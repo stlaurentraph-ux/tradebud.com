@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { parseBackendErrorMessage } from '@/lib/request-campaign-payload';
 
 export type CampaignDecisionFilter = 'all' | 'accept' | 'refuse';
 
@@ -78,9 +79,9 @@ export function useCampaignDecisions(
           headers: getAuthHeaders(),
         },
       );
-      const body = (await response.json().catch(() => ({}))) as CampaignDecisionsPayload & { error?: string };
+      const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body.error ?? 'Failed to load more campaign decisions.');
+        throw new Error(parseBackendErrorMessage(body, 'Failed to load more campaign decisions.'));
       }
 
       setData((current) =>
@@ -123,12 +124,12 @@ export function useCampaignDecisions(
       headers: getAuthHeaders(),
     })
       .then(async (response) => {
-        const body = (await response.json().catch(() => ({}))) as CampaignDecisionsPayload & { error?: string };
+        const body = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(body.error ?? 'Failed to load campaign decision timeline.');
+          throw new Error(parseBackendErrorMessage(body, 'Failed to load campaign decision timeline.'));
         }
         if (!cancelled) {
-          setData(body);
+          setData(body as CampaignDecisionsPayload);
         }
       })
       .catch((loadError) => {

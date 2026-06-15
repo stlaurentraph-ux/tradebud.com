@@ -140,7 +140,7 @@ export function StepRequestType({ data, onChange, onNext, onCancel, mode = 'requ
 
       <div className="space-y-2">
         <Label htmlFor="due-date" className="text-base font-medium">
-          Due Date (optional)
+          Due Date (optional — defaults to 30 days from today)
         </Label>
         <div className="relative">
           <CalendarIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

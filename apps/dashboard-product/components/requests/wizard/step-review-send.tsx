@@ -25,6 +25,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '@/lib/auth-context';
+import { resolveCampaignDueDateIso } from '@/lib/request-campaign-payload';
 import type { RequestType, RequestTypeData } from './step-request-type';
 import type { Recipient, RecipientsData } from './step-select-recipients';
 
@@ -68,6 +69,8 @@ export function StepReviewSend({
         : 'Producer Verification'
       : typeConfig?.label;
   const TypeIcon = typeConfig?.icon ?? FileText;
+  const effectiveDueDate = requestData.dueDate ?? new Date(`${resolveCampaignDueDateIso(null)}T00:00:00`);
+  const dueDateUsesDefault = !requestData.dueDate;
 
   const recipientsByType = recipientsData.selectedRecipients.reduce(
     (acc, r) => {
@@ -129,17 +132,18 @@ export function StepReviewSend({
             </div>
           </div>
 
-          {requestData.dueDate && (
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Due Date</p>
-                <p className="font-medium">{format(requestData.dueDate, 'MMMM d, yyyy')}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
+            <div>
+              <p className="text-sm text-muted-foreground">Due Date</p>
+              <p className="font-medium">
+                {format(effectiveDueDate, 'MMMM d, yyyy')}
+                {dueDateUsesDefault ? ' (default)' : ''}
+              </p>
+            </div>
+          </div>
 
           {requestData.message && (
             <div className="flex items-start gap-3">

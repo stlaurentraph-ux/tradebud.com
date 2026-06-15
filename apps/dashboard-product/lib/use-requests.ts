@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { parseBackendErrorMessage } from '@/lib/request-campaign-payload';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
 
@@ -73,8 +74,8 @@ export function useInboxRequests(tenantId: string | null) {
           headers: getAuthHeaders(),
         });
         if (!response.ok) {
-          const body = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(body.error ?? 'Request API unavailable.');
+          const body = await response.json().catch(() => ({}));
+          throw new Error(parseBackendErrorMessage(body, 'Request API unavailable.'));
         }
         const body = (await response.json()) as { requests?: InboxRequest[] };
         const data = body.requests ?? [];
@@ -125,12 +126,12 @@ export function useInboxRequests(tenantId: string | null) {
         body: JSON.stringify(payload ?? {}),
       });
       if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Request API unavailable.');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(parseBackendErrorMessage(body, 'Request API unavailable.'));
       }
       const body = (await response.json()) as { request?: InboxRequest; error?: string };
       if (!body.request) {
-        throw new Error(body.error ?? 'Failed to respond to request.');
+        throw new Error(parseBackendErrorMessage(body, 'Failed to respond to request.'));
       }
       setRequests((prev) => prev.map((item) => (item.id === body.request?.id ? body.request : item)));
       return body.request;
@@ -169,8 +170,8 @@ export function useRequestCampaigns(tenantId: string | null) {
           headers: getAuthHeaders(),
         });
         if (!response.ok) {
-          const body = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(body.error ?? 'Campaign API unavailable.');
+          const body = await response.json().catch(() => ({}));
+          throw new Error(parseBackendErrorMessage(body, 'Campaign API unavailable.'));
         }
         const body = (await response.json()) as
           | { campaigns?: RequestCampaign[]; data?: RequestCampaign[] }

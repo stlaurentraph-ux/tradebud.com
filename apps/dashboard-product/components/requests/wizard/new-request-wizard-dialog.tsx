@@ -8,6 +8,11 @@ import { StepSelectRecipients, type Recipient, type RecipientsData } from './ste
 import { StepReviewSend } from './step-review-send';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import {
+  extractCampaignIdFromResponse,
+  parseBackendErrorMessage,
+  resolveCampaignDueDateIso,
+} from '@/lib/request-campaign-payload';
 
 type WizardMode = 'request' | 'campaign';
 
@@ -281,7 +286,7 @@ export function NewRequestWizardDialog({
       request_type: toBackendRequestType(requestData.requestType),
       campaign_name: `${mode === 'campaign' ? 'Campaign' : 'Request'} - ${requestData.commodity || 'General'}`,
       description_template: requestData.message || `Automated ${mode} from Tracebud workspace`,
-      due_date: requestData.dueDate ? requestData.dueDate.toISOString().slice(0, 10) : undefined,
+      due_date: resolveCampaignDueDateIso(requestData.dueDate),
       targets,
       status: 'DRAFT',
     };
@@ -296,24 +301,25 @@ export function NewRequestWizardDialog({
       body: JSON.stringify(payload),
     });
 
-    const body = (await response.json().catch(() => ({}))) as
-      | { error?: string; id?: string; campaign?: { id?: string }; data?: { id?: string } };
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.error ?? 'Failed to create campaign.');
+      throw new Error(parseBackendErrorMessage(body, 'Failed to create campaign.'));
     }
-    const campaignId =
-      (typeof body.id === 'string' && body.id) ||
-      (body.campaign && typeof body.campaign.id === 'string' ? body.campaign.id : '') ||
-      (body.data && typeof body.data.id === 'string' ? body.data.id : '');
+    const campaignId = extractCampaignIdFromResponse(body);
 
-    if (status === 'Sent' && campaignId) {
+    if (status === 'Sent') {
+      if (!campaignId) {
+        throw new Error(
+          'Campaign was saved but no campaign id was returned. Refresh the page and send the draft from Outreach.',
+        );
+      }
       const sendResponse = await fetch(`/api/requests/campaigns/${encodeURIComponent(campaignId)}/send`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
-      const sendBody = (await sendResponse.json().catch(() => ({}))) as { error?: string };
+      const sendBody = await sendResponse.json().catch(() => ({}));
       if (!sendResponse.ok) {
-        throw new Error(sendBody.error ?? 'Campaign created but failed to send.');
+        throw new Error(parseBackendErrorMessage(sendBody, 'Campaign created but failed to send.'));
       }
     }
   };
