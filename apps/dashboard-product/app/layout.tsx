@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { DashboardRootBoundary } from '@/components/observability/dashboard-root-boundary';
 import { ObservabilityBootstrap } from '@/components/observability/observability-bootstrap';
 import { AuthProvider } from '@/lib/auth-context';
+import { DemoDataProvider } from '@/lib/demo-data-context';
 import { LocaleProvider } from '@/lib/locale-context';
 import { OnboardingProvider } from '@/lib/onboarding-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -62,17 +63,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>
-          <ObservabilityBootstrap />
-          <DashboardRootBoundary>
-            <LocaleProvider>
-              <OnboardingProvider>
-                <DashboardLayout>{children}</DashboardLayout>
-                <OnboardingWelcomeModal />
-                <GuidedTourOverlay />
-              </OnboardingProvider>
-            </LocaleProvider>
-          </DashboardRootBoundary>
-          <Toaster richColors position="top-right" />
+          <DemoDataProvider>
+            <ObservabilityBootstrap />
+            <DashboardRootBoundary>
+              <LocaleProvider>
+                <OnboardingProvider>
+                  <DashboardLayout>{children}</DashboardLayout>
+                  <OnboardingWelcomeModal />
+                  <GuidedTourOverlay />
+                </OnboardingProvider>
+              </LocaleProvider>
+            </DashboardRootBoundary>
+            <Toaster richColors position="top-right" />
+          </DemoDataProvider>
         </AuthProvider>
         <Analytics />
       </body>

@@ -8,6 +8,9 @@ import { StepSelectRecipients, type Recipient, type RecipientsData } from './ste
 import { StepReviewSend } from './step-review-send';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { useDemoData } from '@/lib/demo-data-context';
+import { mockDemoContacts } from '@/lib/mocks/contacts';
+import { mockPlots } from '@/lib/mocks';
 import {
   extractCampaignIdFromResponse,
   parseBackendErrorMessage,
@@ -51,6 +54,7 @@ export function NewRequestWizardDialog({
   description,
 }: NewRequestWizardDialogProps) {
   const { user } = useAuth();
+  const { demoDataEnabled } = useDemoData();
   const isCooperative = user?.active_role === 'cooperative';
   const noun = mode === 'campaign' ? 'campaign' : 'request';
   const requestTypeLabels = getRequestTypeLabels(isCooperative);
@@ -90,6 +94,31 @@ export function NewRequestWizardDialog({
       setRecipientsError(null);
 
       try {
+        if (demoDataEnabled) {
+          const farmerRecipients: Recipient[] = mockDemoContacts.map((item) => ({
+            id: item.id,
+            type: 'farmer',
+            email: item.email,
+            name: item.full_name,
+            country: item.country,
+            commodity: item.tags.find((tag) => tag.startsWith('commodity:'))?.replace('commodity:', '') ?? 'Unknown',
+            complianceStatus: item.status === 'blocked' ? 'non_compliant' : item.status === 'submitted' ? 'compliant' : 'pending',
+            organizationType: item.organization,
+          }));
+          const plotRecipients: Recipient[] = mockPlots.map((plot) => ({
+            id: plot.id,
+            type: 'plot',
+            name: plot.name,
+            country: 'Rwanda',
+            commodity: 'Cocoa',
+            complianceStatus: plot.verified ? 'compliant' : 'pending',
+          }));
+          if (!cancelled) {
+            setAvailableRecipients([...farmerRecipients, ...plotRecipients]);
+          }
+          return;
+        }
+
         const [contactsRes, plotsRes] = await Promise.all([
           fetch('/api/contacts', { method: 'GET', headers: getAuthHeaders(), cache: 'no-store' }),
           fetch('/api/plots', { method: 'GET', headers: getAuthHeaders(), cache: 'no-store' }),
@@ -218,7 +247,7 @@ export function NewRequestWizardDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, user?.tenant_id]);
+  }, [open, user?.tenant_id, demoDataEnabled]);
 
   const handleCancel = () => {
     onOpenChange(false);
@@ -290,6 +319,10 @@ export function NewRequestWizardDialog({
       targets,
       status: 'DRAFT',
     };
+
+    if (demoDataEnabled) {
+      return;
+    }
 
     const response = await fetch('/api/requests/campaigns', {
       method: 'POST',

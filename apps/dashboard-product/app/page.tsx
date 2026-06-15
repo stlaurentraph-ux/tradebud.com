@@ -33,6 +33,8 @@ import { getRoleDisplayName } from '@/lib/rbac';
 import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useInboxRequests, useRequestCampaigns } from '@/lib/use-requests';
+import { useDemoData } from '@/lib/demo-data-context';
+import { mockCooperativeInsights } from '@/lib/mocks/requests';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
 import type { ShipmentStatus, TenantRole } from '@/types';
 
@@ -243,6 +245,7 @@ type CooperativeInsightsResponse = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { demoDataEnabled } = useDemoData();
   useOnboarding();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -358,6 +361,10 @@ export default function DashboardPage() {
       setCooperativeInsightsMetrics(null);
       return;
     }
+    if (demoDataEnabled) {
+      setCooperativeInsightsMetrics(mockCooperativeInsights);
+      return;
+    }
     const token = window.sessionStorage.getItem('tracebud_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
     void fetch('/api/cooperative/insights', { headers, cache: 'no-store' })
@@ -367,7 +374,7 @@ export default function DashboardPage() {
         setCooperativeInsightsMetrics(payload.metrics);
       })
       .catch(() => undefined);
-  }, [user]);
+  }, [user, demoDataEnabled]);
 
   const dashboardMetrics = useMemo(
     () =>

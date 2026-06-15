@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState, startTransition } from 'react';
 import type { DDSPackage } from '@/types';
+import { useDemoData } from '@/lib/demo-data-context';
+import { mockPackages } from '@/lib/mocks';
 import {
   mapBackendPackageDetailToDdsPackage,
   type BackendPackageDetail,
@@ -22,6 +24,7 @@ export function sumPackageVoucherKg(vouchers: BackendPackageDetailVoucher[]): nu
 }
 
 export function usePackageDetail(packageId: string | null, fallbackTenantId: string | null) {
+  const { demoDataEnabled } = useDemoData();
   const [pkg, setPkg] = useState<DDSPackage | null>(null);
   const [vouchers, setVouchers] = useState<BackendPackageDetailVoucher[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +51,19 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
       setIsLoading(true);
       setError(null);
     });
+
+    if (demoDataEnabled) {
+      const found = mockPackages.find((item) => item.id === packageId) ?? null;
+      if (!cancelled) {
+        setPkg(found);
+        setVouchers([]);
+        setIsLoading(false);
+        if (!found) setError('Package not found.');
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
 
     fetch(`/api/harvest/packages/${encodeURIComponent(packageId)}`, {
       method: 'GET',
@@ -99,7 +115,7 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
     return () => {
       cancelled = true;
     };
-  }, [packageId, fallbackTenantId, refreshToken]);
+  }, [packageId, fallbackTenantId, refreshToken, demoDataEnabled]);
 
   return { pkg, vouchers, isLoading, error, refetch };
 }

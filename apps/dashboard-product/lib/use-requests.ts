@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { parseBackendErrorMessage } from '@/lib/request-campaign-payload';
+import { useDemoData } from '@/lib/demo-data-context';
+import { getMockInboxRequests, mockRequestCampaigns } from '@/lib/mocks/requests';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
 
@@ -48,6 +50,7 @@ function getAuthHeaders(): Record<string, string> | undefined {
 }
 
 export function useInboxRequests(tenantId: string | null) {
+  const { demoDataEnabled } = useDemoData();
   const [requests, setRequests] = useState<InboxRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +71,16 @@ export function useInboxRequests(tenantId: string | null) {
 
       setIsLoading(true);
       setError(null);
+
+      if (demoDataEnabled) {
+        const data = getMockInboxRequests(tenantId);
+        if (!cancelled) {
+          setRequests(data);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       try {
         const response = await fetch('/api/inbox-requests', {
           cache: 'no-store',
@@ -95,7 +108,7 @@ export function useInboxRequests(tenantId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [tenantId, reloadTick]);
+  }, [tenantId, reloadTick, demoDataEnabled]);
 
   const pendingRequests = useMemo(
     () => requests.filter((item) => item.status === 'PENDING'),
@@ -116,6 +129,17 @@ export function useInboxRequests(tenantId: string | null) {
     },
   ) => {
     if (!tenantId) throw new Error('No tenant context available.');
+    if (demoDataEnabled) {
+      const updated = requests.find((item) => item.id === requestId);
+      if (!updated) throw new Error('Request not found for current tenant.');
+      const responded: InboxRequest = {
+        ...updated,
+        status: 'RESPONDED',
+        updated_at: new Date().toISOString(),
+      };
+      setRequests((prev) => prev.map((item) => (item.id === requestId ? responded : item)));
+      return responded;
+    }
     try {
       const response = await fetch(`/api/inbox-requests/${encodeURIComponent(requestId)}/respond`, {
         method: 'POST',
@@ -144,6 +168,7 @@ export function useInboxRequests(tenantId: string | null) {
 }
 
 export function useRequestCampaigns(tenantId: string | null) {
+  const { demoDataEnabled } = useDemoData();
   const [campaigns, setCampaigns] = useState<RequestCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +189,15 @@ export function useRequestCampaigns(tenantId: string | null) {
 
       setIsLoading(true);
       setError(null);
+
+      if (demoDataEnabled) {
+        if (!cancelled) {
+          setCampaigns(mockRequestCampaigns);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       try {
         const response = await fetch('/api/requests/campaigns', {
           cache: 'no-store',
@@ -199,7 +233,7 @@ export function useRequestCampaigns(tenantId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [tenantId, reloadTick]);
+  }, [tenantId, reloadTick, demoDataEnabled]);
 
   const counts = useMemo(
     () => ({

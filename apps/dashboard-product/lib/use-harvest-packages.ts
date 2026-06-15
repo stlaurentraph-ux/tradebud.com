@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { DDSPackage } from '@/types';
+import { useDemoData } from '@/lib/demo-data-context';
+import { mockPackages } from '@/lib/mocks';
 
 function getAuthHeaders(): Record<string, string> | undefined {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
@@ -16,6 +18,7 @@ export function useHarvestPackages(
 ) {
   const scope = options?.scope ?? 'tenant';
   const enabled = options?.enabled ?? true;
+  const { demoDataEnabled } = useDemoData();
   const [packages, setPackages] = useState<DDSPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,18 @@ export function useHarvestPackages(
 
       setIsLoading(true);
       setError(null);
+
+      if (demoDataEnabled) {
+        const data =
+          scope === 'shared'
+            ? mockPackages.filter((pkg) => pkg.status === 'SUBMITTED' || pkg.status === 'SEALED').slice(0, 2)
+            : mockPackages;
+        if (!cancelled) {
+          setPackages(data);
+          setIsLoading(false);
+        }
+        return;
+      }
 
       try {
         const response = await fetch(`/api/harvest/packages?scope=${scope}`, {
@@ -74,7 +89,7 @@ export function useHarvestPackages(
     return () => {
       cancelled = true;
     };
-  }, [tenantId, reloadTick, scope, enabled]);
+  }, [tenantId, reloadTick, scope, enabled, demoDataEnabled]);
 
   const countsByStatus = useMemo(() => {
     return packages.reduce<Record<DDSPackage['status'], number>>(

@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth-context';
 import { hasSupabaseSessionTokens, setAuthTokens } from '@/lib/auth-session';
 import { getAuthenticatedSupabaseClient } from '@/lib/supabase-browser';
 import { NOTIFICATION_CAPABILITIES } from '@/lib/settings-capabilities';
+import { DemoDataToggleCard } from '@/components/demo/demo-data-toggle-card';
 import { useLocale } from '@/lib/locale-context';
 import {
   getAvailableLocales,
@@ -278,6 +279,7 @@ export default function SettingsPage() {
 
           {/* Content */}
           <div className="flex-1 space-y-6">
+            <DemoDataToggleCard />
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <>

@@ -42,6 +42,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useLocale } from '@/lib/locale-context';
 import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
+import { DemoDataSidebarToggle } from '@/components/demo/demo-data-sidebar-toggle';
 import type { TenantRole } from '@/types';
 import { useSponsorViewControls } from '@/lib/sponsor-view';
 
@@ -311,6 +312,7 @@ export function AppSidebar() {
 
       {/* User Section */}
       <div className="flex-shrink-0 p-3 border-t border-white/10">
+        <DemoDataSidebarToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button 

@@ -17,3 +17,5 @@ export * from './compliance';
 export * from './dashboard-metrics';
 export * from './sponsor';
 export * from './integrations';
+export * from './requests';
+export * from './contacts';

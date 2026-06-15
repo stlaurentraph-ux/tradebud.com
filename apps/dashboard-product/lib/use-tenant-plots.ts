@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useDemoData } from '@/lib/demo-data-context';
+import { mockPlots } from '@/lib/mocks';
 
 export interface TenantPlot {
   id: string;
@@ -37,6 +39,7 @@ function normalizePlots(payload: unknown): TenantPlot[] {
 
 export function useTenantPlots(tenantId: string | null, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? Boolean(tenantId);
+  const { demoDataEnabled } = useDemoData();
   const [plots, setPlots] = useState<TenantPlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +55,23 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
     let cancelled = false;
     setIsLoading(true);
     setError(null);
+
+    if (demoDataEnabled) {
+      const data = mockPlots.map((plot) => ({
+        id: plot.id,
+        name: plot.name,
+        farmer_id: plot.farmer_id,
+        status: plot.verified ? 'verified' : 'pending',
+        area_ha: plot.area_hectares ?? null,
+      }));
+      if (!cancelled) {
+        setPlots(data);
+        setIsLoading(false);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
 
     fetch('/api/plots?scope=tenant', {
       cache: 'no-store',
@@ -85,7 +105,7 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
     return () => {
       cancelled = true;
     };
-  }, [tenantId, enabled]);
+  }, [tenantId, enabled, demoDataEnabled]);
 
   return { plots, isLoading, error };
 }

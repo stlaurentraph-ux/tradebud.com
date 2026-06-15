@@ -13,6 +13,7 @@ import {
 } from '@/lib/commercial-profile';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { DemoDataBanner } from '@/components/demo/demo-data-banner';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -158,6 +159,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Button>
           )}
         </header>
+
+        <DemoDataBanner />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">{children}</main>
