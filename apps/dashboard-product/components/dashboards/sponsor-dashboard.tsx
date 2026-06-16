@@ -42,6 +42,12 @@ import {
   getSponsorDashboardLabels,
   getSponsorInterventionItems,
 } from '@/lib/terminology-labels';
+import {
+  getSponsorPanelCopy,
+  getSponsorNetworkStatusLabel,
+  getSponsorProgrammeStatusLabel,
+  getSponsorRiskTierLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface SponsorDashboardProps {
   metrics: {
@@ -76,13 +82,13 @@ type BackendCampaign = {
   commodity?: string;
 };
 
-function mapOrganisationRecord(record: Record<string, unknown>): BackendOrganisation {
+function mapOrganisationRecord(record: Record<string, unknown>, t?: (key: string) => string): BackendOrganisation {
   const completenessRaw = Number(record.onboardingCompleteness);
   const status = String(record.status ?? '').toUpperCase();
   return {
     id: String(record.id ?? ''),
-    name: String(record.name ?? 'Unnamed Organisation'),
-    country: String(record.country ?? 'Unknown'),
+    name: String(record.name ?? getSponsorPanelCopy('unnamed_organisation', t)),
+    country: String(record.country ?? getSponsorPanelCopy('unknown_country', t)),
     type: String(record.type ?? record.roleInNetwork ?? 'partner'),
     status,
     onboardingCompleteness: Number.isFinite(completenessRaw)
@@ -114,8 +120,8 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
     () =>
       summary.rawOrganisations
         .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
-        .map(mapOrganisationRecord),
-    [summary.rawOrganisations],
+        .map((item) => mapOrganisationRecord(item, t)),
+    [summary.rawOrganisations, t],
   );
   const campaigns = summary.rawCampaigns;
   const orgCount = summary.organisationCount;
@@ -147,17 +153,18 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
         const completeness = Number(org.onboardingCompleteness ?? 0);
         const hasCompleteness = completeness > 0;
         const complianceRate = hasCompleteness ? completeness : 0;
+        const riskTier = getSponsorRiskTierLabel(complianceRate, hasCompleteness, t);
         return {
           id: org.id ?? `org-${index}`,
-          name: org.name ?? 'Unnamed Organisation',
-          country: org.country ?? 'Unknown',
+          name: org.name ?? getSponsorPanelCopy('unnamed_organisation', t),
+          country: org.country ?? getSponsorPanelCopy('unknown_country', t),
           complianceRate,
-          riskTier: !hasCompleteness ? 'Unknown' : complianceRate < 75 ? 'High' : complianceRate < 90 ? 'Moderate' : 'Low',
-          status: !hasCompleteness ? 'Pending data' : complianceRate < 80 ? 'At Risk' : 'Active',
+          riskTier,
+          status: getSponsorNetworkStatusLabel(complianceRate, hasCompleteness, t),
           escalations: hasCompleteness && complianceRate < 80 ? 1 : 0,
         };
       }),
-    [organisations],
+    [organisations, t],
   );
 
   const sponsorProgrammes = useMemo(
@@ -171,13 +178,13 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
         const status = typeof campaign.status === 'string' ? campaign.status.toUpperCase() : 'RUNNING';
         return {
           id: campaign.id ?? `prog-${index}`,
-          title: campaign.title ?? 'Programme Campaign',
-          scope: `${targetCount || 0} recipients`,
+          title: campaign.title ?? getSponsorPanelCopy('programme_default_title', t),
+          scope: getSponsorPanelCopy('programme_scope_recipients', t, { count: targetCount || 0 }),
           adoption: status === 'COMPLETED' ? 100 : status === 'DRAFT' ? 25 : 60,
-          status: status === 'DRAFT' ? 'Draft' : status === 'COMPLETED' ? 'Completed' : 'Active',
+          status: getSponsorProgrammeStatusLabel(status, t),
         };
       }),
-    [campaigns],
+    [campaigns, t],
   );
 
   const interventionQueue = useMemo(() => {
@@ -365,7 +372,7 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
                     <div>
                       <p className="font-medium text-foreground">{org.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {org.country} · Risk tier {org.riskTier}
+                        {org.country} · {getSponsorPanelCopy('risk_tier_label', t, { tier: org.riskTier })}
                       </p>
                     </div>
                   </div>
@@ -389,7 +396,9 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
                     <Badge
                       className={cn(
                         'capitalize',
-                        org.status === 'At Risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800',
+                        org.status === getSponsorPanelCopy('status_at_risk', t)
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800',
                       )}
                     >
                       {org.status}

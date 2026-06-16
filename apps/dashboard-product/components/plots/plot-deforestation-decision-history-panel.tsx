@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { AsyncState } from '@/components/common/async-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usePlotDeforestationDecisionHistory } from '@/lib/use-plot-deforestation-decision-history';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getPlotDeforestationDecisionCopy,
+  getPlotDeforestationVerdictLabel,
+} from '@/lib/plot-deforestation-decision-copy';
+import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
 
 interface PlotDeforestationDecisionHistoryPanelProps {
   plotId: string;
@@ -20,6 +26,8 @@ function verdictVariant(verdict: 'no_deforestation_detected' | 'possible_defores
 }
 
 export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestationDecisionHistoryPanelProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { events, isLoading, error, runDecision } = usePlotDeforestationDecisionHistory(plotId);
   const [cutoffDate, setCutoffDate] = useState('');
   const [runError, setRunError] = useState<string | null>(null);
@@ -31,20 +39,22 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
     providerMode: 'glad_s2_primary' | 'radd_fallback' | 'n/a';
   } | null>(null);
 
+  const naLabel = getPlotDeforestationDecisionCopy('na', t);
+
   const handleRunDecision = async () => {
     setRunError(null);
     setRunSuccess(null);
     setIsRunning(true);
     try {
       const result = await runDecision(cutoffDate);
-      setRunSuccess(`Decision run recorded for cutoff ${cutoffDate}.`);
+      setRunSuccess(getPlotDeforestationDecisionCopy('run_success', t, { date: cutoffDate }));
       setLastRun({
         cutoffDate: result.cutoffDate ?? cutoffDate,
         verdict: result.verdict ?? 'unknown',
         providerMode: result.providerMode ?? 'n/a',
       });
     } catch (err) {
-      setRunError(err instanceof Error ? err.message : 'Failed to run deforestation decision.');
+      setRunError(resolveWorkflowErrorMessage(err, 'plot_deforestation_decision_run', t));
     } finally {
       setIsRunning(false);
     }
@@ -53,7 +63,7 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Deforestation Decision History</CardTitle>
+        <CardTitle>{getPlotDeforestationDecisionCopy('panel_title', t)}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -61,24 +71,17 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
             type="date"
             value={cutoffDate}
             onChange={(event) => setCutoffDate(event.target.value)}
-            aria-label="Deforestation cutoff date"
+            aria-label={getPlotDeforestationDecisionCopy('cutoff_aria_label', t)}
             className="w-52"
           />
-          <Button
-            size="sm"
-            onClick={handleRunDecision}
-            disabled={!cutoffDate || isRunning}
-          >
-            {isRunning ? 'Running...' : 'Run decision'}
+          <Button size="sm" onClick={handleRunDecision} disabled={!cutoffDate || isRunning}>
+            {isRunning
+              ? getPlotDeforestationDecisionCopy('running', t)
+              : getPlotDeforestationDecisionCopy('run_cta', t)}
           </Button>
           {runError ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleRunDecision}
-              disabled={!cutoffDate || isRunning}
-            >
-              Retry
+            <Button size="sm" variant="outline" onClick={handleRunDecision} disabled={!cutoffDate || isRunning}>
+              {getPlotDeforestationDecisionCopy('retry', t)}
             </Button>
           ) : null}
           {runSuccess ? <span className="text-xs text-emerald-700">{runSuccess}</span> : null}
@@ -86,42 +89,58 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
         </div>
         {lastRun ? (
           <div className="mb-4 rounded-md border border-border p-2 text-xs text-muted-foreground">
-            Last run: cutoff {lastRun.cutoffDate} | verdict {lastRun.verdict} | provider mode {lastRun.providerMode}
+            {getPlotDeforestationDecisionCopy('last_run_summary', t, {
+              cutoff: lastRun.cutoffDate,
+              verdict: getPlotDeforestationVerdictLabel(lastRun.verdict, t),
+              provider: lastRun.providerMode,
+            })}
           </div>
         ) : null}
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading deforestation decisions..." />
+          <AsyncState
+            mode="loading"
+            title={getPlotDeforestationDecisionCopy('loading_title', t)}
+          />
         ) : error ? (
-          <AsyncState mode="error" title="Deforestation decision history unavailable" description={error} />
+          <AsyncState
+            mode="error"
+            title={getPlotDeforestationDecisionCopy('error_title', t)}
+            description={error}
+          />
         ) : events.length === 0 ? (
           <AsyncState
             mode="empty"
-            title="No decision events yet"
-            description="Run a cutoff-date deforestation decision to create immutable decision evidence."
+            title={getPlotDeforestationDecisionCopy('empty_title', t)}
+            description={getPlotDeforestationDecisionCopy('empty_description', t)}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Cutoff Date</TableHead>
-                <TableHead>Verdict</TableHead>
-                <TableHead>Alerts</TableHead>
-                <TableHead>Provider Mode</TableHead>
+                <TableHead>{getPlotDeforestationDecisionCopy('col_timestamp', t)}</TableHead>
+                <TableHead>{getPlotDeforestationDecisionCopy('col_cutoff', t)}</TableHead>
+                <TableHead>{getPlotDeforestationDecisionCopy('col_verdict', t)}</TableHead>
+                <TableHead>{getPlotDeforestationDecisionCopy('col_alerts', t)}</TableHead>
+                <TableHead>{getPlotDeforestationDecisionCopy('col_provider', t)}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {events.map((event) => (
                 <TableRow key={event.id}>
                   <TableCell>{new Date(event.timestamp).toLocaleString()}</TableCell>
-                  <TableCell>{event.payload.cutoffDate || 'n/a'}</TableCell>
+                  <TableCell>{event.payload.cutoffDate || naLabel}</TableCell>
                   <TableCell>
-                    <Badge variant={verdictVariant(event.payload.verdict)}>{event.payload.verdict}</Badge>
+                    <Badge variant={verdictVariant(event.payload.verdict)}>
+                      {getPlotDeforestationVerdictLabel(event.payload.verdict, t)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {event.payload.summary?.alertCount ?? 'n/a'} / {event.payload.summary?.alertAreaHa ?? 'n/a'} ha
+                    {getPlotDeforestationDecisionCopy('alerts_ha', t, {
+                      count: event.payload.summary?.alertCount ?? naLabel,
+                      area: event.payload.summary?.alertAreaHa ?? naLabel,
+                    })}
                   </TableCell>
-                  <TableCell>{event.payload.providerMode ?? 'n/a'}</TableCell>
+                  <TableCell>{event.payload.providerMode ?? naLabel}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

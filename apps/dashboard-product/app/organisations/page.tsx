@@ -13,6 +13,16 @@ import { Plus, Upload } from 'lucide-react';
 import { useSponsorView } from '@/lib/sponsor-view';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import {
+  getOrganisationsAddCta,
+  getOrganisationsDirectoryDescription,
+  getOrganisationsDirectoryTitle,
+  getOrganisationsPageSubtitle,
+  getOrganisationsStatLabel,
+  getOrganisationsTableColumnLabel,
+  getOrganisationsAddLabel,
+  getComplianceHealthEmphasisLabel,
+} from '@/lib/workflow-terminology-labels';
 
 type OrganisationRow = {
   id: string;
@@ -301,16 +311,12 @@ export default function OrganisationsPage() {
     <div className="flex flex-col">
       <AppHeader
         title={pageHeader.title}
-        subtitle={
-          sponsorView === 'country'
-            ? 'Sponsor-scoped directory for network activation, readiness, and country coverage'
-            : 'Sponsor-scoped directory for supplier performance, funded coverage, and value-chain visibility'
-        }
+        subtitle={getOrganisationsPageSubtitle(sponsorView === 'country', t)}
         breadcrumbs={buildAppBreadcrumbs(t, { name: 'Organisations' })}
         actions={
           <Button onClick={openAddOrganisation}>
             <Plus className="mr-2 h-4 w-4" />
-            Add organisation
+            {getOrganisationsAddCta(t)}
           </Button>
         }
       />
@@ -319,13 +325,13 @@ export default function OrganisationsPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-2xl font-bold">{orderedOrganisations.length}</p>
-              <p className="text-xs text-muted-foreground">Governed organisations</p>
+              <p className="text-xs text-muted-foreground">{getOrganisationsStatLabel('governed', t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <p className="text-2xl font-bold">{averageCompleteness}%</p>
-              <p className="text-xs text-muted-foreground">Average onboarding completeness</p>
+              <p className="text-xs text-muted-foreground">{getOrganisationsStatLabel('completeness', t)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -333,36 +339,32 @@ export default function OrganisationsPage() {
               <p className="text-2xl font-bold">
                 {orderedOrganisations.filter((organisation) => organisation.relationship === 'Direct Sponsor Member').length}
               </p>
-              <p className="text-xs text-muted-foreground">Direct sponsor members</p>
+              <p className="text-xs text-muted-foreground">{getOrganisationsStatLabel('direct_members', t)}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Organisation Directory</CardTitle>
+            <CardTitle>{getOrganisationsDirectoryTitle(t)}</CardTitle>
             <CardDescription>
-              {sponsorView === 'country'
-                ? 'Prioritises ecosystem activation and readiness by country and organisation type.'
-                : 'Prioritises sponsored suppliers and value-chain entities with direct funding impact.'}
+              {getOrganisationsDirectoryDescription(sponsorView === 'country', t)}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="mb-2">
-              <Badge variant="outline">
-                Emphasis: {sponsorView === 'country' ? 'Country programme' : 'Brand sponsor'}
-              </Badge>
+              <Badge variant="outline">{getComplianceHealthEmphasisLabel(sponsorView === 'country', t)}</Badge>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Organisation</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Relationship</TableHead>
-                  <TableHead>Country</TableHead>
-                  <TableHead>Onboarding</TableHead>
-                  <TableHead>Coverage</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('organisation', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('type', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('role', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('relationship', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('country', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('onboarding', t)}</TableHead>
+                  <TableHead>{getOrganisationsTableColumnLabel('coverage', t)}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -383,87 +385,85 @@ export default function OrganisationsPage() {
                 ))}
               </TableBody>
             </Table>
-            {isLoading ? <p className="text-sm text-muted-foreground">Loading organisations from backend...</p> : null}
+            {isLoading ? <p className="text-sm text-muted-foreground">{getOrganisationsAddLabel('loading', t)}</p> : null}
           </CardContent>
         </Card>
 
         <Card id="add-organisation-panel">
           <CardHeader>
-            <CardTitle>Add Organisations</CardTitle>
-            <CardDescription>Add organisations manually or import them in bulk via CSV.</CardDescription>
+            <CardTitle>{getOrganisationsAddLabel('title', t)}</CardTitle>
+            <CardDescription>{getOrganisationsAddLabel('subtitle', t)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs value={addMode} onValueChange={(value) => setAddMode(value as 'manual' | 'bulk')}>
               <TabsList>
-                <TabsTrigger value="manual">Manual</TabsTrigger>
-                <TabsTrigger value="bulk">Bulk import</TabsTrigger>
+                <TabsTrigger value="manual">{getOrganisationsAddLabel('tab_manual', t)}</TabsTrigger>
+                <TabsTrigger value="bulk">{getOrganisationsAddLabel('tab_bulk', t)}</TabsTrigger>
               </TabsList>
               <TabsContent value="manual" className="space-y-3 pt-3">
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label>Organisation name</Label>
+                    <Label>{getOrganisationsAddLabel('field_name', t)}</Label>
                     <Input
                       value={manualDraft.name}
                       onChange={(event) => setManualDraft((previous) => ({ ...previous, name: event.target.value }))}
-                      placeholder="e.g. Highlands Cooperative Union"
+                      placeholder={getOrganisationsAddLabel('placeholder_name', t)}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Type</Label>
+                    <Label>{getOrganisationsAddLabel('field_type', t)}</Label>
                     <Input
                       value={manualDraft.type}
                       onChange={(event) => setManualDraft((previous) => ({ ...previous, type: event.target.value }))}
-                      placeholder="Cooperative / Exporter / Importer / NGO"
+                      placeholder={getOrganisationsAddLabel('placeholder_type', t)}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Role in network</Label>
+                    <Label>{getOrganisationsAddLabel('field_role', t)}</Label>
                     <Input
                       value={manualDraft.roleInNetwork}
                       onChange={(event) => setManualDraft((previous) => ({ ...previous, roleInNetwork: event.target.value }))}
-                      placeholder="Origin aggregator"
+                      placeholder={getOrganisationsAddLabel('placeholder_role', t)}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Relationship</Label>
+                    <Label>{getOrganisationsAddLabel('field_relationship', t)}</Label>
                     <Input
                       value={manualDraft.relationship}
                       onChange={(event) => setManualDraft((previous) => ({ ...previous, relationship: event.target.value }))}
-                      placeholder="Direct Sponsor Member"
+                      placeholder={getOrganisationsAddLabel('placeholder_relationship', t)}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Country</Label>
+                    <Label>{getOrganisationsAddLabel('field_country', t)}</Label>
                     <Input
                       value={manualDraft.country}
                       onChange={(event) => setManualDraft((previous) => ({ ...previous, country: event.target.value }))}
-                      placeholder="Peru"
+                      placeholder={getOrganisationsAddLabel('placeholder_country', t)}
                     />
                   </div>
                 </div>
                 <Button onClick={handleAddOrganisation} disabled={isSaving}>
                   <Plus className="mr-2 h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Add organisation'}
+                  {isSaving ? getOrganisationsAddLabel('saving', t) : getOrganisationsAddLabel('submit', t)}
                 </Button>
               </TabsContent>
               <TabsContent value="bulk" className="space-y-3 pt-3">
-                <p className="text-sm text-muted-foreground">
-                  Expected CSV columns: organisation_name, type, role_in_network, relationship, country
-                </p>
+                <p className="text-sm text-muted-foreground">{getOrganisationsAddLabel('csv_hint', t)}</p>
                 <textarea
                   value={bulkCsv}
                   onChange={(event) => setBulkCsv(event.target.value)}
-                  placeholder="Paste organisation CSV rows here..."
+                  placeholder={getOrganisationsAddLabel('csv_placeholder', t)}
                   className="min-h-[120px] w-full rounded-md border border-border bg-background p-3 text-sm"
                 />
                 <div className="flex gap-2">
                   <Button variant="outline">
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload CSV
+                    {getOrganisationsAddLabel('upload_csv', t)}
                   </Button>
                   <Button disabled={!bulkCsv.trim() || isSaving} onClick={handleImportCsv}>
                     <Plus className="mr-2 h-4 w-4" />
-                    {isSaving ? 'Importing...' : 'Import organisations'}
+                    {isSaving ? getOrganisationsAddLabel('importing', t) : getOrganisationsAddLabel('import', t)}
                   </Button>
                 </div>
               </TabsContent>

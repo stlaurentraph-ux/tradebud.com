@@ -1,5 +1,6 @@
 'use client';
 
+import { useContext } from 'react';
 import { Loader2, AlertCircle, Globe, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,12 @@ import {
   signupPrimarySupportsSupplyChainRoles,
   type SupplyChainRoleId,
 } from '@/lib/org-supply-chain-roles';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getSignupCopy,
+  getSignupPrimaryRoleDescription,
+  getSignupPrimaryRoleLabel,
+} from '@/lib/workflow-terminology-labels';
 
 export type PrimaryRole =
   | 'importer'
@@ -42,32 +49,12 @@ interface StepWorkspaceSetupProps {
   error: string | null;
 }
 
-const ROLE_OPTIONS: { value: PrimaryRole; label: string; description: string }[] = [
-  {
-    value: 'importer',
-    label: 'Importer',
-    description: 'EU-based company bringing goods into the EU market',
-  },
-  {
-    value: 'exporter',
-    label: 'Exporter',
-    description: 'Producer-country entity shipping goods to EU buyers',
-  },
-  {
-    value: 'cooperative',
-    label: 'Supplier / Cooperative',
-    description: 'Producer cooperative or aggregator managing upstream supply data',
-  },
-  {
-    value: 'compliance_manager',
-    label: 'Compliance Manager',
-    description: 'Internal or external compliance professional',
-  },
-  {
-    value: 'admin',
-    label: 'Admin',
-    description: 'Platform or tenant administrator',
-  },
+const ROLE_OPTIONS: { value: PrimaryRole }[] = [
+  { value: 'importer' },
+  { value: 'exporter' },
+  { value: 'cooperative' },
+  { value: 'compliance_manager' },
+  { value: 'admin' },
 ];
 
 // ISO-3166 country list (abbreviated — most relevant EUDR countries)
@@ -90,6 +77,9 @@ export function StepWorkspaceSetup({
   isSubmitting,
   error,
 }: StepWorkspaceSetupProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onNext();
@@ -118,12 +108,12 @@ export function StepWorkspaceSetup({
       <div className="space-y-2">
         <Label htmlFor="orgName">
           <Building2 className="inline h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-          Organization name
+          {getSignupCopy('field_organization', t)}
         </Label>
         <Input
           id="orgName"
           type="text"
-          placeholder="Acme Coffee Exports Ltd."
+          placeholder={getSignupCopy('placeholder_organization', t)}
           value={data.organizationName}
           onChange={(e) => onChange({ ...data, organizationName: e.target.value })}
           required
@@ -134,7 +124,7 @@ export function StepWorkspaceSetup({
       <div className="space-y-2">
         <Label htmlFor="country">
           <Globe className="inline h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-          Country
+          {getSignupCopy('field_country', t)}
         </Label>
         <Select
           value={data.country}
@@ -143,7 +133,7 @@ export function StepWorkspaceSetup({
           required
         >
           <SelectTrigger id="country">
-            <SelectValue placeholder="Select your country" />
+            <SelectValue placeholder={getSignupCopy('country_placeholder', t)} />
           </SelectTrigger>
           <SelectContent>
             {COUNTRIES.map((c) => (
@@ -156,7 +146,7 @@ export function StepWorkspaceSetup({
       </div>
 
       <div className="space-y-2">
-        <Label>Primary role</Label>
+        <Label>{getSignupCopy('field_primary_role', t)}</Label>
         <div className="grid gap-2 sm:grid-cols-1">
           {ROLE_OPTIONS.map((role) => (
             <button
@@ -179,8 +169,12 @@ export function StepWorkspaceSetup({
                 }`}
               />
               <div>
-                <div className="text-sm font-medium leading-none">{role.label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{role.description}</div>
+                <div className="text-sm font-medium leading-none">
+                  {getSignupPrimaryRoleLabel(role.value, t)}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {getSignupPrimaryRoleDescription(role.value, t)}
+                </div>
               </div>
             </button>
           ))}
@@ -189,10 +183,8 @@ export function StepWorkspaceSetup({
 
       {signupPrimarySupportsSupplyChainRoles(data.primaryRole) ? (
         <div className="space-y-2">
-          <Label>Supply chain roles performed by this organisation</Label>
-          <p className="text-xs text-muted-foreground">
-            Select every workflow you run in one tenant. Use a preset or pick roles individually.
-          </p>
+          <Label>{getSignupCopy('supply_chain_roles_title', t)}</Label>
+          <p className="text-xs text-muted-foreground">{getSignupCopy('supply_chain_roles_hint', t)}</p>
           <SupplyChainRolePicker
             selected={data.supplyChainRoles}
             onChange={(supplyChainRoles) => onChange({ ...data, supplyChainRoles })}
@@ -216,7 +208,7 @@ export function StepWorkspaceSetup({
           onClick={onBack}
           disabled={isSubmitting}
         >
-          Back
+          {getSignupCopy('back', t)}
         </Button>
         <Button
           type="submit"
@@ -226,10 +218,10 @@ export function StepWorkspaceSetup({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Saving…
+              {getSignupCopy('saving', t)}
             </>
           ) : (
-            'Continue'
+            getSignupCopy('continue', t)
           )}
         </Button>
       </div>

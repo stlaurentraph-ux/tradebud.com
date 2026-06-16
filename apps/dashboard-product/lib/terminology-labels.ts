@@ -375,6 +375,19 @@ export function formatExporterSlaActive(days: number, t?: TranslateFn): string {
   return interpolate(resolveLabel('dashboard.exporter.sla.active', t), { days });
 }
 
+export function formatExporterComplianceRateSrOnly(
+  pct: number,
+  compliant: number,
+  total: number,
+  t?: TranslateFn,
+): string {
+  return interpolate(resolveLabel('dashboard.exporter.compliance_rate_sr', t), {
+    pct,
+    compliant,
+    total,
+  });
+}
+
 export function getExporterDashboardLabels(t?: TranslateFn) {
   return {
     campaignDescription: resolveLabel('dashboard.exporter.campaign.description', t),
@@ -399,10 +412,24 @@ export function getExporterDashboardLabels(t?: TranslateFn) {
 }
 
 export function getExporterNorthStarLabels(
-  mode: 'seal' | 'handoff',
+  mode: 'blockers' | 'yield' | 'seal' | 'handoff',
   sealedCount: number,
   t?: TranslateFn,
 ): Pick<import('@/lib/dashboard-north-star').NorthStarConfig, 'label' | 'hint' | 'ctaLabel'> {
+  if (mode === 'blockers') {
+    return {
+      label: resolveLabel('dashboard.north_star.exporter.blockers.label', t),
+      hint: resolveLabel('dashboard.north_star.exporter.blockers.hint', t),
+      ctaLabel: resolveLabel('dashboard.north_star.exporter.blockers.cta', t),
+    };
+  }
+  if (mode === 'yield') {
+    return {
+      label: resolveLabel('dashboard.north_star.exporter.yield.label', t),
+      hint: resolveLabel('dashboard.north_star.exporter.yield.hint', t),
+      ctaLabel: resolveLabel('dashboard.north_star.exporter.yield.cta', t),
+    };
+  }
   if (mode === 'seal') {
     return {
       label: resolveLabel('dashboard.north_star.exporter.ready_seal', t),

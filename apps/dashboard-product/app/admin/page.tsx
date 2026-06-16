@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,11 +25,7 @@ import { toast } from 'sonner';
 import type { TenantRole } from '@/types';
 import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
 import { createOrganization, inviteUser, updateUserRole, updateUserStatus } from '@/lib/admin-service';
-import { buildEudrDdsSubmitSuccessMessage } from '@/lib/eudr-dds-submit-feedback';
-import {
-  buildEudrDdsStatusErrorMessage,
-  isMalformedEudrDdsStatusPayloadError,
-} from '@/lib/eudr-dds-status-feedback';
+import { isMalformedEudrDdsStatusPayloadError } from '@/lib/eudr-dds-status-feedback';
 import {
   EUDR_DDS_STATUS_ERROR_FILENAME_TIMESTAMP_TOKEN,
   buildEudrDdsStatusErrorFilename,
@@ -57,20 +53,13 @@ import {
   useWebhookRegistrationEvents,
 } from '@/lib/use-gated-entry';
 import { resetDemoWorkspace, seedFirstCustomerWorkspace } from '@/lib/demo-bootstrap';
+import { LocaleContext } from '@/lib/locale-context';
+import { translatePageHeader } from '@/lib/nav-labels';
+import { getAdminPanelCtaLabel, getAdminActionLabel, getAdminStatLabel, getAdminTabLabel, getAdminSectionCopy, getAdminToastMessage, getAdminUsersSubtitle, getAdminRolesSubtitle, getAdminInvitePlaceholder, getAdminUsersTableColumnLabel, getAdminUsersLoadingLabel, getAdminRolesCanonicalBadge, getAdminOrganizationsLoadingLabel, getAdminDiagnosticsLabel, getAdminDiagnosticsCopy, getAdminDiagnosticsPresetLabel, getAdminFilingPhaseFilterLabel, getAdminChatPhaseFilterLabel, getAdminWorkflowPhaseFilterLabel, getAdminWorkflowSlaFilterLabel, getAdminRiskScorePhaseFilterLabel, getAdminRiskScoreBandFilterLabel, getAdminAssignmentPhaseFilterLabel, getAdminAssignmentStatusFilterLabel, getAdminEntitlementsCopy, getAdminEntitlementStatusLabel, getAdminEudrDdsCopy, getAdminEudrDdsSubmitSuccessMessage, getAdminEudrDdsStatusErrorMessage, getAdminWebhookCopy, getAdminPageTitle, getAdminPageSubtitle, getAdminTenantRoleLabel, getAdminOrgTypeLabel, getAdminOrganizationsTableColumnLabel, getAdminOrgStatusLabel, getAdminRbacCommercialPermissionLabel } from '@/lib/workflow-terminology-labels';
 
-const roleLabels: Record<TenantRole, string> = {
-  exporter: 'Exporter',
-  importer: 'Importer',
-  cooperative: 'Cooperative',
-  country_reviewer: 'Country Reviewer',
-  sponsor: 'Sponsor',
-};
-
-const orgTypeLabels: Record<AdminOrgType, string> = {
-  COOPERATIVE: 'Cooperative',
-  EXPORTER: 'Exporter',
-  IMPORTER: 'Importer',
-};
+const TENANT_ROLES: TenantRole[] = ['exporter', 'importer', 'cooperative', 'country_reviewer', 'sponsor'];
+const ADMIN_ORG_TYPES: AdminOrgType[] = ['COOPERATIVE', 'EXPORTER', 'IMPORTER'];
+const ADMIN_STATUSES: AdminStatus[] = ['ACTIVE', 'PENDING', 'SUSPENDED'];
 
 const statusColors: Record<AdminStatus, string> = {
   ACTIVE: 'bg-green-500/20 text-green-400',
@@ -136,6 +125,12 @@ const EUDR_SAMPLE_STATEMENTS: Record<EudrSamplePreset, Record<string, unknown>> 
 
 
 export default function AdminPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'admin', {
+    title: getAdminPageTitle(t),
+    subtitle: getAdminPageSubtitle(t),
+  });
   const { organizations, users, isLoading, error } = useAdminData();
   const [selectedGate, setSelectedGate] = useState<'all' | 'request_campaigns' | 'annual_reporting'>('all');
   const [timeWindow, setTimeWindow] = useState<'24h' | '7d' | '30d'>('7d');
@@ -417,7 +412,7 @@ export default function AdminPage() {
 
   const handleTelemetryExportCsv = () => {
     if (!gatedEntryEvents.length) {
-      toast.error('No telemetry rows available for export on this page.');
+      toast.error(getAdminDiagnosticsCopy('toast_telemetry_no_rows_page', t));
       return;
     }
     const csv = buildTelemetryCsv(gatedEntryEvents);
@@ -430,7 +425,7 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('Telemetry CSV exported for current page.');
+    toast.success(getAdminDiagnosticsCopy('toast_telemetry_exported_page', t));
   };
 
   const handleTelemetryExportAllCsv = async () => {
@@ -449,7 +444,7 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Failed to export telemetry rows.');
+        throw new Error(body.error ?? getAdminDiagnosticsCopy('toast_telemetry_export_failed', t));
       }
       const csv = await response.text();
       const rowCount = csv.trim().split('\n').length - 1;
@@ -457,7 +452,7 @@ export default function AdminPage() {
       const exportedLimit = Number(response.headers.get('x-export-row-limit') ?? 0);
       const truncated = response.headers.get('x-export-truncated') === 'true';
       if (rowCount <= 0) {
-        toast.error('No telemetry rows available for export for current filters.');
+        toast.error(getAdminDiagnosticsCopy('toast_telemetry_no_rows_filters', t));
         return;
       }
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -469,12 +464,12 @@ export default function AdminPage() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${exportedCount} telemetry rows.`);
+      toast.success(getAdminDiagnosticsCopy('toast_telemetry_exported_count', t, { count: exportedCount }));
       if (truncated && exportedLimit > 0) {
-        toast.warning(`Export capped at ${exportedLimit} rows. Narrow filters for complete extraction.`);
+        toast.warning(getAdminDiagnosticsCopy('toast_telemetry_export_capped', t, { limit: exportedLimit }));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export telemetry rows.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_telemetry_export_failed', t));
     } finally {
       setIsExportAllTelemetryLoading(false);
     }
@@ -486,9 +481,9 @@ export default function AdminPage() {
       await createOrganization(orgForm);
       setOrgForm({ name: '', type: 'COOPERATIVE', country: 'RW' });
       setIsOrgFormOpen(false);
-      toast.success('Organization created.');
+      toast.success(getAdminDiagnosticsCopy('toast_org_created', t));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create organization.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_org_failed', t));
     }
   };
 
@@ -498,38 +493,38 @@ export default function AdminPage() {
       await inviteUser(inviteForm);
       setInviteForm({ name: '', email: '', organisation_id: '', role: 'cooperative' });
       setIsInviteFormOpen(false);
-      toast.success('User invited.');
+      toast.success(getAdminDiagnosticsCopy('toast_user_invited', t));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to invite user.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_invite_failed', t));
     }
   };
 
   const handleRoleChange = async (userId: string, role: TenantRole) => {
     try {
       await updateUserRole(userId, role);
-      toast.success('Role updated.');
+      toast.success(getAdminDiagnosticsCopy('toast_role_updated', t));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update role.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_role_failed', t));
     }
   };
 
   const handleStatusChange = async (userId: string, status: AdminStatus) => {
     try {
       await updateUserStatus(userId, status);
-      toast.success('User status updated.');
+      toast.success(getAdminDiagnosticsCopy('toast_user_status_updated', t));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update user status.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_user_status_failed', t));
     }
   };
 
   const handleSeedWorkspace = () => {
     seedFirstCustomerWorkspace();
-    toast.success('Seeded first-customer demo workspace.');
+    toast.success(getAdminToastMessage('seeded', t));
   };
 
   const handleResetWorkspace = () => {
     resetDemoWorkspace();
-    toast.success('Reset demo workspace to baseline.');
+    toast.success(getAdminToastMessage('reset', t));
   };
 
   React.useEffect(() => {
@@ -550,12 +545,16 @@ export default function AdminPage() {
     setTelemetryDebugEnabled(next);
     setIsTelemetryDebugEnabledState(next);
     setTelemetryDebugCounters(getTelemetryDebugCounters());
-    toast.success(next ? 'Telemetry debug enabled for this session.' : 'Telemetry debug disabled.');
+    toast.success(
+      next
+        ? getAdminDiagnosticsCopy('toast_debug_enabled', t)
+        : getAdminDiagnosticsCopy('toast_debug_disabled', t),
+    );
   };
 
   const handleAssignmentExportCsv = () => {
     if (!assignmentExportEvents.length) {
-      toast.error('No assignment export activity rows available for current filters.');
+      toast.error(getAdminDiagnosticsCopy('toast_assignment_no_rows', t));
       return;
     }
     const header = ['captured_at', 'actor', 'phase', 'status', 'from_days', 'agent_user_id', 'row_count', 'error'];
@@ -590,7 +589,7 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('Assignment export activity CSV exported.');
+    toast.success(getAdminDiagnosticsCopy('toast_assignment_exported_page', t));
   };
 
   const handleAssignmentExportAllCsv = async () => {
@@ -609,13 +608,13 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Failed to export assignment export activity.');
+        throw new Error(body.error ?? getAdminDiagnosticsCopy('toast_assignment_export_failed', t));
       }
       const csv = await response.text();
       const rowCount = csv.trim().split('\n').length - 1;
       const exportedCount = Number(response.headers.get('x-export-row-count') ?? rowCount);
       if (rowCount <= 0) {
-        toast.error('No assignment export activity rows available for current filters.');
+        toast.error(getAdminDiagnosticsCopy('toast_assignment_no_rows', t));
         return;
       }
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -627,15 +626,15 @@ export default function AdminPage() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${exportedCount} assignment export activity rows.`);
+      toast.success(getAdminDiagnosticsCopy('toast_assignment_exported_count', t, { count: exportedCount }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export assignment export activity.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_assignment_export_failed', t));
     }
   };
 
   const handleRiskScoreCsv = () => {
     if (!riskScoreEvents.length) {
-      toast.error('No risk score activity rows available for current filters.');
+      toast.error(getAdminDiagnosticsCopy('toast_risk_no_rows', t));
       return;
     }
     const header = ['captured_at', 'actor', 'phase', 'package_id', 'provider', 'band', 'score', 'reason_count', 'scored_at'];
@@ -671,7 +670,7 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('Risk score activity CSV exported.');
+    toast.success(getAdminDiagnosticsCopy('toast_risk_exported_page', t));
   };
 
   const handleRiskScoreAllCsv = async () => {
@@ -690,13 +689,13 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Failed to export risk score activity.');
+        throw new Error(body.error ?? getAdminDiagnosticsCopy('toast_risk_export_failed', t));
       }
       const csv = await response.text();
       const rowCount = csv.trim().split('\n').length - 1;
       const exportedCount = Number(response.headers.get('x-export-row-count') ?? rowCount);
       if (rowCount <= 0) {
-        toast.error('No risk score activity rows available for current filters.');
+        toast.error(getAdminDiagnosticsCopy('toast_risk_no_rows', t));
         return;
       }
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -708,15 +707,15 @@ export default function AdminPage() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${exportedCount} risk score activity rows.`);
+      toast.success(getAdminDiagnosticsCopy('toast_risk_exported_count', t, { count: exportedCount }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export risk score activity.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_risk_export_failed', t));
     }
   };
 
   const handleFilingCsv = () => {
     if (!filingEvents.length) {
-      toast.error('No filing activity rows available for current filters.');
+      toast.error(getAdminDiagnosticsCopy('toast_filing_no_rows', t));
       return;
     }
     const header = ['captured_at', 'actor', 'phase', 'package_id', 'status', 'artifact_version', 'lot_count', 'idempotency_key', 'submission_state', 'traces_reference', 'replayed', 'persisted_at', 'generated_at'];
@@ -756,7 +755,7 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('Filing activity CSV exported.');
+    toast.success(getAdminDiagnosticsCopy('toast_filing_exported_page', t));
   };
 
   const handleFilingAllCsv = async () => {
@@ -774,13 +773,13 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? 'Failed to export filing activity.');
+        throw new Error(body.error ?? getAdminDiagnosticsCopy('toast_filing_export_failed', t));
       }
       const csv = await response.text();
       const rowCount = csv.trim().split('\n').length - 1;
       const exportedCount = Number(response.headers.get('x-export-row-count') ?? rowCount);
       if (rowCount <= 0) {
-        toast.error('No filing activity rows available for current filters.');
+        toast.error(getAdminDiagnosticsCopy('toast_filing_no_rows', t));
         return;
       }
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -792,9 +791,9 @@ export default function AdminPage() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
-      toast.success(`Exported ${exportedCount} filing activity rows.`);
+      toast.success(getAdminDiagnosticsCopy('toast_filing_exported_count', t, { count: exportedCount }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to export filing activity.');
+      toast.error(err instanceof Error ? err.message : getAdminDiagnosticsCopy('toast_filing_export_failed', t));
     }
   };
 
@@ -805,18 +804,18 @@ export default function AdminPage() {
     try {
       const parsed = JSON.parse(eudrStatementJson);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        toast.error('EUDR statement must be a JSON object.');
+        toast.error(getAdminEudrDdsCopy('toast_statement_not_object', t));
         return;
       }
       statement = parsed as Record<string, unknown>;
     } catch {
-      toast.error('EUDR statement must be valid JSON.');
+      toast.error(getAdminEudrDdsCopy('toast_statement_invalid_json', t));
       return;
     }
 
     const idempotencyKey = eudrIdempotencyKey.trim();
     if (!idempotencyKey) {
-      toast.error('Idempotency key is required.');
+      toast.error(getAdminEudrDdsCopy('toast_idempotency_required', t));
       return;
     }
     const schemaResult = validateEudrDdsStatement(statement);
@@ -842,18 +841,21 @@ export default function AdminPage() {
         replayed?: boolean;
       };
       if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to submit EUDR DDS payload.');
+        throw new Error(payload.error ?? getAdminEudrDdsCopy('toast_submit_failed', t));
       }
       toast.success(
-        buildEudrDdsSubmitSuccessMessage({
-          statusCode: payload.statusCode ?? response.status,
-          replayed: payload.replayed,
-        }),
+        getAdminEudrDdsSubmitSuccessMessage(
+          {
+            statusCode: payload.statusCode ?? response.status,
+            replayed: payload.replayed,
+          },
+          t,
+        ),
       );
       setEudrIdempotencyKey(`eudr_dds_${Date.now()}`);
       reloadFiling();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit EUDR DDS payload.');
+      toast.error(err instanceof Error ? err.message : getAdminEudrDdsCopy('toast_submit_failed', t));
     } finally {
       setIsEudrSubmitLoading(false);
     }
@@ -862,15 +864,15 @@ export default function AdminPage() {
   const handleLoadSampleEudrDds = () => {
     setEudrStatementJson(JSON.stringify(EUDR_SAMPLE_STATEMENTS[eudrSamplePreset], null, 2));
     setEudrIdempotencyKey(`eudr_dds_${Date.now()}`);
-    toast.success(`Loaded sample EUDR DDS payload (${eudrSamplePreset}).`);
+    toast.success(getAdminEudrDdsCopy('toast_sample_loaded', t, { preset: eudrSamplePreset }));
   };
 
   const handleCopyEudrStatementJson = async () => {
     try {
       await navigator.clipboard.writeText(eudrStatementJson);
-      toast.success('EUDR statement JSON copied to clipboard.');
+      toast.success(getAdminEudrDdsCopy('toast_statement_copied', t));
     } catch {
-      toast.error('Failed to copy EUDR statement JSON.');
+      toast.error(getAdminEudrDdsCopy('toast_statement_copy_failed', t));
     }
   };
 
@@ -878,7 +880,7 @@ export default function AdminPage() {
     if (isEudrStatusLoading) return;
     const referenceNumber = eudrStatusReferenceNumber.trim();
     if (!referenceNumber) {
-      toast.error('Reference number is required for status read.');
+      toast.error(getAdminEudrDdsCopy('toast_reference_required', t));
       return;
     }
 
@@ -900,7 +902,7 @@ export default function AdminPage() {
         payload?: unknown;
       };
       if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to read EUDR DDS status.');
+        throw new Error(payload.error ?? getAdminEudrDdsCopy('toast_status_read_failed', t));
       }
       setEudrStatusResult({
         referenceNumber,
@@ -910,20 +912,22 @@ export default function AdminPage() {
       });
       setEudrStatusHintMessage(null);
       setEudrStatusLastError(null);
-      toast.success(`EUDR DDS status read completed (status ${payload.statusCode ?? response.status}).`);
+      toast.success(
+        getAdminEudrDdsCopy('toast_status_read_success', t, {
+          statusCode: payload.statusCode ?? response.status,
+        }),
+      );
     } catch (err) {
       setEudrStatusResult(null);
       const rawMessage = err instanceof Error ? err.message : undefined;
-      const toastMessage = buildEudrDdsStatusErrorMessage({ message: rawMessage });
+      const toastMessage = getAdminEudrDdsStatusErrorMessage({ message: rawMessage }, t);
       setEudrStatusLastError({
         message: toastMessage,
         occurredAt: new Date().toISOString(),
         referenceNumber,
       });
       if (isMalformedEudrDdsStatusPayloadError({ message: rawMessage })) {
-        setEudrStatusHintMessage(
-          'Retry once after 30 seconds. If it repeats, capture this reference and escalate to integration support.',
-        );
+        setEudrStatusHintMessage(getAdminEudrDdsCopy('hint_retry_message', t));
       } else {
         setEudrStatusHintMessage(null);
       }
@@ -939,16 +943,16 @@ export default function AdminPage() {
       const response = await fetch('/api/launch/entitlements', {
         method: 'GET',
       });
-      const payload = (await response.json().catch(() => ({ error: 'Failed to read launch entitlements.' }))) as {
+      const payload = (await response.json().catch(() => ({ error: getAdminEntitlementsCopy('toast_load_error', t) }))) as {
         error?: string;
       } & LaunchFeatureEntitlement[];
       if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to read launch entitlements.');
+        throw new Error(payload.error ?? getAdminEntitlementsCopy('toast_load_error', t));
       }
       setEntitlements(Array.isArray(payload) ? payload : []);
-      toast.success('Launch entitlements loaded.');
+      toast.success(getAdminEntitlementsCopy('toast_loaded', t));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to read launch entitlements.');
+      toast.error(err instanceof Error ? err.message : getAdminEntitlementsCopy('toast_load_error', t));
     } finally {
       setIsEntitlementsLoading(false);
     }
@@ -970,16 +974,18 @@ export default function AdminPage() {
           entitlementStatus,
         }),
       });
-      const payload = (await response.json().catch(() => ({ error: 'Failed to update launch entitlement.' }))) as {
+      const payload = (await response.json().catch(() => ({ error: getAdminEntitlementsCopy('toast_update_error', t) }))) as {
         error?: string;
       };
       if (!response.ok) {
-        throw new Error(payload.error ?? 'Failed to update launch entitlement.');
+        throw new Error(payload.error ?? getAdminEntitlementsCopy('toast_update_error', t));
       }
       await loadLaunchEntitlements();
-      toast.success(`Updated entitlement: ${feature} -> ${entitlementStatus}.`);
+      toast.success(
+        getAdminEntitlementsCopy('toast_updated', t, { feature, status: entitlementStatus }),
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update launch entitlement.');
+      toast.error(err instanceof Error ? err.message : getAdminEntitlementsCopy('toast_update_error', t));
     } finally {
       setIsEntitlementSavingFeature(null);
     }
@@ -989,9 +995,9 @@ export default function AdminPage() {
     if (!eudrStatusResult) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(redactedEudrStatusPayload, null, 2));
-      toast.success('EUDR status payload copied to clipboard.');
+      toast.success(getAdminEudrDdsCopy('toast_payload_copied', t));
     } catch {
-      toast.error('Failed to copy EUDR status payload.');
+      toast.error(getAdminEudrDdsCopy('toast_payload_copy_failed', t));
     }
   };
 
@@ -1000,9 +1006,9 @@ export default function AdminPage() {
     const payload = serializeEudrDdsStatusErrorContext(eudrStatusLastError);
     try {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      toast.success('EUDR status error context copied to clipboard.');
+      toast.success(getAdminEudrDdsCopy('toast_error_context_copied', t));
     } catch {
-      toast.error('Failed to copy EUDR status error context.');
+      toast.error(getAdminEudrDdsCopy('toast_error_context_copy_failed', t));
     }
   };
 
@@ -1020,16 +1026,16 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('EUDR status error context downloaded.');
+    toast.success(getAdminEudrDdsCopy('toast_error_context_downloaded', t));
   };
 
   const handleCopyEudrStatusErrorFilename = async () => {
     if (!eudrStatusErrorFilenamePreview) return;
     try {
       await navigator.clipboard.writeText(eudrStatusErrorFilenamePreview);
-      toast.success('EUDR status error filename copied to clipboard.');
+      toast.success(getAdminEudrDdsCopy('toast_error_filename_copied', t));
     } catch {
-      toast.error('Failed to copy EUDR status error filename.');
+      toast.error(getAdminEudrDdsCopy('toast_error_filename_copy_failed', t));
     }
   };
 
@@ -1046,21 +1052,21 @@ export default function AdminPage() {
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    toast.success('EUDR status payload downloaded.');
+    toast.success(getAdminEudrDdsCopy('toast_payload_downloaded', t));
   };
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Admin Panel"
-        subtitle="Manage organizations, user invitations, and role assignments"
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
         actions={
           <Button
             size="sm"
             onClick={() => (activeTab === 'organizations' ? setIsOrgFormOpen((v) => !v) : setIsInviteFormOpen((v) => !v))}
           >
             <Plus className="w-4 h-4 mr-2" />
-            {activeTab === 'organizations' ? 'Add Organization' : 'Invite User'}
+            {getAdminPanelCtaLabel(activeTab === 'organizations' ? 'organizations' : 'users', t)}
           </Button>
         }
       />
@@ -1068,10 +1074,10 @@ export default function AdminPage() {
       <main className="flex-1 p-6 space-y-6">
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleSeedWorkspace}>
-            Seed First Customers
+            {getAdminActionLabel('seed', t)}
           </Button>
           <Button variant="outline" size="sm" onClick={handleResetWorkspace}>
-            Reset Demo Data
+            {getAdminActionLabel('reset', t)}
           </Button>
         </div>
 
@@ -1085,7 +1091,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{organizations.length}</p>
-                  <p className="text-xs text-muted-foreground">Organizations</p>
+                  <p className="text-xs text-muted-foreground">{getAdminStatLabel('organizations', t)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1098,7 +1104,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{users.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Users</p>
+                  <p className="text-xs text-muted-foreground">{getAdminStatLabel('total_users', t)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1111,7 +1117,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{activeUsersCount}</p>
-                  <p className="text-xs text-muted-foreground">Active Users</p>
+                  <p className="text-xs text-muted-foreground">{getAdminStatLabel('active_users', t)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1124,7 +1130,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{pendingUsersCount}</p>
-                  <p className="text-xs text-muted-foreground">Pending Approval</p>
+                  <p className="text-xs text-muted-foreground">{getAdminStatLabel('pending_approval', t)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1134,14 +1140,14 @@ export default function AdminPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle>Deferred Route Gate Diagnostics</CardTitle>
+              <CardTitle>{getAdminDiagnosticsLabel('title', t)}</CardTitle>
               <CardDescription>
-                Recent tenant-scoped gated-entry attempts captured by telemetry (`feature=mvp_gated`).
+                {getAdminDiagnosticsLabel('subtitle', t)}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleTelemetryExportCsv}>
-                Export CSV
+                {getAdminDiagnosticsLabel('export_csv', t)}
               </Button>
               <Button
                 variant="outline"
@@ -1149,13 +1155,13 @@ export default function AdminPage() {
                 onClick={() => void handleTelemetryExportAllCsv()}
                 disabled={isExportAllTelemetryLoading || !dashboardSummary?.readiness.canExportDetailed}
               >
-                {isExportAllTelemetryLoading ? 'Exporting all...' : 'Export All CSV'}
+                {isExportAllTelemetryLoading ? getAdminDiagnosticsLabel('exporting_all', t) : getAdminDiagnosticsLabel('export_all_csv', t)}
               </Button>
               <Button variant="outline" size="sm" onClick={handleTelemetryRefresh}>
-                Refresh
+                {getAdminDiagnosticsLabel('refresh', t)}
               </Button>
               <Button variant="outline" size="sm" onClick={handleTelemetryDebugToggle}>
-                {isTelemetryDebugEnabled ? 'Debug: On' : 'Debug: Off'}
+                {isTelemetryDebugEnabled ? getAdminDiagnosticsLabel('debug_on', t) : getAdminDiagnosticsLabel('debug_off', t)}
               </Button>
             </div>
           </CardHeader>
@@ -1168,104 +1174,98 @@ export default function AdminPage() {
                   size="sm"
                   onClick={() => applyTelemetryPreset(preset.id)}
                 >
-                  {preset.label}
+                  {getAdminDiagnosticsPresetLabel(preset.id, t)}
                 </Button>
               ))}
             </div>
             <div className="mb-4 rounded-lg border p-3">
-              <div className="mb-2 text-sm font-medium">Diagnostics Summary</div>
-              {isDashboardSummaryLoading && <p className="text-sm text-muted-foreground">Loading diagnostics summary...</p>}
+              <div className="mb-2 text-sm font-medium">{getAdminDiagnosticsLabel('summary', t)}</div>
+              {isDashboardSummaryLoading && <p className="text-sm text-muted-foreground">{getAdminDiagnosticsLabel('loading_summary', t)}</p>}
               {!isDashboardSummaryLoading && dashboardSummaryError && (
                 <p className="text-sm text-destructive">{dashboardSummaryError}</p>
               )}
               {!isDashboardSummaryLoading && !dashboardSummaryError && dashboardSummary && (
                 <>
                   <div className="grid gap-2 text-sm md:grid-cols-3">
-                    <div>Total diagnostics: {dashboardSummary.totalDiagnostics}</div>
-                    <div>Gated entry: {dashboardSummary.counters.gatedEntryAttempts}</div>
-                    <div>Assignment exports: {dashboardSummary.counters.assignmentExportEvents}</div>
-                    <div>Risk scores: {dashboardSummary.counters.riskScoreEvents}</div>
-                    <div>Filing activity: {dashboardSummary.counters.filingActivityEvents}</div>
-                    <div>Chat activity: {dashboardSummary.counters.chatActivityEvents}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_total_diagnostics', t)}: {dashboardSummary.totalDiagnostics}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_gated_entry', t)}: {dashboardSummary.counters.gatedEntryAttempts}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_assignment_exports', t)}: {dashboardSummary.counters.assignmentExportEvents}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_risk_scores', t)}: {dashboardSummary.counters.riskScoreEvents}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_filing_activity', t)}: {dashboardSummary.counters.filingActivityEvents}</div>
+                    <div>{getAdminDiagnosticsCopy('counter_chat_activity', t)}: {dashboardSummary.counters.chatActivityEvents}</div>
                   </div>
                   <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
                     <div>
-                      Assignment phase: req={dashboardSummary.breakdown.assignmentPhase.requested}, ok=
-                      {dashboardSummary.breakdown.assignmentPhase.succeeded}, fail={dashboardSummary.breakdown.assignmentPhase.failed}
+                      {getAdminDiagnosticsCopy('breakdown_assignment_phase', t, { requested: dashboardSummary.breakdown.assignmentPhase.requested, succeeded: dashboardSummary.breakdown.assignmentPhase.succeeded, failed: dashboardSummary.breakdown.assignmentPhase.failed })}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentPhase', 'requested')}>
-                          Requested
+                          {getAdminDiagnosticsCopy('drilldown_requested', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentPhase', 'succeeded')}>
-                          Succeeded
+                          {getAdminDiagnosticsCopy('drilldown_succeeded', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentPhase', 'failed')}>
-                          Failed
+                          {getAdminDiagnosticsCopy('drilldown_failed', t)}
                         </Button>
                       </div>
                     </div>
                     <div>
-                      Assignment status: active={dashboardSummary.breakdown.assignmentStatus.active}, completed=
-                      {dashboardSummary.breakdown.assignmentStatus.completed}, cancelled=
-                      {dashboardSummary.breakdown.assignmentStatus.cancelled}
+                      {getAdminDiagnosticsCopy('breakdown_assignment_status', t, { active: dashboardSummary.breakdown.assignmentStatus.active, completed: dashboardSummary.breakdown.assignmentStatus.completed, cancelled: dashboardSummary.breakdown.assignmentStatus.cancelled })}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentStatus', 'active')}>
-                          Active
+                          {getAdminDiagnosticsCopy('drilldown_active', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentStatus', 'completed')}>
-                          Completed
+                          {getAdminDiagnosticsCopy('drilldown_completed', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('assignmentStatus', 'cancelled')}>
-                          Cancelled
+                          {getAdminDiagnosticsCopy('drilldown_cancelled', t)}
                         </Button>
                       </div>
                     </div>
                     <div>
-                      Risk bands: low={dashboardSummary.breakdown.riskBand.low}, medium={dashboardSummary.breakdown.riskBand.medium}, high=
-                      {dashboardSummary.breakdown.riskBand.high}
+                      {getAdminDiagnosticsCopy('breakdown_risk_band', t, { low: dashboardSummary.breakdown.riskBand.low, medium: dashboardSummary.breakdown.riskBand.medium, high: dashboardSummary.breakdown.riskBand.high })}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('riskBand', 'low')}>
-                          Low
+                          {getAdminDiagnosticsCopy('drilldown_low', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('riskBand', 'medium')}>
-                          Medium
+                          {getAdminDiagnosticsCopy('drilldown_medium', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('riskBand', 'high')}>
-                          High
+                          {getAdminDiagnosticsCopy('drilldown_high', t)}
                         </Button>
                       </div>
                     </div>
                     <div>
-                      Filing family: generation={dashboardSummary.breakdown.filingFamily.generation}, submission=
-                      {dashboardSummary.breakdown.filingFamily.submission}
+                      {getAdminDiagnosticsCopy('breakdown_filing_family', t, { generation: dashboardSummary.breakdown.filingFamily.generation, submission: dashboardSummary.breakdown.filingFamily.submission })}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('filingFamily', 'generation')}>
-                          Generation
+                          {getAdminDiagnosticsCopy('drilldown_generation', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('filingFamily', 'submission')}>
-                          Submission
+                          {getAdminDiagnosticsCopy('drilldown_submission', t)}
                         </Button>
                       </div>
                     </div>
                     <div>
-                      Chat phase: created={dashboardSummary.breakdown.chatPhase.created}, posted=
-                      {dashboardSummary.breakdown.chatPhase.posted}, replayed={dashboardSummary.breakdown.chatPhase.replayed}
+                      {getAdminDiagnosticsCopy('breakdown_chat_phase', t, { created: dashboardSummary.breakdown.chatPhase.created, posted: dashboardSummary.breakdown.chatPhase.posted, replayed: dashboardSummary.breakdown.chatPhase.replayed })}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('chatPhase', 'created')}>
-                          Created
+                          {getAdminDiagnosticsCopy('drilldown_created', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('chatPhase', 'posted')}>
-                          Posted
+                          {getAdminDiagnosticsCopy('drilldown_posted', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => applySummaryDrilldown('chatPhase', 'resolved')}>
-                          Resolved
+                          {getAdminDiagnosticsCopy('drilldown_resolved', t)}
                         </Button>
                       </div>
                     </div>
                     <div>
-                      Readiness: {dashboardSummary.readiness.canExportDetailed ? 'export-ready' : 'no export data'}
+                      {getAdminDiagnosticsCopy('readiness_label', t)}: {dashboardSummary.readiness.canExportDetailed ? getAdminDiagnosticsCopy('readiness_export_ready', t) : getAdminDiagnosticsCopy('readiness_no_export_data', t)}
                       {dashboardSummary.readiness.latestEventAt
-                        ? ` | latest ${new Date(dashboardSummary.readiness.latestEventAt).toLocaleString()}`
+                        ? getAdminDiagnosticsCopy('readiness_latest', t, { date: new Date(dashboardSummary.readiness.latestEventAt).toLocaleString() })
                         : ''}
                     </div>
                   </div>
@@ -1281,9 +1281,9 @@ export default function AdminPage() {
                   setCurrentPage(1);
                 }}
               >
-                <option value="all">All gates</option>
-                <option value="request_campaigns">Request campaigns</option>
-                <option value="annual_reporting">Annual reporting</option>
+                <option value="all">{getAdminDiagnosticsCopy('filter_all_gates', t)}</option>
+                <option value="request_campaigns">{getAdminDiagnosticsCopy('filter_request_campaigns', t)}</option>
+                <option value="annual_reporting">{getAdminDiagnosticsCopy('filter_annual_reporting', t)}</option>
               </select>
               <select
                 className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -1293,9 +1293,9 @@ export default function AdminPage() {
                   setCurrentPage(1);
                 }}
               >
-                <option value="24h">Last 24h</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
+                <option value="24h">{getAdminDiagnosticsCopy('filter_last_24h', t)}</option>
+                <option value="7d">{getAdminDiagnosticsCopy('filter_last_7d', t)}</option>
+                <option value="30d">{getAdminDiagnosticsCopy('filter_last_30d', t)}</option>
               </select>
               <select
                 className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -1305,11 +1305,11 @@ export default function AdminPage() {
                   setCurrentPage(1);
                 }}
               >
-                <option value="desc">Newest first</option>
-                <option value="asc">Oldest first</option>
+                <option value="desc">{getAdminDiagnosticsCopy('filter_newest_first', t)}</option>
+                <option value="asc">{getAdminDiagnosticsCopy('filter_oldest_first', t)}</option>
               </select>
               <div className="text-sm text-muted-foreground flex items-center">
-                {totalTelemetryEvents} matching event(s)
+                {getAdminDiagnosticsCopy('filter_matching_events', t, { count: totalTelemetryEvents })}
               </div>
             </div>
             {telemetryError && (
@@ -1319,38 +1319,37 @@ export default function AdminPage() {
             )}
             {telemetryAuthError && (
               <div className="mb-4 rounded-md border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-300">
-                Telemetry auth check: current session token may be invalid for backend reads in this environment.
+                {getAdminDiagnosticsCopy('message_telemetry_auth', t)}
               </div>
             )}
             {isTelemetryDebugEnabled && (
               <div className="mb-4 rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-200">
-                Debug counters: mutationEvents={telemetryDebugCounters.mutationEvents}, debounceFlushes=
-                {telemetryDebugCounters.debounceFlushes}, fetchLoads={telemetryDebugCounters.fetchLoads}
+                {getAdminDiagnosticsCopy('message_debug_counters', t, { mutationEvents: telemetryDebugCounters.mutationEvents, debounceFlushes: telemetryDebugCounters.debounceFlushes, fetchLoads: telemetryDebugCounters.fetchLoads })}
               </div>
             )}
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Captured At</TableHead>
-                    <TableHead>Gate</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Feature</TableHead>
-                    <TableHead>Redirect</TableHead>
+                    <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                    <TableHead>{getAdminDiagnosticsCopy('table_gate', t)}</TableHead>
+                    <TableHead>{getAdminDiagnosticsCopy('table_role', t)}</TableHead>
+                    <TableHead>{getAdminDiagnosticsCopy('table_feature', t)}</TableHead>
+                    <TableHead>{getAdminDiagnosticsCopy('table_redirect', t)}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isTelemetryLoading && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-muted-foreground">
-                        Loading gated-entry telemetry...
+                        {getAdminDiagnosticsCopy('loading_telemetry', t)}
                       </TableCell>
                     </TableRow>
                   )}
                   {!isTelemetryLoading && totalTelemetryEvents === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-muted-foreground">
-                        No gated-entry attempts captured for this tenant yet.
+                        {getAdminDiagnosticsCopy('empty_telemetry', t)}
                       </TableCell>
                     </TableRow>
                   )}
@@ -1376,7 +1375,7 @@ export default function AdminPage() {
               </Table>
             </div>
             <div className="mt-6">
-              <h4 className="mb-2 text-sm font-medium">Recent Export Activity</h4>
+              <h4 className="mb-2 text-sm font-medium">{getAdminDiagnosticsCopy('section_export_activity', t)}</h4>
               {exportActivityError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   {exportActivityError}
@@ -1386,26 +1385,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Exported At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Gate</TableHead>
-                      <TableHead>Rows</TableHead>
-                      <TableHead>Sort</TableHead>
-                      <TableHead>Truncated</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_exported_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_gate', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_rows', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_sort', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_truncated', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isExportActivityLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading export activity...
+                          {getAdminDiagnosticsCopy('loading_export_activity', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isExportActivityLoading && gatedEntryExportEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No export activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_export_activity', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1426,10 +1425,10 @@ export default function AdminPage() {
                           <TableCell className="text-sm">
                             {event.payload.truncated ? (
                               <Badge variant="outline" className="text-xs text-yellow-300 border-yellow-500/40">
-                                Yes
+                                {getAdminDiagnosticsCopy('yes', t)}
                               </Badge>
                             ) : (
-                              'No'
+                              getAdminDiagnosticsCopy('no', t)
                             )}
                           </TableCell>
                         </TableRow>
@@ -1441,31 +1440,33 @@ export default function AdminPage() {
             <div className="mt-6">
               <div className="mb-3 rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Launch Feature Entitlements (Admin)</h4>
+                  <h4 className="text-sm font-medium">{getAdminEntitlementsCopy('title', t)}</h4>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => void loadLaunchEntitlements()}
                     disabled={isEntitlementsLoading || isEntitlementSavingFeature !== null}
                   >
-                    {isEntitlementsLoading ? 'Loading...' : 'Load entitlements'}
+                    {isEntitlementsLoading
+                      ? getAdminEntitlementsCopy('action_loading', t)
+                      : getAdminEntitlementsCopy('action_load', t)}
                   </Button>
                 </div>
                 <div className="rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Feature</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Updated at</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{getAdminEntitlementsCopy('table_feature', t)}</TableHead>
+                        <TableHead>{getAdminEntitlementsCopy('table_status', t)}</TableHead>
+                        <TableHead>{getAdminEntitlementsCopy('table_updated_at', t)}</TableHead>
+                        <TableHead>{getAdminEntitlementsCopy('table_actions', t)}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {entitlements.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-muted-foreground">
-                            No entitlement rows loaded yet. Use the Load entitlements action.
+                            {getAdminEntitlementsCopy('empty', t)}
                           </TableCell>
                         </TableRow>
                       )}
@@ -1473,7 +1474,9 @@ export default function AdminPage() {
                         <TableRow key={row.feature_key}>
                           <TableCell className="text-sm">{row.feature_key}</TableCell>
                           <TableCell className="text-sm">
-                            <Badge variant="outline">{row.entitlement_status}</Badge>
+                            <Badge variant="outline">
+                              {getAdminEntitlementStatusLabel(row.entitlement_status, t)}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {new Date(row.updated_at).toLocaleString()}
@@ -1488,7 +1491,7 @@ export default function AdminPage() {
                                 }
                                 onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'enabled')}
                               >
-                                Enable
+                                {getAdminEntitlementsCopy('action_enable', t)}
                               </Button>
                               <Button
                                 variant="outline"
@@ -1498,7 +1501,7 @@ export default function AdminPage() {
                                 }
                                 onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'trial')}
                               >
-                                Trial
+                                {getAdminEntitlementsCopy('action_trial', t)}
                               </Button>
                               <Button
                                 variant="outline"
@@ -1508,7 +1511,7 @@ export default function AdminPage() {
                                 }
                                 onClick={() => void setLaunchEntitlementStatus(row.feature_key, 'disabled')}
                               >
-                                Disable
+                                {getAdminEntitlementsCopy('action_disable', t)}
                               </Button>
                             </div>
                           </TableCell>
@@ -1520,7 +1523,7 @@ export default function AdminPage() {
               </div>
               <div className="mb-3 rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-medium">EUDR DDS Submit (Operator Trigger)</h4>
+                  <h4 className="text-sm font-medium">{getAdminEudrDdsCopy('title_submit', t)}</h4>
                   <div className="flex items-center gap-2">
                     <select
                       className="rounded-md border bg-background px-2 py-1 text-xs"
@@ -1528,33 +1531,39 @@ export default function AdminPage() {
                       onChange={(e) => setEudrSamplePreset(e.target.value as EudrSamplePreset)}
                       disabled={isEudrSubmitLoading}
                     >
-                      <option value="import">Import sample</option>
-                      <option value="export">Export sample</option>
-                      <option value="domestic">Domestic sample</option>
+                      <option value="import">{getAdminEudrDdsCopy('preset_import', t)}</option>
+                      <option value="export">{getAdminEudrDdsCopy('preset_export', t)}</option>
+                      <option value="domestic">{getAdminEudrDdsCopy('preset_domestic', t)}</option>
                     </select>
                     <Button variant="outline" size="sm" onClick={() => void handleCopyEudrStatementJson()} disabled={isEudrSubmitLoading}>
-                      Copy JSON
+                      {getAdminEudrDdsCopy('action_copy_json', t)}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleLoadSampleEudrDds} disabled={isEudrSubmitLoading}>
-                      Load sample JSON
+                      {getAdminEudrDdsCopy('action_load_sample', t)}
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => void handleEudrDdsSubmit()} disabled={isEudrSubmitLoading}>
-                      {isEudrSubmitLoading ? 'Submitting...' : 'Submit DDS'}
+                      {isEudrSubmitLoading
+                        ? getAdminEudrDdsCopy('action_submitting', t)
+                        : getAdminEudrDdsCopy('action_submit', t)}
                     </Button>
                   </div>
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Idempotency key</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                      {getAdminEudrDdsCopy('field_idempotency_key', t)}
+                    </label>
                     <input
                       className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                       value={eudrIdempotencyKey}
                       onChange={(e) => setEudrIdempotencyKey(e.target.value)}
-                      placeholder="eudr_dds_..."
+                      placeholder={getAdminEudrDdsCopy('placeholder_idempotency', t)}
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">Statement JSON</label>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                      {getAdminEudrDdsCopy('field_statement_json', t)}
+                    </label>
                     <textarea
                       className="min-h-[110px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
                       value={eudrStatementJson}
@@ -1566,93 +1575,103 @@ export default function AdminPage() {
               </div>
               <div className="mb-3 rounded-lg border p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-medium">EUDR DDS Status Read (Operator Trigger)</h4>
+                  <h4 className="text-sm font-medium">{getAdminEudrDdsCopy('title_status', t)}</h4>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => void handleEudrDdsStatusRead()}
                     disabled={isEudrStatusLoading}
                   >
-                    {isEudrStatusLoading ? 'Checking...' : 'Check Status'}
+                    {isEudrStatusLoading
+                      ? getAdminEudrDdsCopy('action_checking', t)
+                      : getAdminEudrDdsCopy('action_check', t)}
                   </Button>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Reference number</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    {getAdminEudrDdsCopy('field_reference_number', t)}
+                  </label>
                   <input
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                     value={eudrStatusReferenceNumber}
                     onChange={(e) => setEudrStatusReferenceNumber(e.target.value)}
-                    placeholder="TB-REF-..."
+                    placeholder={getAdminEudrDdsCopy('placeholder_reference', t)}
                   />
                 </div>
                 {eudrStatusLastError && (
                   <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <span className="font-medium">Last status error:</span> {eudrStatusLastError.message} (
+                        <span className="font-medium">{getAdminEudrDdsCopy('error_last', t)}</span>{' '}
+                        {eudrStatusLastError.message} (
                         {new Date(eudrStatusLastError.occurredAt).toLocaleString()} - {eudrStatusLastError.referenceNumber})
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => void handleCopyEudrStatusErrorContext()}
-                        aria-label="Copy DDS status error context JSON"
+                        aria-label={getAdminEudrDdsCopy('aria_copy_error_context', t)}
                       >
-                        Copy error context
+                        {getAdminEudrDdsCopy('action_copy_error_context', t)}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleDownloadEudrStatusErrorContext}
-                        aria-label="Download DDS status error context JSON"
+                        aria-label={getAdminEudrDdsCopy('aria_download_error_json', t)}
                       >
-                        Download error JSON
+                        {getAdminEudrDdsCopy('action_download_error_json', t)}
                       </Button>
                     </div>
                     <p className="mt-2 text-[11px] text-destructive/80">
-                      Downloads are saved by your browser to its default Downloads folder.
+                      {getAdminEudrDdsCopy('hint_download_folder', t)}
                     </p>
                     {eudrStatusErrorFilenamePreview && (
                       <div className="mt-1 flex items-center gap-2 text-[11px] text-destructive/80">
                         <span>
-                          Suggested filename: <span className="font-mono">{eudrStatusErrorFilenamePreview}</span>
+                          {getAdminEudrDdsCopy('hint_suggested_filename', t)}{' '}
+                          <span className="font-mono">{eudrStatusErrorFilenamePreview}</span>
                         </span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => void handleCopyEudrStatusErrorFilename()}
-                          aria-label="Copy DDS status error export filename"
+                          aria-label={getAdminEudrDdsCopy('aria_copy_filename', t)}
                         >
-                          Copy filename
+                          {getAdminEudrDdsCopy('action_copy_filename', t)}
                         </Button>
                       </div>
                     )}
                     {eudrStatusErrorFilenamePreview && (
                       <p className="mt-1 text-[11px] text-destructive/80">
-                        Note: <span className="font-mono">{EUDR_DDS_STATUS_ERROR_FILENAME_TIMESTAMP_TOKEN}</span> is replaced at
-                        download time.
+                        {getAdminEudrDdsCopy('hint_timestamp_token', t, {
+                          token: EUDR_DDS_STATUS_ERROR_FILENAME_TIMESTAMP_TOKEN,
+                        })}
                       </p>
                     )}
                   </div>
                 )}
                 {eudrStatusHintMessage && (
                   <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
-                    <span className="font-medium">Retry + Escalation Hint:</span> {eudrStatusHintMessage}
+                    <span className="font-medium">{getAdminEudrDdsCopy('hint_retry', t)}</span> {eudrStatusHintMessage}
                   </div>
                 )}
                 {eudrStatusResult && (
                   <div className="mt-3 rounded-md border bg-muted/20 p-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <div className="text-xs text-muted-foreground">
-                        Last status check: {new Date(eudrStatusResult.checkedAt).toLocaleString()} -{' '}
-                        {eudrStatusResult.referenceNumber} (HTTP {eudrStatusResult.statusCode})
+                        {getAdminEudrDdsCopy('status_last_check', t, {
+                          checkedAt: new Date(eudrStatusResult.checkedAt).toLocaleString(),
+                          referenceNumber: eudrStatusResult.referenceNumber,
+                          statusCode: eudrStatusResult.statusCode,
+                        })}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => void handleCopyEudrStatusPayload()}>
-                          Copy payload
+                          {getAdminEudrDdsCopy('action_copy_payload', t)}
                         </Button>
                         <Button variant="outline" size="sm" onClick={handleDownloadEudrStatusPayload}>
-                          Download JSON
+                          {getAdminEudrDdsCopy('action_download_json', t)}
                         </Button>
                       </div>
                     </div>
@@ -1663,9 +1682,11 @@ export default function AdminPage() {
                 )}
               </div>
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Integration Webhook Registrations</h4>
+                <h4 className="text-sm font-medium">{getAdminWebhookCopy('title_registrations', t)}</h4>
               </div>
-              <div className="mb-3 text-sm text-muted-foreground">{totalWebhookEvents} registered webhook event(s)</div>
+              <div className="mb-3 text-sm text-muted-foreground">
+                {getAdminWebhookCopy('count_registrations', t, { count: totalWebhookEvents })}
+              </div>
               {webhookError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   {webhookError}
@@ -1675,24 +1696,24 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Webhook</TableHead>
-                      <TableHead>Endpoint</TableHead>
-                      <TableHead>Policy</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_webhook', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_endpoint', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_policy', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isWebhookLoading && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-muted-foreground">
-                          Loading integration webhooks...
+                          {getAdminWebhookCopy('loading_registrations', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isWebhookLoading && webhookEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={4} className="text-muted-foreground">
-                          No integration webhooks captured for this tenant yet.
+                          {getAdminWebhookCopy('empty_registrations', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1720,7 +1741,10 @@ export default function AdminPage() {
               {!isWebhookLoading && totalWebhookEvents > webhookPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {webhookPage} of {totalWebhookPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: webhookPage,
+                      totalPages: totalWebhookPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1729,7 +1753,7 @@ export default function AdminPage() {
                       disabled={webhookPage <= 1}
                       onClick={() => setWebhookPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -1737,7 +1761,7 @@ export default function AdminPage() {
                       disabled={webhookPage >= totalWebhookPages}
                       onClick={() => setWebhookPage((page) => Math.min(totalWebhookPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -1745,9 +1769,11 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Webhook Delivery Evidence</h4>
+                <h4 className="text-sm font-medium">{getAdminWebhookCopy('title_delivery', t)}</h4>
                 <div className="text-xs text-muted-foreground">
-                  {selectedWebhookId ? `Selected webhook: ${selectedWebhookId}` : 'Select a webhook row to inspect deliveries'}
+                  {selectedWebhookId
+                    ? getAdminWebhookCopy('selected_webhook', t, { webhookId: selectedWebhookId })
+                    : getAdminWebhookCopy('select_webhook_hint', t)}
                 </div>
               </div>
               {webhookDeliveryError && (
@@ -1759,32 +1785,32 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Delivery</TableHead>
-                      <TableHead>Attempt</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_delivery', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_attempt', t)}</TableHead>
+                      <TableHead>{getAdminWebhookCopy('table_status', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isWebhookDeliveryLoading && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-muted-foreground">
-                          Loading webhook delivery evidence...
+                          {getAdminWebhookCopy('loading_delivery', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isWebhookDeliveryLoading && !selectedWebhookId && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-muted-foreground">
-                          Select a webhook registration to load immutable delivery evidence.
+                          {getAdminWebhookCopy('empty_no_selection', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isWebhookDeliveryLoading && selectedWebhookId && webhookDeliveryEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-muted-foreground">
-                          No delivery evidence captured for this webhook yet.
+                          {getAdminWebhookCopy('empty_delivery', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1810,7 +1836,10 @@ export default function AdminPage() {
               {!isWebhookDeliveryLoading && selectedWebhookId && totalWebhookDeliveryEvents > webhookDeliveryPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {webhookDeliveryPage} of {totalWebhookDeliveryPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: webhookDeliveryPage,
+                      totalPages: totalWebhookDeliveryPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1819,7 +1848,7 @@ export default function AdminPage() {
                       disabled={webhookDeliveryPage <= 1}
                       onClick={() => setWebhookDeliveryPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -1827,7 +1856,7 @@ export default function AdminPage() {
                       disabled={webhookDeliveryPage >= totalWebhookDeliveryPages}
                       onClick={() => setWebhookDeliveryPage((page) => Math.min(totalWebhookDeliveryPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -1835,10 +1864,10 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Filing Activity</h4>
+                <h4 className="text-sm font-medium">{getAdminDiagnosticsCopy('section_filing', t)}</h4>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleFilingCsv}>
-                    Export CSV
+                    {getAdminDiagnosticsLabel('export_csv', t)}
                   </Button>
                   <Button
                     variant="outline"
@@ -1846,7 +1875,7 @@ export default function AdminPage() {
                     onClick={() => void handleFilingAllCsv()}
                     disabled={!dashboardSummary?.readiness.canExportDetailed}
                   >
-                    Export All CSV
+                    {getAdminDiagnosticsCopy('export_all_csv', t)}
                   </Button>
                 </div>
               </div>
@@ -1859,16 +1888,16 @@ export default function AdminPage() {
                     setFilingPage(1);
                   }}
                 >
-                  <option value="all">All phases</option>
-                  <option value="generation_requested">Generation requested</option>
-                  <option value="generation_generated">Generation generated</option>
-                  <option value="submission_requested">Submission requested</option>
-                  <option value="submission_accepted">Submission accepted</option>
-                  <option value="submission_replayed">Submission replayed</option>
+                  <option value="all">{getAdminFilingPhaseFilterLabel('all', t)}</option>
+                  <option value="generation_requested">{getAdminFilingPhaseFilterLabel('generation_requested', t)}</option>
+                  <option value="generation_generated">{getAdminFilingPhaseFilterLabel('generation_generated', t)}</option>
+                  <option value="submission_requested">{getAdminFilingPhaseFilterLabel('submission_requested', t)}</option>
+                  <option value="submission_accepted">{getAdminFilingPhaseFilterLabel('submission_accepted', t)}</option>
+                  <option value="submission_replayed">{getAdminFilingPhaseFilterLabel('submission_replayed', t)}</option>
                 </select>
               </div>
               <div className="mb-3 text-sm text-muted-foreground">
-                {totalFilingEvents} matching filing activity event(s)
+                {getAdminDiagnosticsCopy('count_filing', t, { count: totalFilingEvents })}
               </div>
               {filingError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1879,26 +1908,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Package</TableHead>
-                      <TableHead>Idempotency</TableHead>
-                      <TableHead>TRACES Ref</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_package', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_idempotency', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_traces_ref', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isFilingLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading filing activity...
+                          {getAdminDiagnosticsCopy('loading_filing', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isFilingLoading && filingEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No filing activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_filing', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1909,7 +1938,7 @@ export default function AdminPage() {
                             {new Date(event.timestamp).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? 'unknown'}
+                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? getAdminDiagnosticsCopy('unknown_actor', t)}
                           </TableCell>
                           <TableCell className="text-sm">
                             <Badge variant="outline" className="text-xs">
@@ -1927,7 +1956,10 @@ export default function AdminPage() {
               {!isFilingLoading && totalFilingEvents > filingPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {filingPage} of {totalFilingPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: filingPage,
+                      totalPages: totalFilingPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1936,7 +1968,7 @@ export default function AdminPage() {
                       disabled={filingPage <= 1}
                       onClick={() => setFilingPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -1944,7 +1976,7 @@ export default function AdminPage() {
                       disabled={filingPage >= totalFilingPages}
                       onClick={() => setFilingPage((page) => Math.min(totalFilingPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -1952,7 +1984,7 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Chat Thread Activity</h4>
+                <h4 className="text-sm font-medium">{getAdminDiagnosticsCopy('section_chat', t)}</h4>
               </div>
               <div className="mb-3 grid gap-2 md:grid-cols-1">
                 <select
@@ -1965,17 +1997,17 @@ export default function AdminPage() {
                     setChatPage(1);
                   }}
                 >
-                  <option value="all">All phases</option>
-                  <option value="created">Thread created</option>
-                  <option value="posted">Message posted</option>
-                  <option value="replayed">Message replayed</option>
-                  <option value="resolved">Thread resolved</option>
-                  <option value="reopened">Thread reopened</option>
-                  <option value="archived">Thread archived</option>
+                  <option value="all">{getAdminChatPhaseFilterLabel('all', t)}</option>
+                  <option value="created">{getAdminChatPhaseFilterLabel('created', t)}</option>
+                  <option value="posted">{getAdminChatPhaseFilterLabel('posted', t)}</option>
+                  <option value="replayed">{getAdminChatPhaseFilterLabel('replayed', t)}</option>
+                  <option value="resolved">{getAdminChatPhaseFilterLabel('resolved', t)}</option>
+                  <option value="reopened">{getAdminChatPhaseFilterLabel('reopened', t)}</option>
+                  <option value="archived">{getAdminChatPhaseFilterLabel('archived', t)}</option>
                 </select>
               </div>
               <div className="mb-3 text-sm text-muted-foreground">
-                {totalChatThreadEvents} matching chat-thread event(s)
+                {getAdminDiagnosticsCopy('count_chat', t, { count: totalChatThreadEvents })}
               </div>
               {chatThreadError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -1986,26 +2018,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Thread</TableHead>
-                      <TableHead>Record</TableHead>
-                      <TableHead>Message</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_thread', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_record', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_message', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isChatThreadLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading chat-thread activity...
+                          {getAdminDiagnosticsCopy('loading_chat', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isChatThreadLoading && chatThreadEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No chat-thread activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_chat', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2016,7 +2048,7 @@ export default function AdminPage() {
                             {new Date(event.timestamp).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.actorLabel ?? event.payload.actorUserId ?? event.user_id ?? 'unknown'}
+                            {event.actorLabel ?? event.payload.actorUserId ?? event.user_id ?? getAdminDiagnosticsCopy('unknown_actor', t)}
                           </TableCell>
                           <TableCell className="text-sm">
                             <Badge variant="outline" className="text-xs">
@@ -2034,7 +2066,10 @@ export default function AdminPage() {
               {!isChatThreadLoading && totalChatThreadEvents > chatPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {chatPage} of {totalChatPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: chatPage,
+                      totalPages: totalChatPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2043,7 +2078,7 @@ export default function AdminPage() {
                       disabled={chatPage <= 1}
                       onClick={() => setChatPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -2051,7 +2086,7 @@ export default function AdminPage() {
                       disabled={chatPage >= totalChatPages}
                       onClick={() => setChatPage((page) => Math.min(totalChatPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -2059,7 +2094,7 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Workflow Activity</h4>
+                <h4 className="text-sm font-medium">{getAdminDiagnosticsCopy('section_workflow', t)}</h4>
               </div>
               <div className="mb-3 grid gap-2 md:grid-cols-2">
                 <select
@@ -2079,13 +2114,13 @@ export default function AdminPage() {
                     setWorkflowPage(1);
                   }}
                 >
-                  <option value="all">All phases</option>
-                  <option value="template_created">Template created</option>
-                  <option value="stage_transitioned">Stage transitioned</option>
-                  <option value="sla_warning">SLA warning</option>
-                  <option value="sla_breached">SLA breached</option>
-                  <option value="sla_escalated">SLA escalated</option>
-                  <option value="sla_recovered">SLA recovered</option>
+                  <option value="all">{getAdminWorkflowPhaseFilterLabel('all', t)}</option>
+                  <option value="template_created">{getAdminWorkflowPhaseFilterLabel('template_created', t)}</option>
+                  <option value="stage_transitioned">{getAdminWorkflowPhaseFilterLabel('stage_transitioned', t)}</option>
+                  <option value="sla_warning">{getAdminWorkflowPhaseFilterLabel('sla_warning', t)}</option>
+                  <option value="sla_breached">{getAdminWorkflowPhaseFilterLabel('sla_breached', t)}</option>
+                  <option value="sla_escalated">{getAdminWorkflowPhaseFilterLabel('sla_escalated', t)}</option>
+                  <option value="sla_recovered">{getAdminWorkflowPhaseFilterLabel('sla_recovered', t)}</option>
                 </select>
                 <select
                   className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -2097,15 +2132,15 @@ export default function AdminPage() {
                     setWorkflowPage(1);
                   }}
                 >
-                  <option value="all">All SLA states</option>
-                  <option value="on_track">On track</option>
-                  <option value="warning">Warning</option>
-                  <option value="breached">Breached</option>
-                  <option value="escalated">Escalated</option>
+                  <option value="all">{getAdminWorkflowSlaFilterLabel('all', t)}</option>
+                  <option value="on_track">{getAdminWorkflowSlaFilterLabel('on_track', t)}</option>
+                  <option value="warning">{getAdminWorkflowSlaFilterLabel('warning', t)}</option>
+                  <option value="breached">{getAdminWorkflowSlaFilterLabel('breached', t)}</option>
+                  <option value="escalated">{getAdminWorkflowSlaFilterLabel('escalated', t)}</option>
                 </select>
               </div>
               <div className="mb-3 text-sm text-muted-foreground">
-                {totalWorkflowEvents} matching workflow event(s)
+                {getAdminDiagnosticsCopy('count_workflow', t, { count: totalWorkflowEvents })}
               </div>
               {workflowError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -2116,26 +2151,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Template</TableHead>
-                      <TableHead>Stage</TableHead>
-                      <TableHead>SLA</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_template', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_stage', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_sla', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isWorkflowLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading workflow activity...
+                          {getAdminDiagnosticsCopy('loading_workflow', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isWorkflowLoading && workflowEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No workflow activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_workflow', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2146,7 +2181,7 @@ export default function AdminPage() {
                             {new Date(event.timestamp).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.actorLabel ?? event.payload.actorUserId ?? event.user_id ?? 'unknown'}
+                            {event.actorLabel ?? event.payload.actorUserId ?? event.user_id ?? getAdminDiagnosticsCopy('unknown_actor', t)}
                           </TableCell>
                           <TableCell className="text-sm">
                             <Badge variant="outline" className="text-xs">
@@ -2164,7 +2199,10 @@ export default function AdminPage() {
               {!isWorkflowLoading && totalWorkflowEvents > workflowPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {workflowPage} of {totalWorkflowPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: workflowPage,
+                      totalPages: totalWorkflowPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2173,7 +2211,7 @@ export default function AdminPage() {
                       disabled={workflowPage <= 1}
                       onClick={() => setWorkflowPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -2181,7 +2219,7 @@ export default function AdminPage() {
                       disabled={workflowPage >= totalWorkflowPages}
                       onClick={() => setWorkflowPage((page) => Math.min(totalWorkflowPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -2189,10 +2227,10 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Risk Score Activity</h4>
+                <h4 className="text-sm font-medium">{getAdminDiagnosticsCopy('section_risk_score', t)}</h4>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleRiskScoreCsv}>
-                    Export CSV
+                    {getAdminDiagnosticsLabel('export_csv', t)}
                   </Button>
                   <Button
                     variant="outline"
@@ -2200,7 +2238,7 @@ export default function AdminPage() {
                     onClick={() => void handleRiskScoreAllCsv()}
                     disabled={!dashboardSummary?.readiness.canExportDetailed}
                   >
-                    Export All CSV
+                    {getAdminDiagnosticsCopy('export_all_csv', t)}
                   </Button>
                 </div>
               </div>
@@ -2213,12 +2251,12 @@ export default function AdminPage() {
                     setRiskScorePage(1);
                   }}
                 >
-                  <option value="all">All phases</option>
-                  <option value="requested">Requested</option>
-                  <option value="evaluated">Evaluated</option>
-                  <option value="low">Low band event</option>
-                  <option value="medium">Medium band event</option>
-                  <option value="high">High band event</option>
+                  <option value="all">{getAdminRiskScorePhaseFilterLabel('all', t)}</option>
+                  <option value="requested">{getAdminRiskScorePhaseFilterLabel('requested', t)}</option>
+                  <option value="evaluated">{getAdminRiskScorePhaseFilterLabel('evaluated', t)}</option>
+                  <option value="low">{getAdminRiskScorePhaseFilterLabel('low', t)}</option>
+                  <option value="medium">{getAdminRiskScorePhaseFilterLabel('medium', t)}</option>
+                  <option value="high">{getAdminRiskScorePhaseFilterLabel('high', t)}</option>
                 </select>
                 <select
                   className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -2228,14 +2266,14 @@ export default function AdminPage() {
                     setRiskScorePage(1);
                   }}
                 >
-                  <option value="all">All bands</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="all">{getAdminRiskScoreBandFilterLabel('all', t)}</option>
+                  <option value="low">{getAdminRiskScoreBandFilterLabel('low', t)}</option>
+                  <option value="medium">{getAdminRiskScoreBandFilterLabel('medium', t)}</option>
+                  <option value="high">{getAdminRiskScoreBandFilterLabel('high', t)}</option>
                 </select>
               </div>
               <div className="mb-3 text-sm text-muted-foreground">
-                {totalRiskScoreEvents} matching risk score event(s)
+                {getAdminDiagnosticsCopy('count_risk_score', t, { count: totalRiskScoreEvents })}
               </div>
               {riskScoreError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -2246,26 +2284,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Package</TableHead>
-                      <TableHead>Band</TableHead>
-                      <TableHead>Score</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_package', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_band', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_score', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isRiskScoreLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading risk score activity...
+                          {getAdminDiagnosticsCopy('loading_risk_score', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isRiskScoreLoading && riskScoreEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No risk score activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_risk_score', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2276,7 +2314,7 @@ export default function AdminPage() {
                             {new Date(event.timestamp).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? 'unknown'}
+                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? getAdminDiagnosticsCopy('unknown_actor', t)}
                           </TableCell>
                           <TableCell className="text-sm">
                             <Badge variant="outline" className="text-xs">
@@ -2294,7 +2332,10 @@ export default function AdminPage() {
               {!isRiskScoreLoading && totalRiskScoreEvents > riskScorePageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {riskScorePage} of {totalRiskScorePages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: riskScorePage,
+                      totalPages: totalRiskScorePages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2303,7 +2344,7 @@ export default function AdminPage() {
                       disabled={riskScorePage <= 1}
                       onClick={() => setRiskScorePage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -2311,7 +2352,7 @@ export default function AdminPage() {
                       disabled={riskScorePage >= totalRiskScorePages}
                       onClick={() => setRiskScorePage((page) => Math.min(totalRiskScorePages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -2319,10 +2360,10 @@ export default function AdminPage() {
             </div>
             <div className="mt-6">
               <div className="mb-2 flex items-center justify-between">
-                <h4 className="text-sm font-medium">Assignment Export Activity</h4>
+                <h4 className="text-sm font-medium">{getAdminDiagnosticsCopy('section_assignment_export', t)}</h4>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleAssignmentExportCsv}>
-                    Export CSV
+                    {getAdminDiagnosticsLabel('export_csv', t)}
                   </Button>
                   <Button
                     variant="outline"
@@ -2330,7 +2371,7 @@ export default function AdminPage() {
                     onClick={() => void handleAssignmentExportAllCsv()}
                     disabled={!dashboardSummary?.readiness.canExportDetailed}
                   >
-                    Export All CSV
+                    {getAdminDiagnosticsCopy('export_all_csv', t)}
                   </Button>
                 </div>
               </div>
@@ -2343,10 +2384,10 @@ export default function AdminPage() {
                     setAssignmentExportPage(1);
                   }}
                 >
-                  <option value="all">All phases</option>
-                  <option value="requested">Requested</option>
-                  <option value="succeeded">Succeeded</option>
-                  <option value="failed">Failed</option>
+                  <option value="all">{getAdminAssignmentPhaseFilterLabel('all', t)}</option>
+                  <option value="requested">{getAdminAssignmentPhaseFilterLabel('requested', t)}</option>
+                  <option value="succeeded">{getAdminAssignmentPhaseFilterLabel('succeeded', t)}</option>
+                  <option value="failed">{getAdminAssignmentPhaseFilterLabel('failed', t)}</option>
                 </select>
                 <select
                   className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -2356,14 +2397,14 @@ export default function AdminPage() {
                     setAssignmentExportPage(1);
                   }}
                 >
-                  <option value="all">All statuses</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="all">{getAdminAssignmentStatusFilterLabel('all', t)}</option>
+                  <option value="active">{getAdminAssignmentStatusFilterLabel('active', t)}</option>
+                  <option value="completed">{getAdminAssignmentStatusFilterLabel('completed', t)}</option>
+                  <option value="cancelled">{getAdminAssignmentStatusFilterLabel('cancelled', t)}</option>
                 </select>
               </div>
               <div className="mb-3 text-sm text-muted-foreground">
-                {totalAssignmentExportEvents} matching assignment export event(s)
+                {getAdminDiagnosticsCopy('count_assignment_export', t, { count: totalAssignmentExportEvents })}
               </div>
               {assignmentExportError && (
                 <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -2374,26 +2415,26 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Captured At</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Phase</TableHead>
-                      <TableHead>Filters</TableHead>
-                      <TableHead>Rows</TableHead>
-                      <TableHead>Error</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_captured_at', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_actor', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_phase', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_filters', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_rows', t)}</TableHead>
+                      <TableHead>{getAdminDiagnosticsCopy('table_error', t)}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isAssignmentExportLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading assignment export activity...
+                          {getAdminDiagnosticsCopy('loading_assignment_export', t)}
                         </TableCell>
                       </TableRow>
                     )}
                     {!isAssignmentExportLoading && assignmentExportEvents.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          No assignment export activity captured for this tenant yet.
+                          {getAdminDiagnosticsCopy('empty_assignment_export', t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2404,7 +2445,7 @@ export default function AdminPage() {
                             {new Date(event.timestamp).toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? 'unknown'}
+                            {event.actorLabel ?? event.payload.exportedBy ?? event.user_id ?? getAdminDiagnosticsCopy('unknown_actor', t)}
                           </TableCell>
                           <TableCell className="text-sm">
                             <Badge variant="outline" className="text-xs">
@@ -2425,7 +2466,10 @@ export default function AdminPage() {
               {!isAssignmentExportLoading && totalAssignmentExportEvents > assignmentExportPageSize && (
                 <div className="mt-3 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Page {assignmentExportPage} of {totalAssignmentExportPages}
+                    {getAdminDiagnosticsCopy('pagination_page', t, {
+                      page: assignmentExportPage,
+                      totalPages: totalAssignmentExportPages,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -2434,7 +2478,7 @@ export default function AdminPage() {
                       disabled={assignmentExportPage <= 1}
                       onClick={() => setAssignmentExportPage((page) => Math.max(1, page - 1))}
                     >
-                      Previous
+                      {getAdminDiagnosticsCopy('pagination_previous', t)}
                     </Button>
                     <Button
                       variant="outline"
@@ -2442,7 +2486,7 @@ export default function AdminPage() {
                       disabled={assignmentExportPage >= totalAssignmentExportPages}
                       onClick={() => setAssignmentExportPage((page) => Math.min(totalAssignmentExportPages, page + 1))}
                     >
-                      Next
+                      {getAdminDiagnosticsCopy('pagination_next', t)}
                     </Button>
                   </div>
                 </div>
@@ -2451,7 +2495,10 @@ export default function AdminPage() {
             {!isTelemetryLoading && totalTelemetryEvents > telemetryPageSize && (
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalTelemetryPages}
+                  {getAdminDiagnosticsCopy('pagination_page', t, {
+                    page: currentPage,
+                    totalPages: totalTelemetryPages,
+                  })}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -2460,7 +2507,7 @@ export default function AdminPage() {
                     disabled={currentPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   >
-                    Previous
+                    {getAdminDiagnosticsCopy('pagination_previous', t)}
                   </Button>
                   <Button
                     variant="outline"
@@ -2468,7 +2515,7 @@ export default function AdminPage() {
                     disabled={currentPage >= totalTelemetryPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalTelemetryPages, p + 1))}
                   >
-                    Next
+                    {getAdminDiagnosticsCopy('pagination_next', t)}
                   </Button>
                 </div>
               </div>
@@ -2487,7 +2534,7 @@ export default function AdminPage() {
             }`}
           >
             <Building2 className="w-4 h-4 inline mr-2" />
-            Organizations
+            {getAdminTabLabel('organizations', t)}
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -2498,7 +2545,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="w-4 h-4 inline mr-2" />
-            Users
+            {getAdminTabLabel('users', t)}
           </button>
           <button
             onClick={() => setActiveTab('roles')}
@@ -2509,7 +2556,7 @@ export default function AdminPage() {
             }`}
           >
             <Shield className="w-4 h-4 inline mr-2" />
-            Roles & Permissions
+            {getAdminTabLabel('roles', t)}
           </button>
         </div>
 
@@ -2517,8 +2564,8 @@ export default function AdminPage() {
         {activeTab === 'organizations' && (
           <Card>
             <CardHeader>
-              <CardTitle>Organizations</CardTitle>
-              <CardDescription>Manage tenant organizations in the system</CardDescription>
+              <CardTitle>{getAdminSectionCopy('organizations', 'title', t)}</CardTitle>
+              <CardDescription>{getAdminSectionCopy('organizations', 'subtitle', t)}</CardDescription>
             </CardHeader>
             <CardContent>
               {isOrgFormOpen && (
@@ -2526,7 +2573,7 @@ export default function AdminPage() {
                   <div className="grid gap-3 md:grid-cols-4">
                     <input
                       className="rounded-md border bg-background px-3 py-2 text-sm"
-                      placeholder="Organization name"
+                      placeholder={getAdminSectionCopy('organizations', 'create_placeholder', t)}
                       value={orgForm.name}
                       onChange={(e) => setOrgForm((prev) => ({ ...prev, name: e.target.value }))}
                     />
@@ -2535,19 +2582,19 @@ export default function AdminPage() {
                       value={orgForm.type}
                       onChange={(e) => setOrgForm((prev) => ({ ...prev, type: e.target.value as AdminOrgType }))}
                     >
-                      {Object.keys(orgTypeLabels).map((type) => (
+                      {ADMIN_ORG_TYPES.map((type) => (
                         <option key={type} value={type}>
-                          {orgTypeLabels[type as AdminOrgType]}
+                          {getAdminOrgTypeLabel(type, t)}
                         </option>
                       ))}
                     </select>
                     <input
                       className="rounded-md border bg-background px-3 py-2 text-sm"
-                      placeholder="Country code"
+                      placeholder={getAdminSectionCopy('organizations', 'country_placeholder', t)}
                       value={orgForm.country}
                       onChange={(e) => setOrgForm((prev) => ({ ...prev, country: e.target.value }))}
                     />
-                    <Button onClick={handleCreateOrganization}>Create</Button>
+                    <Button onClick={handleCreateOrganization}>{getAdminActionLabel('create', t)}</Button>
                   </div>
                 </div>
               )}
@@ -2562,11 +2609,11 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Users</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
+                      <TableHead>{getAdminOrganizationsTableColumnLabel('organization', t)}</TableHead>
+                      <TableHead>{getAdminOrganizationsTableColumnLabel('type', t)}</TableHead>
+                      <TableHead>{getAdminOrganizationsTableColumnLabel('users', t)}</TableHead>
+                      <TableHead>{getAdminOrganizationsTableColumnLabel('status', t)}</TableHead>
+                      <TableHead>{getAdminOrganizationsTableColumnLabel('created', t)}</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2574,7 +2621,7 @@ export default function AdminPage() {
                     {isLoading && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-muted-foreground">
-                          Loading organizations...
+                          {getAdminOrganizationsLoadingLabel(t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2588,13 +2635,13 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">
-                            {orgTypeLabels[org.type]}
+                            {getAdminOrgTypeLabel(org.type, t)}
                           </Badge>
                         </TableCell>
                         <TableCell>{usersByOrg.get(org.id) ?? 0}</TableCell>
                         <TableCell>
                           <span className={`text-xs font-medium px-2 py-1 rounded ${statusColors[org.status]}`}>
-                            {org.status}
+                            {getAdminOrgStatusLabel(org.status, t)}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -2614,8 +2661,8 @@ export default function AdminPage() {
         {activeTab === 'users' && (
           <Card>
             <CardHeader>
-              <CardTitle>Users</CardTitle>
-              <CardDescription>Manage user accounts and access</CardDescription>
+              <CardTitle>{getAdminSectionCopy('users', 'title', t)}</CardTitle>
+              <CardDescription>{getAdminUsersSubtitle(t)}</CardDescription>
             </CardHeader>
             <CardContent>
               {isInviteFormOpen && (
@@ -2623,13 +2670,13 @@ export default function AdminPage() {
                   <div className="grid gap-3 md:grid-cols-5">
                     <input
                       className="rounded-md border bg-background px-3 py-2 text-sm"
-                      placeholder="Full name"
+                      placeholder={getAdminInvitePlaceholder('name', t)}
                       value={inviteForm.name}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))}
                     />
                     <input
                       className="rounded-md border bg-background px-3 py-2 text-sm"
-                      placeholder="Email"
+                      placeholder={getAdminInvitePlaceholder('email', t)}
                       value={inviteForm.email}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
                     />
@@ -2638,7 +2685,7 @@ export default function AdminPage() {
                       value={inviteForm.organisation_id}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, organisation_id: e.target.value }))}
                     >
-                      <option value="">Select organization</option>
+                      <option value="">{getAdminInvitePlaceholder('select_org', t)}</option>
                       {organizations.map((org) => (
                         <option key={org.id} value={org.id}>
                           {org.name}
@@ -2650,13 +2697,13 @@ export default function AdminPage() {
                       value={inviteForm.role}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value as TenantRole }))}
                     >
-                      {Object.keys(roleLabels).map((role) => (
+                      {TENANT_ROLES.map((role) => (
                         <option key={role} value={role}>
-                          {roleLabels[role as TenantRole]}
+                          {getAdminTenantRoleLabel(role, t)}
                         </option>
                       ))}
                     </select>
-                    <Button onClick={handleInviteUser}>Invite</Button>
+                    <Button onClick={handleInviteUser}>{getAdminActionLabel('invite', t)}</Button>
                   </div>
                 </div>
               )}
@@ -2664,12 +2711,12 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('user', t)}</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('email', t)}</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('role', t)}</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('organization', t)}</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('status', t)}</TableHead>
+                      <TableHead>{getAdminUsersTableColumnLabel('last_login', t)}</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2677,7 +2724,7 @@ export default function AdminPage() {
                     {isLoading && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-muted-foreground">
-                          Loading users...
+                          {getAdminUsersLoadingLabel(t)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -2698,9 +2745,9 @@ export default function AdminPage() {
                             value={user.roles[0]}
                             onChange={(e) => void handleRoleChange(user.id, e.target.value as TenantRole)}
                           >
-                            {Object.keys(roleLabels).map((role) => (
+                            {TENANT_ROLES.map((role) => (
                               <option key={role} value={role}>
-                                {roleLabels[role as TenantRole]}
+                                {getAdminTenantRoleLabel(role, t)}
                               </option>
                             ))}
                           </select>
@@ -2714,9 +2761,11 @@ export default function AdminPage() {
                             value={user.status}
                             onChange={(e) => void handleStatusChange(user.id, e.target.value as AdminStatus)}
                           >
-                            <option value="ACTIVE">ACTIVE</option>
-                            <option value="PENDING">PENDING</option>
-                            <option value="SUSPENDED">SUSPENDED</option>
+                            {ADMIN_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {getAdminOrgStatusLabel(status, t)}
+                              </option>
+                            ))}
                           </select>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -2736,8 +2785,8 @@ export default function AdminPage() {
         {activeTab === 'roles' && (
           <Card>
             <CardHeader>
-              <CardTitle>Roles & Permissions</CardTitle>
-              <CardDescription>Configure role-based access control</CardDescription>
+              <CardTitle>{getAdminSectionCopy('roles', 'title', t)}</CardTitle>
+              <CardDescription>{getAdminRolesSubtitle(t)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {[
@@ -2750,14 +2799,14 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-primary" />
-                      <span className="font-medium">{roleLabels[item.role as TenantRole] || item.role}</span>
+                      <span className="font-medium">{getAdminTenantRoleLabel(item.role as TenantRole, t)}</span>
                     </div>
-                    <Badge variant="outline">Canonical</Badge>
+                    <Badge variant="outline">{getAdminRolesCanonicalBadge(t)}</Badge>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {item.permissions.map((perm) => (
                       <Badge key={perm} variant="secondary" className="text-xs">
-                        {perm}
+                        {getAdminRbacCommercialPermissionLabel(perm, t)}
                       </Badge>
                     ))}
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,25 +14,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { WizardProgress } from '@/components/onboarding/wizard-progress';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getContactsOrganizationWizardLabel,
+  getOrganizationSizeLabel,
+  getOrganizationTypeLabel,
+} from '@/lib/workflow-terminology-labels';
 import { Check, ArrowLeft, ArrowRight, Building2, MapPin, FileText, Users } from 'lucide-react';
 
-const ORG_TYPES = [
-  { value: 'cooperative', label: 'Cooperative' },
-  { value: 'exporter', label: 'Exporter' },
-  { value: 'importer', label: 'Importer' },
-  { value: 'processor', label: 'Processor' },
-  { value: 'trader', label: 'Trader' },
-  { value: 'other', label: 'Other' },
-];
-
-const ORG_SIZE = [
-  { value: 'micro', label: 'Micro (1-9 employees)' },
-  { value: 'small', label: 'Small (10-49 employees)' },
-  { value: 'medium', label: 'Medium (50-249 employees)' },
-  { value: 'large', label: 'Large (250+ employees)' },
-];
-
-const STEPS = ['Basic Info', 'Details', 'Location', 'Review'];
+const ORG_TYPES = ['cooperative', 'exporter', 'importer', 'processor', 'trader', 'other'] as const;
+const ORG_SIZE = ['micro', 'small', 'medium', 'large'] as const;
 
 interface OrganizationDraft {
   name: string;
@@ -56,9 +47,21 @@ interface AddOrganizationWizardProps {
 }
 
 export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationWizardProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const steps = useMemo(
+    () => [
+      getContactsOrganizationWizardLabel('step_basic', t),
+      getContactsOrganizationWizardLabel('step_details', t),
+      getContactsOrganizationWizardLabel('step_location', t),
+      getContactsOrganizationWizardLabel('step_review', t),
+    ],
+    [t],
+  );
 
   const [draft, setDraft] = useState<OrganizationDraft>({
     name: '',
@@ -105,7 +108,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
     try {
       await onComplete(draft);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create organization.');
+      setError(err instanceof Error ? err.message : getContactsOrganizationWizardLabel('error_create', t));
     } finally {
       setIsSubmitting(false);
     }
@@ -113,7 +116,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
 
   return (
     <div className="space-y-6">
-      <WizardProgress currentStep={step} totalSteps={4} steps={STEPS} />
+      <WizardProgress currentStep={step} totalSteps={4} steps={steps} />
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -129,45 +132,42 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 <Building2 className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Enter the organization&apos;s core details</CardDescription>
+                <CardTitle>{getContactsOrganizationWizardLabel('basic_title', t)}</CardTitle>
+                <CardDescription>{getContactsOrganizationWizardLabel('basic_subtitle', t)}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">
-                Organization Name <span className="text-destructive">*</span>
+                {getContactsOrganizationWizardLabel('field_name', t)} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
                 value={draft.name}
                 onChange={(e) => updateDraft('name', e.target.value)}
-                placeholder="Cooperativa Agrícola XYZ"
+                placeholder="Cooperativa Agricola XYZ"
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="org_type">Organization Type</Label>
-                <Select
-                  value={draft.org_type}
-                  onValueChange={(value) => updateDraft('org_type', value)}
-                >
+                <Label htmlFor="org_type">{getContactsOrganizationWizardLabel('field_type', t)}</Label>
+                <Select value={draft.org_type} onValueChange={(value) => updateDraft('org_type', value)}>
                   <SelectTrigger id="org_type">
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue placeholder={getContactsOrganizationWizardLabel('placeholder_select_type', t)} />
                   </SelectTrigger>
                   <SelectContent>
                     {ORG_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                      <SelectItem key={type} value={type}>
+                        {getOrganizationTypeLabel(type, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="registration_number">Registration Number</Label>
+                <Label htmlFor="registration_number">{getContactsOrganizationWizardLabel('field_registration', t)}</Label>
                 <Input
                   id="registration_number"
                   value={draft.registration_number}
@@ -179,7 +179,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="primary_email">Primary Email</Label>
+                <Label htmlFor="primary_email">{getContactsOrganizationWizardLabel('field_email', t)}</Label>
                 <Input
                   id="primary_email"
                   type="email"
@@ -189,7 +189,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="primary_phone">Primary Phone</Label>
+                <Label htmlFor="primary_phone">{getContactsOrganizationWizardLabel('field_phone', t)}</Label>
                 <Input
                   id="primary_phone"
                   type="tel"
@@ -211,15 +211,15 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Organization Details</CardTitle>
-                <CardDescription>Add more information about the organization</CardDescription>
+                <CardTitle>{getContactsOrganizationWizardLabel('details_title', t)}</CardTitle>
+                <CardDescription>{getContactsOrganizationWizardLabel('details_subtitle', t)}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
+                <Label htmlFor="website">{getContactsOrganizationWizardLabel('field_website', t)}</Label>
                 <Input
                   id="website"
                   type="url"
@@ -229,15 +229,15 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="size">Organization Size</Label>
+                <Label htmlFor="size">{getContactsOrganizationWizardLabel('field_size', t)}</Label>
                 <Select value={draft.size} onValueChange={(value) => updateDraft('size', value)}>
                   <SelectTrigger id="size">
-                    <SelectValue placeholder="Select size" />
+                    <SelectValue placeholder={getContactsOrganizationWizardLabel('placeholder_select_size', t)} />
                   </SelectTrigger>
                   <SelectContent>
                     {ORG_SIZE.map((size) => (
-                      <SelectItem key={size.value} value={size.value}>
-                        {size.label}
+                      <SelectItem key={size} value={size}>
+                        {getOrganizationSizeLabel(size, t)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -246,29 +246,25 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="commodities">Commodities</Label>
+              <Label htmlFor="commodities">{getContactsOrganizationWizardLabel('field_commodities', t)}</Label>
               <Input
                 id="commodities"
                 value={draft.commodities}
                 onChange={(e) => updateDraft('commodities', e.target.value)}
                 placeholder="Coffee, Cocoa, Soy (comma-separated)"
               />
-              <p className="text-xs text-muted-foreground">
-                List the primary commodities this organization handles
-              </p>
+              <p className="text-xs text-muted-foreground">{getContactsOrganizationWizardLabel('hint_commodities', t)}</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="certifications">Certifications</Label>
+              <Label htmlFor="certifications">{getContactsOrganizationWizardLabel('field_certifications', t)}</Label>
               <Input
                 id="certifications"
                 value={draft.certifications}
                 onChange={(e) => updateDraft('certifications', e.target.value)}
                 placeholder="Fair Trade, Organic, Rainforest Alliance"
               />
-              <p className="text-xs text-muted-foreground">
-                List any relevant certifications (comma-separated)
-              </p>
+              <p className="text-xs text-muted-foreground">{getContactsOrganizationWizardLabel('hint_certifications', t)}</p>
             </div>
           </CardContent>
         </Card>
@@ -282,15 +278,15 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Location Information</CardTitle>
-                <CardDescription>Specify the organization&apos;s location</CardDescription>
+                <CardTitle>{getContactsOrganizationWizardLabel('location_title', t)}</CardTitle>
+                <CardDescription>{getContactsOrganizationWizardLabel('location_subtitle', t)}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="country">{getContactsOrganizationWizardLabel('field_country', t)}</Label>
                 <Input
                   id="country"
                   value={draft.country}
@@ -299,7 +295,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="region">Region / State</Label>
+                <Label htmlFor="region">{getContactsOrganizationWizardLabel('field_region', t)}</Label>
                 <Input
                   id="region"
                   value={draft.region}
@@ -310,7 +306,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Full Address</Label>
+              <Label htmlFor="address">{getContactsOrganizationWizardLabel('field_address', t)}</Label>
               <Textarea
                 id="address"
                 value={draft.address}
@@ -321,7 +317,7 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes</Label>
+              <Label htmlFor="notes">{getContactsOrganizationWizardLabel('field_notes', t)}</Label>
               <Textarea
                 id="notes"
                 value={draft.notes}
@@ -342,60 +338,58 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Review Organization</CardTitle>
-                <CardDescription>Verify the information before saving</CardDescription>
+                <CardTitle>{getContactsOrganizationWizardLabel('review_title', t)}</CardTitle>
+                <CardDescription>{getContactsOrganizationWizardLabel('review_subtitle', t)}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-border rounded-lg border border-border">
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Name</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_name', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.name || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Type</span>
-                <span className="text-sm capitalize sm:col-span-2">{draft.org_type}</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_type', t)}</span>
+                <span className="text-sm sm:col-span-2">{getOrganizationTypeLabel(draft.org_type as (typeof ORG_TYPES)[number], t)}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Registration</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_registration', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.registration_number || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Email</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_email', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.primary_email || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Phone</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_phone', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.primary_phone || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Website</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_website', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.website || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Size</span>
-                <span className="text-sm capitalize sm:col-span-2">
-                  {ORG_SIZE.find((s) => s.value === draft.size)?.label || '—'}
-                </span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_size', t)}</span>
+                <span className="text-sm sm:col-span-2">{getOrganizationSizeLabel(draft.size as (typeof ORG_SIZE)[number], t)}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Commodities</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_commodities', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.commodities || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Certifications</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_certifications', t)}</span>
                 <span className="text-sm sm:col-span-2">{draft.certifications || '—'}</span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
-                <span className="text-sm font-medium text-muted-foreground">Location</span>
+                <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_location', t)}</span>
                 <span className="text-sm sm:col-span-2">
                   {[draft.region, draft.country].filter(Boolean).join(', ') || '—'}
                 </span>
               </div>
               {draft.notes && (
                 <div className="grid gap-1 p-4 sm:grid-cols-3">
-                  <span className="text-sm font-medium text-muted-foreground">Notes</span>
+                  <span className="text-sm font-medium text-muted-foreground">{getContactsOrganizationWizardLabel('field_notes', t)}</span>
                   <span className="whitespace-pre-wrap text-sm sm:col-span-2">{draft.notes}</span>
                 </div>
               )}
@@ -406,20 +400,20 @@ export function AddOrganizationWizard({ onComplete, onCancel }: AddOrganizationW
 
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" onClick={step === 1 ? onCancel : handleBack}>
-          {step === 1 ? 'Cancel' : <><ArrowLeft className="mr-2 h-4 w-4" /> Back</>}
+          {step === 1 ? getContactsOrganizationWizardLabel('action_cancel', t) : <><ArrowLeft className="mr-2 h-4 w-4" /> {getContactsOrganizationWizardLabel('action_back', t)}</>}
         </Button>
 
         {step < 4 ? (
           <Button onClick={handleNext} disabled={!canProceed()}>
-            Next <ArrowRight className="ml-2 h-4 w-4" />
+            {getContactsOrganizationWizardLabel('action_next', t)} <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
-              'Saving...'
+              getContactsOrganizationWizardLabel('action_saving', t)
             ) : (
               <>
-                <Check className="mr-2 h-4 w-4" /> Save Organization
+                <Check className="mr-2 h-4 w-4" /> {getContactsOrganizationWizardLabel('action_save', t)}
               </>
             )}
           </Button>

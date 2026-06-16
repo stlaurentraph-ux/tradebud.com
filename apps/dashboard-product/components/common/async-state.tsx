@@ -1,7 +1,10 @@
 'use client';
 
+import { useContext } from 'react';
 import { AlertCircle, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LocaleContext } from '@/lib/locale-context';
+import { getAsyncStateShellCopy } from '@/lib/workflow-terminology-labels';
 
 interface AsyncStateProps {
   mode: 'loading' | 'error' | 'empty';
@@ -11,12 +14,15 @@ interface AsyncStateProps {
 }
 
 export function AsyncState({ mode, title, description, onRetry }: AsyncStateProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
   if (mode === 'loading') {
     return (
       <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{title ?? 'Loading...'}</span>
+          <span>{title ?? getAsyncStateShellCopy('loading', t)}</span>
         </div>
         {description ? <p className="mt-1 text-xs">{description}</p> : null}
       </div>
@@ -30,14 +36,14 @@ export function AsyncState({ mode, title, description, onRetry }: AsyncStateProp
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertCircle className="mt-0.5 h-4 w-4" />
             <div>
-              <p className="font-medium">{title ?? 'Something went wrong'}</p>
+              <p className="font-medium">{title ?? getAsyncStateShellCopy('error', t)}</p>
               {description ? <p className="text-xs text-destructive/80">{description}</p> : null}
             </div>
           </div>
           {onRetry ? (
             <Button size="sm" variant="outline" onClick={onRetry}>
               <RotateCcw className="mr-2 h-3.5 w-3.5" />
-              Retry
+              {getAsyncStateShellCopy('retry', t)}
             </Button>
           ) : null}
         </div>
@@ -47,9 +53,8 @@ export function AsyncState({ mode, title, description, onRetry }: AsyncStateProp
 
   return (
     <div className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
-      <p className="font-medium text-foreground">{title ?? 'No data yet'}</p>
+      <p className="font-medium text-foreground">{title ?? getAsyncStateShellCopy('empty', t)}</p>
       {description ? <p className="mt-1 text-xs">{description}</p> : null}
     </div>
   );
 }
-

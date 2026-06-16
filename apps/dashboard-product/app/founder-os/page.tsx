@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AsyncState } from '@/components/common/async-state';
 import { emitAuditEvent } from '@/lib/audit-events';
 import { useDailyActionHistory, useDailyActions, useOutreachActivity } from '@/lib/use-crm';
 import { useContentCalendar } from '@/lib/use-content';
+import { LocaleContext } from '@/lib/locale-context';
+import { getFounderOsCopy } from '@/lib/founder-os-copy';
 
 export default function FounderOsHomePage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isPlanningDaily, setIsPlanningDaily] = useState(false);
   const [isPlanningWeekly, setIsPlanningWeekly] = useState(false);
@@ -94,7 +98,10 @@ export default function FounderOsHomePage() {
   const nextActions = actions
     .filter((item) => !item.completed)
     .slice(0, 3)
-    .map((item) => `${item.action_type} - ${item.prospects?.name ?? 'Unknown prospect'}`);
+    .map(
+      (item) =>
+        `${item.action_type} - ${item.prospects?.name ?? getFounderOsCopy('unknown_prospect', t)}`,
+    );
 
   const loading = loadingActions || loadingHistory || loadingCalendar || loadingActivity;
   const error = actionsError ?? historyError ?? calendarError ?? activityError;
@@ -103,26 +110,54 @@ export default function FounderOsHomePage() {
     <div className="p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Today</h1>
-          <p className="text-sm text-muted-foreground">Operate on two hard targets: 3 outreaches per weekday and 2 posts per week.</p>
+          <h1 className="text-2xl font-semibold">{getFounderOsCopy('page_title', t)}</h1>
+          <p className="text-sm text-muted-foreground">{getFounderOsCopy('page_subtitle', t)}</p>
         </div>
 
         {loading ? (
-          <AsyncState mode="loading" title="Loading daily operating context..." />
+          <AsyncState mode="loading" title={getFounderOsCopy('loading_title', t)} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load operating context" description={error} />
+          <AsyncState mode="error" title={getFounderOsCopy('error_title', t)} description={error} />
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-4">
-              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Outreach today</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{outreachDone} / 3</p></CardContent></Card>
-              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Posts this week</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{postsThisWeek} / 2</p></CardContent></Card>
-              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Exchanges this week</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{exchangesThisWeek}</p></CardContent></Card>
-              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Open outreach actions</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{actions.filter((item) => !item.completed).length}</p></CardContent></Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{getFounderOsCopy('stat_outreach_today', t)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{outreachDone} / 3</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{getFounderOsCopy('stat_posts_week', t)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{postsThisWeek} / 2</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{getFounderOsCopy('stat_exchanges_week', t)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{exchangesThisWeek}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{getFounderOsCopy('stat_open_actions', t)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{actions.filter((item) => !item.completed).length}</p>
+                </CardContent>
+              </Card>
             </div>
             <Card>
               <CardHeader>
-                <CardTitle>Auto-plan</CardTitle>
-                <CardDescription>Fill your weekly operating targets automatically.</CardDescription>
+                <CardTitle>{getFounderOsCopy('auto_plan_title', t)}</CardTitle>
+                <CardDescription>{getFounderOsCopy('auto_plan_description', t)}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button
@@ -139,13 +174,23 @@ export default function FounderOsHomePage() {
                           entity_id: today,
                           payload: { date: today, target: 3, actions_added: added },
                         });
-                        setActionMessage(added > 0 ? `Added ${added} outreach action(s).` : 'No new outreach actions needed.');
+                        setActionMessage(
+                          added > 0
+                            ? getFounderOsCopy('outreach_added', t, { count: added })
+                            : getFounderOsCopy('outreach_not_needed', t),
+                        );
                       })
-                      .catch((err) => setActionMessage(err instanceof Error ? err.message : 'Failed to plan outreach actions.'))
+                      .catch((err) =>
+                        setActionMessage(
+                          err instanceof Error ? err.message : getFounderOsCopy('outreach_plan_failed', t),
+                        ),
+                      )
                       .finally(() => setIsPlanningDaily(false));
                   }}
                 >
-                  {isPlanningDaily ? 'Planning...' : 'Plan 3 outreach today'}
+                  {isPlanningDaily
+                    ? getFounderOsCopy('plan_outreach_loading', t)
+                    : getFounderOsCopy('plan_outreach', t)}
                 </Button>
                 <Button
                   variant="outline"
@@ -161,27 +206,53 @@ export default function FounderOsHomePage() {
                           entity_id: weekStart.toISOString().slice(0, 10),
                           payload: { week_start: weekStart.toISOString().slice(0, 10), target: 2, slots_added: added },
                         });
-                        setActionMessage(added > 0 ? `Added ${added} post slot(s) this week.` : 'No new post slots needed this week.');
+                        setActionMessage(
+                          added > 0
+                            ? getFounderOsCopy('posts_added', t, { count: added })
+                            : getFounderOsCopy('posts_not_needed', t),
+                        );
                       })
-                      .catch((err) => setActionMessage(err instanceof Error ? err.message : 'Failed to plan weekly posts.'))
+                      .catch((err) =>
+                        setActionMessage(
+                          err instanceof Error ? err.message : getFounderOsCopy('posts_plan_failed', t),
+                        ),
+                      )
                       .finally(() => setIsPlanningWeekly(false));
                   }}
                 >
-                  {isPlanningWeekly ? 'Planning...' : 'Plan 2 posts this week'}
+                  {isPlanningWeekly
+                    ? getFounderOsCopy('plan_posts_loading', t)
+                    : getFounderOsCopy('plan_posts', t)}
                 </Button>
                 <div className="w-full pt-2 text-sm text-muted-foreground">
-                  <span className="mr-4">Outreach streak: {outreachStreak} weekday(s)</span>
-                  <span>Publishing streak: {postStreak} week(s)</span>
+                  <span className="mr-4">
+                    {getFounderOsCopy('outreach_streak', t, { count: outreachStreak })}
+                  </span>
+                  <span>{getFounderOsCopy('publishing_streak', t, { count: postStreak })}</span>
                 </div>
-                <Button asChild><Link href="/founder-os/crm/daily-actions">Open outreach queue</Link></Button>
-                <Button asChild variant="secondary"><Link href="/founder-os/content/calendar">Open content board</Link></Button>
+                <Button asChild>
+                  <Link href="/founder-os/crm/daily-actions">{getFounderOsCopy('open_outreach_queue', t)}</Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link href="/founder-os/content/calendar">{getFounderOsCopy('open_content_board', t)}</Link>
+                </Button>
                 {actionMessage ? <p className="w-full text-sm text-muted-foreground">{actionMessage}</p> : null}
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>Next best outreach actions</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>{getFounderOsCopy('next_actions_title', t)}</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2">
-                {nextActions.length === 0 ? <p className="text-sm text-muted-foreground">No pending outreach. You are clear.</p> : nextActions.map((item) => <p key={item} className="text-sm">{item}</p>)}
+                {nextActions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{getFounderOsCopy('next_actions_empty', t)}</p>
+                ) : (
+                  nextActions.map((item) => (
+                    <p key={item} className="text-sm">
+                      {item}
+                    </p>
+                  ))
+                )}
               </CardContent>
             </Card>
           </>

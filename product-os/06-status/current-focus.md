@@ -2,6 +2,7 @@
 
 ## Work now
 
+- Dashboard A+ scorecard published at `product-os/04-quality/dashboard-a-plus-scorecard.md`; slice 5 shipped (deforestation panel copy, exporter north-star blocker priority, compliance sr-only). Next: exporter/importer critical-path acceptance on real tenant.
 - FDP coffee screening (NG/RW/TZ) is scaffolded behind `FDP_ENABLED`; next: deploy EE worker, run `npm run check:fdp`, calibrate thresholds on real tenant plots.
 - Field app pre-field automation is green (`npm run qa:full`, `store:preflight --strict`). Next before field soak: set prod `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_SENTRY_DSN`, run `release:preflight:production:online`, execute `DEVICE_SMOKE_CHECKLIST.md` on physical devices.
 - FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.

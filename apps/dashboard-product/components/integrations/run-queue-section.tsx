@@ -23,6 +23,8 @@ import { LocaleContext } from '@/lib/locale-context';
 import {
   getIntegrationsReleaseStaleLabel,
   getIntegrationsRunQueueLoadErrorLabel,
+  getIntegrationsConfirmActionCopy,
+  getIntegrationsToastMessage,
 } from '@/lib/workflow-terminology-labels';
 
 type ConfirmAction =
@@ -151,19 +153,27 @@ export function RunQueueSection() {
     try {
       if (confirmAction.type === 'claim') {
         await claimRun(confirmAction.run.id);
-        toast.success(`Claimed run ${confirmAction.run.id.slice(0, 12)}...`);
+        toast.success(
+          getIntegrationsToastMessage('claimed', { runId: `${confirmAction.run.id.slice(0, 12)}...` }, t),
+        );
       } else if (confirmAction.type === 'release') {
         await releaseRun(confirmAction.run.id, confirmAction.force);
         toast.success(
-          `${confirmAction.force ? 'Force released' : 'Released'} run ${confirmAction.run.id.slice(0, 12)}...`,
+          getIntegrationsToastMessage(
+            confirmAction.force ? 'force_released' : 'released',
+            { runId: `${confirmAction.run.id.slice(0, 12)}...` },
+            t,
+          ),
         );
       } else if (confirmAction.type === 'retry') {
         await retryRun(confirmAction.run.id);
-        toast.success(`Retry initiated for run ${confirmAction.run.id.slice(0, 12)}...`);
+        toast.success(
+          getIntegrationsToastMessage('retry', { runId: `${confirmAction.run.id.slice(0, 12)}...` }, t),
+        );
       }
       await loadRunQueueData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Run action failed.');
+      toast.error(error instanceof Error ? error.message : getIntegrationsToastMessage('action_failed', undefined, t));
       return;
     } finally {
       setIsActionLoading(false);
@@ -176,11 +186,13 @@ export function RunQueueSection() {
     setIsBulkReleaseLoading(true);
     try {
       const releasedCount = await releaseStaleClaims(staleMinutes, limit);
-      toast.success(`Released ${releasedCount} stale claim${releasedCount !== 1 ? 's' : ''}`);
+      toast.success(getIntegrationsToastMessage('bulk_released', { count: releasedCount }, t));
       await loadRunQueueData();
       setBulkReleaseOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to release stale claims.');
+      toast.error(
+        error instanceof Error ? error.message : getIntegrationsToastMessage('bulk_release_failed', undefined, t),
+      );
     } finally {
       setIsBulkReleaseLoading(false);
     }
@@ -188,33 +200,18 @@ export function RunQueueSection() {
 
   // Confirmation modal content
   const getConfirmationContent = () => {
-    if (!confirmAction) return { title: '', description: '', variant: 'default' as const };
+    if (!confirmAction) return { title: '', description: '', variant: 'default' as const, confirmLabel: '' };
 
-    switch (confirmAction.type) {
-      case 'claim':
-        return {
-          title: 'Claim Run',
-          description: `Are you sure you want to claim run ${confirmAction.run.id.slice(0, 12)}...? This will assign it to you for processing.`,
-          variant: 'default' as const,
-          confirmLabel: 'Claim',
-        };
-      case 'release':
-        return {
-          title: confirmAction.force ? 'Force Release Run' : 'Release Run',
-          description: confirmAction.force
-            ? `Are you sure you want to force release run ${confirmAction.run.id.slice(0, 12)}...? This will remove the current claim regardless of who owns it.`
-            : `Are you sure you want to release run ${confirmAction.run.id.slice(0, 12)}...?`,
-          variant: confirmAction.force ? ('destructive' as const) : ('default' as const),
-          confirmLabel: confirmAction.force ? 'Force Release' : 'Release',
-        };
-      case 'retry':
-        return {
-          title: 'Retry Run',
-          description: `Are you sure you want to retry run ${confirmAction.run.id.slice(0, 12)}...? This will increment the attempt count and requeue the run.`,
-          variant: 'default' as const,
-          confirmLabel: 'Retry',
-        };
+    const runIdPrefix = `${confirmAction.run.id.slice(0, 12)}...`;
+    if (confirmAction.type === 'claim') {
+      return getIntegrationsConfirmActionCopy('claim', runIdPrefix, t);
     }
+    if (confirmAction.type === 'release') {
+      return confirmAction.force
+        ? getIntegrationsConfirmActionCopy('force_release', runIdPrefix, t)
+        : getIntegrationsConfirmActionCopy('release', runIdPrefix, t);
+    }
+    return getIntegrationsConfirmActionCopy('retry', runIdPrefix, t);
   };
 
   const confirmContent = getConfirmationContent();

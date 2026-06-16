@@ -56,6 +56,7 @@ import {
   getProducersStatTotalHint,
   getProducersStatTotalLabel,
   getProducersTableColumnLabel,
+  getContactStatusLabel,
   getProducersTableTitle,
 } from '@/lib/workflow-terminology-labels';
 
@@ -257,7 +258,7 @@ export default function FarmersPage() {
                           </TableCell>
                           <TableCell className="text-sm">{producer.phone ?? '—'}</TableCell>
                           <TableCell className="text-sm">{producer.organization ?? '—'}</TableCell>
-                          <TableCell className="text-sm capitalize">{producer.status}</TableCell>
+                          <TableCell className="text-sm">{getContactStatusLabel(producer.status, t)}</TableCell>
                           <TableCell>
                             {fpicSigned ? (
                               <CheckCircle className="w-4 h-4 text-green-400" />

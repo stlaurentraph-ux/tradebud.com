@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useLocale } from '@/lib/locale-context';
 import {
   tenantRoleToPersona,
   trackOnboardingEvent,
@@ -17,6 +18,7 @@ import {
   type OnboardingPersona,
   type OnboardingConfig,
 } from '@/lib/onboarding-config';
+import { localizeOnboardingConfig } from '@/lib/onboarding-step-copy';
 import { hasPermission } from '@/lib/rbac';
 import {
   readOnboardingFlag,
@@ -111,6 +113,7 @@ function isActionCompleted(actionKey?: string): boolean {
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { t } = useLocale();
 
   const persona = useMemo<OnboardingPersona | null>(() => {
     if (!user) return null;
@@ -120,13 +123,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const config = useMemo<OnboardingConfig | null>(() => {
     if (!persona || !user) return null;
     const base = ONBOARDING_CONFIGS[persona];
-    return {
+    const filtered = {
       ...base,
       steps: base.steps.filter((step) =>
         step.requiredPermission ? hasPermission(user, step.requiredPermission) : true,
       ),
     };
-  }, [persona, user]);
+    return localizeOnboardingConfig(filtered, t);
+  }, [persona, user, t]);
 
   const [phase, setPhase] = useState<OnboardingPhase>('idle');
   const [currentStepIndex, setCurrentStepIndex] = useState(0);

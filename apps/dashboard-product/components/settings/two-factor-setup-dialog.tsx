@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   Dialog,
@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getAuthenticatedSupabaseClient } from '@/lib/supabase-browser';
 import { setAuthTokens } from '@/lib/auth-session';
+import { LocaleContext } from '@/lib/locale-context';
+import { getSettingsCopy } from '@/lib/workflow-terminology-labels';
 
 interface TwoFactorSetupDialogProps {
   open: boolean;
@@ -23,6 +25,8 @@ interface TwoFactorSetupDialogProps {
 }
 
 export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFactorSetupDialogProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [factorId, setFactorId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
@@ -58,7 +62,9 @@ export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFacto
         setSecret(data.totp.secret);
       } catch (enrollError) {
         if (!cancelled) {
-          setError(enrollError instanceof Error ? enrollError.message : 'Failed to start 2FA setup.');
+          setError(
+            enrollError instanceof Error ? enrollError.message : getSettingsCopy('twofa_error_start', t),
+          );
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -69,11 +75,11 @@ export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFacto
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, t]);
 
   const handleVerify = async () => {
     if (!factorId || verifyCode.trim().length < 6) {
-      setError('Enter the 6-digit code from your authenticator app.');
+      setError(getSettingsCopy('twofa_error_code', t));
       return;
     }
 
@@ -99,7 +105,9 @@ export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFacto
       onEnabled();
       onOpenChange(false);
     } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : 'Verification failed. Try again.');
+      setError(
+        verifyError instanceof Error ? verifyError.message : getSettingsCopy('twofa_error_verify', t),
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -109,29 +117,33 @@ export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFacto
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Enable two-factor authentication</DialogTitle>
-          <DialogDescription>
-            Scan the QR code with an authenticator app (Google Authenticator, 1Password, Authy), then
-            enter the 6-digit code to finish setup.
-          </DialogDescription>
+          <DialogTitle>{getSettingsCopy('twofa_title', t)}</DialogTitle>
+          <DialogDescription>{getSettingsCopy('twofa_description', t)}</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Preparing your authenticator setup...</p>
+          <p className="text-sm text-muted-foreground">{getSettingsCopy('twofa_loading', t)}</p>
         ) : null}
 
         {qrCode ? (
           <div className="space-y-4">
             <div className="flex justify-center rounded-lg border bg-white p-4">
-              <Image src={qrCode} alt="Authenticator QR code" width={180} height={180} unoptimized />
+              <Image
+                src={qrCode}
+                alt={getSettingsCopy('twofa_qr_alt', t)}
+                width={180}
+                height={180}
+                unoptimized
+              />
             </div>
             {secret ? (
               <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                Manual setup key: <span className="font-mono text-foreground">{secret}</span>
+                {getSettingsCopy('twofa_manual_key', t)}{' '}
+                <span className="font-mono text-foreground">{secret}</span>
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label htmlFor="totp-code">Authenticator code</Label>
+              <Label htmlFor="totp-code">{getSettingsCopy('twofa_code_label', t)}</Label>
               <Input
                 id="totp-code"
                 inputMode="numeric"
@@ -148,10 +160,10 @@ export function TwoFactorSetupDialog({ open, onOpenChange, onEnabled }: TwoFacto
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {getSettingsCopy('twofa_cancel', t)}
           </Button>
           <Button onClick={() => void handleVerify()} disabled={isVerifying || !factorId}>
-            {isVerifying ? 'Verifying...' : 'Verify and enable'}
+            {isVerifying ? getSettingsCopy('twofa_verifying', t) : getSettingsCopy('twofa_verify_enable', t)}
           </Button>
         </DialogFooter>
       </DialogContent>

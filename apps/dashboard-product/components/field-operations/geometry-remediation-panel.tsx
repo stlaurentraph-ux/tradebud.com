@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LocaleContext } from '@/lib/locale-context';
+import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
 import {
   getGeometryRemediationEmptyMessage,
   getGeometryRemediationFarmerSuffix,
@@ -59,7 +60,7 @@ export function GeometryRemediationPanel() {
         setError(null);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load geometry remediation queue.');
+        setError(resolveWorkflowErrorMessage(err, 'geometry_remediation_load', t));
       })
       .finally(() => setLoading(false));
   }, []);

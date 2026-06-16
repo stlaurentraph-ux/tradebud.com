@@ -20,6 +20,8 @@ import {
   getProducerLoadingMessage,
   getProducerNotFoundMessage,
   getProducersNavLabel,
+  getContactStatusLabel,
+  getProducerDetailCopy,
 } from '@/lib/workflow-terminology-labels';
 
 interface FarmerDetailPageProps {
@@ -72,14 +74,12 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
           setResolveError(null);
         } else {
           setFarmerProfileId(null);
-          setResolveError(
-            'No field-app account linked yet. The producer must sign up with the same email before you can request data access.',
-          );
+          setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
         }
       })
       .catch((error) => {
         if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : 'Failed to load producer.');
+        setLoadError(error instanceof Error ? error.message : getProducerDetailCopy('load_error', role, t));
         setContact(null);
       })
       .finally(() => {
@@ -88,7 +88,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, role, t]);
 
   const fpicSigned = useMemo(() => (contact ? deriveFpicSigned(contact) : false), [contact]);
   const verified = contact?.status === 'submitted' || contact?.status === 'engaged';
@@ -126,38 +126,44 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
             <div className="space-y-6 lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Producer Information</CardTitle>
+                  <CardTitle className="text-base">{getProducerDetailCopy('section_info', role, t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs text-muted-foreground">Name</div>
+                      <div className="text-xs text-muted-foreground">{getProducerDetailCopy('field_name', role, t)}</div>
                       <div className="mt-1 font-medium">{contact.full_name}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Email</div>
+                      <div className="text-xs text-muted-foreground">{getProducerDetailCopy('field_email', role, t)}</div>
                       <div className="mt-1 font-medium">{contact.email}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Phone</div>
+                      <div className="text-xs text-muted-foreground">{getProducerDetailCopy('field_phone', role, t)}</div>
                       <div className="mt-1 font-medium">{contact.phone?.trim() || '—'}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Organisation</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getProducerDetailCopy('field_organisation', role, t)}
+                      </div>
                       <div className="mt-1 font-medium">{contact.organization?.trim() || '—'}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Country</div>
+                      <div className="text-xs text-muted-foreground">{getProducerDetailCopy('field_country', role, t)}</div>
                       <div className="mt-1 font-medium">{contact.country?.trim() || '—'}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Directory status</div>
-                      <div className="mt-1 font-medium capitalize">{contact.status.replace('_', ' ')}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getProducerDetailCopy('field_directory_status', role, t)}
+                      </div>
+                      <div className="mt-1 font-medium">{getContactStatusLabel(contact.status, t)}</div>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
-                    <div className="mb-3 text-xs text-muted-foreground">Verification Status</div>
+                    <div className="mb-3 text-xs text-muted-foreground">
+                      {getProducerDetailCopy('section_verification', role, t)}
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge
                         variant="outline"
@@ -168,7 +174,9 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
                         }
                       >
                         <CheckCircle className="mr-1 h-3 w-3" />
-                        {verified ? 'Engaged in programme' : 'Pending engagement'}
+                        {verified
+                          ? getProducerDetailCopy('badge_engaged', role, t)
+                          : getProducerDetailCopy('badge_pending_engagement', role, t)}
                       </Badge>
                       <Badge
                         variant="outline"
@@ -179,7 +187,9 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
                         }
                       >
                         <FileCheck className="mr-1 h-3 w-3" />
-                        {fpicSigned ? 'CRM consent marked granted' : 'CRM consent not granted'}
+                        {fpicSigned
+                          ? getProducerDetailCopy('badge_consent_granted', role, t)
+                          : getProducerDetailCopy('badge_consent_not_granted', role, t)}
                       </Badge>
                     </div>
                   </div>
@@ -197,17 +207,16 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
             <div className="space-y-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Field app link</CardTitle>
+                  <CardTitle className="text-sm">{getProducerDetailCopy('section_field_app', role, t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   {farmerProfileId ? (
                     <p className="text-muted-foreground">
-                      Linked to field-app profile. Data access is governed by producer consent grants below.
+                      {getProducerDetailCopy('field_app_linked', role, t)}
                     </p>
                   ) : (
                     <p className="text-muted-foreground">
-                      Not linked yet. Ask the producer to create a Tracebud field account using{' '}
-                      <span className="font-medium text-foreground">{contact.email}</span>.
+                      {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email })}
                     </p>
                   )}
                 </CardContent>

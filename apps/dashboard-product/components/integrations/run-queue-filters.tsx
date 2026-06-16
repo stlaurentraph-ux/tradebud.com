@@ -1,5 +1,6 @@
 'use client';
 
+import { useContext } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,15 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { RunQueueFilters } from '@/types/integrations';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsFilterActiveCountLabel,
+  getIntegrationsFilterClearSearchLabel,
+  getIntegrationsFilterOptionLabel,
+  getIntegrationsFilterResultsLabel,
+  getIntegrationsFilterSearchPlaceholder,
+  getIntegrationsFilterTotalRunsLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface RunQueueFiltersProps {
   filters: RunQueueFilters;
@@ -27,6 +37,9 @@ export function RunQueueFiltersBar({
   totalCount,
   filteredCount,
 }: RunQueueFiltersProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
   const updateFilter = <K extends keyof RunQueueFilters>(
     key: K,
     value: RunQueueFilters[K]
@@ -61,13 +74,11 @@ export function RunQueueFiltersBar({
 
   return (
     <div className="space-y-3">
-      {/* Filter Row */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by Run ID or Questionnaire..."
+            placeholder={getIntegrationsFilterSearchPlaceholder(t)}
             value={filters.search}
             onChange={(e) => updateFilter('search', e.target.value)}
             className="pl-9 h-9"
@@ -76,45 +87,42 @@ export function RunQueueFiltersBar({
             <button
               onClick={() => updateFilter('search', '')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
+              aria-label={getIntegrationsFilterClearSearchLabel(t)}
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        {/* Status Filter */}
         <Select
           value={filters.status}
           onValueChange={(value) => updateFilter('status', value as RunQueueFilters['status'])}
         >
           <SelectTrigger className="w-[130px] h-9">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={getIntegrationsFilterOptionLabel('status', t)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="started">Started</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="all">{getIntegrationsFilterOptionLabel('all_statuses', t)}</SelectItem>
+            <SelectItem value="started">{getIntegrationsFilterOptionLabel('started', t)}</SelectItem>
+            <SelectItem value="completed">{getIntegrationsFilterOptionLabel('completed', t)}</SelectItem>
+            <SelectItem value="failed">{getIntegrationsFilterOptionLabel('failed', t)}</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Run Type Filter */}
         <Select
           value={filters.runType}
           onValueChange={(value) => updateFilter('runType', value as RunQueueFilters['runType'])}
         >
           <SelectTrigger className="w-[130px] h-9">
-            <SelectValue placeholder="Type" />
+            <SelectValue placeholder={getIntegrationsFilterOptionLabel('type', t)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="validation">Validation</SelectItem>
-            <SelectItem value="scoring">Scoring</SelectItem>
+            <SelectItem value="all">{getIntegrationsFilterOptionLabel('all_types', t)}</SelectItem>
+            <SelectItem value="validation">{getIntegrationsFilterOptionLabel('validation', t)}</SelectItem>
+            <SelectItem value="scoring">{getIntegrationsFilterOptionLabel('scoring', t)}</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Claim Status Filter */}
         <Select
           value={filters.claimStatus}
           onValueChange={(value) =>
@@ -122,16 +130,15 @@ export function RunQueueFiltersBar({
           }
         >
           <SelectTrigger className="w-[130px] h-9">
-            <SelectValue placeholder="Claims" />
+            <SelectValue placeholder={getIntegrationsFilterOptionLabel('claims', t)} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Claims</SelectItem>
-            <SelectItem value="claimed">Claimed</SelectItem>
-            <SelectItem value="unclaimed">Unclaimed</SelectItem>
+            <SelectItem value="all">{getIntegrationsFilterOptionLabel('all_claims', t)}</SelectItem>
+            <SelectItem value="claimed">{getIntegrationsFilterOptionLabel('claimed', t)}</SelectItem>
+            <SelectItem value="unclaimed">{getIntegrationsFilterOptionLabel('unclaimed', t)}</SelectItem>
           </SelectContent>
         </Select>
 
-        {/* Due Now Toggle */}
         <Button
           variant={filters.dueNow ? 'default' : 'outline'}
           size="sm"
@@ -141,10 +148,9 @@ export function RunQueueFiltersBar({
             filters.dueNow && 'bg-amber-600 hover:bg-amber-700 text-white'
           )}
         >
-          Due Now
+          {getIntegrationsFilterOptionLabel('due_now', t)}
         </Button>
 
-        {/* Clear Filters */}
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -153,31 +159,25 @@ export function RunQueueFiltersBar({
             className="h-9 text-muted-foreground hover:text-foreground"
           >
             <X className="mr-1.5 h-3.5 w-3.5" />
-            Clear
+            {getIntegrationsFilterOptionLabel('clear', t)}
           </Button>
         )}
       </div>
 
-      {/* Results Count & Active Filters Summary */}
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           {hasActiveFilters ? (
             <>
               <Filter className="h-3.5 w-3.5" />
-              <span>
-                Showing <span className="font-medium text-foreground">{filteredCount}</span> of{' '}
-                {totalCount} runs
-              </span>
+              <span>{getIntegrationsFilterResultsLabel(filteredCount, totalCount, t)}</span>
               {activeFilterCount > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">
-                  {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}
+                  {getIntegrationsFilterActiveCountLabel(activeFilterCount, t)}
                 </Badge>
               )}
             </>
           ) : (
-            <span>
-              <span className="font-medium text-foreground">{totalCount}</span> total runs
-            </span>
+            <span>{getIntegrationsFilterTotalRunsLabel(totalCount, t)}</span>
           )}
         </div>
       </div>

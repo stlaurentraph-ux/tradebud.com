@@ -1,5 +1,6 @@
 'use client';
 
+import { useContext } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,6 +12,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RunSummary } from '@/types/integrations';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsSummaryNeverLabel,
+  getIntegrationsSummaryReleasedCountLabel,
+  getIntegrationsSummaryStatLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface SummaryCardsProps {
   summary: RunSummary;
@@ -71,8 +78,11 @@ function StatCard({ label, value, icon, variant = 'default', isLoading }: StatCa
 }
 
 export function SummaryCards({ summary, isLoading }: SummaryCardsProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
   const formatTimestamp = (timestamp: string | null) => {
-    if (!timestamp) return 'Never';
+    if (!timestamp) return getIntegrationsSummaryNeverLabel(t);
     const date = new Date(timestamp);
     return date.toLocaleString('en-US', {
       month: 'short',
@@ -85,35 +95,34 @@ export function SummaryCards({ summary, isLoading }: SummaryCardsProps) {
   return (
     <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
       <StatCard
-        label="Started"
+        label={getIntegrationsSummaryStatLabel('started', t)}
         value={summary.startedCount}
         icon={<Play className="h-5 w-5" />}
         variant="info"
         isLoading={isLoading}
       />
       <StatCard
-        label="Completed"
+        label={getIntegrationsSummaryStatLabel('completed', t)}
         value={summary.completedCount}
         icon={<CheckCircle2 className="h-5 w-5" />}
         variant="success"
         isLoading={isLoading}
       />
       <StatCard
-        label="Failed"
+        label={getIntegrationsSummaryStatLabel('failed', t)}
         value={summary.failedCount}
         icon={<XCircle className="h-5 w-5" />}
         variant="destructive"
         isLoading={isLoading}
       />
       <StatCard
-        label="Stale Claims"
+        label={getIntegrationsSummaryStatLabel('stale_claims', t)}
         value={summary.staleClaimCount}
         icon={<Clock className="h-5 w-5" />}
         variant="warning"
         isLoading={isLoading}
       />
 
-      {/* Last Sweeper Run Card */}
       <Card className="border-border bg-card col-span-2 lg:col-span-1">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
@@ -122,7 +131,7 @@ export function SummaryCards({ summary, isLoading }: SummaryCardsProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Last Sweeper
+                {getIntegrationsSummaryStatLabel('last_sweeper', t)}
               </p>
               {isLoading ? (
                 <div className="mt-1 space-y-1">
@@ -142,7 +151,7 @@ export function SummaryCards({ summary, isLoading }: SummaryCardsProps) {
                     )}
                     {summary.lastSweeperReleasedCount > 0 && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {summary.lastSweeperReleasedCount} released
+                        {getIntegrationsSummaryReleasedCountLabel(summary.lastSweeperReleasedCount, t)}
                       </Badge>
                     )}
                     {summary.lastSweeperTokenVersion && (

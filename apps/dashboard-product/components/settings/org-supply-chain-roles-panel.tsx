@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,12 @@ import {
 } from '@/lib/org-supply-chain-roles';
 import { fetchCommercialProfile, type CommercialProfile } from '@/lib/commercial-profile';
 import { SupplyChainRolePicker } from '@/components/settings/supply-chain-role-picker';
+import { LocaleContext } from '@/lib/locale-context';
+import { getSettingsPageCopy } from '@/lib/workflow-terminology-labels';
 
 export function OrgSupplyChainRolesPanel() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user, applyTenantRolesFromProfile } = useAuth();
   const [profile, setProfile] = useState<CommercialProfile | null>(null);
   const [selected, setSelected] = useState<SupplyChainRoleId[]>(['exporter']);
@@ -48,13 +52,13 @@ export function OrgSupplyChainRolesPanel() {
         error?: string;
       };
       if (!response.ok || !payload.profile) {
-        throw new Error(payload.error ?? 'Failed to save supply chain roles.');
+        throw new Error(payload.error ?? getSettingsPageCopy('org_roles_error_save', t));
       }
       setProfile(payload.profile);
       applyTenantRolesFromProfile(payload.profile);
-      toast.success('Supply chain roles updated. Use the sidebar switcher to change active workflow.');
+      toast.success(getSettingsPageCopy('org_roles_toast_success', t));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save supply chain roles.');
+      toast.error(error instanceof Error ? error.message : getSettingsPageCopy('org_roles_error_save', t));
     } finally {
       setIsSaving(false);
     }
@@ -63,28 +67,28 @@ export function OrgSupplyChainRolesPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Supply chain roles</CardTitle>
-        <CardDescription>
-          Enable every workflow your organisation performs. Users switch active role from the sidebar without
-          creating separate tenants.
-        </CardDescription>
+        <CardTitle>{getSettingsPageCopy('org_roles_title', t)}</CardTitle>
+        <CardDescription>{getSettingsPageCopy('org_roles_description', t)}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? <p className="text-sm text-muted-foreground">Loading organisation profile…</p> : null}
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">{getSettingsPageCopy('org_roles_loading', t)}</p>
+        ) : null}
         <SupplyChainRolePicker selected={selected} onChange={setSelected} disabled={isSaving || isLoading} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            Active session role: <strong>{user?.active_role}</strong>
+            {getSettingsPageCopy('org_roles_active_session', t, { role: user?.active_role ?? '' })}
             {profile?.organization_name ? ` · ${profile.organization_name}` : ''}
           </p>
           <Button onClick={() => void saveRoles()} disabled={isSaving || selected.length === 0}>
-            {isSaving ? 'Saving…' : 'Save roles'}
+            {isSaving ? getSettingsPageCopy('saving', t) : getSettingsPageCopy('org_roles_save', t)}
           </Button>
         </div>
         {selected.length > 1 ? (
           <p className="text-xs text-muted-foreground">
-            Default landing role after save:{' '}
-            <strong>{primaryTenantRoleFromSupplyChainRoles(selected)}</strong> (change anytime via sidebar).
+            {getSettingsPageCopy('org_roles_default_landing', t, {
+              role: primaryTenantRoleFromSupplyChainRoles(selected),
+            })}
           </p>
         ) : null}
       </CardContent>

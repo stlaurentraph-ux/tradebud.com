@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -19,6 +19,12 @@ import { useEvidenceFeed } from '@/lib/use-evidence-feed';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useTenantPlots } from '@/lib/use-tenant-plots';
 import { useAuth } from '@/lib/auth-context';
+import {
+  getInboxFulfillmentCopy,
+  getInboxFulfillmentEvidenceStatusLabel,
+} from '@/lib/inbox-fulfillment-copy';
+import { LocaleContext } from '@/lib/locale-context';
+import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
 
 export type InboxFulfillmentPayload = {
   notes?: string;
@@ -33,19 +39,14 @@ type InboxFulfillmentDialogProps = {
   onSubmit: (requestId: string, payload: InboxFulfillmentPayload) => Promise<void>;
 };
 
-const evidenceStatusLabel: Record<string, string> = {
-  verified: 'Verified',
-  pending_review: 'Pending review',
-  expired: 'Expired',
-  renewal_due: 'Renewal due',
-};
-
 export function InboxFulfillmentDialog({
   request,
   open,
   onOpenChange,
   onSubmit,
 }: InboxFulfillmentDialogProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
   const { packages } = useHarvestPackages(user?.tenant_id ?? null, { scope: 'tenant', enabled: open });
   const { plots, isLoading: plotsLoading, error: plotsError } = useTenantPlots(user?.tenant_id ?? null, {
@@ -125,7 +126,7 @@ export function InboxFulfillmentDialog({
       });
       handleOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit fulfillment.');
+      setError(resolveWorkflowErrorMessage(err, 'inbox_fulfillment_submit', t));
     } finally {
       setIsSubmitting(false);
     }
@@ -137,40 +138,46 @@ export function InboxFulfillmentDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Fulfill request</DialogTitle>
+          <DialogTitle>{getInboxFulfillmentCopy('dialog_title', t)}</DialogTitle>
           <DialogDescription>
-            Attach shipment, plot, and evidence context for <span className="font-medium">{request.title}</span> from{' '}
-            {request.from_org}. This marks the request as responded and updates the sender campaign.
+            {getInboxFulfillmentCopy('dialog_description', t, {
+              title: request.title,
+              org: request.from_org,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="rounded-md border bg-muted/30 p-3 text-sm">
             <p className="font-medium text-foreground">{request.request_type.replace(/_/g, ' ')}</p>
-            <p className="text-muted-foreground">Due {new Date(request.due_at).toLocaleDateString()}</p>
+            <p className="text-muted-foreground">
+              {getInboxFulfillmentCopy('due_label', t, {
+                date: new Date(request.due_at).toLocaleDateString(),
+              })}
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fulfillment-notes">Fulfillment notes</Label>
+            <Label htmlFor="fulfillment-notes">{getInboxFulfillmentCopy('notes_label', t)}</Label>
             <Textarea
               id="fulfillment-notes"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Describe what evidence or shipment context you are providing."
+              placeholder={getInboxFulfillmentCopy('notes_placeholder', t)}
               rows={4}
             />
           </div>
 
           {packages.length > 0 ? (
             <div className="space-y-2">
-              <Label htmlFor="fulfillment-package">Link shipment (optional)</Label>
+              <Label htmlFor="fulfillment-package">{getInboxFulfillmentCopy('shipment_label', t)}</Label>
               <select
                 id="fulfillment-package"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={selectedPackageId}
                 onChange={(event) => setSelectedPackageId(event.target.value)}
               >
-                <option value="">No shipment linked</option>
+                <option value="">{getInboxFulfillmentCopy('shipment_none', t)}</option>
                 {packages.map((pkg) => (
                   <option key={pkg.id} value={pkg.id}>
                     {pkg.code} ({pkg.status})
@@ -182,15 +189,17 @@ export function InboxFulfillmentDialog({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>Plot evidence</Label>
-              <span className="text-xs text-muted-foreground">{selectedPlotIds.length} selected</span>
+              <Label>{getInboxFulfillmentCopy('plot_evidence_label', t)}</Label>
+              <span className="text-xs text-muted-foreground">
+                {getInboxFulfillmentCopy('selected_count', t, { count: selectedPlotIds.length })}
+              </span>
             </div>
             {plotsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading tenant plots...</p>
+              <p className="text-sm text-muted-foreground">{getInboxFulfillmentCopy('plots_loading', t)}</p>
             ) : plotsError ? (
               <p className="text-sm text-destructive">{plotsError}</p>
             ) : plotOptions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No plots available for this tenant yet.</p>
+              <p className="text-sm text-muted-foreground">{getInboxFulfillmentCopy('plots_empty', t)}</p>
             ) : (
               <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
                 {plotOptions.map((plot) => (
@@ -202,7 +211,9 @@ export function InboxFulfillmentDialog({
                     <span>
                       <span className="font-medium text-foreground">{plot.name}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {plot.source === 'shipment' ? 'From linked shipment' : 'Tenant plot'}
+                        {plot.source === 'shipment'
+                          ? getInboxFulfillmentCopy('plot_source_shipment', t)
+                          : getInboxFulfillmentCopy('plot_source_tenant', t)}
                       </span>
                     </span>
                   </label>
@@ -213,19 +224,17 @@ export function InboxFulfillmentDialog({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>FPIC / evidence repository</Label>
+              <Label>{getInboxFulfillmentCopy('evidence_repo_label', t)}</Label>
               <Link href="/fpic" className="text-xs text-primary underline">
-                Open evidence repository
+                {getInboxFulfillmentCopy('evidence_repo_link', t)}
               </Link>
             </div>
             {evidenceLoading ? (
-              <p className="text-sm text-muted-foreground">Loading evidence feed...</p>
+              <p className="text-sm text-muted-foreground">{getInboxFulfillmentCopy('evidence_loading', t)}</p>
             ) : evidenceError ? (
               <p className="text-sm text-destructive">{evidenceError}</p>
             ) : evidenceDocuments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No synced evidence documents yet. Upload in the evidence repository, then return to fulfill this request.
-              </p>
+              <p className="text-sm text-muted-foreground">{getInboxFulfillmentCopy('evidence_empty', t)}</p>
             ) : (
               <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
                 {evidenceDocuments.map((doc) => (
@@ -238,9 +247,11 @@ export function InboxFulfillmentDialog({
                       <span className="font-medium text-foreground">{doc.name}</span>
                       <span className="block text-xs text-muted-foreground">
                         {doc.farmer_or_community}
-                        {doc.plot_id ? ` · plot ${doc.plot_id.slice(0, 8)}` : ''}
+                        {doc.plot_id
+                          ? ` · ${getInboxFulfillmentCopy('evidence_plot_ref', t, { id: doc.plot_id.slice(0, 8) })}`
+                          : ''}
                         {' · '}
-                        {evidenceStatusLabel[doc.status] ?? doc.status}
+                        {getInboxFulfillmentEvidenceStatusLabel(doc.status, t)}
                       </span>
                     </span>
                   </label>
@@ -254,10 +265,12 @@ export function InboxFulfillmentDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
-            Cancel
+            {getInboxFulfillmentCopy('cancel', t)}
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Submit fulfillment'}
+            {isSubmitting
+              ? getInboxFulfillmentCopy('submitting', t)
+              : getInboxFulfillmentCopy('submit', t)}
           </Button>
         </DialogFooter>
       </DialogContent>

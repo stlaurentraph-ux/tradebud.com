@@ -1,11 +1,14 @@
 'use client';
 
+import { useContext } from 'react';
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { NetworkRoleRow } from '@/lib/sponsor-network-aggregates';
+import { LocaleContext } from '@/lib/locale-context';
+import { getSponsorPanelCopy } from '@/lib/workflow-terminology-labels';
 
 interface SponsorRoleClassificationProps {
   roles: NetworkRoleRow[];
@@ -13,27 +16,26 @@ interface SponsorRoleClassificationProps {
 }
 
 export function SponsorRoleClassification({ roles, inviteHref }: SponsorRoleClassificationProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
-          <CardTitle>Supply chain roles</CardTitle>
-          <CardDescription>
-            Classify cooperatives, exporters, importers, producers, and partners to reach end-to-end transparency.
-          </CardDescription>
+          <CardTitle>{getSponsorPanelCopy('roles_title', t)}</CardTitle>
+          <CardDescription>{getSponsorPanelCopy('roles_description', t)}</CardDescription>
         </div>
         <Button size="sm" asChild>
           <Link href={inviteHref}>
             <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Invite & classify
+            {getSponsorPanelCopy('roles_invite', t)}
           </Link>
         </Button>
       </CardHeader>
       <CardContent>
         {roles.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No classified network members yet. Invite contacts and register organisations with their supply chain role.
-          </p>
+          <p className="text-sm text-muted-foreground">{getSponsorPanelCopy('roles_empty', t)}</p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {roles.map((role) => (
@@ -43,7 +45,10 @@ export function SponsorRoleClassification({ roles, inviteHref }: SponsorRoleClas
                   <Badge variant="outline">{role.organisationCount + role.contactCount}</Badge>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {role.organisationCount} organisations · {role.contactCount} contacts
+                  {getSponsorPanelCopy('roles_row', t, {
+                    orgs: role.organisationCount,
+                    contacts: role.contactCount,
+                  })}
                 </p>
               </div>
             ))}

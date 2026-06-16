@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState, startTransition, type ReactNode } from 'react';
+import { useContext, useEffect, useState, startTransition, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import { AppSidebar } from './app-sidebar';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getAppChromeCopy } from '@/lib/workflow-terminology-labels';
 import {
   fetchCommercialProfile,
   isWorkspaceSetupComplete,
@@ -19,6 +21,8 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { isAuthenticated, isLoading, applyTenantRolesFromProfile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -129,7 +133,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               size="icon"
               onClick={() => setSidebarOpen(true)}
               className="h-9 w-9"
-              aria-label="Open menu"
+              aria-label={getAppChromeCopy('open_menu_aria', t)}
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -143,7 +147,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="rounded-sm"
                 />
               </div>
-              <span className="font-semibold text-foreground">Tracebud</span>
+              <span className="font-semibold text-foreground">{getAppChromeCopy('mobile_brand', t)}</span>
             </div>
           </div>
           
@@ -154,7 +158,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               size="icon"
               onClick={() => setSidebarOpen(false)}
               className="h-9 w-9 lg:hidden"
-              aria-label="Close menu"
+              aria-label={getAppChromeCopy('close_menu_aria', t)}
             >
               <X className="h-5 w-5" />
             </Button>

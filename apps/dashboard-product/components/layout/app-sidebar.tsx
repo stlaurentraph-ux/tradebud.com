@@ -53,6 +53,7 @@ import {
 import { RoleBadge } from '@/components/common/role-badge';
 import { DemoDataSidebarToggle } from '@/components/demo/demo-data-sidebar-toggle';
 import { translateNavItemName } from '@/lib/nav-labels';
+import { getAppChromeCopy } from '@/lib/workflow-terminology-labels';
 import type { TenantRole } from '@/types';
 import { useSponsorViewControls } from '@/lib/sponsor-view';
 
@@ -242,7 +243,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-[15px] font-semibold text-white leading-tight">Tracebud</span>
-          <span className="text-[11px] text-white/50 leading-tight">EUDR Platform</span>
+          <span className="text-[11px] text-white/50 leading-tight">{getAppChromeCopy('eudr_platform', t)}</span>
         </div>
       </div>
 
@@ -261,10 +262,12 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-medium text-white">
-              {workspaceDisplayName || user?.tenant_id || 'Workspace'}
+              {workspaceDisplayName || user?.tenant_id || getAppChromeCopy('workspace_fallback', t)}
             </span>
             <span className="truncate text-[10px] text-white/50">
-              {workspaceDisplayName ? 'Organisation workspace' : 'Tracebud tenant'}
+              {workspaceDisplayName
+                ? getAppChromeCopy('org_workspace', t)
+                : getAppChromeCopy('tracebud_tenant', t)}
             </span>
           </div>
         </div>
@@ -276,7 +279,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
           <div className="flex items-center justify-between rounded-md bg-white/10 px-3 py-2.5">
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
-                Active role
+                {getAppChromeCopy('active_role', t)}
               </span>
               <RoleBadge role={user.active_role} size="sm" />
             </div>
@@ -287,14 +290,14 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-white/60 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                    aria-label="Switch user role"
-                    title="Switch role"
+                    aria-label={getAppChromeCopy('switch_role_aria', t)}
+                    title={getAppChromeCopy('switch_role', t)}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Switch role</DropdownMenuLabel>
+                  <DropdownMenuLabel>{getAppChromeCopy('switch_role', t)}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup
                     value={user.active_role}
@@ -312,7 +315,9 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
           </div>
           {isSponsor && (
             <div className="rounded-md bg-white/10 px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Sponsor view</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                {getAppChromeCopy('sponsor_view', t)}
+              </span>
               <div className="mt-2 grid grid-cols-2 gap-1">
                 <button
                   type="button"
@@ -322,7 +327,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
                     sponsorView === 'country' ? 'bg-white text-emerald-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
                   )}
                 >
-                  Country
+                  {getAppChromeCopy('sponsor_country', t)}
                 </button>
                 <button
                   type="button"
@@ -332,7 +337,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
                     sponsorView === 'brand' ? 'bg-white text-emerald-900' : 'bg-white/10 text-white/80 hover:bg-white/20'
                   )}
                 >
-                  Brand
+                  {getAppChromeCopy('sponsor_brand', t)}
                 </button>
               </div>
             </div>
@@ -341,7 +346,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
       )}
 
       {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Main navigation">
+      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label={getAppChromeCopy('main_nav_aria', t)}>
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
           {t('nav.navigation')}
         </p>
@@ -402,7 +407,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
           <DropdownMenuTrigger asChild>
             <button 
               className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              aria-label={`User menu for ${user?.name || 'Guest'}`}
+              aria-label={getAppChromeCopy('user_menu_aria', t, { name: user?.name || getAppChromeCopy('guest', t) })}
             >
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarFallback className="bg-emerald-500 text-white text-xs font-semibold">
@@ -411,10 +416,10 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
               </Avatar>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm font-medium text-white">
-                  {user?.name || 'Guest'}
+                  {user?.name || getAppChromeCopy('guest', t)}
                 </span>
                 <span className="truncate text-[11px] text-white/50">
-                  {user?.email || 'Not logged in'}
+                  {user?.email || getAppChromeCopy('not_logged_in', t)}
                 </span>
               </div>
               <ChevronDown className="h-4 w-4 flex-shrink-0 text-white/40" aria-hidden="true" />
@@ -424,13 +429,13 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
             <DropdownMenuItem asChild>
               <Link href={withSponsorView('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
-                Account settings
+                {getAppChromeCopy('account_settings', t)}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              {getAppChromeCopy('log_out', t)}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

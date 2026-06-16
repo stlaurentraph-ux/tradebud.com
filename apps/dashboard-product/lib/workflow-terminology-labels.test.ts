@@ -37,6 +37,49 @@ import {
   getFieldOpsPageTitle,
   getReportsPageHeader,
   getRoleDecisionsStatLabel,
+  getHelpPageSubtitle,
+  getContactsPageTitle,
+  getContactStatusLabel,
+  getContactConsentLabel,
+  getContactTypeLabel,
+  getContactsAddPageTitle,
+  getContactsWizardStepLabel,
+  getAdminUsersSubtitle,
+  getAdminUsersTableColumnLabel,
+  getAdminDiagnosticsPresetLabel,
+  getAdminDiagnosticsCopy,
+  getAdminEntitlementsCopy,
+  getAdminEntitlementStatusLabel,
+  getAdminEudrDdsCopy,
+  getAdminWebhookCopy,
+  getProducerDetailCopy,
+  getProducerConsentCopy,
+  getProducerConsentStatusLabel,
+  getAppChromeCopy,
+  getAuthCopy,
+  getSignupCopy,
+  getOnboardingChecklistTaskCopy,
+  getSettingsCopy,
+  getSettingsPageCopy,
+  getSponsorPanelCopy,
+  getOnboardingWelcomeCopy,
+  getOnboardingTourCopy,
+  getOnboardingStepCopy,
+  localizeOnboardingConfig,
+  getVirginStateHeadingCopy,
+  getDemoDataCopy,
+  getWelcomeCardCopy,
+  getAsyncStateShellCopy,
+  getSupplyChainRolePresetLabel,
+  getAdminFilingPhaseFilterLabel,
+  getAdminEudrDdsSubmitSuccessMessage,
+  getAdminEudrDdsStatusErrorMessage,
+  getAdminPageTitle,
+  getAdminTenantRoleLabel,
+  getAdminRbacCopy,
+  getAdminRbacCommercialPermissionLabel,
+  getLegalRoleFilterLabel,
+  getLegalRoleDescriptionLabel,
   formatSlaTimeRemaining,
   getIssuesKanbanColumnLabel,
   getIssuesSlaLabel,
@@ -188,5 +231,57 @@ describe('workflow-terminology-labels', () => {
     expect(getFieldOpsPageTitle()).toBe('Field Operations');
     expect(getRoleDecisionsStatLabel('pending')).toBe('Pending Review');
     expect(getReportsPageHeader('importer').title).toBe('Reporting');
+    expect(getHelpPageSubtitle(false)).toBe('Workflow guidance, troubleshooting, and support resources');
+    expect(getContactsPageTitle(true)).toBe('Members');
+    expect(getLegalRoleDescriptionLabel('OPERATOR')).toContain('EU market');
+  });
+
+  it('localizes contacts add flow, status labels, and admin users table', () => {
+    expect(getContactStatusLabel('engaged')).toBe('Engaged');
+    expect(getContactConsentLabel('granted')).toBe('Granted');
+    expect(getContactTypeLabel('farmer')).toBe('Farmer');
+    expect(getContactsAddPageTitle('select', true)).toBe('Add Member or Organization');
+    expect(getContactsWizardStepLabel('review')).toBe('Review');
+    expect(getAdminUsersSubtitle()).toBe('Manage user accounts and access');
+    expect(getAdminUsersTableColumnLabel('last_login')).toBe('Last Login');
+    expect(getAdminDiagnosticsPresetLabel('latest_blocks')).toBe('Latest blocks (24h)');
+    expect(getAdminDiagnosticsCopy('filter_matching_events', undefined, { count: 3 })).toContain('3');
+    expect(getAdminEntitlementsCopy('action_load')).toBe('Load entitlements');
+    expect(getAdminEntitlementStatusLabel('enabled')).toBe('Enabled');
+    expect(getAdminEudrDdsCopy('action_submit')).toBe('Submit DDS');
+    expect(getAdminWebhookCopy('title_registrations')).toBe('Integration Webhook Registrations');
+    expect(getAdminDiagnosticsCopy('pagination_page', undefined, { page: 2, totalPages: 5 })).toContain('2');
+    expect(getProducerDetailCopy('section_info')).toBe('Producer Information');
+    expect(getProducerDetailCopy('badge_engaged')).toBe('Engaged in programme');
+    expect(getAdminFilingPhaseFilterLabel('submission_accepted')).toBe('Submission accepted');
+    expect(getAdminDiagnosticsCopy('section_workflow')).toBe('Workflow Activity');
+    expect(getAdminDiagnosticsCopy('toast_org_created')).toBe('Organization created.');
+    expect(getAdminEudrDdsSubmitSuccessMessage({ statusCode: 201 }, undefined)).toContain('201');
+    expect(getAdminEudrDdsStatusErrorMessage({ message: 'EUDR DDS status response was not valid JSON' })).toContain('malformed');
+    expect(getAdminPageTitle()).toBe('Admin Panel');
+    expect(getAdminTenantRoleLabel('importer')).toBe('Importer');
+    expect(getAdminRbacCopy('title')).toBe('RBAC Permission Matrix');
+    expect(getAdminRbacCommercialPermissionLabel('packages:submit_traces')).toContain('TRACES');
+    expect(getAdminRbacCommercialPermissionLabel('roles:manual_classify')).toBe('Manual Role Classification');
+    expect(getLegalRoleFilterLabel('OPERATOR')).toBe('Operator');
+    expect(getProducerConsentCopy('title')).toBe('Data access consent');
+    expect(getProducerConsentCopy('action_request', 'cooperative')).toBe('Request data access');
+    expect(getProducerConsentStatusLabel('pending')).toBe('pending');
+    expect(getAppChromeCopy('eudr_platform')).toBe('EUDR Platform');
+    expect(getAppChromeCopy('user_menu_aria', undefined, { name: 'Alex' })).toContain('Alex');
+    expect(getAuthCopy('login_title')).toBe('Sign in to your account');
+    expect(getSignupCopy('create_account')).toBe('Create account');
+    expect(getOnboardingChecklistTaskCopy('finish_overview', 'label')).toBe('Finish sponsor overview');
+    expect(getSupplyChainRolePresetLabel('cooperative_exporter')).toBe('Cooperative + exporter');
+    expect(getSettingsCopy('twofa_title')).toBe('Enable two-factor authentication');
+    expect(getSponsorPanelCopy('hero_title')).toBe('Network transparency for sustainable markets');
+    expect(getOnboardingWelcomeCopy('start_tour')).toBe('Start guided tour');
+    expect(getOnboardingTourCopy('finish')).toBe('Finish tour');
+    expect(getOnboardingStepCopy('coop_overview', 'label')).toBe('Overview');
+    expect(getVirginStateHeadingCopy('sponsor', 'title')).toBe('Build your sponsor oversight network');
+    expect(getDemoDataCopy('sidebar_label')).toBe('Demo data');
+    expect(getWelcomeCardCopy('start_onboarding')).toBe('Start onboarding');
+    expect(getAsyncStateShellCopy('retry')).toBe('Retry');
+    expect(getSettingsPageCopy('tab_security')).toBe('Security');
   });
 });

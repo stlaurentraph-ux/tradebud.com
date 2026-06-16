@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsBulkReleaseDescription,
+  getIntegrationsBulkReleaseLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface BulkReleaseModalProps {
   open: boolean;
@@ -33,6 +38,8 @@ export function BulkReleaseModal({
   isLoading = false,
   onConfirm,
 }: BulkReleaseModalProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [staleMinutes, setStaleMinutes] = useState(defaultStaleMinutes);
   const [limit, setLimit] = useState(defaultLimit);
 
@@ -49,10 +56,9 @@ export function BulkReleaseModal({
               <AlertTriangle className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <DialogTitle>Release Stale Claims</DialogTitle>
+              <DialogTitle>{getIntegrationsBulkReleaseLabel('title', t)}</DialogTitle>
               <DialogDescription className="mt-2">
-                This will release runs that have been claimed for longer than the specified
-                threshold. Currently {staleCount} stale claim{staleCount !== 1 ? 's' : ''} detected.
+                {getIntegrationsBulkReleaseDescription(staleCount, t)}
               </DialogDescription>
             </div>
           </div>
@@ -60,7 +66,7 @@ export function BulkReleaseModal({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="staleMinutes">Stale Threshold (minutes)</Label>
+            <Label htmlFor="staleMinutes">{getIntegrationsBulkReleaseLabel('stale_threshold', t)}</Label>
             <Input
               id="staleMinutes"
               type="number"
@@ -71,12 +77,12 @@ export function BulkReleaseModal({
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Claims older than this will be released
+              {getIntegrationsBulkReleaseLabel('stale_threshold_hint', t)}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="limit">Maximum to Release</Label>
+            <Label htmlFor="limit">{getIntegrationsBulkReleaseLabel('max_release', t)}</Label>
             <Input
               id="limit"
               type="number"
@@ -87,7 +93,7 @@ export function BulkReleaseModal({
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Limit the number of claims released in one operation
+              {getIntegrationsBulkReleaseLabel('max_release_hint', t)}
             </p>
           </div>
         </div>
@@ -98,7 +104,7 @@ export function BulkReleaseModal({
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Cancel
+            {getIntegrationsBulkReleaseLabel('cancel', t)}
           </Button>
           <Button
             variant="default"
@@ -107,7 +113,7 @@ export function BulkReleaseModal({
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Release Stale Claims
+            {getIntegrationsBulkReleaseLabel('confirm', t)}
           </Button>
         </DialogFooter>
       </DialogContent>

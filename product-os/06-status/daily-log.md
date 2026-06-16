@@ -1,3 +1,91 @@
+### 2026-06-16 (dashboard: A+ slice 3 — legacy signup wizard + error fallbacks)
+- Fully localized `create-account-wizard.tsx` via `getSignupCopy` / `getAuthCopy` helpers (legacy component; live flow uses `/create-account` step components).
+- Added `workflow-error-copy` with `resolveWorkflowErrorMessage`; wired inbox fulfillment, plots, field ops, evidence, billing upgrade errors.
+- `create-account` page logo alt via `getAuthCopy`.
+
+### 2026-06-16 (dashboard: A+ slice 2 — auth confirm + campaign intent UX)
+- Wired `/auth/confirm` through `getAuthCopy` confirm keys; added signup error copy keys.
+- `/requests/intent` now shows localized loading state instead of blank redirect (`getRequestIntentCopy`).
+- Synced new keys into `en.json`; parity CI green.
+
+### 2026-06-16 (dashboard: A+ scorecard + holistic slice 1)
+- Added `product-os/04-quality/dashboard-a-plus-scorecard.md` — per-role rubric (copy, IA, virgin path, states, permissions, UI, analytics).
+- Expanded `collectWorkflowTerminologyCopyManifest()` (~1,600 keys); parity CI now covers auth, admin, settings, sponsor, onboarding, shell aria.
+- Wired Founder OS home, app shell aria labels (breadcrumb, nav, mobile menu), sponsor welcome-modal role card.
+- Synced **368** new keys into `locales/en.json`.
+
+### 2026-06-16 (dashboard: EN-only grade A — welcome card, async shell, en.json parity)
+- Wired `WelcomeCard` through `getWelcomeCardCopy` / `getWelcomeCardHighlights`; localized `AsyncState` default labels via `getAsyncStateShellCopy`.
+- Added copy manifest exports and `en-copy-parity.test.ts` smoke test; synced **220** workflow keys into `locales/en.json` (onboarding steps, virgin state, demo, welcome/tour).
+
+### 2026-06-16 (dashboard: EN-only grade A — onboarding steps, virgin state, demo toggles)
+- Added `onboarding-step-copy`, `virgin-state-copy`, and `demo-data-copy` modules with `wf()` fallbacks for all guided-tour step bodies, persona taglines, virgin-state headings/steps, and demo-data UI.
+- `OnboardingProvider` now resolves localized config via `localizeOnboardingConfig`; welcome modal reads config from context.
+- Wired `VirginStatePanel`, `DemoDataToggleCard`, and `DemoDataSidebarToggle` through locale helpers.
+- Added parity tests for step-key coverage and virgin step counts; **416** dashboard tests passing.
+
+### 2026-06-16 (dashboard: EN-only grade A — sponsor panels, tour, settings shell)
+- Wired sponsor network hero, coverage, role classification, transparency panels, and dashboard row labels via `getSponsorPanelCopy`.
+- Localized onboarding welcome modal and guided tour overlay chrome through `getOnboardingWelcomeCopy` / `getOnboardingTourCopy`.
+- Wired settings page tabs, profile/security/notifications copy, org roles panel, and notification capability labels.
+
+### 2026-06-16 (dashboard: EN-only grade A — auth, onboarding, settings)
+- Wired login page, create-account wizard steps, onboarding checklist, supply-chain role picker, 2FA dialog, and billing panel through `getAuthCopy`, `getSignupCopy`, `getOnboardingChecklist*`, and `getSettingsCopy` helpers.
+- Added signup role/commodity/objective labels, supply-chain mix descriptions, and ~120 `workflow.auth.*` / `workflow.onboarding.*` / `workflow.settings.*` fallbacks.
+
+### 2026-06-16 (dashboard: EN-only grade A — consent panel + app chrome + admin roles)
+- Wired `ProducerConsentPanel` through `getProducerConsentCopy` / status / scope helpers (cooperative-aware fallbacks).
+- Localized app sidebar tenant/role/sponsor/user menu and app header notifications via `getAppChromeCopy`.
+- Admin roles tab permission badges now use `getAdminRbacCommercialPermissionLabel` (+ `roles:manual_classify` key).
+- Added ~50 `workflow.producers.consent.*` and `workflow.shell.*` keys to `en.json`; extended terminology unit tests.
+
+### 2026-06-16 (dashboard: admin RBAC matrix i18n)
+- Localized `/admin/rbac` commercial and legal permission matrices, info banner, tabs, and role cards.
+- Added `getAdminRbacCopy` with permission group/commercial/legal permission label helpers; reused legal role labels from role-decisions.
+
+### 2026-06-16 (dashboard: admin EUDR toasts + shell labels)
+- Wired all EUDR DDS handler toasts, retry hint, and accessible button labels through `getAdminEudrDdsCopy`.
+- Added `getAdminEudrDdsSubmitSuccessMessage`, `getAdminEudrDdsStatusErrorMessage`, page header, role/org type, org table, and status label helpers.
+
+### 2026-06-16 (dashboard: admin activity telemetry i18n)
+- Localized Filing, Chat, Workflow, Risk Score, and Assignment Export activity sections (filters, tables, pagination).
+- Wired telemetry/export/org/user toasts and filter label helpers (`getAdminFilingPhaseFilterLabel`, etc.).
+- Extended `getAdminDiagnosticsCopy` with activity sections, shared table headers, and export toast keys.
+
+### 2026-06-16 (dashboard: admin webhooks + producer detail i18n)
+- Localized Integration Webhook Registrations and Webhook Delivery Evidence tables (headers, loading/empty, pagination).
+- Added shared diagnostics pagination keys and `getAdminWebhookCopy` helper (+17 webhook / +3 pagination keys).
+- Wired `/farmers/[id]` producer information, verification badges, field-app link, and resolve/load errors via `getProducerDetailCopy`.
+
+### 2026-06-16 (dashboard: admin entitlements + EUDR DDS i18n)
+- Localized Launch Feature Entitlements block (table, actions, status badges, load/update toasts).
+- Localized EUDR DDS Submit and Status Read operator panels (presets, fields, hints, result actions).
+- Added `getAdminEntitlementsCopy`, `getAdminEntitlementStatusLabel`, and `getAdminEudrDdsCopy` (+45 en/de/sw keys).
+
+### 2026-06-15 (dashboard: admin diagnostics detail i18n)
+- Localized diagnostics presets, summary counters/breakdowns, filters, telemetry/export tables, and auth/debug messages.
+- Added `getAdminDiagnosticsCopy` + `getAdminDiagnosticsPresetLabel` helpers with interpolated breakdown/readiness copy.
+
+### 2026-06-15 (dashboard: org wizard + csv wizard i18n)
+- Localized `AddOrganizationWizard` with shared organization type/size labels and step/field/action copy.
+- Localized `CsvImportWizard` flow (upload/map/review/import) including errors, requirements, statuses, and completion copy.
+
+### 2026-06-15 (dashboard: admin diagnostics + farmer status labels)
+- Localized admin diagnostics header/actions/summary loading copy and organizations loading state.
+- Wired producer directory status labels on `/farmers` and `/farmers/[id]` through shared contacts status localization.
+
+### 2026-06-15 (dashboard: contacts add + admin users i18n)
+- Wired `/contacts/add` (mode cards, bulk import, tips, toasts) and `AddContactWizard` (steps, fields, review, actions).
+- Localized contact status/consent badges and filter options on `/contacts`; admin users invite form, table headers, and roles subtitle.
+
+### 2026-06-15 (dashboard: contacts + org forms + admin shell)
+- Localized `/contacts` (role-aware header, stats, filters, table, empty states).
+- Wired organisations add/import panel and admin stats/tabs/org-user sections; legal role descriptions on role-decisions.
+
+### 2026-06-15 (dashboard: integrations full i18n + sponsor pages)
+- Localized integrations run-queue (filters, table, drawer, confirm/toasts, bulk release) and scheduler sections end-to-end.
+- Wired help, compliance-health, organisations, and admin page headers/body copy; legal role filter labels on role-decisions.
+
 ### 2026-06-15 (dashboard: role-decisions + reports i18n)
 - Localized `/role-decisions` (stats, alerts, table, dialogs) and `/reports` (role-aware headers, stats, charts, report cards).
 - Founder-os content calendar/tasks/review async states wired; integrations run-queue/scheduler loading labels.
@@ -5840,3 +5928,19 @@ Append-only session log.
 - Risks: README can drift from behavior if commands/arguments change without doc updates.
 - Blockers: None.
 - Next step: optionally add a tiny CI doc-check that validates README command names exist in `package.json`.
+
+### 2026-06-16 (execution: dashboard A+ slice 4 — panel copy sweep)
+- Focus: localize remaining hardcoded operator strings in inbox fulfillment, billing upgrade consent, and plot tenure status panels.
+- Files changed: `apps/dashboard-product/lib/inbox-fulfillment-copy.ts`, `apps/dashboard-product/lib/billing-upgrade-copy.ts`, `apps/dashboard-product/lib/plot-tenure-panel-copy.ts`, `apps/dashboard-product/lib/workflow-copy-manifest.ts`, `apps/dashboard-product/components/inbox/inbox-fulfillment-dialog.tsx`, `apps/dashboard-product/components/billing/upgrade-band-consent-modal.tsx`, `apps/dashboard-product/components/plots/plot-tenure-status-panel.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Decisions: three focused copy registries merged into workflow manifest; tenure panel reuses existing `getTenureReview*` dialog helpers where text matches; panel-specific cadastral and shell strings stay in `plot-tenure-panel-copy.ts`.
+- Verification: `npx vitest run lib/en-copy-parity.test.ts` (pass); manifest now ~1,735 keys (+62).
+- Blockers: None.
+- Next step: exporter critical-path acceptance on real tenant per `dashboard-a-plus-scorecard.md`; optional deforestation decision panel async-state strings.
+
+### 2026-06-16 (execution: dashboard A+ slice 5 — deforestation panel + exporter blocker north star)
+- Focus: localize plot deforestation decision panel; prioritize blocking issues/yield failures in exporter north-star KPI before seal handoff.
+- Files changed: `apps/dashboard-product/lib/plot-deforestation-decision-copy.ts`, `apps/dashboard-product/lib/workflow-copy-manifest.ts`, `apps/dashboard-product/components/plots/plot-deforestation-decision-history-panel.tsx`, `apps/dashboard-product/lib/dashboard-north-star.ts`, `apps/dashboard-product/lib/dashboard-north-star.test.ts`, `apps/dashboard-product/lib/terminology-labels.ts`, `apps/dashboard-product/components/dashboards/exporter-dashboard.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/04-quality/dashboard-a-plus-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Decisions: exporter north-star CTA routes to `/compliance/issues`; verdict badges use localized labels instead of raw enum strings.
+- Verification: `npx vitest run lib/en-copy-parity.test.ts lib/dashboard-north-star.test.ts` (pass); manifest +28 keys.
+- Blockers: None.
+- Next step: manual exporter critical-path QA on real tenant (producer → plot → batch → shipment → seal blockers visible).

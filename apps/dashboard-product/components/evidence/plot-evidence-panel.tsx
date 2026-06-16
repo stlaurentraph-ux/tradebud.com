@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,12 @@ import {
   openEvidenceFile,
 } from '@/lib/evidence-files';
 import { useEvidenceFeed, type EvidenceFeedDocument } from '@/lib/use-evidence-feed';
+import { LocaleContext } from '@/lib/locale-context';
+import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
 
 function EvidenceRow({ doc }: { doc: EvidenceFeedDocument }) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [busy, setBusy] = useState<'view' | 'download' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +28,7 @@ function EvidenceRow({ doc }: { doc: EvidenceFeedDocument }) {
     try {
       await openEvidenceFile(doc.storage_path);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open file.');
+      setError(resolveWorkflowErrorMessage(e, 'evidence_open_file', t));
     } finally {
       setBusy(null);
     }
@@ -37,7 +41,7 @@ function EvidenceRow({ doc }: { doc: EvidenceFeedDocument }) {
     try {
       await downloadEvidenceFile(doc.storage_path, doc.name);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not download file.');
+      setError(resolveWorkflowErrorMessage(e, 'evidence_download_file', t));
     } finally {
       setBusy(null);
     }

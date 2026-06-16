@@ -1,10 +1,13 @@
 'use client';
 
+import { useContext, useMemo } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TransparencyMetrics } from '@/lib/sponsor-network-aggregates';
+import { LocaleContext } from '@/lib/locale-context';
+import { getSponsorPanelCopy } from '@/lib/workflow-terminology-labels';
 
 interface SponsorTransparencyPanelProps {
   metrics: TransparencyMetrics;
@@ -12,44 +15,48 @@ interface SponsorTransparencyPanelProps {
 }
 
 export function SponsorTransparencyPanel({ metrics, complianceHealthHref }: SponsorTransparencyPanelProps) {
-  const scorecards = [
-    {
-      label: 'Transparency index',
-      value: metrics.transparencyIndex !== null ? `${metrics.transparencyIndex}%` : '--',
-      hint: 'Blends plot compliance and organisation readiness',
-      icon: TrendingUp,
-    },
-    {
-      label: 'Compliance health',
-      value: metrics.complianceHealthPercent !== null ? `${metrics.complianceHealthPercent}%` : '--',
-      hint: 'Mapped plots meeting compliance signals',
-      icon: ShieldCheck,
-    },
-    {
-      label: 'At-risk organisations',
-      value: String(metrics.atRiskOrganisations),
-      hint: 'Below readiness threshold across your network',
-      icon: ShieldCheck,
-    },
-    {
-      label: 'Active contacts',
-      value: String(metrics.activeContacts),
-      hint: 'Invited or engaged supply chain contacts',
-      icon: TrendingUp,
-    },
-  ];
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+
+  const scorecards = useMemo(
+    () => [
+      {
+        label: getSponsorPanelCopy('transparency_index', t),
+        value: metrics.transparencyIndex !== null ? `${metrics.transparencyIndex}%` : '--',
+        hint: getSponsorPanelCopy('transparency_index_hint', t),
+        icon: TrendingUp,
+      },
+      {
+        label: getSponsorPanelCopy('transparency_compliance', t),
+        value: metrics.complianceHealthPercent !== null ? `${metrics.complianceHealthPercent}%` : '--',
+        hint: getSponsorPanelCopy('transparency_compliance_hint', t),
+        icon: ShieldCheck,
+      },
+      {
+        label: getSponsorPanelCopy('transparency_at_risk', t),
+        value: String(metrics.atRiskOrganisations),
+        hint: getSponsorPanelCopy('transparency_at_risk_hint', t),
+        icon: ShieldCheck,
+      },
+      {
+        label: getSponsorPanelCopy('transparency_contacts', t),
+        value: String(metrics.activeContacts),
+        hint: getSponsorPanelCopy('transparency_contacts_hint', t),
+        icon: TrendingUp,
+      },
+    ],
+    [metrics, t],
+  );
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
-          <CardTitle>Transparency & sustainable market readiness</CardTitle>
-          <CardDescription>
-            Cross-network signals for EUDR-aligned transparency, deforestation-risk visibility, and programme accountability.
-          </CardDescription>
+          <CardTitle>{getSponsorPanelCopy('transparency_title', t)}</CardTitle>
+          <CardDescription>{getSponsorPanelCopy('transparency_description', t)}</CardDescription>
         </div>
         <Button variant="outline" size="sm" asChild>
-          <Link href={complianceHealthHref}>Open compliance health</Link>
+          <Link href={complianceHealthHref}>{getSponsorPanelCopy('transparency_cta', t)}</Link>
         </Button>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

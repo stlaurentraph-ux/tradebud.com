@@ -29,6 +29,7 @@ import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
 import { LocaleContext } from '@/lib/locale-context';
 import { getShipmentStatusLabel } from '@/lib/status-labels';
 import {
+  formatExporterComplianceRateSrOnly,
   formatExporterSlaActive,
   formatExporterSlaLabel,
   getExporterDashboardLabels,
@@ -147,7 +148,12 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
     <div className="space-y-6">
       {northStar ? <NorthStarKpi config={northStar} priorityLabel={getNorthStarPriorityLabel(t)} /> : null}
       <span className="sr-only">
-        Plot compliance rate {complianceRate} percent ({metrics.compliant_plots} of {metrics.total_plots} plots).
+        {formatExporterComplianceRateSrOnly(
+          complianceRate,
+          metrics.compliant_plots,
+          metrics.total_plots,
+          t,
+        )}
       </span>
       <CampaignsOverviewCard
         description={copy.campaignDescription}

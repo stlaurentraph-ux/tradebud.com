@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -22,33 +22,24 @@ import {
   supplyChainRoleToTenantRole,
   type SupplyChainRoleId,
 } from '@/lib/org-supply-chain-roles';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getAuthCopy,
+  getSignupCopy,
+  getSignupStepMeta,
+} from '@/lib/workflow-terminology-labels';
 
 type Step = 1 | 2 | 3;
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
 type SupportedPrefillRole = PrimaryRole;
 
-const STEP_TITLES: Record<Step, { title: string; description: string }> = {
-  1: {
-    title: 'Create your account',
-    description: 'Start your Tracebud workspace in a few minutes.',
-  },
-  2: {
-    title: 'Set up your workspace',
-    description: 'Tell us about your organization so we can tailor your workflows.',
-  },
-  3: {
-    title: 'Your commercial profile',
-    description: 'Help us personalize onboarding. You can update this later.',
-  },
-};
+const WIZARD_STEP_KEYS = ['wizard_step_account', 'wizard_step_workspace', 'wizard_step_profile'] as const;
 
-const WIZARD_STEPS = ['Create account', 'Workspace', 'Profile'];
-
-function extractErrorMessage(body: unknown): string {
-  if (!body || typeof body !== 'object') return 'Something went wrong. Please try again.';
+function extractErrorMessage(body: unknown, t?: (key: string) => string): string {
+  if (!body || typeof body !== 'object') return getAuthCopy('error_generic', t);
   const b = body as Record<string, unknown>;
   const msg = b.message ?? b.msg ?? b.error;
-  return typeof msg === 'string' && msg.length > 0 ? msg : 'Something went wrong. Please try again.';
+  return typeof msg === 'string' && msg.length > 0 ? msg : getAuthCopy('error_generic', t);
 }
 
 function toApiPrimaryRole(role: PrimaryRole | ''): ApiPrimaryRole {
@@ -103,6 +94,8 @@ export default function CreateAccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hydrateSessionFromToken, isAuthenticated } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const resumeWorkspace = searchParams.get('resume') === 'workspace';
   const [step, setStep] = useState<Step>(resumeWorkspace ? 2 : 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,14 +150,14 @@ export default function CreateAccountPage() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(extractErrorMessage(json));
+      if (!res.ok) throw new Error(extractErrorMessage(json, t));
       const payload = json as { accessToken?: string; refreshToken?: string | null };
       if (payload.accessToken) {
         hydrateSessionFromToken(payload.accessToken, payload.refreshToken);
       }
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(err instanceof Error ? err.message : getAuthCopy('error_generic', t));
     } finally {
       setIsSubmitting(false);
     }
@@ -189,7 +182,7 @@ export default function CreateAccountPage() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(extractErrorMessage(json));
+      if (!res.ok) throw new Error(extractErrorMessage(json, t));
 
       const supplyChainRoles: SupplyChainRoleId[] = signupPrimarySupportsSupplyChainRoles(effectivePrimaryRole)
         ? workspaceData.supplyChainRoles
@@ -232,7 +225,7 @@ export default function CreateAccountPage() {
       }
       setStep(3);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(err instanceof Error ? err.message : getAuthCopy('error_generic', t));
     } finally {
       setIsSubmitting(false);
     }
@@ -266,7 +259,8 @@ export default function CreateAccountPage() {
     }
   };
 
-  const { title, description } = STEP_TITLES[step];
+  const { title, description } = getSignupStepMeta(step, t);
+  const wizardSteps = WIZARD_STEP_KEYS.map((key) => getSignupCopy(key, t));
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-background px-4 py-10 sm:items-center sm:py-0">
@@ -274,25 +268,25 @@ export default function CreateAccountPage() {
         <div className="mb-8 flex flex-col items-center">
           <Image
             src="/tracebud-logo-v6.png"
-            alt="Tracebud"
+            alt={getAuthCopy('logo_alt', t)}
             width={64}
             height={64}
             className="mb-4 rounded-xl"
           />
           <h1 className="text-2xl font-bold text-[#064E3B]">Tracebud</h1>
-          <p className="text-sm text-muted-foreground">EUDR Compliance Platform</p>
+          <p className="text-sm text-muted-foreground">{getAuthCopy('eudr_platform_tagline', t)}</p>
         </div>
 
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="pb-2">
-            <WizardProgress currentStep={step} totalSteps={3} steps={WIZARD_STEPS} />
+            <WizardProgress currentStep={step} totalSteps={3} steps={wizardSteps} />
           </CardHeader>
 
           <CardHeader className="pt-4 pb-2">
             <CardTitle className="text-xl">{title}</CardTitle>
             <CardDescription>
               {resumeWorkspace && step === 2
-                ? 'Your email is confirmed. Choose your organization and role to finish setup.'
+                ? getSignupCopy('step2_resume_description', t)
                 : description}
             </CardDescription>
           </CardHeader>
@@ -338,9 +332,9 @@ export default function CreateAccountPage() {
         </Card>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {getAuthCopy('already_have_account', t)}{' '}
           <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-            Sign in
+            {getAuthCopy('sign_in', t)}
           </Link>
         </p>
       </div>

@@ -33,6 +33,10 @@ import {
   type Locale,
 } from '@/lib/locale-policy';
 import {
+  getNotificationCapabilityCopy,
+  getSettingsPageCopy,
+} from '@/lib/workflow-terminology-labels';
+import {
   isDashboardTimezone,
   TIMEZONE_OPTIONS,
   type DashboardTimezone,
@@ -110,7 +114,7 @@ export default function SettingsPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          setProfileError(error instanceof Error ? error.message : 'Unable to load profile.');
+          setProfileError(error instanceof Error ? error.message : getSettingsPageCopy('error_load_profile', t));
         }
       } finally {
         if (!cancelled) setIsLoadingProfile(false);
@@ -150,7 +154,7 @@ export default function SettingsPage() {
 
       toast.success(t('settings.preferences.saved'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save preferences.');
+      toast.error(error instanceof Error ? error.message : getSettingsPageCopy('error_save_preferences', t));
     } finally {
       setIsSavingPreferences(false);
     }
@@ -159,7 +163,7 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     const fullName = profileForm.fullName.trim();
     if (!fullName) {
-      toast.error('Full name is required.');
+      toast.error(getSettingsPageCopy('error_name_required', t));
       return;
     }
 
@@ -181,9 +185,9 @@ export default function SettingsPage() {
       }
 
       updateProfile({ name: fullName });
-      toast.success('Profile saved');
+      toast.success(getSettingsPageCopy('toast_profile_saved', t));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save profile.';
+      const message = error instanceof Error ? error.message : getSettingsPageCopy('error_save_profile', t);
       setProfileError(message);
       toast.error(message);
     } finally {
@@ -195,7 +199,7 @@ export default function SettingsPage() {
     if (activeTab !== 'security') return;
     if (!hasSupabaseSessionTokens()) {
       setIsTwoFactorEnabled(false);
-      setSecurityError('Sign out and sign in again to manage security settings.');
+      setSecurityError(getSettingsPageCopy('error_security_session', t));
       return;
     }
 
@@ -213,7 +217,7 @@ export default function SettingsPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          setSecurityError(error instanceof Error ? error.message : 'Unable to load security settings.');
+          setSecurityError(error instanceof Error ? error.message : getSettingsPageCopy('error_load_security', t));
           setIsTwoFactorEnabled(false);
         }
       } finally {
@@ -229,11 +233,11 @@ export default function SettingsPage() {
 
   const handlePasswordUpdate = async () => {
     if (!passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('New passwords do not match.');
+      toast.error(getSettingsPageCopy('error_password_mismatch', t));
       return;
     }
     if (passwordForm.newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters.');
+      toast.error(getSettingsPageCopy('error_password_length', t));
       return;
     }
 
@@ -242,10 +246,10 @@ export default function SettingsPage() {
       const supabase = await getAuthenticatedSupabaseClient();
       const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
       if (error) throw error;
-      toast.success('Password updated');
+      toast.success(getSettingsPageCopy('toast_password_updated', t));
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update password.');
+      toast.error(error instanceof Error ? error.message : getSettingsPageCopy('error_password_update', t));
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -264,10 +268,10 @@ export default function SettingsPage() {
           <div className="w-56 flex-shrink-0">
             <nav className="space-y-1">
               {[
-                { id: 'profile', label: 'Profile', icon: User },
-                { id: 'organization', label: 'Organization', icon: Building2 },
-                { id: 'notifications', label: 'Notifications', icon: Bell },
-                { id: 'security', label: 'Security', icon: Shield },
+                { id: 'profile', label: getSettingsPageCopy('tab_profile', t), icon: User },
+                { id: 'organization', label: getSettingsPageCopy('tab_organization', t), icon: Building2 },
+                { id: 'notifications', label: getSettingsPageCopy('tab_notifications', t), icon: Bell },
+                { id: 'security', label: getSettingsPageCopy('tab_security', t), icon: Shield },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -310,15 +314,15 @@ export default function SettingsPage() {
                       <div>
                         <Button variant="outline" size="sm" disabled>
                           <Upload className="w-4 h-4 mr-2" />
-                          Change Photo
+                          {getSettingsPageCopy('change_photo', t)}
                         </Button>
-                        <p className="text-xs text-muted-foreground mt-1">Profile photos are not wired yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">{getSettingsPageCopy('photo_not_wired', t)}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Full Name</label>
+                        <label className="text-sm font-medium">{getSettingsPageCopy('field_full_name', t)}</label>
                         <Input
                           value={profileForm.fullName}
                           onChange={(event) =>
@@ -328,11 +332,11 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Email</label>
+                        <label className="text-sm font-medium">{getSettingsPageCopy('field_email', t)}</label>
                         <Input value={user?.email || ''} type="email" disabled />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Phone</label>
+                        <label className="text-sm font-medium">{getSettingsPageCopy('field_phone', t)}</label>
                         <Input
                           value={profileForm.phone}
                           onChange={(event) =>
@@ -344,7 +348,7 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Role</label>
+                        <label className="text-sm font-medium">{getSettingsPageCopy('field_role', t)}</label>
                         <Input value={user?.active_role || ''} disabled />
                       </div>
                     </div>
@@ -352,7 +356,7 @@ export default function SettingsPage() {
                     <div className="flex flex-col items-end gap-2">
                       {!hasSupabaseSessionTokens() ? (
                         <p className="text-xs text-muted-foreground">
-                          Sign out and sign back in to save profile changes.
+                          {getSettingsPageCopy('sign_in_to_save', t)}
                         </p>
                       ) : null}
                       <Button
@@ -360,7 +364,7 @@ export default function SettingsPage() {
                         disabled={isLoadingProfile || isSavingProfile || !hasSupabaseSessionTokens()}
                       >
                         <Save className="w-4 h-4 mr-2" />
-                        {isSavingProfile ? 'Saving...' : 'Save Changes'}
+                        {isSavingProfile ? getSettingsPageCopy('saving', t) : getSettingsPageCopy('save_changes', t)}
                       </Button>
                     </div>
                   </CardContent>
@@ -441,43 +445,43 @@ export default function SettingsPage() {
                 <OrgSupplyChainRolesPanel />
               <Card>
                 <CardHeader>
-                  <CardTitle>Organization Settings</CardTitle>
-                  <CardDescription>Manage your organization details</CardDescription>
+                  <CardTitle>{getSettingsPageCopy('org_settings_title', t)}</CardTitle>
+                  <CardDescription>{getSettingsPageCopy('org_settings_description', t)}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Organization Name</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('org_name', t)}</label>
                       <Input defaultValue="Brazil Export Co." />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Organization Type</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('org_type', t)}</label>
                       <Input value="Exporter" disabled />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Country</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('org_country', t)}</label>
                       <Input defaultValue="Brazil" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Registration Number</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('org_registration', t)}</label>
                       <Input defaultValue="BR-EXP-2024-001" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Address</label>
+                    <label className="text-sm font-medium">{getSettingsPageCopy('org_address', t)}</label>
                     <Input defaultValue="Av. Paulista, 1000 - Sao Paulo, SP" />
                   </div>
 
                   <div className="pt-4 border-t">
-                    <h4 className="font-medium mb-3">API Access</h4>
+                    <h4 className="font-medium mb-3">{getSettingsPageCopy('org_api_access', t)}</h4>
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
                         <Input value="sk_live_xxxxxxxxxxxxxxxxx" type="password" disabled />
                       </div>
                       <Button variant="outline">
                         <Key className="w-4 h-4 mr-2" />
-                        Regenerate
+                        {getSettingsPageCopy('org_regenerate', t)}
                       </Button>
                     </div>
                   </div>
@@ -485,7 +489,7 @@ export default function SettingsPage() {
                   <div className="flex justify-end">
                     <Button>
                       <Save className="w-4 h-4 mr-2" />
-                      Save Changes
+                      {getSettingsPageCopy('save_changes', t)}
                     </Button>
                   </div>
                 </CardContent>
@@ -497,38 +501,48 @@ export default function SettingsPage() {
             {activeTab === 'notifications' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Notification delivery</CardTitle>
-                  <CardDescription>
-                    What Tracebud can send today versus what is still on the roadmap
-                  </CardDescription>
+                  <CardTitle>{getSettingsPageCopy('notifications_title', t)}</CardTitle>
+                  <CardDescription>{getSettingsPageCopy('notifications_description', t)}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <Alert>
-                    <AlertDescription>
-                      Most toggles in the old settings screen were placeholders. Only the items marked
-                      <span className="font-medium"> Active today</span> are wired in the current beta setup.
-                      Per-user notification preferences are not persisted yet.
-                    </AlertDescription>
+                    <AlertDescription>{getSettingsPageCopy('notifications_beta_alert', t)}</AlertDescription>
                   </Alert>
 
                   {NOTIFICATION_CAPABILITIES.map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-4 border-b border-border/60 pb-4 last:border-0 last:pb-0">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium">{item.title}</p>
+                          <p className="font-medium">{getNotificationCapabilityCopy(item.id, 'title', t)}</p>
                           <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                            {item.status === 'active' ? 'Active today' : 'Planned'}
+                            {item.status === 'active'
+                              ? getSettingsPageCopy('notifications_active_today', t)
+                              : getSettingsPageCopy('notifications_planned', t)}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                        {item.note ? <p className="text-xs text-muted-foreground">{item.note}</p> : null}
+                        <p className="text-sm text-muted-foreground">
+                          {getNotificationCapabilityCopy(item.id, 'description', t)}
+                        </p>
+                        {item.note ? (
+                          <p className="text-xs text-muted-foreground">
+                            {getNotificationCapabilityCopy(item.id, 'note', t)}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex shrink-0 flex-col gap-2 text-xs text-muted-foreground">
                         {item.deliveries.email ? (
-                          <span>{item.status === 'active' ? 'Email: sent' : 'Email: planned'}</span>
+                          <span>
+                            {item.status === 'active'
+                              ? getSettingsPageCopy('notifications_email_sent', t)
+                              : getSettingsPageCopy('notifications_email_planned', t)}
+                          </span>
                         ) : null}
-                        {item.deliveries.in_app ? <span>In-app: planned</span> : null}
-                        {item.deliveries.push ? <span>Push: not wired</span> : null}
+                        {item.deliveries.in_app ? (
+                          <span>{getSettingsPageCopy('notifications_in_app_planned', t)}</span>
+                        ) : null}
+                        {item.deliveries.push ? (
+                          <span>{getSettingsPageCopy('notifications_push_not_wired', t)}</span>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -547,12 +561,12 @@ export default function SettingsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Change Password</CardTitle>
-                    <CardDescription>Updates your Supabase auth password for this account</CardDescription>
+                    <CardTitle>{getSettingsPageCopy('security_password_title', t)}</CardTitle>
+                    <CardDescription>{getSettingsPageCopy('security_password_description', t)}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Current Password</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('security_current_password', t)}</label>
                       <Input
                         type="password"
                         value={passwordForm.currentPassword}
@@ -560,11 +574,11 @@ export default function SettingsPage() {
                           setPasswordForm((previous) => ({ ...previous, currentPassword: event.target.value }))
                         }
                         disabled
-                        placeholder="Not required for Supabase password reset in-session"
+                        placeholder={getSettingsPageCopy('security_current_password_hint', t)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">New Password</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('security_new_password', t)}</label>
                       <Input
                         type="password"
                         value={passwordForm.newPassword}
@@ -574,7 +588,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Confirm New Password</label>
+                      <label className="text-sm font-medium">{getSettingsPageCopy('security_confirm_password', t)}</label>
                       <Input
                         type="password"
                         value={passwordForm.confirmPassword}
@@ -588,7 +602,9 @@ export default function SettingsPage() {
                         onClick={() => void handlePasswordUpdate()}
                         disabled={isUpdatingPassword || !hasSupabaseSessionTokens()}
                       >
-                        {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                        {isUpdatingPassword
+                          ? getSettingsPageCopy('security_updating', t)
+                          : getSettingsPageCopy('security_update_password', t)}
                       </Button>
                     </div>
                   </CardContent>
@@ -596,21 +612,19 @@ export default function SettingsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Two-Factor Authentication</CardTitle>
-                    <CardDescription>
-                      Protect your account with a TOTP authenticator app via Supabase Auth
-                    </CardDescription>
+                    <CardTitle>{getSettingsPageCopy('security_twofa_title', t)}</CardTitle>
+                    <CardDescription>{getSettingsPageCopy('security_twofa_description', t)}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="font-medium">Status</p>
+                        <p className="font-medium">{getSettingsPageCopy('security_status', t)}</p>
                         <p className="text-sm text-muted-foreground">
                           {isLoadingSecurity
-                            ? 'Checking authenticator status...'
+                            ? getSettingsPageCopy('security_checking_2fa', t)
                             : isTwoFactorEnabled
-                              ? '2FA is enabled for this account'
-                              : '2FA is currently disabled'}
+                              ? getSettingsPageCopy('security_2fa_enabled', t)
+                              : getSettingsPageCopy('security_2fa_disabled', t)}
                         </p>
                       </div>
                       {!isTwoFactorEnabled ? (
@@ -619,10 +633,10 @@ export default function SettingsPage() {
                           onClick={() => setIsTwoFactorDialogOpen(true)}
                           disabled={!hasSupabaseSessionTokens() || isLoadingSecurity}
                         >
-                          Enable 2FA
+                          {getSettingsPageCopy('security_enable_2fa', t)}
                         </Button>
                       ) : (
-                        <Badge variant="secondary">Enabled</Badge>
+                        <Badge variant="secondary">{getSettingsPageCopy('security_enabled_badge', t)}</Badge>
                       )}
                     </div>
                   </CardContent>
@@ -630,13 +644,12 @@ export default function SettingsPage() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Active Sessions</CardTitle>
-                    <CardDescription>Session revocation is not wired in beta yet</CardDescription>
+                    <CardTitle>{getSettingsPageCopy('security_sessions_title', t)}</CardTitle>
+                    <CardDescription>{getSettingsPageCopy('security_sessions_description', t)}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      You are signed in on this browser. Multi-device session management will be added in a
-                      later release.
+                      {getSettingsPageCopy('security_sessions_body', t)}
                     </p>
                   </CardContent>
                 </Card>
@@ -646,7 +659,7 @@ export default function SettingsPage() {
                   onOpenChange={setIsTwoFactorDialogOpen}
                   onEnabled={() => {
                     setIsTwoFactorEnabled(true);
-                    toast.success('Two-factor authentication enabled');
+                    toast.success(getSettingsPageCopy('toast_2fa_enabled', t));
                   }}
                 />
               </>

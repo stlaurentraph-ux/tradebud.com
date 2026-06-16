@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { Calendar, FileCheck, RefreshCw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,17 +12,13 @@ import {
   requestProducerDataAccess,
   type ProducerConsentGrant,
 } from '@/lib/consent-grants-service';
-
-function scopeLabel(scope: string[]): string {
-  return scope
-    .map((item) => {
-      if (item === 'identity') return 'profile';
-      if (item === 'plots') return 'plots';
-      if (item === 'evidence') return 'evidence';
-      return item;
-    })
-    .join(', ');
-}
+import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getProducerConsentCopy,
+  getProducerConsentScopeLabel,
+  getProducerConsentStatusLabel,
+} from '@/lib/workflow-terminology-labels';
 
 function statusBadgeVariant(
   status: ProducerConsentGrant['status'],
@@ -46,11 +42,19 @@ export function ProducerConsentPanel({
   granteeOrgName,
   resolveError,
 }: ProducerConsentPanelProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const { user } = useAuth();
+  const role = user?.active_role;
+
   const [grants, setGrants] = useState<ProducerConsentGrant[]>([]);
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const formatScopeList = (scope: string[]) =>
+    scope.map((item) => getProducerConsentScopeLabel(item, t)).join(', ');
 
   const refresh = useCallback(async () => {
     if (!farmerProfileId) {
@@ -63,12 +67,14 @@ export function ProducerConsentPanel({
       const items = await listProducerConsentGrants(farmerProfileId);
       setGrants(items);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load consent grants.');
+      setError(
+        e instanceof Error ? e.message : getProducerConsentCopy('error_load', role, t),
+      );
       setGrants([]);
     } finally {
       setLoading(false);
     }
-  }, [farmerProfileId]);
+  }, [farmerProfileId, role, t]);
 
   useEffect(() => {
     void refresh();
@@ -90,33 +96,42 @@ export function ProducerConsentPanel({
       });
       setMessage(
         result.status === 'active'
-          ? 'Producer already granted access.'
+          ? getProducerConsentCopy('message_already_granted', role, t)
           : result.status === 'pending'
-            ? 'Request sent. The producer must approve in the Tracebud field app under Data sharing.'
-            : 'Consent request recorded.',
+            ? getProducerConsentCopy('message_pending', role, t)
+            : getProducerConsentCopy('message_recorded', role, t),
       );
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to request data access.');
+      setError(
+        e instanceof Error ? e.message : getProducerConsentCopy('error_request', role, t),
+      );
     } finally {
       setRequesting(false);
     }
   };
 
+  const revokedDateSuffix = revokedGrant?.revoked_at
+    ? getProducerConsentCopy('revoked_on', role, t, {
+        date: new Date(revokedGrant.revoked_at).toLocaleDateString(),
+      })
+    : '';
+  const revokedRetentionSuffix = revokedGrant?.sold_lineage_retention_until
+    ? getProducerConsentCopy('revoked_until', role, t, {
+        date: new Date(revokedGrant.sold_lineage_retention_until).toLocaleDateString(),
+      })
+    : getProducerConsentCopy('revoked_retention_default', role, t);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-4">
-        <CardTitle className="text-base">Data access consent</CardTitle>
+        <CardTitle className="text-base">{getProducerConsentCopy('title', role, t)}</CardTitle>
         <Button variant="ghost" size="sm" onClick={() => void refresh()} disabled={loading || !farmerProfileId}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Plot and evidence data is only visible after the producer approves a request in the Tracebud field app.
-          The producer can revoke future access at any time. Data already in batches or shipments they sold to you
-          cannot be withdrawn and may be retained for EU compliance (up to 5 years for importers).
-        </p>
+        <p className="text-sm text-muted-foreground">{getProducerConsentCopy('intro', role, t)}</p>
 
         {resolveError ? (
           <Alert className="border-amber-500/50 bg-amber-500/10">
@@ -139,31 +154,24 @@ export function ProducerConsentPanel({
         {revokedGrant ? (
           <Alert className="border-slate-500/40 bg-slate-500/10">
             <AlertDescription className="text-slate-800">
-              Future access revoked by the producer
-              {revokedGrant.revoked_at
-                ? ` on ${new Date(revokedGrant.revoked_at).toLocaleDateString()}`
-                : ''}
-              . You can no longer view new plots or harvests. Sold batch and shipment lineage already linked before
-              revocation remains available for compliance
-              {revokedGrant.sold_lineage_retention_until
-                ? ` until ${new Date(revokedGrant.sold_lineage_retention_until).toLocaleDateString()}`
-                : ' (up to 5 years for importers)'}
-              .
+              {getProducerConsentCopy('revoked_prefix', role, t)}
+              {revokedDateSuffix}
+              {getProducerConsentCopy('revoked_body', role, t)}
+              {revokedRetentionSuffix}.
             </AlertDescription>
           </Alert>
         ) : null}
 
         {!farmerProfileId ? (
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Link this directory contact to a field-app account (same email) before you can request data access.
+            {getProducerConsentCopy('link_required', role, t)}
           </div>
         ) : (
           <>
             {!activeGrant && !revokedGrant ? (
               <Alert className="border-amber-500/50 bg-amber-500/10">
                 <AlertDescription className="text-amber-800">
-                  No active data access consent. You cannot view this producer&apos;s backed-up plots until they
-                  approve your request.
+                  {getProducerConsentCopy('no_active_consent', role, t)}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -175,19 +183,19 @@ export function ProducerConsentPanel({
               >
                 <Send className="mr-2 h-4 w-4" />
                 {requesting
-                  ? 'Sending…'
+                  ? getProducerConsentCopy('action_sending', role, t)
                   : pendingGrant
-                    ? 'Request pending approval'
+                    ? getProducerConsentCopy('action_pending', role, t)
                     : activeGrant
-                      ? 'Access already granted'
-                      : 'Request data access'}
+                      ? getProducerConsentCopy('action_granted', role, t)
+                      : getProducerConsentCopy('action_request', role, t)}
               </Button>
             </PermissionGate>
 
             {grants.length === 0 && !loading ? (
               <div className="text-center py-6 text-sm text-muted-foreground">
                 <FileCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                No consent requests yet for {producerName}.
+                {getProducerConsentCopy('empty_none', role, t, { name: producerName })}
               </div>
             ) : (
               <div className="space-y-2">
@@ -197,24 +205,32 @@ export function ProducerConsentPanel({
                       <span className="text-sm font-medium">
                         {grant.grantee_org_name?.trim() || grant.grantee_tenant_id}
                       </span>
-                      <Badge variant={statusBadgeVariant(grant.status)}>{grant.status}</Badge>
+                      <Badge variant={statusBadgeVariant(grant.status)}>
+                        {getProducerConsentStatusLabel(grant.status, t)}
+                      </Badge>
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">Can see: {scopeLabel(grant.data_scope)}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {getProducerConsentCopy('scope_prefix', role, t)} {formatScopeList(grant.data_scope)}
+                    </p>
                     <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                       {grant.granted_at ? (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Granted: {new Date(grant.granted_at).toLocaleString()}
+                          {getProducerConsentCopy('granted_at', role, t, {
+                            date: new Date(grant.granted_at).toLocaleString(),
+                          })}
                         </div>
                       ) : null}
                       {grant.revoked_at ? (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Revoked: {new Date(grant.revoked_at).toLocaleString()}
+                          {getProducerConsentCopy('revoked_at', role, t, {
+                            date: new Date(grant.revoked_at).toLocaleString(),
+                          })}
                         </div>
                       ) : null}
                       {grant.status === 'pending' ? (
-                        <div>Waiting for producer approval in the field app.</div>
+                        <div>{getProducerConsentCopy('waiting_approval', role, t)}</div>
                       ) : null}
                     </div>
                   </div>

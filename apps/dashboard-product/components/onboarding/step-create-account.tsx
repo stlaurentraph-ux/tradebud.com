@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck, Zap, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LocaleContext } from '@/lib/locale-context';
+import { getAuthCopy, getSignupCopy } from '@/lib/workflow-terminology-labels';
 
 export interface CreateAccountData {
   email: string;
@@ -20,11 +22,8 @@ interface StepCreateAccountProps {
   error: string | null;
 }
 
-const TRUST_SIGNALS = [
-  { icon: ShieldCheck, label: 'No credit card required' },
-  { icon: Zap, label: 'Set up in under 1 minute' },
-  { icon: Globe, label: 'EUDR-compliant from day one' },
-];
+const TRUST_SIGNAL_KEYS = ['trust_no_card', 'trust_fast_setup', 'trust_eudr_day_one'] as const;
+const TRUST_ICONS = [ShieldCheck, Zap, Globe] as const;
 
 export function StepCreateAccount({
   data,
@@ -33,6 +32,8 @@ export function StepCreateAccount({
   isSubmitting,
   error,
 }: StepCreateAccountProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,28 +43,28 @@ export function StepCreateAccount({
 
   return (
     <div className="space-y-6">
-      {/* Value reinforcement */}
       <div className="rounded-xl border border-border bg-secondary/50 p-4">
-        <p className="text-sm font-medium text-foreground mb-3">
-          Join 200+ supply chain teams already managing EUDR compliance on Tracebud.
-        </p>
+        <p className="text-sm font-medium text-foreground mb-3">{getSignupCopy('trust_headline', t)}</p>
         <div className="flex flex-wrap gap-4">
-          {TRUST_SIGNALS.map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Icon className="h-3.5 w-3.5 text-primary" />
-              <span>{label}</span>
-            </div>
-          ))}
+          {TRUST_SIGNAL_KEYS.map((key, index) => {
+            const Icon = TRUST_ICONS[index];
+            return (
+              <div key={key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon className="h-3.5 w-3.5 text-primary" />
+                <span>{getSignupCopy(key, t)}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="fullName">Full name</Label>
+          <Label htmlFor="fullName">{getAuthCopy('field_full_name', t)}</Label>
           <Input
             id="fullName"
             type="text"
-            placeholder="Maria Santos"
+            placeholder={getAuthCopy('placeholder_full_name', t)}
             value={data.fullName}
             onChange={(e) => onChange({ ...data, fullName: e.target.value })}
             autoComplete="name"
@@ -73,11 +74,11 @@ export function StepCreateAccount({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Work email</Label>
+          <Label htmlFor="email">{getAuthCopy('field_work_email', t)}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="maria@company.com"
+            placeholder={getAuthCopy('placeholder_email', t)}
             value={data.email}
             onChange={(e) => onChange({ ...data, email: e.target.value })}
             autoComplete="email"
@@ -87,12 +88,12 @@ export function StepCreateAccount({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{getAuthCopy('field_password', t)}</Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="At least 8 characters"
+              placeholder={getAuthCopy('placeholder_password_new', t)}
               value={data.password}
               onChange={(e) => onChange({ ...data, password: e.target.value })}
               autoComplete="new-password"
@@ -106,7 +107,7 @@ export function StepCreateAccount({
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
               tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? getAuthCopy('hide_password', t) : getAuthCopy('show_password', t)}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -124,19 +125,24 @@ export function StepCreateAccount({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Creating account…
+              {getSignupCopy('creating_account', t)}
             </>
           ) : (
-            'Create account'
+            getSignupCopy('create_account', t)
           )}
         </Button>
       </form>
 
       <p className="text-center text-xs text-muted-foreground">
-        By continuing, you agree to Tracebud&apos;s{' '}
-        <a href="#" className="underline underline-offset-4 hover:text-foreground">Terms of Service</a>{' '}
+        {getSignupCopy('terms_prefix', t)}{' '}
+        <a href="#" className="underline underline-offset-4 hover:text-foreground">
+          {getSignupCopy('terms_of_service', t)}
+        </a>{' '}
         and{' '}
-        <a href="#" className="underline underline-offset-4 hover:text-foreground">Privacy Policy</a>.
+        <a href="#" className="underline underline-offset-4 hover:text-foreground">
+          {getSignupCopy('privacy_policy', t)}
+        </a>
+        .
       </p>
     </div>
   );

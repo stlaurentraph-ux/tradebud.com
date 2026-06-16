@@ -1,49 +1,64 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSponsorView } from '@/lib/sponsor-view';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import {
+  getComplianceHealthEmphasisLabel,
+  getComplianceHealthKpiLabel,
+  getComplianceHealthPageSubtitle,
+  getComplianceHealthPriorityTitle,
+  getComplianceHealthWarningLabel,
+} from '@/lib/workflow-terminology-labels';
 
-const warningRows = [
-  { area: 'Missing geometry evidence', count: 147, trend: '+12%' },
-  { area: 'Shipment holds', count: 24, trend: '+4%' },
-  { area: 'Stale risk screening', count: 31, trend: '-8%' },
-  { area: 'Unresolved manual classifications', count: 9, trend: '+1%' },
+const warningRowIds = [
+  'missing_geometry',
+  'shipment_holds',
+  'stale_risk',
+  'manual_classifications',
+] as const;
+
+const warningCounts = [
+  { count: 147, trend: '+12%' },
+  { count: 24, trend: '+4%' },
+  { count: 31, trend: '-8%' },
+  { count: 9, trend: '+1%' },
 ];
 
 export default function ComplianceHealthPage() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
-  const pageHeader = translatePageHeader(t, 'compliance_health', { title: "Compliance Health" });
+  const pageHeader = translatePageHeader(t, 'compliance_health', { title: 'Compliance Health' });
   const sponsorView = useSponsorView();
-  const kpis =
-    sponsorView === 'country'
-      ? [
-          { value: '91%', label: 'Mapped plot ratio' },
-          { value: '6.2%', label: 'Yield warning rate' },
-          { value: '3.4%', label: 'Blocked batch rate' },
-          { value: '87%', label: 'DDS acceptance proxy' },
-        ]
-      : [
-          { value: '3.4%', label: 'Shipment hold rate' },
-          { value: '87%', label: 'DDS acceptance proxy' },
-          { value: '91%', label: 'Mapped supplier coverage' },
-          { value: '6.2%', label: 'Yield warning rate' },
-        ];
+  const isCountryView = sponsorView === 'country';
+
+  const kpis = useMemo(
+    () =>
+      isCountryView
+        ? [
+            { value: '91%', label: getComplianceHealthKpiLabel('mapped_plot_ratio', t) },
+            { value: '6.2%', label: getComplianceHealthKpiLabel('yield_warning_rate', t) },
+            { value: '3.4%', label: getComplianceHealthKpiLabel('blocked_batch_rate', t) },
+            { value: '87%', label: getComplianceHealthKpiLabel('dds_acceptance', t) },
+          ]
+        : [
+            { value: '3.4%', label: getComplianceHealthKpiLabel('shipment_hold_rate', t) },
+            { value: '87%', label: getComplianceHealthKpiLabel('dds_acceptance', t) },
+            { value: '91%', label: getComplianceHealthKpiLabel('mapped_supplier_coverage', t) },
+            { value: '6.2%', label: getComplianceHealthKpiLabel('yield_warning_rate', t) },
+          ],
+    [isCountryView, t],
+  );
 
   return (
     <div className="flex flex-col">
       <AppHeader
         title={pageHeader.title}
-        subtitle={
-          sponsorView === 'country'
-            ? 'Cross-network board for origin-level readiness, deterioration signals, and escalation pressure'
-            : 'Cross-network board for supplier compliance posture and buyer-impacting risk indicators'
-        }
+        subtitle={getComplianceHealthPageSubtitle(isCountryView, t)}
         breadcrumbs={buildAppBreadcrumbs(t, { name: 'Compliance Health' })}
       />
       <div className="flex-1 space-y-6 p-6">
@@ -59,20 +74,18 @@ export default function ComplianceHealthPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Priority Risk Patterns</CardTitle>
+            <CardTitle>{getComplianceHealthPriorityTitle(t)}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="mb-2">
-              <Badge variant="outline">
-                Emphasis: {sponsorView === 'country' ? 'Country programme' : 'Brand sponsor'}
-              </Badge>
+              <Badge variant="outline">{getComplianceHealthEmphasisLabel(isCountryView, t)}</Badge>
             </div>
-            {warningRows.map((row) => (
-              <div key={row.area} className="flex items-center justify-between rounded-lg border p-3">
-                <p className="text-sm">{row.area}</p>
+            {warningRowIds.map((warningId, index) => (
+              <div key={warningId} className="flex items-center justify-between rounded-lg border p-3">
+                <p className="text-sm">{getComplianceHealthWarningLabel(warningId, t)}</p>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">{row.count}</Badge>
-                  <Badge variant="secondary">{row.trend}</Badge>
+                  <Badge variant="outline">{warningCounts[index].count}</Badge>
+                  <Badge variant="secondary">{warningCounts[index].trend}</Badge>
                 </div>
               </div>
             ))}

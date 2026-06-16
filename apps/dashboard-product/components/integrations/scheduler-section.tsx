@@ -23,9 +23,22 @@ import { cn } from '@/lib/utils';
 import type { SchedulerConfig, StaleReleaseResult, TriggerSource } from '@/types/integrations';
 import { fetchRunSummary, fetchSchedulerConfig, triggerStaleSweeper } from '@/lib/integrations-v2-api';
 import { LocaleContext } from '@/lib/locale-context';
-import { getIntegrationsSchedulerLoadingLabel } from '@/lib/workflow-terminology-labels';
+import {
+  getIntegrationsSchedulerLabel,
+  getIntegrationsSchedulerLoadingLabel,
+  getIntegrationsSchedulerTriggerBadgeLabel,
+  getIntegrationsToastMessage,
+} from '@/lib/workflow-terminology-labels';
 
-function TokenStatusIndicator({ configured, version }: { configured: boolean; version: string | null }) {
+function TokenStatusIndicator({
+  configured,
+  version,
+  t,
+}: {
+  configured: boolean;
+  version: string | null;
+  t?: (key: string) => string;
+}) {
   return (
     <div
       className={cn(
@@ -39,9 +52,11 @@ function TokenStatusIndicator({ configured, version }: { configured: boolean; ve
         <>
           <ShieldCheck className="h-5 w-5 text-emerald-600" />
           <div>
-            <p className="text-sm font-medium text-emerald-700">Token Configured</p>
+            <p className="text-sm font-medium text-emerald-700">{getIntegrationsSchedulerLabel('token_configured', t)}</p>
             {version && (
-              <p className="text-xs text-emerald-600">Version: {version}</p>
+              <p className="text-xs text-emerald-600">
+                {getIntegrationsSchedulerLabel('token_version', t)}: {version}
+              </p>
             )}
           </div>
         </>
@@ -49,8 +64,8 @@ function TokenStatusIndicator({ configured, version }: { configured: boolean; ve
         <>
           <ShieldAlert className="h-5 w-5 text-red-600" />
           <div>
-            <p className="text-sm font-medium text-red-700">Token Not Configured</p>
-            <p className="text-xs text-red-600">Set COOLFARM_SAI_V2_SCHEDULER_TOKEN</p>
+            <p className="text-sm font-medium text-red-700">{getIntegrationsSchedulerLabel('token_not_configured', t)}</p>
+            <p className="text-xs text-red-600">{getIntegrationsSchedulerLabel('token_env_hint', t)}</p>
           </div>
         </>
       )}
@@ -58,14 +73,22 @@ function TokenStatusIndicator({ configured, version }: { configured: boolean; ve
   );
 }
 
-function TriggerResultCard({ result }: { result: StaleReleaseResult | null }) {
+function TriggerResultCard({
+  result,
+  t,
+}: {
+  result: StaleReleaseResult | null;
+  t?: (key: string) => string;
+}) {
   if (!result) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
         <Clock className="h-10 w-10 text-muted-foreground/50" />
-        <p className="mt-3 text-sm font-medium text-muted-foreground">No Recent Triggers</p>
+        <p className="mt-3 text-sm font-medium text-muted-foreground">
+          {getIntegrationsSchedulerLabel('no_triggers', t)}
+        </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          The stale sweeper has not been triggered yet.
+          {getIntegrationsSchedulerLabel('no_triggers_hint', t)}
         </p>
       </div>
     );
@@ -87,12 +110,12 @@ function TriggerResultCard({ result }: { result: StaleReleaseResult | null }) {
     return source === 'scheduled' ? (
       <Badge variant="secondary" className="gap-1">
         <Clock className="h-3 w-3" />
-        Scheduled
+        {getIntegrationsSchedulerTriggerBadgeLabel('scheduled', t)}
       </Badge>
     ) : (
       <Badge variant="outline" className="gap-1">
         <Zap className="h-3 w-3" />
-        Manual
+        {getIntegrationsSchedulerTriggerBadgeLabel('manual', t)}
       </Badge>
     );
   };
@@ -103,7 +126,7 @@ function TriggerResultCard({ result }: { result: StaleReleaseResult | null }) {
         <div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            <p className="font-medium">Last Trigger Result</p>
+            <p className="font-medium">{getIntegrationsSchedulerLabel('last_result', t)}</p>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {formatTimestamp(result.timestamp)}
@@ -116,11 +139,11 @@ function TriggerResultCard({ result }: { result: StaleReleaseResult | null }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-xs text-muted-foreground">Claims Released</p>
+          <p className="text-xs text-muted-foreground">{getIntegrationsSchedulerLabel('claims_released', t)}</p>
           <p className="mt-0.5 text-2xl font-semibold tabular-nums">{result.releasedCount}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Token Version</p>
+          <p className="text-xs text-muted-foreground">{getIntegrationsSchedulerLabel('token_version', t)}</p>
           <p className="mt-0.5 text-lg font-medium">{result.tokenVersion || '-'}</p>
         </div>
       </div>
@@ -159,7 +182,7 @@ export function SchedulerSection() {
         setStaleMinutes(loadedConfig.defaultStaleMinutes);
         setLimit(loadedConfig.defaultLimit);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load scheduler settings.');
+        toast.error(error instanceof Error ? error.message : getIntegrationsSchedulerLabel('load_error', t));
       } finally {
         setIsLoading(false);
       }
@@ -170,7 +193,7 @@ export function SchedulerSection() {
 
   const handleTrigger = async () => {
     if (!config?.tokenConfigured) {
-      toast.error('Scheduler token is not configured');
+      toast.error(getIntegrationsSchedulerLabel('token_missing', t));
       return;
     }
 
@@ -183,12 +206,12 @@ export function SchedulerSection() {
       });
 
       if (newResult.releasedCount > 0) {
-        toast.success(`Released ${newResult.releasedCount} stale claim${newResult.releasedCount !== 1 ? 's' : ''}`);
+        toast.success(getIntegrationsToastMessage('bulk_released', { count: newResult.releasedCount }, t));
       } else {
-        toast.info('No stale claims found to release');
+        toast.info(getIntegrationsSchedulerLabel('no_stale', t));
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to trigger stale sweeper.');
+      toast.error(error instanceof Error ? error.message : getIntegrationsSchedulerLabel('load_error', t));
     } finally {
       setIsTriggerLoading(false);
     }
@@ -215,10 +238,8 @@ export function SchedulerSection() {
               <Zap className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Scheduled Stale Sweeper</CardTitle>
-              <CardDescription>
-                Release runs that have been claimed for too long
-              </CardDescription>
+              <CardTitle className="text-lg">{getIntegrationsSchedulerLabel('title', t)}</CardTitle>
+              <CardDescription>{getIntegrationsSchedulerLabel('subtitle', t)}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -226,12 +247,13 @@ export function SchedulerSection() {
           {/* Token Status */}
           <div>
             <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-              Token Status
+              {getIntegrationsSchedulerLabel('token_status', t)}
             </Label>
             <div className="mt-2">
               <TokenStatusIndicator
                 configured={config?.tokenConfigured ?? false}
                 version={config?.tokenVersion ?? null}
+                t={t}
               />
             </div>
           </div>
@@ -242,7 +264,7 @@ export function SchedulerSection() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="scheduler-stale-minutes">
-                Stale Threshold (minutes)
+                {getIntegrationsSchedulerLabel('stale_threshold', t)}
               </Label>
               <Input
                 id="scheduler-stale-minutes"
@@ -254,13 +276,13 @@ export function SchedulerSection() {
                 disabled={!config?.tokenConfigured}
               />
               <p className="text-xs text-muted-foreground">
-                Claims older than this threshold will be released
+                {getIntegrationsSchedulerLabel('stale_threshold_hint', t)}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="scheduler-limit">
-                Maximum to Release
+                {getIntegrationsSchedulerLabel('max_release', t)}
               </Label>
               <Input
                 id="scheduler-limit"
@@ -272,7 +294,7 @@ export function SchedulerSection() {
                 disabled={!config?.tokenConfigured}
               />
               <p className="text-xs text-muted-foreground">
-                Limit the number of claims released per trigger
+                {getIntegrationsSchedulerLabel('max_release_hint', t)}
               </p>
             </div>
           </div>
@@ -282,9 +304,9 @@ export function SchedulerSection() {
           {/* Trigger Button */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Manual Trigger</p>
+              <p className="text-sm font-medium">{getIntegrationsSchedulerLabel('manual_trigger', t)}</p>
               <p className="text-xs text-muted-foreground">
-                Run the stale sweeper now with current settings
+                {getIntegrationsSchedulerLabel('manual_trigger_hint', t)}
               </p>
             </div>
             <Button
@@ -295,12 +317,12 @@ export function SchedulerSection() {
               {isTriggerLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Running...
+                  {getIntegrationsSchedulerLabel('running', t)}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Trigger Now
+                  {getIntegrationsSchedulerLabel('trigger_now', t)}
                 </>
               )}
             </Button>
@@ -312,11 +334,10 @@ export function SchedulerSection() {
                 <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-amber-800">
-                    Token Required
+                    {getIntegrationsSchedulerLabel('token_required_title', t)}
                   </p>
                   <p className="text-xs text-amber-700 mt-0.5">
-                    Set the COOLFARM_SAI_V2_SCHEDULER_TOKEN environment variable
-                    to enable the scheduled stale sweeper.
+                    {getIntegrationsSchedulerLabel('token_required_body', t)}
                   </p>
                 </div>
               </div>
@@ -333,26 +354,24 @@ export function SchedulerSection() {
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <CardTitle className="text-lg">Trigger History</CardTitle>
+              <CardTitle className="text-lg">{getIntegrationsSchedulerLabel('history_title', t)}</CardTitle>
               <CardDescription>
-                Results from the most recent sweeper execution
+                {getIntegrationsSchedulerLabel('history_subtitle', t)}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <TriggerResultCard result={lastResult} />
+          <TriggerResultCard result={lastResult} t={t} />
 
           {/* Info about scheduled runs */}
           <div className="mt-6 rounded-md bg-muted/50 p-4">
             <div className="flex items-start gap-3">
               <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium">Automated Execution</p>
+                <p className="text-sm font-medium">{getIntegrationsSchedulerLabel('automated_title', t)}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  When the scheduler token is configured, the stale sweeper runs
-                  automatically via cron. Manual triggers use the same endpoint
-                  but are recorded with a different trigger source for auditing.
+                  {getIntegrationsSchedulerLabel('automated_body', t)}
                 </p>
               </div>
             </div>

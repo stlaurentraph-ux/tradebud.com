@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useContext, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import { LocaleContext } from '@/lib/locale-context';
+import { getRequestIntentCopy } from '@/lib/request-intent-copy';
 
 type CampaignDecision = 'accept' | 'refuse';
 
 const STORAGE_KEY = 'tracebud_pending_request_decision_intent';
 
 export default function RequestDecisionIntentPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -69,6 +74,13 @@ export default function RequestDecisionIntentPage() {
     };
   }, [router, searchParams]);
 
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="flex max-w-md flex-col items-center gap-3 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+        <h1 className="text-lg font-semibold text-foreground">{getRequestIntentCopy('loading_title', t)}</h1>
+        <p className="text-sm text-muted-foreground">{getRequestIntentCopy('loading_description', t)}</p>
+      </div>
+    </div>
+  );
 }
-

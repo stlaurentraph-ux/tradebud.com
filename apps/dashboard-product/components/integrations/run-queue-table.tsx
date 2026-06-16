@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useContext, type ReactNode } from 'react';
 import {
   Table,
   TableBody,
@@ -31,6 +31,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { IntegrationRun, RunStatus, RunType } from '@/types/integrations';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsActionLabel,
+  getIntegrationsDueBadgeLabel,
+  getIntegrationsRunStatusLabel,
+  getIntegrationsTableColumnLabel,
+  getIntegrationsTableEmptyDescription,
+  getIntegrationsTableEmptyTitle,
+  getIntegrationsTableLoadingLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface RunQueueTableProps {
   runs: IntegrationRun[];
@@ -52,15 +62,13 @@ interface SortHeaderProps {
   onSort: (field: SortField) => void;
 }
 
-function StatusBadge({ status }: { status: RunStatus }) {
-  const variants: Record<RunStatus, { variant: 'info' | 'success' | 'destructive'; label: string }> = {
-    started: { variant: 'info', label: 'Started' },
-    completed: { variant: 'success', label: 'Completed' },
-    failed: { variant: 'destructive', label: 'Failed' },
+function StatusBadge({ status, t }: { status: RunStatus; t?: (key: string) => string }) {
+  const variants: Record<RunStatus, 'info' | 'success' | 'destructive'> = {
+    started: 'info',
+    completed: 'success',
+    failed: 'destructive',
   };
-
-  const { variant, label } = variants[status];
-  return <Badge variant={variant}>{label}</Badge>;
+  return <Badge variant={variants[status]}>{getIntegrationsRunStatusLabel(status, t)}</Badge>;
 }
 
 function TypeBadge({ type }: { type: RunType }) {
@@ -127,6 +135,8 @@ export function RunQueueTable({
   onRetry,
   isLoading,
 }: RunQueueTableProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [sortField, setSortField] = useState<SortField>('updatedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -175,7 +185,7 @@ export function RunQueueTable({
       <div className="rounded-lg border border-border bg-card">
         <div className="p-8 text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-3 text-sm text-muted-foreground">Loading runs...</p>
+          <p className="mt-3 text-sm text-muted-foreground">{getIntegrationsTableLoadingLabel(t)}</p>
         </div>
       </div>
     );
@@ -188,9 +198,9 @@ export function RunQueueTable({
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Eye className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 className="mt-4 text-sm font-medium text-foreground">No runs found</h3>
+          <h3 className="mt-4 text-sm font-medium text-foreground">{getIntegrationsTableEmptyTitle(t)}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            No integration runs match your current filters.
+            {getIntegrationsTableEmptyDescription(t)}
           </p>
         </div>
       </div>
@@ -203,25 +213,25 @@ export function RunQueueTable({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[180px]">Run ID</TableHead>
-              <TableHead>Questionnaire</TableHead>
-              <TableHead>Type</TableHead>
+              <TableHead className="w-[180px]">{getIntegrationsTableColumnLabel('run_id', t)}</TableHead>
+              <TableHead>{getIntegrationsTableColumnLabel('questionnaire', t)}</TableHead>
+              <TableHead>{getIntegrationsTableColumnLabel('type', t)}</TableHead>
               <TableHead>
-                <SortHeader field="status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Status</SortHeader>
+                <SortHeader field="status" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>{getIntegrationsTableColumnLabel('status', t)}</SortHeader>
               </TableHead>
               <TableHead className="text-center">
-                <SortHeader field="attemptCount" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Attempts</SortHeader>
+                <SortHeader field="attemptCount" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>{getIntegrationsTableColumnLabel('attempts', t)}</SortHeader>
               </TableHead>
-              <TableHead>Error Code</TableHead>
+              <TableHead>{getIntegrationsTableColumnLabel('error_code', t)}</TableHead>
               <TableHead>
-                <SortHeader field="nextRetryAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Next Retry</SortHeader>
+                <SortHeader field="nextRetryAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>{getIntegrationsTableColumnLabel('next_retry', t)}</SortHeader>
               </TableHead>
-              <TableHead>Claimed By</TableHead>
+              <TableHead>{getIntegrationsTableColumnLabel('claimed_by', t)}</TableHead>
               <TableHead>
-                <SortHeader field="updatedAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>Updated</SortHeader>
+                <SortHeader field="updatedAt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort}>{getIntegrationsTableColumnLabel('updated', t)}</SortHeader>
               </TableHead>
               <TableHead className="w-[50px]">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{getIntegrationsTableColumnLabel('actions', t)}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -249,7 +259,7 @@ export function RunQueueTable({
                     <TypeBadge type={run.runType} />
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={run.status} />
+                    <StatusBadge status={run.status} t={t} />
                   </TableCell>
                   <TableCell className="text-center tabular-nums">
                     {run.attemptCount}
@@ -274,7 +284,7 @@ export function RunQueueTable({
                         {formatTimestamp(run.nextRetryAt)}
                         {due && (
                           <Badge variant="warning" className="ml-2 text-[10px] px-1 py-0">
-                            Due
+                            {getIntegrationsDueBadgeLabel(t)}
                           </Badge>
                         )}
                       </span>
@@ -302,7 +312,7 @@ export function RunQueueTable({
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
+                          <span className="sr-only">{getIntegrationsTableColumnLabel('actions', t)}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -313,7 +323,7 @@ export function RunQueueTable({
                           }}
                         >
                           <Eye className="mr-2 h-4 w-4" />
-                          View Details
+                          {getIntegrationsActionLabel('view_details', t)}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -324,7 +334,7 @@ export function RunQueueTable({
                           disabled={!canClaim(run)}
                         >
                           <Hand className="mr-2 h-4 w-4" />
-                          Claim
+                          {getIntegrationsActionLabel('claim', t)}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
@@ -334,7 +344,7 @@ export function RunQueueTable({
                           disabled={!canRelease(run)}
                         >
                           <Unlock className="mr-2 h-4 w-4" />
-                          Release
+                          {getIntegrationsActionLabel('release', t)}
                         </DropdownMenuItem>
                         {canRelease(run) && (
                           <DropdownMenuItem
@@ -345,7 +355,7 @@ export function RunQueueTable({
                             className="text-destructive focus:text-destructive"
                           >
                             <Unlock className="mr-2 h-4 w-4" />
-                            Force Release
+                            {getIntegrationsActionLabel('force_release', t)}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
@@ -357,7 +367,7 @@ export function RunQueueTable({
                           disabled={!canRetry(run)}
                         >
                           <RotateCcw className="mr-2 h-4 w-4" />
-                          Retry
+                          {getIntegrationsActionLabel('retry', t)}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

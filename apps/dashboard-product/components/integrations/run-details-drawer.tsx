@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,14 @@ import {
 import { cn } from '@/lib/utils';
 import type { IntegrationRun, TimelineEvent, RunStatus } from '@/types/integrations';
 import { toast } from 'sonner';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsActionLabel,
+  getIntegrationsDrawerLabel,
+  getIntegrationsRunStatusLabel,
+  getIntegrationsTableColumnLabel,
+  getIntegrationsTimelineEventLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface RunDetailsDrawerProps {
   run: IntegrationRun | null;
@@ -40,15 +48,13 @@ interface RunDetailsDrawerProps {
   onRetry: (run: IntegrationRun) => void;
 }
 
-function StatusBadge({ status }: { status: RunStatus }) {
-  const variants: Record<RunStatus, { variant: 'info' | 'success' | 'destructive'; label: string }> = {
-    started: { variant: 'info', label: 'Started' },
-    completed: { variant: 'success', label: 'Completed' },
-    failed: { variant: 'destructive', label: 'Failed' },
+function StatusBadge({ status, t }: { status: RunStatus; t?: (key: string) => string }) {
+  const variants: Record<RunStatus, 'info' | 'success' | 'destructive'> = {
+    started: 'info',
+    completed: 'success',
+    failed: 'destructive',
   };
-
-  const { variant, label } = variants[status];
-  return <Badge variant={variant}>{label}</Badge>;
+  return <Badge variant={variants[status]}>{getIntegrationsRunStatusLabel(status, t)}</Badge>;
 }
 
 function formatTimestamp(timestamp: string | null): string {
@@ -110,23 +116,23 @@ function TimelineEventIcon({ type }: { type: TimelineEvent['type'] }) {
   );
 }
 
-function TimelineEventLabel({ type }: { type: TimelineEvent['type'] }) {
-  const labels: Record<TimelineEvent['type'], string> = {
-    draft_saved: 'Draft Saved',
-    submitted: 'Submitted',
-    run_started: 'Run Started',
-    run_completed: 'Run Completed',
-    run_failed: 'Run Failed',
-    claimed: 'Claimed',
-    released: 'Released',
-    retried: 'Retried',
-    stale_released: 'Stale Released',
-  };
-
-  return <span className="font-medium">{labels[type] || type}</span>;
+function TimelineEventLabel({
+  type,
+  t,
+}: {
+  type: TimelineEvent['type'];
+  t?: (key: string) => string;
+}) {
+  return <span className="font-medium">{getIntegrationsTimelineEventLabel(type, t)}</span>;
 }
 
-function ExpandablePayload({ payload }: { payload: Record<string, unknown> }) {
+function ExpandablePayload({
+  payload,
+  t,
+}: {
+  payload: Record<string, unknown>;
+  t?: (key: string) => string;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -136,7 +142,7 @@ function ExpandablePayload({ payload }: { payload: Record<string, unknown> }) {
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        View payload
+        {getIntegrationsDrawerLabel('view_payload', t)}
       </button>
       {expanded && (
         <pre className="mt-2 rounded-md bg-muted p-3 text-xs font-mono overflow-x-auto">
@@ -155,6 +161,8 @@ export function RunDetailsDrawer({
   onRelease,
   onRetry,
 }: RunDetailsDrawerProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
 
   useEffect(() => {
@@ -222,7 +230,7 @@ export function RunDetailsDrawer({
         };
         setTimeline(events.length > 0 ? events.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1)) : [fallbackEvent]);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load run timeline.');
+        toast.error(error instanceof Error ? error.message : getIntegrationsDrawerLabel('timeline_load_error', t));
         setTimeline([]);
       }
     };
@@ -241,7 +249,7 @@ export function RunDetailsDrawer({
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
-              <DialogTitle className="text-lg">Run Details</DialogTitle>
+              <DialogTitle className="text-lg">{getIntegrationsDrawerLabel('title', t)}</DialogTitle>
               <p className="mt-1 text-xs text-muted-foreground font-mono">
                 {run.id}
               </p>
@@ -261,7 +269,7 @@ export function RunDetailsDrawer({
           {/* Status & Metadata */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <StatusBadge status={run.status} />
+              <StatusBadge status={run.status} t={t} />
               <Badge variant="outline" className="font-mono text-xs">
                 {run.runType}
               </Badge>
@@ -269,29 +277,29 @@ export function RunDetailsDrawer({
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-xs text-muted-foreground">Questionnaire</p>
+                <p className="text-xs text-muted-foreground">{getIntegrationsTableColumnLabel('questionnaire', t)}</p>
                 <div className="mt-0.5 flex items-center gap-1">
                   <span className="font-mono">{run.questionnaireId}</span>
                   <CopyButton text={run.questionnaireId} />
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Attempt</p>
+                <p className="text-xs text-muted-foreground">{getIntegrationsDrawerLabel('attempt', t)}</p>
                 <p className="mt-0.5 font-medium">{run.attemptCount}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Queued At</p>
+                <p className="text-xs text-muted-foreground">{getIntegrationsDrawerLabel('queued_at', t)}</p>
                 <p className="mt-0.5">{formatTimestamp(run.queuedAt)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Updated At</p>
+                <p className="text-xs text-muted-foreground">{getIntegrationsDrawerLabel('updated_at', t)}</p>
                 <p className="mt-0.5">{formatTimestamp(run.updatedAt)}</p>
               </div>
             </div>
 
             {run.errorCode && (
               <div className="rounded-md bg-red-50 border border-red-200 p-3">
-                <p className="text-xs font-medium text-red-800">Error Code</p>
+                <p className="text-xs font-medium text-red-800">{getIntegrationsDrawerLabel('error_code', t)}</p>
                 <p className="mt-0.5 font-mono text-sm text-red-700">{run.errorCode}</p>
               </div>
             )}
@@ -301,7 +309,7 @@ export function RunDetailsDrawer({
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-amber-600" />
                   <div>
-                    <p className="text-xs font-medium text-amber-800">Claimed by</p>
+                    <p className="text-xs font-medium text-amber-800">{getIntegrationsDrawerLabel('claimed_by', t)}</p>
                     <p className="text-sm text-amber-700">
                       {run.claimedByUserId}
                     </p>
@@ -318,7 +326,7 @@ export function RunDetailsDrawer({
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-blue-600" />
                   <div>
-                    <p className="text-xs font-medium text-blue-800">Next Retry</p>
+                    <p className="text-xs font-medium text-blue-800">{getIntegrationsTableColumnLabel('next_retry', t)}</p>
                     <p className="text-sm text-blue-700">
                       {formatTimestamp(run.nextRetryAt)}
                     </p>
@@ -333,7 +341,7 @@ export function RunDetailsDrawer({
           {/* Actions */}
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Actions
+              {getIntegrationsTableColumnLabel('actions', t)}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -343,7 +351,7 @@ export function RunDetailsDrawer({
                 disabled={!canClaim}
               >
                 <Hand className="mr-1.5 h-3.5 w-3.5" />
-                Claim
+                {getIntegrationsActionLabel('claim', t)}
               </Button>
               <Button
                 size="sm"
@@ -352,7 +360,7 @@ export function RunDetailsDrawer({
                 disabled={!canRelease}
               >
                 <Unlock className="mr-1.5 h-3.5 w-3.5" />
-                Release
+                {getIntegrationsActionLabel('release', t)}
               </Button>
               {canRelease && (
                 <Button
@@ -362,7 +370,7 @@ export function RunDetailsDrawer({
                   onClick={() => onRelease(run, true)}
                 >
                   <Unlock className="mr-1.5 h-3.5 w-3.5" />
-                  Force Release
+                  {getIntegrationsActionLabel('force_release', t)}
                 </Button>
               )}
               <Button
@@ -372,17 +380,16 @@ export function RunDetailsDrawer({
                 disabled={!canRetry}
               >
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Retry
+                {getIntegrationsActionLabel('retry', t)}
               </Button>
             </div>
           </div>
 
           <Separator />
 
-          {/* Timeline */}
           <div className="space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Timeline
+              {getIntegrationsDrawerLabel('timeline', t)}
             </p>
             <div className="space-y-4">
               {timeline.map((event, index) => (
@@ -395,7 +402,7 @@ export function RunDetailsDrawer({
                   </div>
                   <div className="flex-1 pb-4">
                     <div className="flex items-center gap-2">
-                      <TimelineEventLabel type={event.type} />
+                      <TimelineEventLabel type={event.type} t={t} />
                       {event.actor && (
                         <span className="text-xs text-muted-foreground">
                           by {event.actor}
@@ -405,7 +412,7 @@ export function RunDetailsDrawer({
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {formatTimestamp(event.timestamp)}
                     </p>
-                    {event.payload && <ExpandablePayload payload={event.payload} />}
+                    {event.payload && <ExpandablePayload payload={event.payload} t={t} />}
                   </div>
                 </div>
               ))}

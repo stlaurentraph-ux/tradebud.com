@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FileText, Hand, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,23 @@ import {
   type TenureParseStatus,
 } from '@/lib/use-plot-tenure-verification';
 import { confirmTenureReview } from '@/lib/use-tenure-review-queue';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getPlotTenurePanelCadastralCrossCheckLabel,
+  getPlotTenurePanelCopy,
+  getPlotTenurePanelFilesSyncedLabel,
+} from '@/lib/plot-tenure-panel-copy';
+import {
+  getTenureReviewAiConfidenceLabel,
+  getTenureReviewAiDetectedLabel,
+  getTenureReviewConfirmFailedMessage,
+  getTenureReviewDialogCancelLabel,
+  getTenureReviewDialogConfirmLabel,
+  getTenureReviewDialogNoteLabel,
+  getTenureReviewDialogTitle,
+  getTenureReviewDocumentFallback,
+  getTenureReviewReasonMinLengthMessage,
+} from '@/lib/workflow-terminology-labels';
 
 function badgeVariant(
   badge: ReturnType<typeof computePlotTenureStatus>['badge'],
@@ -54,25 +71,9 @@ function formatTenureType(value: unknown): string | null {
   return value.replace(/_/g, ' ').toLowerCase();
 }
 
-function cadastralCrossCheckLabel(
-  crossCheck: Record<string, unknown> | null | undefined,
-): string | null {
-  if (!crossCheck || typeof crossCheck !== 'object') return null;
-  if (crossCheck.keys_match === true) return 'Cadastral key verified';
-  if (crossCheck.keys_match === false) return 'Cadastral key mismatch';
-  if (Array.isArray(crossCheck.issues) && crossCheck.issues.includes('declared_cadastral_key_missing')) {
-    return 'Enter Clave Catastral to cross-check';
-  }
-  if (crossCheck.requires_manual_review === true) return 'Formal title needs review';
-  if (typeof crossCheck.country_label === 'string' && crossCheck.country_label.length > 0) {
-    if (crossCheck.keys_match === null && crossCheck.extracted_parcel_reference) {
-      return `Enter ${crossCheck.country_label} to cross-check`;
-    }
-  }
-  return null;
-}
-
 export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { documents, isLoading: evidenceLoading } = useEvidenceFeed({ plotId, enabled: Boolean(plotId) });
   const { legalSync, isLoading: legalLoading, error: legalError } = usePlotLegalSync(plotId);
   const {
@@ -110,7 +111,7 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
 
   const handleConfirm = async () => {
     if (!confirmTarget || confirmReason.trim().length < 8) {
-      setConfirmError('Enter a reason with at least 8 characters.');
+      setConfirmError(getTenureReviewReasonMinLengthMessage(t));
       return;
     }
     setConfirmBusy(true);
@@ -127,7 +128,11 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
       setConfirmNote('');
       await reload();
     } catch (e) {
-      setConfirmError(e instanceof Error ? e.message : 'Confirmation failed.');
+      setConfirmError(
+        e instanceof Error && e.message.trim()
+          ? e.message
+          : getTenureReviewConfirmFailedMessage(t),
+      );
     } finally {
       setConfirmBusy(false);
     }
@@ -138,7 +143,7 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">Land tenure path</CardTitle>
+            <CardTitle className="text-base">{getPlotTenurePanelCopy('title', t)}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={badgeVariant(status.badge)}>{tenureBadgeLabel(status.badge)}</Badge>
               {aggregateParseStatus ? (
@@ -163,7 +168,7 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
           {isLoading ? (
             <p className="text-muted-foreground flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading tenure status…
+              {getPlotTenurePanelCopy('loading', t)}
             </p>
           ) : (
             <>
@@ -174,19 +179,18 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
 
               {legalSync?.cadastralKey ? (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
-                  <span className="text-muted-foreground">Cadastral key</span>
+                  <span className="text-muted-foreground">{getPlotTenurePanelCopy('cadastral_key_label', t)}</span>
                   <span className="font-medium">{legalSync.cadastralKey}</span>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground rounded-md border border-dashed px-3 py-2">
-                  Ask the farmer to enter Clave Catastral and sync land title photos from the field app
-                  for formal cadastral cross-check.
+                  {getPlotTenurePanelCopy('cadastral_key_hint', t)}
                 </p>
               )}
 
               {legalSync?.informalTenure && legalSync.informalTenureNote ? (
                 <div className="rounded-md border border-border px-3 py-2 space-y-1">
-                  <p className="text-muted-foreground text-xs">Possession note</p>
+                  <p className="text-muted-foreground text-xs">{getPlotTenurePanelCopy('possession_note_label', t)}</p>
                   <p>{legalSync.informalTenureNote}</p>
                 </div>
               ) : null}
@@ -194,24 +198,28 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
               <div className="text-muted-foreground text-xs space-y-1">
                 <p>
                   {tenureEvidence.length > 0
-                    ? `${tenureEvidence.length} tenure file${tenureEvidence.length === 1 ? '' : 's'} synced`
-                    : 'No tenure files synced for this plot yet.'}
+                    ? getPlotTenurePanelFilesSyncedLabel(tenureEvidence.length, t)
+                    : getPlotTenurePanelCopy('no_files', t)}
                 </p>
                 {legalSync ? (
-                  <p>Legal metadata last synced {new Date(legalSync.syncedAt).toLocaleString()}</p>
+                  <p>
+                    {getPlotTenurePanelCopy('legal_synced_at', t, {
+                      date: new Date(legalSync.syncedAt).toLocaleString(),
+                    })}
+                  </p>
                 ) : (
-                  <p>Informal tenure and cadastral metadata appear after the farmer backs up from the field app.</p>
+                  <p>{getPlotTenurePanelCopy('informal_after_backup', t)}</p>
                 )}
                 {pendingPoll ? (
                   <p className="text-amber-700 dark:text-amber-400">
-                    AI review in progress — status refreshes automatically.
+                    {getPlotTenurePanelCopy('ai_in_progress', t)}
                   </p>
                 ) : null}
               </div>
 
               {verificationRecords.length > 0 ? (
                 <div className="space-y-2 pt-1">
-                  <p className="text-xs font-medium text-foreground">AI tenure review</p>
+                  <p className="text-xs font-medium text-foreground">{getPlotTenurePanelCopy('ai_review_title', t)}</p>
                   {verificationRecords.map((record) => {
                     const tenureType = formatTenureType(record.parse_result?.tenure_type);
                     const missing = Array.isArray(record.parse_result?.clauses_missing)
@@ -220,11 +228,11 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
                     const crossCheck = record.parse_result?.cadastral_cross_check as
                       | Record<string, unknown>
                       | undefined;
-                    const cadastralLabel = cadastralCrossCheckLabel(crossCheck);
+                    const cadastralLabel = getPlotTenurePanelCadastralCrossCheckLabel(crossCheck, t);
                     const label =
                       record.evidence_label?.trim() ||
                       record.storage_path.split('/').pop() ||
-                      'Tenure document';
+                      getTenureReviewDocumentFallback(t);
 
                     return (
                       <div
@@ -238,11 +246,16 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
                           </Badge>
                         </div>
                         {tenureType ? (
-                          <p className="text-xs text-muted-foreground">Detected: {tenureType}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {getTenureReviewAiDetectedLabel(tenureType, t)}
+                          </p>
                         ) : null}
                         {record.parse_confidence != null ? (
                           <p className="text-xs text-muted-foreground">
-                            Confidence {Math.round(record.parse_confidence * 100)}%
+                            {getTenureReviewAiConfidenceLabel(
+                              Math.round(record.parse_confidence * 100),
+                              t,
+                            )}
                           </p>
                         ) : null}
                         {cadastralLabel ? (
@@ -255,19 +268,19 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
                           >
                             {cadastralLabel}
                             {typeof crossCheck?.extracted_parcel_reference === 'string'
-                              ? ` · Extracted: ${crossCheck.extracted_parcel_reference}`
+                              ? ` ${getPlotTenurePanelCopy('extracted_prefix', t)} ${crossCheck.extracted_parcel_reference}`
                               : ''}
                           </p>
                         ) : null}
                         {missing.length > 0 ? (
                           <p className="text-xs text-amber-700 dark:text-amber-400">
-                            Missing: {missing.slice(0, 3).join(', ')}
+                            {getPlotTenurePanelCopy('missing_prefix', t)} {missing.slice(0, 3).join(', ')}
                             {missing.length > 3 ? '…' : ''}
                           </p>
                         ) : null}
                         {record.parse_status === 'MANUAL_REQUIRED' ? (
                           <Button size="sm" variant="outline" onClick={() => setConfirmTarget(record)}>
-                            Confirm review
+                            {getTenureReviewDialogConfirmLabel(t)}
                           </Button>
                         ) : null}
                       </div>
@@ -276,8 +289,7 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
                 </div>
               ) : tenureEvidence.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  AI review starts automatically after tenure files sync. Use refresh if a file was
-                  just uploaded.
+                  {getPlotTenurePanelCopy('ai_starts_after_sync', t)}
                 </p>
               ) : null}
 
@@ -286,10 +298,10 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
 
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button variant="link" size="sm" className="px-0" asChild>
-                  <Link href="#plot-evidence">View uploaded evidence below</Link>
+                  <Link href="#plot-evidence">{getPlotTenurePanelCopy('view_evidence_link', t)}</Link>
                 </Button>
                 <Button variant="link" size="sm" className="px-0" asChild>
-                  <Link href="/compliance/tenure-review">Open full tenure queue</Link>
+                  <Link href="/compliance/tenure-review">{getPlotTenurePanelCopy('open_queue_link', t)}</Link>
                 </Button>
               </div>
             </>
@@ -300,25 +312,24 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
       <Dialog open={confirmTarget != null} onOpenChange={(open) => !open && setConfirmTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm tenure review</DialogTitle>
-            <DialogDescription>
-              Record why this AI extraction is acceptable for compliance. This clears the manual review
-              gate for the farmer checklist.
-            </DialogDescription>
+            <DialogTitle>{getTenureReviewDialogTitle(t)}</DialogTitle>
+            <DialogDescription>{getPlotTenurePanelCopy('dialog_description', t)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="plot-tenure-confirm-reason">Reason (required)</Label>
+              <Label htmlFor="plot-tenure-confirm-reason">
+                {getPlotTenurePanelCopy('dialog_reason_required_label', t)}
+              </Label>
               <Textarea
                 id="plot-tenure-confirm-reason"
                 value={confirmReason}
                 onChange={(e) => setConfirmReason(e.target.value)}
-                placeholder="e.g. Municipal attestation matches field visit notes…"
+                placeholder={getPlotTenurePanelCopy('dialog_reason_placeholder', t)}
                 rows={3}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="plot-tenure-confirm-note">Note (optional)</Label>
+              <Label htmlFor="plot-tenure-confirm-note">{getTenureReviewDialogNoteLabel(t)}</Label>
               <Textarea
                 id="plot-tenure-confirm-note"
                 value={confirmNote}
@@ -330,10 +341,12 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmTarget(null)}>
-              Cancel
+              {getTenureReviewDialogCancelLabel(t)}
             </Button>
             <Button disabled={confirmBusy} onClick={() => void handleConfirm()}>
-              {confirmBusy ? 'Confirming…' : 'Confirm review'}
+              {confirmBusy
+                ? getPlotTenurePanelCopy('dialog_confirming', t)
+                : getTenureReviewDialogConfirmLabel(t)}
             </Button>
           </DialogFooter>
         </DialogContent>

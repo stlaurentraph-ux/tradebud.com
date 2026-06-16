@@ -29,7 +29,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { PermissionGate } from '@/components/common/permission-gate';
 import {
   getLegalRoleDisplayName,
-  getLegalRoleDescription,
   getLegalRoleBadgeColor,
 } from '@/lib/rbac';
 import { LocaleContext } from '@/lib/locale-context';
@@ -63,6 +62,8 @@ import {
   getRoleDecisionsTableColumnLabel,
   getRoleDecisionsViewDetailsLabel,
   getRoleDecisionsViewLabel,
+  getLegalRoleFilterLabel,
+  getLegalRoleDescriptionLabel,
 } from '@/lib/workflow-terminology-labels';
 import type { LegalWorkflowRole, RoleDecision } from '@/types';
 const roleDecisions: (RoleDecision & {
@@ -236,13 +237,13 @@ export default function RoleDecisionsPage() {
               className="rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
               <option value="all">{getRoleDecisionsFilterAllRolesLabel(t)}</option>
-              <option value="PENDING_MANUAL_CLASSIFICATION">Pending Classification</option>
-              <option value="OPERATOR">Operator</option>
-              <option value="MICRO_SMALL_PRIMARY_OPERATOR">Micro/Small Primary Operator</option>
-              <option value="DOWNSTREAM_OPERATOR_FIRST">Downstream Operator (First)</option>
-              <option value="DOWNSTREAM_OPERATOR_SUBSEQUENT">Downstream Operator (Subsequent)</option>
-              <option value="TRADER">Trader</option>
-              <option value="OUT_OF_SCOPE">Out of Scope</option>
+              <option value="PENDING_MANUAL_CLASSIFICATION">{getLegalRoleFilterLabel('PENDING_MANUAL_CLASSIFICATION', t)}</option>
+              <option value="OPERATOR">{getLegalRoleFilterLabel('OPERATOR', t)}</option>
+              <option value="MICRO_SMALL_PRIMARY_OPERATOR">{getLegalRoleFilterLabel('MICRO_SMALL_PRIMARY_OPERATOR', t)}</option>
+              <option value="DOWNSTREAM_OPERATOR_FIRST">{getLegalRoleFilterLabel('DOWNSTREAM_OPERATOR_FIRST', t)}</option>
+              <option value="DOWNSTREAM_OPERATOR_SUBSEQUENT">{getLegalRoleFilterLabel('DOWNSTREAM_OPERATOR_SUBSEQUENT', t)}</option>
+              <option value="TRADER">{getLegalRoleFilterLabel('TRADER', t)}</option>
+              <option value="OUT_OF_SCOPE">{getLegalRoleFilterLabel('OUT_OF_SCOPE', t)}</option>
             </select>
           </div>
         </div>
@@ -448,7 +449,7 @@ export default function RoleDecisionsPage() {
                     {getRoleDecisionsDetailFieldLabel('role_definition', t)}
                   </Label>
                   <p className="mt-1 text-sm">
-                    {getLegalRoleDescription(selectedDecision.determined_role)}
+                    {getLegalRoleDescriptionLabel(selectedDecision.determined_role, t)}
                   </p>
                 </div>
 
@@ -528,12 +529,12 @@ export default function RoleDecisionsPage() {
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 >
                   <option value="">{getRoleDecisionsClassifySelectRolePlaceholder(t)}</option>
-                  <option value="OPERATOR">Operator</option>
-                  <option value="MICRO_SMALL_PRIMARY_OPERATOR">Micro/Small Primary Operator</option>
-                  <option value="DOWNSTREAM_OPERATOR_FIRST">Downstream Operator (First)</option>
-                  <option value="DOWNSTREAM_OPERATOR_SUBSEQUENT">Downstream Operator (Subsequent)</option>
-                  <option value="TRADER">Trader</option>
-                  <option value="OUT_OF_SCOPE">Out of Scope</option>
+                  <option value="OPERATOR">{getLegalRoleFilterLabel('OPERATOR', t)}</option>
+                  <option value="MICRO_SMALL_PRIMARY_OPERATOR">{getLegalRoleFilterLabel('MICRO_SMALL_PRIMARY_OPERATOR', t)}</option>
+                  <option value="DOWNSTREAM_OPERATOR_FIRST">{getLegalRoleFilterLabel('DOWNSTREAM_OPERATOR_FIRST', t)}</option>
+                  <option value="DOWNSTREAM_OPERATOR_SUBSEQUENT">{getLegalRoleFilterLabel('DOWNSTREAM_OPERATOR_SUBSEQUENT', t)}</option>
+                  <option value="TRADER">{getLegalRoleFilterLabel('TRADER', t)}</option>
+                  <option value="OUT_OF_SCOPE">{getLegalRoleFilterLabel('OUT_OF_SCOPE', t)}</option>
                 </select>
               </div>
 

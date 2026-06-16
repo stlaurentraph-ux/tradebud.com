@@ -67,7 +67,7 @@ describe('PlotDeforestationDecisionHistoryPanel', () => {
     ];
     render(<PlotDeforestationDecisionHistoryPanel plotId="plot_1" />);
     expect(screen.getByText('2020-12-31')).toBeInTheDocument();
-    expect(screen.getByText('no_deforestation_detected')).toBeInTheDocument();
+    expect(screen.getByText('No deforestation detected')).toBeInTheDocument();
     expect(screen.getByText('0 / 0 ha')).toBeInTheDocument();
     expect(screen.getByText('glad_s2_primary')).toBeInTheDocument();
   });
@@ -82,7 +82,9 @@ describe('PlotDeforestationDecisionHistoryPanel', () => {
     expect(hookState.runDecision).toHaveBeenCalledWith('2020-12-31');
     expect(await screen.findByText('Decision run recorded for cutoff 2020-12-31.')).toBeInTheDocument();
     expect(
-      screen.getByText('Last run: cutoff 2020-12-31 | verdict no_deforestation_detected | provider mode glad_s2_primary'),
+      screen.getByText(
+        'Last run: cutoff 2020-12-31 | verdict No deforestation detected | provider mode glad_s2_primary',
+      ),
     ).toBeInTheDocument();
   });
 

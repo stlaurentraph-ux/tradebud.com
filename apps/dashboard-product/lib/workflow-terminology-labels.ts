@@ -1,9 +1,11 @@
 import { t as translate, type Locale } from '@/lib/i18n';
-import type { User } from '@/types';
+import type { User, TenantRole, LegalWorkflowRole } from '@/types';
 import * as en from '@/lib/supply-chain-terminology';
 import { getDashboardBreadcrumbLabel, getMiniReviewImporterFilingAction } from '@/lib/terminology-labels';
 import { translateNavItemName } from '@/lib/nav-labels';
 import { getIssueSlaUrgency } from '@/lib/compliance-issue-sla';
+import { isMalformedEudrDdsStatusPayloadError } from '@/lib/eudr-dds-status-feedback';
+import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
 
 type SupplyChainRole = User['active_role'] | null | undefined;
 type TranslateFn = (key: string) => string;
@@ -1218,6 +1220,1681 @@ export function getProducerNotFoundMessage(role?: SupplyChainRole, t?: Translate
   );
 }
 
+const PRODUCER_DETAIL_COPY: Record<string, { key: string; fallback: string; cooperativeFallback?: string }> = {
+  section_info: {
+    key: 'workflow.producers.detail.section.info',
+    fallback: 'Producer Information',
+    cooperativeFallback: 'Member Information',
+  },
+  field_name: { key: 'workflow.producers.detail.field.name', fallback: 'Name' },
+  field_email: { key: 'workflow.producers.detail.field.email', fallback: 'Email' },
+  field_phone: { key: 'workflow.producers.detail.field.phone', fallback: 'Phone' },
+  field_organisation: { key: 'workflow.producers.detail.field.organisation', fallback: 'Organisation' },
+  field_country: { key: 'workflow.producers.detail.field.country', fallback: 'Country' },
+  field_directory_status: {
+    key: 'workflow.producers.detail.field.directory_status',
+    fallback: 'Directory status',
+  },
+  section_verification: {
+    key: 'workflow.producers.detail.section.verification',
+    fallback: 'Verification Status',
+  },
+  badge_engaged: {
+    key: 'workflow.producers.detail.badge.engaged',
+    fallback: 'Engaged in programme',
+  },
+  badge_pending_engagement: {
+    key: 'workflow.producers.detail.badge.pending_engagement',
+    fallback: 'Pending engagement',
+  },
+  badge_consent_granted: {
+    key: 'workflow.producers.detail.badge.consent_granted',
+    fallback: 'CRM consent marked granted',
+  },
+  badge_consent_not_granted: {
+    key: 'workflow.producers.detail.badge.consent_not_granted',
+    fallback: 'CRM consent not granted',
+  },
+  section_field_app: {
+    key: 'workflow.producers.detail.section.field_app',
+    fallback: 'Field app link',
+  },
+  field_app_linked: {
+    key: 'workflow.producers.detail.field_app.linked',
+    fallback: 'Linked to field-app profile. Data access is governed by producer consent grants below.',
+  },
+  field_app_not_linked: {
+    key: 'workflow.producers.detail.field_app.not_linked',
+    fallback:
+      'Not linked yet. Ask the producer to create a Tracebud field account using {{email}}.',
+  },
+  resolve_error_no_account: {
+    key: 'workflow.producers.detail.resolve_error.no_account',
+    fallback:
+      'No field-app account linked yet. The producer must sign up with the same email before you can request data access.',
+    cooperativeFallback:
+      'No field-app account linked yet. The member must sign up with the same email before you can request data access.',
+  },
+  load_error: {
+    key: 'workflow.producers.detail.load_error',
+    fallback: 'Failed to load producer.',
+    cooperativeFallback: 'Failed to load member.',
+  },
+};
+
+export function getProducerDetailCopy(
+  key: keyof typeof PRODUCER_DETAIL_COPY,
+  role?: SupplyChainRole,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = PRODUCER_DETAIL_COPY[key];
+  const fallback =
+    role === 'cooperative' && entry.cooperativeFallback ? entry.cooperativeFallback : entry.fallback;
+  return wf(entry.key, fallback, t, values);
+}
+
+const PRODUCER_CONSENT_COPY: Record<string, { key: string; fallback: string; cooperativeFallback?: string }> = {
+  title: { key: 'workflow.producers.consent.title', fallback: 'Data access consent' },
+  intro: {
+    key: 'workflow.producers.consent.intro',
+    fallback:
+      'Plot and evidence data is only visible after the producer approves a request in the Tracebud field app. The producer can revoke future access at any time. Data already in batches or shipments they sold to you cannot be withdrawn and may be retained for EU compliance (up to 5 years for importers).',
+    cooperativeFallback:
+      'Plot and evidence data is only visible after the member approves a request in the Tracebud field app. The member can revoke future access at any time. Data already in batches or shipments they sold to you cannot be withdrawn and may be retained for EU compliance (up to 5 years for importers).',
+  },
+  error_load: {
+    key: 'workflow.producers.consent.error.load',
+    fallback: 'Failed to load consent grants.',
+  },
+  message_already_granted: {
+    key: 'workflow.producers.consent.message.already_granted',
+    fallback: 'Producer already granted access.',
+    cooperativeFallback: 'Member already granted access.',
+  },
+  message_pending: {
+    key: 'workflow.producers.consent.message.pending',
+    fallback: 'Request sent. The producer must approve in the Tracebud field app under Data sharing.',
+    cooperativeFallback: 'Request sent. The member must approve in the Tracebud field app under Data sharing.',
+  },
+  message_recorded: {
+    key: 'workflow.producers.consent.message.recorded',
+    fallback: 'Consent request recorded.',
+  },
+  error_request: {
+    key: 'workflow.producers.consent.error.request',
+    fallback: 'Failed to request data access.',
+  },
+  revoked_prefix: {
+    key: 'workflow.producers.consent.revoked.prefix',
+    fallback: 'Future access revoked by the producer',
+    cooperativeFallback: 'Future access revoked by the member',
+  },
+  revoked_on: { key: 'workflow.producers.consent.revoked.on', fallback: ' on {{date}}' },
+  revoked_body: {
+    key: 'workflow.producers.consent.revoked.body',
+    fallback:
+      '. You can no longer view new plots or harvests. Sold batch and shipment lineage already linked before revocation remains available for compliance',
+  },
+  revoked_until: { key: 'workflow.producers.consent.revoked.until', fallback: ' until {{date}}' },
+  revoked_retention_default: {
+    key: 'workflow.producers.consent.revoked.retention_default',
+    fallback: ' (up to 5 years for importers)',
+  },
+  link_required: {
+    key: 'workflow.producers.consent.link_required',
+    fallback: 'Link this directory contact to a field-app account (same email) before you can request data access.',
+  },
+  no_active_consent: {
+    key: 'workflow.producers.consent.no_active',
+    fallback:
+      "No active data access consent. You cannot view this producer's backed-up plots until they approve your request.",
+    cooperativeFallback:
+      "No active data access consent. You cannot view this member's backed-up plots until they approve your request.",
+  },
+  action_sending: { key: 'workflow.producers.consent.action.sending', fallback: 'Sending…' },
+  action_pending: { key: 'workflow.producers.consent.action.pending', fallback: 'Request pending approval' },
+  action_granted: { key: 'workflow.producers.consent.action.granted', fallback: 'Access already granted' },
+  action_request: { key: 'workflow.producers.consent.action.request', fallback: 'Request data access' },
+  empty_none: {
+    key: 'workflow.producers.consent.empty.none',
+    fallback: 'No consent requests yet for {{name}}.',
+  },
+  scope_prefix: { key: 'workflow.producers.consent.scope.prefix', fallback: 'Can see:' },
+  granted_at: { key: 'workflow.producers.consent.granted_at', fallback: 'Granted: {{date}}' },
+  revoked_at: { key: 'workflow.producers.consent.revoked_at', fallback: 'Revoked: {{date}}' },
+  waiting_approval: {
+    key: 'workflow.producers.consent.waiting_approval',
+    fallback: 'Waiting for producer approval in the field app.',
+    cooperativeFallback: 'Waiting for member approval in the field app.',
+  },
+  scope_profile: { key: 'workflow.producers.consent.scope.profile', fallback: 'profile' },
+  scope_plots: { key: 'workflow.producers.consent.scope.plots', fallback: 'plots' },
+  scope_evidence: { key: 'workflow.producers.consent.scope.evidence', fallback: 'evidence' },
+};
+
+type ProducerConsentStatus = 'active' | 'pending' | 'revoked' | 'denied';
+
+const PRODUCER_CONSENT_STATUS_COPY: Record<ProducerConsentStatus, { key: string; fallback: string }> = {
+  active: { key: 'workflow.producers.consent.status.active', fallback: 'active' },
+  pending: { key: 'workflow.producers.consent.status.pending', fallback: 'pending' },
+  revoked: { key: 'workflow.producers.consent.status.revoked', fallback: 'revoked' },
+  denied: { key: 'workflow.producers.consent.status.denied', fallback: 'denied' },
+};
+
+export function getProducerConsentCopy(
+  key: keyof typeof PRODUCER_CONSENT_COPY,
+  role?: SupplyChainRole,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = PRODUCER_CONSENT_COPY[key];
+  const fallback =
+    role === 'cooperative' && entry.cooperativeFallback ? entry.cooperativeFallback : entry.fallback;
+  return wf(entry.key, fallback, t, values);
+}
+
+export function getProducerConsentStatusLabel(status: ProducerConsentStatus, t?: TranslateFn): string {
+  const entry = PRODUCER_CONSENT_STATUS_COPY[status];
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getProducerConsentScopeLabel(scopeItem: string, t?: TranslateFn): string {
+  const keyMap: Record<string, keyof typeof PRODUCER_CONSENT_COPY> = {
+    identity: 'scope_profile',
+    plots: 'scope_plots',
+    evidence: 'scope_evidence',
+  };
+  const copyKey = keyMap[scopeItem];
+  if (!copyKey) return scopeItem;
+  return getProducerConsentCopy(copyKey, undefined, t);
+}
+
+const APP_CHROME_COPY: Record<string, { key: string; fallback: string }> = {
+  eudr_platform: { key: 'workflow.shell.sidebar.eudr_platform', fallback: 'EUDR Platform' },
+  active_role: { key: 'workflow.shell.sidebar.active_role', fallback: 'Active role' },
+  switch_role: { key: 'workflow.shell.sidebar.switch_role', fallback: 'Switch role' },
+  switch_role_aria: { key: 'workflow.shell.sidebar.switch_role_aria', fallback: 'Switch user role' },
+  sponsor_view: { key: 'workflow.shell.sidebar.sponsor_view', fallback: 'Sponsor view' },
+  sponsor_country: { key: 'workflow.shell.sidebar.sponsor_country', fallback: 'Country' },
+  sponsor_brand: { key: 'workflow.shell.sidebar.sponsor_brand', fallback: 'Brand' },
+  org_workspace: { key: 'workflow.shell.sidebar.org_workspace', fallback: 'Organisation workspace' },
+  tracebud_tenant: { key: 'workflow.shell.sidebar.tracebud_tenant', fallback: 'Tracebud tenant' },
+  workspace_fallback: { key: 'workflow.shell.sidebar.workspace_fallback', fallback: 'Workspace' },
+  guest: { key: 'workflow.shell.sidebar.guest', fallback: 'Guest' },
+  not_logged_in: { key: 'workflow.shell.sidebar.not_logged_in', fallback: 'Not logged in' },
+  account_settings: { key: 'workflow.shell.sidebar.account_settings', fallback: 'Account settings' },
+  log_out: { key: 'workflow.shell.sidebar.log_out', fallback: 'Log out' },
+  user_menu_aria: { key: 'workflow.shell.sidebar.user_menu_aria', fallback: 'User menu for {{name}}' },
+  notifications: { key: 'workflow.shell.header.notifications', fallback: 'Notifications' },
+  notifications_empty: { key: 'workflow.shell.header.notifications_empty', fallback: 'No notifications yet.' },
+  notifications_aria: { key: 'workflow.shell.header.notifications_aria', fallback: 'Notifications' },
+  breadcrumb_aria: { key: 'workflow.shell.header.breadcrumb_aria', fallback: 'Breadcrumb' },
+  main_nav_aria: { key: 'workflow.shell.sidebar.main_nav_aria', fallback: 'Main navigation' },
+  open_menu_aria: { key: 'workflow.shell.mobile.open_menu_aria', fallback: 'Open menu' },
+  close_menu_aria: { key: 'workflow.shell.mobile.close_menu_aria', fallback: 'Close menu' },
+  mobile_brand: { key: 'workflow.shell.mobile.brand', fallback: 'Tracebud' },
+};
+
+export function getAppChromeCopy(
+  key: keyof typeof APP_CHROME_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = APP_CHROME_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+const AUTH_COPY: Record<string, { key: string; fallback: string }> = {
+  login_title: { key: 'workflow.auth.login.title', fallback: 'Sign in to your account' },
+  login_subtitle: {
+    key: 'workflow.auth.login.subtitle',
+    fallback: 'Enter your credentials to access your Tracebud workspace',
+  },
+  email_confirmed: {
+    key: 'workflow.auth.login.email_confirmed',
+    fallback: 'Your email is confirmed. Sign in with your password to continue.',
+  },
+  intent_recorded: {
+    key: 'workflow.auth.login.intent_recorded',
+    fallback:
+      'Your email action to {{intent}} was recorded. Sign in to continue your compliance workflow.',
+  },
+  intent_pending: {
+    key: 'workflow.auth.login.intent_pending',
+    fallback:
+      'You clicked an email action to {{intent}}. Sign in to confirm and continue your compliance workflow.',
+  },
+  intent_accept: { key: 'workflow.auth.login.intent.accept', fallback: 'accept this request' },
+  intent_refuse: { key: 'workflow.auth.login.intent.refuse', fallback: 'refuse this request' },
+  field_email: { key: 'workflow.auth.field.email', fallback: 'Email' },
+  field_password: { key: 'workflow.auth.field.password', fallback: 'Password' },
+  field_work_email: { key: 'workflow.auth.field.work_email', fallback: 'Work email' },
+  field_full_name: { key: 'workflow.auth.field.full_name', fallback: 'Full name' },
+  placeholder_email: { key: 'workflow.auth.placeholder.email', fallback: 'you@company.com' },
+  placeholder_password: { key: 'workflow.auth.placeholder.password', fallback: 'Enter your password' },
+  placeholder_full_name: { key: 'workflow.auth.placeholder.full_name', fallback: 'Maria Santos' },
+  placeholder_password_new: { key: 'workflow.auth.placeholder.password_new', fallback: 'At least 8 characters' },
+  forgot_password: { key: 'workflow.auth.login.forgot_password', fallback: 'Forgot password?' },
+  forgot_password_sending: { key: 'workflow.auth.login.forgot_password_sending', fallback: 'Sending reset link…' },
+  signing_in: { key: 'workflow.auth.login.signing_in', fallback: 'Signing in...' },
+  sign_in: { key: 'workflow.auth.login.sign_in', fallback: 'Sign in' },
+  new_to_tracebud: { key: 'workflow.auth.login.new_to_tracebud', fallback: 'New to Tracebud?' },
+  create_workspace: { key: 'workflow.auth.login.create_workspace', fallback: 'Create workspace' },
+  already_have_account: { key: 'workflow.auth.signup.already_have_account', fallback: 'Already have an account?' },
+  error_invalid_credentials: {
+    key: 'workflow.auth.login.error.invalid_credentials',
+    fallback: 'Incorrect email or password. Check your credentials or reset your password below.',
+  },
+  error_email_not_confirmed: {
+    key: 'workflow.auth.login.error.email_not_confirmed',
+    fallback: 'Confirm your email using the link we sent you, then sign in again.',
+  },
+  error_forgot_password_email: {
+    key: 'workflow.auth.login.error.forgot_password_email',
+    fallback: 'Enter your email address above, then choose forgot password.',
+  },
+  error_reset_unavailable: {
+    key: 'workflow.auth.login.error.reset_unavailable',
+    fallback: 'Password reset is unavailable in this environment. Contact support@tracebud.com.',
+  },
+  reset_notice: {
+    key: 'workflow.auth.login.reset_notice',
+    fallback: 'If an account exists for {{email}}, a password reset link is on its way.',
+  },
+  error_reset_send: {
+    key: 'workflow.auth.login.error.reset_send',
+    fallback: 'Could not send password reset email.',
+  },
+  error_generic: { key: 'workflow.auth.error.generic', fallback: 'Something went wrong. Please try again.' },
+  eudr_platform_tagline: { key: 'workflow.auth.tagline.eudr_platform', fallback: 'EUDR Compliance Platform' },
+  show_password: { key: 'workflow.auth.a11y.show_password', fallback: 'Show password' },
+  hide_password: { key: 'workflow.auth.a11y.hide_password', fallback: 'Hide password' },
+  welcome_back: { key: 'workflow.auth.legacy_login.welcome_back', fallback: 'Welcome back' },
+  legacy_login_subtitle: {
+    key: 'workflow.auth.legacy_login.subtitle',
+    fallback: 'Sign in to your Tracebud Exporter account',
+  },
+  legacy_login_hint: {
+    key: 'workflow.auth.legacy_login.hint',
+    fallback: 'Use your Supabase account with an exporter email (e.g., exporter+name@email.com or @tracebud.com)',
+  },
+  confirm_loading_title: { key: 'workflow.auth.confirm.loading_title', fallback: 'Confirming your email' },
+  confirm_success_title: { key: 'workflow.auth.confirm.success_title', fallback: 'Email confirmed' },
+  confirm_problem_title: { key: 'workflow.auth.confirm.problem_title', fallback: 'Confirmation problem' },
+  confirm_loading_wait: {
+    key: 'workflow.auth.confirm.loading_wait',
+    fallback: 'Please wait while we verify your link.',
+  },
+  confirm_success_session: {
+    key: 'workflow.auth.confirm.success_session',
+    fallback: 'Your email is confirmed. Continue setup or open your dashboard.',
+  },
+  confirm_sign_in_required_detail: {
+    key: 'workflow.auth.confirm.sign_in_required_detail',
+    fallback: 'Your email is confirmed. Sign in with the password you chose during signup.',
+  },
+  confirm_link_invalid: {
+    key: 'workflow.auth.confirm.link_invalid',
+    fallback:
+      'This confirmation link is invalid or has expired. Sign in if you already confirmed, or create a new workspace.',
+  },
+  confirm_continue_setup: {
+    key: 'workflow.auth.confirm.continue_setup',
+    fallback: 'Continue workspace setup',
+  },
+  confirm_go_dashboard: { key: 'workflow.auth.confirm.go_dashboard', fallback: 'Go to dashboard' },
+  confirm_sign_in_cta: { key: 'workflow.auth.confirm.sign_in_cta', fallback: 'Sign in' },
+  confirm_create_workspace_cta: {
+    key: 'workflow.auth.confirm.create_workspace_cta',
+    fallback: 'Create workspace',
+  },
+  logo_alt: { key: 'workflow.auth.brand.logo_alt', fallback: 'Tracebud' },
+};
+
+const SIGNUP_COPY: Record<string, { key: string; fallback: string }> = {
+  step1_title: { key: 'workflow.auth.signup.step1.title', fallback: 'Create your account' },
+  step1_description: {
+    key: 'workflow.auth.signup.step1.description',
+    fallback: 'Start your Tracebud workspace in a few minutes.',
+  },
+  step2_title: { key: 'workflow.auth.signup.step2.title', fallback: 'Set up your workspace' },
+  step2_description: {
+    key: 'workflow.auth.signup.step2.description',
+    fallback: 'Tell us about your organization so we can tailor your workflows.',
+  },
+  step2_resume_description: {
+    key: 'workflow.auth.signup.step2.resume_description',
+    fallback: 'Your email is confirmed. Choose your organization and role to finish setup.',
+  },
+  step3_title: { key: 'workflow.auth.signup.step3.title', fallback: 'Your commercial profile' },
+  step3_description: {
+    key: 'workflow.auth.signup.step3.description',
+    fallback: 'Help us personalize onboarding. You can update this later.',
+  },
+  wizard_step_account: { key: 'workflow.auth.signup.wizard.account', fallback: 'Create account' },
+  wizard_step_workspace: { key: 'workflow.auth.signup.wizard.workspace', fallback: 'Workspace' },
+  wizard_step_profile: { key: 'workflow.auth.signup.wizard.profile', fallback: 'Profile' },
+  trust_headline: {
+    key: 'workflow.auth.signup.trust_headline',
+    fallback: 'Join 200+ supply chain teams already managing EUDR compliance on Tracebud.',
+  },
+  trust_no_card: { key: 'workflow.auth.signup.trust.no_card', fallback: 'No credit card required' },
+  trust_fast_setup: { key: 'workflow.auth.signup.trust.fast_setup', fallback: 'Set up in under 1 minute' },
+  trust_eudr_day_one: { key: 'workflow.auth.signup.trust.eudr_day_one', fallback: 'EUDR-compliant from day one' },
+  creating_account: { key: 'workflow.auth.signup.creating_account', fallback: 'Creating account…' },
+  create_account: { key: 'workflow.auth.signup.create_account', fallback: 'Create account' },
+  terms_prefix: { key: 'workflow.auth.signup.terms_prefix', fallback: "By continuing, you agree to Tracebud's" },
+  terms_of_service: { key: 'workflow.auth.signup.terms_of_service', fallback: 'Terms of Service' },
+  privacy_policy: { key: 'workflow.auth.signup.privacy_policy', fallback: 'Privacy Policy' },
+  field_organization: { key: 'workflow.auth.signup.field.organization', fallback: 'Organization name' },
+  placeholder_organization: {
+    key: 'workflow.auth.signup.placeholder.organization',
+    fallback: 'Acme Coffee Exports Ltd.',
+  },
+  field_country: { key: 'workflow.auth.signup.field.country', fallback: 'Country' },
+  country_placeholder: { key: 'workflow.auth.signup.country_placeholder', fallback: 'Select your country' },
+  field_primary_role: { key: 'workflow.auth.signup.field.primary_role', fallback: 'Primary role' },
+  supply_chain_roles_title: {
+    key: 'workflow.auth.signup.supply_chain_roles_title',
+    fallback: 'Supply chain roles performed by this organisation',
+  },
+  supply_chain_roles_hint: {
+    key: 'workflow.auth.signup.supply_chain_roles_hint',
+    fallback: 'Select every workflow you run in one tenant. Use a preset or pick roles individually.',
+  },
+  back: { key: 'workflow.auth.signup.back', fallback: 'Back' },
+  continue: { key: 'workflow.auth.signup.continue', fallback: 'Continue' },
+  saving: { key: 'workflow.auth.signup.saving', fallback: 'Saving…' },
+  field_primary_commodity: { key: 'workflow.auth.signup.field.primary_commodity', fallback: 'Primary commodity' },
+  commodity_placeholder: { key: 'workflow.auth.signup.commodity_placeholder', fallback: 'Select a commodity' },
+  field_primary_objective: { key: 'workflow.auth.signup.field.primary_objective', fallback: 'Primary objective' },
+  objective_placeholder: {
+    key: 'workflow.auth.signup.objective_placeholder',
+    fallback: 'What brings you to Tracebud?',
+  },
+  skip_for_now: { key: 'workflow.auth.signup.skip_for_now', fallback: 'Skip for now' },
+  finishing: { key: 'workflow.auth.signup.finishing', fallback: 'Finishing…' },
+  go_to_dashboard: { key: 'workflow.auth.signup.go_to_dashboard', fallback: 'Go to dashboard' },
+  members_count: { key: 'workflow.auth.signup.members_count', fallback: 'Number of members' },
+  members_hint: {
+    key: 'workflow.auth.signup.members_hint',
+    fallback: 'Farmer or producer members in your cooperative.',
+  },
+  suppliers_count: { key: 'workflow.auth.signup.suppliers_count', fallback: 'Number of suppliers' },
+  suppliers_hint_exporter: {
+    key: 'workflow.auth.signup.suppliers_hint_exporter',
+    fallback: 'Farms, cooperatives, or aggregators you source from.',
+  },
+  suppliers_hint_importer: {
+    key: 'workflow.auth.signup.suppliers_hint_importer',
+    fallback: 'Exporters or producers you source from.',
+  },
+  importers_count: { key: 'workflow.auth.signup.importers_count', fallback: 'Number of importers' },
+  importers_hint: { key: 'workflow.auth.signup.importers_hint', fallback: 'EU buyers you ship to.' },
+  number_placeholder: { key: 'workflow.auth.signup.number_placeholder', fallback: 'e.g. 50' },
+  error_create_account: {
+    key: 'workflow.auth.signup.error.create_account',
+    fallback: 'Unable to create account.',
+  },
+  error_complete_workspace: {
+    key: 'workflow.auth.signup.error.complete_workspace',
+    fallback: 'Unable to complete workspace setup.',
+  },
+  legacy_wizard_title: {
+    key: 'workflow.auth.signup.legacy_wizard.title',
+    fallback: 'Create your Tracebud workspace',
+  },
+  legacy_wizard_progress: {
+    key: 'workflow.auth.signup.legacy_wizard.progress',
+    fallback: 'Step {{step}} of 3 - fast setup, then immediate first-value onboarding.',
+  },
+  legacy_value_banner: {
+    key: 'workflow.auth.signup.legacy_wizard.value_banner',
+    fallback: 'Start your EUDR-ready workspace in under 2 minutes. No credit card required. 30-day trial.',
+  },
+  creating_workspace: {
+    key: 'workflow.auth.signup.legacy_wizard.creating_workspace',
+    fallback: 'Creating workspace...',
+  },
+  submit_create_workspace: {
+    key: 'workflow.auth.signup.legacy_wizard.submit_create_workspace',
+    fallback: 'Create workspace',
+  },
+  saving_setup: {
+    key: 'workflow.auth.signup.legacy_wizard.saving_setup',
+    fallback: 'Saving setup...',
+  },
+  continue_to_dashboard: {
+    key: 'workflow.auth.signup.legacy_wizard.continue_to_dashboard',
+    fallback: 'Continue to dashboard',
+  },
+  placeholder_password_create: {
+    key: 'workflow.auth.signup.legacy_wizard.placeholder.password_create',
+    fallback: 'Create a secure password',
+  },
+  placeholder_full_name_short: {
+    key: 'workflow.auth.signup.legacy_wizard.placeholder.full_name_short',
+    fallback: 'Jane Doe',
+  },
+  placeholder_country_example: {
+    key: 'workflow.auth.signup.legacy_wizard.placeholder.country_example',
+    fallback: 'France',
+  },
+  field_members_optional: {
+    key: 'workflow.auth.signup.legacy_wizard.field.members_optional',
+    fallback: 'Number of members (optional)',
+  },
+  field_suppliers_optional: {
+    key: 'workflow.auth.signup.legacy_wizard.field.suppliers_optional',
+    fallback: 'Number of suppliers (optional)',
+  },
+  field_importers_optional: {
+    key: 'workflow.auth.signup.legacy_wizard.field.importers_optional',
+    fallback: 'Number of importers (optional)',
+  },
+  field_main_commodity_optional: {
+    key: 'workflow.auth.signup.legacy_wizard.field.main_commodity_optional',
+    fallback: 'Main commodity (optional)',
+  },
+  supply_chain_roles_hint_examples: {
+    key: 'workflow.auth.signup.legacy_wizard.supply_chain_roles_hint_examples',
+    fallback:
+      'Select every workflow you run in one tenant — e.g. cooperative + exporter, or exporter + importer for a vertically integrated brand.',
+  },
+  objective_prepare_dds: {
+    key: 'workflow.auth.signup.legacy_wizard.objective.prepare_dds',
+    fallback: 'Prepare first due diligence package',
+  },
+  objective_risk_screening: {
+    key: 'workflow.auth.signup.legacy_wizard.objective.risk_screening',
+    fallback: 'Risk screening',
+  },
+  objective_audit_readiness: {
+    key: 'workflow.auth.signup.legacy_wizard.objective.audit_readiness',
+    fallback: 'Audit readiness',
+  },
+};
+
+const SIGNUP_PRIMARY_ROLE_COPY: Record<
+  string,
+  { labelKey: string; labelFallback: string; descriptionKey: string; descriptionFallback: string }
+> = {
+  importer: {
+    labelKey: 'workflow.auth.signup.role.importer.label',
+    labelFallback: 'Importer',
+    descriptionKey: 'workflow.auth.signup.role.importer.description',
+    descriptionFallback: 'EU-based company bringing goods into the EU market',
+  },
+  exporter: {
+    labelKey: 'workflow.auth.signup.role.exporter.label',
+    labelFallback: 'Exporter',
+    descriptionKey: 'workflow.auth.signup.role.exporter.description',
+    descriptionFallback: 'Producer-country entity shipping goods to EU buyers',
+  },
+  cooperative: {
+    labelKey: 'workflow.auth.signup.role.cooperative.label',
+    labelFallback: 'Supplier / Cooperative',
+    descriptionKey: 'workflow.auth.signup.role.cooperative.description',
+    descriptionFallback: 'Producer cooperative or aggregator managing upstream supply data',
+  },
+  compliance_manager: {
+    labelKey: 'workflow.auth.signup.role.compliance_manager.label',
+    labelFallback: 'Compliance Manager',
+    descriptionKey: 'workflow.auth.signup.role.compliance_manager.description',
+    descriptionFallback: 'Internal or external compliance professional',
+  },
+  admin: {
+    labelKey: 'workflow.auth.signup.role.admin.label',
+    labelFallback: 'Admin',
+    descriptionKey: 'workflow.auth.signup.role.admin.description',
+    descriptionFallback: 'Platform or tenant administrator',
+  },
+};
+
+const SIGNUP_COMMODITY_COPY: Record<string, { key: string; fallback: string }> = {
+  coffee: { key: 'workflow.auth.signup.commodity.coffee', fallback: 'Coffee' },
+  cocoa: { key: 'workflow.auth.signup.commodity.cocoa', fallback: 'Cocoa' },
+  soy: { key: 'workflow.auth.signup.commodity.soy', fallback: 'Soy' },
+  cattle: { key: 'workflow.auth.signup.commodity.cattle', fallback: 'Cattle' },
+  oil_palm: { key: 'workflow.auth.signup.commodity.oil_palm', fallback: 'Oil Palm' },
+  rubber: { key: 'workflow.auth.signup.commodity.rubber', fallback: 'Rubber' },
+  wood: { key: 'workflow.auth.signup.commodity.wood', fallback: 'Wood' },
+};
+
+const SIGNUP_OBJECTIVE_COPY: Record<string, { key: string; fallback: string }> = {
+  eudr_compliance: {
+    key: 'workflow.auth.signup.objective.eudr_compliance',
+    fallback: 'Achieve full EUDR compliance',
+  },
+  supply_chain_visibility: {
+    key: 'workflow.auth.signup.objective.supply_chain_visibility',
+    fallback: 'Gain end-to-end supply chain visibility',
+  },
+  dds_automation: {
+    key: 'workflow.auth.signup.objective.dds_automation',
+    fallback: 'Automate Due Diligence Statements (DDS)',
+  },
+  supplier_onboarding: {
+    key: 'workflow.auth.signup.objective.supplier_onboarding',
+    fallback: 'Onboard and manage suppliers',
+  },
+  buyer_reporting: {
+    key: 'workflow.auth.signup.objective.buyer_reporting',
+    fallback: 'Report compliance data to EU buyers',
+  },
+};
+
+export function getAuthCopy(
+  key: keyof typeof AUTH_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = AUTH_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getSignupCopy(
+  key: keyof typeof SIGNUP_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = SIGNUP_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getSignupPrimaryRoleLabel(role: string, t?: TranslateFn): string {
+  const entry = SIGNUP_PRIMARY_ROLE_COPY[role];
+  if (!entry) return role;
+  return wf(entry.labelKey, entry.labelFallback, t);
+}
+
+export function getSignupPrimaryRoleDescription(role: string, t?: TranslateFn): string {
+  const entry = SIGNUP_PRIMARY_ROLE_COPY[role];
+  if (!entry) return '';
+  return wf(entry.descriptionKey, entry.descriptionFallback, t);
+}
+
+export function getSignupCommodityLabel(value: string, t?: TranslateFn): string {
+  const entry = SIGNUP_COMMODITY_COPY[value];
+  if (!entry) return value;
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getSignupObjectiveLabel(value: string, t?: TranslateFn): string {
+  const entry = SIGNUP_OBJECTIVE_COPY[value];
+  if (!entry) return value;
+  return wf(entry.key, entry.fallback, t);
+}
+
+const SIGNUP_WIZARD_OBJECTIVE_VALUES = [
+  'prepare_first_due_diligence_package',
+  'supplier_onboarding',
+  'risk_screening',
+  'audit_readiness',
+] as const;
+
+export function getSignupWizardObjectiveLabel(value: string, t?: TranslateFn): string {
+  if (value === 'supplier_onboarding') {
+    return getSignupObjectiveLabel('supplier_onboarding', t);
+  }
+  const map: Record<string, keyof typeof SIGNUP_COPY> = {
+    prepare_first_due_diligence_package: 'objective_prepare_dds',
+    risk_screening: 'objective_risk_screening',
+    audit_readiness: 'objective_audit_readiness',
+  };
+  const copyKey = map[value];
+  return copyKey ? getSignupCopy(copyKey, t) : value;
+}
+
+export function getSignupWizardObjectiveOptions(t?: TranslateFn): Array<{ value: string; label: string }> {
+  return SIGNUP_WIZARD_OBJECTIVE_VALUES.map((value) => ({
+    value,
+    label: getSignupWizardObjectiveLabel(value, t),
+  }));
+}
+
+const EUDR_COMMODITY_VALUES = ['coffee', 'cocoa', 'soy', 'cattle', 'oil_palm', 'rubber', 'wood'] as const;
+
+export function getSignupCommodityOptions(t?: TranslateFn): Array<{ value: string; label: string }> {
+  return EUDR_COMMODITY_VALUES.map((value) => ({
+    value,
+    label: getSignupCommodityLabel(value, t),
+  }));
+}
+
+const SIGNUP_WIZARD_PRIMARY_ROLES = [
+  'importer',
+  'exporter',
+  'cooperative',
+  'compliance_manager',
+  'admin',
+] as const;
+
+export function getSignupWizardPrimaryRoleOptions(t?: TranslateFn): Array<{ value: string; label: string }> {
+  return SIGNUP_WIZARD_PRIMARY_ROLES.map((value) => ({
+    value,
+    label: getSignupPrimaryRoleLabel(value, t),
+  }));
+}
+
+export function getSignupStepMeta(
+  step: 1 | 2 | 3,
+  t?: TranslateFn,
+): { title: string; description: string } {
+  const titleKey = `step${step}_title` as keyof typeof SIGNUP_COPY;
+  const descriptionKey = `step${step}_description` as keyof typeof SIGNUP_COPY;
+  return {
+    title: getSignupCopy(titleKey, t),
+    description: getSignupCopy(descriptionKey, t),
+  };
+}
+
+const ONBOARDING_CHECKLIST_SHELL_COPY: Record<string, { key: string; fallback: string }> = {
+  title_active: { key: 'workflow.onboarding.checklist.title_active', fallback: 'Getting started' },
+  title_complete: { key: 'workflow.onboarding.checklist.title_complete', fallback: 'Setup complete' },
+  badge_all_done: { key: 'workflow.onboarding.checklist.badge_all_done', fallback: 'All done' },
+  subtitle_complete: {
+    key: 'workflow.onboarding.checklist.subtitle_complete',
+    fallback: 'Your workspace is fully configured.',
+  },
+  subtitle_active: {
+    key: 'workflow.onboarding.checklist.subtitle_active',
+    fallback: 'Complete these {{count}} starter tasks to activate your workflow.',
+  },
+  hide_aria: { key: 'workflow.onboarding.checklist.hide_aria', fallback: 'Hide getting started widget' },
+  expand_aria: { key: 'workflow.onboarding.checklist.expand_aria', fallback: 'Expand checklist' },
+  collapse_aria: { key: 'workflow.onboarding.checklist.collapse_aria', fallback: 'Collapse checklist' },
+  progress_aria: { key: 'workflow.onboarding.checklist.progress_aria', fallback: '{{progress}}% complete' },
+  progress_label: { key: 'workflow.onboarding.checklist.progress_label', fallback: '{{progress}}% complete' },
+  steps_of: { key: 'workflow.onboarding.checklist.steps_of', fallback: '{{completed}} of {{total}} steps' },
+  resume_tour: { key: 'workflow.onboarding.checklist.resume_tour', fallback: 'Resume guided tour' },
+  need_help: { key: 'workflow.onboarding.checklist.need_help', fallback: 'Need help?' },
+  help_docs: { key: 'workflow.onboarding.checklist.help.docs', fallback: 'Documentation' },
+  help_support: { key: 'workflow.onboarding.checklist.help.support', fallback: 'Support' },
+  help_video: { key: 'workflow.onboarding.checklist.help.video', fallback: 'Video walkthrough' },
+  badge_next: { key: 'workflow.onboarding.checklist.badge_next', fallback: 'Next' },
+  aria_completed: { key: 'workflow.onboarding.checklist.aria.completed', fallback: 'Completed' },
+  aria_incomplete: { key: 'workflow.onboarding.checklist.aria.incomplete', fallback: 'Incomplete' },
+  steps_list_aria: { key: 'workflow.onboarding.checklist.steps_list_aria', fallback: 'Onboarding steps' },
+};
+
+type OnboardingChecklistTaskId =
+  | 'finish_overview'
+  | 'map_organisations'
+  | 'launch_programme_campaign'
+  | 'launch_first_workflow'
+  | 'add_producers';
+
+const ONBOARDING_CHECKLIST_TASK_COPY: Record<
+  OnboardingChecklistTaskId,
+  { label: { key: string; fallback: string }; description: { key: string; fallback: string }; cta: { key: string; fallback: string } }
+> = {
+  finish_overview: {
+    label: { key: 'workflow.onboarding.checklist.task.finish_overview.label', fallback: 'Finish sponsor overview' },
+    description: {
+      key: 'workflow.onboarding.checklist.task.finish_overview.description',
+      fallback: 'Review governance KPIs, intervention alerts, and sponsor network posture.',
+    },
+    cta: { key: 'workflow.onboarding.checklist.task.finish_overview.cta', fallback: 'Open overview' },
+  },
+  map_organisations: {
+    label: { key: 'workflow.onboarding.checklist.task.map_organisations.label', fallback: 'Map organisations' },
+    description: {
+      key: 'workflow.onboarding.checklist.task.map_organisations.description',
+      fallback: 'Validate member organisations and sponsor-covered scope across the governed network.',
+    },
+    cta: { key: 'workflow.onboarding.checklist.task.map_organisations.cta', fallback: 'Open organisations' },
+  },
+  launch_programme_campaign: {
+    label: {
+      key: 'workflow.onboarding.checklist.task.launch_programme_campaign.label',
+      fallback: 'Launch programme campaign',
+    },
+    description: {
+      key: 'workflow.onboarding.checklist.task.launch_programme_campaign.description',
+      fallback: 'Send your first bulk programme campaign to upstream organisations.',
+    },
+    cta: { key: 'workflow.onboarding.checklist.task.launch_programme_campaign.cta', fallback: 'Launch programme' },
+  },
+  launch_first_workflow: {
+    label: {
+      key: 'workflow.onboarding.checklist.task.launch_first_workflow.label.importer',
+      fallback: 'Launch campaign',
+    },
+    description: {
+      key: 'workflow.onboarding.checklist.task.launch_first_workflow.description.importer',
+      fallback: 'Start your first campaign to collect missing upstream evidence.',
+    },
+    cta: { key: 'workflow.onboarding.checklist.task.launch_first_workflow.cta', fallback: 'Launch campaign' },
+  },
+  add_producers: {
+    label: {
+      key: 'workflow.onboarding.checklist.task.add_producers.label.importer',
+      fallback: 'Build network',
+    },
+    description: {
+      key: 'workflow.onboarding.checklist.task.add_producers.description.importer',
+      fallback: 'Add counterpart contacts so campaign and request workflows route correctly.',
+    },
+    cta: { key: 'workflow.onboarding.checklist.task.add_producers.cta.importer', fallback: 'Add contact' },
+  },
+};
+
+export function getOnboardingChecklistShellCopy(
+  key: keyof typeof ONBOARDING_CHECKLIST_SHELL_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ONBOARDING_CHECKLIST_SHELL_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getOnboardingChecklistTaskCopy(
+  taskId: OnboardingChecklistTaskId,
+  field: 'label' | 'description' | 'cta',
+  role?: SupplyChainRole,
+  t?: TranslateFn,
+): string {
+  const entry = ONBOARDING_CHECKLIST_TASK_COPY[taskId][field];
+  let fallback = entry.fallback;
+  let key = entry.key;
+
+  if (taskId === 'launch_first_workflow' && field !== 'cta') {
+    if (role === 'exporter') {
+      key = `workflow.onboarding.checklist.task.launch_first_workflow.${field}.exporter`;
+      fallback =
+        field === 'label'
+          ? 'Start campaign'
+          : 'Launch your first campaign to collect missing plot, evidence, and upstream producer data.';
+    } else if (role === 'cooperative') {
+      key = `workflow.onboarding.checklist.task.launch_first_workflow.${field}.cooperative`;
+      fallback =
+        field === 'label'
+          ? 'Start a campaign'
+          : 'Launch your first campaign to collect missing plot geometry, evidence, and member data.';
+    }
+  }
+
+  if (taskId === 'add_producers') {
+    if (role === 'exporter') {
+      key = `workflow.onboarding.checklist.task.add_producers.${field}.exporter`;
+      fallback =
+        field === 'label'
+          ? 'Add producers'
+          : field === 'description'
+            ? 'Build your producer directory so traceability links and requests route correctly.'
+            : 'Add producer';
+    } else if (role === 'cooperative') {
+      key = `workflow.onboarding.checklist.task.add_producers.${field}.cooperative`;
+      fallback =
+        field === 'label'
+          ? 'Build member directory'
+          : field === 'description'
+            ? 'Create cooperative member records for consent, portability, and aggregation workflows.'
+            : 'Add member';
+    }
+  }
+
+  return wf(key, fallback, t);
+}
+
+const SETTINGS_COPY: Record<string, { key: string; fallback: string }> = {
+  supply_chain_common_setups: {
+    key: 'workflow.settings.supply_chain.common_setups',
+    fallback: 'Common setups',
+  },
+  supply_chain_presets_hint: {
+    key: 'workflow.settings.supply_chain.presets_hint',
+    fallback: 'Presets fill the role checkboxes below — adjust any time before saving.',
+  },
+  supply_chain_roles: { key: 'workflow.settings.supply_chain.roles', fallback: 'Supply chain roles' },
+  supply_chain_enabled: { key: 'workflow.settings.supply_chain.enabled', fallback: 'Enabled' },
+  twofa_title: { key: 'workflow.settings.twofa.title', fallback: 'Enable two-factor authentication' },
+  twofa_description: {
+    key: 'workflow.settings.twofa.description',
+    fallback:
+      'Scan the QR code with an authenticator app (Google Authenticator, 1Password, Authy), then enter the 6-digit code to finish setup.',
+  },
+  twofa_loading: {
+    key: 'workflow.settings.twofa.loading',
+    fallback: 'Preparing your authenticator setup...',
+  },
+  twofa_qr_alt: { key: 'workflow.settings.twofa.qr_alt', fallback: 'Authenticator QR code' },
+  twofa_manual_key: { key: 'workflow.settings.twofa.manual_key', fallback: 'Manual setup key:' },
+  twofa_code_label: { key: 'workflow.settings.twofa.code_label', fallback: 'Authenticator code' },
+  twofa_error_start: { key: 'workflow.settings.twofa.error.start', fallback: 'Failed to start 2FA setup.' },
+  twofa_error_code: {
+    key: 'workflow.settings.twofa.error.code',
+    fallback: 'Enter the 6-digit code from your authenticator app.',
+  },
+  twofa_error_verify: { key: 'workflow.settings.twofa.error.verify', fallback: 'Verification failed. Try again.' },
+  twofa_cancel: { key: 'workflow.settings.twofa.cancel', fallback: 'Cancel' },
+  twofa_verifying: { key: 'workflow.settings.twofa.verifying', fallback: 'Verifying...' },
+  twofa_verify_enable: { key: 'workflow.settings.twofa.verify_enable', fallback: 'Verify and enable' },
+  billing_adoption_title: { key: 'workflow.settings.billing.adoption_title', fallback: 'Adoption offer' },
+  billing_adoption_description: {
+    key: 'workflow.settings.billing.adoption_description',
+    fallback:
+      'Your first sealed shipment or first DDS submit is free (€1 each). If you use either free shipment leg, the 3-month subscription-free offer ends that month — subscription billing starts the following month. Otherwise you keep 3 months subscription-free until you ship.',
+  },
+  billing_subscription_starts: {
+    key: 'workflow.settings.billing.subscription_starts',
+    fallback: 'Subscription billing starts',
+  },
+  billing_subscription_free_until: {
+    key: 'workflow.settings.billing.subscription_free_until',
+    fallback: 'Subscription free until',
+  },
+  billing_ended: { key: 'workflow.settings.billing.ended', fallback: 'Ended' },
+  billing_first_origin_seal: { key: 'workflow.settings.billing.first_origin_seal', fallback: 'First origin seal' },
+  billing_first_dds_submit: { key: 'workflow.settings.billing.first_dds_submit', fallback: 'First DDS submit' },
+  billing_free_available: { key: 'workflow.settings.billing.free_available', fallback: 'Free — available' },
+  billing_used: { key: 'workflow.settings.billing.used', fallback: 'Used' },
+  billing_band_title: { key: 'workflow.settings.billing.band_title', fallback: 'Subscription band' },
+  billing_band_description: {
+    key: 'workflow.settings.billing.band_description',
+    fallback:
+      'Your monthly price depends on managed contacts (Starter 1–50, Growth 51–500, Scale 501–3,000, Enterprise 3,001+).',
+  },
+  billing_preview_title: { key: 'workflow.settings.billing.preview_title', fallback: 'Monthly billing preview' },
+  billing_preview_description: {
+    key: 'workflow.settings.billing.preview_description',
+    fallback:
+      'Subscription plus metered usage (€1 per origin seal, €1 per destination DDS submit) is invoiced at month end.',
+  },
+  billing_error_unavailable: {
+    key: 'workflow.settings.billing.error.unavailable',
+    fallback: 'Billing usage is not available yet. Run backend migrations if this is a new environment.',
+  },
+  billing_error_load: { key: 'workflow.settings.billing.error.load', fallback: 'Failed to load billing usage.' },
+  billing_loading_preview: { key: 'workflow.settings.billing.loading_preview', fallback: 'Loading billing preview…' },
+  billing_period: { key: 'workflow.settings.billing.period', fallback: 'Billing period' },
+  billing_origin_seals: { key: 'workflow.settings.billing.origin_seals', fallback: 'Origin seals (€1 each)' },
+  billing_destination_submits: {
+    key: 'workflow.settings.billing.destination_submits',
+    fallback: 'Destination DDS submits (€1 each)',
+  },
+  billing_subscription_period: {
+    key: 'workflow.settings.billing.subscription_period',
+    fallback: 'Subscription (this period)',
+  },
+  billing_projected_total: {
+    key: 'workflow.settings.billing.projected_total',
+    fallback: 'Projected month-end total',
+  },
+  billing_invoice_status: {
+    key: 'workflow.settings.billing.invoice_status',
+    fallback: 'Invoice status: {{status}}',
+  },
+  billing_recent_events: { key: 'workflow.settings.billing.recent_events', fallback: 'Recent metered events' },
+  billing_no_events: {
+    key: 'workflow.settings.billing.no_events',
+    fallback: 'No metered events this period yet.',
+  },
+};
+
+const SUPPLY_CHAIN_ROLE_LABEL_COPY: Record<string, { key: string; fallback: string }> = {
+  cooperative: { key: 'workflow.settings.supply_chain.role.cooperative.label', fallback: 'Cooperative' },
+  exporter: {
+    key: 'workflow.settings.supply_chain.role.exporter.label',
+    fallback: 'Exporter / aggregator',
+  },
+  importer: {
+    key: 'workflow.settings.supply_chain.role.importer.label',
+    fallback: 'Importer / EU operator',
+  },
+};
+
+const SUPPLY_CHAIN_ROLE_DESC_COPY: Record<string, { key: string; fallback: string }> = {
+  cooperative: {
+    key: 'workflow.settings.supply_chain.role.cooperative.description',
+    fallback: 'Member plots, field capture, consent, and cooperative governance.',
+  },
+  exporter: {
+    key: 'workflow.settings.supply_chain.role.exporter.description',
+    fallback: 'Batch assembly, lineage integrity, and handoff-ready shipments.',
+  },
+  importer: {
+    key: 'workflow.settings.supply_chain.role.importer.description',
+    fallback: 'Verify upstream evidence and submit DDS to TRACES.',
+  },
+};
+
+const SUPPLY_CHAIN_PRESET_COPY: Record<string, { key: string; fallback: string }> = {
+  cooperative_exporter: {
+    key: 'workflow.settings.supply_chain.preset.cooperative_exporter',
+    fallback: 'Cooperative + exporter',
+  },
+  brand: {
+    key: 'workflow.settings.supply_chain.preset.brand',
+    fallback: 'Vertically integrated brand',
+  },
+  cooperative_importer: {
+    key: 'workflow.settings.supply_chain.preset.cooperative_importer',
+    fallback: 'Cooperative + EU market',
+  },
+};
+
+export function getSettingsCopy(
+  key: keyof typeof SETTINGS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = SETTINGS_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getSupplyChainRoleOptionLabel(roleId: string, t?: TranslateFn): string {
+  const entry = SUPPLY_CHAIN_ROLE_LABEL_COPY[roleId];
+  if (!entry) return roleId;
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getSupplyChainRoleOptionDescription(roleId: string, t?: TranslateFn): string {
+  const entry = SUPPLY_CHAIN_ROLE_DESC_COPY[roleId];
+  if (!entry) return '';
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getSupplyChainRolePresetLabel(presetId: string, t?: TranslateFn): string {
+  const entry = SUPPLY_CHAIN_PRESET_COPY[presetId];
+  if (!entry) return presetId;
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getSupplyChainRoleMixDescription(roles: string[], t?: TranslateFn): string {
+  if (roles.includes('cooperative') && roles.includes('exporter')) {
+    return wf(
+      'workflow.settings.supply_chain.mix.cooperative_exporter',
+      'Integrated cooperative-exporter: capture upstream and prepare export shipments in one tenant.',
+      t,
+    );
+  }
+  if (roles.includes('exporter') && roles.includes('importer')) {
+    return wf(
+      'workflow.settings.supply_chain.mix.brand',
+      'Vertically integrated brand: operate origin aggregation and EU filing in one workspace (switch role in the sidebar).',
+      t,
+    );
+  }
+  if (roles.includes('cooperative') && roles.includes('importer')) {
+    return wf(
+      'workflow.settings.supply_chain.mix.cooperative_importer',
+      'Cooperative with EU market access: manage members locally and verify/file EU shipments.',
+      t,
+    );
+  }
+  if (roles.length === 1) {
+    return getSupplyChainRoleOptionDescription(roles[0], t);
+  }
+  return wf(
+    'workflow.settings.supply_chain.mix.multi_role',
+    'Multi-role organisation: use the sidebar role switcher to move between workflows.',
+    t,
+  );
+}
+
+const SPONSOR_PANEL_COPY: Record<string, { key: string; fallback: string }> = {
+  hero_eyebrow: { key: 'workflow.sponsor.hero.eyebrow', fallback: 'Sponsor oversight' },
+  hero_title: {
+    key: 'workflow.sponsor.hero.title',
+    fallback: 'Network transparency for sustainable markets',
+  },
+  hero_subtitle_country: {
+    key: 'workflow.sponsor.hero.subtitle.country',
+    fallback:
+      'Coordinate government or development programmes across origins, classify supply chain actors, and track EUDR-ready transparency by country and commodity.',
+  },
+  hero_subtitle_brand: {
+    key: 'workflow.sponsor.hero.subtitle.brand',
+    fallback:
+      'Give brands and buyers a governed view of supplier networks, sustainable sourcing readiness, and compliance signals across commodities.',
+  },
+  hero_countries: { key: 'workflow.sponsor.hero.countries', fallback: '{{count}} countries' },
+  hero_commodities: { key: 'workflow.sponsor.hero.commodities', fallback: '{{count}} commodities' },
+  hero_invite_contact: { key: 'workflow.sponsor.hero.invite_contact', fallback: 'Invite contact' },
+  hero_classify_orgs: { key: 'workflow.sponsor.hero.classify_orgs', fallback: 'Classify organisations' },
+  coverage_countries_title: { key: 'workflow.sponsor.coverage.countries.title', fallback: 'Countries in scope' },
+  coverage_countries_description: {
+    key: 'workflow.sponsor.coverage.countries.description',
+    fallback: 'Governed organisations and invited contacts by origin market',
+  },
+  coverage_manage: { key: 'workflow.sponsor.coverage.manage', fallback: 'Manage' },
+  coverage_countries_empty: {
+    key: 'workflow.sponsor.coverage.countries.empty',
+    fallback: 'Add organisations or invite contacts to start mapping your multi-country network.',
+  },
+  coverage_country_row: {
+    key: 'workflow.sponsor.coverage.countries.row',
+    fallback: '{{orgs}} orgs · {{contacts}} contacts',
+  },
+  coverage_nodes: { key: 'workflow.sponsor.coverage.nodes', fallback: '{{count}} nodes' },
+  coverage_commodities_title: {
+    key: 'workflow.sponsor.coverage.commodities.title',
+    fallback: 'Commodities tracked',
+  },
+  coverage_commodities_description: {
+    key: 'workflow.sponsor.coverage.commodities.description',
+    fallback: 'Programme coverage across sustainable market supply chains',
+  },
+  coverage_commodities_empty: {
+    key: 'workflow.sponsor.coverage.commodities.empty',
+    fallback: 'Launch a programme to classify commodity scope and collect transparency evidence.',
+  },
+  coverage_commodity_row: {
+    key: 'workflow.sponsor.coverage.commodities.row',
+    fallback: '{{active}} active · {{total}} total programmes',
+  },
+  coverage_status_active: { key: 'workflow.sponsor.coverage.status.active', fallback: 'Active' },
+  coverage_status_planned: { key: 'workflow.sponsor.coverage.status.planned', fallback: 'Planned' },
+  roles_title: { key: 'workflow.sponsor.roles.title', fallback: 'Supply chain roles' },
+  roles_description: {
+    key: 'workflow.sponsor.roles.description',
+    fallback:
+      'Classify cooperatives, exporters, importers, producers, and partners to reach end-to-end transparency.',
+  },
+  roles_invite: { key: 'workflow.sponsor.roles.invite', fallback: 'Invite & classify' },
+  roles_empty: {
+    key: 'workflow.sponsor.roles.empty',
+    fallback:
+      'No classified network members yet. Invite contacts and register organisations with their supply chain role.',
+  },
+  roles_row: {
+    key: 'workflow.sponsor.roles.row',
+    fallback: '{{orgs}} organisations · {{contacts}} contacts',
+  },
+  transparency_title: {
+    key: 'workflow.sponsor.transparency.title',
+    fallback: 'Transparency & sustainable market readiness',
+  },
+  transparency_description: {
+    key: 'workflow.sponsor.transparency.description',
+    fallback:
+      'Cross-network signals for EUDR-aligned transparency, deforestation-risk visibility, and programme accountability.',
+  },
+  transparency_cta: { key: 'workflow.sponsor.transparency.cta', fallback: 'Open compliance health' },
+  transparency_index: { key: 'workflow.sponsor.transparency.index', fallback: 'Transparency index' },
+  transparency_index_hint: {
+    key: 'workflow.sponsor.transparency.index_hint',
+    fallback: 'Blends plot compliance and organisation readiness',
+  },
+  transparency_compliance: { key: 'workflow.sponsor.transparency.compliance', fallback: 'Compliance health' },
+  transparency_compliance_hint: {
+    key: 'workflow.sponsor.transparency.compliance_hint',
+    fallback: 'Mapped plots meeting compliance signals',
+  },
+  transparency_at_risk: { key: 'workflow.sponsor.transparency.at_risk', fallback: 'At-risk organisations' },
+  transparency_at_risk_hint: {
+    key: 'workflow.sponsor.transparency.at_risk_hint',
+    fallback: 'Below readiness threshold across your network',
+  },
+  transparency_contacts: { key: 'workflow.sponsor.transparency.contacts', fallback: 'Active contacts' },
+  transparency_contacts_hint: {
+    key: 'workflow.sponsor.transparency.contacts_hint',
+    fallback: 'Invited or engaged supply chain contacts',
+  },
+  unnamed_organisation: { key: 'workflow.sponsor.fallback.unnamed_org', fallback: 'Unnamed Organisation' },
+  unknown_country: { key: 'workflow.sponsor.fallback.unknown_country', fallback: 'Unknown' },
+  risk_tier_label: { key: 'workflow.sponsor.network.risk_tier', fallback: 'Risk tier {{tier}}' },
+  risk_tier_unknown: { key: 'workflow.sponsor.network.risk_unknown', fallback: 'Unknown' },
+  risk_tier_high: { key: 'workflow.sponsor.network.risk_high', fallback: 'High' },
+  risk_tier_moderate: { key: 'workflow.sponsor.network.risk_moderate', fallback: 'Moderate' },
+  risk_tier_low: { key: 'workflow.sponsor.network.risk_low', fallback: 'Low' },
+  status_pending_data: { key: 'workflow.sponsor.network.status.pending_data', fallback: 'Pending data' },
+  status_at_risk: { key: 'workflow.sponsor.network.status.at_risk', fallback: 'At Risk' },
+  status_active: { key: 'workflow.sponsor.network.status.active', fallback: 'Active' },
+  programme_default_title: {
+    key: 'workflow.sponsor.programme.default_title',
+    fallback: 'Programme Campaign',
+  },
+  programme_scope_recipients: {
+    key: 'workflow.sponsor.programme.scope_recipients',
+    fallback: '{{count}} recipients',
+  },
+  programme_status_draft: { key: 'workflow.sponsor.programme.status.draft', fallback: 'Draft' },
+  programme_status_completed: { key: 'workflow.sponsor.programme.status.completed', fallback: 'Completed' },
+  programme_status_active: { key: 'workflow.sponsor.programme.status.active', fallback: 'Active' },
+};
+
+const ONBOARDING_WELCOME_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.onboarding.welcome.title', fallback: 'Welcome to Tracebud, {{name}}' },
+  tagline_fallback: {
+    key: 'workflow.onboarding.welcome.tagline_fallback',
+    fallback: 'Your workspace is ready. Take a quick guided tour to get up to speed.',
+  },
+  your_role: { key: 'workflow.onboarding.welcome.your_role', fallback: 'Your role' },
+  tour_preview: {
+    key: 'workflow.onboarding.welcome.tour_preview',
+    fallback: '{{count}}-step guided tour — takes about 3 minutes',
+  },
+  tour_preview_hint: {
+    key: 'workflow.onboarding.welcome.tour_preview_hint',
+    fallback:
+      'Each step highlights the exact area to click. You can skip at any time and resume later from your dashboard.',
+  },
+  continue_later: { key: 'workflow.onboarding.welcome.continue_later', fallback: 'Continue later' },
+  start_tour: { key: 'workflow.onboarding.welcome.start_tour', fallback: 'Start guided tour' },
+};
+
+const WELCOME_CARD_COPY: Record<string, { key: string; fallback: string }> = {
+  dismiss_aria: {
+    key: 'workflow.onboarding.welcome_card.dismiss_aria',
+    fallback: 'Dismiss welcome message',
+  },
+  title: { key: 'workflow.onboarding.welcome.title', fallback: 'Welcome to Tracebud, {{name}}' },
+  name_fallback: { key: 'workflow.onboarding.welcome_card.name_fallback', fallback: 'there' },
+  description: {
+    key: 'workflow.onboarding.welcome_card.description',
+    fallback:
+      'Your workspace is ready. You can start managing EUDR compliance right away or take a moment to explore the platform first.',
+  },
+  start_onboarding: {
+    key: 'workflow.onboarding.welcome_card.start_onboarding',
+    fallback: 'Start onboarding',
+  },
+  explore_workspace: {
+    key: 'workflow.onboarding.welcome_card.explore_workspace',
+    fallback: 'Explore workspace first',
+  },
+};
+
+const WELCOME_CARD_HIGHLIGHT_KEYS = [
+  'workflow.onboarding.welcome_card.highlight.packages',
+  'workflow.onboarding.welcome_card.highlight.supply_data',
+  'workflow.onboarding.welcome_card.highlight.readiness',
+] as const;
+
+const WELCOME_CARD_HIGHLIGHT_FALLBACKS: Record<string, string> = {
+  'workflow.onboarding.welcome_card.highlight.packages': 'Prepare shipment-ready traceability packages',
+  'workflow.onboarding.welcome_card.highlight.supply_data': 'Manage plots, producers, and upstream supply data',
+  'workflow.onboarding.welcome_card.highlight.readiness': 'Track blockers and readiness across your supply chain',
+};
+
+const ONBOARDING_WELCOME_HIGHLIGHTS: Record<string, string[]> = {
+  cooperative: [
+    'workflow.onboarding.welcome.highlight.coop.register',
+    'workflow.onboarding.welcome.highlight.coop.respond',
+    'workflow.onboarding.welcome.highlight.coop.upload',
+  ],
+  exporter: [
+    'workflow.onboarding.welcome.highlight.exporter.campaigns',
+    'workflow.onboarding.welcome.highlight.exporter.batches',
+    'workflow.onboarding.welcome.highlight.exporter.shipments',
+  ],
+  importer: [
+    'workflow.onboarding.welcome.highlight.importer.validate',
+    'workflow.onboarding.welcome.highlight.importer.campaigns',
+    'workflow.onboarding.welcome.highlight.importer.reporting',
+  ],
+  sponsor: [
+    'workflow.onboarding.welcome.highlight.sponsor.network',
+    'workflow.onboarding.welcome.highlight.sponsor.programmes',
+    'workflow.onboarding.welcome.highlight.sponsor.compliance',
+  ],
+};
+
+const ONBOARDING_WELCOME_HIGHLIGHT_FALLBACKS: Record<string, string> = {
+  'workflow.onboarding.welcome.highlight.coop.register': 'Register producers & plots',
+  'workflow.onboarding.welcome.highlight.coop.respond': 'Respond to exporter requests',
+  'workflow.onboarding.welcome.highlight.coop.upload': 'Upload harvest evidence',
+  'workflow.onboarding.welcome.highlight.exporter.campaigns': 'Run producer and plot completion campaigns',
+  'workflow.onboarding.welcome.highlight.exporter.batches': 'Build lineage-safe lots and batches',
+  'workflow.onboarding.welcome.highlight.exporter.shipments': 'Prepare and seal shipment packages',
+  'workflow.onboarding.welcome.highlight.importer.validate': 'Validate shipment and evidence readiness',
+  'workflow.onboarding.welcome.highlight.importer.campaigns': 'Run campaigns and fulfill inbound requests',
+  'workflow.onboarding.welcome.highlight.importer.reporting': 'Generate declaration and reporting snapshots',
+  'workflow.onboarding.welcome.highlight.sponsor.network': 'Map organisations and classify network contacts',
+  'workflow.onboarding.welcome.highlight.sponsor.programmes': 'Launch transparency programmes and bulk campaigns',
+  'workflow.onboarding.welcome.highlight.sponsor.compliance': 'Monitor compliance health across markets',
+};
+
+const ONBOARDING_TOUR_COPY: Record<string, { key: string; fallback: string }> = {
+  step_of: { key: 'workflow.onboarding.tour.step_of', fallback: 'Step {{current}} of {{total}}' },
+  aria_step: {
+    key: 'workflow.onboarding.tour.aria_step',
+    fallback: 'Onboarding step {{current}} of {{total}}: {{title}}',
+  },
+  skip_aria: { key: 'workflow.onboarding.tour.skip_aria', fallback: 'Skip tour' },
+  progress_done: { key: 'workflow.onboarding.tour.progress_done', fallback: '{{completed}} of {{total}} steps done' },
+  action_completed: {
+    key: 'workflow.onboarding.tour.action_completed',
+    fallback: 'Action completed — continue to next step',
+  },
+  action_pending: {
+    key: 'workflow.onboarding.tour.action_pending',
+    fallback: 'Complete the action on this page, then click “Next” to proceed.',
+  },
+  back: { key: 'workflow.onboarding.tour.back', fallback: 'Back' },
+  back_welcome_aria: { key: 'workflow.onboarding.tour.back_welcome_aria', fallback: 'Back to welcome' },
+  prev_aria: { key: 'workflow.onboarding.tour.prev_aria', fallback: 'Previous step' },
+  next: { key: 'workflow.onboarding.tour.next', fallback: 'Next' },
+  finish: { key: 'workflow.onboarding.tour.finish', fallback: 'Finish tour' },
+  skip_bottom: { key: 'workflow.onboarding.tour.skip_bottom', fallback: 'Skip tour — continue later' },
+  contextual_add_member: { key: 'workflow.onboarding.tour.contextual.add_member', fallback: 'Add member' },
+  contextual_field_queues: {
+    key: 'workflow.onboarding.tour.contextual.field_queues',
+    fallback: 'Open field queues',
+  },
+  contextual_add_contact: { key: 'workflow.onboarding.tour.contextual.add_contact', fallback: 'Add contact' },
+  contextual_start_campaign: {
+    key: 'workflow.onboarding.tour.contextual.start_campaign',
+    fallback: 'Start campaign',
+  },
+};
+
+const SETTINGS_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
+  tab_profile: { key: 'workflow.settings.page.tab.profile', fallback: 'Profile' },
+  tab_organization: { key: 'workflow.settings.page.tab.organization', fallback: 'Organization' },
+  tab_notifications: { key: 'workflow.settings.page.tab.notifications', fallback: 'Notifications' },
+  tab_security: { key: 'workflow.settings.page.tab.security', fallback: 'Security' },
+  change_photo: { key: 'workflow.settings.page.change_photo', fallback: 'Change Photo' },
+  photo_not_wired: {
+    key: 'workflow.settings.page.photo_not_wired',
+    fallback: 'Profile photos are not wired yet',
+  },
+  field_full_name: { key: 'workflow.settings.page.field.full_name', fallback: 'Full Name' },
+  field_email: { key: 'workflow.settings.page.field.email', fallback: 'Email' },
+  field_phone: { key: 'workflow.settings.page.field.phone', fallback: 'Phone' },
+  field_role: { key: 'workflow.settings.page.field.role', fallback: 'Role' },
+  sign_in_to_save: {
+    key: 'workflow.settings.page.sign_in_to_save',
+    fallback: 'Sign out and sign back in to save profile changes.',
+  },
+  saving: { key: 'workflow.settings.page.saving', fallback: 'Saving...' },
+  save_changes: { key: 'workflow.settings.page.save_changes', fallback: 'Save Changes' },
+  error_load_profile: { key: 'workflow.settings.page.error.load_profile', fallback: 'Unable to load profile.' },
+  error_save_preferences: {
+    key: 'workflow.settings.page.error.save_preferences',
+    fallback: 'Failed to save preferences.',
+  },
+  error_name_required: { key: 'workflow.settings.page.error.name_required', fallback: 'Full name is required.' },
+  toast_profile_saved: { key: 'workflow.settings.page.toast.profile_saved', fallback: 'Profile saved' },
+  error_save_profile: { key: 'workflow.settings.page.error.save_profile', fallback: 'Failed to save profile.' },
+  error_security_session: {
+    key: 'workflow.settings.page.error.security_session',
+    fallback: 'Sign out and sign in again to manage security settings.',
+  },
+  error_load_security: {
+    key: 'workflow.settings.page.error.load_security',
+    fallback: 'Unable to load security settings.',
+  },
+  error_password_mismatch: {
+    key: 'workflow.settings.page.error.password_mismatch',
+    fallback: 'New passwords do not match.',
+  },
+  error_password_length: {
+    key: 'workflow.settings.page.error.password_length',
+    fallback: 'Password must be at least 8 characters.',
+  },
+  toast_password_updated: { key: 'workflow.settings.page.toast.password_updated', fallback: 'Password updated' },
+  error_password_update: {
+    key: 'workflow.settings.page.error.password_update',
+    fallback: 'Failed to update password.',
+  },
+  org_settings_title: {
+    key: 'workflow.settings.page.org.title',
+    fallback: 'Organization Settings',
+  },
+  org_settings_description: {
+    key: 'workflow.settings.page.org.description',
+    fallback: 'Manage your organization details',
+  },
+  org_name: { key: 'workflow.settings.page.org.name', fallback: 'Organization Name' },
+  org_type: { key: 'workflow.settings.page.org.type', fallback: 'Organization Type' },
+  org_country: { key: 'workflow.settings.page.org.country', fallback: 'Country' },
+  org_registration: { key: 'workflow.settings.page.org.registration', fallback: 'Registration Number' },
+  org_address: { key: 'workflow.settings.page.org.address', fallback: 'Address' },
+  org_api_access: { key: 'workflow.settings.page.org.api_access', fallback: 'API Access' },
+  org_regenerate: { key: 'workflow.settings.page.org.regenerate', fallback: 'Regenerate' },
+  notifications_title: {
+    key: 'workflow.settings.page.notifications.title',
+    fallback: 'Notification delivery',
+  },
+  notifications_description: {
+    key: 'workflow.settings.page.notifications.description',
+    fallback: 'What Tracebud can send today versus what is still on the roadmap',
+  },
+  notifications_beta_alert: {
+    key: 'workflow.settings.page.notifications.beta_alert',
+    fallback:
+      'Most toggles in the old settings screen were placeholders. Only the items marked Active today are wired in the current beta setup. Per-user notification preferences are not persisted yet.',
+  },
+  notifications_active_today: {
+    key: 'workflow.settings.page.notifications.active_today',
+    fallback: 'Active today',
+  },
+  notifications_planned: { key: 'workflow.settings.page.notifications.planned', fallback: 'Planned' },
+  notifications_email_sent: {
+    key: 'workflow.settings.page.notifications.email_sent',
+    fallback: 'Email: sent',
+  },
+  notifications_email_planned: {
+    key: 'workflow.settings.page.notifications.email_planned',
+    fallback: 'Email: planned',
+  },
+  notifications_in_app_planned: {
+    key: 'workflow.settings.page.notifications.in_app_planned',
+    fallback: 'In-app: planned',
+  },
+  notifications_push_not_wired: {
+    key: 'workflow.settings.page.notifications.push_not_wired',
+    fallback: 'Push: not wired',
+  },
+  security_password_title: {
+    key: 'workflow.settings.page.security.password_title',
+    fallback: 'Change Password',
+  },
+  security_password_description: {
+    key: 'workflow.settings.page.security.password_description',
+    fallback: 'Updates your Supabase auth password for this account',
+  },
+  security_current_password: {
+    key: 'workflow.settings.page.security.current_password',
+    fallback: 'Current Password',
+  },
+  security_current_password_hint: {
+    key: 'workflow.settings.page.security.current_password_hint',
+    fallback: 'Not required for Supabase password reset in-session',
+  },
+  security_new_password: { key: 'workflow.settings.page.security.new_password', fallback: 'New Password' },
+  security_confirm_password: {
+    key: 'workflow.settings.page.security.confirm_password',
+    fallback: 'Confirm New Password',
+  },
+  security_updating: { key: 'workflow.settings.page.security.updating', fallback: 'Updating...' },
+  security_update_password: {
+    key: 'workflow.settings.page.security.update_password',
+    fallback: 'Update Password',
+  },
+  security_twofa_title: {
+    key: 'workflow.settings.page.security.twofa_title',
+    fallback: 'Two-Factor Authentication',
+  },
+  security_twofa_description: {
+    key: 'workflow.settings.page.security.twofa_description',
+    fallback: 'Protect your account with a TOTP authenticator app via Supabase Auth',
+  },
+  security_status: { key: 'workflow.settings.page.security.status', fallback: 'Status' },
+  security_checking_2fa: {
+    key: 'workflow.settings.page.security.checking_2fa',
+    fallback: 'Checking authenticator status...',
+  },
+  security_2fa_enabled: {
+    key: 'workflow.settings.page.security.2fa_enabled',
+    fallback: '2FA is enabled for this account',
+  },
+  security_2fa_disabled: {
+    key: 'workflow.settings.page.security.2fa_disabled',
+    fallback: '2FA is currently disabled',
+  },
+  security_enable_2fa: { key: 'workflow.settings.page.security.enable_2fa', fallback: 'Enable 2FA' },
+  security_enabled_badge: { key: 'workflow.settings.page.security.enabled_badge', fallback: 'Enabled' },
+  security_sessions_title: {
+    key: 'workflow.settings.page.security.sessions_title',
+    fallback: 'Active Sessions',
+  },
+  security_sessions_description: {
+    key: 'workflow.settings.page.security.sessions_description',
+    fallback: 'Session revocation is not wired in beta yet',
+  },
+  security_sessions_body: {
+    key: 'workflow.settings.page.security.sessions_body',
+    fallback:
+      'You are signed in on this browser. Multi-device session management will be added in a later release.',
+  },
+  toast_2fa_enabled: {
+    key: 'workflow.settings.page.toast.2fa_enabled',
+    fallback: 'Two-factor authentication enabled',
+  },
+  org_roles_title: { key: 'workflow.settings.org_roles.title', fallback: 'Supply chain roles' },
+  org_roles_description: {
+    key: 'workflow.settings.org_roles.description',
+    fallback:
+      'Enable every workflow your organisation performs. Users switch active role from the sidebar without creating separate tenants.',
+  },
+  org_roles_loading: {
+    key: 'workflow.settings.org_roles.loading',
+    fallback: 'Loading organisation profile…',
+  },
+  org_roles_active_session: {
+    key: 'workflow.settings.org_roles.active_session',
+    fallback: 'Active session role: {{role}}',
+  },
+  org_roles_save: { key: 'workflow.settings.org_roles.save', fallback: 'Save roles' },
+  org_roles_default_landing: {
+    key: 'workflow.settings.org_roles.default_landing',
+    fallback: 'Default landing role after save: {{role}} (change anytime via sidebar).',
+  },
+  org_roles_toast_success: {
+    key: 'workflow.settings.org_roles.toast_success',
+    fallback: 'Supply chain roles updated. Use the sidebar switcher to change active workflow.',
+  },
+  org_roles_error_save: {
+    key: 'workflow.settings.org_roles.error_save',
+    fallback: 'Failed to save supply chain roles.',
+  },
+};
+
+const NOTIFICATION_CAPABILITY_COPY: Record<
+  string,
+  { title: { key: string; fallback: string }; description: { key: string; fallback: string }; note?: { key: string; fallback: string } }
+> = {
+  onboarding: {
+    title: { key: 'workflow.settings.notifications.onboarding.title', fallback: 'Account & onboarding emails' },
+    description: {
+      key: 'workflow.settings.notifications.onboarding.description',
+      fallback: 'Welcome email after workspace setup and resume reminders for incomplete onboarding.',
+    },
+    note: {
+      key: 'workflow.settings.notifications.onboarding.note',
+      fallback: 'Always sent by Tracebud when applicable. Not configurable here yet.',
+    },
+  },
+  campaign_outreach: {
+    title: { key: 'workflow.settings.notifications.campaign.title', fallback: 'Campaign outreach emails' },
+    description: {
+      key: 'workflow.settings.notifications.campaign.description',
+      fallback: 'Emails sent to contacts when you launch request or outreach campaigns.',
+    },
+    note: {
+      key: 'workflow.settings.notifications.campaign.note',
+      fallback: 'Controlled by campaign actions, not per-user notification preferences.',
+    },
+  },
+  package_updates: {
+    title: { key: 'workflow.settings.notifications.packages.title', fallback: 'Package updates' },
+    description: {
+      key: 'workflow.settings.notifications.packages.description',
+      fallback: 'Alerts when shipment package status changes.',
+    },
+  },
+  compliance_alerts: {
+    title: { key: 'workflow.settings.notifications.compliance.title', fallback: 'Compliance alerts' },
+    description: {
+      key: 'workflow.settings.notifications.compliance.description',
+      fallback:
+        'Email and mobile push when land tenure documents need exporter review or package readiness regresses.',
+    },
+    note: {
+      key: 'workflow.settings.notifications.compliance.note',
+      fallback:
+        'Tenure MANUAL_REQUIRED/FAILED alerts are sent to cooperative staff and farmers when push tokens are registered.',
+    },
+  },
+  traces_submissions: {
+    title: { key: 'workflow.settings.notifications.traces.title', fallback: 'TRACES submissions' },
+    description: {
+      key: 'workflow.settings.notifications.traces.description',
+      fallback: 'Updates when TRACES filing status changes.',
+    },
+  },
+  weekly_reports: {
+    title: { key: 'workflow.settings.notifications.weekly.title', fallback: 'Weekly reports' },
+    description: {
+      key: 'workflow.settings.notifications.weekly.description',
+      fallback: 'Scheduled summary of compliance and shipment readiness.',
+    },
+  },
+  system_updates: {
+    title: { key: 'workflow.settings.notifications.system.title', fallback: 'System updates' },
+    description: {
+      key: 'workflow.settings.notifications.system.description',
+      fallback: 'Important platform announcements and maintenance notices.',
+    },
+  },
+  push_notifications: {
+    title: { key: 'workflow.settings.notifications.push.title', fallback: 'Browser push notifications' },
+    description: {
+      key: 'workflow.settings.notifications.push.description',
+      fallback: 'Real-time alerts in your browser.',
+    },
+    note: {
+      key: 'workflow.settings.notifications.push.note',
+      fallback: 'Push delivery is not wired in the dashboard yet.',
+    },
+  },
+};
+
+export function getSponsorPanelCopy(
+  key: keyof typeof SPONSOR_PANEL_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = SPONSOR_PANEL_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getSponsorRiskTierLabel(rate: number, hasCompleteness: boolean, t?: TranslateFn): string {
+  if (!hasCompleteness) return getSponsorPanelCopy('risk_tier_unknown', t);
+  if (rate < 75) return getSponsorPanelCopy('risk_tier_high', t);
+  if (rate < 90) return getSponsorPanelCopy('risk_tier_moderate', t);
+  return getSponsorPanelCopy('risk_tier_low', t);
+}
+
+export function getSponsorNetworkStatusLabel(
+  complianceRate: number,
+  hasCompleteness: boolean,
+  t?: TranslateFn,
+): string {
+  if (!hasCompleteness) return getSponsorPanelCopy('status_pending_data', t);
+  if (complianceRate < 80) return getSponsorPanelCopy('status_at_risk', t);
+  return getSponsorPanelCopy('status_active', t);
+}
+
+export function getSponsorProgrammeStatusLabel(status: string, t?: TranslateFn): string {
+  const normalized = status.toUpperCase();
+  if (normalized === 'DRAFT') return getSponsorPanelCopy('programme_status_draft', t);
+  if (normalized === 'COMPLETED') return getSponsorPanelCopy('programme_status_completed', t);
+  return getSponsorPanelCopy('programme_status_active', t);
+}
+
+export function getOnboardingWelcomeCopy(
+  key: keyof typeof ONBOARDING_WELCOME_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ONBOARDING_WELCOME_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getWelcomeCardCopy(
+  key: keyof typeof WELCOME_CARD_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = WELCOME_CARD_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getWelcomeCardHighlights(t?: TranslateFn): string[] {
+  return WELCOME_CARD_HIGHLIGHT_KEYS.map((key) => wf(key, WELCOME_CARD_HIGHLIGHT_FALLBACKS[key] ?? key, t));
+}
+
+export function getWelcomeCardCopyManifest(): Record<string, string> {
+  const manifest: Record<string, string> = {};
+  for (const entry of Object.values(WELCOME_CARD_COPY)) {
+    manifest[entry.key] = entry.fallback;
+  }
+  for (const [key, fallback] of Object.entries(WELCOME_CARD_HIGHLIGHT_FALLBACKS)) {
+    manifest[key] = fallback;
+  }
+  for (const entry of Object.values(ONBOARDING_WELCOME_COPY)) {
+    manifest[entry.key] = entry.fallback;
+  }
+  for (const [key, fallback] of Object.entries(ONBOARDING_WELCOME_HIGHLIGHT_FALLBACKS)) {
+    manifest[key] = fallback;
+  }
+  for (const entry of Object.values(ONBOARDING_TOUR_COPY)) {
+    manifest[entry.key] = entry.fallback;
+  }
+  return manifest;
+}
+
+export function getOnboardingWelcomeHighlights(persona: string, t?: TranslateFn): string[] {
+  const keys = ONBOARDING_WELCOME_HIGHLIGHTS[persona] ?? [];
+  return keys.map((key) => wf(key, ONBOARDING_WELCOME_HIGHLIGHT_FALLBACKS[key] ?? key, t));
+}
+
+export function getOnboardingTourCopy(
+  key: keyof typeof ONBOARDING_TOUR_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ONBOARDING_TOUR_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getOnboardingTourContextualAction(stepKey: string, t?: TranslateFn): string | null {
+  const map: Record<string, keyof typeof ONBOARDING_TOUR_COPY> = {
+    coop_members: 'contextual_add_member',
+    coop_field_operations: 'contextual_field_queues',
+    imp_network: 'contextual_add_contact',
+    imp_campaigns: 'contextual_start_campaign',
+  };
+  const copyKey = map[stepKey];
+  if (!copyKey) return null;
+  return getOnboardingTourCopy(copyKey, t);
+}
+
+export function getSettingsPageCopy(
+  key: keyof typeof SETTINGS_PAGE_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = SETTINGS_PAGE_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getNotificationCapabilityCopy(
+  id: string,
+  field: 'title' | 'description' | 'note',
+  t?: TranslateFn,
+): string {
+  const entry = NOTIFICATION_CAPABILITY_COPY[id];
+  if (!entry) return id;
+  const fieldEntry = entry[field];
+  if (!fieldEntry) return '';
+  return wf(fieldEntry.key, fieldEntry.fallback, t);
+}
+
+export {
+  getOnboardingStepCopy,
+  getOnboardingPersonaCopy,
+  localizeOnboardingConfig,
+  ONBOARDING_STEP_KEYS,
+} from '@/lib/onboarding-step-copy';
+
+export {
+  getVirginStateHeadingCopy,
+  getVirginStateStepCopy,
+  getVirginStateShellCopy,
+  getVirginStepsForRole,
+  VIRGIN_STEP_IDS,
+} from '@/lib/virgin-state-copy';
+
+export { getDemoDataCopy } from '@/lib/demo-data-copy';
+
 function producerRoleKey(role: SupplyChainRole | null | undefined, cooperativeKey: string, defaultKey: string): string {
   return role === 'cooperative' ? cooperativeKey : defaultKey;
 }
@@ -1530,6 +3207,27 @@ export function getWorkflowAsyncStateCopy(
   }
   const description = wf(hintKey, fallbackHints[scope] ?? '', t);
   return description ? { title, description } : { title };
+}
+
+const ASYNC_STATE_SHELL_COPY: Record<string, { key: string; fallback: string }> = {
+  loading: { key: 'workflow.async.shell.loading', fallback: 'Loading...' },
+  error: { key: 'workflow.async.shell.error', fallback: 'Something went wrong' },
+  empty: { key: 'workflow.async.shell.empty', fallback: 'No data yet' },
+  retry: { key: 'workflow.async.shell.retry', fallback: 'Retry' },
+};
+
+export function getAsyncStateShellCopy(
+  key: keyof typeof ASYNC_STATE_SHELL_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = ASYNC_STATE_SHELL_COPY[key];
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getAsyncStateShellCopyManifest(): Record<string, string> {
+  return Object.fromEntries(
+    Object.values(ASYNC_STATE_SHELL_COPY).map((entry) => [entry.key, entry.fallback]),
+  );
 }
 
 export function buildPlotReviewBreadcrumbs(t?: TranslateFn): WorkflowBreadcrumb[] {
@@ -5685,4 +7383,3027 @@ export function getIntegrationsReleaseStaleLabel(count: number, t?: TranslateFn)
 
 export function getIntegrationsSchedulerLoadingLabel(t?: TranslateFn): string {
   return wf('workflow.integrations.scheduler.loading', 'Loading scheduler config...', t);
+}
+
+type IntegrationRunStatus = 'started' | 'completed' | 'failed';
+type IntegrationRunType = 'validation' | 'scoring';
+type IntegrationTimelineEvent =
+  | 'draft_saved'
+  | 'submitted'
+  | 'run_started'
+  | 'run_completed'
+  | 'run_failed'
+  | 'claimed'
+  | 'released'
+  | 'retried'
+  | 'stale_released';
+
+export function getIntegrationsRunStatusLabel(status: IntegrationRunStatus, t?: TranslateFn): string {
+  const keyMap = {
+    started: 'workflow.integrations.status.started',
+    completed: 'workflow.integrations.status.completed',
+    failed: 'workflow.integrations.status.failed',
+  } as const;
+  const fallbackMap = { started: 'Started', completed: 'Completed', failed: 'Failed' } as const;
+  return wf(keyMap[status], fallbackMap[status], t);
+}
+
+export function getIntegrationsSummaryStatLabel(
+  stat: 'started' | 'completed' | 'failed' | 'stale_claims' | 'last_sweeper',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    started: 'workflow.integrations.summary.started',
+    completed: 'workflow.integrations.summary.completed',
+    failed: 'workflow.integrations.summary.failed',
+    stale_claims: 'workflow.integrations.summary.stale_claims',
+    last_sweeper: 'workflow.integrations.summary.last_sweeper',
+  } as const;
+  const fallbackMap = {
+    started: 'Started',
+    completed: 'Completed',
+    failed: 'Failed',
+    stale_claims: 'Stale Claims',
+    last_sweeper: 'Last Sweeper',
+  } as const;
+  return wf(keyMap[stat], fallbackMap[stat], t);
+}
+
+export function getIntegrationsSummaryNeverLabel(t?: TranslateFn): string {
+  return wf('workflow.integrations.summary.never', 'Never', t);
+}
+
+export function getIntegrationsSummaryReleasedCountLabel(count: number, t?: TranslateFn): string {
+  return wf('workflow.integrations.summary.released_count', '{{count}} released', t, { count });
+}
+
+export function getIntegrationsFilterSearchPlaceholder(t?: TranslateFn): string {
+  return wf('workflow.integrations.filter.search_placeholder', 'Search by Run ID or Questionnaire...', t);
+}
+
+export function getIntegrationsFilterClearSearchLabel(t?: TranslateFn): string {
+  return wf('workflow.integrations.filter.clear_search', 'Clear search', t);
+}
+
+export function getIntegrationsFilterOptionLabel(
+  group: 'status' | 'type' | 'claims' | 'all_statuses' | 'started' | 'completed' | 'failed' | 'all_types' | 'validation' | 'scoring' | 'all_claims' | 'claimed' | 'unclaimed' | 'due_now' | 'clear',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    status: 'workflow.integrations.filter.status',
+    type: 'workflow.integrations.filter.type',
+    claims: 'workflow.integrations.filter.claims',
+    all_statuses: 'workflow.integrations.filter.all_statuses',
+    started: 'workflow.integrations.status.started',
+    completed: 'workflow.integrations.status.completed',
+    failed: 'workflow.integrations.status.failed',
+    all_types: 'workflow.integrations.filter.all_types',
+    validation: 'workflow.integrations.filter.validation',
+    scoring: 'workflow.integrations.filter.scoring',
+    all_claims: 'workflow.integrations.filter.all_claims',
+    claimed: 'workflow.integrations.filter.claimed',
+    unclaimed: 'workflow.integrations.filter.unclaimed',
+    due_now: 'workflow.integrations.filter.due_now',
+    clear: 'workflow.integrations.filter.clear',
+  } as const;
+  const fallbackMap = {
+    status: 'Status',
+    type: 'Type',
+    claims: 'Claims',
+    all_statuses: 'All Statuses',
+    started: 'Started',
+    completed: 'Completed',
+    failed: 'Failed',
+    all_types: 'All Types',
+    validation: 'Validation',
+    scoring: 'Scoring',
+    all_claims: 'All Claims',
+    claimed: 'Claimed',
+    unclaimed: 'Unclaimed',
+    due_now: 'Due Now',
+    clear: 'Clear',
+  } as const;
+  return wf(keyMap[group], fallbackMap[group], t);
+}
+
+export function getIntegrationsFilterResultsLabel(filtered: number, total: number, t?: TranslateFn): string {
+  return wf('workflow.integrations.filter.showing_runs', 'Showing {{filtered}} of {{total}} runs', t, {
+    filtered,
+    total,
+  });
+}
+
+export function getIntegrationsFilterTotalRunsLabel(total: number, t?: TranslateFn): string {
+  return wf('workflow.integrations.filter.total_runs', '{{total}} total runs', t, { total });
+}
+
+export function getIntegrationsFilterActiveCountLabel(count: number, t?: TranslateFn): string {
+  const key =
+    count === 1
+      ? 'workflow.integrations.filter.active_filters'
+      : 'workflow.integrations.filter.active_filters_plural';
+  const fallback = count === 1 ? '{{count}} filter' : '{{count}} filters';
+  return wf(key, fallback, t, { count });
+}
+
+export function getIntegrationsTableLoadingLabel(t?: TranslateFn): string {
+  return wf('workflow.integrations.table.loading', 'Loading runs...', t);
+}
+
+export function getIntegrationsTableEmptyTitle(t?: TranslateFn): string {
+  return wf('workflow.integrations.table.empty_title', 'No runs found', t);
+}
+
+export function getIntegrationsTableEmptyDescription(t?: TranslateFn): string {
+  return wf(
+    'workflow.integrations.table.empty_description',
+    'No integration runs match your current filters.',
+    t,
+  );
+}
+
+export function getIntegrationsTableColumnLabel(
+  column:
+    | 'run_id'
+    | 'questionnaire'
+    | 'type'
+    | 'status'
+    | 'attempts'
+    | 'error_code'
+    | 'next_retry'
+    | 'claimed_by'
+    | 'updated'
+    | 'actions',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    run_id: 'workflow.integrations.table.run_id',
+    questionnaire: 'workflow.integrations.table.questionnaire',
+    type: 'workflow.integrations.table.type',
+    status: 'workflow.integrations.table.status',
+    attempts: 'workflow.integrations.table.attempts',
+    error_code: 'workflow.integrations.table.error_code',
+    next_retry: 'workflow.integrations.table.next_retry',
+    claimed_by: 'workflow.integrations.table.claimed_by',
+    updated: 'workflow.integrations.table.updated',
+    actions: 'workflow.integrations.table.actions',
+  } as const;
+  const fallbackMap = {
+    run_id: 'Run ID',
+    questionnaire: 'Questionnaire',
+    type: 'Type',
+    status: 'Status',
+    attempts: 'Attempts',
+    error_code: 'Error Code',
+    next_retry: 'Next Retry',
+    claimed_by: 'Claimed By',
+    updated: 'Updated',
+    actions: 'Actions',
+  } as const;
+  return wf(keyMap[column], fallbackMap[column], t);
+}
+
+export function getIntegrationsDueBadgeLabel(t?: TranslateFn): string {
+  return wf('workflow.integrations.table.due', 'Due', t);
+}
+
+export function getIntegrationsActionLabel(
+  action: 'view_details' | 'claim' | 'release' | 'force_release' | 'retry',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    view_details: 'workflow.integrations.action.view_details',
+    claim: 'workflow.integrations.action.claim',
+    release: 'workflow.integrations.action.release',
+    force_release: 'workflow.integrations.action.force_release',
+    retry: 'workflow.integrations.action.retry',
+  } as const;
+  const fallbackMap = {
+    view_details: 'View Details',
+    claim: 'Claim',
+    release: 'Release',
+    force_release: 'Force Release',
+    retry: 'Retry',
+  } as const;
+  return wf(keyMap[action], fallbackMap[action], t);
+}
+
+export function getIntegrationsConfirmActionCopy(
+  action: 'claim' | 'release' | 'force_release' | 'retry',
+  runIdPrefix: string,
+  t?: TranslateFn,
+): {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  variant: 'default' | 'destructive';
+} {
+  const prefix = action === 'force_release' ? 'force_release' : action;
+  const titleKey = `workflow.integrations.confirm.${prefix}.title`;
+  const descriptionKey = `workflow.integrations.confirm.${prefix}.description`;
+  const confirmKey = `workflow.integrations.confirm.${prefix}.confirm`;
+  const fallbacks = {
+    claim: {
+      title: 'Claim Run',
+      description: `Are you sure you want to claim run ${runIdPrefix}? This will assign it to you for processing.`,
+      confirm: 'Claim',
+      variant: 'default' as const,
+    },
+    release: {
+      title: 'Release Run',
+      description: `Are you sure you want to release run ${runIdPrefix}?`,
+      confirm: 'Release',
+      variant: 'default' as const,
+    },
+    force_release: {
+      title: 'Force Release Run',
+      description: `Are you sure you want to force release run ${runIdPrefix}? This will remove the current claim regardless of who owns it.`,
+      confirm: 'Force Release',
+      variant: 'destructive' as const,
+    },
+    retry: {
+      title: 'Retry Run',
+      description: `Are you sure you want to retry run ${runIdPrefix}? This will increment the attempt count and requeue the run.`,
+      confirm: 'Retry',
+      variant: 'default' as const,
+    },
+  };
+  const fallback = fallbacks[action];
+  return {
+    title: wf(titleKey, fallback.title, t),
+    description: wf(descriptionKey, fallback.description, t, { runId: runIdPrefix }),
+    confirmLabel: wf(confirmKey, fallback.confirm, t),
+    variant: fallback.variant,
+  };
+}
+
+export function getIntegrationsToastMessage(
+  kind: 'claimed' | 'released' | 'force_released' | 'retry' | 'action_failed' | 'bulk_released' | 'bulk_release_failed',
+  values?: { runId?: string; count?: number },
+  t?: TranslateFn,
+): string {
+  if (kind === 'bulk_released' && values?.count !== undefined) {
+    const key =
+      values.count === 1
+        ? 'workflow.integrations.toast.bulk_released'
+        : 'workflow.integrations.toast.bulk_released_plural';
+    const fallback =
+      values.count === 1 ? 'Released {{count}} stale claim' : 'Released {{count}} stale claims';
+    return wf(key, fallback, t, { count: values.count });
+  }
+  const keyMap = {
+    claimed: 'workflow.integrations.toast.claimed',
+    released: 'workflow.integrations.toast.released',
+    force_released: 'workflow.integrations.toast.force_released',
+    retry: 'workflow.integrations.toast.retry',
+    action_failed: 'workflow.integrations.toast.action_failed',
+    bulk_release_failed: 'workflow.integrations.toast.bulk_release_failed',
+  } as const;
+  const fallbackMap = {
+    claimed: 'Claimed run {{runId}}',
+    released: 'Released run {{runId}}',
+    force_released: 'Force released run {{runId}}',
+    retry: 'Retry initiated for run {{runId}}',
+    action_failed: 'Run action failed.',
+    bulk_release_failed: 'Failed to release stale claims.',
+  } as const;
+  return wf(keyMap[kind], fallbackMap[kind], t, {
+    runId: values?.runId ?? '',
+    count: values?.count ?? 0,
+  });
+}
+
+export function getIntegrationsBulkReleaseDescription(count: number, t?: TranslateFn): string {
+  const key =
+    count === 1
+      ? 'workflow.integrations.bulk_release.description'
+      : 'workflow.integrations.bulk_release.description_plural';
+  const fallback =
+    count === 1
+      ? 'This will release runs that have been claimed for longer than the specified threshold. Currently {{count}} stale claim detected.'
+      : 'This will release runs that have been claimed for longer than the specified threshold. Currently {{count}} stale claims detected.';
+  return wf(key, fallback, t, { count });
+}
+
+export function getIntegrationsBulkReleaseLabel(
+  field: 'title' | 'stale_threshold' | 'stale_threshold_hint' | 'max_release' | 'max_release_hint' | 'cancel' | 'confirm',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    title: 'workflow.integrations.bulk_release.title',
+    stale_threshold: 'workflow.integrations.bulk_release.stale_threshold',
+    stale_threshold_hint: 'workflow.integrations.bulk_release.stale_threshold_hint',
+    max_release: 'workflow.integrations.bulk_release.max_release',
+    max_release_hint: 'workflow.integrations.bulk_release.max_release_hint',
+    cancel: 'workflow.integrations.bulk_release.cancel',
+    confirm: 'workflow.integrations.bulk_release.confirm',
+  } as const;
+  const fallbackMap = {
+    title: 'Release Stale Claims',
+    stale_threshold: 'Stale Threshold (minutes)',
+    stale_threshold_hint: 'Claims older than this will be released',
+    max_release: 'Maximum to Release',
+    max_release_hint: 'Limit the number of claims released in one operation',
+    cancel: 'Cancel',
+    confirm: 'Release Stale Claims',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
+}
+
+export function getIntegrationsDrawerLabel(
+  field:
+    | 'title'
+    | 'attempt'
+    | 'queued_at'
+    | 'updated_at'
+    | 'error_code'
+    | 'claimed_by'
+    | 'view_payload'
+    | 'timeline'
+    | 'timeline_load_error',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    title: 'workflow.integrations.drawer.title',
+    attempt: 'workflow.integrations.drawer.attempt',
+    queued_at: 'workflow.integrations.drawer.queued_at',
+    updated_at: 'workflow.integrations.drawer.updated_at',
+    error_code: 'workflow.integrations.drawer.error_code',
+    claimed_by: 'workflow.integrations.drawer.claimed_by',
+    view_payload: 'workflow.integrations.drawer.view_payload',
+    timeline: 'workflow.integrations.drawer.timeline',
+    timeline_load_error: 'workflow.integrations.drawer.timeline_load_error',
+  } as const;
+  const fallbackMap = {
+    title: 'Run Details',
+    attempt: 'Attempt',
+    queued_at: 'Queued At',
+    updated_at: 'Updated At',
+    error_code: 'Error Code',
+    claimed_by: 'Claimed by',
+    view_payload: 'View payload',
+    timeline: 'Timeline',
+    timeline_load_error: 'Failed to load run timeline.',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
+}
+
+export function getIntegrationsTimelineEventLabel(type: IntegrationTimelineEvent, t?: TranslateFn): string {
+  const keyMap = {
+    draft_saved: 'workflow.integrations.timeline.draft_saved',
+    submitted: 'workflow.integrations.timeline.submitted',
+    run_started: 'workflow.integrations.timeline.run_started',
+    run_completed: 'workflow.integrations.timeline.run_completed',
+    run_failed: 'workflow.integrations.timeline.run_failed',
+    claimed: 'workflow.integrations.timeline.claimed',
+    released: 'workflow.integrations.timeline.released',
+    retried: 'workflow.integrations.timeline.retried',
+    stale_released: 'workflow.integrations.timeline.stale_released',
+  } as const;
+  const fallbackMap = {
+    draft_saved: 'Draft Saved',
+    submitted: 'Submitted',
+    run_started: 'Run Started',
+    run_completed: 'Run Completed',
+    run_failed: 'Run Failed',
+    claimed: 'Claimed',
+    released: 'Released',
+    retried: 'Retried',
+    stale_released: 'Stale Released',
+  } as const;
+  return wf(keyMap[type], fallbackMap[type], t);
+}
+
+export function getIntegrationsSchedulerLabel(
+  field:
+    | 'title'
+    | 'subtitle'
+    | 'token_status'
+    | 'token_configured'
+    | 'token_not_configured'
+    | 'token_env_hint'
+    | 'stale_threshold'
+    | 'stale_threshold_hint'
+    | 'max_release'
+    | 'max_release_hint'
+    | 'manual_trigger'
+    | 'manual_trigger_hint'
+    | 'running'
+    | 'trigger_now'
+    | 'token_required_title'
+    | 'token_required_body'
+    | 'history_title'
+    | 'history_subtitle'
+    | 'no_triggers'
+    | 'no_triggers_hint'
+    | 'last_result'
+    | 'claims_released'
+    | 'token_version'
+    | 'automated_title'
+    | 'automated_body'
+    | 'load_error'
+    | 'token_missing'
+    | 'no_stale',
+  t?: TranslateFn,
+): string {
+  const key = `workflow.integrations.scheduler.${field}` as const;
+  const fallbackMap: Record<typeof field, string> = {
+    title: 'Scheduled Stale Sweeper',
+    subtitle: 'Release runs that have been claimed for too long',
+    token_status: 'Token Status',
+    token_configured: 'Token Configured',
+    token_not_configured: 'Token Not Configured',
+    token_env_hint: 'Set COOLFARM_SAI_V2_SCHEDULER_TOKEN',
+    stale_threshold: 'Stale Threshold (minutes)',
+    stale_threshold_hint: 'Claims older than this threshold will be released',
+    max_release: 'Maximum to Release',
+    max_release_hint: 'Limit the number of claims released per trigger',
+    manual_trigger: 'Manual Trigger',
+    manual_trigger_hint: 'Run the stale sweeper now with current settings',
+    running: 'Running...',
+    trigger_now: 'Trigger Now',
+    token_required_title: 'Token Required',
+    token_required_body:
+      'Set the COOLFARM_SAI_V2_SCHEDULER_TOKEN environment variable to enable the scheduled stale sweeper.',
+    history_title: 'Trigger History',
+    history_subtitle: 'Results from the most recent sweeper execution',
+    no_triggers: 'No Recent Triggers',
+    no_triggers_hint: 'The stale sweeper has not been triggered yet.',
+    last_result: 'Last Trigger Result',
+    claims_released: 'Claims Released',
+    token_version: 'Token Version',
+    automated_title: 'Automated Execution',
+    automated_body:
+      'When the scheduler token is configured, the stale sweeper runs automatically via cron. Manual triggers use the same endpoint but are recorded with a different trigger source for auditing.',
+    load_error: 'Failed to load scheduler settings.',
+    token_missing: 'Scheduler token is not configured',
+    no_stale: 'No stale claims found to release',
+  };
+  return wf(key, fallbackMap[field], t);
+}
+
+export function getIntegrationsSchedulerTriggerBadgeLabel(
+  source: 'scheduled' | 'manual',
+  t?: TranslateFn,
+): string {
+  const key =
+    source === 'scheduled'
+      ? 'workflow.integrations.scheduler.trigger_scheduled'
+      : 'workflow.integrations.scheduler.trigger_manual';
+  return wf(key, source === 'scheduled' ? 'Scheduled' : 'Manual', t);
+}
+
+export function getHelpPageSubtitle(isCooperative: boolean, t?: TranslateFn): string {
+  if (isCooperative) {
+    return wf(
+      'page.help.subtitle_cooperative',
+      'Guidance for field operations, consent, portability, governance, and shipment readiness',
+      t,
+    );
+  }
+  return wf('page.help.subtitle', 'Workflow guidance, troubleshooting, and support resources', t);
+}
+
+export function getHelpCenterTitle(t?: TranslateFn): string {
+  return wf('workflow.help.center_title', 'Help Center', t);
+}
+
+export function getHelpCenterIntro(t?: TranslateFn): string {
+  return wf(
+    'workflow.help.center_intro',
+    'Search documentation, troubleshooting guides, and workflow walkthroughs.',
+    t,
+  );
+}
+
+export function getHelpCenterWorkflowHint(isCooperative: boolean, t?: TranslateFn): string {
+  if (isCooperative) {
+    return wf(
+      'workflow.help.center_cooperative',
+      'For cooperative workflows, start with Members, Field Operations, Lots & Batches, Governance, and Audit Log.',
+      t,
+    );
+  }
+  return wf(
+    'workflow.help.center_default',
+    'For importer workflows, start with Shipments, Compliance, Evidence, and Reporting guides.',
+    t,
+  );
+}
+
+export function getHelpGuidesSectionTitle(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.help.guides_cooperative' : 'workflow.help.guides_default',
+    isCooperative ? 'Cooperative Guides' : 'Recommended Guides',
+    t,
+  );
+}
+
+export function getHelpGuideBadgeLabel(t?: TranslateFn): string {
+  return wf('workflow.help.guide_badge', 'Guide', t);
+}
+
+export function getHelpGuideItemLabel(
+  id:
+    | 'coop.onboarding'
+    | 'coop.portability'
+    | 'coop.geometry'
+    | 'coop.yield'
+    | 'coop.premium'
+    | 'coop.sync'
+    | 'default.shipments'
+    | 'default.evidence'
+    | 'default.issues'
+    | 'default.reporting',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    'coop.onboarding': 'workflow.help.guide.coop.onboarding',
+    'coop.portability': 'workflow.help.guide.coop.portability',
+    'coop.geometry': 'workflow.help.guide.coop.geometry',
+    'coop.yield': 'workflow.help.guide.coop.yield',
+    'coop.premium': 'workflow.help.guide.coop.premium',
+    'coop.sync': 'workflow.help.guide.coop.sync',
+    'default.shipments': 'workflow.help.guide.default.shipments',
+    'default.evidence': 'workflow.help.guide.default.evidence',
+    'default.issues': 'workflow.help.guide.default.issues',
+    'default.reporting': 'workflow.help.guide.default.reporting',
+  } as const;
+  const fallbackMap = {
+    'coop.onboarding': 'Member onboarding and consent capture',
+    'coop.portability': 'Portability request review and approval',
+    'coop.geometry': 'Plot geometry remediation and duplicate handling',
+    'coop.yield': 'Yield-cap blockers and batch appeal workflows',
+    'coop.premium': 'Premium governance records and committee approvals',
+    'coop.sync': 'Field sync conflicts and offline submission recovery',
+    'default.shipments': 'Shipments and declaration readiness',
+    'default.evidence': 'Evidence management and retention',
+    'default.issues': 'Compliance issue remediation',
+    'default.reporting': 'Reporting snapshots and exports',
+  } as const;
+  return wf(keyMap[id], fallbackMap[id], t);
+}
+
+export function getComplianceHealthPageSubtitle(isCountryView: boolean, t?: TranslateFn): string {
+  if (isCountryView) {
+    return wf(
+      'page.compliance_health.subtitle_country',
+      'Cross-network board for origin-level readiness, deterioration signals, and escalation pressure',
+      t,
+    );
+  }
+  return wf(
+    'page.compliance_health.subtitle',
+    'Cross-network board for supplier compliance posture and buyer-impacting risk indicators',
+    t,
+  );
+}
+
+export function getComplianceHealthPriorityTitle(t?: TranslateFn): string {
+  return wf('workflow.compliance_health.priority_title', 'Priority Risk Patterns', t);
+}
+
+export function getComplianceHealthEmphasisLabel(isCountryView: boolean, t?: TranslateFn): string {
+  const emphasis = wf(
+    isCountryView
+      ? 'workflow.compliance_health.emphasis_country'
+      : 'workflow.compliance_health.emphasis_brand',
+    isCountryView ? 'Country programme' : 'Brand sponsor',
+    t,
+  );
+  return `${wf('workflow.compliance_health.emphasis_prefix', 'Emphasis:', t)} ${emphasis}`;
+}
+
+export function getComplianceHealthKpiLabel(
+  kpi:
+    | 'mapped_plot_ratio'
+    | 'yield_warning_rate'
+    | 'blocked_batch_rate'
+    | 'dds_acceptance'
+    | 'shipment_hold_rate'
+    | 'mapped_supplier_coverage',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    mapped_plot_ratio: 'workflow.compliance_health.kpi.mapped_plot_ratio',
+    yield_warning_rate: 'workflow.compliance_health.kpi.yield_warning_rate',
+    blocked_batch_rate: 'workflow.compliance_health.kpi.blocked_batch_rate',
+    dds_acceptance: 'workflow.compliance_health.kpi.dds_acceptance',
+    shipment_hold_rate: 'workflow.compliance_health.kpi.shipment_hold_rate',
+    mapped_supplier_coverage: 'workflow.compliance_health.kpi.mapped_supplier_coverage',
+  } as const;
+  const fallbackMap = {
+    mapped_plot_ratio: 'Mapped plot ratio',
+    yield_warning_rate: 'Yield warning rate',
+    blocked_batch_rate: 'Blocked batch rate',
+    dds_acceptance: 'DDS acceptance proxy',
+    shipment_hold_rate: 'Shipment hold rate',
+    mapped_supplier_coverage: 'Mapped supplier coverage',
+  } as const;
+  return wf(keyMap[kpi], fallbackMap[kpi], t);
+}
+
+export function getComplianceHealthWarningLabel(
+  warning: 'missing_geometry' | 'shipment_holds' | 'stale_risk' | 'manual_classifications',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    missing_geometry: 'workflow.compliance_health.warning.missing_geometry',
+    shipment_holds: 'workflow.compliance_health.warning.shipment_holds',
+    stale_risk: 'workflow.compliance_health.warning.stale_risk',
+    manual_classifications: 'workflow.compliance_health.warning.manual_classifications',
+  } as const;
+  const fallbackMap = {
+    missing_geometry: 'Missing geometry evidence',
+    shipment_holds: 'Shipment holds',
+    stale_risk: 'Stale risk screening',
+    manual_classifications: 'Unresolved manual classifications',
+  } as const;
+  return wf(keyMap[warning], fallbackMap[warning], t);
+}
+
+export function getAdminPanelCtaLabel(tab: 'organizations' | 'users', t?: TranslateFn): string {
+  return wf(
+    tab === 'organizations' ? 'workflow.admin.cta.add_org' : 'workflow.admin.cta.invite_user',
+    tab === 'organizations' ? 'Add Organization' : 'Invite User',
+    t,
+  );
+}
+
+export function getAdminPageTitle(t?: TranslateFn): string {
+  return wf('workflow.admin.page.title', 'Admin Panel', t);
+}
+
+export function getAdminPageSubtitle(t?: TranslateFn): string {
+  return wf(
+    'workflow.admin.page.subtitle',
+    'Manage organizations, user invitations, and role assignments',
+    t,
+  );
+}
+
+export function getAdminTenantRoleLabel(role: TenantRole, t?: TranslateFn): string {
+  const keyMap: Record<TenantRole, string> = {
+    exporter: 'workflow.admin.role.exporter',
+    importer: 'workflow.admin.role.importer',
+    cooperative: 'workflow.admin.role.cooperative',
+    country_reviewer: 'workflow.admin.role.country_reviewer',
+    sponsor: 'workflow.admin.role.sponsor',
+  };
+  const fallbackMap: Record<TenantRole, string> = {
+    exporter: 'Exporter',
+    importer: 'Importer',
+    cooperative: 'Cooperative',
+    country_reviewer: 'Country Reviewer',
+    sponsor: 'Sponsor',
+  };
+  return wf(keyMap[role], fallbackMap[role], t);
+}
+
+export function getAdminOrgTypeLabel(type: AdminOrgType, t?: TranslateFn): string {
+  const keyMap: Record<AdminOrgType, string> = {
+    COOPERATIVE: 'workflow.admin.org_type.cooperative',
+    EXPORTER: 'workflow.admin.org_type.exporter',
+    IMPORTER: 'workflow.admin.org_type.importer',
+  };
+  const fallbackMap: Record<AdminOrgType, string> = {
+    COOPERATIVE: 'Cooperative',
+    EXPORTER: 'Exporter',
+    IMPORTER: 'Importer',
+  };
+  return wf(keyMap[type], fallbackMap[type], t);
+}
+
+export function getAdminOrganizationsTableColumnLabel(
+  column: 'organization' | 'type' | 'users' | 'status' | 'created',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    organization: 'workflow.admin.organizations.table.organization',
+    type: 'workflow.admin.organizations.table.type',
+    users: 'workflow.admin.organizations.table.users',
+    status: 'workflow.admin.organizations.table.status',
+    created: 'workflow.admin.organizations.table.created',
+  } as const;
+  const fallbackMap = {
+    organization: 'Organization',
+    type: 'Type',
+    users: 'Users',
+    status: 'Status',
+    created: 'Created',
+  } as const;
+  return wf(keyMap[column], fallbackMap[column], t);
+}
+
+export function getAdminOrgStatusLabel(status: AdminStatus, t?: TranslateFn): string {
+  const keyMap: Record<AdminStatus, string> = {
+    ACTIVE: 'workflow.admin.organizations.status.active',
+    PENDING: 'workflow.admin.organizations.status.pending',
+    SUSPENDED: 'workflow.admin.organizations.status.suspended',
+  };
+  const fallbackMap: Record<AdminStatus, string> = {
+    ACTIVE: 'Active',
+    PENDING: 'Pending',
+    SUSPENDED: 'Suspended',
+  };
+  return wf(keyMap[status], fallbackMap[status], t);
+}
+
+export function getOrganisationsPageSubtitle(isCountryView: boolean, t?: TranslateFn): string {
+  if (isCountryView) {
+    return wf(
+      'page.organisations.subtitle_country',
+      'Sponsor-scoped directory for network activation, readiness, and country coverage',
+      t,
+    );
+  }
+  return wf(
+    'page.organisations.subtitle',
+    'Sponsor-scoped directory for supplier performance, funded coverage, and value-chain visibility',
+    t,
+  );
+}
+
+export function getOrganisationsStatLabel(
+  stat: 'governed' | 'completeness' | 'direct_members',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    governed: 'workflow.organisations.stat.governed',
+    completeness: 'workflow.organisations.stat.completeness',
+    direct_members: 'workflow.organisations.stat.direct_members',
+  } as const;
+  const fallbackMap = {
+    governed: 'Governed organisations',
+    completeness: 'Average onboarding completeness',
+    direct_members: 'Direct sponsor members',
+  } as const;
+  return wf(keyMap[stat], fallbackMap[stat], t);
+}
+
+export function getOrganisationsDirectoryTitle(t?: TranslateFn): string {
+  return wf('workflow.organisations.directory_title', 'Organisation Directory', t);
+}
+
+export function getOrganisationsDirectoryDescription(isCountryView: boolean, t?: TranslateFn): string {
+  return wf(
+    isCountryView
+      ? 'workflow.organisations.directory_desc_country'
+      : 'workflow.organisations.directory_desc_brand',
+    isCountryView
+      ? 'Prioritises ecosystem activation and readiness by country and organisation type.'
+      : 'Prioritises sponsored suppliers and value-chain entities with direct funding impact.',
+    t,
+  );
+}
+
+export function getOrganisationsTableColumnLabel(
+  column: 'organisation' | 'type' | 'role' | 'relationship' | 'country' | 'onboarding' | 'coverage',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    organisation: 'workflow.organisations.table.organisation',
+    type: 'workflow.organisations.table.type',
+    role: 'workflow.organisations.table.role',
+    relationship: 'workflow.organisations.table.relationship',
+    country: 'workflow.organisations.table.country',
+    onboarding: 'workflow.organisations.table.onboarding',
+    coverage: 'workflow.organisations.table.coverage',
+  } as const;
+  const fallbackMap = {
+    organisation: 'Organisation',
+    type: 'Type',
+    role: 'Role',
+    relationship: 'Relationship',
+    country: 'Country',
+    onboarding: 'Onboarding',
+    coverage: 'Coverage',
+  } as const;
+  return wf(keyMap[column], fallbackMap[column], t);
+}
+
+export function getOrganisationsAddCta(t?: TranslateFn): string {
+  return wf('workflow.organisations.cta.add', 'Add organisation', t);
+}
+
+export function getLegalRoleFilterLabel(role: LegalWorkflowRole, t?: TranslateFn): string {
+  const keyMap: Record<LegalWorkflowRole, string> = {
+    PENDING_MANUAL_CLASSIFICATION: 'workflow.role_decisions.role.pending',
+    OPERATOR: 'workflow.role_decisions.role.operator',
+    MICRO_SMALL_PRIMARY_OPERATOR: 'workflow.role_decisions.role.micro_small',
+    DOWNSTREAM_OPERATOR_FIRST: 'workflow.role_decisions.role.downstream_first',
+    DOWNSTREAM_OPERATOR_SUBSEQUENT: 'workflow.role_decisions.role.downstream_subsequent',
+    TRADER: 'workflow.role_decisions.role.trader',
+    OUT_OF_SCOPE: 'workflow.role_decisions.role.out_of_scope',
+  };
+  const fallbackMap: Record<LegalWorkflowRole, string> = {
+    PENDING_MANUAL_CLASSIFICATION: 'Pending Classification',
+    OPERATOR: 'Operator',
+    MICRO_SMALL_PRIMARY_OPERATOR: 'Micro/Small Primary Operator',
+    DOWNSTREAM_OPERATOR_FIRST: 'Downstream Operator (First)',
+    DOWNSTREAM_OPERATOR_SUBSEQUENT: 'Downstream Operator (Subsequent)',
+    TRADER: 'Trader',
+    OUT_OF_SCOPE: 'Out of Scope',
+  };
+  return wf(keyMap[role], fallbackMap[role], t);
+}
+
+export function getLegalRoleDescriptionLabel(role: LegalWorkflowRole, t?: TranslateFn): string {
+  const keyMap: Record<LegalWorkflowRole, string> = {
+    OUT_OF_SCOPE: 'workflow.role_decisions.role_description.out_of_scope',
+    OPERATOR: 'workflow.role_decisions.role_description.operator',
+    MICRO_SMALL_PRIMARY_OPERATOR: 'workflow.role_decisions.role_description.micro_small',
+    DOWNSTREAM_OPERATOR_FIRST: 'workflow.role_decisions.role_description.downstream_first',
+    DOWNSTREAM_OPERATOR_SUBSEQUENT: 'workflow.role_decisions.role_description.downstream_subsequent',
+    TRADER: 'workflow.role_decisions.role_description.trader',
+    PENDING_MANUAL_CLASSIFICATION: 'workflow.role_decisions.role_description.pending',
+  };
+  const fallbackMap: Record<LegalWorkflowRole, string> = {
+    OUT_OF_SCOPE: 'Product not in EUDR Annex I scope',
+    OPERATOR: 'First person placing product on EU market or exporting',
+    MICRO_SMALL_PRIMARY_OPERATOR: 'Operator eligible for simplified primary-operator pathway',
+    DOWNSTREAM_OPERATOR_FIRST: 'First downstream operator receiving covered goods',
+    DOWNSTREAM_OPERATOR_SUBSEQUENT: 'Later downstream operator in covered chain',
+    TRADER: 'Making products available without operator/downstream role',
+    PENDING_MANUAL_CLASSIFICATION: 'Legal role cannot be resolved - manual review required',
+  };
+  return wf(keyMap[role], fallbackMap[role], t);
+}
+
+export function getAdminStatLabel(
+  stat: 'organizations' | 'total_users' | 'active_users' | 'pending_approval',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    organizations: 'workflow.admin.stat.organizations',
+    total_users: 'workflow.admin.stat.total_users',
+    active_users: 'workflow.admin.stat.active_users',
+    pending_approval: 'workflow.admin.stat.pending_approval',
+  } as const;
+  const fallbackMap = {
+    organizations: 'Organizations',
+    total_users: 'Total Users',
+    active_users: 'Active Users',
+    pending_approval: 'Pending Approval',
+  } as const;
+  return wf(keyMap[stat], fallbackMap[stat], t);
+}
+
+export function getAdminActionLabel(
+  action: 'seed' | 'reset' | 'create' | 'invite',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    seed: 'workflow.admin.cta.seed',
+    reset: 'workflow.admin.cta.reset',
+    create: 'workflow.admin.organizations.create',
+    invite: 'workflow.admin.users.invite',
+  } as const;
+  const fallbackMap = {
+    seed: 'Seed First Customers',
+    reset: 'Reset Demo Data',
+    create: 'Create',
+    invite: 'Invite',
+  } as const;
+  return wf(keyMap[action], fallbackMap[action], t);
+}
+
+export function getAdminTabLabel(
+  tab: 'organizations' | 'users' | 'roles',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    organizations: 'workflow.admin.tab.organizations',
+    users: 'workflow.admin.tab.users',
+    roles: 'workflow.admin.tab.roles',
+  } as const;
+  const fallbackMap = {
+    organizations: 'Organizations',
+    users: 'Users',
+    roles: 'Roles & Permissions',
+  } as const;
+  return wf(keyMap[tab], fallbackMap[tab], t);
+}
+
+export function getAdminSectionCopy(
+  section: 'organizations' | 'users' | 'roles',
+  field: 'title' | 'subtitle' | 'create_placeholder' | 'country_placeholder',
+  t?: TranslateFn,
+): string {
+  if (section === 'organizations') {
+    const keyMap = {
+      title: 'workflow.admin.organizations.title',
+      subtitle: 'workflow.admin.organizations.subtitle',
+      create_placeholder: 'workflow.admin.organizations.create_placeholder',
+      country_placeholder: 'workflow.admin.organizations.country_placeholder',
+    } as const;
+    const fallbackMap = {
+      title: 'Organizations',
+      subtitle: 'Manage tenant organizations in the system',
+      create_placeholder: 'Organization name',
+      country_placeholder: 'Country code',
+    } as const;
+    return wf(keyMap[field], fallbackMap[field], t);
+  }
+  if (section === 'users') {
+    return wf('workflow.admin.users.title', 'Users', t);
+  }
+  return wf('workflow.admin.roles.title', 'Roles & Permissions', t);
+}
+
+export function getAdminToastMessage(kind: 'seeded' | 'reset', t?: TranslateFn): string {
+  const keyMap = {
+    seeded: 'workflow.admin.toast.seeded',
+    reset: 'workflow.admin.toast.reset',
+  } as const;
+  const fallbackMap = {
+    seeded: 'Seeded first-customer demo workspace.',
+    reset: 'Reset demo workspace to baseline.',
+  } as const;
+  return wf(keyMap[kind], fallbackMap[kind], t);
+}
+
+export function getOrganisationsAddLabel(
+  field:
+    | 'title'
+    | 'subtitle'
+    | 'tab_manual'
+    | 'tab_bulk'
+    | 'field_name'
+    | 'field_type'
+    | 'field_role'
+    | 'field_relationship'
+    | 'field_country'
+    | 'placeholder_name'
+    | 'placeholder_type'
+    | 'placeholder_role'
+    | 'placeholder_relationship'
+    | 'placeholder_country'
+    | 'saving'
+    | 'submit'
+    | 'csv_hint'
+    | 'csv_placeholder'
+    | 'upload_csv'
+    | 'importing'
+    | 'import'
+    | 'loading',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    title: 'workflow.organisations.add.title',
+    subtitle: 'workflow.organisations.add.subtitle',
+    tab_manual: 'workflow.organisations.add.tab.manual',
+    tab_bulk: 'workflow.organisations.add.tab.bulk',
+    field_name: 'workflow.organisations.add.field.name',
+    field_type: 'workflow.organisations.add.field.type',
+    field_role: 'workflow.organisations.add.field.role',
+    field_relationship: 'workflow.organisations.add.field.relationship',
+    field_country: 'workflow.organisations.add.field.country',
+    placeholder_name: 'workflow.organisations.add.placeholder.name',
+    placeholder_type: 'workflow.organisations.add.placeholder.type',
+    placeholder_role: 'workflow.organisations.add.placeholder.role',
+    placeholder_relationship: 'workflow.organisations.add.placeholder.relationship',
+    placeholder_country: 'workflow.organisations.add.placeholder.country',
+    saving: 'workflow.organisations.add.saving',
+    submit: 'workflow.organisations.add.submit',
+    csv_hint: 'workflow.organisations.add.csv_hint',
+    csv_placeholder: 'workflow.organisations.add.csv_placeholder',
+    upload_csv: 'workflow.organisations.add.upload_csv',
+    importing: 'workflow.organisations.add.importing',
+    import: 'workflow.organisations.add.import',
+    loading: 'workflow.organisations.loading',
+  } as const;
+  const fallbackMap = {
+    title: 'Add Organisations',
+    subtitle: 'Add organisations manually or import them in bulk via CSV.',
+    tab_manual: 'Manual',
+    tab_bulk: 'Bulk import',
+    field_name: 'Organisation name',
+    field_type: 'Type',
+    field_role: 'Role in network',
+    field_relationship: 'Relationship',
+    field_country: 'Country',
+    placeholder_name: 'e.g. Highlands Cooperative Union',
+    placeholder_type: 'Cooperative / Exporter / Importer / NGO',
+    placeholder_role: 'Origin aggregator',
+    placeholder_relationship: 'Direct Sponsor Member',
+    placeholder_country: 'Peru',
+    saving: 'Saving...',
+    submit: 'Add organisation',
+    csv_hint: 'Expected CSV columns: organisation_name, type, role_in_network, relationship, country',
+    csv_placeholder: 'Paste organisation CSV rows here...',
+    upload_csv: 'Upload CSV',
+    importing: 'Importing...',
+    import: 'Import organisations',
+    loading: 'Loading organisations from backend...',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
+}
+
+export function getContactsPageTitle(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.contacts.title_cooperative' : 'workflow.contacts.title',
+    isCooperative ? 'Members' : 'Contacts',
+    t,
+  );
+}
+
+export function getContactsPageSubtitle(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.contacts.subtitle_cooperative' : 'workflow.contacts.subtitle',
+    isCooperative
+      ? 'Manage member identity, consent status, and portability readiness'
+      : 'Tenant CRM',
+    t,
+  );
+}
+
+export function getContactsStatLabel(
+  stat: 'total' | 'active' | 'blocked',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    total: isCooperative ? 'workflow.contacts.stat.total_cooperative' : 'workflow.contacts.stat.total',
+    active: isCooperative ? 'workflow.contacts.stat.active_cooperative' : 'workflow.contacts.stat.active',
+    blocked: isCooperative ? 'workflow.contacts.stat.blocked_cooperative' : 'workflow.contacts.stat.blocked',
+  } as const;
+  const fallbackMap = {
+    total: isCooperative ? 'Total Members' : 'Total Contacts',
+    active: isCooperative ? 'Active Membership' : 'Active Pipeline',
+    blocked: isCooperative ? 'Membership Blockers' : 'Blocked',
+  } as const;
+  return wf(keyMap[stat], fallbackMap[stat], t);
+}
+
+export function getContactsSearchPlaceholder(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.contacts.search_cooperative' : 'workflow.contacts.search',
+    isCooperative
+      ? 'Search member by name, email, cooperative, or status'
+      : 'Search by name, email, org',
+    t,
+  );
+}
+
+export function getContactsFilterAllStatusesLabel(t?: TranslateFn): string {
+  return wf('workflow.contacts.filter.all_statuses', 'All statuses', t);
+}
+
+export function getContactsCtaLabel(
+  action: 'import_csv' | 'add',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  if (action === 'import_csv') {
+    return wf('workflow.contacts.cta.import_csv', 'Import CSV', t);
+  }
+  return wf(
+    isCooperative ? 'workflow.contacts.cta.add_cooperative' : 'workflow.contacts.cta.add',
+    isCooperative ? 'Add Member' : 'Add Contact',
+    t,
+  );
+}
+
+export function getContactsListTitle(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.contacts.list_title_cooperative' : 'workflow.contacts.list_title',
+    isCooperative ? 'Member directory' : 'Contact list',
+    t,
+  );
+}
+
+export function getContactsEmptyCopy(
+  field: 'title' | 'description' | 'cta',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  const fieldKey = field === 'description' ? 'desc' : field;
+  const suffix = isCooperative ? '_cooperative' : '';
+  const key = `workflow.contacts.empty_${fieldKey}${suffix}`;
+  const fallbacks = {
+    title: isCooperative ? 'No members yet' : 'No contacts yet',
+    description: isCooperative
+      ? 'Add your first cooperative member to anchor consent, portability, and aggregation workflows.'
+      : 'Add counterpart contacts so campaigns and request workflows route correctly.',
+    cta: isCooperative ? 'Add first member' : 'Add first contact',
+  };
+  return wf(key, fallbacks[field], t);
+}
+
+export function getContactsNoMatchesLabel(isCooperative: boolean, t?: TranslateFn): string {
+  return wf(
+    isCooperative ? 'workflow.contacts.no_matches_cooperative' : 'workflow.contacts.no_matches',
+    isCooperative
+      ? 'No members match your search or filters yet.'
+      : 'No contacts match your search or filters yet.',
+    t,
+  );
+}
+
+export function getContactsTableColumnLabel(
+  column: 'name' | 'email' | 'organization' | 'status' | 'consent' | 'last_activity' | 'update_status',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    name: 'workflow.contacts.table.name',
+    email: 'workflow.contacts.table.email',
+    organization: 'workflow.contacts.table.organization',
+    status: 'workflow.contacts.table.status',
+    consent: 'workflow.contacts.table.consent',
+    last_activity: 'workflow.contacts.table.last_activity',
+    update_status: 'workflow.contacts.table.update_status',
+  } as const;
+  const fallbackMap = {
+    name: 'Name',
+    email: 'Email',
+    organization: 'Organization',
+    status: 'Status',
+    consent: 'Consent',
+    last_activity: 'Last activity',
+    update_status: 'Update status',
+  } as const;
+  return wf(keyMap[column], fallbackMap[column], t);
+}
+
+export function getContactsErrorMessage(kind: 'load' | 'update', t?: TranslateFn): string {
+  const keyMap = {
+    load: 'workflow.contacts.error.load',
+    update: 'workflow.contacts.error.update',
+  } as const;
+  return wf(keyMap[kind], kind === 'load' ? 'Failed to load contacts.' : 'Failed to update status.', t);
+}
+
+export function getContactStatusLabel(
+  status: 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    new: 'workflow.contacts.status.new',
+    invited: 'workflow.contacts.status.invited',
+    engaged: 'workflow.contacts.status.engaged',
+    submitted: 'workflow.contacts.status.submitted',
+    inactive: 'workflow.contacts.status.inactive',
+    blocked: 'workflow.contacts.status.blocked',
+  } as const;
+  const fallbackMap = {
+    new: 'New',
+    invited: 'Invited',
+    engaged: 'Engaged',
+    submitted: 'Submitted',
+    inactive: 'Inactive',
+    blocked: 'Blocked',
+  } as const;
+  return wf(keyMap[status], fallbackMap[status], t);
+}
+
+export function getContactConsentLabel(
+  status: 'unknown' | 'granted' | 'revoked',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    unknown: 'workflow.contacts.consent.unknown',
+    granted: 'workflow.contacts.consent.granted',
+    revoked: 'workflow.contacts.consent.revoked',
+  } as const;
+  return wf(keyMap[status], status.charAt(0).toUpperCase() + status.slice(1), t);
+}
+
+export function getContactTypeLabel(
+  type: 'farmer' | 'cooperative' | 'exporter' | 'other',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    farmer: 'workflow.contacts.type.farmer',
+    cooperative: 'workflow.contacts.type.cooperative',
+    exporter: 'workflow.contacts.type.exporter',
+    other: 'workflow.contacts.type.other',
+  } as const;
+  const fallbackMap = {
+    farmer: 'Farmer',
+    cooperative: 'Cooperative',
+    exporter: 'Exporter',
+    other: 'Other',
+  } as const;
+  return wf(keyMap[type], fallbackMap[type], t);
+}
+
+type ContactsAddMode = 'select' | 'contact' | 'organization' | 'csv';
+
+export function getContactsAddPageTitle(
+  mode: ContactsAddMode,
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  if (mode === 'select') {
+    return wf(
+      isCooperative ? 'workflow.contacts.add.title_select_cooperative' : 'workflow.contacts.add.title_select',
+      isCooperative ? 'Add Member or Organization' : 'Add Contact or Organization',
+      t,
+    );
+  }
+  if (mode === 'csv') {
+    return wf('workflow.contacts.add.title_bulk', 'Bulk Import', t);
+  }
+  if (mode === 'organization') {
+    return wf('workflow.contacts.add.title_organization', 'Add New Organization', t);
+  }
+  return wf(
+    isCooperative ? 'workflow.contacts.add.title_contact_cooperative' : 'workflow.contacts.add.title_contact',
+    isCooperative ? 'Add New Member' : 'Add New Contact',
+    t,
+  );
+}
+
+export function getContactsAddBreadcrumbLabel(
+  kind: 'add' | 'bulk' | 'add_contact' | 'add_organization',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    add: 'workflow.contacts.add.breadcrumb.add',
+    bulk: 'workflow.contacts.add.breadcrumb.bulk',
+    add_contact: isCooperative
+      ? 'workflow.contacts.add.breadcrumb.add_contact_cooperative'
+      : 'workflow.contacts.add.breadcrumb.add_contact',
+    add_organization: 'workflow.contacts.add.breadcrumb.add_organization',
+  } as const;
+  const fallbackMap = {
+    add: 'Add',
+    bulk: 'Bulk Import',
+    add_contact: isCooperative ? 'Add Member' : 'Add Contact',
+    add_organization: 'Add Organization',
+  } as const;
+  return wf(keyMap[kind], fallbackMap[kind], t);
+}
+
+export function getContactsAddSectionTitle(
+  section: 'individual' | 'bulk' | 'tips',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    individual: 'workflow.contacts.add.section.individual',
+    bulk: 'workflow.contacts.add.section.bulk',
+    tips: 'workflow.contacts.add.section.tips',
+  } as const;
+  const fallbackMap = {
+    individual: 'Add Individually',
+    bulk: 'Bulk Import',
+    tips: 'Tips',
+  } as const;
+  return wf(keyMap[section], fallbackMap[section], t);
+}
+
+export function getContactsAddCardCopy(
+  card: 'contact' | 'organization' | 'csv',
+  field: 'title' | 'subtitle' | 'description',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  if (card === 'contact') {
+    const titleKey = isCooperative ? 'workflow.contacts.add.card.contact.title_cooperative' : 'workflow.contacts.add.card.contact.title';
+    const descKey = isCooperative ? 'workflow.contacts.add.card.contact.desc_cooperative' : 'workflow.contacts.add.card.contact.desc';
+    const map = {
+      title: wf(titleKey, isCooperative ? 'Add Member' : 'Add Contact', t),
+      subtitle: wf('workflow.contacts.add.card.contact.subtitle', 'Add an individual person', t),
+      description: wf(
+        descKey,
+        isCooperative
+          ? 'Create a new member with personal details, cooperative affiliation, and location information.'
+          : 'Create a new contact with personal details, organization affiliation, and location information.',
+        t,
+      ),
+    };
+    return map[field];
+  }
+  if (card === 'organization') {
+    const map = {
+      title: wf('workflow.contacts.add.card.organization.title', 'Add Organization', t),
+      subtitle: wf('workflow.contacts.add.card.organization.subtitle', 'Add a company or cooperative', t),
+      description: wf(
+        'workflow.contacts.add.card.organization.desc',
+        'Create a new organization with business details, certifications, and commodity information.',
+        t,
+      ),
+    };
+    return map[field];
+  }
+  return {
+    title: wf('workflow.contacts.add.card.csv.title', 'Import from CSV', t),
+    subtitle: wf('workflow.contacts.add.card.csv.subtitle', 'Upload a CSV file with multiple records', t),
+    description: wf(
+      'workflow.contacts.add.card.csv.desc',
+      'Import multiple contacts or organizations at once using a CSV file. You can map columns and preview data before importing.',
+      t,
+    ),
+  }[field];
+}
+
+export function getContactsAddTipLabel(tip: 1 | 2 | 3 | 4, isCooperative: boolean, t?: TranslateFn): string {
+  const keyMap = {
+    1: isCooperative ? 'workflow.contacts.add.tip.1_cooperative' : 'workflow.contacts.add.tip.1',
+    2: 'workflow.contacts.add.tip.2',
+    3: 'workflow.contacts.add.tip.3',
+    4: 'workflow.contacts.add.tip.4',
+  } as const;
+  const fallbackMap = {
+    1: isCooperative
+      ? 'Use Add Member for individual farmers or cooperative representatives'
+      : 'Use Add Contact for individual people like farmers, managers, or representatives',
+    2: 'Use Add Organization for cooperatives, exporters, or other business entities',
+    3: 'Use CSV Import when you have many records to add at once',
+    4: 'You can download a template CSV to ensure your data is formatted correctly',
+  } as const;
+  return wf(keyMap[tip], fallbackMap[tip], t);
+}
+
+export function getContactsAddToastMessage(
+  kind: 'contact_created' | 'member_added' | 'organization_created' | 'import_success',
+  values?: { count?: number },
+  t?: TranslateFn,
+): string {
+  if (kind === 'import_success' && values?.count !== undefined) {
+    const key =
+      values.count === 1
+        ? 'workflow.contacts.add.toast.import_success'
+        : 'workflow.contacts.add.toast.import_success_plural';
+    return wf(key, 'Successfully imported {{count}} record(s)', t, { count: values.count });
+  }
+  const keyMap = {
+    contact_created: 'workflow.contacts.add.toast.contact_created',
+    member_added: 'workflow.contacts.add.toast.member_added',
+    organization_created: 'workflow.contacts.add.toast.organization_created',
+    import_success: 'workflow.contacts.add.toast.import_success',
+  } as const;
+  const fallbackMap = {
+    contact_created: 'Contact created successfully',
+    member_added: 'Member added to your directory',
+    organization_created: 'Organization created successfully',
+    import_success: 'Successfully imported {{count}} record',
+  } as const;
+  return wf(keyMap[kind], fallbackMap[kind], t, { count: values?.count ?? 1 });
+}
+
+export function getContactsWizardStepLabel(
+  step: 'basic' | 'organization' | 'location' | 'review',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    basic: 'workflow.contacts.wizard.step.basic',
+    organization: 'workflow.contacts.wizard.step.organization',
+    location: 'workflow.contacts.wizard.step.location',
+    review: 'workflow.contacts.wizard.step.review',
+  } as const;
+  const fallbackMap = {
+    basic: 'Basic Info',
+    organization: 'Organization',
+    location: 'Location',
+    review: 'Review',
+  } as const;
+  return wf(keyMap[step], fallbackMap[step], t);
+}
+
+export function getContactsWizardSectionCopy(
+  section: 'basic' | 'organization' | 'location' | 'review',
+  field: 'title' | 'subtitle',
+  isCooperative: boolean,
+  t?: TranslateFn,
+): string {
+  const reviewTitleKey = isCooperative
+    ? 'workflow.contacts.wizard.review.title_cooperative'
+    : 'workflow.contacts.wizard.review.title';
+  const map = {
+    basic: {
+      title: wf('workflow.contacts.wizard.basic.title', 'Basic Information', t),
+      subtitle: wf('workflow.contacts.wizard.basic.subtitle', "Enter the contact's personal details", t),
+    },
+    organization: {
+      title: wf('workflow.contacts.wizard.organization.title', 'Organization Details', t),
+      subtitle: wf('workflow.contacts.wizard.organization.subtitle', 'Add organization and role information', t),
+    },
+    location: {
+      title: wf('workflow.contacts.wizard.location.title', 'Location Information', t),
+      subtitle: wf('workflow.contacts.wizard.location.subtitle', "Specify the contact's location", t),
+    },
+    review: {
+      title: wf(reviewTitleKey, isCooperative ? 'Review Member' : 'Review Contact', t),
+      subtitle: wf('workflow.contacts.wizard.review.subtitle', 'Verify the information before saving', t),
+    },
+  };
+  return map[section][field];
+}
+
+export function getContactsWizardFieldLabel(
+  field:
+    | 'full_name'
+    | 'email'
+    | 'phone'
+    | 'contact_type'
+    | 'consent_status'
+    | 'organization'
+    | 'job_title'
+    | 'tags'
+    | 'country'
+    | 'region'
+    | 'address'
+    | 'notes'
+    | 'location',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    full_name: 'workflow.contacts.wizard.field.full_name',
+    email: 'workflow.contacts.wizard.field.email',
+    phone: 'workflow.contacts.wizard.field.phone',
+    contact_type: 'workflow.contacts.wizard.field.contact_type',
+    consent_status: 'workflow.contacts.wizard.field.consent_status',
+    organization: 'workflow.contacts.wizard.field.organization',
+    job_title: 'workflow.contacts.wizard.field.job_title',
+    tags: 'workflow.contacts.wizard.field.tags',
+    country: 'workflow.contacts.wizard.field.country',
+    region: 'workflow.contacts.wizard.field.region',
+    address: 'workflow.contacts.wizard.field.address',
+    notes: 'workflow.contacts.wizard.field.notes',
+    location: 'workflow.contacts.wizard.field.location',
+  } as const;
+  const fallbackMap = {
+    full_name: 'Full Name',
+    email: 'Email',
+    phone: 'Phone',
+    contact_type: 'Contact Type',
+    consent_status: 'Consent Status',
+    organization: 'Organization Name',
+    job_title: 'Job Title / Role',
+    tags: 'Tags',
+    country: 'Country',
+    region: 'Region / State',
+    address: 'Address',
+    notes: 'Additional Notes',
+    location: 'Location',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
+}
+
+export function getContactsWizardLockedTypeLabel(label: string, t?: TranslateFn): string {
+  return wf('workflow.contacts.wizard.field.contact_type_locked', '{{label}} type', t, { label });
+}
+
+export function getContactsWizardTagsHint(t?: TranslateFn): string {
+  return wf('workflow.contacts.wizard.field.tags_hint', 'Separate multiple tags with commas', t);
+}
+
+export function getContactsWizardPlaceholder(
+  field: 'select_type' | 'select_consent',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    select_type: 'workflow.contacts.wizard.placeholder.select_type',
+    select_consent: 'workflow.contacts.wizard.placeholder.select_consent',
+  } as const;
+  return wf(keyMap[field], field === 'select_type' ? 'Select type' : 'Select consent status', t);
+}
+
+export function getContactsWizardActionLabel(
+  action: 'cancel' | 'back' | 'next' | 'saving' | 'save_contact' | 'save_member',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    cancel: 'workflow.contacts.wizard.action.cancel',
+    back: 'workflow.contacts.wizard.action.back',
+    next: 'workflow.contacts.wizard.action.next',
+    saving: 'workflow.contacts.wizard.action.saving',
+    save_contact: 'workflow.contacts.wizard.action.save_contact',
+    save_member: 'workflow.contacts.wizard.action.save_member',
+  } as const;
+  const fallbackMap = {
+    cancel: 'Cancel',
+    back: 'Back',
+    next: 'Next',
+    saving: 'Saving...',
+    save_contact: 'Save Contact',
+    save_member: 'Save Member',
+  } as const;
+  return wf(keyMap[action], fallbackMap[action], t);
+}
+
+export function getContactsWizardCreateError(t?: TranslateFn): string {
+  return wf('workflow.contacts.wizard.error.create', 'Failed to create contact.', t);
+}
+
+export function getContactsAddBackToOptionsLabel(t?: TranslateFn): string {
+  return wf('workflow.contacts.add.back_to_options', 'Back to options', t);
+}
+
+export function getContactsAddPageSubtitle(isCooperative: boolean, t?: TranslateFn): string {
+  if (isCooperative) {
+    return wf('workflow.contacts.add.subtitle_cooperative', 'Cooperative member directory', t);
+  }
+  return getContactsPageSubtitle(false, t);
+}
+
+export function getContactsAddImportCta(
+  kind: 'contacts' | 'organizations',
+  t?: TranslateFn,
+): string {
+  return wf(
+    kind === 'contacts' ? 'workflow.contacts.add.cta.import_contacts' : 'workflow.contacts.add.cta.import_organizations',
+    kind === 'contacts' ? 'Import Contacts' : 'Import Organizations',
+    t,
+  );
+}
+
+export function getAdminUsersSubtitle(t?: TranslateFn): string {
+  return wf('workflow.admin.users.subtitle', 'Manage user accounts and access', t);
+}
+
+export function getAdminRolesSubtitle(t?: TranslateFn): string {
+  return wf('workflow.admin.roles.subtitle', 'Configure role-based access control', t);
+}
+
+export function getAdminInvitePlaceholder(
+  field: 'name' | 'email' | 'select_org',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    name: 'workflow.admin.invite.name',
+    email: 'workflow.admin.invite.email',
+    select_org: 'workflow.admin.invite.select_org',
+  } as const;
+  const fallbackMap = {
+    name: 'Full name',
+    email: 'Email',
+    select_org: 'Select organization',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
+}
+
+export function getAdminUsersTableColumnLabel(
+  column: 'user' | 'email' | 'role' | 'organization' | 'status' | 'last_login',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    user: 'workflow.admin.users.table.user',
+    email: 'workflow.admin.users.table.email',
+    role: 'workflow.admin.users.table.role',
+    organization: 'workflow.admin.users.table.organization',
+    status: 'workflow.admin.users.table.status',
+    last_login: 'workflow.admin.users.table.last_login',
+  } as const;
+  const fallbackMap = {
+    user: 'User',
+    email: 'Email',
+    role: 'Role',
+    organization: 'Organization',
+    status: 'Status',
+    last_login: 'Last Login',
+  } as const;
+  return wf(keyMap[column], fallbackMap[column], t);
+}
+
+export function getAdminUsersLoadingLabel(t?: TranslateFn): string {
+  return wf('workflow.admin.users.loading', 'Loading users...', t);
+}
+
+export function getAdminRolesCanonicalBadge(t?: TranslateFn): string {
+  return wf('workflow.admin.roles.canonical', 'Canonical', t);
+}
+
+
+export function getAdminOrganizationsLoadingLabel(t?: TranslateFn): string {
+  return wf('workflow.admin.organizations.loading', 'Loading organizations...', t);
+}
+
+const ADMIN_DIAGNOSTICS_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.admin.diagnostics.title', fallback: 'Deferred Route Gate Diagnostics' },
+  subtitle: {
+    key: 'workflow.admin.diagnostics.subtitle',
+    fallback: 'Recent tenant-scoped gated-entry attempts captured by telemetry (`feature=mvp_gated`).',
+  },
+  export_csv: { key: 'workflow.admin.diagnostics.export_csv', fallback: 'Export CSV' },
+  export_all_csv: { key: 'workflow.admin.diagnostics.export_all_csv', fallback: 'Export All CSV' },
+  exporting_all: { key: 'workflow.admin.diagnostics.exporting_all', fallback: 'Exporting all...' },
+  refresh: { key: 'workflow.admin.diagnostics.refresh', fallback: 'Refresh' },
+  debug_on: { key: 'workflow.admin.diagnostics.debug_on', fallback: 'Debug: On' },
+  debug_off: { key: 'workflow.admin.diagnostics.debug_off', fallback: 'Debug: Off' },
+  summary: { key: 'workflow.admin.diagnostics.summary', fallback: 'Diagnostics Summary' },
+  loading_summary: {
+    key: 'workflow.admin.diagnostics.loading_summary',
+    fallback: 'Loading diagnostics summary...',
+  },
+  preset_latest_blocks: {
+    key: 'workflow.admin.diagnostics.preset.latest_blocks',
+    fallback: 'Latest blocks (24h)',
+  },
+  preset_weekly_volume: {
+    key: 'workflow.admin.diagnostics.preset.weekly_volume',
+    fallback: 'Weekly volume',
+  },
+  preset_campaign_focus: {
+    key: 'workflow.admin.diagnostics.preset.campaign_focus',
+    fallback: 'Campaigns oldest first',
+  },
+  preset_reporting_focus: {
+    key: 'workflow.admin.diagnostics.preset.reporting_focus',
+    fallback: 'Reporting oldest first',
+  },
+  counter_total_diagnostics: {
+    key: 'workflow.admin.diagnostics.counter.total_diagnostics',
+    fallback: 'Total diagnostics',
+  },
+  counter_gated_entry: { key: 'workflow.admin.diagnostics.counter.gated_entry', fallback: 'Gated entry' },
+  counter_assignment_exports: {
+    key: 'workflow.admin.diagnostics.counter.assignment_exports',
+    fallback: 'Assignment exports',
+  },
+  counter_risk_scores: { key: 'workflow.admin.diagnostics.counter.risk_scores', fallback: 'Risk scores' },
+  counter_filing_activity: {
+    key: 'workflow.admin.diagnostics.counter.filing_activity',
+    fallback: 'Filing activity',
+  },
+  counter_chat_activity: {
+    key: 'workflow.admin.diagnostics.counter.chat_activity',
+    fallback: 'Chat activity',
+  },
+  breakdown_assignment_phase: {
+    key: 'workflow.admin.diagnostics.breakdown.assignment_phase',
+    fallback: 'Assignment phase: req={{requested}}, ok={{succeeded}}, fail={{failed}}',
+  },
+  breakdown_assignment_status: {
+    key: 'workflow.admin.diagnostics.breakdown.assignment_status',
+    fallback: 'Assignment status: active={{active}}, completed={{completed}}, cancelled={{cancelled}}',
+  },
+  breakdown_risk_band: {
+    key: 'workflow.admin.diagnostics.breakdown.risk_band',
+    fallback: 'Risk bands: low={{low}}, medium={{medium}}, high={{high}}',
+  },
+  breakdown_filing_family: {
+    key: 'workflow.admin.diagnostics.breakdown.filing_family',
+    fallback: 'Filing family: generation={{generation}}, submission={{submission}}',
+  },
+  breakdown_chat_phase: {
+    key: 'workflow.admin.diagnostics.breakdown.chat_phase',
+    fallback: 'Chat phase: created={{created}}, posted={{posted}}, replayed={{replayed}}',
+  },
+  drilldown_requested: { key: 'workflow.admin.diagnostics.drilldown.requested', fallback: 'Requested' },
+  drilldown_succeeded: { key: 'workflow.admin.diagnostics.drilldown.succeeded', fallback: 'Succeeded' },
+  drilldown_failed: { key: 'workflow.admin.diagnostics.drilldown.failed', fallback: 'Failed' },
+  drilldown_active: { key: 'workflow.admin.diagnostics.drilldown.active', fallback: 'Active' },
+  drilldown_completed: { key: 'workflow.admin.diagnostics.drilldown.completed', fallback: 'Completed' },
+  drilldown_cancelled: { key: 'workflow.admin.diagnostics.drilldown.cancelled', fallback: 'Cancelled' },
+  drilldown_low: { key: 'workflow.admin.diagnostics.drilldown.low', fallback: 'Low' },
+  drilldown_medium: { key: 'workflow.admin.diagnostics.drilldown.medium', fallback: 'Medium' },
+  drilldown_high: { key: 'workflow.admin.diagnostics.drilldown.high', fallback: 'High' },
+  drilldown_generation: { key: 'workflow.admin.diagnostics.drilldown.generation', fallback: 'Generation' },
+  drilldown_submission: { key: 'workflow.admin.diagnostics.drilldown.submission', fallback: 'Submission' },
+  drilldown_created: { key: 'workflow.admin.diagnostics.drilldown.created', fallback: 'Created' },
+  drilldown_posted: { key: 'workflow.admin.diagnostics.drilldown.posted', fallback: 'Posted' },
+  drilldown_resolved: { key: 'workflow.admin.diagnostics.drilldown.resolved', fallback: 'Resolved' },
+  readiness_export_ready: {
+    key: 'workflow.admin.diagnostics.readiness.export_ready',
+    fallback: 'export-ready',
+  },
+  readiness_no_export_data: {
+    key: 'workflow.admin.diagnostics.readiness.no_export_data',
+    fallback: 'no export data',
+  },
+  readiness_latest: {
+    key: 'workflow.admin.diagnostics.readiness.latest',
+    fallback: ' | latest {{date}}',
+  },
+  readiness_label: { key: 'workflow.admin.diagnostics.readiness.label', fallback: 'Readiness' },
+  filter_all_gates: { key: 'workflow.admin.diagnostics.filter.all_gates', fallback: 'All gates' },
+  filter_request_campaigns: {
+    key: 'workflow.admin.diagnostics.filter.request_campaigns',
+    fallback: 'Request campaigns',
+  },
+  filter_annual_reporting: {
+    key: 'workflow.admin.diagnostics.filter.annual_reporting',
+    fallback: 'Annual reporting',
+  },
+  filter_last_24h: { key: 'workflow.admin.diagnostics.filter.last_24h', fallback: 'Last 24h' },
+  filter_last_7d: { key: 'workflow.admin.diagnostics.filter.last_7d', fallback: 'Last 7 days' },
+  filter_last_30d: { key: 'workflow.admin.diagnostics.filter.last_30d', fallback: 'Last 30 days' },
+  filter_newest_first: { key: 'workflow.admin.diagnostics.filter.newest_first', fallback: 'Newest first' },
+  filter_oldest_first: { key: 'workflow.admin.diagnostics.filter.oldest_first', fallback: 'Oldest first' },
+  filter_matching_events: {
+    key: 'workflow.admin.diagnostics.filter.matching_events',
+    fallback: '{{count}} matching event(s)',
+  },
+  message_telemetry_auth: {
+    key: 'workflow.admin.diagnostics.message.telemetry_auth',
+    fallback:
+      'Telemetry auth check: current session token may be invalid for backend reads in this environment.',
+  },
+  message_debug_counters: {
+    key: 'workflow.admin.diagnostics.message.debug_counters',
+    fallback:
+      'Debug counters: mutationEvents={{mutationEvents}}, debounceFlushes={{debounceFlushes}}, fetchLoads={{fetchLoads}}',
+  },
+  loading_telemetry: {
+    key: 'workflow.admin.diagnostics.loading.telemetry',
+    fallback: 'Loading gated-entry telemetry...',
+  },
+  empty_telemetry: {
+    key: 'workflow.admin.diagnostics.empty.telemetry',
+    fallback: 'No gated-entry attempts captured for this tenant yet.',
+  },
+  section_export_activity: {
+    key: 'workflow.admin.diagnostics.section.export_activity',
+    fallback: 'Recent Export Activity',
+  },
+  loading_export_activity: {
+    key: 'workflow.admin.diagnostics.loading.export_activity',
+    fallback: 'Loading export activity...',
+  },
+  empty_export_activity: {
+    key: 'workflow.admin.diagnostics.empty.export_activity',
+    fallback: 'No export activity captured for this tenant yet.',
+  },
+  table_captured_at: { key: 'workflow.admin.diagnostics.table.captured_at', fallback: 'Captured At' },
+  table_gate: { key: 'workflow.admin.diagnostics.table.gate', fallback: 'Gate' },
+  table_role: { key: 'workflow.admin.diagnostics.table.role', fallback: 'Role' },
+  table_feature: { key: 'workflow.admin.diagnostics.table.feature', fallback: 'Feature' },
+  table_redirect: { key: 'workflow.admin.diagnostics.table.redirect', fallback: 'Redirect' },
+  table_exported_at: { key: 'workflow.admin.diagnostics.table.exported_at', fallback: 'Exported At' },
+  table_actor: { key: 'workflow.admin.diagnostics.table.actor', fallback: 'Actor' },
+  table_rows: { key: 'workflow.admin.diagnostics.table.rows', fallback: 'Rows' },
+  table_sort: { key: 'workflow.admin.diagnostics.table.sort', fallback: 'Sort' },
+  table_truncated: { key: 'workflow.admin.diagnostics.table.truncated', fallback: 'Truncated' },
+  table_phase: { key: 'workflow.admin.diagnostics.table.phase', fallback: 'Phase' },
+  table_package: { key: 'workflow.admin.diagnostics.table.package', fallback: 'Package' },
+  table_idempotency: { key: 'workflow.admin.diagnostics.table.idempotency', fallback: 'Idempotency' },
+  table_traces_ref: { key: 'workflow.admin.diagnostics.table.traces_ref', fallback: 'TRACES Ref' },
+  table_thread: { key: 'workflow.admin.diagnostics.table.thread', fallback: 'Thread' },
+  table_record: { key: 'workflow.admin.diagnostics.table.record', fallback: 'Record' },
+  table_message: { key: 'workflow.admin.diagnostics.table.message', fallback: 'Message' },
+  table_template: { key: 'workflow.admin.diagnostics.table.template', fallback: 'Template' },
+  table_stage: { key: 'workflow.admin.diagnostics.table.stage', fallback: 'Stage' },
+  table_sla: { key: 'workflow.admin.diagnostics.table.sla', fallback: 'SLA' },
+  table_band: { key: 'workflow.admin.diagnostics.table.band', fallback: 'Band' },
+  table_score: { key: 'workflow.admin.diagnostics.table.score', fallback: 'Score' },
+  table_filters: { key: 'workflow.admin.diagnostics.table.filters', fallback: 'Filters' },
+  table_error: { key: 'workflow.admin.diagnostics.table.error', fallback: 'Error' },
+  filter_all_phases: { key: 'workflow.admin.diagnostics.filter.all_phases', fallback: 'All phases' },
+  filter_all_sla_states: { key: 'workflow.admin.diagnostics.filter.all_sla_states', fallback: 'All SLA states' },
+  filter_all_bands: { key: 'workflow.admin.diagnostics.filter.all_bands', fallback: 'All bands' },
+  filter_all_statuses: { key: 'workflow.admin.diagnostics.filter.all_statuses', fallback: 'All statuses' },
+  unknown_actor: { key: 'workflow.admin.diagnostics.unknown_actor', fallback: 'unknown' },
+  section_filing: { key: 'workflow.admin.diagnostics.section.filing', fallback: 'Filing Activity' },
+  count_filing: {
+    key: 'workflow.admin.diagnostics.count.filing',
+    fallback: '{{count}} matching filing activity event(s)',
+  },
+  loading_filing: { key: 'workflow.admin.diagnostics.loading.filing', fallback: 'Loading filing activity...' },
+  empty_filing: {
+    key: 'workflow.admin.diagnostics.empty.filing',
+    fallback: 'No filing activity captured for this tenant yet.',
+  },
+  filter_filing_generation_requested: {
+    key: 'workflow.admin.diagnostics.filter.filing.generation_requested',
+    fallback: 'Generation requested',
+  },
+  filter_filing_generation_generated: {
+    key: 'workflow.admin.diagnostics.filter.filing.generation_generated',
+    fallback: 'Generation generated',
+  },
+  filter_filing_submission_requested: {
+    key: 'workflow.admin.diagnostics.filter.filing.submission_requested',
+    fallback: 'Submission requested',
+  },
+  filter_filing_submission_accepted: {
+    key: 'workflow.admin.diagnostics.filter.filing.submission_accepted',
+    fallback: 'Submission accepted',
+  },
+  filter_filing_submission_replayed: {
+    key: 'workflow.admin.diagnostics.filter.filing.submission_replayed',
+    fallback: 'Submission replayed',
+  },
+  section_chat: { key: 'workflow.admin.diagnostics.section.chat', fallback: 'Chat Thread Activity' },
+  count_chat: {
+    key: 'workflow.admin.diagnostics.count.chat',
+    fallback: '{{count}} matching chat-thread event(s)',
+  },
+  loading_chat: { key: 'workflow.admin.diagnostics.loading.chat', fallback: 'Loading chat-thread activity...' },
+  empty_chat: {
+    key: 'workflow.admin.diagnostics.empty.chat',
+    fallback: 'No chat-thread activity captured for this tenant yet.',
+  },
+  filter_chat_thread_created: {
+    key: 'workflow.admin.diagnostics.filter.chat.thread_created',
+    fallback: 'Thread created',
+  },
+  filter_chat_message_posted: {
+    key: 'workflow.admin.diagnostics.filter.chat.message_posted',
+    fallback: 'Message posted',
+  },
+  filter_chat_message_replayed: {
+    key: 'workflow.admin.diagnostics.filter.chat.message_replayed',
+    fallback: 'Message replayed',
+  },
+  filter_chat_thread_resolved: {
+    key: 'workflow.admin.diagnostics.filter.chat.thread_resolved',
+    fallback: 'Thread resolved',
+  },
+  filter_chat_thread_reopened: {
+    key: 'workflow.admin.diagnostics.filter.chat.thread_reopened',
+    fallback: 'Thread reopened',
+  },
+  filter_chat_thread_archived: {
+    key: 'workflow.admin.diagnostics.filter.chat.thread_archived',
+    fallback: 'Thread archived',
+  },
+  section_workflow: { key: 'workflow.admin.diagnostics.section.workflow', fallback: 'Workflow Activity' },
+  count_workflow: {
+    key: 'workflow.admin.diagnostics.count.workflow',
+    fallback: '{{count}} matching workflow event(s)',
+  },
+  loading_workflow: {
+    key: 'workflow.admin.diagnostics.loading.workflow',
+    fallback: 'Loading workflow activity...',
+  },
+  empty_workflow: {
+    key: 'workflow.admin.diagnostics.empty.workflow',
+    fallback: 'No workflow activity captured for this tenant yet.',
+  },
+  filter_workflow_template_created: {
+    key: 'workflow.admin.diagnostics.filter.workflow.template_created',
+    fallback: 'Template created',
+  },
+  filter_workflow_stage_transitioned: {
+    key: 'workflow.admin.diagnostics.filter.workflow.stage_transitioned',
+    fallback: 'Stage transitioned',
+  },
+  filter_workflow_sla_warning: {
+    key: 'workflow.admin.diagnostics.filter.workflow.sla_warning',
+    fallback: 'SLA warning',
+  },
+  filter_workflow_sla_breached: {
+    key: 'workflow.admin.diagnostics.filter.workflow.sla_breached',
+    fallback: 'SLA breached',
+  },
+  filter_workflow_sla_escalated: {
+    key: 'workflow.admin.diagnostics.filter.workflow.sla_escalated',
+    fallback: 'SLA escalated',
+  },
+  filter_workflow_sla_recovered: {
+    key: 'workflow.admin.diagnostics.filter.workflow.sla_recovered',
+    fallback: 'SLA recovered',
+  },
+  filter_sla_state_on_track: {
+    key: 'workflow.admin.diagnostics.filter.sla_state.on_track',
+    fallback: 'On track',
+  },
+  filter_sla_state_warning: {
+    key: 'workflow.admin.diagnostics.filter.sla_state.warning',
+    fallback: 'Warning',
+  },
+  filter_sla_state_breached: {
+    key: 'workflow.admin.diagnostics.filter.sla_state.breached',
+    fallback: 'Breached',
+  },
+  filter_sla_state_escalated: {
+    key: 'workflow.admin.diagnostics.filter.sla_state.escalated',
+    fallback: 'Escalated',
+  },
+  section_risk_score: { key: 'workflow.admin.diagnostics.section.risk_score', fallback: 'Risk Score Activity' },
+  count_risk_score: {
+    key: 'workflow.admin.diagnostics.count.risk_score',
+    fallback: '{{count}} matching risk score event(s)',
+  },
+  loading_risk_score: {
+    key: 'workflow.admin.diagnostics.loading.risk_score',
+    fallback: 'Loading risk score activity...',
+  },
+  empty_risk_score: {
+    key: 'workflow.admin.diagnostics.empty.risk_score',
+    fallback: 'No risk score activity captured for this tenant yet.',
+  },
+  filter_risk_requested: { key: 'workflow.admin.diagnostics.filter.risk.requested', fallback: 'Requested' },
+  filter_risk_evaluated: { key: 'workflow.admin.diagnostics.filter.risk.evaluated', fallback: 'Evaluated' },
+  filter_risk_low_band: {
+    key: 'workflow.admin.diagnostics.filter.risk.low_band',
+    fallback: 'Low band event',
+  },
+  filter_risk_medium_band: {
+    key: 'workflow.admin.diagnostics.filter.risk.medium_band',
+    fallback: 'Medium band event',
+  },
+  filter_risk_high_band: {
+    key: 'workflow.admin.diagnostics.filter.risk.high_band',
+    fallback: 'High band event',
+  },
+  section_assignment_export: {
+    key: 'workflow.admin.diagnostics.section.assignment_export',
+    fallback: 'Assignment Export Activity',
+  },
+  count_assignment_export: {
+    key: 'workflow.admin.diagnostics.count.assignment_export',
+    fallback: '{{count}} matching assignment export event(s)',
+  },
+  loading_assignment_export: {
+    key: 'workflow.admin.diagnostics.loading.assignment_export',
+    fallback: 'Loading assignment export activity...',
+  },
+  empty_assignment_export: {
+    key: 'workflow.admin.diagnostics.empty.assignment_export',
+    fallback: 'No assignment export activity captured for this tenant yet.',
+  },
+  toast_telemetry_no_rows_page: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_no_rows_page',
+    fallback: 'No telemetry rows available for export on this page.',
+  },
+  toast_telemetry_exported_page: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_exported_page',
+    fallback: 'Telemetry CSV exported for current page.',
+  },
+  toast_telemetry_no_rows_filters: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_no_rows_filters',
+    fallback: 'No telemetry rows available for export for current filters.',
+  },
+  toast_telemetry_exported_count: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_exported_count',
+    fallback: 'Exported {{count}} telemetry rows.',
+  },
+  toast_telemetry_export_capped: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_export_capped',
+    fallback: 'Export capped at {{limit}} rows. Narrow filters for complete extraction.',
+  },
+  toast_telemetry_export_failed: {
+    key: 'workflow.admin.diagnostics.toast.telemetry_export_failed',
+    fallback: 'Failed to export telemetry rows.',
+  },
+  toast_debug_enabled: {
+    key: 'workflow.admin.diagnostics.toast.debug_enabled',
+    fallback: 'Telemetry debug enabled for this session.',
+  },
+  toast_debug_disabled: {
+    key: 'workflow.admin.diagnostics.toast.debug_disabled',
+    fallback: 'Telemetry debug disabled.',
+  },
+  toast_assignment_no_rows: {
+    key: 'workflow.admin.diagnostics.toast.assignment_no_rows',
+    fallback: 'No assignment export activity rows available for current filters.',
+  },
+  toast_assignment_exported_page: {
+    key: 'workflow.admin.diagnostics.toast.assignment_exported_page',
+    fallback: 'Assignment export activity CSV exported.',
+  },
+  toast_assignment_exported_count: {
+    key: 'workflow.admin.diagnostics.toast.assignment_exported_count',
+    fallback: 'Exported {{count}} assignment export activity rows.',
+  },
+  toast_assignment_export_failed: {
+    key: 'workflow.admin.diagnostics.toast.assignment_export_failed',
+    fallback: 'Failed to export assignment export activity.',
+  },
+  toast_risk_no_rows: {
+    key: 'workflow.admin.diagnostics.toast.risk_no_rows',
+    fallback: 'No risk score activity rows available for current filters.',
+  },
+  toast_risk_exported_page: {
+    key: 'workflow.admin.diagnostics.toast.risk_exported_page',
+    fallback: 'Risk score activity CSV exported.',
+  },
+  toast_risk_exported_count: {
+    key: 'workflow.admin.diagnostics.toast.risk_exported_count',
+    fallback: 'Exported {{count}} risk score activity rows.',
+  },
+  toast_risk_export_failed: {
+    key: 'workflow.admin.diagnostics.toast.risk_export_failed',
+    fallback: 'Failed to export risk score activity.',
+  },
+  toast_filing_no_rows: {
+    key: 'workflow.admin.diagnostics.toast.filing_no_rows',
+    fallback: 'No filing activity rows available for current filters.',
+  },
+  toast_filing_exported_page: {
+    key: 'workflow.admin.diagnostics.toast.filing_exported_page',
+    fallback: 'Filing activity CSV exported.',
+  },
+  toast_filing_exported_count: {
+    key: 'workflow.admin.diagnostics.toast.filing_exported_count',
+    fallback: 'Exported {{count}} filing activity rows.',
+  },
+  toast_filing_export_failed: {
+    key: 'workflow.admin.diagnostics.toast.filing_export_failed',
+    fallback: 'Failed to export filing activity.',
+  },
+  toast_org_created: { key: 'workflow.admin.toast.org_created', fallback: 'Organization created.' },
+  toast_org_failed: { key: 'workflow.admin.toast.org_failed', fallback: 'Failed to create organization.' },
+  toast_user_invited: { key: 'workflow.admin.toast.user_invited', fallback: 'User invited.' },
+  toast_invite_failed: { key: 'workflow.admin.toast.invite_failed', fallback: 'Failed to invite user.' },
+  toast_role_updated: { key: 'workflow.admin.toast.role_updated', fallback: 'Role updated.' },
+  toast_role_failed: { key: 'workflow.admin.toast.role_failed', fallback: 'Failed to update role.' },
+  toast_user_status_updated: {
+    key: 'workflow.admin.toast.user_status_updated',
+    fallback: 'User status updated.',
+  },
+  toast_user_status_failed: {
+    key: 'workflow.admin.toast.user_status_failed',
+    fallback: 'Failed to update user status.',
+  },
+  yes: { key: 'workflow.admin.diagnostics.yes', fallback: 'Yes' },
+  no: { key: 'workflow.admin.diagnostics.no', fallback: 'No' },
+  pagination_previous: { key: 'workflow.admin.diagnostics.pagination.previous', fallback: 'Previous' },
+  pagination_next: { key: 'workflow.admin.diagnostics.pagination.next', fallback: 'Next' },
+  pagination_page: {
+    key: 'workflow.admin.diagnostics.pagination.page',
+    fallback: 'Page {{page}} of {{totalPages}}',
+  },
+};
+
+export function getAdminDiagnosticsCopy(
+  key: keyof typeof ADMIN_DIAGNOSTICS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ADMIN_DIAGNOSTICS_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getAdminDiagnosticsLabel(
+  key: keyof typeof ADMIN_DIAGNOSTICS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  return getAdminDiagnosticsCopy(key, t, values);
+}
+
+export function getAdminDiagnosticsPresetLabel(
+  presetId: 'latest_blocks' | 'weekly_volume' | 'campaign_focus' | 'reporting_focus',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    latest_blocks: 'preset_latest_blocks',
+    weekly_volume: 'preset_weekly_volume',
+    campaign_focus: 'preset_campaign_focus',
+    reporting_focus: 'preset_reporting_focus',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[presetId], t);
+}
+
+export function getAdminFilingPhaseFilterLabel(
+  phase:
+    | 'all'
+    | 'generation_requested'
+    | 'generation_generated'
+    | 'submission_requested'
+    | 'submission_accepted'
+    | 'submission_replayed',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_phases',
+    generation_requested: 'filter_filing_generation_requested',
+    generation_generated: 'filter_filing_generation_generated',
+    submission_requested: 'filter_filing_submission_requested',
+    submission_accepted: 'filter_filing_submission_accepted',
+    submission_replayed: 'filter_filing_submission_replayed',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[phase], t);
+}
+
+export function getAdminChatPhaseFilterLabel(
+  phase: 'all' | 'created' | 'posted' | 'replayed' | 'resolved' | 'reopened' | 'archived',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_phases',
+    created: 'filter_chat_thread_created',
+    posted: 'filter_chat_message_posted',
+    replayed: 'filter_chat_message_replayed',
+    resolved: 'filter_chat_thread_resolved',
+    reopened: 'filter_chat_thread_reopened',
+    archived: 'filter_chat_thread_archived',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[phase], t);
+}
+
+export function getAdminWorkflowPhaseFilterLabel(
+  phase:
+    | 'all'
+    | 'template_created'
+    | 'stage_transitioned'
+    | 'sla_warning'
+    | 'sla_breached'
+    | 'sla_escalated'
+    | 'sla_recovered',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_phases',
+    template_created: 'filter_workflow_template_created',
+    stage_transitioned: 'filter_workflow_stage_transitioned',
+    sla_warning: 'filter_workflow_sla_warning',
+    sla_breached: 'filter_workflow_sla_breached',
+    sla_escalated: 'filter_workflow_sla_escalated',
+    sla_recovered: 'filter_workflow_sla_recovered',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[phase], t);
+}
+
+export function getAdminWorkflowSlaFilterLabel(
+  state: 'all' | 'on_track' | 'warning' | 'breached' | 'escalated',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_sla_states',
+    on_track: 'filter_sla_state_on_track',
+    warning: 'filter_sla_state_warning',
+    breached: 'filter_sla_state_breached',
+    escalated: 'filter_sla_state_escalated',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[state], t);
+}
+
+export function getAdminRiskScorePhaseFilterLabel(
+  phase: 'all' | 'requested' | 'evaluated' | 'low' | 'medium' | 'high',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_phases',
+    requested: 'filter_risk_requested',
+    evaluated: 'filter_risk_evaluated',
+    low: 'filter_risk_low_band',
+    medium: 'filter_risk_medium_band',
+    high: 'filter_risk_high_band',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[phase], t);
+}
+
+export function getAdminRiskScoreBandFilterLabel(
+  band: 'all' | 'low' | 'medium' | 'high',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_bands',
+    low: 'drilldown_low',
+    medium: 'drilldown_medium',
+    high: 'drilldown_high',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[band], t);
+}
+
+export function getAdminAssignmentPhaseFilterLabel(
+  phase: 'all' | 'requested' | 'succeeded' | 'failed',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_phases',
+    requested: 'drilldown_requested',
+    succeeded: 'drilldown_succeeded',
+    failed: 'drilldown_failed',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[phase], t);
+}
+
+export function getAdminAssignmentStatusFilterLabel(
+  status: 'all' | 'active' | 'completed' | 'cancelled',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    all: 'filter_all_statuses',
+    active: 'drilldown_active',
+    completed: 'drilldown_completed',
+    cancelled: 'drilldown_cancelled',
+  } as const;
+  return getAdminDiagnosticsCopy(keyMap[status], t);
+}
+
+const ADMIN_ENTITLEMENTS_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.admin.entitlements.title', fallback: 'Launch Feature Entitlements (Admin)' },
+  action_loading: { key: 'workflow.admin.entitlements.action.loading', fallback: 'Loading...' },
+  action_load: { key: 'workflow.admin.entitlements.action.load', fallback: 'Load entitlements' },
+  table_feature: { key: 'workflow.admin.entitlements.table.feature', fallback: 'Feature' },
+  table_status: { key: 'workflow.admin.entitlements.table.status', fallback: 'Status' },
+  table_updated_at: { key: 'workflow.admin.entitlements.table.updated_at', fallback: 'Updated at' },
+  table_actions: { key: 'workflow.admin.entitlements.table.actions', fallback: 'Actions' },
+  empty: {
+    key: 'workflow.admin.entitlements.empty',
+    fallback: 'No entitlement rows loaded yet. Use the Load entitlements action.',
+  },
+  action_enable: { key: 'workflow.admin.entitlements.action.enable', fallback: 'Enable' },
+  action_trial: { key: 'workflow.admin.entitlements.action.trial', fallback: 'Trial' },
+  action_disable: { key: 'workflow.admin.entitlements.action.disable', fallback: 'Disable' },
+  status_enabled: { key: 'workflow.admin.entitlements.status.enabled', fallback: 'Enabled' },
+  status_disabled: { key: 'workflow.admin.entitlements.status.disabled', fallback: 'Disabled' },
+  status_trial: { key: 'workflow.admin.entitlements.status.trial', fallback: 'Trial' },
+  toast_loaded: { key: 'workflow.admin.entitlements.toast.loaded', fallback: 'Launch entitlements loaded.' },
+  toast_load_error: {
+    key: 'workflow.admin.entitlements.toast.load_error',
+    fallback: 'Failed to read launch entitlements.',
+  },
+  toast_updated: {
+    key: 'workflow.admin.entitlements.toast.updated',
+    fallback: 'Updated entitlement: {{feature}} -> {{status}}.',
+  },
+  toast_update_error: {
+    key: 'workflow.admin.entitlements.toast.update_error',
+    fallback: 'Failed to update launch entitlement.',
+  },
+};
+
+export function getAdminEntitlementsCopy(
+  key: keyof typeof ADMIN_ENTITLEMENTS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ADMIN_ENTITLEMENTS_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getAdminEntitlementStatusLabel(
+  status: 'enabled' | 'disabled' | 'trial',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    enabled: 'status_enabled',
+    disabled: 'status_disabled',
+    trial: 'status_trial',
+  } as const;
+  return getAdminEntitlementsCopy(keyMap[status], t);
+}
+
+const ADMIN_EUDR_DDS_COPY: Record<string, { key: string; fallback: string }> = {
+  title_submit: { key: 'workflow.admin.eudr.title.submit', fallback: 'EUDR DDS Submit (Operator Trigger)' },
+  title_status: { key: 'workflow.admin.eudr.title.status', fallback: 'EUDR DDS Status Read (Operator Trigger)' },
+  preset_import: { key: 'workflow.admin.eudr.preset.import', fallback: 'Import sample' },
+  preset_export: { key: 'workflow.admin.eudr.preset.export', fallback: 'Export sample' },
+  preset_domestic: { key: 'workflow.admin.eudr.preset.domestic', fallback: 'Domestic sample' },
+  action_copy_json: { key: 'workflow.admin.eudr.action.copy_json', fallback: 'Copy JSON' },
+  action_load_sample: { key: 'workflow.admin.eudr.action.load_sample', fallback: 'Load sample JSON' },
+  action_submit: { key: 'workflow.admin.eudr.action.submit', fallback: 'Submit DDS' },
+  action_submitting: { key: 'workflow.admin.eudr.action.submitting', fallback: 'Submitting...' },
+  action_check: { key: 'workflow.admin.eudr.action.check_status', fallback: 'Check Status' },
+  action_checking: { key: 'workflow.admin.eudr.action.checking', fallback: 'Checking...' },
+  field_idempotency_key: { key: 'workflow.admin.eudr.field.idempotency_key', fallback: 'Idempotency key' },
+  field_statement_json: { key: 'workflow.admin.eudr.field.statement_json', fallback: 'Statement JSON' },
+  field_reference_number: {
+    key: 'workflow.admin.eudr.field.reference_number',
+    fallback: 'Reference number',
+  },
+  placeholder_idempotency: { key: 'workflow.admin.eudr.placeholder.idempotency', fallback: 'eudr_dds_...' },
+  placeholder_reference: { key: 'workflow.admin.eudr.placeholder.reference', fallback: 'TB-REF-...' },
+  error_last: { key: 'workflow.admin.eudr.error.last', fallback: 'Last status error:' },
+  action_copy_error_context: {
+    key: 'workflow.admin.eudr.action.copy_error_context',
+    fallback: 'Copy error context',
+  },
+  action_download_error_json: {
+    key: 'workflow.admin.eudr.action.download_error_json',
+    fallback: 'Download error JSON',
+  },
+  hint_download_folder: {
+    key: 'workflow.admin.eudr.hint.download_folder',
+    fallback: 'Downloads are saved by your browser to its default Downloads folder.',
+  },
+  hint_suggested_filename: {
+    key: 'workflow.admin.eudr.hint.suggested_filename',
+    fallback: 'Suggested filename:',
+  },
+  action_copy_filename: { key: 'workflow.admin.eudr.action.copy_filename', fallback: 'Copy filename' },
+  hint_timestamp_token: {
+    key: 'workflow.admin.eudr.hint.timestamp_token',
+    fallback: 'Note: {{token}} is replaced at download time.',
+  },
+  hint_retry: { key: 'workflow.admin.eudr.hint.retry', fallback: 'Retry + Escalation Hint:' },
+  status_last_check: {
+    key: 'workflow.admin.eudr.status.last_check',
+    fallback: 'Last status check: {{checkedAt}} - {{referenceNumber}} (HTTP {{statusCode}})',
+  },
+  action_copy_payload: { key: 'workflow.admin.eudr.action.copy_payload', fallback: 'Copy payload' },
+  action_download_json: { key: 'workflow.admin.eudr.action.download_json', fallback: 'Download JSON' },
+  aria_copy_error_context: {
+    key: 'workflow.admin.eudr.aria.copy_error_context',
+    fallback: 'Copy DDS status error context JSON',
+  },
+  aria_download_error_json: {
+    key: 'workflow.admin.eudr.aria.download_error_json',
+    fallback: 'Download DDS status error context JSON',
+  },
+  aria_copy_filename: {
+    key: 'workflow.admin.eudr.aria.copy_filename',
+    fallback: 'Copy DDS status error export filename',
+  },
+  toast_statement_not_object: {
+    key: 'workflow.admin.eudr.toast.statement_not_object',
+    fallback: 'EUDR statement must be a JSON object.',
+  },
+  toast_statement_invalid_json: {
+    key: 'workflow.admin.eudr.toast.statement_invalid_json',
+    fallback: 'EUDR statement must be valid JSON.',
+  },
+  toast_idempotency_required: {
+    key: 'workflow.admin.eudr.toast.idempotency_required',
+    fallback: 'Idempotency key is required.',
+  },
+  toast_submit_failed: {
+    key: 'workflow.admin.eudr.toast.submit_failed',
+    fallback: 'Failed to submit EUDR DDS payload.',
+  },
+  toast_submit_success: {
+    key: 'workflow.admin.eudr.toast.submit_success',
+    fallback: 'EUDR DDS submitted (status {{statusCode}}).',
+  },
+  toast_submit_replayed: {
+    key: 'workflow.admin.eudr.toast.submit_replayed',
+    fallback: 'EUDR DDS replay acknowledged (status {{statusCode}}). No duplicate side effects created.',
+  },
+  toast_sample_loaded: {
+    key: 'workflow.admin.eudr.toast.sample_loaded',
+    fallback: 'Loaded sample EUDR DDS payload ({{preset}}).',
+  },
+  toast_statement_copied: {
+    key: 'workflow.admin.eudr.toast.statement_copied',
+    fallback: 'EUDR statement JSON copied to clipboard.',
+  },
+  toast_statement_copy_failed: {
+    key: 'workflow.admin.eudr.toast.statement_copy_failed',
+    fallback: 'Failed to copy EUDR statement JSON.',
+  },
+  toast_reference_required: {
+    key: 'workflow.admin.eudr.toast.reference_required',
+    fallback: 'Reference number is required for status read.',
+  },
+  toast_status_read_failed: {
+    key: 'workflow.admin.eudr.toast.status_read_failed',
+    fallback: 'Failed to read EUDR DDS status.',
+  },
+  toast_status_read_success: {
+    key: 'workflow.admin.eudr.toast.status_read_success',
+    fallback: 'EUDR DDS status read completed (status {{statusCode}}).',
+  },
+  toast_status_malformed: {
+    key: 'workflow.admin.eudr.toast.status_malformed',
+    fallback: 'EUDR returned malformed status payload. Retry the check or escalate to integration support.',
+  },
+  hint_retry_message: {
+    key: 'workflow.admin.eudr.hint.retry_message',
+    fallback:
+      'Retry once after 30 seconds. If it repeats, capture this reference and escalate to integration support.',
+  },
+  toast_payload_copied: {
+    key: 'workflow.admin.eudr.toast.payload_copied',
+    fallback: 'EUDR status payload copied to clipboard.',
+  },
+  toast_payload_copy_failed: {
+    key: 'workflow.admin.eudr.toast.payload_copy_failed',
+    fallback: 'Failed to copy EUDR status payload.',
+  },
+  toast_error_context_copied: {
+    key: 'workflow.admin.eudr.toast.error_context_copied',
+    fallback: 'EUDR status error context copied to clipboard.',
+  },
+  toast_error_context_copy_failed: {
+    key: 'workflow.admin.eudr.toast.error_context_copy_failed',
+    fallback: 'Failed to copy EUDR status error context.',
+  },
+  toast_error_context_downloaded: {
+    key: 'workflow.admin.eudr.toast.error_context_downloaded',
+    fallback: 'EUDR status error context downloaded.',
+  },
+  toast_error_filename_copied: {
+    key: 'workflow.admin.eudr.toast.error_filename_copied',
+    fallback: 'EUDR status error filename copied to clipboard.',
+  },
+  toast_error_filename_copy_failed: {
+    key: 'workflow.admin.eudr.toast.error_filename_copy_failed',
+    fallback: 'Failed to copy EUDR status error filename.',
+  },
+  toast_payload_downloaded: {
+    key: 'workflow.admin.eudr.toast.payload_downloaded',
+    fallback: 'EUDR status payload downloaded.',
+  },
+};
+
+export function getAdminEudrDdsCopy(
+  key: keyof typeof ADMIN_EUDR_DDS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ADMIN_EUDR_DDS_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getAdminEudrDdsSubmitSuccessMessage(
+  input: { statusCode?: number; replayed?: boolean },
+  t?: TranslateFn,
+): string {
+  const statusCode = input.statusCode ?? 200;
+  if (input.replayed) {
+    return getAdminEudrDdsCopy('toast_submit_replayed', t, { statusCode });
+  }
+  return getAdminEudrDdsCopy('toast_submit_success', t, { statusCode });
+}
+
+export function getAdminEudrDdsStatusErrorMessage(input: { message?: string }, t?: TranslateFn): string {
+  const message = input.message?.trim();
+  if (!message) {
+    return getAdminEudrDdsCopy('toast_status_read_failed', t);
+  }
+  if (isMalformedEudrDdsStatusPayloadError({ message })) {
+    return getAdminEudrDdsCopy('toast_status_malformed', t);
+  }
+  return message;
+}
+
+const ADMIN_WEBHOOK_COPY: Record<string, { key: string; fallback: string }> = {
+  title_registrations: {
+    key: 'workflow.admin.webhook.title.registrations',
+    fallback: 'Integration Webhook Registrations',
+  },
+  count_registrations: {
+    key: 'workflow.admin.webhook.count.registrations',
+    fallback: '{{count}} registered webhook event(s)',
+  },
+  loading_registrations: {
+    key: 'workflow.admin.webhook.loading.registrations',
+    fallback: 'Loading integration webhooks...',
+  },
+  empty_registrations: {
+    key: 'workflow.admin.webhook.empty.registrations',
+    fallback: 'No integration webhooks captured for this tenant yet.',
+  },
+  table_webhook: { key: 'workflow.admin.webhook.table.webhook', fallback: 'Webhook' },
+  table_endpoint: { key: 'workflow.admin.webhook.table.endpoint', fallback: 'Endpoint' },
+  table_policy: { key: 'workflow.admin.webhook.table.policy', fallback: 'Policy' },
+  title_delivery: { key: 'workflow.admin.webhook.title.delivery', fallback: 'Webhook Delivery Evidence' },
+  selected_webhook: {
+    key: 'workflow.admin.webhook.selected',
+    fallback: 'Selected webhook: {{webhookId}}',
+  },
+  select_webhook_hint: {
+    key: 'workflow.admin.webhook.select_hint',
+    fallback: 'Select a webhook row to inspect deliveries',
+  },
+  loading_delivery: {
+    key: 'workflow.admin.webhook.loading.delivery',
+    fallback: 'Loading webhook delivery evidence...',
+  },
+  empty_no_selection: {
+    key: 'workflow.admin.webhook.empty.no_selection',
+    fallback: 'Select a webhook registration to load immutable delivery evidence.',
+  },
+  empty_delivery: {
+    key: 'workflow.admin.webhook.empty.delivery',
+    fallback: 'No delivery evidence captured for this webhook yet.',
+  },
+  table_phase: { key: 'workflow.admin.webhook.table.phase', fallback: 'Phase' },
+  table_delivery: { key: 'workflow.admin.webhook.table.delivery', fallback: 'Delivery' },
+  table_attempt: { key: 'workflow.admin.webhook.table.attempt', fallback: 'Attempt' },
+  table_status: { key: 'workflow.admin.webhook.table.status', fallback: 'Status' },
+};
+
+export function getAdminWebhookCopy(
+  key: keyof typeof ADMIN_WEBHOOK_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ADMIN_WEBHOOK_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+const ADMIN_RBAC_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.admin.rbac.title', fallback: 'RBAC Permission Matrix' },
+  subtitle: {
+    key: 'workflow.admin.rbac.subtitle',
+    fallback: 'View role-based access control permissions for commercial and legal workflow roles',
+  },
+  back_to_admin: { key: 'workflow.admin.rbac.back_to_admin', fallback: 'Back to Admin' },
+  info_title: {
+    key: 'workflow.admin.rbac.info.title',
+    fallback: 'Understanding the Permission System',
+  },
+  info_body_prefix: {
+    key: 'workflow.admin.rbac.info.body_prefix',
+    fallback: 'Tracebud separates',
+  },
+  info_commercial_label: {
+    key: 'workflow.admin.rbac.info.commercial_label',
+    fallback: 'Commercial Permissions',
+  },
+  info_body_mid: {
+    key: 'workflow.admin.rbac.info.body_mid',
+    fallback: '(what features users can access based on their commercial tier) from',
+  },
+  info_legal_label: {
+    key: 'workflow.admin.rbac.info.legal_label',
+    fallback: 'Legal Workflow Permissions',
+  },
+  info_body_suffix: {
+    key: 'workflow.admin.rbac.info.body_suffix',
+    fallback:
+      "(what legal actions users can take per EUDR requirements). A user's legal role is determined per workflow, not as a static label.",
+  },
+  tab_commercial: { key: 'workflow.admin.rbac.tab.commercial', fallback: 'Commercial Tier' },
+  tab_legal: { key: 'workflow.admin.rbac.tab.legal', fallback: 'Legal Workflow' },
+  commercial_title: {
+    key: 'workflow.admin.rbac.commercial.title',
+    fallback: 'Commercial Tier Permission Matrix',
+  },
+  commercial_subtitle: {
+    key: 'workflow.admin.rbac.commercial.subtitle',
+    fallback: 'Permissions available to each tenant role based on their commercial tier subscription',
+  },
+  table_permission: { key: 'workflow.admin.rbac.table.permission', fallback: 'Permission' },
+  role_sponsor: { key: 'workflow.admin.rbac.role.sponsor', fallback: 'Network Sponsor' },
+  group_packages_shipments: {
+    key: 'workflow.admin.rbac.group.packages_shipments',
+    fallback: 'Packages/Shipments',
+  },
+  group_plots: { key: 'workflow.admin.rbac.group.plots', fallback: 'Plots' },
+  group_farmers: { key: 'workflow.admin.rbac.group.farmers', fallback: 'Farmers' },
+  group_compliance: { key: 'workflow.admin.rbac.group.compliance', fallback: 'Compliance' },
+  group_requests: { key: 'workflow.admin.rbac.group.requests', fallback: 'Requests' },
+  group_reports: { key: 'workflow.admin.rbac.group.reports', fallback: 'Reports' },
+  group_admin: { key: 'workflow.admin.rbac.group.admin', fallback: 'Admin' },
+  perm_packages_view: { key: 'workflow.admin.rbac.perm.packages_view', fallback: 'View Packages' },
+  perm_packages_create: { key: 'workflow.admin.rbac.perm.packages_create', fallback: 'Create Packages' },
+  perm_packages_edit: { key: 'workflow.admin.rbac.perm.packages_edit', fallback: 'Edit Packages' },
+  perm_packages_delete: { key: 'workflow.admin.rbac.perm.packages_delete', fallback: 'Delete Packages' },
+  perm_packages_seal_shipment: {
+    key: 'workflow.admin.rbac.perm.packages_seal_shipment',
+    fallback: 'Seal Shipment',
+  },
+  perm_packages_submit_traces: {
+    key: 'workflow.admin.rbac.perm.packages_submit_traces',
+    fallback: 'Submit to TRACES (importer only)',
+  },
+  perm_packages_approve: { key: 'workflow.admin.rbac.perm.packages_approve', fallback: 'Approve Packages' },
+  perm_plots_view: { key: 'workflow.admin.rbac.perm.plots_view', fallback: 'View Plots' },
+  perm_plots_create: { key: 'workflow.admin.rbac.perm.plots_create', fallback: 'Create Plots' },
+  perm_plots_edit: { key: 'workflow.admin.rbac.perm.plots_edit', fallback: 'Edit Plots' },
+  perm_plots_delete: { key: 'workflow.admin.rbac.perm.plots_delete', fallback: 'Delete Plots' },
+  perm_plots_bulk_upload: { key: 'workflow.admin.rbac.perm.plots_bulk_upload', fallback: 'Bulk Upload' },
+  perm_farmers_view: { key: 'workflow.admin.rbac.perm.farmers_view', fallback: 'View Farmers' },
+  perm_farmers_create: { key: 'workflow.admin.rbac.perm.farmers_create', fallback: 'Create Farmers' },
+  perm_farmers_edit: { key: 'workflow.admin.rbac.perm.farmers_edit', fallback: 'Edit Farmers' },
+  perm_farmers_delete: { key: 'workflow.admin.rbac.perm.farmers_delete', fallback: 'Delete Farmers' },
+  perm_farmers_link_validation: {
+    key: 'workflow.admin.rbac.perm.farmers_link_validation',
+    fallback: 'Link Validation',
+  },
+  perm_compliance_view: { key: 'workflow.admin.rbac.perm.compliance_view', fallback: 'View Compliance' },
+  perm_compliance_run_check: { key: 'workflow.admin.rbac.perm.compliance_run_check', fallback: 'Run Check' },
+  perm_compliance_approve: { key: 'workflow.admin.rbac.perm.compliance_approve', fallback: 'Approve' },
+  perm_compliance_create_issue: {
+    key: 'workflow.admin.rbac.perm.compliance_create_issue',
+    fallback: 'Create Issue',
+  },
+  perm_compliance_resolve_issue: {
+    key: 'workflow.admin.rbac.perm.compliance_resolve_issue',
+    fallback: 'Resolve Issue',
+  },
+  perm_requests_view: { key: 'workflow.admin.rbac.perm.requests_view', fallback: 'View Requests' },
+  perm_requests_create: { key: 'workflow.admin.rbac.perm.requests_create', fallback: 'Create Requests' },
+  perm_requests_send: { key: 'workflow.admin.rbac.perm.requests_send', fallback: 'Send Requests' },
+  perm_requests_respond: { key: 'workflow.admin.rbac.perm.requests_respond', fallback: 'Respond' },
+  perm_reports_view: { key: 'workflow.admin.rbac.perm.reports_view', fallback: 'View Reports' },
+  perm_reports_generate: { key: 'workflow.admin.rbac.perm.reports_generate', fallback: 'Generate' },
+  perm_reports_export: { key: 'workflow.admin.rbac.perm.reports_export', fallback: 'Export' },
+  perm_admin_view: { key: 'workflow.admin.rbac.perm.admin_view', fallback: 'View Admin' },
+  perm_admin_manage_users: {
+    key: 'workflow.admin.rbac.perm.admin_manage_users',
+    fallback: 'Manage Users',
+  },
+  perm_admin_manage_roles: {
+    key: 'workflow.admin.rbac.perm.admin_manage_roles',
+    fallback: 'Manage Roles',
+  },
+  perm_roles_manual_classify: {
+    key: 'workflow.admin.rbac.perm.roles_manual_classify',
+    fallback: 'Manual Role Classification',
+  },
+  legal_roles_title: {
+    key: 'workflow.admin.rbac.legal.roles_title',
+    fallback: 'EUDR Legal Workflow Roles',
+  },
+  legal_roles_subtitle: {
+    key: 'workflow.admin.rbac.legal.roles_subtitle',
+    fallback: "Legal roles are determined per workflow based on the entity's position in the supply chain",
+  },
+  legal_matrix_title: {
+    key: 'workflow.admin.rbac.legal.matrix_title',
+    fallback: 'Legal Workflow Permission Matrix',
+  },
+  legal_matrix_subtitle: {
+    key: 'workflow.admin.rbac.legal.matrix_subtitle',
+    fallback: 'What legal actions each workflow role can perform under EUDR',
+  },
+  no_legal_permissions: {
+    key: 'workflow.admin.rbac.legal.no_permissions',
+    fallback: 'No legal permissions',
+  },
+  legal_perm_submit_dds: { key: 'workflow.admin.rbac.legal_perm.submit_dds', fallback: 'Submit DDS' },
+  legal_perm_submit_simplified_declaration: {
+    key: 'workflow.admin.rbac.legal_perm.submit_simplified_declaration',
+    fallback: 'Submit Simplified Declaration',
+  },
+  legal_perm_retain_reference: {
+    key: 'workflow.admin.rbac.legal_perm.retain_reference',
+    fallback: 'Retain Reference',
+  },
+  legal_perm_downstream_reference: {
+    key: 'workflow.admin.rbac.legal_perm.downstream_reference',
+    fallback: 'Downstream Reference',
+  },
+  legal_perm_trader_retention: {
+    key: 'workflow.admin.rbac.legal_perm.trader_retention',
+    fallback: 'Trader Retention',
+  },
+  legal_perm_acknowledge_liability: {
+    key: 'workflow.admin.rbac.legal_perm.acknowledge_liability',
+    fallback: 'Acknowledge Liability',
+  },
+};
+
+const RBAC_PERMISSION_GROUP_COPY_KEYS = {
+  packages_shipments: 'group_packages_shipments',
+  plots: 'group_plots',
+  farmers: 'group_farmers',
+  compliance: 'group_compliance',
+  requests: 'group_requests',
+  reports: 'group_reports',
+  admin: 'group_admin',
+} as const;
+
+const RBAC_COMMERCIAL_PERMISSION_COPY_KEYS: Record<string, keyof typeof ADMIN_RBAC_COPY> = {
+  'packages:view': 'perm_packages_view',
+  'packages:create': 'perm_packages_create',
+  'packages:edit': 'perm_packages_edit',
+  'packages:delete': 'perm_packages_delete',
+  'packages:seal_shipment': 'perm_packages_seal_shipment',
+  'packages:submit_traces': 'perm_packages_submit_traces',
+  'packages:approve': 'perm_packages_approve',
+  'plots:view': 'perm_plots_view',
+  'plots:create': 'perm_plots_create',
+  'plots:edit': 'perm_plots_edit',
+  'plots:delete': 'perm_plots_delete',
+  'plots:bulk_upload': 'perm_plots_bulk_upload',
+  'farmers:view': 'perm_farmers_view',
+  'farmers:create': 'perm_farmers_create',
+  'farmers:edit': 'perm_farmers_edit',
+  'farmers:delete': 'perm_farmers_delete',
+  'farmers:link_validation': 'perm_farmers_link_validation',
+  'compliance:view': 'perm_compliance_view',
+  'compliance:run_check': 'perm_compliance_run_check',
+  'compliance:approve': 'perm_compliance_approve',
+  'compliance:create_issue': 'perm_compliance_create_issue',
+  'compliance:resolve_issue': 'perm_compliance_resolve_issue',
+  'requests:view': 'perm_requests_view',
+  'requests:create': 'perm_requests_create',
+  'requests:send': 'perm_requests_send',
+  'requests:respond': 'perm_requests_respond',
+  'reports:view': 'perm_reports_view',
+  'reports:generate': 'perm_reports_generate',
+  'reports:export': 'perm_reports_export',
+  'admin:view': 'perm_admin_view',
+  'admin:manage_users': 'perm_admin_manage_users',
+  'admin:manage_roles': 'perm_admin_manage_roles',
+  'roles:manual_classify': 'perm_roles_manual_classify',
+};
+
+const RBAC_LEGAL_PERMISSION_COPY_KEYS: Record<string, keyof typeof ADMIN_RBAC_COPY> = {
+  'legal:submit_dds': 'legal_perm_submit_dds',
+  'legal:submit_simplified_declaration': 'legal_perm_submit_simplified_declaration',
+  'legal:retain_reference': 'legal_perm_retain_reference',
+  'legal:downstream_reference': 'legal_perm_downstream_reference',
+  'legal:trader_retention': 'legal_perm_trader_retention',
+  'legal:acknowledge_liability': 'legal_perm_acknowledge_liability',
+};
+
+export type AdminRbacPermissionGroupId = keyof typeof RBAC_PERMISSION_GROUP_COPY_KEYS;
+
+export function getAdminRbacCopy(
+  key: keyof typeof ADMIN_RBAC_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = ADMIN_RBAC_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getAdminRbacCommercialRoleLabel(role: TenantRole, t?: TranslateFn): string {
+  if (role === 'sponsor') {
+    return getAdminRbacCopy('role_sponsor', t);
+  }
+  return getAdminTenantRoleLabel(role, t);
+}
+
+export function getAdminRbacPermissionGroupLabel(groupId: AdminRbacPermissionGroupId, t?: TranslateFn): string {
+  return getAdminRbacCopy(RBAC_PERMISSION_GROUP_COPY_KEYS[groupId], t);
+}
+
+export function getAdminRbacCommercialPermissionLabel(permKey: string, t?: TranslateFn): string {
+  const copyKey = RBAC_COMMERCIAL_PERMISSION_COPY_KEYS[permKey];
+  if (!copyKey) return permKey;
+  return getAdminRbacCopy(copyKey, t);
+}
+
+export function getAdminRbacLegalPermissionLabel(permKey: string, t?: TranslateFn): string {
+  const copyKey = RBAC_LEGAL_PERMISSION_COPY_KEYS[permKey];
+  if (!copyKey) return permKey.replace('legal:', '');
+  return getAdminRbacCopy(copyKey, t);
+}
+
+export function getOrganizationTypeLabel(
+  value: 'cooperative' | 'exporter' | 'importer' | 'processor' | 'trader' | 'other',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    cooperative: 'workflow.contacts.org_type.cooperative',
+    exporter: 'workflow.contacts.org_type.exporter',
+    importer: 'workflow.contacts.org_type.importer',
+    processor: 'workflow.contacts.org_type.processor',
+    trader: 'workflow.contacts.org_type.trader',
+    other: 'workflow.contacts.org_type.other',
+  } as const;
+  const fallbackMap = {
+    cooperative: 'Cooperative',
+    exporter: 'Exporter',
+    importer: 'Importer',
+    processor: 'Processor',
+    trader: 'Trader',
+    other: 'Other',
+  } as const;
+  return wf(keyMap[value], fallbackMap[value], t);
+}
+
+export function getOrganizationSizeLabel(
+  value: 'micro' | 'small' | 'medium' | 'large',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    micro: 'workflow.contacts.org_size.micro',
+    small: 'workflow.contacts.org_size.small',
+    medium: 'workflow.contacts.org_size.medium',
+    large: 'workflow.contacts.org_size.large',
+  } as const;
+  const fallbackMap = {
+    micro: 'Micro (1-9 employees)',
+    small: 'Small (10-49 employees)',
+    medium: 'Medium (50-249 employees)',
+    large: 'Large (250+ employees)',
+  } as const;
+  return wf(keyMap[value], fallbackMap[value], t);
+}
+
+export function getContactsOrganizationWizardLabel(key: string, t?: TranslateFn): string {
+  const keyMap: Record<string, string> = {
+    step_basic: 'workflow.contacts.org_wizard.step.basic',
+    step_details: 'workflow.contacts.org_wizard.step.details',
+    step_location: 'workflow.contacts.org_wizard.step.location',
+    step_review: 'workflow.contacts.org_wizard.step.review',
+    basic_title: 'workflow.contacts.org_wizard.basic.title',
+    basic_subtitle: 'workflow.contacts.org_wizard.basic.subtitle',
+    details_title: 'workflow.contacts.org_wizard.details.title',
+    details_subtitle: 'workflow.contacts.org_wizard.details.subtitle',
+    location_title: 'workflow.contacts.org_wizard.location.title',
+    location_subtitle: 'workflow.contacts.org_wizard.location.subtitle',
+    review_title: 'workflow.contacts.org_wizard.review.title',
+    review_subtitle: 'workflow.contacts.org_wizard.review.subtitle',
+    field_name: 'workflow.contacts.org_wizard.field.name',
+    field_type: 'workflow.contacts.org_wizard.field.type',
+    field_registration: 'workflow.contacts.org_wizard.field.registration',
+    field_email: 'workflow.contacts.org_wizard.field.email',
+    field_phone: 'workflow.contacts.org_wizard.field.phone',
+    field_website: 'workflow.contacts.org_wizard.field.website',
+    field_size: 'workflow.contacts.org_wizard.field.size',
+    field_commodities: 'workflow.contacts.org_wizard.field.commodities',
+    field_certifications: 'workflow.contacts.org_wizard.field.certifications',
+    field_country: 'workflow.contacts.org_wizard.field.country',
+    field_region: 'workflow.contacts.org_wizard.field.region',
+    field_address: 'workflow.contacts.org_wizard.field.address',
+    field_notes: 'workflow.contacts.org_wizard.field.notes',
+    field_location: 'workflow.contacts.org_wizard.field.location',
+    placeholder_select_type: 'workflow.contacts.org_wizard.placeholder.select_type',
+    placeholder_select_size: 'workflow.contacts.org_wizard.placeholder.select_size',
+    hint_commodities: 'workflow.contacts.org_wizard.hint.commodities',
+    hint_certifications: 'workflow.contacts.org_wizard.hint.certifications',
+    action_cancel: 'workflow.contacts.org_wizard.action.cancel',
+    action_back: 'workflow.contacts.org_wizard.action.back',
+    action_next: 'workflow.contacts.org_wizard.action.next',
+    action_saving: 'workflow.contacts.org_wizard.action.saving',
+    action_save: 'workflow.contacts.org_wizard.action.save',
+    error_create: 'workflow.contacts.org_wizard.error.create',
+  };
+  const fallbackMap: Record<string, string> = {
+    step_basic: 'Basic Info',
+    step_details: 'Details',
+    step_location: 'Location',
+    step_review: 'Review',
+    basic_title: 'Basic Information',
+    basic_subtitle: "Enter the organization's core details",
+    details_title: 'Organization Details',
+    details_subtitle: 'Add more information about the organization',
+    location_title: 'Location Information',
+    location_subtitle: "Specify the organization's location",
+    review_title: 'Review Organization',
+    review_subtitle: 'Verify the information before saving',
+    field_name: 'Organization Name',
+    field_type: 'Organization Type',
+    field_registration: 'Registration Number',
+    field_email: 'Primary Email',
+    field_phone: 'Primary Phone',
+    field_website: 'Website',
+    field_size: 'Organization Size',
+    field_commodities: 'Commodities',
+    field_certifications: 'Certifications',
+    field_country: 'Country',
+    field_region: 'Region / State',
+    field_address: 'Full Address',
+    field_notes: 'Additional Notes',
+    field_location: 'Location',
+    placeholder_select_type: 'Select type',
+    placeholder_select_size: 'Select size',
+    hint_commodities: 'List the primary commodities this organization handles',
+    hint_certifications: 'List any relevant certifications (comma-separated)',
+    action_cancel: 'Cancel',
+    action_back: 'Back',
+    action_next: 'Next',
+    action_saving: 'Saving...',
+    action_save: 'Save Organization',
+    error_create: 'Failed to create organization.',
+  };
+  return wf(keyMap[key] ?? key, fallbackMap[key] ?? key, t);
+}
+
+export function getContactsCsvWizardLabel(key: string, t?: TranslateFn): string {
+  const keyMap: Record<string, string> = {
+    step_upload: 'workflow.contacts.csv.step.upload',
+    step_map: 'workflow.contacts.csv.step.map',
+    step_review: 'workflow.contacts.csv.step.review',
+    step_import: 'workflow.contacts.csv.step.import',
+    title_upload: 'workflow.contacts.csv.title.upload',
+    desc_upload_contacts: 'workflow.contacts.csv.desc.upload_contacts',
+    desc_upload_organizations: 'workflow.contacts.csv.desc.upload_organizations',
+    dropzone_title: 'workflow.contacts.csv.dropzone.title',
+    dropzone_subtitle: 'workflow.contacts.csv.dropzone.subtitle',
+    download_template: 'workflow.contacts.csv.action.download_template',
+    requirements_title: 'workflow.contacts.csv.requirements.title',
+    requirements_headers: 'workflow.contacts.csv.requirements.headers',
+    requirements_delimiter: 'workflow.contacts.csv.requirements.delimiter',
+    requirements_required: 'workflow.contacts.csv.requirements.required',
+    requirements_max_rows: 'workflow.contacts.csv.requirements.max_rows',
+    title_map: 'workflow.contacts.csv.title.map',
+    desc_map: 'workflow.contacts.csv.desc.map',
+    map_required_warning: 'workflow.contacts.csv.map.required_warning',
+    csv_column: 'workflow.contacts.csv.map.csv_column',
+    sample: 'workflow.contacts.csv.map.sample',
+    sample_empty: 'workflow.contacts.csv.map.sample_empty',
+    map_to_field: 'workflow.contacts.csv.map.to_field',
+    title_review: 'workflow.contacts.csv.title.review',
+    desc_review: 'workflow.contacts.csv.desc.review',
+    validation_errors: 'workflow.contacts.csv.validation.title',
+    row_prefix: 'workflow.contacts.csv.validation.row_prefix',
+    and_more: 'workflow.contacts.csv.validation.and_more',
+    table_status: 'workflow.contacts.csv.table.status',
+    status_error: 'workflow.contacts.csv.table.status_error',
+    status_ready: 'workflow.contacts.csv.table.status_ready',
+    status_skipped: 'workflow.contacts.csv.table.status_skipped',
+    showing_first: 'workflow.contacts.csv.table.showing_first',
+    title_complete: 'workflow.contacts.csv.title.complete',
+    desc_complete_contacts: 'workflow.contacts.csv.desc.complete_contacts',
+    desc_complete_organizations: 'workflow.contacts.csv.desc.complete_organizations',
+    success_count: 'workflow.contacts.csv.summary.success',
+    failed_count: 'workflow.contacts.csv.summary.failed',
+    import_errors: 'workflow.contacts.csv.summary.errors',
+    action_cancel: 'workflow.contacts.csv.action.cancel',
+    action_back: 'workflow.contacts.csv.action.back',
+    action_next: 'workflow.contacts.csv.action.next',
+    action_importing: 'workflow.contacts.csv.action.importing',
+    action_import_records: 'workflow.contacts.csv.action.import_records',
+    action_done: 'workflow.contacts.csv.action.done',
+    error_upload_csv: 'workflow.contacts.csv.error.upload_csv',
+    error_empty_csv: 'workflow.contacts.csv.error.empty_csv',
+    error_read_file: 'workflow.contacts.csv.error.read_file',
+    error_import_failed: 'workflow.contacts.csv.error.import_failed',
+  };
+  const fallbackMap: Record<string, string> = {
+    step_upload: 'Upload File',
+    step_map: 'Map Fields',
+    step_review: 'Review',
+    step_import: 'Import',
+    title_upload: 'Upload CSV File',
+    desc_upload_contacts: 'Upload a CSV file with contact data',
+    desc_upload_organizations: 'Upload a CSV file with organization data',
+    dropzone_title: 'Drag and drop your CSV file here',
+    dropzone_subtitle: 'or click to browse',
+    download_template: 'Download Template',
+    requirements_title: 'CSV Requirements',
+    requirements_headers: 'First row should contain column headers',
+    requirements_delimiter: 'Use comma (,) as the delimiter',
+    requirements_required: 'Required fields:',
+    requirements_max_rows: 'Maximum 1,000 rows per import',
+    title_map: 'Map Fields',
+    desc_map: 'Match your CSV columns to the correct fields',
+    map_required_warning: 'Please map all required fields:',
+    csv_column: 'CSV Column',
+    sample: 'Sample:',
+    sample_empty: '(empty)',
+    map_to_field: 'Map to Field',
+    title_review: 'Review Data',
+    desc_review: 'Select the rows you want to import',
+    validation_errors: 'Validation Errors',
+    row_prefix: 'Row',
+    and_more: '...and {{count}} more errors',
+    table_status: 'Status',
+    status_error: 'Error',
+    status_ready: 'Ready',
+    status_skipped: 'Skipped',
+    showing_first: 'Showing first {{shown}} of {{total}} rows',
+    title_complete: 'Import Complete',
+    desc_complete_contacts: '{{count}} contacts imported successfully',
+    desc_complete_organizations: '{{count}} organizations imported successfully',
+    success_count: 'Successfully imported',
+    failed_count: 'Failed to import',
+    import_errors: 'Import Errors',
+    action_cancel: 'Cancel',
+    action_back: 'Back',
+    action_next: 'Next',
+    action_importing: 'Importing...',
+    action_import_records: 'Import {{count}} Records',
+    action_done: 'Done',
+    error_upload_csv: 'Please upload a CSV file.',
+    error_empty_csv: 'The CSV file appears to be empty.',
+    error_read_file: 'Failed to read the file. Please try again.',
+    error_import_failed: 'Import failed. Please try again.',
+  };
+  return wf(keyMap[key] ?? key, fallbackMap[key] ?? key, t);
+}
+
+type FlatCopyEntry = { key: string; fallback: string; cooperativeFallback?: string };
+
+function flattenCopyRegistry(registry: Record<string, FlatCopyEntry>): Record<string, string> {
+  const manifest: Record<string, string> = {};
+  for (const entry of Object.values(registry)) {
+    manifest[entry.key] = entry.fallback;
+  }
+  return manifest;
+}
+
+function flattenSignupPrimaryRoleCopy(): Record<string, string> {
+  const manifest: Record<string, string> = {};
+  for (const entry of Object.values(SIGNUP_PRIMARY_ROLE_COPY)) {
+    manifest[entry.labelKey] = entry.labelFallback;
+    manifest[entry.descriptionKey] = entry.descriptionFallback;
+  }
+  return manifest;
+}
+
+function flattenOnboardingChecklistTaskCopy(): Record<string, string> {
+  const manifest: Record<string, string> = {};
+  for (const task of Object.values(ONBOARDING_CHECKLIST_TASK_COPY)) {
+    manifest[task.label.key] = task.label.fallback;
+    manifest[task.description.key] = task.description.fallback;
+    manifest[task.cta.key] = task.cta.fallback;
+  }
+  return manifest;
+}
+
+function flattenNotificationCapabilityCopy(): Record<string, string> {
+  const manifest: Record<string, string> = {};
+  for (const capability of Object.values(NOTIFICATION_CAPABILITY_COPY)) {
+    manifest[capability.title.key] = capability.title.fallback;
+    manifest[capability.description.key] = capability.description.fallback;
+    if (capability.note) {
+      manifest[capability.note.key] = capability.note.fallback;
+    }
+  }
+  return manifest;
+}
+
+/** All workflow helper keys with English fallbacks — used for en.json parity CI. */
+export function collectWorkflowTerminologyCopyManifest(): Record<string, string> {
+  return {
+    ...WORKFLOW_LABELS,
+    ...flattenCopyRegistry(PRODUCER_DETAIL_COPY),
+    ...flattenCopyRegistry(PRODUCER_CONSENT_COPY),
+    ...flattenCopyRegistry(PRODUCER_CONSENT_STATUS_COPY),
+    ...flattenCopyRegistry(APP_CHROME_COPY),
+    ...flattenCopyRegistry(AUTH_COPY),
+    ...flattenCopyRegistry(SIGNUP_COPY),
+    ...flattenSignupPrimaryRoleCopy(),
+    ...flattenCopyRegistry(SIGNUP_COMMODITY_COPY),
+    ...flattenCopyRegistry(SIGNUP_OBJECTIVE_COPY),
+    ...flattenCopyRegistry(ONBOARDING_CHECKLIST_SHELL_COPY),
+    ...flattenOnboardingChecklistTaskCopy(),
+    ...flattenCopyRegistry(SETTINGS_COPY),
+    ...flattenCopyRegistry(SUPPLY_CHAIN_ROLE_LABEL_COPY),
+    ...flattenCopyRegistry(SUPPLY_CHAIN_ROLE_DESC_COPY),
+    ...flattenCopyRegistry(SUPPLY_CHAIN_PRESET_COPY),
+    ...flattenCopyRegistry(SPONSOR_PANEL_COPY),
+    ...flattenCopyRegistry(ONBOARDING_WELCOME_COPY),
+    ...flattenCopyRegistry(WELCOME_CARD_COPY),
+    ...ONBOARDING_WELCOME_HIGHLIGHT_FALLBACKS,
+    ...WELCOME_CARD_HIGHLIGHT_FALLBACKS,
+    ...flattenCopyRegistry(ONBOARDING_TOUR_COPY),
+    ...flattenCopyRegistry(SETTINGS_PAGE_COPY),
+    ...flattenNotificationCapabilityCopy(),
+    ...flattenCopyRegistry(ASYNC_STATE_SHELL_COPY),
+    ...flattenCopyRegistry(ADMIN_DIAGNOSTICS_COPY),
+    ...flattenCopyRegistry(ADMIN_ENTITLEMENTS_COPY),
+    ...flattenCopyRegistry(ADMIN_EUDR_DDS_COPY),
+    ...flattenCopyRegistry(ADMIN_WEBHOOK_COPY),
+    ...flattenCopyRegistry(ADMIN_RBAC_COPY),
+  };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,8 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LocaleContext } from '@/lib/locale-context';
+import { getAppChromeCopy, getAuthCopy } from '@/lib/workflow-terminology-labels';
 
 type ConfirmStatus = 'loading' | 'success' | 'sign_in_required' | 'error';
 
@@ -17,10 +19,12 @@ function parseHashParams(hash: string): Record<string, string> {
 }
 
 export default function AuthConfirmPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const router = useRouter();
   const { hydrateSessionFromToken, isAuthenticated } = useAuth();
   const [status, setStatus] = useState<ConfirmStatus>('loading');
-  const [detail, setDetail] = useState<string | null>(null);
+  const [providerError, setProviderError] = useState<string | null>(null);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -30,7 +34,7 @@ export default function AuthConfirmPage() {
     const errorDescription = search.get('error_description') ?? hashParams.error_description;
     if (error) {
       setStatus('error');
-      setDetail(errorDescription ?? error);
+      setProviderError(errorDescription ?? error);
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
@@ -40,36 +44,35 @@ export default function AuthConfirmPage() {
     if (accessToken) {
       hydrateSessionFromToken(accessToken);
       setStatus('success');
-      setDetail('Your email is confirmed. Continue setup or open your dashboard.');
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
 
-    // PKCE / code-based redirects confirm the email but need password sign-in here.
     if (search.get('code')) {
       setStatus('sign_in_required');
-      setDetail('Your email is confirmed. Sign in with the password you chose during signup.');
       window.history.replaceState(null, '', window.location.pathname);
       return;
     }
 
     setStatus('error');
-    setDetail(
-      'This confirmation link is invalid or has expired. Sign in if you already confirmed, or create a new workspace.',
-    );
   }, [hydrateSessionFromToken]);
+
+  const detail = useMemo(() => {
+    if (status === 'loading') return getAuthCopy('confirm_loading_wait', t);
+    if (providerError) return providerError;
+    if (status === 'success') return getAuthCopy('confirm_success_session', t);
+    if (status === 'sign_in_required') return getAuthCopy('confirm_sign_in_required_detail', t);
+    return getAuthCopy('confirm_link_invalid', t);
+  }, [status, providerError, t]);
 
   const title =
     status === 'loading'
-      ? 'Confirming your email'
-      : status === 'success'
-        ? 'Email confirmed'
-        : status === 'sign_in_required'
-          ? 'Email confirmed'
-          : 'Confirmation problem';
+      ? getAuthCopy('confirm_loading_title', t)
+      : status === 'error'
+        ? getAuthCopy('confirm_problem_title', t)
+        : getAuthCopy('confirm_success_title', t);
 
-  const Icon =
-    status === 'loading' ? Loader2 : status === 'error' ? AlertCircle : CheckCircle2;
+  const Icon = status === 'loading' ? Loader2 : status === 'error' ? AlertCircle : CheckCircle2;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -77,13 +80,13 @@ export default function AuthConfirmPage() {
         <div className="mb-8 flex flex-col items-center">
           <Image
             src="/tracebud-logo-v6.png"
-            alt="Tracebud"
+            alt={getAuthCopy('logo_alt', t)}
             width={64}
             height={64}
             className="mb-4 rounded-xl"
           />
-          <h1 className="text-2xl font-bold text-[#064E3B]">Tracebud</h1>
-          <p className="text-sm text-muted-foreground">EUDR Compliance Platform</p>
+          <h1 className="text-2xl font-bold text-[#064E3B]">{getAppChromeCopy('mobile_brand', t)}</h1>
+          <p className="text-sm text-muted-foreground">{getAuthCopy('eudr_platform_tagline', t)}</p>
         </div>
 
         <Card className="border-border bg-card">
@@ -94,29 +97,29 @@ export default function AuthConfirmPage() {
               />
               {title}
             </CardTitle>
-            <CardDescription>
-              {status === 'loading' ? 'Please wait while we verify your link.' : detail}
-            </CardDescription>
+            <CardDescription>{detail}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             {status === 'success' && isAuthenticated ? (
               <>
                 <Button className="w-full" onClick={() => router.push('/create-account')}>
-                  Continue workspace setup
+                  {getAuthCopy('confirm_continue_setup', t)}
                 </Button>
                 <Button variant="outline" className="w-full" onClick={() => router.push('/')}>
-                  Go to dashboard
+                  {getAuthCopy('confirm_go_dashboard', t)}
                 </Button>
               </>
             ) : null}
             {(status === 'sign_in_required' || status === 'error') && (
               <Button className="w-full" asChild>
-                <Link href={status === 'sign_in_required' ? '/login?confirmed=1' : '/login'}>Sign in</Link>
+                <Link href={status === 'sign_in_required' ? '/login?confirmed=1' : '/login'}>
+                  {getAuthCopy('confirm_sign_in_cta', t)}
+                </Link>
               </Button>
             )}
             {status === 'error' ? (
               <Button variant="outline" className="w-full" asChild>
-                <Link href="/create-account">Create workspace</Link>
+                <Link href="/create-account">{getAuthCopy('confirm_create_workspace_cta', t)}</Link>
               </Button>
             ) : null}
           </CardContent>

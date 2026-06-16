@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { TenantRole, User } from '@/types';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
 import {
   defaultSupplyChainRoleForSignupPrimary,
   ensurePrimaryInSupplyChainRoles,
@@ -15,6 +16,13 @@ import {
   type SupplyChainRoleId,
 } from '@/lib/org-supply-chain-roles';
 import { SupplyChainRolePicker } from '@/components/settings/supply-chain-role-picker';
+import {
+  getAuthCopy,
+  getSignupCommodityOptions,
+  getSignupCopy,
+  getSignupWizardObjectiveOptions,
+  getSignupWizardPrimaryRoleOptions,
+} from '@/lib/workflow-terminology-labels';
 
 type PrimaryRole = 'importer' | 'exporter' | 'cooperative' | 'compliance_manager' | 'admin';
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
@@ -41,24 +49,9 @@ function readApiError(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-const objectiveOptions: Array<{ value: PrimaryObjective; label: string }> = [
-  { value: 'prepare_first_due_diligence_package', label: 'Prepare first due diligence package' },
-  { value: 'supplier_onboarding', label: 'Supplier onboarding' },
-  { value: 'risk_screening', label: 'Risk screening' },
-  { value: 'audit_readiness', label: 'Audit readiness' },
-];
-
-const eudrCommodityOptions = [
-  { value: 'coffee', label: 'Coffee' },
-  { value: 'cocoa', label: 'Cocoa' },
-  { value: 'soy', label: 'Soy' },
-  { value: 'cattle', label: 'Cattle' },
-  { value: 'oil_palm', label: 'Oil palm' },
-  { value: 'rubber', label: 'Rubber' },
-  { value: 'wood', label: 'Wood' },
-];
-
 export function CreateAccountWizard() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const router = useRouter();
   const { hydrateSessionFromToken } = useAuth();
   const [step, setStep] = useState(1);
@@ -78,14 +71,22 @@ export function CreateAccountWizard() {
   const [exporterSuppliers, setExporterSuppliers] = useState('');
   const [exporterImporters, setExporterImporters] = useState('');
   const [importerSuppliers, setImporterSuppliers] = useState('');
-  const [mainCommodity, setMainCommodity] = useState(eudrCommodityOptions[0].value);
+  const commodityOptions = useMemo(() => getSignupCommodityOptions(t), [t]);
+  const [mainCommodity, setMainCommodity] = useState('coffee');
+  const objectiveOptions = useMemo(() => getSignupWizardObjectiveOptions(t), [t]);
+  const primaryRoleOptions = useMemo(() => getSignupWizardPrimaryRoleOptions(t), [t]);
   const [primaryObjective, setPrimaryObjective] =
     useState<PrimaryObjective>('prepare_first_due_diligence_package');
   const [supplyChainRoles, setSupplyChainRoles] = useState<SupplyChainRoleId[]>(['exporter']);
 
   useEffect(() => {
+    if (commodityOptions.length > 0 && !commodityOptions.some((option) => option.value === mainCommodity)) {
+      setMainCommodity(commodityOptions[0].value);
+    }
+  }, [commodityOptions, mainCommodity]);
+
+  useEffect(() => {
     void emitEvent('create_workspace_value_viewed', { source: 'create_account_step_1' });
-    // Fire impression once on first paint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,7 +111,6 @@ export function CreateAccountWizard() {
   };
 
   const toApiPrimaryRole = (role: PrimaryRole): ApiPrimaryRole => {
-    // Backend commercial-profile schema currently persists canonical commercial roles only.
     if (role === 'cooperative') return 'exporter';
     return role;
   };
@@ -136,7 +136,7 @@ export function CreateAccountWizard() {
         msg?: string;
       };
       if (!response.ok) {
-        throw new Error(readApiError(payload, 'Unable to create account.'));
+        throw new Error(readApiError(payload, getSignupCopy('error_create_account', t)));
       }
       if (payload.accessToken) {
         hydrateSessionFromToken(payload.accessToken, payload.refreshToken);
@@ -144,7 +144,9 @@ export function CreateAccountWizard() {
       setSignupResult(payload);
       setStep(2);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to create account.');
+      setError(
+        submitError instanceof Error ? submitError.message : getSignupCopy('error_create_account', t),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -177,7 +179,7 @@ export function CreateAccountWizard() {
         error?: string;
       };
       if (!response.ok) {
-        throw new Error(readApiError(payload, 'Unable to complete workspace setup.'));
+        throw new Error(readApiError(payload, getSignupCopy('error_complete_workspace', t)));
       }
       const rolesResponse = await fetch('/api/launch/supply-chain-roles', {
         method: 'PATCH',
@@ -193,7 +195,9 @@ export function CreateAccountWizard() {
       applyRoleToStoredUser(primaryRole);
       setStep(3);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to complete workspace setup.');
+      setError(
+        submitError instanceof Error ? submitError.message : getSignupCopy('error_complete_workspace', t),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -277,63 +281,63 @@ export function CreateAccountWizard() {
   return (
     <Card className="border-border bg-card">
       <CardHeader className="space-y-2">
-        <CardTitle className="text-xl">Create your Tracebud workspace</CardTitle>
-        <CardDescription>
-          Step {step} of 3 - fast setup, then immediate first-value onboarding.
-        </CardDescription>
+        <CardTitle className="text-xl">{getSignupCopy('legacy_wizard_title', t)}</CardTitle>
+        <CardDescription>{getSignupCopy('legacy_wizard_progress', t, { step })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {step === 1 ? (
           <>
             <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              Start your EUDR-ready workspace in under 2 minutes. No credit card required. 30-day trial.
+              {getSignupCopy('legacy_value_banner', t)}
             </div>
             <form className="space-y-4" onSubmit={handleStepOneSubmit}>
               <div className="space-y-2">
                 <label htmlFor="workEmail" className="text-sm font-medium">
-                  Work email
+                  {getAuthCopy('field_work_email', t)}
                 </label>
                 <Input
                   id="workEmail"
                   type="email"
                   value={workEmail}
                   onChange={(event) => setWorkEmail(event.target.value)}
-                  placeholder="you@company.com"
+                  placeholder={getAuthCopy('placeholder_email', t)}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {getAuthCopy('field_password', t)}
                 </label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Create a secure password"
+                  placeholder={getSignupCopy('placeholder_password_create', t)}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <label htmlFor="fullName" className="text-sm font-medium">
-                  Full name
+                  {getAuthCopy('field_full_name', t)}
                 </label>
                 <Input
                   id="fullName"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
-                  placeholder="Jane Doe"
+                  placeholder={getSignupCopy('placeholder_full_name_short', t)}
                   required
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating workspace...' : 'Create workspace'}
+                {isSubmitting
+                  ? getSignupCopy('creating_workspace', t)
+                  : getSignupCopy('submit_create_workspace', t)}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
+                {getAuthCopy('already_have_account', t)}{' '}
                 <Link href="/login" className="font-medium text-primary hover:underline">
-                  Sign in
+                  {getAuthCopy('sign_in', t)}
                 </Link>
               </p>
             </form>
@@ -344,31 +348,31 @@ export function CreateAccountWizard() {
           <form className="space-y-4" onSubmit={handleWorkspaceSetup}>
             <div className="space-y-2">
               <label htmlFor="organizationName" className="text-sm font-medium">
-                Organization name
+                {getSignupCopy('field_organization', t)}
               </label>
               <Input
                 id="organizationName"
                 value={organizationName}
                 onChange={(event) => setOrganizationName(event.target.value)}
-                placeholder="Tracebud Imports Ltd"
+                placeholder={getSignupCopy('placeholder_organization', t)}
                 required
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="country" className="text-sm font-medium">
-                Country
+                {getSignupCopy('field_country', t)}
               </label>
               <Input
                 id="country"
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
-                placeholder="France"
+                placeholder={getSignupCopy('placeholder_country_example', t)}
                 required
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="primaryRole" className="text-sm font-medium">
-                Primary role
+                {getSignupCopy('field_primary_role', t)}
               </label>
               <select
                 id="primaryRole"
@@ -377,23 +381,25 @@ export function CreateAccountWizard() {
                   const role = event.target.value as PrimaryRole;
                   setPrimaryRole(role);
                   setSupplyChainRoles((current) =>
-                    ensurePrimaryInSupplyChainRoles(role, current.length > 0 ? current : [defaultSupplyChainRoleForSignupPrimary(role)]),
+                    ensurePrimaryInSupplyChainRoles(
+                      role,
+                      current.length > 0 ? current : [defaultSupplyChainRoleForSignupPrimary(role)],
+                    ),
                   );
                 }}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="importer">Importer</option>
-                <option value="exporter">Exporter</option>
-                <option value="cooperative">Supplier (cooperative)</option>
-                <option value="compliance_manager">Compliance manager</option>
-                <option value="admin">Admin</option>
+                {primaryRoleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Supply chain roles performed by this organisation</p>
+              <p className="text-sm font-medium">{getSignupCopy('supply_chain_roles_title', t)}</p>
               <p className="text-xs text-muted-foreground">
-                Select every workflow you run in one tenant — e.g. cooperative + exporter, or exporter + importer for a
-                vertically integrated brand.
+                {getSignupCopy('supply_chain_roles_hint_examples', t)}
               </p>
               <SupplyChainRolePicker
                 selected={supplyChainRoles}
@@ -403,10 +409,10 @@ export function CreateAccountWizard() {
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={isSubmitting}>
-                Back
+                {getSignupCopy('back', t)}
               </Button>
               <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving setup...' : 'Continue'}
+                {isSubmitting ? getSignupCopy('saving_setup', t) : getSignupCopy('continue', t)}
               </Button>
             </div>
           </form>
@@ -423,13 +429,13 @@ export function CreateAccountWizard() {
             {primaryRole === 'cooperative' ? (
               <div className="space-y-2">
                 <label htmlFor="cooperativeMembers" className="text-sm font-medium">
-                  Number of members (optional)
+                  {getSignupCopy('field_members_optional', t)}
                 </label>
                 <Input
                   id="cooperativeMembers"
                   value={cooperativeMembers}
                   onChange={(event) => setCooperativeMembers(event.target.value)}
-                  placeholder="120"
+                  placeholder={getSignupCopy('number_placeholder', t)}
                 />
               </div>
             ) : null}
@@ -437,7 +443,7 @@ export function CreateAccountWizard() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label htmlFor="exporterSuppliers" className="text-sm font-medium">
-                    Number of suppliers (optional)
+                    {getSignupCopy('field_suppliers_optional', t)}
                   </label>
                   <Input
                     id="exporterSuppliers"
@@ -448,7 +454,7 @@ export function CreateAccountWizard() {
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="exporterImporters" className="text-sm font-medium">
-                    Number of importers (optional)
+                    {getSignupCopy('field_importers_optional', t)}
                   </label>
                   <Input
                     id="exporterImporters"
@@ -462,7 +468,7 @@ export function CreateAccountWizard() {
             {primaryRole === 'importer' ? (
               <div className="space-y-2">
                 <label htmlFor="importerSuppliers" className="text-sm font-medium">
-                  Number of suppliers (optional)
+                  {getSignupCopy('field_suppliers_optional', t)}
                 </label>
                 <Input
                   id="importerSuppliers"
@@ -474,7 +480,7 @@ export function CreateAccountWizard() {
             ) : null}
             <div className="space-y-2">
               <label htmlFor="mainCommodity" className="text-sm font-medium">
-                Main commodity (optional)
+                {getSignupCopy('field_main_commodity_optional', t)}
               </label>
               <select
                 id="mainCommodity"
@@ -482,7 +488,7 @@ export function CreateAccountWizard() {
                 onChange={(event) => setMainCommodity(event.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                {eudrCommodityOptions.map((option) => (
+                {commodityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -491,7 +497,7 @@ export function CreateAccountWizard() {
             </div>
             <div className="space-y-2">
               <label htmlFor="primaryObjective" className="text-sm font-medium">
-                Primary objective
+                {getSignupCopy('field_primary_objective', t)}
               </label>
               <select
                 id="primaryObjective"
@@ -508,10 +514,10 @@ export function CreateAccountWizard() {
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => void saveCommercialProfile(true)} disabled={isSubmitting}>
-                Skip for now
+                {getSignupCopy('skip_for_now', t)}
               </Button>
               <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Continue to dashboard'}
+                {isSubmitting ? getSignupCopy('saving', t) : getSignupCopy('continue_to_dashboard', t)}
               </Button>
             </div>
           </form>

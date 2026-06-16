@@ -17,7 +17,14 @@ const PREFIXES = [
   'workflow.sla.',
   'workflow.integrations.',
   'workflow.role_decisions.',
+  'workflow.help.',
+  'workflow.compliance_health.',
+  'workflow.admin.',
+  'workflow.producers.',
+  'workflow.organisations.',
   'workflow.reports.',
+  'workflow.contacts.',
+  'workflow.role_decisions.role_description.',
   'workflow.async.issues.',
 ];
 

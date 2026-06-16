@@ -272,7 +272,7 @@ describe('AdminPage DDS status last-error accessibility labels', () => {
 
     await waitFor(() => {
       expect(screen.getByText('dashboard_exports')).toBeInTheDocument();
-      expect(screen.getByText('enabled')).toBeInTheDocument();
+      expect(screen.getByText('Enabled')).toBeInTheDocument();
       expect(toastSuccess).toHaveBeenCalledWith('Launch entitlements loaded.');
     });
   });
@@ -340,7 +340,7 @@ describe('AdminPage DDS status last-error accessibility labels', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
     await waitFor(() => {
-      expect(screen.getByText('disabled')).toBeInTheDocument();
+      expect(screen.getByText('Disabled')).toBeInTheDocument();
       expect(toastSuccess).toHaveBeenCalledWith('Updated entitlement: dashboard_exports -> disabled.');
     });
   });

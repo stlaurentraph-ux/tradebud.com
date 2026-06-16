@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   useCallback,
+  useContext,
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -31,6 +32,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useOnboarding } from '@/lib/onboarding-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getOnboardingTourContextualAction,
+  getOnboardingTourCopy,
+} from '@/lib/workflow-terminology-labels';
 
 // ─────────────────────────────────────────────────────────────
 // Icon resolver
@@ -71,6 +77,8 @@ const TOOLTIP_WIDTH = 416;
 // ─────────────────────────────────────────────────────────────
 
 export function GuidedTourOverlay() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -199,13 +207,7 @@ export function GuidedTourOverlay() {
 
   const isCompleted = completedSteps[step.key] ?? false;
   const isLastStep = currentStepIndex === totalSteps - 1;
-  const contextualActionLabelByStep: Record<string, string> = {
-    coop_members: 'Add member',
-    coop_field_operations: 'Open field queues',
-    imp_network: 'Add contact',
-    imp_campaigns: 'Start campaign',
-  };
-  const contextualActionLabel = contextualActionLabelByStep[step.key];
+  const contextualActionLabel = step ? getOnboardingTourContextualAction(step.key, t) : null;
 
   // ─────────────────────────────────────────────────────────────
   // SVG cut-out spotlight mask
@@ -234,7 +236,11 @@ export function GuidedTourOverlay() {
       className="fixed inset-0 z-[9000]"
       role="dialog"
       aria-modal="true"
-      aria-label={`Onboarding step ${currentStepIndex + 1} of ${totalSteps}: ${step.title}`}
+      aria-label={getOnboardingTourCopy('aria_step', t, {
+        current: currentStepIndex + 1,
+        total: totalSteps,
+        title: step.title,
+      })}
     >
       {/* Overlay backdrop with cut-out */}
       {spotlightClipPath ? (
@@ -286,7 +292,7 @@ export function GuidedTourOverlay() {
             </div>
             <div>
               <div className="text-xs font-medium text-muted-foreground">
-                Step {currentStepIndex + 1} of {totalSteps}
+                {getOnboardingTourCopy('step_of', t, { current: currentStepIndex + 1, total: totalSteps })}
               </div>
               <div className="text-sm font-semibold text-foreground leading-snug">{step.title}</div>
             </div>
@@ -295,7 +301,7 @@ export function GuidedTourOverlay() {
             type="button"
             onClick={skipTour}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Skip tour"
+            aria-label={getOnboardingTourCopy('skip_aria', t)}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -308,7 +314,9 @@ export function GuidedTourOverlay() {
           {/* Progress bar */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{completedCount} of {totalSteps} steps done</span>
+              <span>
+                {getOnboardingTourCopy('progress_done', t, { completed: completedCount, total: totalSteps })}
+              </span>
               <span>{progress}%</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -328,11 +336,11 @@ export function GuidedTourOverlay() {
             isCompleted ? (
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-700">
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                Action completed — continue to next step
+                {getOnboardingTourCopy('action_completed', t)}
               </div>
             ) : (
               <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
-                Complete the action on this page, then click &ldquo;Next&rdquo; to proceed.
+                {getOnboardingTourCopy('action_pending', t)}
               </div>
             )
           ) : null}
@@ -345,10 +353,10 @@ export function GuidedTourOverlay() {
             size="sm"
             onClick={handleBack}
             className="gap-1 text-xs"
-            aria-label={isFirstStep ? 'Back to welcome' : 'Previous step'}
+            aria-label={isFirstStep ? getOnboardingTourCopy('back_welcome_aria', t) : getOnboardingTourCopy('prev_aria', t)}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back
+            {getOnboardingTourCopy('back', t)}
           </Button>
 
           <div className="flex items-center justify-end gap-2">
@@ -362,16 +370,16 @@ export function GuidedTourOverlay() {
             {/* Next / Done */}
             {step.requiresAction && !isCompleted ? (
               <Button size="sm" className="text-xs" onClick={completeCurrentStep}>
-                Next
+                {getOnboardingTourCopy('next', t)}
               </Button>
             ) : isLastStep ? (
               <Button size="sm" className="gap-1 text-xs" onClick={completeCurrentStep}>
-                Finish tour
+                {getOnboardingTourCopy('finish', t)}
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </Button>
             ) : (
               <Button size="sm" className="gap-1 text-xs" onClick={completeCurrentStep}>
-                Next
+                {getOnboardingTourCopy('next', t)}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             )}
@@ -386,7 +394,7 @@ export function GuidedTourOverlay() {
           onClick={skipTour}
           className="rounded-full bg-white/10 px-4 py-1.5 text-xs text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
-          Skip tour — continue later
+          {getOnboardingTourCopy('skip_bottom', t)}
         </button>
       </div>
     </div>,

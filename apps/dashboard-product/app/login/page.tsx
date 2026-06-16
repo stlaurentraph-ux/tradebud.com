@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -9,8 +9,12 @@ import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LocaleContext } from '@/lib/locale-context';
+import { getAuthCopy } from '@/lib/workflow-terminology-labels';
 
 export default function LoginPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +29,9 @@ export default function LoginPage() {
   const emailConfirmed = searchParams.get('confirmed') === '1';
   const intentLabel =
     intent === 'accept'
-      ? 'accept this request'
+      ? getAuthCopy('intent_accept', t)
       : intent === 'refuse'
-        ? 'refuse this request'
+        ? getAuthCopy('intent_refuse', t)
         : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,9 +64,9 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
       if (message.toLowerCase().includes('invalid login credentials')) {
-        setError('Incorrect email or password. Check your credentials or reset your password below.');
+        setError(getAuthCopy('error_invalid_credentials', t));
       } else if (message.toLowerCase().includes('email not confirmed')) {
-        setError('Confirm your email using the link we sent you, then sign in again.');
+        setError(getAuthCopy('error_email_not_confirmed', t));
       } else {
         setError(message);
       }
@@ -76,13 +80,13 @@ export default function LoginPage() {
     setNotice(null);
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError('Enter your email address above, then choose forgot password.');
+      setError(getAuthCopy('error_forgot_password_email', t));
       return;
     }
 
     const client = getSupabaseBrowserClient();
     if (!client) {
-      setError('Password reset is unavailable in this environment. Contact support@tracebud.com.');
+      setError(getAuthCopy('error_reset_unavailable', t));
       return;
     }
 
@@ -98,9 +102,9 @@ export default function LoginPage() {
       if (resetError) {
         throw resetError;
       }
-      setNotice(`If an account exists for ${trimmedEmail}, a password reset link is on its way.`);
+      setNotice(getAuthCopy('reset_notice', t, { email: trimmedEmail }));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not send password reset email.');
+      setError(err instanceof Error ? err.message : getAuthCopy('error_reset_send', t));
     } finally {
       setIsResettingPassword(false);
     }
@@ -109,7 +113,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="mb-8 flex flex-col items-center">
           <Image
             src="/tracebud-logo-v6.png"
@@ -119,35 +122,23 @@ export default function LoginPage() {
             className="rounded-xl mb-4"
           />
           <h1 className="text-2xl font-bold text-[#064E3B]">Tracebud</h1>
-          <p className="text-sm text-muted-foreground">EUDR Compliance Platform</p>
+          <p className="text-sm text-muted-foreground">{getAuthCopy('eudr_platform_tagline', t)}</p>
         </div>
 
         <Card className="border-border bg-card">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">Sign in to your account</CardTitle>
-            <CardDescription>
-              Enter your credentials to access your Tracebud workspace
-            </CardDescription>
+            <CardTitle className="text-xl">{getAuthCopy('login_title', t)}</CardTitle>
+            <CardDescription>{getAuthCopy('login_subtitle', t)}</CardDescription>
             {emailConfirmed ? (
               <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                Your email is confirmed. Sign in with your password to continue.
+                {getAuthCopy('email_confirmed', t)}
               </div>
             ) : null}
             {intentLabel ? (
               <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
                 {recorded
-                  ? (
-                    <>
-                      Your email action to <strong>{intentLabel}</strong> was recorded. Sign in to continue your
-                      compliance workflow.
-                    </>
-                  )
-                  : (
-                    <>
-                      You clicked an email action to <strong>{intentLabel}</strong>. Sign in to confirm and continue
-                      your compliance workflow.
-                    </>
-                  )}
+                  ? getAuthCopy('intent_recorded', t, { intent: intentLabel })
+                  : getAuthCopy('intent_pending', t, { intent: intentLabel })}
               </div>
             ) : null}
           </CardHeader>
@@ -155,12 +146,12 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Email
+                  {getAuthCopy('field_email', t)}
                 </label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@company.com"
+                  placeholder={getAuthCopy('placeholder_email', t)}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-secondary"
@@ -170,7 +161,7 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="text-sm font-medium text-foreground">
-                    Password
+                    {getAuthCopy('field_password', t)}
                   </label>
                   <button
                     type="button"
@@ -178,13 +169,15 @@ export default function LoginPage() {
                     onClick={() => void handleForgotPassword()}
                     disabled={isLoading || isResettingPassword}
                   >
-                    {isResettingPassword ? 'Sending reset link…' : 'Forgot password?'}
+                    {isResettingPassword
+                      ? getAuthCopy('forgot_password_sending', t)
+                      : getAuthCopy('forgot_password', t)}
                   </button>
                 </div>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder={getAuthCopy('placeholder_password', t)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-secondary"
@@ -193,24 +186,20 @@ export default function LoginPage() {
               </div>
 
               {notice ? (
-                <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-800">
-                  {notice}
-                </div>
+                <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-800">{notice}</div>
               ) : null}
 
               {error ? (
-                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                  {error}
-                </div>
+                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
               ) : null}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? getAuthCopy('signing_in', t) : getAuthCopy('sign_in', t)}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
-                New to Tracebud?{' '}
+                {getAuthCopy('new_to_tracebud', t)}{' '}
                 <Link href="/create-account" className="font-medium text-primary hover:underline">
-                  Create workspace
+                  {getAuthCopy('create_workspace', t)}
                 </Link>
               </p>
             </form>

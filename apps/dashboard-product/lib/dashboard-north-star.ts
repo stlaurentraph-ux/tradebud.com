@@ -44,6 +44,28 @@ export function getNorthStarForRole(
     case 'exporter': {
       const readyToSeal = status.READY ?? 0;
       const sealed = status.SEALED ?? 0;
+      const blockingIssues = metrics.blocking_issues_count ?? 0;
+      const yieldFailures = metrics.yield_failures_count ?? 0;
+
+      if (blockingIssues > 0) {
+        const labels = getExporterNorthStarLabels('blockers', sealed, t);
+        return {
+          ...labels,
+          value: String(blockingIssues),
+          ctaHref: '/compliance/issues',
+          tone: 'emerald',
+        };
+      }
+      if (yieldFailures > 0) {
+        const labels = getExporterNorthStarLabels('yield', sealed, t);
+        return {
+          ...labels,
+          value: String(yieldFailures),
+          ctaHref: '/compliance/issues',
+          tone: 'emerald',
+        };
+      }
+
       const value = readyToSeal > 0 ? String(readyToSeal) : String(sealed);
       const labels =
         readyToSeal > 0

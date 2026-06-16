@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useState } from 'react';
+import { Fragment, useContext, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -21,88 +21,99 @@ import { cn } from '@/lib/utils';
 import type { TenantRole, LegalWorkflowRole, CommercialTier } from '@/types';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import {
+  getAdminPageTitle,
+  getAdminRbacCopy,
+  getAdminRbacCommercialRoleLabel,
+  getAdminRbacPermissionGroupLabel,
+  getAdminRbacCommercialPermissionLabel,
+  getAdminRbacLegalPermissionLabel,
+  getLegalRoleFilterLabel,
+  getLegalRoleDescriptionLabel,
+  type AdminRbacPermissionGroupId,
+} from '@/lib/workflow-terminology-labels';
 
-// Canonical tenant roles
-const TENANT_ROLES: { role: TenantRole; label: string; tier: CommercialTier }[] = [
-  { role: 'exporter', label: 'Exporter', tier: 'tier_2' },
-  { role: 'importer', label: 'Importer', tier: 'tier_3' },
-  { role: 'cooperative', label: 'Cooperative', tier: 'tier_2' },
-  { role: 'country_reviewer', label: 'Country Reviewer', tier: 'tier_3' },
-  { role: 'sponsor', label: 'Network Sponsor', tier: 'tier_4' },
+const TENANT_ROLES: { role: TenantRole; tier: CommercialTier }[] = [
+  { role: 'exporter', tier: 'tier_2' },
+  { role: 'importer', tier: 'tier_3' },
+  { role: 'cooperative', tier: 'tier_2' },
+  { role: 'country_reviewer', tier: 'tier_3' },
+  { role: 'sponsor', tier: 'tier_4' },
 ];
 
-// Commercial tier permission groups
-const PERMISSION_GROUPS = [
+const PERMISSION_GROUPS: {
+  id: AdminRbacPermissionGroupId;
+  permissions: { key: string }[];
+}[] = [
   {
-    name: 'Packages/Shipments',
+    id: 'packages_shipments',
     permissions: [
-      { key: 'packages:view', label: 'View Packages' },
-      { key: 'packages:create', label: 'Create Packages' },
-      { key: 'packages:edit', label: 'Edit Packages' },
-      { key: 'packages:delete', label: 'Delete Packages' },
-      { key: 'packages:seal_shipment', label: 'Seal Shipment' },
-      { key: 'packages:submit_traces', label: 'Submit to TRACES (importer only)' },
-      { key: 'packages:approve', label: 'Approve Packages' },
+      { key: 'packages:view' },
+      { key: 'packages:create' },
+      { key: 'packages:edit' },
+      { key: 'packages:delete' },
+      { key: 'packages:seal_shipment' },
+      { key: 'packages:submit_traces' },
+      { key: 'packages:approve' },
     ],
   },
   {
-    name: 'Plots',
+    id: 'plots',
     permissions: [
-      { key: 'plots:view', label: 'View Plots' },
-      { key: 'plots:create', label: 'Create Plots' },
-      { key: 'plots:edit', label: 'Edit Plots' },
-      { key: 'plots:delete', label: 'Delete Plots' },
-      { key: 'plots:bulk_upload', label: 'Bulk Upload' },
+      { key: 'plots:view' },
+      { key: 'plots:create' },
+      { key: 'plots:edit' },
+      { key: 'plots:delete' },
+      { key: 'plots:bulk_upload' },
     ],
   },
   {
-    name: 'Farmers',
+    id: 'farmers',
     permissions: [
-      { key: 'farmers:view', label: 'View Farmers' },
-      { key: 'farmers:create', label: 'Create Farmers' },
-      { key: 'farmers:edit', label: 'Edit Farmers' },
-      { key: 'farmers:delete', label: 'Delete Farmers' },
-      { key: 'farmers:link_validation', label: 'Link Validation' },
+      { key: 'farmers:view' },
+      { key: 'farmers:create' },
+      { key: 'farmers:edit' },
+      { key: 'farmers:delete' },
+      { key: 'farmers:link_validation' },
     ],
   },
   {
-    name: 'Compliance',
+    id: 'compliance',
     permissions: [
-      { key: 'compliance:view', label: 'View Compliance' },
-      { key: 'compliance:run_check', label: 'Run Check' },
-      { key: 'compliance:approve', label: 'Approve' },
-      { key: 'compliance:create_issue', label: 'Create Issue' },
-      { key: 'compliance:resolve_issue', label: 'Resolve Issue' },
+      { key: 'compliance:view' },
+      { key: 'compliance:run_check' },
+      { key: 'compliance:approve' },
+      { key: 'compliance:create_issue' },
+      { key: 'compliance:resolve_issue' },
     ],
   },
   {
-    name: 'Requests',
+    id: 'requests',
     permissions: [
-      { key: 'requests:view', label: 'View Requests' },
-      { key: 'requests:create', label: 'Create Requests' },
-      { key: 'requests:send', label: 'Send Requests' },
-      { key: 'requests:respond', label: 'Respond' },
+      { key: 'requests:view' },
+      { key: 'requests:create' },
+      { key: 'requests:send' },
+      { key: 'requests:respond' },
     ],
   },
   {
-    name: 'Reports',
+    id: 'reports',
     permissions: [
-      { key: 'reports:view', label: 'View Reports' },
-      { key: 'reports:generate', label: 'Generate' },
-      { key: 'reports:export', label: 'Export' },
+      { key: 'reports:view' },
+      { key: 'reports:generate' },
+      { key: 'reports:export' },
     ],
   },
   {
-    name: 'Admin',
+    id: 'admin',
     permissions: [
-      { key: 'admin:view', label: 'View Admin' },
-      { key: 'admin:manage_users', label: 'Manage Users' },
-      { key: 'admin:manage_roles', label: 'Manage Roles' },
+      { key: 'admin:view' },
+      { key: 'admin:manage_users' },
+      { key: 'admin:manage_roles' },
     ],
   },
 ];
 
-// Permission matrix - which roles have which permissions
 const ROLE_PERMISSIONS: Record<TenantRole, string[]> = {
   exporter: [
     'packages:view', 'packages:create', 'packages:edit', 'packages:delete', 'packages:seal_shipment', 'packages:submit_traces',
@@ -148,28 +159,25 @@ const ROLE_PERMISSIONS: Record<TenantRole, string[]> = {
   ],
 };
 
-// Legal workflow roles
-const LEGAL_WORKFLOW_ROLES: { role: LegalWorkflowRole; label: string; description: string }[] = [
-  { role: 'OUT_OF_SCOPE', label: 'Out of Scope', description: 'Not subject to EUDR requirements' },
-  { role: 'OPERATOR', label: 'Operator', description: 'Places goods on EU market or exports from EU' },
-  { role: 'MICRO_SMALL_PRIMARY_OPERATOR', label: 'Micro/Small Primary Operator', description: 'Simplified obligations apply' },
-  { role: 'DOWNSTREAM_OPERATOR_FIRST', label: 'Downstream Operator (First)', description: 'First downstream after initial placement' },
-  { role: 'DOWNSTREAM_OPERATOR_SUBSEQUENT', label: 'Downstream Operator (Subsequent)', description: 'Subsequent downstream operators' },
-  { role: 'TRADER', label: 'Trader', description: 'Makes product available on market' },
-  { role: 'PENDING_MANUAL_CLASSIFICATION', label: 'Pending Classification', description: 'Awaiting manual role determination' },
+const LEGAL_WORKFLOW_ROLES: LegalWorkflowRole[] = [
+  'OUT_OF_SCOPE',
+  'OPERATOR',
+  'MICRO_SMALL_PRIMARY_OPERATOR',
+  'DOWNSTREAM_OPERATOR_FIRST',
+  'DOWNSTREAM_OPERATOR_SUBSEQUENT',
+  'TRADER',
+  'PENDING_MANUAL_CLASSIFICATION',
 ];
 
-// Legal workflow permissions
 const LEGAL_WORKFLOW_PERMISSIONS = [
-  { key: 'legal:submit_dds', label: 'Submit DDS' },
-  { key: 'legal:submit_simplified_declaration', label: 'Submit Simplified Declaration' },
-  { key: 'legal:retain_reference', label: 'Retain Reference' },
-  { key: 'legal:downstream_reference', label: 'Downstream Reference' },
-  { key: 'legal:trader_retention', label: 'Trader Retention' },
-  { key: 'legal:acknowledge_liability', label: 'Acknowledge Liability' },
+  { key: 'legal:submit_dds' },
+  { key: 'legal:submit_simplified_declaration' },
+  { key: 'legal:retain_reference' },
+  { key: 'legal:downstream_reference' },
+  { key: 'legal:trader_retention' },
+  { key: 'legal:acknowledge_liability' },
 ];
 
-// Legal role permissions matrix
 const LEGAL_ROLE_PERMISSIONS: Record<LegalWorkflowRole, string[]> = {
   OUT_OF_SCOPE: [],
   OPERATOR: ['legal:submit_dds', 'legal:retain_reference', 'legal:acknowledge_liability'],
@@ -183,7 +191,10 @@ const LEGAL_ROLE_PERMISSIONS: Record<LegalWorkflowRole, string[]> = {
 export default function RBACMatrixPage() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
-  const pageHeader = translatePageHeader(t, 'rbac_matrix', { title: "RBAC Permission Matrix", subtitle: "View role-based access control permissions for commercial and legal workflow roles" });
+  const pageHeader = translatePageHeader(t, 'rbac_matrix', {
+    title: getAdminRbacCopy('title', t),
+    subtitle: getAdminRbacCopy('subtitle', t),
+  });
   const [activeTab, setActiveTab] = useState<'commercial' | 'legal'>('commercial');
 
   return (
@@ -191,30 +202,31 @@ export default function RBACMatrixPage() {
       <div className="flex flex-col">
         <AppHeader
           title={pageHeader.title}
-        subtitle={pageHeader.subtitle}
-          breadcrumbs={buildAppBreadcrumbs(t, { name: 'Admin', href: '/admin' }, { name: 'RBAC Matrix' })}
+          subtitle={pageHeader.subtitle}
+          breadcrumbs={buildAppBreadcrumbs(t, { name: getAdminPageTitle(t), href: '/admin' }, { name: getAdminRbacCopy('title', t) })}
           actions={
             <Button variant="outline" asChild>
               <Link href="/admin">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Admin
+                {getAdminRbacCopy('back_to_admin', t)}
               </Link>
             </Button>
           }
         />
 
         <div className="flex-1 space-y-6 p-6">
-          {/* Info Banner */}
           <Card className="bg-blue-50/50 border-blue-200">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <Info className="h-5 w-5 text-blue-600 mt-0.5" />
                 <div>
-                  <p className="font-medium text-blue-900">Understanding the Permission System</p>
+                  <p className="font-medium text-blue-900">{getAdminRbacCopy('info_title', t)}</p>
                   <p className="text-sm text-blue-700 mt-1">
-                    Tracebud separates <strong>Commercial Permissions</strong> (what features users can access based on their commercial tier) 
-                    from <strong>Legal Workflow Permissions</strong> (what legal actions users can take per EUDR requirements). 
-                    A user&apos;s legal role is determined per workflow, not as a static label.
+                    {getAdminRbacCopy('info_body_prefix', t)}{' '}
+                    <strong>{getAdminRbacCopy('info_commercial_label', t)}</strong>{' '}
+                    {getAdminRbacCopy('info_body_mid', t)}{' '}
+                    <strong>{getAdminRbacCopy('info_legal_label', t)}</strong>{' '}
+                    {getAdminRbacCopy('info_body_suffix', t)}
                   </p>
                 </div>
               </div>
@@ -230,25 +242,22 @@ export default function RBACMatrixPage() {
             <TabsList className="grid w-full grid-cols-2 max-w-md">
               <TabsTrigger value="commercial" className="gap-2">
                 <Building2 className="h-4 w-4" />
-                Commercial Tier
+                {getAdminRbacCopy('tab_commercial', t)}
               </TabsTrigger>
               <TabsTrigger value="legal" className="gap-2">
                 <Gavel className="h-4 w-4" />
-                Legal Workflow
+                {getAdminRbacCopy('tab_legal', t)}
               </TabsTrigger>
             </TabsList>
 
-            {/* Commercial Tier Matrix */}
             <TabsContent value="commercial" className="mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5" />
-                    Commercial Tier Permission Matrix
+                    {getAdminRbacCopy('commercial_title', t)}
                   </CardTitle>
-                  <CardDescription>
-                    Permissions available to each tenant role based on their commercial tier subscription
-                  </CardDescription>
+                  <CardDescription>{getAdminRbacCopy('commercial_subtitle', t)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -256,12 +265,12 @@ export default function RBACMatrixPage() {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground sticky left-0 bg-background">
-                            Permission
+                            {getAdminRbacCopy('table_permission', t)}
                           </th>
                           {TENANT_ROLES.map((r) => (
                             <th key={r.role} className="text-center py-3 px-4 font-medium min-w-[100px]">
                               <div className="flex flex-col items-center gap-1">
-                                <span>{r.label}</span>
+                                <span>{getAdminRbacCommercialRoleLabel(r.role, t)}</span>
                                 <Badge variant="outline" className="text-xs">
                                   {r.tier}
                                 </Badge>
@@ -272,19 +281,19 @@ export default function RBACMatrixPage() {
                       </thead>
                       <tbody>
                         {PERMISSION_GROUPS.map((group) => (
-                          <>
-                            <tr key={group.name} className="bg-secondary/30">
+                          <Fragment key={group.id}>
+                            <tr className="bg-secondary/30">
                               <td
                                 colSpan={TENANT_ROLES.length + 1}
                                 className="py-2 px-4 font-semibold text-foreground"
                               >
-                                {group.name}
+                                {getAdminRbacPermissionGroupLabel(group.id, t)}
                               </td>
                             </tr>
                             {group.permissions.map((perm) => (
                               <tr key={perm.key} className="border-b hover:bg-secondary/20">
                                 <td className="py-2 px-4 text-muted-foreground sticky left-0 bg-background">
-                                  {perm.label}
+                                  {getAdminRbacCommercialPermissionLabel(perm.key, t)}
                                 </td>
                                 {TENANT_ROLES.map((r) => {
                                   const hasPermission = ROLE_PERMISSIONS[r.role]?.includes(perm.key);
@@ -300,7 +309,7 @@ export default function RBACMatrixPage() {
                                 })}
                               </tr>
                             ))}
-                          </>
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -309,44 +318,42 @@ export default function RBACMatrixPage() {
               </Card>
             </TabsContent>
 
-            {/* Legal Workflow Matrix */}
             <TabsContent value="legal" className="mt-6 space-y-6">
-              {/* Legal Roles Overview */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Gavel className="h-5 w-5" />
-                    EUDR Legal Workflow Roles
+                    {getAdminRbacCopy('legal_roles_title', t)}
                   </CardTitle>
-                  <CardDescription>
-                    Legal roles are determined per workflow based on the entity&apos;s position in the supply chain
-                  </CardDescription>
+                  <CardDescription>{getAdminRbacCopy('legal_roles_subtitle', t)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {LEGAL_WORKFLOW_ROLES.map((role) => (
                       <div
-                        key={role.role}
+                        key={role}
                         className={cn(
                           'p-4 rounded-lg border',
-                          role.role === 'PENDING_MANUAL_CLASSIFICATION'
+                          role === 'PENDING_MANUAL_CLASSIFICATION'
                             ? 'bg-amber-50/50 border-amber-200'
-                            : role.role === 'OUT_OF_SCOPE'
+                            : role === 'OUT_OF_SCOPE'
                             ? 'bg-gray-50 border-gray-200'
                             : 'bg-card'
                         )}
                       >
-                        <p className="font-medium text-foreground">{role.label}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                        <p className="font-medium text-foreground">{getLegalRoleFilterLabel(role, t)}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{getLegalRoleDescriptionLabel(role, t)}</p>
                         <div className="mt-3 flex flex-wrap gap-1">
-                          {LEGAL_ROLE_PERMISSIONS[role.role].length > 0 ? (
-                            LEGAL_ROLE_PERMISSIONS[role.role].map((perm) => (
+                          {LEGAL_ROLE_PERMISSIONS[role].length > 0 ? (
+                            LEGAL_ROLE_PERMISSIONS[role].map((perm) => (
                               <Badge key={perm} variant="secondary" className="text-xs">
-                                {perm.replace('legal:', '')}
+                                {getAdminRbacLegalPermissionLabel(perm, t)}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-xs text-muted-foreground">No legal permissions</span>
+                            <span className="text-xs text-muted-foreground">
+                              {getAdminRbacCopy('no_legal_permissions', t)}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -355,13 +362,10 @@ export default function RBACMatrixPage() {
                 </CardContent>
               </Card>
 
-              {/* Legal Permissions Matrix */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Legal Workflow Permission Matrix</CardTitle>
-                  <CardDescription>
-                    What legal actions each workflow role can perform under EUDR
-                  </CardDescription>
+                  <CardTitle>{getAdminRbacCopy('legal_matrix_title', t)}</CardTitle>
+                  <CardDescription>{getAdminRbacCopy('legal_matrix_subtitle', t)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -369,11 +373,11 @@ export default function RBACMatrixPage() {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground sticky left-0 bg-background">
-                            Permission
+                            {getAdminRbacCopy('table_permission', t)}
                           </th>
-                          {LEGAL_WORKFLOW_ROLES.map((r) => (
-                            <th key={r.role} className="text-center py-3 px-2 font-medium min-w-[90px]">
-                              <span className="text-xs">{r.label}</span>
+                          {LEGAL_WORKFLOW_ROLES.map((role) => (
+                            <th key={role} className="text-center py-3 px-2 font-medium min-w-[90px]">
+                              <span className="text-xs">{getLegalRoleFilterLabel(role, t)}</span>
                             </th>
                           ))}
                         </tr>
@@ -382,12 +386,12 @@ export default function RBACMatrixPage() {
                         {LEGAL_WORKFLOW_PERMISSIONS.map((perm) => (
                           <tr key={perm.key} className="border-b hover:bg-secondary/20">
                             <td className="py-3 px-4 text-muted-foreground sticky left-0 bg-background">
-                              {perm.label}
+                              {getAdminRbacLegalPermissionLabel(perm.key, t)}
                             </td>
-                            {LEGAL_WORKFLOW_ROLES.map((r) => {
-                              const hasPermission = LEGAL_ROLE_PERMISSIONS[r.role]?.includes(perm.key);
+                            {LEGAL_WORKFLOW_ROLES.map((role) => {
+                              const hasPermission = LEGAL_ROLE_PERMISSIONS[role]?.includes(perm.key);
                               return (
-                                <td key={r.role} className="text-center py-3 px-2">
+                                <td key={role} className="text-center py-3 px-2">
                                   {hasPermission ? (
                                     <Check className="h-4 w-4 text-emerald-600 mx-auto" />
                                   ) : (

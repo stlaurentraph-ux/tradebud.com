@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { LocaleContext } from "@/lib/locale-context";
+import { getAuthCopy } from "@/lib/workflow-terminology-labels";
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -12,6 +14,8 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onLogin, error }: LoginFormProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,19 +37,14 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
             <span className="text-xl font-bold text-primary-foreground">T</span>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your Tracebud Exporter account
-          </CardDescription>
+          <CardTitle className="text-2xl">{getAuthCopy("welcome_back", t)}</CardTitle>
+          <CardDescription>{getAuthCopy("legacy_login_subtitle", t)}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                {getAuthCopy("field_email", t)}
               </label>
               <Input
                 id="email"
@@ -57,11 +56,8 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-foreground"
-              >
-                Password
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                {getAuthCopy("field_password", t)}
               </label>
               <Input
                 id="password"
@@ -83,20 +79,16 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  {getAuthCopy("signing_in", t)}
                 </>
               ) : (
-                "Sign in"
+                getAuthCopy("sign_in", t)
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              Use your Supabase account with an exporter email
-              <br />
-              (e.g., exporter+name@email.com or @tracebud.com)
-            </p>
+            <p className="text-xs text-muted-foreground">{getAuthCopy("legacy_login_hint", t)}</p>
           </div>
         </CardContent>
       </Card>

@@ -1,22 +1,33 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { LocaleContext } from '@/lib/locale-context';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddContactWizard } from '@/components/contacts/add-contact-wizard';
 import { AddOrganizationWizard } from '@/components/contacts/add-organization-wizard';
 import { CsvImportWizard } from '@/components/contacts/csv-import-wizard';
 import { createContact, type ContactType } from '@/lib/contact-service';
+import {
+  getContactsAddBreadcrumbLabel,
+  getContactsAddCardCopy,
+  getContactsAddImportCta,
+  getContactsAddBackToOptionsLabel,
+  getContactsAddPageSubtitle,
+  getContactsAddPageTitle,
+  getContactsAddSectionTitle,
+  getContactsAddTipLabel,
+  getContactsAddToastMessage,
+  getContactsPageTitle,
+} from '@/lib/workflow-terminology-labels';
 import { toast } from 'sonner';
 import {
   User,
   Building2,
-  FileSpreadsheet,
   ArrowLeft,
   UserPlus,
   Users,
@@ -74,14 +85,20 @@ interface ImportResult {
   errors: { row: number; field: string; message: string }[];
 }
 
+function resolveAddPageMode(mode: AddMode): 'select' | 'contact' | 'organization' | 'csv' {
+  if (mode.includes('csv')) return 'csv';
+  return mode;
+}
+
 export default function AddContactPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
   const isImporter = user?.active_role === 'importer';
   const [mode, setMode] = useState<AddMode>('select');
-  const [importTab, setImportTab] = useState<'contacts' | 'organizations'>('contacts');
 
   useEffect(() => {
     const requestedMode = searchParams.get('mode');
@@ -112,6 +129,8 @@ export default function AddContactPage() {
     };
   }, [isCooperative, isImporter]);
 
+  const pageMode = resolveAddPageMode(mode);
+
   const handleContactComplete = async (data: ContactDraft) => {
     await createContact({
       full_name: data.full_name,
@@ -120,17 +139,17 @@ export default function AddContactPage() {
       organization: data.organization || null,
       contact_type: data.contact_type,
       country: data.country || null,
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()) : [],
+      tags: data.tags ? data.tags.split(',').map((tag) => tag.trim()) : [],
       consent_status: data.consent_status,
     });
     markOnboardingAction('contacts_uploaded');
-    toast.success(isCooperative ? 'Member added to your directory' : 'Contact created successfully');
+    toast.success(
+      getContactsAddToastMessage(isCooperative ? 'member_added' : 'contact_created', undefined, t),
+    );
     router.push('/contacts');
   };
 
   const handleOrganizationComplete = async (data: OrganizationDraft) => {
-    // For now, create as a contact with organization type
-    // In a real app, you'd have a separate organization service
     await createContact({
       full_name: data.name,
       email: data.primary_email || `${data.name.toLowerCase().replace(/\s/g, '-')}@organization.local`,
@@ -138,11 +157,11 @@ export default function AddContactPage() {
       organization: data.name,
       contact_type: 'other',
       country: data.country || null,
-      tags: data.commodities ? data.commodities.split(',').map((t) => t.trim()) : [],
+      tags: data.commodities ? data.commodities.split(',').map((tag) => tag.trim()) : [],
       consent_status: 'unknown',
     });
     markOnboardingAction('contacts_uploaded');
-    toast.success('Organization created successfully');
+    toast.success(getContactsAddToastMessage('organization_created', undefined, t));
     router.push('/contacts');
   };
 
@@ -161,7 +180,7 @@ export default function AddContactPage() {
           organization: row.organization || row.name || null,
           contact_type: (row.contact_type as ContactType) || 'other',
           country: row.country || null,
-          tags: row.tags ? row.tags.split(',').map((t) => t.trim()) : [],
+          tags: row.tags ? row.tags.split(',').map((tag) => tag.trim()) : [],
           consent_status: (row.consent_status as 'unknown' | 'granted' | 'revoked') || 'unknown',
         });
         success++;
@@ -177,7 +196,7 @@ export default function AddContactPage() {
 
     if (success > 0) {
       markOnboardingAction('contacts_uploaded');
-      toast.success(`Successfully imported ${success} record${success !== 1 ? 's' : ''}`);
+      toast.success(getContactsAddToastMessage('import_success', { count: success }, t));
     }
 
     return { success, failed, errors };
@@ -191,35 +210,31 @@ export default function AddContactPage() {
     }
   };
 
-  const directoryLabel = isCooperative ? 'Members' : 'Contacts';
   const breadcrumbs = [
-    { label: directoryLabel, href: '/contacts' },
-    { label: mode === 'select' ? 'Add' : mode.includes('csv') ? 'Bulk Import' : mode === 'contact' ? (isCooperative ? 'Add Member' : 'Add Contact') : 'Add Organization' },
+    { label: getContactsPageTitle(isCooperative, t), href: '/contacts' },
+    {
+      label:
+        pageMode === 'select'
+          ? getContactsAddBreadcrumbLabel('add', isCooperative, t)
+          : pageMode === 'csv'
+            ? getContactsAddBreadcrumbLabel('bulk', isCooperative, t)
+            : pageMode === 'contact'
+              ? getContactsAddBreadcrumbLabel('add_contact', isCooperative, t)
+              : getContactsAddBreadcrumbLabel('add_organization', isCooperative, t),
+    },
   ];
 
   return (
     <>
       <AppHeader
-        title={
-          mode === 'select'
-            ? isCooperative
-              ? 'Add Member or Organization'
-              : 'Add Contact or Organization'
-            : mode.includes('csv')
-              ? 'Bulk Import'
-              : mode === 'contact'
-                ? isCooperative
-                  ? 'Add New Member'
-                  : 'Add New Contact'
-                : 'Add New Organization'
-        }
-        subtitle={isCooperative ? 'Cooperative member directory' : 'Tenant CRM'}
+        title={getContactsAddPageTitle(pageMode, isCooperative, t)}
+        subtitle={getContactsAddPageSubtitle(isCooperative, t)}
         breadcrumbs={breadcrumbs}
         actions={
           mode !== 'select' && (
             <Button variant="ghost" size="sm" onClick={() => setMode('select')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to options
+              {getContactsAddBackToOptionsLabel(t)}
             </Button>
           )
         }
@@ -229,9 +244,10 @@ export default function AddContactPage() {
         <div className="mx-auto max-w-3xl">
           {mode === 'select' && (
             <div className="space-y-6">
-              {/* Individual Add Options */}
               <div>
-                <h2 className="mb-4 text-lg font-semibold">Add Individually</h2>
+                <h2 className="mb-4 text-lg font-semibold">
+                  {getContactsAddSectionTitle('individual', t)}
+                </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Card
                     className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
@@ -243,15 +259,18 @@ export default function AddContactPage() {
                           <UserPlus className="h-6 w-6" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">Add Contact</CardTitle>
-                          <CardDescription>Add an individual person</CardDescription>
+                          <CardTitle className="text-base">
+                            {getContactsAddCardCopy('contact', 'title', isCooperative, t)}
+                          </CardTitle>
+                          <CardDescription>
+                            {getContactsAddCardCopy('contact', 'subtitle', isCooperative, t)}
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Create a new contact with personal details, organization affiliation, and
-                        location information.
+                        {getContactsAddCardCopy('contact', 'description', isCooperative, t)}
                       </p>
                     </CardContent>
                   </Card>
@@ -266,24 +285,28 @@ export default function AddContactPage() {
                           <Building2 className="h-6 w-6" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">Add Organization</CardTitle>
-                          <CardDescription>Add a company or cooperative</CardDescription>
+                          <CardTitle className="text-base">
+                            {getContactsAddCardCopy('organization', 'title', isCooperative, t)}
+                          </CardTitle>
+                          <CardDescription>
+                            {getContactsAddCardCopy('organization', 'subtitle', isCooperative, t)}
+                          </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground">
-                        Create a new organization with business details, certifications, and
-                        commodity information.
+                        {getContactsAddCardCopy('organization', 'description', isCooperative, t)}
                       </p>
                     </CardContent>
                   </Card>
                 </div>
               </div>
 
-              {/* Bulk Import Options */}
               <div>
-                <h2 className="mb-4 text-lg font-semibold">Bulk Import</h2>
+                <h2 className="mb-4 text-lg font-semibold">
+                  {getContactsAddSectionTitle('bulk', t)}
+                </h2>
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
@@ -291,46 +314,41 @@ export default function AddContactPage() {
                         <Upload className="h-6 w-6" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">Import from CSV</CardTitle>
-                        <CardDescription>Upload a CSV file with multiple records</CardDescription>
+                        <CardTitle className="text-base">
+                          {getContactsAddCardCopy('csv', 'title', isCooperative, t)}
+                        </CardTitle>
+                        <CardDescription>
+                          {getContactsAddCardCopy('csv', 'subtitle', isCooperative, t)}
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                      Import multiple contacts or organizations at once using a CSV file. You can
-                      map columns and preview data before importing.
+                      {getContactsAddCardCopy('csv', 'description', isCooperative, t)}
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <Button variant="outline" onClick={() => setMode('csv-contacts')}>
                         <User className="mr-2 h-4 w-4" />
-                        Import Contacts
+                        {getContactsAddImportCta('contacts', t)}
                       </Button>
                       <Button variant="outline" onClick={() => setMode('csv-organizations')}>
                         <Users className="mr-2 h-4 w-4" />
-                        Import Organizations
+                        {getContactsAddImportCta('organizations', t)}
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Quick Stats */}
               <div className="rounded-lg border border-border bg-muted/30 p-4">
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">Tips</h3>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                  {getContactsAddSectionTitle('tips', t)}
+                </h3>
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li>
-                    Use <strong>Add Contact</strong> for individual people like farmers, managers,
-                    or representatives
-                  </li>
-                  <li>
-                    Use <strong>Add Organization</strong> for cooperatives, exporters, or other
-                    business entities
-                  </li>
-                  <li>
-                    Use <strong>CSV Import</strong> when you have many records to add at once
-                  </li>
-                  <li>You can download a template CSV to ensure your data is formatted correctly</li>
+                  {([1, 2, 3, 4] as const).map((tip) => (
+                    <li key={tip}>{getContactsAddTipLabel(tip, isCooperative, t)}</li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -343,6 +361,7 @@ export default function AddContactPage() {
               defaultContactType={contactWizardDefaults.defaultContactType}
               lockContactType={contactWizardDefaults.lockContactType}
               lockedTypeLabel={contactWizardDefaults.lockedTypeLabel}
+              isCooperative={isCooperative}
             />
           )}
 
