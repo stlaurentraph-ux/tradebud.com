@@ -42,14 +42,32 @@ import {
   Info,
   Download,
   RotateCcw,
+  Signal,
+  BatteryFull,
+  Sun,
+  Footprints,
+  Flag,
+  Navigation,
 } from "lucide-react"
 
 type Screen = "home" | "register" | "plots" | "plot-detail" | "harvest" | "documents" | "settings"
 type SubScreen = null | "photos" | "documents" | "harvests" | "voucher"
+type RegisterStep = "landing" | "capture" | "saved"
+
+const SCREEN_TITLES: Record<Screen, string> = {
+  home: "Tracebud",
+  register: "Walk my plot",
+  plots: "My plots",
+  "plot-detail": "Plot details",
+  harvest: "Log harvest",
+  documents: "Documents",
+  settings: "Settings",
+}
 
 export default function PrototypePage() {
   const [activeScreen, setActiveScreen] = useState<Screen>("home")
   const [subScreen, setSubScreen] = useState<SubScreen>(null)
+  const [registerStep, setRegisterStep] = useState<RegisterStep>("landing")
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [waypoints, setWaypoints] = useState(0)
@@ -91,6 +109,10 @@ export default function PrototypePage() {
   const navigateTo = (screen: Screen, plotId?: string) => {
     setActiveScreen(screen)
     setSubScreen(null)
+    setRegisterStep("landing")
+    setIsRecording(false)
+    setRecordingTime(0)
+    setWaypoints(0)
     if (plotId) setSelectedPlot(plotId)
   }
 
@@ -133,49 +155,68 @@ export default function PrototypePage() {
                   {/* Status Bar */}
                   <div className="bg-emerald-700 pt-10 pb-2 px-5 flex items-center justify-between">
                     <span className="text-white text-xs font-semibold">9:41</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded-full">
-                        <WifiOff className="w-3 h-3 text-amber-300" />
-                        <span className="text-amber-300 text-xs font-semibold">Offline</span>
-                      </div>
+                    <div className="flex items-center gap-1.5 text-white/90">
+                      <Signal className="w-3.5 h-3.5" />
+                      <BatteryFull className="w-4 h-4" />
                     </div>
                   </div>
 
                   {/* App Header with Back Button */}
                   <div className="bg-emerald-700 px-4 pb-4">
-                    <div className="flex items-center justify-between">
-                      {activeScreen !== "home" ? (
-                        <button 
-                          onClick={() => {
-                            if (subScreen) {
-                              setSubScreen(null)
-                            } else if (activeScreen === "plot-detail") {
-                              navigateTo("plots")
-                            } else {
-                              navigateTo("home")
-                            }
-                          }}
-                          className="flex items-center gap-1 text-white/90 hover:text-white transition-colors"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                          <span className="text-sm">Back</span>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                      {/* Left: back button or profile */}
+                      <div className="flex justify-start min-w-0">
+                        {activeScreen === "home" ? (
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-white text-sm font-semibold truncate">Maria Santos</p>
+                              <p className="text-emerald-200 text-xs truncate">Farmer - Honduras</p>
+                            </div>
+                          </div>
+                        ) : activeScreen === "register" && registerStep === "saved" ? (
+                          <span aria-hidden className="w-9 h-9" />
+                        ) : (
+                          <button
+                            onClick={() => {
+                              if (subScreen) {
+                                setSubScreen(null)
+                              } else if (activeScreen === "register" && registerStep === "capture") {
+                                setIsRecording(false)
+                                setRecordingTime(0)
+                                setWaypoints(0)
+                                setRegisterStep("landing")
+                              } else if (activeScreen === "plot-detail") {
+                                navigateTo("plots")
+                              } else {
+                                navigateTo("home")
+                              }
+                            }}
+                            className="flex items-center gap-1 text-white/90 hover:text-white transition-colors min-h-[44px] -ml-1 pr-2"
+                          >
+                            <ChevronLeft className="w-6 h-6" />
+                            <span className="text-sm">Back</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Center: screen title */}
+                      <div className="text-center px-1">
+                        {activeScreen !== "home" && (
+                          <p className="text-white text-base font-semibold whitespace-nowrap">
+                            {activeScreen === "register" && registerStep === "saved" ? "Done" : SCREEN_TITLES[activeScreen]}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Right: language pill */}
+                      <div className="flex justify-end">
+                        <button className="bg-emerald-600/50 px-3 py-1.5 rounded-full flex items-center gap-1.5 min-h-[36px]">
+                          <Languages className="w-3.5 h-3.5 text-white" />
+                          <span className="text-white text-xs font-semibold">EN</span>
                         </button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-white text-sm font-semibold">Maria Santos</p>
-                            <p className="text-emerald-200 text-xs">Farmer - Honduras</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <div className="bg-emerald-600/50 px-2.5 py-1 rounded-full flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-                          <span className="text-white text-xs font-medium">ES</span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -189,6 +230,8 @@ export default function PrototypePage() {
                     )}
                     {activeScreen === "register" && (
                       <RegisterPlotScreen
+                        registerStep={registerStep}
+                        setRegisterStep={setRegisterStep}
                         isRecording={isRecording}
                         setIsRecording={setIsRecording}
                         recordingTime={recordingTime}
@@ -196,15 +239,8 @@ export default function PrototypePage() {
                         waypoints={waypoints}
                         setWaypoints={setWaypoints}
                         showGpsWarning={showGpsWarning}
-                        fpicConsent={fpicConsent}
-                        setFpicConsent={setFpicConsent}
-                        laborDeclaration={laborDeclaration}
-                        setLaborDeclaration={setLaborDeclaration}
-                        landTenure={landTenure}
-                        setLandTenure={setLandTenure}
-                        noDeforestation={noDeforestation}
-                        setNoDeforestation={setNoDeforestation}
                         formatTime={formatTime}
+                        navigateTo={navigateTo}
                       />
                     )}
                     {activeScreen === "plots" && (
