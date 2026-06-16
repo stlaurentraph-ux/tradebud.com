@@ -2,7 +2,16 @@
 
 ## Work now
 
-- Dashboard A+ scorecard published at `product-os/04-quality/dashboard-a-plus-scorecard.md`; slice 5 shipped (deforestation panel copy, exporter north-star blocker priority, compliance sr-only). Next: exporter/importer critical-path acceptance on real tenant.
+- Dashboard A+ slice 7 shipped (package assemble gate tests, importer inbox north star, handoff terminology tests, importer QA doc). **Committed + pushed to main for tomorrow QA.**
+
+## Tomorrow (2026-06-17)
+
+1. **Dashboard manual QA (priority)** — Run `product-os/04-quality/exporter-critical-path-qa.md` and `importer-critical-path-qa.md` on staging/prod exporter + importer tenants; update scorecard checkboxes.
+2. **Exporter lineage ★** — Only open critical-path item: producer → plot → batch → shipment end-to-end on real data.
+3. **Dashboard attention strip i18n** — `lib/dashboard-attention.ts` still hardcoded; localize + manifest if QA surfaces copy gaps.
+4. **Field app soak** — `DEVICE_SMOKE_CHECKLIST.md` on physical devices if dashboard QA passes; verify OAuth callback changes from today.
+5. **CI stability** — Triage any flaky page tests if CI fails on main after push.
+
 - FDP coffee screening (NG/RW/TZ) is scaffolded behind `FDP_ENABLED`; next: deploy EE worker, run `npm run check:fdp`, calibrate thresholds on real tenant plots.
 - Field app pre-field automation is green (`npm run qa:full`, `store:preflight --strict`). Next before field soak: set prod `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_SENTRY_DSN`, run `release:preflight:production:online`, execute `DEVICE_SMOKE_CHECKLIST.md` on physical devices.
 - FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.

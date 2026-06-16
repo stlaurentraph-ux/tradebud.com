@@ -81,6 +81,17 @@ export function getNorthStarForRole(
     case 'importer': {
       const pendingReview = (status.READY ?? 0) + (status.ON_HOLD ?? 0);
       const readyToFile = (status.SEALED ?? 0) + (status.READY ?? 0);
+      const incomingRequests = metrics.incoming_requests_pending ?? 0;
+
+      if (incomingRequests > 0) {
+        const labels = getImporterNorthStarLabels('inbox', t);
+        return {
+          ...labels,
+          value: String(incomingRequests),
+          ctaHref: '/inbox',
+          tone: 'blue',
+        };
+      }
       if (pendingReview > 0) {
         const labels = getImporterNorthStarLabels('review', t);
         return {

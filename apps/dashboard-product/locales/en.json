@@ -3041,5 +3041,9 @@
   "dashboard.north_star.exporter.yield.label": "Yield cap failures",
   "dashboard.north_star.exporter.yield.hint": "Review harvest batches that exceeded yield limits before sealing",
   "dashboard.north_star.exporter.yield.cta": "Review yield failures",
-  "dashboard.exporter.compliance_rate_sr": "Plot compliance rate {pct} percent ({compliant} of {total} plots)."
+  "dashboard.exporter.compliance_rate_sr": "Plot compliance rate {pct} percent ({compliant} of {total} plots).",
+  "workflow.package.detail.assemble_blocked": "Resolve readiness blockers before assembling this shipment.",
+  "dashboard.north_star.importer.inbox_pending": "Inbound requests pending",
+  "dashboard.north_star.importer.inbox_hint": "Respond to partner evidence and shipment requests before reviewing shared shipments.",
+  "dashboard.north_star.importer.inbox_cta": "Open inbox"
 }

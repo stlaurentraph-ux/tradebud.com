@@ -33,6 +33,16 @@ describe('getNorthStarForRole', () => {
     expect(sealed?.label).toBe('Handoff-ready shipments');
   });
 
+  it('prioritizes importer inbox requests before shipment review', () => {
+    const inbox = getNorthStarForRole('importer', {
+      packages_by_status: { READY: 2, ON_HOLD: 1 },
+      incoming_requests_pending: 5,
+    });
+    expect(inbox?.label).toBe('Inbound requests pending');
+    expect(inbox?.value).toBe('5');
+    expect(inbox?.ctaHref).toBe('/inbox');
+  });
+
   it('frames importer north star as review or TRACES filing', () => {
     const review = getNorthStarForRole('importer', {
       packages_by_status: { READY: 2, ON_HOLD: 1 },

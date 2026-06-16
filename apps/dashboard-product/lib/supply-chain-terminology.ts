@@ -610,6 +610,10 @@ export function getAssembleShipmentActionLabel(_role?: SupplyChainRole): string 
   return 'Assemble Shipment';
 }
 
+export function getPackageAssembleBlockedHint(_role?: SupplyChainRole): string {
+  return 'Resolve readiness blockers before assembling this shipment.';
+}
+
 export function getPackagePreflightBlockersTitle(role?: SupplyChainRole): string {
   return role === 'importer' ? 'TRACES filing blockers' : 'Filing preflight blockers';
 }

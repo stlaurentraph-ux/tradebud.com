@@ -331,12 +331,19 @@ export function formatImporterVerifiedPct(pct: number, t?: TranslateFn): string 
 }
 
 export function getImporterNorthStarLabels(
-  mode: 'review' | 'filing',
+  mode: 'inbox' | 'review' | 'filing',
   t?: TranslateFn,
 ): Pick<
   import('@/lib/dashboard-north-star').NorthStarConfig,
   'label' | 'hint' | 'ctaLabel'
 > {
+  if (mode === 'inbox') {
+    return {
+      label: resolveLabel('dashboard.north_star.importer.inbox_pending', t),
+      hint: resolveLabel('dashboard.north_star.importer.inbox_hint', t),
+      ctaLabel: resolveLabel('dashboard.north_star.importer.inbox_cta', t),
+    };
+  }
   if (mode === 'review') {
     return {
       label: resolveLabel('dashboard.north_star.importer.awaiting_review', t),

@@ -44,6 +44,7 @@ interface ImporterDashboardProps {
     packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
+    incoming_requests_pending?: number;
   };
   home?: DashboardHomeResources;
 }

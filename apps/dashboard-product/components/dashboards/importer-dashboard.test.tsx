@@ -81,4 +81,19 @@ describe('ImporterDashboard', () => {
     expect(screen.getByText('Start collecting upstream evidence')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Add contact/i })).toBeInTheDocument();
   });
+
+  it('prioritizes inbound requests in north-star KPI', () => {
+    render(
+      <ImporterDashboard
+        metrics={{
+          ...mockMetrics,
+          incoming_requests_pending: 3,
+        }}
+      />,
+    );
+    expect(screen.getByRole('link', { name: /Open inbox/i })).toHaveAttribute('href', '/inbox');
+    expect(screen.getByRole('link', { name: /Open inbox/i }).closest('div')?.textContent).toContain(
+      'Inbound requests pending',
+    );
+  });
 });

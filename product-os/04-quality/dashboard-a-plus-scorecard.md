@@ -38,7 +38,7 @@ Score each role **0–2** per pillar (`0` missing, `1` partial, `2` done). **A+ 
 | IA | 2 | Producers → plots → harvests → packages → compliance/issues |
 | Overview ★ | 2 | North star prioritizes blockers/yield before seal; KPI strip surfaces readiness counts |
 | Virgin ★ | 2 | Virgin-state panel + tour (`exp_*` steps) |
-| Daily use ★ | 1 | Seal path exists; issues board integration needs real-tenant QA |
+| Daily use ★ | 2 | Assemble CTA gated on readiness blockers; seal step blocks when blockers remain; issues linked from north star |
 | States | 2 | AsyncState wired on plot panels; deforestation decision panel localized |
 | Permissions | 2 | Nav/step gates via RBAC |
 | UI | 1 | Table density / mobile pass incomplete |
@@ -47,8 +47,8 @@ Score each role **0–2** per pillar (`0` missing, `1` partial, `2` done). **A+ 
 **Critical path acceptance ★**
 
 - [ ] Register producer → plot → batch → shipment with lineage intact
-- [ ] Readiness blockers visible before seal attempt
-- [ ] Importer-handoff language consistent on packages/compliance
+- [x] Readiness blockers visible before seal attempt (UI gate on package detail + assemble; manual QA: `exporter-critical-path-qa.md`)
+- [x] Importer-handoff language consistent on packages/compliance (`supply-chain-terminology-handoff.test.ts`; manual QA: exporter-critical-path-qa.md §4)
 
 ---
 
@@ -60,7 +60,7 @@ Score each role **0–2** per pillar (`0` missing, `1` partial, `2` done). **A+ 
 |--------|-------|----------------|
 | Copy | 2 | Importer-specific shipment/compliance language in helpers |
 | IA | 2 | Network → campaigns → requests → shipments → compliance → reporting |
-| Overview ★ | 1 | Shared-scope summary; attention strip role-aware |
+| Overview ★ | 2 | North star prioritizes inbound inbox; attention strip + mini review queue on home |
 | Virgin ★ | 2 | Virgin panel + `imp_*` tour |
 | Daily use ★ | 2 | Inbox fulfill, shared tab default, campaign timeline |
 | States | 1 | Inbox/campaign errors mostly handled |

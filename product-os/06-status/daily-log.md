@@ -5944,3 +5944,17 @@ Append-only session log.
 - Verification: `npx vitest run lib/en-copy-parity.test.ts lib/dashboard-north-star.test.ts` (pass); manifest +28 keys.
 - Blockers: None.
 - Next step: manual exporter critical-path QA on real tenant (producer → plot → batch → shipment → seal blockers visible).
+
+### 2026-06-16 (execution: dashboard A+ slice 6 — exporter seal gate + QA doc)
+- Focus: close exporter critical-path gap where assemble link bypassed readiness blockers; add exporter dashboard tests and manual QA checklist.
+- Files changed: `apps/dashboard-product/app/packages/[id]/page.tsx`, `apps/dashboard-product/lib/workflow-terminology-labels.ts`, `apps/dashboard-product/lib/supply-chain-terminology.ts`, `apps/dashboard-product/components/dashboards/exporter-dashboard.test.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/04-quality/exporter-critical-path-qa.md`, `product-os/04-quality/dashboard-a-plus-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Decisions: disable header assemble CTA while readiness loading or blockers present; reuse `getPackageAssembleBlockedHint` for tooltip/aria context.
+- Verification: `npx vitest run components/dashboards/exporter-dashboard.test.tsx lib/en-copy-parity.test.ts` (pass).
+- Blockers: Real-tenant lineage + handoff language still need manual sign-off.
+- Next step: run `exporter-critical-path-qa.md` on staging tenant and check remaining scorecard ★ items.
+
+### 2026-06-16 (execution: dashboard A+ slice 7 — package gate tests + importer inbox north star)
+- Focus: lock assemble readiness gate with page tests; prioritize importer inbound requests in north star; add handoff vs TRACES terminology tests and importer QA checklist.
+- Files changed: `apps/dashboard-product/app/packages/[id]/page.test.tsx`, `apps/dashboard-product/lib/dashboard-north-star.ts`, `apps/dashboard-product/lib/dashboard-north-star.test.ts`, `apps/dashboard-product/lib/terminology-labels.ts`, `apps/dashboard-product/lib/supply-chain-terminology-handoff.test.ts`, `apps/dashboard-product/components/dashboards/importer-dashboard.tsx`, `apps/dashboard-product/components/dashboards/importer-dashboard.test.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/04-quality/importer-critical-path-qa.md`, `product-os/04-quality/dashboard-a-plus-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
+- Verification: package detail, north-star, importer/exporter dashboard, and handoff terminology tests pass.
+- Next step: manual sign-off using `exporter-critical-path-qa.md` and `importer-critical-path-qa.md`.

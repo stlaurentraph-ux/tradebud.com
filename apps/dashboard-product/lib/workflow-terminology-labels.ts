@@ -389,6 +389,8 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.package.detail.run_compliance.importer': 'Run Declaration Checks',
   'workflow.package.detail.run_compliance.default': 'Run Compliance',
   'workflow.package.detail.assemble': 'Assemble Shipment',
+  'workflow.package.detail.assemble_blocked':
+    'Resolve readiness blockers before assembling this shipment.',
   'workflow.package.detail.submit.submitting': 'Submitting...',
   'workflow.package.detail.submit.handoff': 'Submit downstream handoff',
   'workflow.package.detail.submitted.importer':
@@ -4922,6 +4924,14 @@ export function getRunPackageComplianceLabel(role?: SupplyChainRole, t?: Transla
 
 export function getAssembleShipmentActionLabel(_role?: SupplyChainRole, t?: TranslateFn): string {
   return wf('workflow.package.detail.assemble', en.getAssembleShipmentActionLabel(), t);
+}
+
+export function getPackageAssembleBlockedHint(role?: SupplyChainRole, t?: TranslateFn): string {
+  return wf(
+    'workflow.package.detail.assemble_blocked',
+    en.getPackageAssembleBlockedHint(role),
+    t,
+  );
 }
 
 export function getPackageSubmitActionLabel(

@@ -39,6 +39,7 @@ import {
   formatPackagePlotMeta,
   formatPackageSeasonYear,
   getAssembleShipmentActionLabel,
+  getPackageAssembleBlockedHint,
   getAssociatedProducersCardTitle,
   getCommonCancelLabel,
   getGenerateFilingArtifactsLabel,
@@ -203,12 +204,24 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             )}
             {pkg.status === 'DRAFT' || pkg.status === 'READY' ? (
               <PermissionGate permission="packages:seal_shipment">
-                <Button asChild variant="default">
-                  <Link href={`/packages/${pkg.id}/assemble`}>
+                {readinessBlockers.length > 0 || readinessLoading ? (
+                  <Button
+                    variant="default"
+                    disabled
+                    title={getPackageAssembleBlockedHint(role, t)}
+                    aria-disabled="true"
+                  >
                     <Lock className="mr-2 h-4 w-4" />
                     {getAssembleShipmentActionLabel(role, t)}
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button asChild variant="default">
+                    <Link href={`/packages/${pkg.id}/assemble`}>
+                      <Lock className="mr-2 h-4 w-4" />
+                      {getAssembleShipmentActionLabel(role, t)}
+                    </Link>
+                  </Button>
+                )}
               </PermissionGate>
             ) : null}
             <PermissionGate permission="packages:edit">
