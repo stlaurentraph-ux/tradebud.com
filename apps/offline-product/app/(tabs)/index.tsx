@@ -390,6 +390,7 @@ export default function HomeScreen() {
           <ThemedText type="title" style={styles.welcomeName}>
             {farmer?.name || t('farmer_fallback')}
           </ThemedText>
+          {counts.plotsCount > 0 ? (
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <ThemedText type="caption" style={styles.statLabel}>
@@ -419,6 +420,11 @@ export default function HomeScreen() {
               </ThemedText>
             </View>
           </View>
+          ) : (
+            <ThemedText type="caption" style={styles.welcomeNewUserHint}>
+              {t('home_data_on_device')}
+            </ThemedText>
+          )}
         </LinearGradient>
 
         <View style={styles.tilesGrid}>
@@ -465,6 +471,7 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
+        {counts.plotsCount > 0 ? (
         <Pressable
           onPress={pendingCount > 0 ? () => router.navigate('/(tabs)/settings?focus=backup') : undefined}
           disabled={pendingCount === 0}
@@ -522,6 +529,7 @@ export default function HomeScreen() {
             ) : null}
           </Card>
         </Pressable>
+        ) : null}
 
         {__DEV__ ? (
         <Card variant="outlined" style={styles.syncCard}>
@@ -677,6 +685,12 @@ const styles = StyleSheet.create({
     lineHeight: scaleText(34),
     fontWeight: '700',
     marginTop: 2,
+  },
+  welcomeNewUserHint: {
+    marginTop: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: scaleText(14),
+    lineHeight: scaleText(20),
   },
   statsRow: {
     flexDirection: 'row',

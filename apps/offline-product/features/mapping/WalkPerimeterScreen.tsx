@@ -368,8 +368,6 @@ export function WalkPerimeterScreen() {
     return 'standard' as const;
   }, [showWalkFieldPreview, offlineTilesEnabled, lowDataMap]);
 
-  const hasFarmerAccess = farmer?.selfDeclared === true;
-
   const finishNewPlotSave = useCallback(
     (name: string, tryServerUpload: () => void) => {
       const buttons: {
@@ -398,6 +396,16 @@ export function WalkPerimeterScreen() {
     },
     [openSignIn, t],
   );
+
+  const hasFarmerAccess = farmer?.selfDeclared === true;
+
+  const openShortPathCompletion = useCallback(() => {
+    setShowRegistrationPage(false);
+    setShowProducerProfilePage(false);
+    setShowDeclarationsPage(false);
+    setShowPhotosPage(false);
+    setShowCompletionPage(true);
+  }, []);
 
   const handlePlotUploadResult = useCallback(
     (result: Awaited<ReturnType<typeof postPlotToBackend>>, retry: () => void) => {
@@ -709,7 +717,7 @@ export function WalkPerimeterScreen() {
     !showCompletionPage;
   const photosCapturedCount = Object.values(photoSlots).filter(Boolean).length;
 
-  const handleSavePointPlot = () => {
+  const handleSavePointPlot = (options?: { shortPath?: boolean }) => {
     if (!canSavePointPlot) return;
 
     const last = points[points.length - 1];
@@ -779,7 +787,14 @@ export function WalkPerimeterScreen() {
     pendingProductionSystemRef.current = null;
     if (newPlotId) {
       lastRegisteredPlotIdRef.current = newPlotId;
-      logPlotComplianceDeclared(newPlotId, name);
+      if (!options?.shortPath) {
+        logPlotComplianceDeclared(newPlotId, name);
+      }
+    }
+
+    if (options?.shortPath) {
+      openShortPathCompletion();
+      return;
     }
 
     if (farmer) {
@@ -799,23 +814,17 @@ export function WalkPerimeterScreen() {
     }
   };
 
-  const handleSavePlot = () => {
+  const handleSavePlot = (options?: { shortPath?: boolean }) => {
     if (!canSavePlot) {
       return;
     }
 
     if (precisionMeters != null && precisionMeters > 10) {
-      Alert.alert(
-        'Poor GPS (Amber)',
-        'GPS precision is poor. You can still save, but consider vertex averaging or manual trace for better accuracy.',
-      );
+      Alert.alert(t('walk_poor_gps_title'), t('walk_poor_gps_body'));
     }
 
     if (hasSelfIntersection(points)) {
-      Alert.alert(
-        'Invalid boundary',
-        'The polygon self-intersects. Please walk the perimeter again.',
-      );
+      Alert.alert(t('walk_invalid_boundary_title'), t('walk_invalid_boundary_body'));
       return;
     }
 
@@ -830,10 +839,7 @@ export function WalkPerimeterScreen() {
     if (declaredAreaHaInput.trim().length > 0) {
       const parsed = Number(declaredAreaHaInput.trim().replace(',', '.'));
       if (Number.isNaN(parsed) || parsed <= 0) {
-        Alert.alert(
-          'Invalid declared area',
-          'Please enter a positive number for declared hectares.',
-        );
+        Alert.alert(t('walk_invalid_declared_title'), t('walk_invalid_declared_body'));
         return;
       }
       declaredAreaHectares = parsed;
@@ -843,12 +849,12 @@ export function WalkPerimeterScreen() {
 
       if (pct > 5) {
         Alert.alert(
-          'Area discrepancy too large',
-          `The difference between GPS area (${area.hectares.toFixed(
-            4,
-          )} ha) and declared area (${declaredAreaHectares.toFixed(
-            4,
-          )} ha) is ${pct.toFixed(1)}%, which exceeds the 5% tolerance.`,
+          t('walk_area_discrepancy_title'),
+          t('walk_area_discrepancy_body', {
+            gps: area.hectares.toFixed(4),
+            declared: declaredAreaHectares.toFixed(4),
+            pct: pct.toFixed(1),
+          }),
         );
         return;
       }
@@ -883,10 +889,7 @@ export function WalkPerimeterScreen() {
         discrepancyPercent,
         precisionMetersAtSave: precisionMeters ?? null,
       });
-      Alert.alert(
-        'Plot updated',
-        'Boundary saved on this device. If this plot was already uploaded, sync the new geometry from My Plots (upload / retry sync).',
-      );
+      Alert.alert(t('walk_plot_updated_title'), t('walk_plot_updated_polygon_body'));
       router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
       return;
     }
@@ -909,7 +912,9 @@ export function WalkPerimeterScreen() {
     pendingProductionSystemRef.current = null;
     if (newPlotId) {
       lastRegisteredPlotIdRef.current = newPlotId;
-      logPlotComplianceDeclared(newPlotId, name);
+      if (!options?.shortPath) {
+        logPlotComplianceDeclared(newPlotId, name);
+      }
     }
 
     // Log raw GNSS capture metadata for GIS review (best-effort, local only).
@@ -940,6 +945,11 @@ export function WalkPerimeterScreen() {
       // ignore
     }
 
+    if (options?.shortPath) {
+      openShortPathCompletion();
+      return;
+    }
+
     if (farmer && points.length > 0 && !editingPlot) {
       const tryServerUpload = () => {
         postPlotToBackend({
@@ -967,7 +977,7 @@ export function WalkPerimeterScreen() {
       handleSavePlot();
       return;
     }
-    setShowRegistrationPage(true);
+    handleSavePlot({ shortPath: true });
   };
 
   const logPlotComplianceDeclared = (plotId: string, plotName: string) => {
@@ -1550,58 +1560,52 @@ export function WalkPerimeterScreen() {
                     <Ionicons name="checkmark-circle-outline" size={58} color="#0A7F59" />
                   </View>
                   <ThemedText type="title" style={styles.completionTitle}>
-                    Plot Registered!
+                    {t('walk_completion_title')}
                   </ThemedText>
                   <ThemedText type="caption" style={styles.completionBody}>
-                    Your plot has been saved locally and will sync when connectivity is available.
+                    {t('walk_completion_body')}
+                  </ThemedText>
+                  <ThemedText type="defaultSemiBold" style={styles.completionPlotName}>
+                    {(plotName || defaultPlotName).trim()} · {area.hectares.toFixed(1)} ha
                   </ThemedText>
                 </View>
 
                 <Card variant="outlined" style={styles.completionStatusCard}>
-                  <View style={styles.completionStatusHeader}>
-                    <ThemedText type="defaultSemiBold" style={styles.completionStatusTitle}>
-                      Compliance Status
-                    </ThemedText>
-                    <View style={styles.pendingReviewPill}>
-                      <ThemedText numberOfLines={1} type="caption" style={styles.pendingReviewText}>
-                        Pending Review
-                      </ThemedText>
-                    </View>
+                  <View style={styles.completionListRow}>
+                    <View style={[styles.completionDot, { backgroundColor: '#10B981' }]} />
+                    <ThemedText type="default">{t('walk_completion_gps_polygon')}</ThemedText>
                   </View>
-                  <View style={{ gap: 8, marginTop: 10 }}>
-                    <View style={styles.completionListRow}>
-                      <View style={[styles.completionDot, { backgroundColor: '#10B981' }]} />
-                      <ThemedText type="default">GPS polygon captured</ThemedText>
-                    </View>
-                    <View style={styles.completionListRow}>
-                      <View style={[styles.completionDot, { backgroundColor: '#10B981' }]} />
-                      <ThemedText type="default">All declarations signed</ThemedText>
-                    </View>
-                    <View style={styles.completionListRow}>
-                      <View
-                        style={[
-                          styles.completionDot,
-                          { backgroundColor: photosCapturedCount >= 4 ? '#10B981' : '#F59E0B' },
-                        ]}
-                      />
-                      <ThemedText type="default">Ground-truth photos: {photosCapturedCount}/4</ThemedText>
-                    </View>
-                    <View style={styles.completionListRow}>
-                      <View style={[styles.completionDot, { backgroundColor: '#F59E0B' }]} />
-                      <ThemedText type="default">Deforestation check pending</ThemedText>
-                    </View>
-                    <View style={styles.completionListRow}>
-                      <View style={[styles.completionDot, { backgroundColor: '#F59E0B' }]} />
-                      <ThemedText type="default">Awaiting sync</ThemedText>
-                    </View>
+                  <View style={styles.completionListRow}>
+                    <View style={[styles.completionDot, { backgroundColor: '#F59E0B' }]} />
+                    <ThemedText type="default">{t('walk_completion_photos', { n: 0 })}</ThemedText>
                   </View>
+                  <View style={styles.completionListRow}>
+                    <View style={[styles.completionDot, { backgroundColor: '#F59E0B' }]} />
+                    <ThemedText type="default">{t('walk_completion_sign_declarations')}</ThemedText>
+                  </View>
+                  <ThemedText type="caption" style={styles.completionFinishLater}>
+                    {t('walk_completion_finish_later')}
+                  </ThemedText>
                 </Card>
 
                 {lastRegisteredPlotIdRef.current ? (
-                  <View style={{ marginTop: 10 }}>
-                    <Button
-                      variant="outline"
-                      fullWidth
+                  <View style={styles.completionChipRow}>
+                    <Pressable
+                      style={styles.completionChip}
+                      onPress={() => {
+                        const pid = lastRegisteredPlotIdRef.current;
+                        if (pid) {
+                          router.push(`/plot/${encodeURIComponent(pid)}?sub=photos`);
+                        }
+                      }}
+                    >
+                      <Ionicons name="camera-outline" size={16} color="#0A7F59" />
+                      <ThemedText type="caption" style={styles.completionChipText}>
+                        {t('walk_completion_add_photos')}
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      style={styles.completionChip}
                       onPress={() => {
                         const pid = lastRegisteredPlotIdRef.current;
                         if (pid) {
@@ -1609,8 +1613,11 @@ export function WalkPerimeterScreen() {
                         }
                       }}
                     >
-                      {t('plot_completion_upload_docs')}
-                    </Button>
+                      <Ionicons name="document-text-outline" size={16} color="#0A7F59" />
+                      <ThemedText type="caption" style={styles.completionChipText}>
+                        {t('walk_completion_sign_declarations')}
+                      </ThemedText>
+                    </Pressable>
                   </View>
                 ) : null}
 
@@ -1618,20 +1625,16 @@ export function WalkPerimeterScreen() {
                   <Button
                     variant="secondary"
                     fullWidth
-                    style={{ backgroundColor: '#0A7F59' }}
+                    style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
                     onPress={() => {
                       setShowCompletionPage(false);
                       setShowDetailedForm(false);
                       setSelectedMethodPage(null);
-                      setShowRegistrationPage(false);
-                      setShowProducerProfilePage(false);
-                      setShowDeclarationsPage(false);
-                      setShowPhotosPage(false);
-                      setPhotoSlots({ north: null, east: null, south: null, west: null });
                       reset();
+                      router.replace('/(tabs)/explore');
                     }}
                   >
-                    Register Another Plot
+                    {t('walk_completion_view_plots')}
                   </Button>
                 </View>
 
@@ -1640,9 +1643,26 @@ export function WalkPerimeterScreen() {
                     variant="ghost"
                     fullWidth
                     style={{ backgroundColor: '#E5E7EB', borderWidth: 1, borderColor: '#D1D5DB' }}
-                    onPress={() => navigateHome(router)}
+                    onPress={() => {
+                      setShowCompletionPage(false);
+                      setShowDetailedForm(false);
+                      setSelectedMethodPage(null);
+                      setPhotoSlots({ north: null, east: null, south: null, west: null });
+                      reset();
+                      setPlotName(defaultPlotName);
+                      setCaptureMethod('walk');
+                      setCaptureMode('walk');
+                      setSelectedMethodPage('walk');
+                      setShowDetailedForm(true);
+                    }}
                   >
-                    Back to Home
+                    {t('walk_register_another')}
+                  </Button>
+                </View>
+
+                <View style={{ marginTop: 10 }}>
+                  <Button variant="ghost" fullWidth onPress={() => navigateHome(router)}>
+                    {t('back_to_home')}
                   </Button>
                 </View>
               </>
@@ -2487,7 +2507,7 @@ export function WalkPerimeterScreen() {
                     handleSavePlot();
                     return;
                   }
-                  setShowRegistrationPage(true);
+                  handleSavePlot({ shortPath: true });
                 }}
                 disabled={!canSavePlot}
               >
@@ -2506,15 +2526,15 @@ export function WalkPerimeterScreen() {
                       handleSavePointPlot();
                       return;
                     }
-                    setShowRegistrationPage(true);
+                    handleSavePointPlot({ shortPath: true });
                   }}
                   disabled={!canSavePointPlot}
                 >
                   {editingPlot
-                    ? 'Save point update'
+                    ? t('walk_save_point')
                     : captureMethod === 'centroid'
-                      ? 'Complete geolocation'
-                      : 'Complete as point (<4ha)'}
+                      ? t('walk_complete_geolocation')
+                      : t('walk_complete_as_point')}
                 </Button>
               </View>
             ) : null}
@@ -2962,11 +2982,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 26 / 1.35,
   },
+  completionPlotName: {
+    marginTop: 10,
+    color: '#0B4F3B',
+    textAlign: 'center',
+  },
+  completionFinishLater: {
+    marginTop: 12,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  completionChipRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  completionChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#B7E7D7',
+    backgroundColor: '#F0FAF5',
+  },
+  completionChipText: {
+    color: '#0A7F59',
+    fontWeight: '600',
+  },
   completionStatusCard: {
     marginTop: 14,
     borderRadius: 18,
     borderColor: '#D5D9DD',
     backgroundColor: '#FFFFFF',
+    padding: 14,
+    gap: 8,
   },
   completionStatusHeader: {
     flexDirection: 'row',

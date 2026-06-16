@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app full design-review UX pass delivered: short post-capture save path, Home/My Plots/Plot detail/Settings polish on `cursor/v0-design-review-a74f`.
 - Field app map-first walk-my-plot UX delivered in React Native: simplified landing, taller map, farmer-friendly GPS strip and stats, direct walk flow on `WalkPerimeterScreen.tsx`.
 - Field app v0 design review pack delivered: `apps/offline-product/design/V0_DESIGN_REVIEW.md`, `V0_WALK_PLOT_PROMPT.md`, and `README.md` on branch `cursor/v0-design-review-a74f` for v0-by-Vercel walk-my-plot and full-app visual simplification.
 - Field app production crash fix delivered (`REACT-NATIVE-1`): `SignInSheetContext` now calls `reloadFromDisk` after auth rekey instead of undefined `reloadAppState`; push bridges hardened; Sentry Expo config aligned to `tracebud/react-native`; OTA published to preview + production.

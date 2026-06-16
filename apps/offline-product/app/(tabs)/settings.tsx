@@ -1104,6 +1104,12 @@ export default function SettingsScreen() {
                 {totalSyncPending > 0 ? t('pending_count', { n: totalSyncPending }) : t('up_to_date')}
               </Badge>
             </View>
+            <ThemedText type="caption" style={styles.backupIntroText}>
+              {t('settings_data_on_device')}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.mutedText}>
+              {t('settings_backup_sync_body')}
+            </ThemedText>
             <ThemedText type="caption" style={styles.mutedText}>
               {t('settings_api_base')}: {getTracebudApiBaseUrl()}
             </ThemedText>
@@ -1595,6 +1601,12 @@ const styles = StyleSheet.create({
     marginTop: 0,
     fontSize: 15,
     lineHeight: 22,
+  },
+  backupIntroText: {
+    marginTop: 8,
+    color: '#0B4F3B',
+    lineHeight: 20,
+    fontWeight: '600',
   },
   dataSharingRow: {
     gap: 12,

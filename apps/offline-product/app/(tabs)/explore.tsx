@@ -580,6 +580,25 @@ export default function PlotsScreen() {
         />
 
         <ThemedScrollView contentContainerStyle={styles.containerCompact}>
+          {plots.length === 0 ? (
+            <Card variant="outlined" style={styles.emptyPlotsCard}>
+              <View style={styles.emptyPlotsIconWrap}>
+                <Ionicons name="walk-outline" size={32} color="#0A7F59" />
+              </View>
+              <ThemedText type="defaultSemiBold" style={styles.emptyPlotsTitle}>
+                {t('walk_landing_headline')}
+              </ThemedText>
+              <ThemedText type="caption" style={styles.emptyPlotsBody}>
+                {t('my_plots_empty')}
+              </ThemedText>
+              <Pressable style={styles.emptyPlotsCta} onPress={() => router.push('/record')}>
+                <ThemedText type="defaultSemiBold" style={styles.emptyPlotsCtaText}>
+                  {t('walk_start_mapping')}
+                </ThemedText>
+                <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+              </Pressable>
+            </Card>
+          ) : null}
           {plots.map((plot) => {
             const status = statusForPlot(plot);
             const statusLabel = status === 'Compliant' ? t('status_compliant') : t('status_action_needed');
@@ -620,6 +639,20 @@ export default function PlotsScreen() {
                     </View>
                   </View>
                   {renderPlotListAreaCaption(plot, t)}
+                  {status !== 'Compliant' ? (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        router.push(`/plot/${encodeURIComponent(plot.id)}`);
+                      }}
+                      style={styles.finishSetupChip}
+                    >
+                      <Ionicons name="alert-circle-outline" size={14} color="#B45309" />
+                      <ThemedText type="caption" style={styles.finishSetupChipText}>
+                        {t('finish_setup_chip')}
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
                   <View style={styles.plotMetaRow}>
                     <View style={styles.plotMetaItem}>
                       <Ionicons name="camera-outline" size={16} color="#8A8A8A" />
@@ -2221,6 +2254,62 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     gap: 12,
+  },
+  emptyPlotsCard: {
+    borderRadius: 18,
+    borderColor: '#AEE6D3',
+    backgroundColor: '#E8F7F0',
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyPlotsIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPlotsTitle: {
+    color: '#0B4F3B',
+    textAlign: 'center',
+  },
+  emptyPlotsBody: {
+    color: '#1F6B57',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyPlotsCta: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0A7F59',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    minHeight: 48,
+  },
+  emptyPlotsCtaText: {
+    color: '#FFFFFF',
+  },
+  finishSetupChip: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  finishSetupChipText: {
+    color: '#B45309',
+    fontWeight: '600',
   },
   plotProtoCard: {
     borderRadius: 18,

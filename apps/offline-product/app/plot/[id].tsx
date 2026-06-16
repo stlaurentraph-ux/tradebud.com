@@ -587,13 +587,13 @@ export default function PlotDetailScreen() {
           </View>
           <View style={styles.summaryMetaRow}>
             <View style={styles.summaryMetaCell}>
-              <ThemedText type="caption">GeoID</ThemedText>
+              <ThemedText type="caption">{t('plot_geoid_label')}</ThemedText>
               <ThemedText type="defaultSemiBold">
                 {plot ? `HN-COP-${new Date(plot.createdAt).getFullYear()}-${String(plot.id).slice(-3)}` : '—'}
               </ThemedText>
             </View>
             <View style={styles.summaryMetaCell}>
-              <ThemedText type="caption">Registered</ThemedText>
+              <ThemedText type="caption">{t('plot_registered_label')}</ThemedText>
               <ThemedText type="defaultSemiBold">
                 {plot ? new Date(plot.createdAt).toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
               </ThemedText>
@@ -602,6 +602,24 @@ export default function PlotDetailScreen() {
         </Card>
 
         <Card variant="outlined" style={styles.statusChecklistCard}>
+          <View style={styles.progressHeaderRow}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${plotStatusRows.length > 0 ? ((plotStatusRows.length - checklistOpenCount) / plotStatusRows.length) * 100 : 0}%`,
+                  },
+                ]}
+              />
+            </View>
+            <ThemedText type="defaultSemiBold" style={styles.progressLabel}>
+              {t('plot_progress_label', {
+                done: plotStatusRows.length - checklistOpenCount,
+                total: plotStatusRows.length,
+              })}
+            </ThemedText>
+          </View>
           <ThemedText type="defaultSemiBold" style={styles.statusChecklistTitle}>
             {t('plot_status_title')}
           </ThemedText>
@@ -672,8 +690,8 @@ export default function PlotDetailScreen() {
             <Ionicons name="camera-outline" size={28} color="#B36A00" />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">Photo Vault</ThemedText>
-            <ThemedText type="default">{photos.length} ground-truth photos</ThemedText>
+            <ThemedText type="subtitle">{t('plot_nav_photos_title')}</ThemedText>
+            <ThemedText type="default">{t('plot_nav_photos_sub', { n: photos.length })}</ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -683,8 +701,10 @@ export default function PlotDetailScreen() {
             <Ionicons name="document-text-outline" size={28} color="#2D5FD4" />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">Land Documents</ThemedText>
-            <ThemedText type="default">{titlePhotos.length > 0 ? 'Clave Catastral uploaded' : 'Upload title and permit evidence'}</ThemedText>
+            <ThemedText type="subtitle">{t('plot_nav_documents_title')}</ThemedText>
+            <ThemedText type="default">
+              {titlePhotos.length > 0 ? t('plot_nav_documents_sub_done') : t('plot_nav_documents_sub_empty')}
+            </ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -694,8 +714,8 @@ export default function PlotDetailScreen() {
             <Ionicons name="scale-outline" size={28} color="#0B6F50" />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">Harvest Records</ThemedText>
-            <ThemedText type="default">{vouchers.length} deliveries this season</ThemedText>
+            <ThemedText type="subtitle">{t('plot_nav_harvests_title')}</ThemedText>
+            <ThemedText type="default">{t('plot_nav_harvests_sub', { n: vouchers.length })}</ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -705,8 +725,8 @@ export default function PlotDetailScreen() {
             <Ionicons name="qr-code-outline" size={26} color="#7B2CBF" />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">Compliance Voucher</ThemedText>
-            <ThemedText type="default">Download QR proof</ThemedText>
+            <ThemedText type="subtitle">{t('plot_nav_voucher_title')}</ThemedText>
+            <ThemedText type="default">{t('plot_nav_voucher_sub')}</ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -1193,6 +1213,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 14,
     gap: 0,
+  },
+  progressHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#10B981',
+  },
+  progressLabel: {
+    color: '#0B4F3B',
+    fontSize: 13,
+    minWidth: 88,
+    textAlign: 'right',
   },
   statusChecklistTitle: {
     color: '#0B4F3B',

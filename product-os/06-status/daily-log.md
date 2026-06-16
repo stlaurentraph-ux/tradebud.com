@@ -1,3 +1,10 @@
+### 2026-06-16 (field app: full design-review UX pass — short save path + all screens)
+- Walk plot: save boundary immediately after capture (`shortPath`); simplified success screen with finish-later chips; draw/centroid use same path.
+- Home: hide stats/sync for new users; farmer-friendly Ready/To finish labels.
+- My Plots: empty state with walk CTA; Finish setup chip on incomplete plots.
+- Plot detail: progress bar (N of M complete); nav cards i18n.
+- Settings: backup card shows on-device + sync body copy.
+
 ### 2026-06-16 (field app: map-first walk my plot UX in React Native)
 - `WalkPerimeterScreen`: simplified landing (name + size → walk map), map ~50% viewport, GPS strip (Strong/Fair/Weak only), Time/Area/GPS stats, pictogram steps, Start walking / Stop and save CTAs, Other ways to map link.
 - Home tile renamed to "Walk my plot" / "Map your field with GPS" (`en.json`).
