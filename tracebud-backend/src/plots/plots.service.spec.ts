@@ -50,6 +50,10 @@ const pushNotificationMock = {
   notifyFarmerConsentRequest: jest.fn().mockResolvedValue(undefined),
 };
 
+const onboardingEmailMock = {
+  sendFarmerWelcomeAfterFieldSignup: jest.fn().mockResolvedValue(true),
+};
+
 const gfwContextMock = {
   queryForGeometry: jest.fn().mockResolvedValue({
     summary: {
@@ -95,6 +99,7 @@ function makePlotsService(pool: { query: jest.Mock } | ReturnType<typeof makePoo
     tenureParseMock as any,
     evidenceDocumentsMock as any,
     pushNotificationMock as any,
+    onboardingEmailMock as any,
   );
 }
 

@@ -1,0 +1,27 @@
+Subject: Welcome to Tracebud — your farmer account is ready
+Preheader: Map plots offline, back up, and share with your cooperative
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+Welcome to Tracebud — your farmer account is ready.
+
+What you can do with Tracebud:
+
+  • Map plot boundaries offline (walk the perimeter or draw on the map)
+  • Back up plots, harvest logs, and photos to your account
+  • Share approved data with your cooperative when you choose
+  • Keep EUDR-ready plot and harvest records in one place
+
+Open Tracebud on your phone and sign in from Settings to sync your plots.
+
+  {{appUrl}}
+
+──────────────────────────────────────────────────────
+Tracebud · Field app for farmers
+tracebud.com
+
+© {{year}} Tracebud. All rights reserved.
+
+You received this because you created a Tracebud farmer account (email,
+Google, or Apple sign-in).

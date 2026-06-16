@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { BillingService } from '../billing/billing.service';
 import { isPlotDeforestationFreeVerified } from '../compliance/plot-compliance-status';
 import { isFarmerInTenant, resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
+import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -382,17 +383,7 @@ export class HarvestService {
   }
 
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
-    const res = await this.pool.query(
-      `
-        SELECT 1
-        FROM farmer_profile
-        WHERE id = $1
-          AND user_id = $2
-        LIMIT 1
-      `,
-      [farmerId, userId],
-    );
-    return (res.rowCount ?? 0) > 0;
+    return isFarmerProfileOwnedByUser(this.pool, farmerId, userId);
   }
 
   async getVoucherByQrRef(qrRef: string) {

@@ -1,10 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export type OnboardingEmailTemplateId = 'welcome' | 'resume-nudge-first' | 'resume-nudge-final';
+export type OnboardingEmailTemplateId =
+  | 'welcome'
+  | 'farmer-welcome'
+  | 'resume-nudge-first'
+  | 'resume-nudge-final';
 
 export const ONBOARDING_EMAIL_SUBJECTS: Record<OnboardingEmailTemplateId, string> = {
   welcome: 'Welcome to Tracebud — your workspace is ready',
+  'farmer-welcome': 'Welcome to Tracebud — your farmer account is ready',
   'resume-nudge-first': 'Finish setting up your Tracebud workspace',
   'resume-nudge-final': 'Reminder: your Tracebud workspace is almost ready',
 };
@@ -16,6 +21,7 @@ export interface OnboardingEmailTemplateVars {
   roleLabel?: string;
   loginUrl?: string;
   resumeUrl?: string;
+  appUrl?: string;
   unsubscribeUrl?: string;
   year: string;
 }
@@ -101,6 +107,7 @@ export function applyTemplatePlaceholders(
     roleLabel: vars.roleLabel ?? '',
     loginUrl: vars.loginUrl ?? '',
     resumeUrl: vars.resumeUrl ?? '',
+    appUrl: vars.appUrl ?? '',
     unsubscribeUrl: vars.unsubscribeUrl ?? '',
     year: vars.year,
   };
@@ -154,6 +161,21 @@ export function buildOnboardingTemplateVars(input: {
     unsubscribeUrl:
       process.env.TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL?.trim() ||
       `${dashboardBase}/settings`,
+    year: String(new Date().getFullYear()),
+  };
+}
+
+export function buildFarmerWelcomeTemplateVars(input: {
+  firstName: string;
+}): OnboardingEmailTemplateVars {
+  const appUrl =
+    process.env.TRACEBUD_FIELD_APP_PUBLIC_URL?.trim()?.replace(/\/$/, '') ||
+    'https://tracebud.com';
+  return {
+    firstName: input.firstName,
+    appUrl,
+    unsubscribeUrl:
+      process.env.TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL?.trim() || `${appUrl}/privacy`,
     year: String(new Date().getFullYear()),
   };
 }

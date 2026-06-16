@@ -39,4 +39,15 @@ describe('resolveFieldActorRole', () => {
   it('returns null for dashboard JWT without farmer_profile', async () => {
     await expect(resolveFieldActorRole(poolWithoutProfile(), exporterUser)).resolves.toBeNull();
   });
+
+  it('assertTenantClaimOrFieldActor allows field-app signup without tenant', async () => {
+    const { assertTenantClaimOrFieldActor } = await import('./field-app-auth');
+    await expect(
+      assertTenantClaimOrFieldActor(poolWithoutProfile(), {
+        id: 'user-4',
+        user_metadata: { signup_source: 'field-app', role: 'farmer' },
+        app_metadata: { provider: 'google' },
+      }),
+    ).resolves.toBeUndefined();
+  });
 });

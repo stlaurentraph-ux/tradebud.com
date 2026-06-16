@@ -1,7 +1,7 @@
 import { OnboardingEmailService } from './onboarding-email.service';
 
 describe('OnboardingEmailService', () => {
-  it('detects complete workspace setup from commercial profile fields', () => {
+  it('skips farmer welcome when profile already exists', () => {
     const service = new OnboardingEmailService({ query: jest.fn() } as any);
     expect(service.isWorkspaceSetupComplete(null)).toBe(false);
     expect(

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { OnboardingEmailService } from '../launch/onboarding-email.service';
 import { PlotsService } from './plots.service';
 
 @ApiTags('Field app')
@@ -16,7 +17,10 @@ import { PlotsService } from './plots.service';
 @UseGuards(SupabaseAuthGuard)
 @Controller()
 export class FieldAppController {
-  constructor(private readonly plotsService: PlotsService) {}
+  constructor(
+    private readonly plotsService: PlotsService,
+    private readonly onboardingEmail: OnboardingEmailService,
+  ) {}
 
   @Post('v1/me/field-app-bootstrap')
   @ApiOperation({
@@ -34,12 +38,30 @@ export class FieldAppController {
     if (!farmerId) {
       throw new BadRequestException('farmerId is required');
     }
-    await this.plotsService.bootstrapFieldAppProducer({
+    const email = typeof req.user?.email === 'string' ? req.user.email : '';
+    const fullName =
+      body.fullName?.trim() ||
+      (typeof req.user?.user_metadata?.full_name === 'string'
+        ? req.user.user_metadata.full_name
+        : typeof req.user?.user_metadata?.fullName === 'string'
+          ? req.user.user_metadata.fullName
+          : null);
+    const { created } = await this.plotsService.bootstrapFieldAppProducer({
       farmerId,
       userId,
       countryCode: body.countryCode?.trim() || 'HN',
-      fullName: body.fullName?.trim() || null,
+      fullName,
     });
+    if (created && email) {
+      void this.onboardingEmail
+        .sendFarmerWelcomeAfterFieldSignup({
+          userId,
+          farmerId,
+          email,
+          fullName,
+        })
+        .catch(() => undefined);
+    }
     return { ok: true, farmer_id: farmerId };
   }
 }

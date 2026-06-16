@@ -1,7 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Inject, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Pool } from 'pg';
-import { resolveFieldActorRole } from '../auth/field-app-auth';
+import { resolveFieldActorRole, assertTenantClaimOrFieldActor } from '../auth/field-app-auth';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
@@ -35,6 +35,10 @@ export class PlotsController {
     if (!tenantId) {
       throw new ForbiddenException('Missing tenant claim in app_metadata');
     }
+  }
+
+  private async requireTenantClaimOrFieldActor(req: any) {
+    await assertTenantClaimOrFieldActor(this.pool, req.user);
   }
 
   private async enforceSyncPlotScope(plotId: string, req: any, assignmentId?: string) {
@@ -194,7 +198,7 @@ export class PlotsController {
 
   @Post()
   async create(@Body() dto: CreatePlotDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const userId = req.user?.id as string | undefined;
     const actorRole = await resolveFieldActorRole(this.pool, req.user);
     const jwtRole = deriveRoleFromSupabaseUser(req.user);
@@ -202,7 +206,14 @@ export class PlotsController {
       throw new ForbiddenException('Only farmers, agents, or exporters can create plots');
     }
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
-    const row = await this.plotsService.create(dto, userId, tenantId);
+    const email = typeof req.user?.email === 'string' ? req.user.email : undefined;
+    const fullName =
+      typeof req.user?.user_metadata?.full_name === 'string'
+        ? req.user.user_metadata.full_name
+        : typeof req.user?.user_metadata?.fullName === 'string'
+          ? req.user.user_metadata.fullName
+          : undefined;
+    const row = await this.plotsService.create(dto, userId, tenantId, { email, fullName });
     return row;
   }
 
@@ -214,7 +225,7 @@ export class PlotsController {
     @Query('scope') scope: string | undefined,
     @Req() req: any,
   ) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const actorRole = await resolveFieldActorRole(this.pool, req.user);
     const resolvedScope = scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
@@ -288,7 +299,7 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async updateMetadata(@Param('id') id: string, @Body() dto: UpdatePlotDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'farmer' && role !== 'agent') {
       throw new ForbiddenException('Only farmers or agents can edit plots');
@@ -314,7 +325,7 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async updateGeometry(@Param('id') id: string, @Body() dto: UpdatePlotGeometryDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role !== 'farmer' && role !== 'agent') {
       throw new ForbiddenException('Only farmers or agents can revise plot geometry');
@@ -345,7 +356,7 @@ export class PlotsController {
     @Body() dto: SyncPlotPhotosDto,
     @Req() req: any,
   ) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
     return this.plotsService.syncPhotos(id, dto, userId, tenantId);
@@ -359,7 +370,7 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async syncLegal(@Param('id') id: string, @Body() dto: SyncPlotLegalDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
     return this.plotsService.syncLegal(id, dto, userId);
   }
@@ -372,7 +383,7 @@ export class PlotsController {
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async syncEvidence(@Param('id') id: string, @Body() dto: SyncPlotEvidenceDto, @Req() req: any) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     const userId = await this.enforceSyncPlotScope(id, req, dto.assignmentId);
     return this.plotsService.syncEvidence(id, dto, userId, tenantId);
@@ -679,7 +690,7 @@ export class PlotsController {
     @Query('signalsOnly') signalsOnlyRaw: string | undefined,
     @Req() req: any,
   ) {
-    this.requireTenantClaim(req);
+    await this.requireTenantClaimOrFieldActor(req);
     const role = deriveRoleFromSupabaseUser(req.user);
     if (role === 'farmer') {
       const userId = req.user?.id as string | undefined;

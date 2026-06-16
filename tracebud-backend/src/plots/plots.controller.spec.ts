@@ -12,11 +12,22 @@ function makeConsentMock(): jest.Mocked<
   };
 }
 
+function makePoolMock() {
+  return {
+    query: jest.fn(async () => ({ rows: [], rowCount: 0 })),
+  };
+}
+
 function makePlotsController(
   service: ReturnType<typeof makeServiceMock>,
   consent: ReturnType<typeof makeConsentMock> = makeConsentMock(),
+  pool: ReturnType<typeof makePoolMock> = makePoolMock(),
 ) {
-  return new PlotsController(service as unknown as PlotsService, consent as unknown as ConsentService);
+  return new PlotsController(
+    service as unknown as PlotsService,
+    consent as unknown as ConsentService,
+    pool as never,
+  );
 }
 
 function makeServiceMock(): jest.Mocked<
@@ -71,16 +82,28 @@ function makeServiceMock(): jest.Mocked<
 }
 
 describe('PlotsController scope boundaries', () => {
-  it('rejects create when tenant claim is missing', async () => {
+  it('rejects create when tenant claim is missing and actor is not field-app', async () => {
     const service = makeServiceMock();
     const controller = makePlotsController(service);
 
     await expect(
-      controller.create({} as any, { user: { id: 'user_1', email: 'farmer@example.com' } }),
+      controller.create({} as any, { user: { id: 'user_1', email: 'exporter@example.com', app_metadata: { role: 'exporter' } } }),
     ).rejects.toThrow(ForbiddenException);
   });
 
-  it('rejects when tenant claim is missing', async () => {
+  it('allows create for field-app farmer without tenant claim', async () => {
+    const service = makeServiceMock();
+    service.create.mockResolvedValue({ id: 'plot_1' });
+    const controller = makePlotsController(service);
+
+    await expect(
+      controller.create({ farmerId: 'user_1' } as any, {
+        user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { role: 'farmer' } },
+      }),
+    ).resolves.toEqual({ id: 'plot_1' });
+  });
+
+  it('rejects when tenant claim is missing for non-field actors', async () => {
     const service = makeServiceMock();
     const controller = makePlotsController(service);
 

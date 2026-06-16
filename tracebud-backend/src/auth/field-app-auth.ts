@@ -1,8 +1,35 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 
-import { deriveRoleFromSupabaseUser } from './roles';
+import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from './roles';
 
 export type FieldActorRole = 'farmer' | 'agent';
+
+function readMetadataString(
+  user: { app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } | null | undefined,
+  key: string,
+): string | null {
+  const app = user?.app_metadata?.[key];
+  if (typeof app === 'string' && app.trim()) {
+    return app.trim();
+  }
+  const userMeta = user?.user_metadata?.[key];
+  if (typeof userMeta === 'string' && userMeta.trim()) {
+    return userMeta.trim();
+  }
+  return null;
+}
+
+/** True for native field-app signups and dashboard accounts that linked the field app. */
+export function isFieldAppSignupUser(
+  user: { app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } | null | undefined,
+): boolean {
+  if (readMetadataString(user, 'signup_source') === 'field-app') {
+    return true;
+  }
+  const linked = user?.user_metadata?.field_app_linked ?? user?.app_metadata?.field_app_linked;
+  return linked === true || linked === 'true';
+}
 
 /**
  * Field-app API actor: JWT farmer/agent, or any user with a linked farmer_profile row
@@ -31,4 +58,29 @@ export async function resolveFieldActorRole(
   }
 
   return null;
+}
+
+/** Dashboard operators need tenant_id; self-declared field-app farmers/agents may sync without it. */
+export async function assertTenantClaimOrFieldActor(
+  pool: Pool,
+  user:
+    | {
+        id?: string;
+        app_metadata?: Record<string, unknown>;
+        user_metadata?: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+): Promise<void> {
+  if (deriveTenantIdFromSupabaseUser(user)) {
+    return;
+  }
+  const actorRole = await resolveFieldActorRole(pool, user);
+  if (actorRole === 'farmer' || actorRole === 'agent') {
+    return;
+  }
+  if (isFieldAppSignupUser(user)) {
+    return;
+  }
+  throw new ForbiddenException('Missing tenant claim in app_metadata');
 }

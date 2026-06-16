@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
+import { LaunchModule } from '../launch/launch.module';
 import { PlotsController } from './plots.controller';
 import { FieldAppController } from './field-app.controller';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
@@ -13,7 +14,7 @@ import { GfwService } from '../compliance/gfw.service';
 import { FdpCommodityService } from '../compliance/fdp-commodity.service';
 
 @Module({
-  imports: [DbModule, ConsentModule],
+  imports: [DbModule, ConsentModule, LaunchModule],
   controllers: [PlotsController, FieldAppController],
   providers: [
     PlotsService,

@@ -178,6 +178,35 @@ export class ConsentController {
     return { registered: true };
   }
 
+  @Post('v1/me/push-devices/unregister')
+  async unregisterPushDevice(
+    @Body() body: { push_token?: string },
+    @Req() req: any,
+  ) {
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const actorRole = await resolveFieldActorRole(this.pool, req.user);
+    const allowedRoles = new Set([
+      'farmer',
+      'agent',
+      'cooperative',
+      'exporter',
+      'compliance_manager',
+    ]);
+    if ((!role || !allowedRoles.has(role)) && !actorRole) {
+      throw new ForbiddenException('This account cannot unregister push devices');
+    }
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    const pushToken = body?.push_token?.trim();
+    if (!pushToken) {
+      throw new BadRequestException('push_token is required');
+    }
+    await this.pushNotifications.unregisterDevice(userId, pushToken);
+    return { unregistered: true };
+  }
+
   @Post('v1/me/gdpr-erasure-request')
   async requestGdprErasure(@Body() body: { details?: string }, @Req() req: any) {
     const userId = await this.requireFieldProducerUserId(

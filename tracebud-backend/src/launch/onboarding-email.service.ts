@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { Resend } from 'resend';
 import { PG_POOL } from '../db/db.module';
 import {
+  buildFarmerWelcomeTemplateVars,
   buildOnboardingTemplateVars,
   getResumeNudgeTemplateId,
   ONBOARDING_EMAIL_SUBJECTS,
@@ -48,6 +49,17 @@ export class OnboardingEmailService {
         welcome_email_sent_at TIMESTAMPTZ NULL,
         resume_nudge_sent_at TIMESTAMPTZ NULL,
         resume_nudge_count INTEGER NOT NULL DEFAULT 0 CHECK (resume_nudge_count >= 0),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS field_app_signup_contacts (
+        user_id TEXT PRIMARY KEY,
+        farmer_id UUID NULL,
+        email TEXT NOT NULL,
+        full_name TEXT NULL,
+        welcome_email_sent_at TIMESTAMPTZ NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
@@ -172,6 +184,90 @@ export class OnboardingEmailService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Welcome email failed for ${recipient}: ${message}`);
+      return false;
+    }
+  }
+
+  async sendFarmerWelcomeAfterFieldSignup(input: {
+    userId: string;
+    farmerId: string;
+    email: string;
+    fullName: string | null;
+  }): Promise<boolean> {
+    await this.ensureEmailSchema();
+    const userId = input.userId.trim();
+    const farmerId = input.farmerId.trim();
+    const recipient = input.email.trim().toLowerCase();
+    if (!userId || !farmerId || !recipient) {
+      return false;
+    }
+
+    const alreadySent = await this.pool.query<{ welcome_email_sent_at: string | null }>(
+      `
+        SELECT welcome_email_sent_at
+        FROM field_app_signup_contacts
+        WHERE user_id = $1
+      `,
+      [userId],
+    );
+    if (alreadySent.rows[0]?.welcome_email_sent_at) {
+      return false;
+    }
+
+    if (!this.isResendConfigured()) {
+      this.logger.warn('Skipping farmer welcome email: Resend is not configured.');
+      return false;
+    }
+
+    const firstName = this.firstNameFrom(input.fullName, recipient);
+    const templateVars = buildFarmerWelcomeTemplateVars({ firstName });
+
+    try {
+      const resend = this.getResendClient();
+      const from = this.formatFromAddress();
+      const result = await resend.emails.send({
+        from,
+        to: recipient,
+        replyTo: this.getReplyTo(from),
+        subject: ONBOARDING_EMAIL_SUBJECTS['farmer-welcome'],
+        html: renderOnboardingEmailHtml('farmer-welcome', templateVars),
+        text: renderOnboardingEmailText('farmer-welcome', templateVars),
+      });
+      if (result.error) {
+        this.logger.warn(`Farmer welcome email failed for ${recipient}: ${result.error.message}`);
+        return false;
+      }
+
+      await this.pool.query(
+        `
+          INSERT INTO field_app_signup_contacts (
+            user_id,
+            farmer_id,
+            email,
+            full_name,
+            welcome_email_sent_at,
+            updated_at
+          )
+          VALUES ($1, $2::uuid, $3, $4, NOW(), NOW())
+          ON CONFLICT (user_id) DO UPDATE SET
+            farmer_id = COALESCE(EXCLUDED.farmer_id, field_app_signup_contacts.farmer_id),
+            email = EXCLUDED.email,
+            full_name = COALESCE(EXCLUDED.full_name, field_app_signup_contacts.full_name),
+            welcome_email_sent_at = NOW(),
+            updated_at = NOW()
+        `,
+        [userId, farmerId, recipient, input.fullName?.trim() || null],
+      );
+      await this.emitAuditEvent('farmer_welcome_email_sent', {
+        userId,
+        farmerId,
+        email: recipient,
+        sentAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Farmer welcome email failed for ${recipient}: ${message}`);
       return false;
     }
   }

@@ -43,6 +43,26 @@ export class PushNotificationService {
     }
   }
 
+  async unregisterDevice(userId: string, pushToken: string): Promise<void> {
+    const token = pushToken?.trim();
+    if (!token || !userId) {
+      return;
+    }
+    try {
+      await this.pool.query(
+        `DELETE FROM farmer_push_devices WHERE user_id = $1::uuid AND push_token = $2`,
+        [userId, token],
+      );
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        this.logger.warn('farmer_push_devices table missing; skip push unregister');
+        return;
+      }
+      throw error;
+    }
+  }
+
   async notifyFarmerConsentRequest(params: {
     farmerId: string;
     granteeOrgName: string | null;

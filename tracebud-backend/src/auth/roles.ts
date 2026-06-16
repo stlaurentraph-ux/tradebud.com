@@ -7,9 +7,11 @@ export type AppRole =
   | 'compliance_manager'
   | 'country_reviewer';
 
-function parseClaimRole(user: any): AppRole | null {
-  const rawClaimRole = (user?.app_metadata?.role as string | undefined) ?? '';
-  const claimRole = rawClaimRole.trim().toLowerCase();
+function parseRoleString(raw: unknown): AppRole | null {
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const claimRole = raw.trim().toLowerCase();
   if (!claimRole) {
     return null;
   }
@@ -36,6 +38,14 @@ function parseClaimRole(user: any): AppRole | null {
     return 'farmer';
   }
   return null;
+}
+
+function parseClaimRole(user: any): AppRole | null {
+  const appRole = parseRoleString(user?.app_metadata?.role);
+  if (appRole) {
+    return appRole;
+  }
+  return parseRoleString(user?.user_metadata?.role);
 }
 
 export function deriveRoleFromSupabaseUser(user: any): AppRole {

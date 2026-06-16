@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
+import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -36,6 +37,7 @@ import { PlotGeometryValidationService } from './plot-geometry-validation.servic
 import { TenureParseService } from './tenure-parse.service';
 import { EvidenceDocumentsService } from './evidence-documents.service';
 import { PushNotificationService } from '../consent/push-notification.service';
+import { OnboardingEmailService } from '../launch/onboarding-email.service';
 import {
   applyReviewClearanceGate,
   EUDR_DEFORESTATION_CUTOFF,
@@ -126,6 +128,7 @@ export class PlotsService {
     private readonly tenureParse: TenureParseService,
     private readonly evidenceDocuments: EvidenceDocumentsService,
     private readonly pushNotifications: PushNotificationService,
+    private readonly onboardingEmail: OnboardingEmailService,
   ) {}
 
   private static parseNumeric(value: unknown): number | null {
@@ -299,8 +302,12 @@ export class PlotsService {
     userId: string;
     countryCode?: string;
     fullName?: string | null;
-  }): Promise<void> {
-    await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, params.countryCode);
+  }): Promise<{ created: boolean }> {
+    const created = await this.ensureFarmerProfileForPlot(
+      params.farmerId,
+      params.userId,
+      params.countryCode,
+    );
     if (params.fullName) {
       await this.pool.query(
         `
@@ -311,13 +318,34 @@ export class PlotsService {
         [params.userId, params.fullName],
       );
     }
+    return { created };
+  }
+
+  private maybeSendFarmerWelcome(input: {
+    created: boolean;
+    userId: string;
+    farmerId: string;
+    email?: string | null;
+    fullName?: string | null;
+  }): void {
+    if (!input.created || !input.email?.trim()) {
+      return;
+    }
+    void this.onboardingEmail
+      .sendFarmerWelcomeAfterFieldSignup({
+        userId: input.userId,
+        farmerId: input.farmerId,
+        email: input.email,
+        fullName: input.fullName ?? null,
+      })
+      .catch(() => undefined);
   }
 
   private async ensureFarmerProfileForPlot(
     farmerId: string,
     authUserId: string | undefined,
     countryCode = 'HN',
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!authUserId) {
       throw new BadRequestException('Missing authenticated user for plot creation');
     }
@@ -332,7 +360,7 @@ export class PlotsService {
           'This farmer ID is already linked to another account. Use the profile from your device.',
         );
       }
-      return;
+      return false;
     }
 
     await this.pool.query(
@@ -351,9 +379,15 @@ export class PlotsService {
     `,
       [farmerId, authUserId, countryCode],
     );
+    return true;
   }
 
-  async create(createDto: CreatePlotDto, userId: string | undefined, tenantId?: string | null) {
+  async create(
+    createDto: CreatePlotDto,
+    userId: string | undefined,
+    tenantId?: string | null,
+    actorContact?: { email?: string | null; fullName?: string | null },
+  ) {
     const {
       geometry,
       declaredAreaHa,
@@ -366,7 +400,16 @@ export class PlotsService {
       productionSystem,
     } = createDto;
 
-    await this.ensureFarmerProfileForPlot(farmerId, userId);
+    const profileCreated = await this.ensureFarmerProfileForPlot(farmerId, userId);
+    if (userId) {
+      this.maybeSendFarmerWelcome({
+        created: profileCreated,
+        userId,
+        farmerId,
+        email: actorContact?.email,
+        fullName: actorContact?.fullName,
+      });
+    }
 
     // Simple validation: ensure 6 decimal places for coords
     const ensureSixDecimals = (value: number) => Number(value.toFixed(6));
@@ -2010,17 +2053,7 @@ export class PlotsService {
   }
 
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
-    const res = await this.pool.query(
-      `
-        SELECT 1
-        FROM farmer_profile
-        WHERE id = $1
-          AND user_id = $2
-        LIMIT 1
-      `,
-      [farmerId, userId],
-    );
-    return (res.rowCount ?? 0) > 0;
+    return isFarmerProfileOwnedByUser(this.pool, farmerId, userId);
   }
 
   async isPlotOwnedByUser(plotId: string, userId: string): Promise<boolean> {

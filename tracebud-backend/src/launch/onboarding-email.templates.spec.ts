@@ -35,6 +35,23 @@ describe('onboarding-email.templates', () => {
     expect(text).not.toContain('{{organizationName}}');
   });
 
+  it('renders farmer welcome html and text from repo templates', () => {
+    const vars = {
+      firstName: 'Maria',
+      appUrl: 'https://tracebud.com',
+      unsubscribeUrl: 'https://tracebud.com/privacy',
+      year: '2026',
+    };
+    const html = renderOnboardingEmailHtml('farmer-welcome', vars);
+    expect(html).toContain('Hi Maria');
+    expect(html).toContain('Map plot boundaries offline');
+    expect(html).not.toContain('{{firstName}}');
+
+    const text = renderOnboardingEmailText('farmer-welcome', vars);
+    expect(text).toContain('Welcome to Tracebud');
+    expect(text).not.toContain('{{appUrl}}');
+  });
+
   it('renders resume nudge variants', () => {
     const vars = {
       firstName: 'Amara',

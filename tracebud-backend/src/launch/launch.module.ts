@@ -11,6 +11,6 @@ import { OnboardingEmailService } from './onboarding-email.service';
   imports: [DbModule, InboxModule],
   providers: [LaunchService, OnboardingEmailService],
   controllers: [LaunchController, LaunchPublicController, LaunchCronController],
-  exports: [LaunchService],
+  exports: [LaunchService, OnboardingEmailService],
 })
 export class LaunchModule {}

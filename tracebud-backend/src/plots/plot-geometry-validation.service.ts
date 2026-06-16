@@ -108,7 +108,7 @@ export class PlotGeometryValidationService {
         WHERE fp.id = $1::uuid
           AND fp2.id <> $1::uuid
       ),
-      overlaps AS (
+      overlap_candidates AS (
         SELECT
           p.id::text AS plot_id,
           p.name AS plot_name,
@@ -146,7 +146,7 @@ export class PlotGeometryValidationService {
         o.farmer_id,
         o.overlap_ha,
         o.smaller_area_ha
-      FROM overlaps o
+      FROM overlap_candidates o
     `;
 
     try {
@@ -200,7 +200,7 @@ export class PlotGeometryValidationService {
           (ST_Area(geom::geography) / 10000.0)::float8 AS area_ha
         FROM candidate
       ),
-      overlaps AS (
+      overlap_candidates AS (
         SELECT
           p.id::text AS plot_id,
           p.name AS plot_name,
@@ -238,7 +238,7 @@ export class PlotGeometryValidationService {
         o.farmer_id,
         o.overlap_ha,
         o.smaller_area_ha
-      FROM overlaps o
+      FROM overlap_candidates o
     `;
     const res = await this.pool.query(text, [params.farmerId, params.excludePlotId ?? null]);
     const metricRow = res.rows.find((row) => row.row_kind === 'metrics') ?? res.rows[0];
