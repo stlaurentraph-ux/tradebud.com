@@ -12,6 +12,8 @@ import { createTranslator, type TranslateFn } from '@/features/i18n/translate';
 import { defaultLocale, isSupportedLanguage } from '@/features/i18n/config';
 import { getSetting } from '@/features/state/persistence';
 import { loadPlotCadastralKey } from '@/features/state/persistence';
+import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 
 const LANG_STORAGE_KEY = 'tracebudAppLanguage';
 
@@ -59,10 +61,19 @@ function uploadGeometryQualityError(
   });
 }
 
-/** Same matching rule as My Plots: server row `name` equals local plot display name. */
+/** Server row when stable client id (or legacy display name) matches. */
 export function backendHasMatchingPlot(localPlot: Plot, backendPlots: unknown[]): boolean {
-  const name = String(localPlot.name ?? '');
-  return (backendPlots as { name?: string }[]).some((p) => String(p?.name ?? '') === name);
+  return (
+    findBackendPlotForLocal(
+      {
+        id: localPlot.id,
+        name: localPlot.name,
+        areaHectares: localPlot.areaHectares,
+        kind: localPlot.kind,
+      },
+      backendPlots,
+    ) != null
+  );
 }
 
 export function listUnsyncedLocalPlots(localPlots: Plot[], backendPlots: unknown[]): Plot[] {
@@ -163,7 +174,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
 
     const r = await postPlotToBackend({
       farmerId,
-      clientPlotId: plot.name,
+      clientPlotId: resolveClientPlotId(plot),
       geometry,
       declaredAreaHa: plot.declaredAreaHectares ?? plot.areaHectares ?? null,
       precisionMeters: plot.precisionMetersAtSave ?? null,

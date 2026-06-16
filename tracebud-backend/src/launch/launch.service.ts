@@ -44,6 +44,7 @@ interface CommercialProfileRow {
   organization_name: string | null;
   country: string | null;
   primary_role: SignupPrimaryRole | null;
+  supply_chain_roles: string[];
   team_size: string | null;
   main_commodity: string | null;
   primary_objective: SignupPrimaryObjective | null;
@@ -204,6 +205,10 @@ export class LaunchService {
         profile_skipped BOOLEAN NOT NULL DEFAULT FALSE,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
+    `);
+    await this.pool.query(`
+      ALTER TABLE tenant_commercial_profiles
+      ADD COLUMN IF NOT EXISTS supply_chain_roles TEXT[] NOT NULL DEFAULT '{}'
     `);
     this.schemaReady = true;
   }
@@ -425,6 +430,7 @@ export class LaunchService {
           organization_name,
           country,
           primary_role,
+          COALESCE(supply_chain_roles, '{}') AS supply_chain_roles,
           team_size,
           main_commodity,
           primary_objective,
@@ -822,7 +828,7 @@ export class LaunchService {
           primary_role = EXCLUDED.primary_role,
           profile_skipped = FALSE,
           updated_at = NOW()
-        RETURNING tenant_id, organization_name, country, primary_role, team_size, main_commodity, primary_objective, profile_skipped, updated_at
+        RETURNING tenant_id, organization_name, country, primary_role, COALESCE(supply_chain_roles, '{}') AS supply_chain_roles, team_size, main_commodity, primary_objective, profile_skipped, updated_at
       `,
       [input.tenantId, input.organizationName.trim(), input.country.trim(), input.primaryRole],
     );
@@ -890,7 +896,7 @@ export class LaunchService {
           primary_objective = EXCLUDED.primary_objective,
           profile_skipped = EXCLUDED.profile_skipped,
           updated_at = NOW()
-        RETURNING tenant_id, organization_name, country, primary_role, team_size, main_commodity, primary_objective, profile_skipped, updated_at
+        RETURNING tenant_id, organization_name, country, primary_role, COALESCE(supply_chain_roles, '{}') AS supply_chain_roles, team_size, main_commodity, primary_objective, profile_skipped, updated_at
       `,
       [
         input.tenantId,
@@ -907,6 +913,55 @@ export class LaunchService {
       primaryRole: input.primaryRole,
       primaryObjective: input.primaryObjective,
       savedAt: new Date().toISOString(),
+    }).catch(() => undefined);
+    return result.rows[0];
+  }
+
+  private normalizeSupplyChainRoles(roles: string[] | null | undefined): string[] {
+    const allowed = new Set(['cooperative', 'exporter', 'importer']);
+    const unique = new Set<string>();
+    for (const role of roles ?? []) {
+      if (typeof role === 'string' && allowed.has(role)) {
+        unique.add(role);
+      }
+    }
+    return Array.from(unique);
+  }
+
+  async saveSupplyChainRoles(input: {
+    tenantId: string;
+    supplyChainRoles: string[];
+    actorUserId: string | null;
+  }): Promise<CommercialProfileRow> {
+    await this.ensureSchema();
+    const roles = this.normalizeSupplyChainRoles(input.supplyChainRoles);
+    if (roles.length === 0) {
+      throw new ForbiddenException('At least one supply chain role is required.');
+    }
+    const primaryRole: SignupPrimaryRole = roles.includes('importer') ? 'importer' : 'exporter';
+    const result = await this.pool.query<CommercialProfileRow>(
+      `
+        INSERT INTO tenant_commercial_profiles (
+          tenant_id,
+          primary_role,
+          supply_chain_roles,
+          profile_skipped,
+          updated_at
+        )
+        VALUES ($1, $2, $3::text[], FALSE, NOW())
+        ON CONFLICT (tenant_id) DO UPDATE SET
+          supply_chain_roles = EXCLUDED.supply_chain_roles,
+          primary_role = EXCLUDED.primary_role,
+          updated_at = NOW()
+        RETURNING tenant_id, organization_name, country, primary_role, COALESCE(supply_chain_roles, '{}') AS supply_chain_roles, team_size, main_commodity, primary_objective, profile_skipped, updated_at
+      `,
+      [input.tenantId, primaryRole, roles],
+    );
+    await this.emitAuditEvent('supply_chain_roles_updated', {
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      supplyChainRoles: roles,
+      updatedAt: new Date().toISOString(),
     }).catch(() => undefined);
     return result.rows[0];
   }

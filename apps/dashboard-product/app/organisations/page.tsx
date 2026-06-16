@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Upload } from 'lucide-react';
 import { useSponsorView } from '@/lib/sponsor-view';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 type OrganisationRow = {
   id: string;
@@ -127,6 +129,9 @@ function parseBulkOrganisationCsv(csv: string): OrganisationRow[] {
 }
 
 export default function OrganisationsPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'organisations', { title: "Organisations" });
   const sponsorView = useSponsorView();
   const [organisationRows, setOrganisationRows] = useState<OrganisationRow[]>(organisations);
   const [addMode, setAddMode] = useState<'manual' | 'bulk'>('manual');
@@ -295,13 +300,13 @@ export default function OrganisationsPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Organisations"
+        title={pageHeader.title}
         subtitle={
           sponsorView === 'country'
             ? 'Sponsor-scoped directory for network activation, readiness, and country coverage'
             : 'Sponsor-scoped directory for supplier performance, funded coverage, and value-chain visibility'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Organisations' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Organisations' })}
         actions={
           <Button onClick={openAddOrganisation}>
             <Plus className="mr-2 h-4 w-4" />

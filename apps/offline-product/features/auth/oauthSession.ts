@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import { getAppRoleFromSession, isDashboardWorkspaceRole } from '@/features/auth/fieldAppEligibility';
 
 export function getNameFromSession(session: Session): string {
   const meta = session.user.user_metadata?.full_name;
@@ -40,14 +41,16 @@ export function getEmailFromSession(session: Session): string {
   return '';
 }
 
-export async function ensureFarmerOAuthProfile(fullName?: string): Promise<void> {
+export async function ensureFarmerOAuthProfile(fullName?: string, session?: Session): Promise<void> {
   const name = fullName?.trim() ?? '';
   const supabase = getSupabaseAuthClient();
+  const dashboardRole = session ? getAppRoleFromSession(session) : null;
+  const linkOnly = isDashboardWorkspaceRole(dashboardRole);
   await supabase.auth.updateUser({
     data: {
       ...(name ? { full_name: name } : {}),
-      role: 'farmer',
       signup_source: 'field-app',
+      ...(linkOnly ? { field_app_linked: true } : { role: 'farmer' }),
     },
   });
 }
@@ -59,8 +62,17 @@ export function mapOAuthErrorToCode(error: unknown): string {
   if (error.message === 'sign_in_oauth_cancelled') {
     return 'sign_in_oauth_cancelled';
   }
+  if (error.message === 'sign_in_oauth_timeout') {
+    return 'sign_in_oauth_failed';
+  }
 
   const msg = error.message.toLowerCase();
+  if (msg.includes('unsupported provider') || msg.includes('provider is not enabled')) {
+    return 'sign_in_oauth_provider_disabled';
+  }
+  if (msg.includes('nonce')) {
+    return 'sign_in_oauth_failed';
+  }
   if (msg.includes('sign up not completed') || msg.includes('signup not completed')) {
     return 'sign_in_apple_not_completed';
   }

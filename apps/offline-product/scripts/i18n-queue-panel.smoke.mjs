@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const languageContextPath = resolve(process.cwd(), 'features/state/LanguageContext.tsx');
-const QUEUE_I18N_SMOKE_VERSION = '1';
+const messagesDir = resolve(process.cwd(), 'features/i18n/messages');
+const QUEUE_I18N_SMOKE_VERSION = '2';
 
 const REQUIRED_QUEUE_KEYS = [
   'sync_queue_preferences_reset',
@@ -27,41 +27,16 @@ const REQUIRED_QUEUE_KEYS = [
   'sync_queue_attempt_chip_first',
 ];
 
-function extractLocaleBlock(source, locale) {
-  const marker = `${locale}: {`;
-  const start = source.indexOf(marker);
-  if (start < 0) {
-    throw new Error(`Locale block not found: ${locale}`);
-  }
-  const bodyStart = source.indexOf('{', start);
-  let depth = 0;
-  for (let i = bodyStart; i < source.length; i += 1) {
-    const ch = source[i];
-    if (ch === '{') depth += 1;
-    if (ch === '}') depth -= 1;
-    if (depth === 0) {
-      return source.slice(bodyStart + 1, i);
-    }
-  }
-  throw new Error(`Locale block parse failed: ${locale}`);
-}
-
-function extractKeys(localeBlock) {
-  const keys = new Set();
-  const re = /^\s*([a-z0-9_]+):/gim;
-  let match = re.exec(localeBlock);
-  while (match) {
-    keys.add(match[1]);
-    match = re.exec(localeBlock);
-  }
-  return keys;
+async function loadLocaleKeys(locale) {
+  const raw = await readFile(resolve(messagesDir, `${locale}.json`), 'utf8');
+  const parsed = JSON.parse(raw);
+  return new Set(Object.keys(parsed));
 }
 
 async function main() {
   const cliArgs = new Set(process.argv.slice(2));
-  const source = await readFile(languageContextPath, 'utf8');
-  const enKeys = extractKeys(extractLocaleBlock(source, 'en'));
-  const esKeys = extractKeys(extractLocaleBlock(source, 'es'));
+  const enKeys = await loadLocaleKeys('en');
+  const esKeys = await loadLocaleKeys('es');
 
   const missingInEn = REQUIRED_QUEUE_KEYS.filter((k) => !enKeys.has(k));
   const missingInEs = REQUIRED_QUEUE_KEYS.filter((k) => !esKeys.has(k));

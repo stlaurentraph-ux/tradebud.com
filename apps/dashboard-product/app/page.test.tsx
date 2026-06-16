@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import DashboardPage from './page';
+import { DashboardHomeClient } from '@/components/dashboards/dashboard-home-client';
 
 const searchParamsState = {
   feature: 'mvp_gated',
@@ -51,6 +51,40 @@ vi.mock('@/components/dashboards/sponsor-dashboard', () => ({
   SponsorDashboard: () => <div>Sponsor Dashboard</div>,
 }));
 
+vi.mock('@/lib/demo-data-context', () => ({
+  useDemoData: () => ({ demoDataEnabled: false }),
+}));
+
+vi.mock('@/lib/use-dashboard-summary', () => ({
+  useDashboardSummary: () => ({
+    metrics: {
+      total_packages: 0,
+      packages_by_status: {},
+      total_plots: 0,
+      compliant_plots: 0,
+      total_farmers: 0,
+      recent_activity: [],
+    },
+    packages: [],
+    campaigns: [],
+    sponsor: null,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/lib/use-harvest-packages', () => ({
+  useHarvestPackages: () => ({
+    packages: [],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/components/dashboards/dashboard-attention-strip', () => ({
+  DashboardAttentionStrip: () => null,
+}));
+
 vi.mock('@/components/onboarding/onboarding-checklist-card', () => ({
   OnboardingChecklistCard: () => <div>Onboarding Checklist</div>,
 }));
@@ -96,7 +130,7 @@ describe('DashboardPage gated-entry telemetry', () => {
       }),
     );
 
-    const { rerender } = render(<DashboardPage />);
+    const { rerender } = render(<DashboardHomeClient />);
     await waitFor(() => {
       expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });
@@ -107,7 +141,7 @@ describe('DashboardPage gated-entry telemetry', () => {
       }),
     );
 
-    rerender(<DashboardPage />);
+    rerender(<DashboardHomeClient />);
     await waitFor(() => {
       expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });
@@ -122,7 +156,7 @@ describe('DashboardPage gated-entry telemetry', () => {
       }),
     );
 
-    render(<DashboardPage />);
+    render(<DashboardHomeClient />);
     await waitFor(() => {
       expect(getTelemetryCalls(fetchSpy)).toHaveLength(0);
     });
@@ -137,7 +171,7 @@ describe('DashboardPage gated-entry telemetry', () => {
       }),
     );
 
-    render(<DashboardPage />);
+    render(<DashboardHomeClient />);
     await waitFor(() => {
       expect(getTelemetryCalls(fetchSpy)).toHaveLength(1);
     });

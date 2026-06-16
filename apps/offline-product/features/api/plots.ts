@@ -6,10 +6,13 @@
 import { getAccessTokenFromSupabase } from './auth';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
+import type { GeoJSONPoint, GeoJSONPolygon } from './postPlot';
 
 export {
   buildGeometryFromLocalPlot,
   POLYGON_REQUIRED_MIN_AREA_HA,
+  type GeoJSONPoint,
+  type GeoJSONPolygon,
   type LocalPlotForUpload,
 } from './postPlot';
 

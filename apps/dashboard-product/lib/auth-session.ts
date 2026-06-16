@@ -1,3 +1,5 @@
+import { clearAuthSessionCookie, setAuthSessionCookie } from '@/lib/auth-cookie';
+
 const ACCESS_TOKEN_KEY = 'tracebud_token';
 const REFRESH_TOKEN_KEY = 'tracebud_refresh_token';
 
@@ -14,6 +16,7 @@ export function getRefreshToken(): string | null {
 export function setAuthTokens(accessToken: string, refreshToken?: string | null): void {
   if (typeof window === 'undefined') return;
   window.sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  setAuthSessionCookie(accessToken);
   if (refreshToken) {
     window.sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
@@ -23,6 +26,7 @@ export function clearAuthTokens(): void {
   if (typeof window === 'undefined') return;
   window.sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   window.sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  clearAuthSessionCookie();
 }
 
 export function hasSupabaseSessionTokens(): boolean {

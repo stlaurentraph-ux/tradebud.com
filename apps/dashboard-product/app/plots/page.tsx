@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,19 +19,26 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getPlotDeforestationRiskLabel,
+  getPlotsAddCtaLabel,
+  getPlotsEmptyMessage,
+  getPlotsFiltersLabel,
+  getPlotsOriginColumnLabel,
+  getPlotsPageSubtitle,
+  getPlotsPageTitle,
+  getPlotsSearchPlaceholder,
+  getPlotsStatHint,
+  getPlotsStatLabel,
+  getPlotsTableTitle,
+} from '@/lib/workflow-terminology-labels';
 
 const riskColors = {
   low: 'text-green-400 bg-green-400/10',
   medium: 'text-amber-400 bg-amber-400/10',
   high: 'text-red-400 bg-red-400/10',
   unknown: 'text-slate-500 bg-slate-200/40',
-};
-
-const riskLabels = {
-  low: 'Low Risk',
-  medium: 'Medium Risk',
-  high: 'High Risk',
-  unknown: 'Unknown Risk',
 };
 
 const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => {
@@ -42,8 +49,11 @@ const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => 
 };
 
 export default function PlotsPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
+  const role = user?.active_role;
   const [plots, setPlots] = useState<Array<{
     id: string;
     name: string;
@@ -136,17 +146,13 @@ export default function PlotsPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Plots"
-        description={
-          isCooperative
-            ? 'Track member plot coverage, geometry quality, and compliance risk with field-capture overlays'
-            : 'Manage plot inventory and deforestation risk assessments'
-        }
+        title={getPlotsPageTitle(t)}
+        description={getPlotsPageSubtitle(role, t)}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              {getPlotsFiltersLabel(t)}
             </Button>
             <Button
               size="sm"
@@ -155,7 +161,7 @@ export default function PlotsPage() {
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Plot
+              {getPlotsAddCtaLabel(t)}
             </Button>
           </div>
         }
@@ -166,30 +172,32 @@ export default function PlotsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Total Plots</div>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('total', role, t)}</div>
               <div className="text-3xl font-bold mt-2">{plots.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">{totalArea.toFixed(1)} hectares total</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {getPlotsStatHint('total', role, t, { ha: totalArea.toFixed(1) })}
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Mapped & Low Risk' : 'Low Risk'}</div>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('low', role, t)}</div>
               <div className="text-3xl font-bold text-green-400 mt-2">{lowRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Ready for batch lineage inclusion' : 'Ready for compliance'}</p>
+              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('low', role, t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Needs Field Review' : 'Medium Risk'}</div>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('medium', role, t)}</div>
               <div className="text-3xl font-bold text-amber-400 mt-2">{mediumRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Geometry/legal checks pending' : 'Requires review'}</p>
+              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('medium', role, t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">{isCooperative ? 'Blocked / High Risk' : 'High Risk'}</div>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('high', role, t)}</div>
               <div className="text-3xl font-bold text-red-400 mt-2">{highRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">{isCooperative ? 'Escalate to issues and appeals' : 'Action needed'}</p>
+              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('high', role, t)}</p>
             </CardContent>
           </Card>
         </div>
@@ -199,7 +207,7 @@ export default function PlotsPage() {
           <CardContent className="pt-6">
             <input
               type="text"
-              placeholder={isCooperative ? 'Search by plot name, ID, or member-linked records...' : 'Search by plot name or ID...'}
+              placeholder={getPlotsSearchPlaceholder(role, t)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -210,7 +218,7 @@ export default function PlotsPage() {
         {/* Plots Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{isCooperative ? 'Plot Registry and Capture Quality' : 'Plot Inventory'}</CardTitle>
+            <CardTitle className="text-lg">{getPlotsTableTitle(role, t)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border">
@@ -218,7 +226,7 @@ export default function PlotsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Plot Name</TableHead>
-                    <TableHead>{isCooperative ? 'Member' : 'Producer'}</TableHead>
+                    <TableHead>{getPlotsOriginColumnLabel(role, t)}</TableHead>
                     <TableHead>Area (ha)</TableHead>
                     <TableHead>Deforestation Risk</TableHead>
                     <TableHead>Evidence</TableHead>
@@ -230,7 +238,7 @@ export default function PlotsPage() {
                   {filteredPlots.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No plots found
+                        {getPlotsEmptyMessage(t)}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -249,7 +257,7 @@ export default function PlotsPage() {
                             <div className="flex items-center gap-2">
                               <RiskIcon risk={plot.deforestation_risk} />
                               <span className={`text-xs font-medium px-2 py-1 rounded ${riskColors[plot.deforestation_risk]}`}>
-                                {riskLabels[plot.deforestation_risk]}
+                                {getPlotDeforestationRiskLabel(plot.deforestation_risk, t)}
                               </span>
                             </div>
                           </TableCell>

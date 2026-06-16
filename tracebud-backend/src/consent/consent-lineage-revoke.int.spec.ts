@@ -149,7 +149,7 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
     const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
     consentService = new ConsentService(pool, push as any);
     const harvestService = new HarvestService(pool, createBillingServiceMock());
-    const plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
     harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
     plotsController = new PlotsController(plotsService, consentService);
   }, 30_000);

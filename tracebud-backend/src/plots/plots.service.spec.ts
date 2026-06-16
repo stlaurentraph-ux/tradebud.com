@@ -64,11 +64,33 @@ const gfwContextMock = {
   }),
 };
 
+const fdpCommodityMock = {
+  queryForGeometry: jest.fn().mockResolvedValue({
+    summary: {
+      ok: false,
+      modelVersion: '2025b',
+      commodity: 'coffee',
+      countryCode: null,
+      countryLabel: null,
+      baselineYear: 2020,
+      years: {},
+      competingCommodity: null,
+      competingProbMean: null,
+      temporalStability: 'unknown',
+      layers: [],
+      queriedAt: new Date().toISOString(),
+      skippedReason: 'fdp_disabled',
+    },
+    signal: 'unknown',
+  }),
+};
+
 function makePlotsService(pool: { query: jest.Mock } | ReturnType<typeof makePoolMock>) {
   return new PlotsService(
     pool as any,
     gfwMock as any,
     gfwContextMock as any,
+    fdpCommodityMock as any,
     geometryValidationMock as any,
     tenureParseMock as any,
     evidenceDocumentsMock as any,
@@ -848,6 +870,77 @@ describe('PlotsService.runGfwCheck', () => {
     );
   });
 
+  it('auto-clears amber shade-grown plots when FDP reads legitimate Tanzania coffee', async () => {
+    const pool = makePoolMock([
+      {
+        rows: [{ id: 'plot_1', kind: 'polygon', geojson: '{"type":"Polygon","coordinates":[]}' }],
+      },
+      { rows: [{ sinaph_overlap: false, indigenous_overlap: false }] },
+      {
+        rows: [
+          {
+            status: 'under_review',
+            production_system: 'shade_grown',
+            deforestation_screening: null,
+          },
+        ],
+      },
+      { rows: [{ country_code: 'TZ', main_commodity: 'coffee' }] },
+      { rows: [] },
+      { rows: [] },
+    ]);
+    const service = makePlotsService(pool);
+    gfwMock.runHistoricalDeforestationQuery.mockResolvedValue({
+      dataset: 'gfw_integrated_alerts',
+      version: 'latest',
+      historicalSqlApplied: true,
+      result: [{ count: 2, area_ha: 0.01 }],
+    });
+    gfwContextMock.queryForGeometry.mockResolvedValueOnce({
+      summary: {
+        tropicalTreeCoverAvgPct: null,
+        tropicalTreeCoverAreaHa: null,
+        treeCoverLossHa: null,
+        naturalForestHa: null,
+      },
+      signal: 'unknown',
+      layers: [],
+      queriedAt: new Date().toISOString(),
+    });
+    fdpCommodityMock.queryForGeometry.mockResolvedValueOnce({
+      summary: {
+        ok: true,
+        modelVersion: '2025b',
+        commodity: 'coffee',
+        countryCode: 'TZ',
+        countryLabel: 'Tanzania',
+        baselineYear: 2020,
+        years: {
+          '2019': { mean: 0.42, p50: 0.4, p90: 0.65 },
+          '2020': { mean: 0.44, p50: 0.41, p90: 0.66 },
+          '2021': { mean: 0.43, p50: 0.4, p90: 0.64 },
+        },
+        competingCommodity: 'cocoa',
+        competingProbMean: 0.08,
+        temporalStability: 'stable',
+        layers: [],
+        queriedAt: new Date().toISOString(),
+      },
+      signal: 'legitimate',
+    });
+
+    const result = await service.runGfwCheck('plot_1', 'user_1');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: true,
+        plotStatus: 'compliant',
+        commodityAdjusted: true,
+        fdpSignal: 'legitimate',
+      }),
+    );
+  });
+
   it('merges GFW red signal with overlap degradation into deforestation_detected', async () => {
     const pool = makePoolMock([
       {
@@ -878,6 +971,7 @@ describe('PlotsService.runGfwCheck', () => {
       },
       { rows: [{ sinaph_overlap: false, indigenous_overlap: false }] },
       { rows: [{ status: 'under_review', deforestation_screening: null }] },
+      { rows: [{ country_code: 'TZ', main_commodity: 'coffee' }] },
       {
         rows: [
           {

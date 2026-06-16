@@ -8,6 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import type { TenantRole, User } from '@/types';
 import { useAuth } from '@/lib/auth-context';
+import {
+  defaultSupplyChainRoleForSignupPrimary,
+  ensurePrimaryInSupplyChainRoles,
+  supplyChainRoleToTenantRole,
+  type SupplyChainRoleId,
+} from '@/lib/org-supply-chain-roles';
+import { SupplyChainRolePicker } from '@/components/settings/supply-chain-role-picker';
 
 type PrimaryRole = 'importer' | 'exporter' | 'cooperative' | 'compliance_manager' | 'admin';
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
@@ -74,6 +81,7 @@ export function CreateAccountWizard() {
   const [mainCommodity, setMainCommodity] = useState(eudrCommodityOptions[0].value);
   const [primaryObjective, setPrimaryObjective] =
     useState<PrimaryObjective>('prepare_first_due_diligence_package');
+  const [supplyChainRoles, setSupplyChainRoles] = useState<SupplyChainRoleId[]>(['exporter']);
 
   useEffect(() => {
     void emitEvent('create_workspace_value_viewed', { source: 'create_account_step_1' });
@@ -171,6 +179,17 @@ export function CreateAccountWizard() {
       if (!response.ok) {
         throw new Error(readApiError(payload, 'Unable to complete workspace setup.'));
       }
+      const rolesResponse = await fetch('/api/launch/supply-chain-roles', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ supplyChainRoles }),
+      });
+      if (!rolesResponse.ok) {
+        // Non-blocking: workspace is usable with primary role only.
+      }
       applyRoleToStoredUser(primaryRole);
       setStep(3);
     } catch (submitError) {
@@ -224,25 +243,24 @@ export function CreateAccountWizard() {
     }
   };
 
-  const selectedRoleToTenantRole = (role: PrimaryRole): TenantRole => {
-    if (role === 'cooperative') return 'cooperative';
-    if (role === 'importer' || role === 'exporter') return role;
-    return 'exporter';
-  };
-
   const applyRoleToStoredUser = (role: PrimaryRole) => {
     const rawUser = sessionStorage.getItem('tracebud_user');
     if (!rawUser) return;
-    const selectedRole = selectedRoleToTenantRole(role);
+    const tenantRoles = Array.from(new Set(supplyChainRoles.map(supplyChainRoleToTenantRole)));
+    const activeRole =
+      role === 'cooperative'
+        ? 'cooperative'
+        : role === 'importer' || role === 'compliance_manager'
+          ? 'importer'
+          : tenantRoles.includes('exporter')
+            ? 'exporter'
+            : tenantRoles[0] ?? 'exporter';
     try {
       const parsedUser = JSON.parse(rawUser) as User;
-      const nextRoles = parsedUser.roles.includes(selectedRole)
-        ? parsedUser.roles
-        : [selectedRole, ...parsedUser.roles];
       const updatedUser: User = {
         ...parsedUser,
-        roles: nextRoles,
-        active_role: selectedRole,
+        roles: tenantRoles,
+        active_role: activeRole,
       };
       sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
     } catch {
@@ -355,7 +373,13 @@ export function CreateAccountWizard() {
               <select
                 id="primaryRole"
                 value={primaryRole}
-                onChange={(event) => setPrimaryRole(event.target.value as PrimaryRole)}
+                onChange={(event) => {
+                  const role = event.target.value as PrimaryRole;
+                  setPrimaryRole(role);
+                  setSupplyChainRoles((current) =>
+                    ensurePrimaryInSupplyChainRoles(role, current.length > 0 ? current : [defaultSupplyChainRoleForSignupPrimary(role)]),
+                  );
+                }}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="importer">Importer</option>
@@ -364,6 +388,18 @@ export function CreateAccountWizard() {
                 <option value="compliance_manager">Compliance manager</option>
                 <option value="admin">Admin</option>
               </select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Supply chain roles performed by this organisation</p>
+              <p className="text-xs text-muted-foreground">
+                Select every workflow you run in one tenant — e.g. cooperative + exporter, or exporter + importer for a
+                vertically integrated brand.
+              </p>
+              <SupplyChainRolePicker
+                selected={supplyChainRoles}
+                onChange={setSupplyChainRoles}
+                disabled={isSubmitting}
+              />
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => setStep(1)} disabled={isSubmitting}>

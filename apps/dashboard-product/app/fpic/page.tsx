@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Plus,
@@ -25,6 +25,33 @@ import { StatusChip } from '@/components/ui/status-chip';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  getEvidenceDeleteLabel,
+  getEvidenceDocTypeLabel,
+  getEvidenceEmptyMessage,
+  getEvidenceExpiresLabel,
+  getEvidenceFilterStatusLabel,
+  getEvidenceFilterStatusOption,
+  getEvidenceHashFullLabel,
+  getEvidenceLinkedEntitiesLabel,
+  getEvidenceLoadingMessage,
+  getEvidencePageSubtitle,
+  getEvidencePageTitle,
+  getEvidenceReviewHistoryLabel,
+  getEvidenceSearchPlaceholder,
+  getEvidenceSummaryExpiredLabel,
+  getEvidenceSummaryPendingLabel,
+  getEvidenceSummaryRenewalLabel,
+  getEvidenceSummaryTotalLabel,
+  getEvidenceSummaryVerifiedLabel,
+  getEvidenceUploadedLabel,
+  getEvidenceUploadCtaLabel,
+  getEvidenceUploaderLabel,
+  getEvidenceViewFullLabel,
+  type EvidenceDocType,
+} from '@/lib/workflow-terminology-labels';
 
 interface FPICDocument {
   id: string;
@@ -112,11 +139,11 @@ const mockDocuments: FPICDocument[] = process.env.NODE_ENV !== 'production' ? [
   },
 ] : [];
 
-const docTypeLabels: Record<FPICDocument['type'], string> = {
-  'community_minutes': 'Community Minutes',
-  'consent_form': 'Consent Form',
-  'agreement': 'Agreement',
-  'affidavit': 'Affidavit',
+const docTypeLabels: Record<FPICDocument['type'], EvidenceDocType> = {
+  community_minutes: 'community_minutes',
+  consent_form: 'consent_form',
+  agreement: 'agreement',
+  affidavit: 'affidavit',
 };
 
 const statusToChipStatus: Record<FPICDocument['status'], 'APPROVED' | 'PENDING' | 'REJECTED' | 'WARNING'> = {
@@ -130,7 +157,17 @@ function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
 }
 
-function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded: boolean; onToggle: () => void }) {
+function DocumentCard({
+  doc,
+  expanded,
+  onToggle,
+  t,
+}: {
+  doc: FPICDocument;
+  expanded: boolean;
+  onToggle: () => void;
+  t?: (key: string) => string;
+}) {
   return (
     <Card className={cn('transition-shadow', expanded ? 'shadow-md ring-1 ring-primary/20' : 'hover:shadow-md')}>
       <CardContent className="pt-6 pb-4">
@@ -144,7 +181,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
               <div className="flex-1">
                 <p className="font-medium text-foreground">{doc.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {docTypeLabels[doc.type]} - {doc.farmer_or_community}
+                  {getEvidenceDocTypeLabel(docTypeLabels[doc.type], t)} - {doc.farmer_or_community}
                 </p>
               </div>
             </div>
@@ -156,7 +193,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
               </div>
               <span className="text-muted-foreground">-</span>
               <div className="text-muted-foreground">
-                Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
+                {getEvidenceUploadedLabel(t)} {new Date(doc.upload_date).toLocaleDateString()}
               </div>
               <span className="text-muted-foreground">-</span>
               <div className={cn(
@@ -165,7 +202,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
                   ? 'text-destructive'
                   : 'text-muted-foreground'
               )}>
-                Expires: {new Date(doc.expiry_date).toLocaleDateString()}
+                {getEvidenceExpiresLabel(t)} {new Date(doc.expiry_date).toLocaleDateString()}
               </div>
             </div>
 
@@ -211,12 +248,12 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
             {/* Provenance Info Grid */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground mb-1">Uploader</p>
+                <p className="text-muted-foreground mb-1">{getEvidenceUploaderLabel(t)}</p>
                 <p className="font-medium">{doc.uploader_name}</p>
                 <p className="text-muted-foreground text-xs">{doc.uploader_org}</p>
               </div>
               <div>
-                <p className="text-muted-foreground mb-1">Full SHA-256 Hash</p>
+                <p className="text-muted-foreground mb-1">{getEvidenceHashFullLabel(t)}</p>
                 <div className="flex items-center gap-2">
                   <code className="font-mono text-xs bg-muted px-2 py-1 rounded break-all">
                     {doc.sha256_hash}
@@ -237,7 +274,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
             <div>
               <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
                 <Link2 className="h-3 w-3" />
-                Linked entities
+                {getEvidenceLinkedEntitiesLabel(t)}
               </p>
               <div className="flex flex-wrap gap-2">
                 {doc.linked_entities.map((entity) => (
@@ -260,7 +297,7 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
             <div>
               <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
                 <Shield className="h-3 w-3" />
-                Review history
+                {getEvidenceReviewHistoryLabel(t)}
               </p>
               <div className="bg-muted/50 rounded-lg p-3">
                 <Timeline 
@@ -276,13 +313,13 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
               <PermissionGate permission="fpic:view">
                 <Button variant="outline" size="sm">
                   <ExternalLink className="mr-2 h-3 w-3" />
-                  View full document
+                  {getEvidenceViewFullLabel(t)}
                 </Button>
               </PermissionGate>
               <PermissionGate permission="fpic:upload">
                 <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
                   <Trash2 className="mr-2 h-3 w-3" />
-                  Delete
+                  {getEvidenceDeleteLabel(t)}
                 </Button>
               </PermissionGate>
             </div>
@@ -295,8 +332,11 @@ function DocumentCard({ doc, expanded, onToggle }: { doc: FPICDocument; expanded
 
 export default function FPICRepositoryPage() {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
-  const isCooperative = user?.active_role === 'cooperative';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
+  const isImporter = role === 'importer';
+  const isCooperative = role === 'cooperative';
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending_review' | 'renewal_due' | 'expired'>('all');
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
@@ -375,10 +415,10 @@ export default function FPICRepositoryPage() {
     return (
       doc.name.toLowerCase().includes(query) ||
       doc.farmer_or_community.toLowerCase().includes(query) ||
-      docTypeLabels[doc.type].toLowerCase().includes(query) ||
+      getEvidenceDocTypeLabel(docTypeLabels[doc.type], t).toLowerCase().includes(query) ||
       doc.sha256_hash.toLowerCase().includes(query)
     );
-  }), [documents, filterStatus, searchQuery]);
+  }), [documents, filterStatus, searchQuery, t]);
 
   const verified = documents.filter((d) => d.status === 'verified').length;
   const pending = documents.filter((d) => d.status === 'pending_review').length;
@@ -388,24 +428,18 @@ export default function FPICRepositoryPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={isImporter ? 'Evidence' : 'FPIC Repository'}
-        subtitle={
-          isImporter
-            ? 'Review, complete, and retain evidence for shipment and declaration defensibility'
-            : isCooperative
-            ? 'Manage consent, portability, and cooperative evidence with full provenance chain'
-            : 'Manage Free Prior Informed Consent documents with full provenance chain'
-        }
+        title={getEvidencePageTitle(role, t)}
+        subtitle={getEvidencePageSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: isImporter ? 'Evidence' : isCooperative ? 'Evidence' : 'FPIC Repository' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getEvidencePageTitle(role, t) },
         ]}
         actions={
           <PermissionGate permission="fpic:upload">
             <Button asChild>
               <Link href="/fpic/upload">
                 <Plus className="mr-2 h-4 w-4" />
-                {isImporter ? 'Upload evidence' : 'Upload document'}
+                {getEvidenceUploadCtaLabel(role, t)}
               </Link>
             </Button>
           </PermissionGate>
@@ -418,9 +452,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  {isImporter ? 'Total evidence records' : isCooperative ? 'Total evidence files' : 'Total documents'}
-                </p>
+                <p className="text-sm text-muted-foreground">{getEvidenceSummaryTotalLabel(role, t)}</p>
                 <p className="text-2xl font-bold mt-1">
                   {isCooperative && backendSummary.total > 0 ? backendSummary.total : documents.length}
                 </p>
@@ -431,7 +463,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Verified</p>
+                <p className="text-sm text-muted-foreground">{getEvidenceSummaryVerifiedLabel(t)}</p>
                 <p className="text-2xl font-bold text-emerald-600 mt-1">
                   {isCooperative && backendSummary.total > 0 ? backendSummary.verified : verified}
                 </p>
@@ -442,7 +474,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent review queue' : 'Pending review'}</p>
+                <p className="text-sm text-muted-foreground">{getEvidenceSummaryPendingLabel(role, t)}</p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">
                   {isCooperative && backendSummary.total > 0 ? backendSummary.pending : pending}
                 </p>
@@ -453,7 +485,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">{isCooperative ? 'Consent renewal due' : 'Renewal due'}</p>
+                <p className="text-sm text-muted-foreground">{getEvidenceSummaryRenewalLabel(role, t)}</p>
                 <p className="text-2xl font-bold text-amber-600 mt-1">
                   {isCooperative && backendSummary.total > 0 ? backendSummary.renewal_due : renewalDue}
                 </p>
@@ -464,7 +496,7 @@ export default function FPICRepositoryPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Expired</p>
+                <p className="text-sm text-muted-foreground">{getEvidenceSummaryExpiredLabel(t)}</p>
                 <p className="text-2xl font-bold text-destructive mt-1">
                   {isCooperative && backendSummary.total > 0 ? backendSummary.expired : expired}
                 </p>
@@ -478,19 +510,13 @@ export default function FPICRepositoryPage() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <Input
-                placeholder={
-                  isImporter
-                    ? 'Search by evidence title, shipment reference, partner, or hash...'
-                    : isCooperative
-                      ? 'Search by member, plot, shipment, consent artifact, or hash...'
-                      : 'Search by name, farmer, community, or hash...'
-                }
+                placeholder={getEvidenceSearchPlaceholder(role, t)}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="max-w-md"
               />
               <div className="flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                <span className="text-sm font-medium text-muted-foreground">{getEvidenceFilterStatusLabel(t)}</span>
                 {(['all', 'verified', 'pending_review', 'renewal_due', 'expired'] as const).map((status) => (
                   <Button
                     key={status}
@@ -498,15 +524,7 @@ export default function FPICRepositoryPage() {
                     size="sm"
                     onClick={() => setFilterStatus(status)}
                   >
-                    {status === 'all'
-                      ? 'All'
-                      : status === 'verified'
-                      ? 'Verified'
-                      : status === 'pending_review'
-                      ? 'Pending'
-                      : status === 'renewal_due'
-                      ? 'Renewal'
-                      : 'Expired'}
+                    {getEvidenceFilterStatusOption(status, t)}
                   </Button>
                 ))}
               </div>
@@ -518,13 +536,13 @@ export default function FPICRepositoryPage() {
         <div className="space-y-3">
           {isLoadingDocuments ? (
             <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
-              Loading evidence records...
+              {getEvidenceLoadingMessage(t)}
             </div>
           ) : filteredDocs.length === 0 ? (
             <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <p className="mt-4 text-sm text-muted-foreground">
-                {isImporter ? 'No evidence records match your filters' : 'No documents match your filters'}
+                {getEvidenceEmptyMessage(role, t)}
               </p>
             </div>
           ) : (
@@ -534,6 +552,7 @@ export default function FPICRepositoryPage() {
                 doc={doc}
                 expanded={expandedDoc === doc.id}
                 onToggle={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
+                t={t}
               />
             ))
           )}

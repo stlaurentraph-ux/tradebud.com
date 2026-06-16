@@ -7,7 +7,6 @@ import { Menu, X } from 'lucide-react';
 import { AppSidebar } from './app-sidebar';
 import { useAuth } from '@/lib/auth-context';
 import {
-  commercialPrimaryRoleToTenantRole,
   fetchCommercialProfile,
   isWorkspaceSetupComplete,
 } from '@/lib/commercial-profile';
@@ -20,11 +19,12 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, isLoading, applyTenantRoleFromProfile } = useAuth();
+  const { isAuthenticated, isLoading, applyTenantRolesFromProfile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [workspaceCheckDone, setWorkspaceCheckDone] = useState(false);
+  const [workspaceDisplayName, setWorkspaceDisplayName] = useState<string | null>(null);
   const isPublicRoute =
     pathname === '/login' ||
     pathname === '/create-account' ||
@@ -67,13 +67,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         router.replace(`/create-account?${resume.toString()}`);
         return;
       }
-      applyTenantRoleFromProfile(commercialPrimaryRoleToTenantRole(profile?.primary_role));
+      applyTenantRolesFromProfile(profile);
+      setWorkspaceDisplayName(profile?.organization_name?.trim() || null);
       setWorkspaceCheckDone(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [isLoading, isAuthenticated, isPublicRoute, router, applyTenantRoleFromProfile]);
+  }, [isLoading, isAuthenticated, isPublicRoute, router, applyTenantRolesFromProfile]);
 
   // Show loading state
   if (isLoading || (isAuthenticated && !isPublicRoute && !workspaceCheckDone)) {
@@ -115,7 +116,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <AppSidebar />
+        <AppSidebar workspaceDisplayName={workspaceDisplayName} />
       </div>
 
       {/* Main content area */}

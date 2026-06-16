@@ -30,12 +30,17 @@ function withSentryPlugin(plugins) {
   return [...withoutSentry, SENTRY_PLUGIN];
 }
 
+function withAppleSignInPlugin(plugins) {
+  const hasApple = plugins.some((p) => (Array.isArray(p) ? p[0] : p) === 'expo-apple-authentication');
+  return hasApple ? plugins : [...plugins, 'expo-apple-authentication'];
+}
+
 /** @type {import('@expo/config').ExpoConfig} */
 module.exports = ({ config }) => {
   const profile = process.env.EAS_BUILD_PROFILE;
   const includePush = profile === 'production' || profile === 'simulator';
 
-  const plugins = withSentryPlugin([...(config.plugins ?? appJson.expo.plugins)]);
+  const plugins = withAppleSignInPlugin(withSentryPlugin([...(config.plugins ?? appJson.expo.plugins)]));
   if (includePush && !plugins.some((p) => (Array.isArray(p) ? p[0] : p) === 'expo-notifications')) {
     plugins.push(PRODUCTION_NOTIFICATIONS_PLUGIN);
   }

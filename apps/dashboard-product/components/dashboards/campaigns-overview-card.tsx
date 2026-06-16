@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/lib/auth-context';
 import { useRequestCampaigns } from '@/lib/use-requests';
 
+import type { RequestCampaign } from '@/lib/use-requests';
+
 interface CampaignsOverviewCardProps {
   title?: string;
   description: string;
@@ -18,6 +20,8 @@ interface CampaignsOverviewCardProps {
   emptyDescription?: string;
   emptyCtaLabel?: string;
   listLinkLabel?: string;
+  prefetchedCampaigns?: RequestCampaign[];
+  prefetchedLoading?: boolean;
 }
 
 export function CampaignsOverviewCard({
@@ -30,9 +34,16 @@ export function CampaignsOverviewCard({
   emptyDescription = 'Create your first campaign to request missing upstream data from producers and partners.',
   emptyCtaLabel = 'Launch first campaign',
   listLinkLabel = 'View all campaigns',
+  prefetchedCampaigns,
+  prefetchedLoading,
 }: CampaignsOverviewCardProps) {
   const { user } = useAuth();
-  const { campaigns, isLoading } = useRequestCampaigns(user?.tenant_id ?? null);
+  const useLiveCampaigns = prefetchedCampaigns === undefined;
+  const { campaigns: liveCampaigns, isLoading: liveLoading } = useRequestCampaigns(
+    useLiveCampaigns ? (user?.tenant_id ?? null) : null,
+  );
+  const campaigns = prefetchedCampaigns ?? liveCampaigns;
+  const isLoading = prefetchedCampaigns !== undefined ? Boolean(prefetchedLoading) : liveLoading;
   const activeCampaigns = campaigns.filter((campaign) =>
     ['DRAFT', 'QUEUED', 'RUNNING'].includes(campaign.status),
   ).length;

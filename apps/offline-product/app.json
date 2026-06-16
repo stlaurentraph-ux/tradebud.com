@@ -15,6 +15,7 @@
         "NSLocationWhenInUseUsageDescription": "Tracebud needs your location to record farm boundaries while you walk around the plot.",
         "NSPhotoLibraryUsageDescription": "Tracebud uses your photo library so you can set a profile picture.",
         "NSCameraUsageDescription": "Tracebud uses the camera so you can take a profile picture.",
+        "NSUserNotificationsUsageDescription": "Tracebud sends reminders about consent requests and backup status when you are offline.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.tracebud.app"
@@ -33,15 +34,7 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "READ_MEDIA_IMAGES"
       ]
     },
     "web": {

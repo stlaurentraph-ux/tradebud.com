@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, FileCheck } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -11,6 +11,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProducerConsentPanel } from '@/components/farmers/producer-consent-panel';
 import { listContacts, type ContactRecord } from '@/lib/contact-service';
 import { resolveProducerFarmerId } from '@/lib/consent-grants-service';
+import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  getBackToProducersLabel,
+  getProducerDetailFallbackTitle,
+  getProducerLoadingMessage,
+  getProducerNotFoundMessage,
+  getProducersNavLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface FarmerDetailPageProps {
   params: Promise<{ id: string }>;
@@ -21,6 +31,10 @@ function deriveFpicSigned(contact: ContactRecord): boolean {
 }
 
 export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const { user } = useAuth();
+  const role = user?.active_role;
   const { id } = use(params);
   const [contact, setContact] = useState<ContactRecord | null>(null);
   const [farmerProfileId, setFarmerProfileId] = useState<string | null>(null);
@@ -37,7 +51,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         const match = contacts.find((item) => item.id === id && item.contact_type === 'farmer');
         if (!match) {
           setContact(null);
-          setLoadError('Producer contact not found in your directory.');
+          setLoadError(getProducerNotFoundMessage(role, t));
           setFarmerProfileId(null);
           setResolveError(null);
           return;
@@ -82,12 +96,12 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={contact?.full_name ?? 'Producer'}
+        title={contact?.full_name ?? getProducerDetailFallbackTitle(role, t)}
         subtitle={contact ? contact.email : `ID: ${id}`}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Producers', href: '/farmers' },
-          { label: contact?.full_name ?? 'Producer' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getProducersNavLabel(role, t), href: '/farmers' },
+          { label: contact?.full_name ?? getProducerDetailFallbackTitle(role, t) },
         ]}
       />
 
@@ -95,7 +109,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         <Button variant="ghost" size="sm" className="mb-6" asChild>
           <Link href="/farmers">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Producers
+            {getBackToProducersLabel(role, t)}
           </Link>
         </Button>
 
@@ -106,7 +120,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading producer…</p>
+          <p className="text-sm text-muted-foreground">{getProducerLoadingMessage(role, t)}</p>
         ) : contact ? (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">

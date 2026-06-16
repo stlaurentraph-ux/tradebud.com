@@ -1,0 +1,7 @@
+*
+!tracebud-backend
+!tracebud-backend/**
+tracebud-backend/node_modules
+tracebud-backend/dist
+tracebud-backend/.env
+tracebud-backend/.env.local

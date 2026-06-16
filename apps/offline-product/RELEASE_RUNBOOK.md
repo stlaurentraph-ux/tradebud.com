@@ -34,10 +34,22 @@ npm run release:production
 npm run submit:production
 ```
 
-For production, prefer:
+For production, prefer (runs lint, typecheck, tests, store assets, then env preflight, then EAS build):
 
 ```bash
 npm run release:production:safe
+```
+
+Preview builds:
+
+```bash
+npm run release:preview:safe
+```
+
+Before the first production submit, also verify Supabase OAuth providers (network):
+
+```bash
+npm run release:preflight:production:online
 ```
 
 OTA (only after validation):
@@ -55,6 +67,10 @@ npm run update:production
 - Analytics events: key onboarding/sync/error events visible.
 - Acceptance criteria: FEAT-002 and quality evidence checklist complete.
 - Spatial/HLC/lineage/TRACES/GDPR constraints: unchanged or verified in impacted paths.
+
+## When things go wrong
+
+See `INCIDENT_RUNBOOK.md` for farmer support triage and engineering escalation (auth, sync queue, Sentry).
 
 ## Production env safety
 

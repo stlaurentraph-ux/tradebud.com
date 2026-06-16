@@ -46,7 +46,13 @@ export type PendingSyncAction = {
   id: number;
   createdAt: number;
   hlcTimestamp: string;
-  actionType: 'harvest' | 'photos_sync' | 'evidence_sync';
+  actionType:
+    | 'harvest'
+    | 'photos_sync'
+    | 'evidence_sync'
+    | 'consent_approve'
+    | 'consent_deny'
+    | 'consent_revoke';
   payloadJson: string;
   attempts: number;
   lastError: string | null;
@@ -169,6 +175,7 @@ export async function initDatabase() {
   `);
   await ensureFarmerSchemaExtras(db);
   await ensurePendingSyncSchemaExtras(db);
+  await ensurePlotSchemaExtras(db);
 }
 
 async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
@@ -199,6 +206,23 @@ async function ensurePendingSyncSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
   if (!has('lastAttemptAt')) {
     await db.execAsync('ALTER TABLE pending_sync ADD COLUMN lastAttemptAt INTEGER;');
+  }
+}
+
+async function ensurePlotSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(plots);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('landTenureDeclared')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN landTenureDeclared INTEGER;');
+  }
+  if (!has('landTenureDeclaredAt')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN landTenureDeclaredAt INTEGER;');
+  }
+  if (!has('noDeforestationDeclared')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN noDeforestationDeclared INTEGER;');
+  }
+  if (!has('noDeforestationDeclaredAt')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN noDeforestationDeclaredAt INTEGER;');
   }
 }
 
@@ -266,6 +290,11 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
       declaredAreaHectares: row.declaredAreaHectares ?? undefined,
       discrepancyPercent: row.discrepancyPercent ?? undefined,
       precisionMetersAtSave: row.precisionMetersAtSave ?? null,
+      landTenureDeclared: row.landTenureDeclared === 1 ? true : row.landTenureDeclared === 0 ? false : undefined,
+      landTenureDeclaredAt: row.landTenureDeclaredAt ?? undefined,
+      noDeforestationDeclared:
+        row.noDeforestationDeclared === 1 ? true : row.noDeforestationDeclared === 0 ? false : undefined,
+      noDeforestationDeclaredAt: row.noDeforestationDeclaredAt ?? undefined,
     };
   });
 
@@ -311,8 +340,9 @@ export async function persistPlots(plots: Plot[]) {
     await db.runAsync(
       `INSERT INTO plots (
         id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
-        declaredAreaHectares, discrepancyPercent, precisionMetersAtSave
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
+        landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         plot.id,
         plot.farmerId,
@@ -325,6 +355,10 @@ export async function persistPlots(plots: Plot[]) {
         plot.declaredAreaHectares ?? null,
         plot.discrepancyPercent ?? null,
         plot.precisionMetersAtSave ?? null,
+        plot.landTenureDeclared === true ? 1 : plot.landTenureDeclared === false ? 0 : null,
+        plot.landTenureDeclaredAt ?? null,
+        plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
+        plot.noDeforestationDeclaredAt ?? null,
       ],
     );
   }
@@ -593,5 +627,39 @@ export async function deletePlotLocalData(plotId: string): Promise<void> {
   await db.runAsync('DELETE FROM plot_evidence WHERE plotId = ?;', [plotId]);
   await db.runAsync('DELETE FROM plot_legal WHERE plotId = ?;', [plotId]);
   await db.runAsync('DELETE FROM pending_sync WHERE payloadJson LIKE ?;', [`%\"plotId\":\"${plotId}\"%`]);
+}
+
+/** Align local farmer UUID with Supabase auth user id when server has no plots under either id. */
+export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string): Promise<void> {
+  if (!previousId || !nextId || previousId === nextId) return;
+  const db = await getDb();
+  await db.runAsync('UPDATE plots SET farmerId = ? WHERE farmerId = ?;', [nextId, previousId]);
+  await db.runAsync('UPDATE farmer SET id = ? WHERE id = ?;', [nextId, previousId]);
+  await db.runAsync('UPDATE audit_log SET userId = ? WHERE userId = ?;', [nextId, previousId]);
+}
+
+/** Collect on-device media URIs referenced by Tracebud SQLite tables (for storage footprint). */
+export async function collectTracebudMediaFileUris(): Promise<string[]> {
+  const db = await getDb();
+  const uris = new Set<string>();
+  const addUri = (value: unknown) => {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      uris.add(value.trim());
+    }
+  };
+
+  const photoRows = await db.getAllAsync<{ uri: string }>('SELECT uri FROM plot_photos;');
+  for (const row of photoRows ?? []) addUri(row.uri);
+
+  const titleRows = await db.getAllAsync<{ uri: string }>('SELECT uri FROM plot_title_photos;');
+  for (const row of titleRows ?? []) addUri(row.uri);
+
+  const evidenceRows = await db.getAllAsync<{ uri: string }>('SELECT uri FROM plot_evidence;');
+  for (const row of evidenceRows ?? []) addUri(row.uri);
+
+  const profileUri = await getSetting('farmerProfilePhotoUri');
+  addUri(profileUri);
+
+  return [...uris];
 }
 

@@ -13,6 +13,15 @@ vi.mock('@/lib/auth-context', () => ({
   }),
 }));
 
+vi.mock('@/lib/use-harvest-packages', () => ({
+  useHarvestPackages: () => ({
+    packages: [],
+    isLoading: false,
+    error: null,
+    reload: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/use-requests', () => ({
   useRequestCampaigns: () => ({
     campaigns: [],
@@ -59,16 +68,17 @@ const virginMetrics = {
 };
 
 describe('ImporterDashboard', () => {
-  it('renders campaigns overview and supply chain banner', () => {
+  it('renders campaigns overview and operational sections for mature tenants', () => {
     render(<ImporterDashboard metrics={mockMetrics} />);
     expect(screen.getByText('Campaigns')).toBeInTheDocument();
-    expect(screen.getByText('Supply Chain Visibility')).toBeInTheDocument();
+    expect(screen.getByText('Your priority')).toBeInTheDocument();
+    expect(screen.getByText('Review queue')).toBeInTheDocument();
+    expect(screen.queryByText('Supply Chain Visibility')).not.toBeInTheDocument();
   });
 
-  it('shows activity empty state for virgin tenants', () => {
+  it('shows onboarding banner copy for virgin tenants', () => {
     render(<ImporterDashboard metrics={virginMetrics} />);
-    expect(
-      screen.getByText(/Upstream activity will appear once exporters share packages/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Start collecting upstream evidence')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Add contact/i })).toBeInTheDocument();
   });
 });

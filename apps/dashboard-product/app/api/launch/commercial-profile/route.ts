@@ -31,11 +31,17 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
 
   if (isDevSignupBypassEnabled()) {
+    const supplyChainRoles = Array.isArray((body as { supplyChainRoles?: unknown }).supplyChainRoles)
+      ? (body as { supplyChainRoles: string[] }).supplyChainRoles
+      : [];
     return NextResponse.json({
       ok: true,
       profile: {
         tenant_id: 'tenant_dev_local',
+        organization_name: null,
+        country: null,
         primary_role: typeof body.primaryRole === 'string' ? body.primaryRole : 'admin',
+        supply_chain_roles: supplyChainRoles,
         team_size: typeof body.teamSize === 'string' ? body.teamSize : null,
         main_commodity: typeof body.mainCommodity === 'string' ? body.mainCommodity : null,
         primary_objective: typeof body.primaryObjective === 'string' ? body.primaryObjective : null,

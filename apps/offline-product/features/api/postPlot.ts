@@ -1,25 +1,22 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
-import {
-  clearSyncAuthCredentials,
-  loadSyncAuthCredentials,
-  saveSyncAuthCredentials,
-} from '@/features/security/syncAuthStorage';
-import {
-  getStoreDemoBackendPlots,
-  getStoreDemoHarvestVouchers,
-  isStoreDemoFarmer,
-} from '@/features/demo/storeDemoApiFixtures';
-import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
+import { getAccessTokenFromSupabase } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
-type GeoJSONPoint = {
+export {
+  clearPersistedSyncAuth,
+  getAuthCredentials,
+  hydrateSyncAuthFromSettings,
+  saveAndApplySyncAuth,
+  setAuthCredentials,
+  testBackendLogin,
+} from './syncAuthSession';
+
+export type GeoJSONPoint = {
   type: 'Point';
   coordinates: [number, number]; // [lon, lat]
 };
 
-type GeoJSONPolygon = {
+export type GeoJSONPolygon = {
   type: 'Polygon';
   coordinates: [number, number][][]; // [[[lon, lat], ...]]
 };
@@ -86,9 +83,6 @@ export type PostPlotToBackendResult =
     };
 
 const API_BASE_URL = getRuntimeGuardedApiBaseUrl();
-const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
-const ALLOW_LOCALHOST_API = process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API === '1';
-const IS_DEV_RUNTIME = typeof __DEV__ !== 'undefined' && __DEV__;
 
 /** Resolved API root (includes `/api`). Use in Settings to show which server the app calls. */
 export function getTracebudApiBaseUrl(): string {
@@ -109,141 +103,6 @@ function messageFromBackendJson(body: unknown): string | undefined {
     return raw.join(' ');
   }
   return undefined;
-}
-
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-const DEFAULT_EMAIL = process.env.EXPO_PUBLIC_TRACEBUD_TEST_EMAIL ?? '';
-const DEFAULT_PASSWORD = process.env.EXPO_PUBLIC_TRACEBUD_TEST_PASSWORD ?? '';
-
-let supabaseClient: SupabaseClient | null = null;
-let cachedAccessToken: string | null = null;
-let cachedExpiresAt: number | null = null;
-let currentEmail = ALLOW_TEST_AUTH ? DEFAULT_EMAIL : '';
-let currentPassword = ALLOW_TEST_AUTH ? DEFAULT_PASSWORD : '';
-
-function isLocalhostApi(url: string): boolean {
-  return /:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url);
-}
-
-function getSupabaseClient(): SupabaseClient {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured');
-  }
-  if (!supabaseClient) {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-  return supabaseClient;
-}
-
-async function getAccessTokenFromSupabase(): Promise<string | null> {
-  if (!currentEmail || !currentPassword) {
-    return null;
-  }
-
-  const now = Date.now() / 1000;
-  if (cachedAccessToken && cachedExpiresAt && cachedExpiresAt - now > 60) {
-    return cachedAccessToken;
-  }
-
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: currentEmail,
-    password: currentPassword,
-  });
-
-  if (error) {
-    throw new Error(`Supabase login failed: ${error.message}`);
-  }
-  if (!data.session) {
-    throw new Error('Supabase login failed: no session returned');
-  }
-
-  cachedAccessToken = data.session.access_token;
-  cachedExpiresAt = data.session.expires_at ?? null;
-
-  return cachedAccessToken;
-}
-
-export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; message: string }> {
-  try {
-    if (isLocalhostApi(API_BASE_URL) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
-      return {
-        ok: false,
-        message:
-          'EXPO_PUBLIC_API_URL points to localhost. For preview/production builds, set a reachable HTTPS API URL.',
-      };
-    }
-    const token = await getAccessTokenFromSupabase();
-    if (!token) {
-      return {
-        ok: false,
-        message: 'Sign in to sync your plots to Tracebud.',
-      };
-    }
-    const base = getTracebudApiBaseUrl();
-    const healthUrl = `${base}/health`;
-    const healthRes = await fetch(healthUrl, { method: 'GET' });
-    if (!healthRes.ok) {
-      return {
-        ok: false,
-        message: `Tracebud API returned ${healthRes.status} at ${healthUrl}. Check EXPO_PUBLIC_API_URL (currently ${base}).`,
-      };
-    }
-    return { ok: true };
-  } catch (e) {
-    const base = getTracebudApiBaseUrl();
-    const hint =
-      base.includes('localhost') || base.includes('127.0.0.1')
-        ? ' On a physical phone/tablet, localhost points to the device — set EXPO_PUBLIC_API_URL to http://YOUR_COMPUTER_LAN_IP:4000/api (same Wi‑Fi as the computer running the API).'
-        : '';
-    return {
-      ok: false,
-      message: `${e instanceof Error ? e.message : String(e)}.${hint}`,
-    };
-  }
-}
-
-export function setAuthCredentials(email: string, password: string) {
-  currentEmail = email.trim();
-  currentPassword = password;
-  cachedAccessToken = null;
-  cachedExpiresAt = null;
-}
-
-export function getAuthCredentials() {
-  return { email: currentEmail, password: currentPassword };
-}
-
-/** Load saved Tracebud account from local settings into memory (call on app start). */
-export async function hydrateSyncAuthFromSettings(): Promise<void> {
-  try {
-    const credentials = await loadSyncAuthCredentials();
-    if (credentials) {
-      currentEmail = credentials.email;
-      currentPassword = credentials.password;
-      cachedAccessToken = null;
-      cachedExpiresAt = null;
-    }
-  } catch {
-    // ignore
-  }
-}
-
-/** Save account on device and apply for API calls. */
-export async function saveAndApplySyncAuth(email: string, password: string): Promise<void> {
-  const e = email.trim();
-  await saveSyncAuthCredentials(e, password);
-  setAuthCredentials(e, password);
-}
-
-/** Remove saved account and clear session cache. */
-export async function clearPersistedSyncAuth(): Promise<void> {
-  await clearSyncAuthCredentials();
-  currentEmail = '';
-  currentPassword = '';
-  cachedAccessToken = null;
-  cachedExpiresAt = null;
 }
 
 export async function postPlotToBackend(params: {
@@ -371,10 +230,6 @@ export async function updatePlotMetadataOnBackend(params: {
 }
 
 export async function fetchPlotsForFarmer(farmerId: string) {
-  if (storeDemoToolsEnabled && isStoreDemoFarmer(farmerId)) {
-    return getStoreDemoBackendPlots();
-  }
-
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
     throw new Error('No access token available for plot sync');
@@ -437,10 +292,6 @@ export async function postHarvestToBackend(params: {
 }
 
 export async function fetchVouchersForFarmer(farmerId: string) {
-  if (storeDemoToolsEnabled && isStoreDemoFarmer(farmerId)) {
-    return getStoreDemoHarvestVouchers();
-  }
-
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
     throw new Error('No access token available for vouchers');

@@ -2,10 +2,11 @@
 
 ## Work now
 
-- Field app v0 design review branch ready: `cursor/v0-design-review-a74f` — RN walk-my-plot UX implemented; design prompts in `apps/offline-product/design/`.
+- FDP coffee screening (NG/RW/TZ) is scaffolded behind `FDP_ENABLED`; next: deploy EE worker, run `npm run check:fdp`, calibrate thresholds on real tenant plots.
+- Field app pre-field automation is green (`npm run qa:full`, `store:preflight --strict`). Next before field soak: set prod `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_SENTRY_DSN`, run `release:preflight:production:online`, execute `DEVICE_SMOKE_CHECKLIST.md` on physical devices.
 - FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.
 - Beta-release readiness track is now formalized: controlled beta go/no-go checklist is published at `product-os/04-quality/beta-go-no-go-checklist.md` with explicit invite-only scope, waived official gates (`P0-02`, `P0-03`), and required fail-closed/security/test evidence for tenant-safe rollout.
-- Importer dashboard IA foundation is being aligned to Tier 3 compliance operations: sidebar/order now maps to `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log` with settings/help as support destinations.
+- Importer dashboard IA foundation is aligned to Tier 3 compliance operations: sidebar uses grouped sections (Network, Compliance ops, Engagement, Governance) with Overview pinned at top; settings/help remain support destinations.
 - Importer page framing pass is complete on shared routes: importer users now see role-appropriate destination labels and explanatory copy on `Shipments`, `Compliance`, `Evidence`, `Campaigns`, `Requests`, `Reporting`, and `Issues`.
 - Importer terminology alignment now also covers shared child components (package tables + compliance/evidence cards) so importer copy stays consistent across reused UI blocks.
 - Importer onboarding microcopy alignment is now complete: welcome, checklist, and guided-tour step language/ordering match the importer IA (`Network`, `Campaigns`, `Requests`, `Shipments`, `Compliance`, `Evidence`, `Reporting`).

@@ -23,20 +23,25 @@ import { hasSupabaseSessionTokens, setAuthTokens } from '@/lib/auth-session';
 import { getAuthenticatedSupabaseClient } from '@/lib/supabase-browser';
 import { NOTIFICATION_CAPABILITIES } from '@/lib/settings-capabilities';
 import { DemoDataToggleCard } from '@/components/demo/demo-data-toggle-card';
+import { OrgSupplyChainRolesPanel } from '@/components/settings/org-supply-chain-roles-panel';
 import { useLocale } from '@/lib/locale-context';
 import {
-  getAvailableLocales,
   getLocaleLabel,
+  getLocalePickerGroupsForRole,
+  getLocalePolicyDescriptionKey,
+  isLocaleForRole,
+  type Locale,
+} from '@/lib/locale-policy';
+import {
   isDashboardTimezone,
-  isLocale,
   TIMEZONE_OPTIONS,
   type DashboardTimezone,
-  type Locale,
 } from '@/lib/i18n';
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth();
-  const { locale, timezone, setLocale, setTimezone, t } = useLocale();
+  const { locale, timezone, availableLocales, setLocale, setTimezone, t } = useLocale();
+  const role = user?.active_role ?? null;
   const [activeTab, setActiveTab] = useState<'profile' | 'organization' | 'notifications' | 'security'>('profile');
   const [profileForm, setProfileForm] = useState({
     fullName: '',
@@ -97,7 +102,7 @@ export default function SettingsPage() {
         const storedLocale = typeof metadata.locale === 'string' ? metadata.locale : null;
         const storedTimezone = typeof metadata.timezone === 'string' ? metadata.timezone : null;
         setProfileForm({ fullName, phone });
-        if (storedLocale && isLocale(storedLocale)) {
+        if (storedLocale && isLocaleForRole(storedLocale, role)) {
           setPreferencesDraft((previous) => ({ ...previous, locale: storedLocale }));
         }
         if (storedTimezone && isDashboardTimezone(storedTimezone)) {
@@ -116,19 +121,22 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, user?.id, user?.name]);
+  }, [activeTab, user?.id, user?.name, role, locale, timezone]);
 
   const handlePreferencesSave = async () => {
     setIsSavingPreferences(true);
     try {
-      setLocale(preferencesDraft.locale);
+      const nextLocale = isLocaleForRole(preferencesDraft.locale, role)
+        ? preferencesDraft.locale
+        : availableLocales[0];
+      setLocale(nextLocale);
       setTimezone(preferencesDraft.timezone);
 
       if (hasSupabaseSessionTokens()) {
         const supabase = await getAuthenticatedSupabaseClient();
         const { error } = await supabase.auth.updateUser({
           data: {
-            locale: preferencesDraft.locale,
+            locale: nextLocale,
             timezone: preferencesDraft.timezone,
           },
         });
@@ -367,7 +375,9 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <p className="font-medium">{t('settings.preferences.language')}</p>
-                        <p className="text-sm text-muted-foreground">{t('settings.preferences.language_hint')}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t(getLocalePolicyDescriptionKey(role))}
+                        </p>
                       </div>
                       <select
                         value={preferencesDraft.locale}
@@ -377,13 +387,17 @@ export default function SettingsPage() {
                             locale: event.target.value as Locale,
                           }))
                         }
-                        className="min-w-[10rem] rounded-md border bg-background px-3 py-2 text-sm"
+                        className="min-w-[12rem] max-w-[14rem] rounded-md border bg-background px-3 py-2 text-sm"
                         disabled={isSavingPreferences}
                       >
-                        {getAvailableLocales().map((option) => (
-                          <option key={option} value={option}>
-                            {getLocaleLabel(option)}
-                          </option>
+                        {getLocalePickerGroupsForRole(role).map((group) => (
+                          <optgroup key={group.labelKey} label={t(group.labelKey)}>
+                            {group.locales.map((option) => (
+                              <option key={option} value={option}>
+                                {getLocaleLabel(option)}
+                              </option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
                     </div>
@@ -423,6 +437,8 @@ export default function SettingsPage() {
 
             {/* Organization Tab */}
             {activeTab === 'organization' && (
+              <div className="space-y-6">
+                <OrgSupplyChainRolesPanel />
               <Card>
                 <CardHeader>
                   <CardTitle>Organization Settings</CardTitle>
@@ -474,6 +490,7 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </div>
             )}
 
             {/* Notifications Tab */}

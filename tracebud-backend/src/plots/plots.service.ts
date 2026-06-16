@@ -13,9 +13,15 @@ import { PlotGeometryHistoryEventDto } from './dto/plot-geometry-history-respons
 import { GfwContextService } from '../compliance/gfw-context.service';
 import {
   applyGfwContextToPlotStatus,
-  contextSupportsAutoReviewClear,
   type GfwContextScreening,
 } from '../compliance/gfw-context-fusion';
+import { FdpCommodityService } from '../compliance/fdp-commodity.service';
+import {
+  applyFdpCommodityToPlotStatus,
+  buildFdpContextSnapshot,
+  screeningSupportsAutoReviewClear,
+  type FdpCommodityScreening,
+} from '../compliance/fdp-commodity-fusion';
 import { GfwService } from '../compliance/gfw.service';
 import {
   buildGroundTruthPhotoVerification,
@@ -38,6 +44,7 @@ import {
   mergePlotComplianceStatus,
   overlapToPlotStatus,
   type DeforestationScreeningContextSnapshot,
+  type DeforestationScreeningCommodityContextSnapshot,
   type DeforestationScreeningSnapshot,
   type GfwAlertSummary,
   type PlotComplianceStatus,
@@ -114,6 +121,7 @@ export class PlotsService {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly gfw: GfwService,
     private readonly gfwContext: GfwContextService,
+    private readonly fdpCommodity: FdpCommodityService,
     private readonly geometryValidation: PlotGeometryValidationService,
     private readonly tenureParse: TenureParseService,
     private readonly evidenceDocuments: EvidenceDocumentsService,
@@ -286,7 +294,30 @@ export class PlotsService {
     }
   }
 
-  private async ensureFarmerProfileForPlot(farmerId: string, authUserId: string | undefined): Promise<void> {
+  async bootstrapFieldAppProducer(params: {
+    farmerId: string;
+    userId: string;
+    countryCode?: string;
+    fullName?: string | null;
+  }): Promise<void> {
+    await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, params.countryCode);
+    if (params.fullName) {
+      await this.pool.query(
+        `
+          INSERT INTO user_account (id, role, name)
+          VALUES ($1::uuid, 'farmer', $2)
+          ON CONFLICT (id) DO UPDATE SET name = COALESCE(user_account.name, EXCLUDED.name)
+        `,
+        [params.userId, params.fullName],
+      );
+    }
+  }
+
+  private async ensureFarmerProfileForPlot(
+    farmerId: string,
+    authUserId: string | undefined,
+    countryCode = 'HN',
+  ): Promise<void> {
     if (!authUserId) {
       throw new BadRequestException('Missing authenticated user for plot creation');
     }
@@ -316,9 +347,9 @@ export class PlotsService {
     await this.pool.query(
       `
       INSERT INTO farmer_profile (id, user_id, country_code, self_declared, status)
-      VALUES ($1::uuid, $2::uuid, 'HN', true, 'active')
+      VALUES ($1::uuid, $2::uuid, $3, true, 'active')
     `,
-      [farmerId, authUserId],
+      [farmerId, authUserId, countryCode],
     );
   }
 
@@ -1011,6 +1042,70 @@ export class PlotsService {
     };
   }
 
+  private async getPlotScreeningContext(plotId: string): Promise<{
+    countryCode: string | null;
+    mainCommodity: string | null;
+  }> {
+    try {
+      const res = await this.pool.query<{
+        country_code: string | null;
+        main_commodity: string | null;
+      }>(
+        `
+          SELECT
+            fp.country_code,
+            tcp.main_commodity
+          FROM plot p
+          JOIN farmer_profile fp ON fp.id = p.farmer_id
+          LEFT JOIN tenant_signup_contacts tsc
+            ON tsc.user_id = fp.user_id::text
+          LEFT JOIN tenant_commercial_profiles tcp
+            ON tcp.tenant_id = tsc.tenant_id
+          WHERE p.id = $1
+          ORDER BY tcp.updated_at DESC NULLS LAST
+          LIMIT 1
+        `,
+        [plotId],
+      );
+      if (res.rowCount === 0) {
+        return { countryCode: null, mainCommodity: null };
+      }
+      const row = res.rows[0];
+      return {
+        countryCode: typeof row.country_code === 'string' ? row.country_code.toUpperCase() : null,
+        mainCommodity: typeof row.main_commodity === 'string' ? row.main_commodity : null,
+      };
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        const fallback = await this.pool.query<{ country_code: string | null }>(
+          `
+            SELECT fp.country_code
+            FROM plot p
+            JOIN farmer_profile fp ON fp.id = p.farmer_id
+            WHERE p.id = $1
+            LIMIT 1
+          `,
+          [plotId],
+        );
+        return {
+          countryCode:
+            typeof fallback.rows[0]?.country_code === 'string'
+              ? fallback.rows[0].country_code.toUpperCase()
+              : null,
+          mainCommodity: null,
+        };
+      }
+      throw error;
+    }
+  }
+
+  private buildCommodityContextSnapshot(
+    screening: FdpCommodityScreening,
+  ): DeforestationScreeningCommodityContextSnapshot {
+    return buildFdpContextSnapshot(screening);
+  }
+
   private async getPlotOverlapFlags(plotId: string): Promise<{
     sinaph_overlap: boolean;
     indigenous_overlap: boolean;
@@ -1059,6 +1154,8 @@ export class PlotsService {
       gfwResult: Record<string, unknown>;
       context?: GfwContextScreening;
       contextAdjusted?: boolean;
+      commodity?: FdpCommodityScreening;
+      commodityAdjusted?: boolean;
     };
   }): DeforestationScreeningSnapshot {
     return {
@@ -1072,6 +1169,11 @@ export class PlotsService {
       screenedAt: new Date().toISOString(),
       context: params.screening.context ? this.buildContextSnapshot(params.screening.context) : undefined,
       contextAdjusted: params.screening.contextAdjusted === true,
+      commodityContext: params.screening.commodity
+        ? this.buildCommodityContextSnapshot(params.screening.commodity)
+        : undefined,
+      commodityAdjusted: params.screening.commodityAdjusted === true,
+      fdpModelVersion: params.screening.commodity?.summary.ok ? '2025b' : null,
     };
   }
 
@@ -1108,6 +1210,10 @@ export class PlotsService {
   private async queryGfwAlertsForGeometry(
     geometry: any,
     cutoffDate: string = EUDR_DEFORESTATION_CUTOFF,
+    screeningContext?: {
+      countryCode: string | null;
+      mainCommodity: string | null;
+    },
   ): Promise<{
     summary: GfwAlertSummary;
     gfwResult: Record<string, unknown>;
@@ -1115,8 +1221,9 @@ export class PlotsService {
     cutoffDate: string;
     historicalSqlApplied: boolean;
     context: GfwContextScreening;
+    commodity: FdpCommodityScreening;
   }> {
-    const [alertsOutcome, context] = await Promise.all([
+    const [alertsOutcome, context, commodity] = await Promise.all([
       (async () => {
         let gfwResult: Record<string, unknown> = await this.gfw.runHistoricalDeforestationQuery({
           geometry,
@@ -1141,12 +1248,18 @@ export class PlotsService {
         };
       })(),
       this.gfwContext.queryForGeometry(geometry, cutoffDate),
+      this.fdpCommodity.queryForGeometry({
+        geometry,
+        countryCode: screeningContext?.countryCode ?? null,
+        commodity: screeningContext?.mainCommodity ?? null,
+      }),
     ]);
 
     return {
       ...alertsOutcome,
       cutoffDate,
       context,
+      commodity,
     };
   }
 
@@ -1156,7 +1269,12 @@ export class PlotsService {
     indigenousOverlap: boolean;
     productionSystem?: string | null;
     context?: GfwContextScreening;
-  }): { status: PlotComplianceStatus; contextAdjusted: boolean } {
+    commodity?: FdpCommodityScreening;
+  }): {
+    status: PlotComplianceStatus;
+    contextAdjusted: boolean;
+    commodityAdjusted: boolean;
+  } {
     const alertStatus = gfwSummaryToPlotStatus(params.gfwSummary);
     const contextAdjustedStatus = params.context
       ? applyGfwContextToPlotStatus({
@@ -1168,12 +1286,21 @@ export class PlotsService {
         })
       : alertStatus;
 
+    const fdpAdjustedStatus = params.commodity
+      ? applyFdpCommodityToPlotStatus({
+          fdpSignal: params.commodity.signal,
+          productionSystem: params.productionSystem,
+          baseStatus: contextAdjustedStatus,
+        })
+      : contextAdjustedStatus;
+
     return {
       status: mergePlotComplianceStatus(
-        contextAdjustedStatus,
+        fdpAdjustedStatus,
         overlapToPlotStatus(params.sinaphOverlap, params.indigenousOverlap),
       ),
       contextAdjusted: contextAdjustedStatus !== alertStatus,
+      commodityAdjusted: fdpAdjustedStatus !== contextAdjustedStatus,
     };
   }
 
@@ -1181,9 +1308,14 @@ export class PlotsService {
     const geometry = await this.getPlotGeometryForCompliance(plotId);
     const overlaps = await this.getPlotOverlapFlags(plotId);
     const plotMeta = await this.getPlotStatusRow(plotId);
+    const screeningContext = await this.getPlotScreeningContext(plotId);
 
     try {
-      const screening = await this.queryGfwAlertsForGeometry(geometry);
+      const screening = await this.queryGfwAlertsForGeometry(
+        geometry,
+        EUDR_DEFORESTATION_CUTOFF,
+        screeningContext,
+      );
       const signalTier = gfwSummaryToSignalTier(screening.summary);
       const mergeResult = this.resolveMergedPlotStatus({
         gfwSummary: screening.summary,
@@ -1191,9 +1323,11 @@ export class PlotsService {
         indigenousOverlap: overlaps.indigenous_overlap,
         productionSystem: plotMeta.production_system,
         context: screening.context,
+        commodity: screening.commodity,
       });
-      const contextAutoClear = contextSupportsAutoReviewClear({
-        contextSignal: screening.context.signal,
+      const contextAutoClear = screeningSupportsAutoReviewClear({
+        gfwContextSignal: screening.context.signal,
+        fdpSignal: screening.commodity.signal,
         productionSystem: plotMeta.production_system,
         proposedStatus: mergeResult.status,
       });
@@ -1215,6 +1349,8 @@ export class PlotsService {
           gfwResult: screening.gfwResult,
           context: screening.context,
           contextAdjusted: mergeResult.contextAdjusted,
+          commodity: screening.commodity,
+          commodityAdjusted: mergeResult.commodityAdjusted,
         },
       });
 
@@ -1237,6 +1373,9 @@ export class PlotsService {
             proposedStatus: mergeResult.status,
             contextAdjusted: mergeResult.contextAdjusted,
             contextSignal: screening.context.signal,
+            commodityAdjusted: mergeResult.commodityAdjusted,
+            fdpSignal: screening.commodity.signal,
+            fdpModelVersion: screening.commodity.summary.ok ? '2025b' : null,
             contextAutoClear,
             reviewClearanceBlocked: finalized.reviewClearanceBlocked,
             groundTruthPhotos: finalized.groundTruthPhotos,
@@ -1260,6 +1399,8 @@ export class PlotsService {
         groundTruthPhotos: finalized.groundTruthPhotos,
         contextAdjusted: mergeResult.contextAdjusted,
         contextSignal: screening.context.signal,
+        commodityAdjusted: mergeResult.commodityAdjusted,
+        fdpSignal: screening.commodity.signal,
         usedFallback: screening.usedFallback,
         cutoffDate: screening.cutoffDate,
         summary: { status: signalTier, ...screening.summary },
@@ -1306,7 +1447,8 @@ export class PlotsService {
     const geometry = await this.getPlotGeometryForCompliance(plotId);
     const overlaps = await this.getPlotOverlapFlags(plotId);
     const plotMeta = await this.getPlotStatusRow(plotId);
-    const screening = await this.queryGfwAlertsForGeometry(geometry, cutoffDate);
+    const screeningContext = await this.getPlotScreeningContext(plotId);
+    const screening = await this.queryGfwAlertsForGeometry(geometry, cutoffDate, screeningContext);
 
     const verdict =
       screening.summary.alertCount == null
@@ -1321,10 +1463,12 @@ export class PlotsService {
       indigenousOverlap: overlaps.indigenous_overlap,
       productionSystem: plotMeta.production_system,
       context: screening.context,
+      commodity: screening.commodity,
     });
     const proposedStatus = verdict === 'unknown' ? ('pending_check' as const) : mergeResult.status;
-    const contextAutoClear = contextSupportsAutoReviewClear({
-      contextSignal: screening.context.signal,
+    const contextAutoClear = screeningSupportsAutoReviewClear({
+      gfwContextSignal: screening.context.signal,
+      fdpSignal: screening.commodity.signal,
       productionSystem: plotMeta.production_system,
       proposedStatus,
     });
@@ -1347,6 +1491,8 @@ export class PlotsService {
         gfwResult: screening.gfwResult,
         context: screening.context,
         contextAdjusted: mergeResult.contextAdjusted,
+        commodity: screening.commodity,
+        commodityAdjusted: mergeResult.commodityAdjusted,
       },
     });
 
@@ -1368,6 +1514,10 @@ export class PlotsService {
           cutoffDate,
           verdict,
           plotStatus,
+          commodityAdjusted: mergeResult.commodityAdjusted,
+          fdpSignal: screening.commodity.signal,
+          fdpModelVersion: screening.commodity.summary.ok ? '2025b' : null,
+          screening: screeningSnapshot,
           summary: {
             alertCount: screening.summary.alertCount,
             alertAreaHa: screening.summary.alertAreaHa,
@@ -2136,17 +2286,25 @@ export class PlotsService {
     let gfwProviderMode: 'glad_s2_primary' | 'radd_fallback' | 'unavailable' = 'unavailable';
     let gfwError: string | null = null;
     let contextScreening: GfwContextScreening | null = null;
+    let commodityScreening: FdpCommodityScreening | null = null;
     let contextAdjusted = false;
+    let commodityAdjusted = false;
     const productionSystem =
       typeof row.production_system === 'string' ? row.production_system : null;
 
     try {
       const geometry = await this.getPlotGeometryForCompliance(plotId);
-      const screening = await this.queryGfwAlertsForGeometry(geometry);
+      const screeningContext = await this.getPlotScreeningContext(plotId);
+      const screening = await this.queryGfwAlertsForGeometry(
+        geometry,
+        EUDR_DEFORESTATION_CUTOFF,
+        screeningContext,
+      );
       gfwSummary = screening.summary;
       gfwSignalTier = gfwSummaryToSignalTier(screening.summary);
       gfwProviderMode = screening.usedFallback ? 'radd_fallback' : 'glad_s2_primary';
       contextScreening = screening.context;
+      commodityScreening = screening.commodity;
     } catch (error) {
       gfwError = error instanceof Error ? error.message : String(error);
     }
@@ -2157,10 +2315,13 @@ export class PlotsService {
       indigenousOverlap: overlaps.indigenous_overlap === true,
       productionSystem,
       context: contextScreening ?? undefined,
+      commodity: commodityScreening ?? undefined,
     });
     contextAdjusted = mergeResult.contextAdjusted;
-    const contextAutoClear = contextSupportsAutoReviewClear({
-      contextSignal: contextScreening?.signal ?? 'unknown',
+    commodityAdjusted = mergeResult.commodityAdjusted;
+    const contextAutoClear = screeningSupportsAutoReviewClear({
+      gfwContextSignal: contextScreening?.signal ?? 'unknown',
+      fdpSignal: commodityScreening?.signal,
       productionSystem,
       proposedStatus: mergeResult.status,
     });
@@ -2186,6 +2347,8 @@ export class PlotsService {
               },
               context: contextScreening ?? undefined,
               contextAdjusted,
+              commodity: commodityScreening ?? undefined,
+              commodityAdjusted,
             },
           })
         : null;

@@ -1,5 +1,12 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  Share,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
@@ -11,8 +18,12 @@ import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Brand, Colors } from '@/constants/theme';
+import { Input } from '@/components/ui/input';
+import {
+  HEADER_GRADIENT_COLORS,
+  compactTabHeaderStyles,
+} from '@/constants/compactTabHeader';
+import { Brand, Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchMyConsentGrants, requestGdprErasure, type ConsentGrant } from '@/features/api/consentGrants';
 import {
@@ -30,23 +41,186 @@ import { goBackOrHome } from '@/features/navigation/routes';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 
-function scopeLabel(scope: string[], t: (key: string) => string): string {
-  const labels = scope
-    .map((item) => {
-      if (item === 'identity') return t('data_sharing_scope_identity');
-      if (item === 'plots') return t('data_sharing_scope_plots');
-      if (item === 'evidence') return t('data_sharing_scope_evidence');
-      return item;
-    })
-    .filter(Boolean);
-  return labels.join(', ');
+type ScopeItem = 'identity' | 'plots' | 'evidence';
+
+function parseScope(scope: string[]): ScopeItem[] {
+  return scope.filter(
+    (item): item is ScopeItem =>
+      item === 'identity' || item === 'plots' || item === 'evidence',
+  );
 }
 
-function statusVariant(status: ConsentGrant['status']): 'success' | 'warning' | 'error' | 'default' {
-  if (status === 'active') return 'success';
-  if (status === 'pending') return 'warning';
-  if (status === 'revoked') return 'error';
-  return 'default';
+function scopeLabelKey(item: ScopeItem): string {
+  if (item === 'identity') return 'data_sharing_scope_identity';
+  if (item === 'plots') return 'data_sharing_scope_plots';
+  return 'data_sharing_scope_evidence';
+}
+
+function scopeIcon(item: ScopeItem): keyof typeof Ionicons.glyphMap {
+  if (item === 'identity') return 'person-outline';
+  if (item === 'plots') return 'map-outline';
+  return 'document-text-outline';
+}
+
+function ScopeChips({ scope, t }: { scope: string[]; t: (key: string) => string }) {
+  const items = parseScope(scope);
+  if (items.length === 0) return null;
+  return (
+    <View style={styles.scopeRow}>
+      {items.map((item) => (
+        <View key={item} style={styles.scopeChip}>
+          <Ionicons name={scopeIcon(item)} size={12} color="#4B5563" />
+          <ThemedText type="caption" style={styles.scopeChipText}>
+            {t(scopeLabelKey(item))}
+          </ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function StatusChip({
+  dotColor,
+  label,
+  value,
+}: {
+  dotColor: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <View style={styles.statusChip}>
+      <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+      <ThemedText type="caption" style={styles.statusChipValue}>
+        {value}
+      </ThemedText>
+      <ThemedText type="caption" style={styles.statusChipLabel}>
+        {label}
+      </ThemedText>
+    </View>
+  );
+}
+
+function PendingGrantCard({
+  grant,
+  t,
+  busy,
+  onApprove,
+  onDeny,
+}: {
+  grant: ConsentGrant;
+  t: (key: string) => string;
+  busy: boolean;
+  onApprove: () => void;
+  onDeny: () => void;
+}) {
+  const orgName = grant.grantee_org_name?.trim() || grant.grantee_tenant_id;
+  return (
+    <View style={styles.pendingCard}>
+      <View style={styles.pendingAccent} />
+      <View style={styles.pendingBody}>
+        <View style={styles.pendingTop}>
+          <View style={styles.orgMark}>
+            <Ionicons name="business" size={18} color="#B45309" />
+          </View>
+          <View style={styles.pendingMain}>
+            <ThemedText type="defaultSemiBold" style={styles.orgName} numberOfLines={2}>
+              {orgName}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.pendingHint}>
+              {t('data_sharing_pending_hint')}
+            </ThemedText>
+            <ScopeChips scope={grant.data_scope} t={t} />
+          </View>
+        </View>
+        <Button variant="primary" size="sm" fullWidth disabled={busy} onPress={onApprove}>
+          {t('data_sharing_allow')}
+        </Button>
+        <Pressable onPress={onDeny} disabled={busy} style={styles.denyLink}>
+          <ThemedText type="defaultSemiBold" style={styles.denyLinkText}>
+            {t('data_sharing_deny')}
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function ActiveGrantRow({
+  grant,
+  t,
+  busy,
+  isLast,
+  onRevoke,
+}: {
+  grant: ConsentGrant;
+  t: (key: string) => string;
+  busy: boolean;
+  isLast: boolean;
+  onRevoke: () => void;
+}) {
+  const orgName = grant.grantee_org_name?.trim() || grant.grantee_tenant_id;
+  return (
+    <View style={[styles.activeRow, !isLast ? styles.activeRowBorder : null]}>
+      <View style={styles.activeRowMain}>
+        <View style={styles.orgMarkActive}>
+          <Ionicons name="business-outline" size={17} color={Brand.primary} />
+        </View>
+        <View style={styles.activeText}>
+          <ThemedText type="defaultSemiBold" numberOfLines={2}>
+            {orgName}
+          </ThemedText>
+          <ScopeChips scope={grant.data_scope} t={t} />
+        </View>
+        <View style={styles.activeBadge}>
+          <ThemedText type="caption" style={styles.activeBadgeText}>
+            {t('data_sharing_status_active')}
+          </ThemedText>
+        </View>
+      </View>
+      <Pressable onPress={onRevoke} disabled={busy} style={styles.revokeLink}>
+        <ThemedText type="caption" style={styles.revokeLinkText}>
+          {t('data_sharing_revoke')}
+        </ThemedText>
+      </Pressable>
+    </View>
+  );
+}
+
+function SettingsRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  destructive,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle?: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.settingsRow}>
+      <View style={[styles.settingsIcon, destructive ? styles.settingsIconMuted : null]}>
+        <Ionicons name={icon} size={18} color={destructive ? '#9CA3AF' : Brand.primary} />
+      </View>
+      <View style={styles.settingsText}>
+        <ThemedText
+          type="defaultSemiBold"
+          style={destructive ? styles.settingsTitleMuted : undefined}
+        >
+          {title}
+        </ThemedText>
+        {subtitle ? (
+          <ThemedText type="caption" style={styles.settingsSubtitle}>
+            {subtitle}
+          </ThemedText>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="#C4C4C4" />
+    </Pressable>
+  );
 }
 
 export default function DataSharingScreen() {
@@ -60,6 +234,8 @@ export default function DataSharingScreen() {
   const [loading, setLoading] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [showPrivacyNote, setShowPrivacyNote] = useState(false);
+  const [showGdpr, setShowGdpr] = useState(false);
   const [erasureDetails, setErasureDetails] = useState('');
   const [erasureSubmitting, setErasureSubmitting] = useState(false);
 
@@ -184,166 +360,202 @@ export default function DataSharingScreen() {
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
-        colors={['#0A7F59', '#0B6F50']}
+        colors={[...HEADER_GRADIENT_COLORS]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top }]}
+        style={[compactTabHeaderStyles.header, { paddingTop: insets.top }]}
       >
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => goBackOrHome(router)} style={styles.backPill}>
-            <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
-            <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              {t('back')}
-            </ThemedText>
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+        <View style={compactTabHeaderStyles.headerRowCompact}>
+          <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideLeft]}>
+            <Pressable onPress={() => goBackOrHome(router)} style={compactTabHeaderStyles.backButton}>
+              <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
+              <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+                {t('back')}
+              </ThemedText>
+            </Pressable>
+          </View>
+          <View style={compactTabHeaderStyles.headerTitleWrap} pointerEvents="none">
+            <ThemedText type="defaultSemiBold" style={compactTabHeaderStyles.headerTitleCompact}>
               {t('data_sharing_title')}
             </ThemedText>
-            <ThemedText type="caption" style={{ color: colors.textInverse, opacity: 0.9 }}>
-              {t('data_sharing_subtitle')}
-            </ThemedText>
           </View>
+          <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideRight]} />
         </View>
       </LinearGradient>
 
       <ThemedScrollView contentContainerStyle={styles.container}>
-        <Card variant="outlined" style={styles.card}>
-          <CardContent>
-            <ThemedText type="caption" style={styles.intro}>
-              {t('data_sharing_intro')}
+        <View style={styles.hero}>
+          <ThemedText type="defaultSemiBold" style={styles.heroTitle}>
+            {t('data_sharing_subtitle')}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.heroBody}>
+            {t('data_sharing_intro')}
+          </ThemedText>
+          <Pressable onPress={() => setShowPrivacyNote((v) => !v)} style={styles.learnMoreBtn}>
+            <ThemedText type="caption" style={styles.learnMoreText}>
+              {showPrivacyNote ? t('data_sharing_learn_less') : t('data_sharing_learn_more')}
             </ThemedText>
-            <ThemedText type="caption" style={styles.note}>
+            <Ionicons
+              name={showPrivacyNote ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={Brand.primary}
+            />
+          </Pressable>
+          {showPrivacyNote ? (
+            <ThemedText type="caption" style={styles.privacyNote}>
               {t('data_sharing_eudr_note')}
             </ThemedText>
-          </CardContent>
-        </Card>
+          ) : null}
+        </View>
 
         {!isSignedIn ? (
-          <Card variant="outlined" style={styles.card}>
-            <CardContent>
-              <ThemedText type="default">{t('data_sharing_sign_in_required')}</ThemedText>
-              <View style={{ marginTop: 12 }}>
-                <Button variant="primary" fullWidth onPress={() => openSignIn({ variant: 'sync' })}>
-                  {t('sign_in')}
-                </Button>
-              </View>
-            </CardContent>
-          </Card>
+          <Pressable style={styles.signInBanner} onPress={() => openSignIn({ variant: 'sync' })}>
+            <Ionicons name="lock-closed-outline" size={18} color={Brand.primary} />
+            <View style={styles.signInBannerText}>
+              <ThemedText type="defaultSemiBold" style={styles.signInBannerTitle}>
+                {t('data_sharing_sign_in_required')}
+              </ThemedText>
+              <ThemedText type="caption" style={styles.signInBannerSub}>
+                {t('data_sharing_sign_in_cta')}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Brand.primary} />
+          </Pressable>
         ) : null}
 
         {hint ? (
-          <ThemedText type="caption" style={styles.hint}>
-            {hint}
-          </ThemedText>
+          <View style={styles.hintBanner}>
+            <Ionicons name="information-circle-outline" size={16} color="#0369A1" />
+            <ThemedText type="caption" style={styles.hintText}>
+              {hint}
+            </ThemedText>
+          </View>
+        ) : null}
+
+        {isSignedIn ? (
+          <View style={styles.statusRow}>
+            <StatusChip
+              dotColor="#F59E0B"
+              label={t('data_sharing_status_pending')}
+              value={pending.length}
+            />
+            <View style={styles.statusDivider} />
+            <StatusChip
+              dotColor="#10B981"
+              label={t('data_sharing_status_active')}
+              value={active.length}
+            />
+            {loading ? <ActivityIndicator color={Brand.primary} style={styles.inlineLoader} /> : null}
+          </View>
         ) : null}
 
         {isSignedIn && pending.length > 0 ? (
-          <>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              {t('data_sharing_pending')}
+          <View style={styles.block}>
+            <ThemedText type="caption" style={styles.blockLabel}>
+              {t('data_sharing_pending').toUpperCase()}
             </ThemedText>
             {pending.map((grant) => (
-              <Card key={grant.id} variant="outlined" style={styles.card}>
-                <CardContent>
-                  <View style={styles.grantHeader}>
-                    <ThemedText type="defaultSemiBold">
-                      {grant.grantee_org_name?.trim() || grant.grantee_tenant_id}
-                    </ThemedText>
-                    <Badge variant={statusVariant(grant.status)} size="sm">
-                      {t('data_sharing_status_pending')}
-                    </Badge>
-                  </View>
-                  <ThemedText type="caption" style={styles.muted}>
-                    {t('data_sharing_can_see', { scope: scopeLabel(grant.data_scope, t) })}
-                  </ThemedText>
-                  <View style={styles.rowActions}>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      disabled={actionId === grant.id}
-                      onPress={() => void onApprove(grant)}
-                    >
-                      {t('data_sharing_allow')}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={actionId === grant.id}
-                      onPress={() => void onDeny(grant)}
-                    >
-                      {t('data_sharing_deny')}
-                    </Button>
-                  </View>
-                </CardContent>
-              </Card>
+              <PendingGrantCard
+                key={grant.id}
+                grant={grant}
+                t={t}
+                busy={actionId === grant.id}
+                onApprove={() => void onApprove(grant)}
+                onDeny={() => void onDeny(grant)}
+              />
             ))}
-          </>
+          </View>
         ) : null}
 
         {isSignedIn ? (
-          <>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              {t('data_sharing_active')}
+          <View style={styles.block}>
+            <ThemedText type="caption" style={styles.blockLabel}>
+              {t('data_sharing_active').toUpperCase()}
             </ThemedText>
-            {active.length === 0 ? (
-              <Card variant="outlined" style={styles.card}>
-                <CardContent>
-                  <ThemedText type="caption">{t('data_sharing_none_active')}</ThemedText>
+            {loading && active.length === 0 && pending.length === 0 ? (
+              <Card variant="outlined" padding="none">
+                <CardContent style={styles.loadingCard}>
+                  <ActivityIndicator color={Brand.primary} />
+                </CardContent>
+              </Card>
+            ) : active.length === 0 ? (
+              <Card variant="outlined" padding="none" style={styles.emptyCard}>
+                <CardContent style={styles.emptyCardInner}>
+                  <Ionicons name="shield-outline" size={28} color="#D1D5DB" />
+                  <ThemedText type="caption" style={styles.emptyText}>
+                    {t('data_sharing_none_active')}
+                  </ThemedText>
                 </CardContent>
               </Card>
             ) : (
-              active.map((grant) => (
-                <Card key={grant.id} variant="outlined" style={styles.card}>
-                  <CardContent>
-                    <View style={styles.grantHeader}>
-                      <ThemedText type="defaultSemiBold">
-                        {grant.grantee_org_name?.trim() || grant.grantee_tenant_id}
-                      </ThemedText>
-                      <Badge variant={statusVariant(grant.status)} size="sm">
-                        {t('data_sharing_status_active')}
-                      </Badge>
-                    </View>
-                    <ThemedText type="caption" style={styles.muted}>
-                      {t('data_sharing_can_see', { scope: scopeLabel(grant.data_scope, t) })}
-                    </ThemedText>
-                    <View style={{ marginTop: 10 }}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={actionId === grant.id}
-                        onPress={() => onRevoke(grant)}
-                      >
-                        {t('data_sharing_revoke')}
-                      </Button>
-                    </View>
-                  </CardContent>
-                </Card>
-              ))
+              <Card variant="outlined" padding="none">
+                {active.map((grant, index) => (
+                  <ActiveGrantRow
+                    key={grant.id}
+                    grant={grant}
+                    t={t}
+                    busy={actionId === grant.id}
+                    isLast={index === active.length - 1}
+                    onRevoke={() => onRevoke(grant)}
+                  />
+                ))}
+              </Card>
             )}
-          </>
+          </View>
         ) : null}
 
-        {isSignedIn ? (
-          <Card variant="outlined" style={styles.card}>
-            <CardContent>
-              <ThemedText type="defaultSemiBold">{t('data_sharing_gdpr_title')}</ThemedText>
-              <ThemedText type="caption" style={styles.muted}>
-                {t('data_sharing_gdpr_body')}
-              </ThemedText>
-              <TextInput
-                value={erasureDetails}
-                onChangeText={setErasureDetails}
-                placeholder={t('data_sharing_gdpr_placeholder')}
-                multiline
-                style={[
-                  styles.erasureInput,
-                  { borderColor: colors.border, color: colors.text },
-                ]}
-              />
-              <View style={{ marginTop: 10 }}>
+        <View style={styles.block}>
+          <ThemedText type="caption" style={styles.blockLabel}>
+            {t('data_sharing_your_data_title').toUpperCase()}
+          </ThemedText>
+          <Card variant="outlined" padding="none">
+            <SettingsRow
+              icon="download-outline"
+              title={t('data_sharing_export_title')}
+              subtitle={t('data_sharing_export_short')}
+              onPress={() => void exportRecords()}
+            />
+            {isSignedIn ? (
+              <>
+                <View style={styles.rowDivider} />
+                <Pressable onPress={() => setShowGdpr((v) => !v)} style={styles.settingsRow}>
+                  <View style={[styles.settingsIcon, styles.settingsIconMuted]}>
+                    <Ionicons name="trash-outline" size={18} color="#9CA3AF" />
+                  </View>
+                  <View style={styles.settingsText}>
+                    <ThemedText type="defaultSemiBold" style={styles.settingsTitleMuted}>
+                      {t('data_sharing_gdpr_title')}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.settingsSubtitle}>
+                      {t('data_sharing_gdpr_short')}
+                    </ThemedText>
+                  </View>
+                  <Ionicons
+                    name={showGdpr ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color="#C4C4C4"
+                  />
+                </Pressable>
+              </>
+            ) : null}
+          </Card>
+          {isSignedIn && showGdpr ? (
+            <Card variant="outlined" padding="none" style={styles.gdprCard}>
+              <CardContent style={styles.gdprCardInner}>
+                <ThemedText type="caption" style={styles.gdprBody}>
+                  {t('data_sharing_gdpr_body')}
+                </ThemedText>
+                <Input
+                  value={erasureDetails}
+                  onChangeText={setErasureDetails}
+                  placeholder={t('data_sharing_gdpr_placeholder')}
+                  multiline
+                  dense
+                  style={styles.erasureInput}
+                />
                 <Button
                   variant="outline"
+                  size="sm"
                   fullWidth
                   disabled={erasureSubmitting || !erasureDetails.trim()}
                   onPress={() => {
@@ -356,39 +568,20 @@ export default function DataSharingScreen() {
                         return;
                       }
                       setErasureDetails('');
+                      setShowGdpr(false);
                       Alert.alert(t('data_sharing_gdpr_title'), res.message);
                     })();
                   }}
                 >
                   {t('data_sharing_gdpr_submit')}
                 </Button>
-              </View>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card variant="outlined" style={styles.card}>
-          <CardContent>
-            <ThemedText type="defaultSemiBold">{t('data_sharing_export_title')}</ThemedText>
-            <ThemedText type="caption" style={styles.muted}>
-              {t('data_sharing_export_body')}
-            </ThemedText>
-            <ThemedText type="caption" style={styles.footnote}>
-              {t('data_sharing_export_footnote')}
-            </ThemedText>
-            <View style={{ marginTop: 10 }}>
-              <Button variant="outline" fullWidth onPress={() => void exportRecords()}>
-                {t('data_sharing_download_records')}
-              </Button>
-            </View>
-          </CardContent>
-        </Card>
-
-        {loading ? (
-          <ThemedText type="caption" style={styles.muted}>
-            …
+              </CardContent>
+            </Card>
+          ) : null}
+          <ThemedText type="caption" style={styles.exportFootnote}>
+            {t('data_sharing_export_footnote')}
           </ThemedText>
-        ) : null}
+        </View>
       </ThemedScrollView>
     </ThemedView>
   );
@@ -396,37 +589,300 @@ export default function DataSharingScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { paddingHorizontal: 16, paddingBottom: 14 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  backPill: {
+  container: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.lg,
+  },
+  hero: {
+    gap: 6,
+  },
+  heroTitle: {
+    color: '#111827',
+    fontSize: 17,
+    lineHeight: 24,
+  },
+  heroBody: {
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  learnMoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    paddingVertical: 6,
-    paddingRight: 8,
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 2,
   },
-  container: { padding: 16, gap: 10, paddingBottom: 32 },
-  card: { marginBottom: 0 },
-  intro: { color: '#374151', lineHeight: 20 },
-  note: { color: '#6B7280', marginTop: 8, lineHeight: 18 },
-  sectionTitle: { marginTop: 4, color: Brand.primary },
-  grantHeader: {
+  learnMoreText: {
+    color: Brand.primary,
+    fontWeight: '600',
+  },
+  privacyNote: {
+    color: '#4B5563',
+    lineHeight: 19,
+    marginTop: 4,
+    paddingLeft: 2,
+  },
+  signInBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  muted: { color: '#6B7280', marginTop: 6, lineHeight: 20 },
-  footnote: { color: '#9CA3AF', marginTop: 8, lineHeight: 18, fontStyle: 'italic' },
-  rowActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  hint: { color: '#B45309', textAlign: 'center' },
-  erasureInput: {
-    marginTop: 10,
-    minHeight: 72,
+    gap: Spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
     borderWidth: 1,
-    borderRadius: 10,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  signInBannerText: { flex: 1, gap: 2 },
+  signInBannerTitle: { color: '#111827' },
+  signInBannerSub: { color: '#6B7280', lineHeight: 18 },
+  hintBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#F0F9FF',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  hintText: { flex: 1, color: '#0369A1', lineHeight: 18 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  statusChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusChipValue: {
+    color: '#111827',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  statusChipLabel: {
+    color: '#6B7280',
+  },
+  statusDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#E5E7EB',
+  },
+  inlineLoader: {
+    marginRight: 8,
+  },
+  block: {
+    gap: Spacing.sm,
+  },
+  blockLabel: {
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  pendingCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    overflow: 'hidden',
+  },
+  pendingAccent: {
+    width: 4,
+    backgroundColor: '#F59E0B',
+  },
+  pendingBody: {
+    flex: 1,
+    padding: 14,
+    gap: 10,
+  },
+  pendingTop: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pendingMain: {
+    flex: 1,
+    gap: 4,
+  },
+  pendingHint: {
+    color: '#92400E',
+    lineHeight: 18,
+  },
+  orgMark: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: '#FFFBEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgMarkActive: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.md,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgName: {
+    color: '#111827',
+  },
+  denyLink: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  denyLinkText: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  scopeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  scopeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  scopeChipText: {
+    color: '#4B5563',
+    fontSize: 11,
+  },
+  activeRow: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+    gap: 6,
+  },
+  activeRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  activeRowMain: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  activeText: {
+    flex: 1,
+    gap: 4,
+  },
+  activeBadge: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  activeBadgeText: {
+    color: '#047857',
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  revokeLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    marginLeft: 44,
+  },
+  revokeLinkText: {
+    color: '#B45309',
+    fontWeight: '600',
+  },
+  emptyCard: {
+    backgroundColor: '#FAFAFA',
+    borderColor: '#E5E7EB',
+  },
+  emptyCardInner: {
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing.lg,
+  },
+  emptyText: {
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 260,
+  },
+  loadingCard: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  settingsIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.md,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIconMuted: {
+    backgroundColor: '#F3F4F6',
+  },
+  settingsText: {
+    flex: 1,
+    gap: 2,
+  },
+  settingsTitleMuted: {
+    color: '#4B5563',
+  },
+  settingsSubtitle: {
+    color: '#9CA3AF',
+    lineHeight: 18,
+  },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 60,
+  },
+  gdprCard: {
+    marginTop: -4,
+    backgroundColor: '#FAFAFA',
+  },
+  gdprCardInner: {
+    gap: Spacing.sm,
+  },
+  gdprBody: {
+    color: '#6B7280',
+    lineHeight: 19,
+  },
+  erasureInput: {
+    minHeight: 72,
     textAlignVertical: 'top',
+  },
+  exportFootnote: {
+    color: '#9CA3AF',
+    lineHeight: 17,
+    marginLeft: 4,
+    fontStyle: 'italic',
   },
 });

@@ -1,16 +1,56 @@
-// Simple i18n utilities for localization support
-export type Locale = 'en' | 'fr' | 'es';
+import {
+  ALL_LOCALES,
+  getAvailableLocalesForRole,
+  getLocaleLabel as getCatalogLocaleLabel,
+  isLocale as isCatalogLocale,
+  isLocaleForRole,
+  resolveLocaleForRole,
+  type Locale,
+} from '@/lib/locale-policy';
+import type { TenantRole } from '@/types';
+
+export type { Locale };
+export {
+  ALL_LOCALES,
+  getAvailableLocalesForRole,
+  getLocalePickerGroupsForRole,
+  getLocalePolicyDescriptionKey,
+  isLocaleForRole,
+} from '@/lib/locale-policy';
 
 export type DashboardTimezone = 'UTC' | 'Europe/Paris' | 'Africa/Kigali' | 'America/Sao_Paulo';
 
 const LOCALE_STORAGE_KEY = 'tracebud_locale';
 const TIMEZONE_STORAGE_KEY = 'tracebud_timezone';
 
-const translations: Record<Locale, Record<string, string>> = {
-  en: require('../../locales/en.json'),
+const EN_TRANSLATIONS: Record<string, string> = require('../../locales/en.json');
+
+const LOCALE_OVERLAYS: Partial<Record<Locale, Record<string, string>>> = {
   fr: require('../../locales/fr.json'),
   es: require('../../locales/es.json'),
+  de: require('../../locales/overlays/de.json'),
+  it: require('../../locales/overlays/it.json'),
+  nl: require('../../locales/overlays/nl.json'),
+  pt: require('../../locales/overlays/pt.json'),
+  no: require('../../locales/overlays/no.json'),
+  sw: require('../../locales/overlays/sw.json'),
+  rw: require('../../locales/overlays/rw.json'),
+  lg: require('../../locales/overlays/lg.json'),
+  am: require('../../locales/overlays/am.json'),
+  id: require('../../locales/overlays/id.json'),
+  vi: require('../../locales/overlays/vi.json'),
+  hi: require('../../locales/overlays/hi.json'),
+  ar: require('../../locales/overlays/ar.json'),
 };
+
+const MERGED_TRANSLATIONS: Record<Locale, Record<string, string>> = ALL_LOCALES.reduce(
+  (accumulator, locale) => {
+    const overlay = LOCALE_OVERLAYS[locale];
+    accumulator[locale] = overlay ? { ...EN_TRANSLATIONS, ...overlay } : { ...EN_TRANSLATIONS };
+    return accumulator;
+  },
+  {} as Record<Locale, Record<string, string>>,
+);
 
 export const TIMEZONE_OPTIONS: Array<{ value: DashboardTimezone; labelKey: string }> = [
   { value: 'UTC', labelKey: 'preferences.timezone.utc' },
@@ -20,25 +60,23 @@ export const TIMEZONE_OPTIONS: Array<{ value: DashboardTimezone; labelKey: strin
 ];
 
 export function t(key: string, locale: Locale = 'en'): string {
-  return translations[locale]?.[key] ?? translations.en?.[key] ?? key;
+  return MERGED_TRANSLATIONS[locale]?.[key] ?? EN_TRANSLATIONS[key] ?? key;
 }
 
+/** @deprecated Use getAvailableLocalesForRole(role) for role-aware language lists. */
 export function getAvailableLocales(): Locale[] {
-  return ['en', 'fr', 'es'];
+  return [...ALL_LOCALES];
 }
 
 export function getLocaleLabel(locale: Locale): string {
-  return t(`preferences.language.${locale}`, locale);
+  return getCatalogLocaleLabel(locale);
 }
 
-export function getCurrentLocale(): Locale {
+export function getCurrentLocale(role?: TenantRole | null): Locale {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-    if (stored && getAvailableLocales().includes(stored as Locale)) {
-      return stored as Locale;
-    }
-    const lang = navigator.language?.split('-')[0].toLowerCase();
-    if (lang === 'fr' || lang === 'es') return lang as Locale;
+    const browserLang = navigator.language;
+    return resolveLocaleForRole({ stored, browserLang, role });
   }
   return 'en';
 }
@@ -69,5 +107,11 @@ export function isDashboardTimezone(value: string): value is DashboardTimezone {
 }
 
 export function isLocale(value: string): value is Locale {
-  return getAvailableLocales().includes(value as Locale);
+  return isCatalogLocale(value);
+}
+
+export function getTranslationCoverage(locale: Locale): { translated: number; total: number } {
+  const overlay = LOCALE_OVERLAYS[locale];
+  const translated = locale === 'en' ? Object.keys(EN_TRANSLATIONS).length : Object.keys(overlay ?? {}).length;
+  return { translated, total: Object.keys(EN_TRANSLATIONS).length };
 }

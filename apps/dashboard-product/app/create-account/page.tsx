@@ -15,6 +15,13 @@ import {
 } from '@/components/onboarding/step-workspace-setup';
 import { StepCommercialProfile, type CommercialProfileData } from '@/components/onboarding/step-commercial-profile';
 import type { User, TenantRole } from '@/types';
+import {
+  defaultSupplyChainRoleForSignupPrimary,
+  primaryTenantRoleFromSupplyChainRoles,
+  signupPrimarySupportsSupplyChainRoles,
+  supplyChainRoleToTenantRole,
+  type SupplyChainRoleId,
+} from '@/lib/org-supply-chain-roles';
 
 type Step = 1 | 2 | 3;
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
@@ -110,6 +117,7 @@ export default function CreateAccountPage() {
     organizationName: '',
     country: '',
     primaryRole: '',
+    supplyChainRoles: ['exporter'],
   });
   const [profileData, setProfileData] = useState<CommercialProfileData>({
     memberCount: '',
@@ -125,7 +133,12 @@ export default function CreateAccountPage() {
   useEffect(() => {
     if (!resumeWorkspace || !isAuthenticated) return;
     if (!workspaceData.primaryRole && prefillRole) {
-      setWorkspaceData((current) => ({ ...current, primaryRole: prefillRole }));
+      const defaultRole = defaultSupplyChainRoleForSignupPrimary(prefillRole);
+      setWorkspaceData((current) => ({
+        ...current,
+        primaryRole: prefillRole,
+        supplyChainRoles: signupPrimarySupportsSupplyChainRoles(prefillRole) ? [defaultRole] : current.supplyChainRoles,
+      }));
     }
   }, [resumeWorkspace, isAuthenticated, prefillRole, workspaceData.primaryRole]);
 
@@ -177,16 +190,40 @@ export default function CreateAccountPage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(extractErrorMessage(json));
+
+      const supplyChainRoles: SupplyChainRoleId[] = signupPrimarySupportsSupplyChainRoles(effectivePrimaryRole)
+        ? workspaceData.supplyChainRoles
+        : [];
+      if (supplyChainRoles.length > 0) {
+        const rolesRes = await fetch('/api/launch/supply-chain-roles', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ supplyChainRoles }),
+        });
+        if (!rolesRes.ok) {
+          // Non-blocking: workspace remains usable with primary role only.
+        }
+      }
+
       const rawUser = sessionStorage.getItem('tracebud_user');
       if (rawUser) {
         try {
           const parsed = JSON.parse(rawUser) as User;
-          const selectedRole = selectedRoleToTenantRole(effectivePrimaryRole);
-          const nextRoles = parsed.roles.includes(selectedRole) ? parsed.roles : [selectedRole, ...parsed.roles];
+          const tenantRoles =
+            supplyChainRoles.length > 0
+              ? Array.from(new Set(supplyChainRoles.map(supplyChainRoleToTenantRole)))
+              : [selectedRoleToTenantRole(effectivePrimaryRole)];
+          const activeRole =
+            supplyChainRoles.length > 0
+              ? primaryTenantRoleFromSupplyChainRoles(supplyChainRoles)
+              : selectedRoleToTenantRole(effectivePrimaryRole);
           const updatedUser: User = {
             ...parsed,
-            roles: nextRoles,
-            active_role: selectedRole,
+            roles: tenantRoles,
+            active_role: activeRole,
           };
           sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
         } catch {

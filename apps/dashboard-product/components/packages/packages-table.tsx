@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import Link from 'next/link';
 import {
   MoreHorizontal,
@@ -27,6 +27,17 @@ import { PackageStatusBadge, ComplianceStatusBadge } from './package-status-badg
 import { PermissionGate } from '@/components/common/permission-gate';
 import type { DDSPackage } from '@/types';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getDeletePackageActionLabel,
+  getEditPackageActionLabel,
+  getPackageSubmitActionLabel,
+  getPackagesTableCodeColumnLabel,
+  getPackagesTableEmptyMessage,
+  getPackagesTableSearchPlaceholder,
+  getPackagesTableTitle,
+  getRunComplianceCheckActionLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface PackagesTableProps {
   packages: DDSPackage[];
@@ -35,7 +46,9 @@ interface PackagesTableProps {
 
 export function PackagesTable({ packages, readOnly = false }: PackagesTableProps) {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<'code' | 'created_at' | 'status'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -74,12 +87,12 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
     <Card className="border-border bg-card">
       <CardHeader className="pb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-lg font-semibold">Shipment Packages</CardTitle>
+          <CardTitle className="text-lg font-semibold">{getPackagesTableTitle(role, t)}</CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search shipments..."
+                placeholder={getPackagesTableSearchPlaceholder(role, t)}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 bg-secondary pl-9"
@@ -102,7 +115,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                     className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     onClick={() => toggleSort('code')}
                   >
-                    {isImporter ? 'Shipment Code' : 'Package Code'}
+                    {getPackagesTableCodeColumnLabel(role, t)}
                     <ArrowUpDown className="h-3 w-3" />
                   </button>
                 </th>
@@ -198,7 +211,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                             <DropdownMenuItem asChild>
                               <Link href={`/packages/${pkg.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
-                                {isImporter ? 'Edit Shipment' : 'Edit Package'}
+                                {getEditPackageActionLabel(role, t)}
                               </Link>
                             </DropdownMenuItem>
                           )}
@@ -207,7 +220,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                           <DropdownMenuItem asChild>
                             <Link href={`/packages/${pkg.id}/compliance`}>
                               <ShieldCheck className="mr-2 h-4 w-4" />
-                              Run Compliance Check
+                              {getRunComplianceCheckActionLabel(role, t)}
                             </Link>
                           </DropdownMenuItem>
                         </PermissionGate>
@@ -216,7 +229,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                             <DropdownMenuItem asChild>
                               <Link href={`/packages/${pkg.id}/submit`}>
                                 <Send className="mr-2 h-4 w-4" />
-                                Submit downstream handoff
+                                {getPackageSubmitActionLabel(role, false, t)}
                               </Link>
                             </DropdownMenuItem>
                           </PermissionGate>
@@ -226,7 +239,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                           <PermissionGate permission="packages:delete">
                             <DropdownMenuItem className="text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
-                              {isImporter ? 'Delete Shipment' : 'Delete Package'}
+                              {getDeletePackageActionLabel(role, t)}
                             </DropdownMenuItem>
                           </PermissionGate>
                         )}
@@ -241,7 +254,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
           {filteredPackages.length === 0 && (
             <div className="py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                {isImporter ? 'No shipments found' : 'No shipment packages found'}
+                {getPackagesTableEmptyMessage(role, t)}
               </p>
             </div>
           )}

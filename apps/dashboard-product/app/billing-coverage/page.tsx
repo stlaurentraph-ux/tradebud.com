@@ -1,9 +1,12 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSponsorView } from '@/lib/sponsor-view';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const billingRows = [
   { item: 'Covered organisations', value: '29', note: '13 pass-through' },
@@ -13,6 +16,9 @@ const billingRows = [
 ];
 
 export default function BillingCoveragePage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'billing_coverage', { title: "Billing & Coverage" });
   const sponsorView = useSponsorView();
   const orderedRows =
     sponsorView === 'country'
@@ -22,13 +28,13 @@ export default function BillingCoveragePage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Billing & Coverage"
+        title={pageHeader.title}
         subtitle={
           sponsorView === 'country'
             ? 'Manage sponsor-funded coverage and budget exposure across country network operations'
             : 'Manage sponsor-funded compliance outcomes, supplier support, and pass-through exceptions'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Billing & Coverage' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Billing & Coverage' })}
       />
       <div className="flex-1 space-y-6 p-6">
         <Card>

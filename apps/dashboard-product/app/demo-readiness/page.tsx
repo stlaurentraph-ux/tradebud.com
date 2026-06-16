@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ import { useAdminData } from '@/lib/use-admin-data';
 import { resetDemoWorkspace, seedFirstCustomerWorkspace } from '@/lib/demo-bootstrap';
 import { emitAuditEvent } from '@/lib/audit-events';
 import { toast } from 'sonner';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const CHECKS = [
   'Producer inbox has actionable pending requests',
@@ -23,6 +25,9 @@ const CHECKS = [
 ];
 
 export default function DemoReadinessPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'demo_readiness', { title: "Demo Readiness", subtitle: "Operational checklist and status for customer demo quality" });
   const [isMutating, setIsMutating] = useState(false);
   const { packages } = usePackages();
   const { users } = useAdminData();
@@ -64,9 +69,9 @@ export default function DemoReadinessPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Demo Readiness"
-        subtitle="Operational checklist and status for customer demo quality"
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Demo Readiness' }]}
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Demo Readiness' })}
       />
       <div className="flex-1 space-y-6 p-6">
         <Card>

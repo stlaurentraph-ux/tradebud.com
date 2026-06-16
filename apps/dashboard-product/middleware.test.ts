@@ -2,8 +2,21 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { NextRequest } from 'next/server';
 import { applyGateRedirectParams, getGateRedirectPath, middleware } from './middleware';
 
-function makeMiddlewareRequest(url: string): NextRequest {
-  return { nextUrl: new URL(url) } as NextRequest;
+function makeToken(expSeconds: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({ exp: expSeconds }));
+  return `${header}.${payload}.signature`;
+}
+
+function makeMiddlewareRequest(url: string, withSession = true): NextRequest {
+  const request = { nextUrl: new URL(url) } as NextRequest;
+  request.cookies = {
+    get: (name: string) =>
+      withSession && name === 'tracebud_session'
+        ? { value: makeToken(Math.floor(Date.now() / 1000) + 3600) }
+        : undefined,
+  } as NextRequest['cookies'];
+  return request;
 }
 
 describe('middleware gate redirect', () => {
@@ -88,5 +101,38 @@ describe('middleware gate redirect', () => {
     const response = middleware(request);
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('middleware redirects internal tools in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXT_PUBLIC_ENABLE_INTERNAL_TOOLS', 'false');
+    const request = makeMiddlewareRequest('https://tracebud.test/founder-os/crm/daily-actions');
+
+    const response = middleware(request);
+    expect(response.headers.get('location')).toContain('https://tracebud.test/');
+    expect(response.status).toBe(307);
+  });
+
+  it('middleware redirects /shipments list to /packages', () => {
+    const request = makeMiddlewareRequest('https://tracebud.test/shipments');
+
+    const response = middleware(request);
+    expect(response.headers.get('location')).toContain('https://tracebud.test/packages');
+    expect(response.status).toBe(307);
+  });
+
+  it('middleware redirects unauthenticated users to login', () => {
+    const request = makeMiddlewareRequest('https://tracebud.test/packages', false);
+
+    const response = middleware(request);
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/login?next=%2Fpackages');
+  });
+
+  it('middleware allows public auth routes without session cookie', () => {
+    const request = makeMiddlewareRequest('https://tracebud.test/login', false);
+
+    const response = middleware(request);
+    expect(response.status).toBe(200);
   });
 });

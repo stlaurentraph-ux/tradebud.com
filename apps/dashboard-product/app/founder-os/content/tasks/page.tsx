@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { AsyncState } from '@/components/common/async-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useContentTasks } from '@/lib/use-content';
+import { LocaleContext } from '@/lib/locale-context';
+import { getWorkflowAsyncStateCopy } from '@/lib/workflow-terminology-labels';
 
 export default function FounderOsContentTasksPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { tasks, isLoading, error, reload, setStatus, createTask } = useContentTasks();
   const [form, setForm] = useState({ task_type: 'write_post', due_date: '', notes: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -40,11 +44,20 @@ export default function FounderOsContentTasksPage() {
           </CardContent>
         </Card>
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading content tasks..." />
+          <AsyncState mode="loading" title={getWorkflowAsyncStateCopy('content.tasks', 'loading', t).title} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load content tasks" description={error} onRetry={reload} />
+          <AsyncState
+            mode="error"
+            title={getWorkflowAsyncStateCopy('content.tasks', 'error', t).title}
+            description={error}
+            onRetry={reload}
+          />
         ) : tasks.length === 0 ? (
-          <AsyncState mode="empty" title="No content tasks yet" description="Generate tasks from cadence settings." />
+          <AsyncState
+            mode="empty"
+            title={getWorkflowAsyncStateCopy('content.tasks', 'empty', t).title}
+            description={getWorkflowAsyncStateCopy('content.tasks', 'empty', t).description}
+          />
         ) : (
           tasks.map((task) => (
             <Card key={task.id}>

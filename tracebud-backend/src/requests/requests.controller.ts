@@ -61,11 +61,42 @@ export class RequestsController {
     return this.requestsService.list(tenantId);
   }
 
+  private requireOperationalIssuesAccess(req: any): void {
+    const role = this.resolveDashboardRole(req);
+    if (
+      ![
+        'admin',
+        'exporter',
+        'compliance_manager',
+        'cooperative',
+        'importer',
+        'country_reviewer',
+        'sponsor',
+      ].includes(role)
+    ) {
+      throw new ForbiddenException('This role cannot access operational issues.');
+    }
+  }
+
   @Get('issues')
   async listOperationalIssues(@Req() req: any) {
-    this.requireRequestsAccess(req);
+    this.requireOperationalIssuesAccess(req);
     const tenantId = this.getTenantId(req);
     return this.requestsService.listOperationalIssues(tenantId);
+  }
+
+  @Patch('issues/:id')
+  async updateOperationalIssueStatus(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { status?: 'open' | 'in_progress' | 'resolved' | 'closed' },
+  ) {
+    this.requireOperationalIssuesAccess(req);
+    const tenantId = this.getTenantId(req);
+    if (!body?.status) {
+      throw new BadRequestException('status is required.');
+    }
+    return this.requestsService.updateOperationalIssueStatus(tenantId, id, body.status);
   }
 
   @Get('evidence-feed')

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, Loader2, Save, X } from 'lucide-react';
@@ -13,6 +13,21 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  getHarvestVoucherEmptyMessage,
+  getHarvestVoucherLoadingMessage,
+  getHarvestVoucherSectionDescription,
+  getPackageCreateBackLabel,
+  getPackageCreateInfoCardTitle,
+  getPackageCreatePreviewTitle,
+  getPackageCreateSubmitLabel,
+  getPackageCreateSubtitle,
+  getPackageCreateSuccessToast,
+  getPackageCreateTitle,
+  getPackagesPageTitle,
+} from '@/lib/workflow-terminology-labels';
 import {
   buildPackageLabel,
   createHarvestPackage,
@@ -41,8 +56,9 @@ function formatHarvestDate(value: string | null): string {
 export default function NewPackagePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const isExporter = user?.active_role === 'exporter';
-  const isImporter = user?.active_role === 'importer';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const canCreatePackage = PACKAGE_CREATE_ROLES.has(user?.active_role ?? '');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,7 +126,10 @@ export default function NewPackagePage() {
     [selectedVouchers],
   );
 
-  const validationErrors = useMemo(() => validatePackageCreateForm(formData), [formData]);
+  const validationErrors = useMemo(
+    () => validatePackageCreateForm(formData, role, t),
+    [formData, role, t],
+  );
   const isFormValid = !hasPackageCreateErrors(validationErrors);
 
   const toggleVoucher = (voucher: TenantHarvestVoucher, checked: boolean) => {
@@ -132,7 +151,7 @@ export default function NewPackagePage() {
       return;
     }
 
-    const errors = validatePackageCreateForm(formData);
+    const errors = validatePackageCreateForm(formData, role, t);
     setFieldErrors(errors);
     if (hasPackageCreateErrors(errors)) {
       toast.error('Fix validation errors before creating this record.');
@@ -146,11 +165,7 @@ export default function NewPackagePage() {
         voucherIds: formData.voucherIds,
         label: buildPackageLabel(formData),
       });
-      toast.success(
-        isExporter || isImporter
-          ? 'Shipment package created from selected harvest vouchers.'
-          : 'DDS package created from selected harvest vouchers.',
-      );
+      toast.success(getPackageCreateSuccessToast(role, t));
       trackDashboardEvent(DASHBOARD_EVENTS.PACKAGE_CREATE_SUCCESS, {
         packageId: created.id,
         voucherCount: formData.voucherIds.length,
@@ -173,16 +188,12 @@ export default function NewPackagePage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={isExporter || isImporter ? 'Create New Shipment' : 'Create New Package'}
-        subtitle={
-          isExporter
-            ? 'Select harvest vouchers and build a shipment package for downstream handoff'
-            : 'Select harvest vouchers to start a DDS package for EUDR compliance'
-        }
+        title={getPackageCreateTitle(role, t)}
+        subtitle={getPackageCreateSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: isExporter || isImporter ? 'Shipments' : 'DDS Packages', href: '/packages' },
-          { label: isExporter || isImporter ? 'New Shipment' : 'New Package' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getPackagesPageTitle(role, t), href: '/packages' },
+          { label: getPackageCreateTitle(role, t) },
         ]}
       />
 
@@ -190,7 +201,7 @@ export default function NewPackagePage() {
         <Button variant="ghost" size="sm" className="mb-4" asChild>
           <Link href="/packages">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {isExporter || isImporter ? 'Back to Shipments' : 'Back to Packages'}
+            {getPackageCreateBackLabel(role, t)}
           </Link>
         </Button>
 
@@ -209,9 +220,7 @@ export default function NewPackagePage() {
             <div className="space-y-6 lg:col-span-2">
               <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-lg">
-                    {isExporter || isImporter ? 'Shipment Information' : 'Package Information'}
-                  </CardTitle>
+                  <CardTitle className="text-lg">{getPackageCreateInfoCardTitle(role, t)}</CardTitle>
                   <CardDescription>
                     Label metadata for the package record. Harvest vouchers are linked in the next
                     section.
@@ -319,7 +328,7 @@ export default function NewPackagePage() {
                     <div>
                       <CardTitle className="text-lg">Harvest Vouchers</CardTitle>
                       <CardDescription>
-                        Select verified harvest vouchers to include in this package
+                        {getHarvestVoucherSectionDescription(role, t)}
                       </CardDescription>
                     </div>
                     {vouchers.some((voucher) => !voucher.eligible_for_package) ? (
@@ -339,7 +348,7 @@ export default function NewPackagePage() {
                   {isLoadingVouchers ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading harvest vouchers...
+                      {getHarvestVoucherLoadingMessage(role, t)}
                     </div>
                   ) : voucherLoadError ? (
                     <Alert variant="destructive">
@@ -350,9 +359,7 @@ export default function NewPackagePage() {
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
-                        {showIneligible
-                          ? 'No harvest vouchers are available for this organisation yet.'
-                          : 'No eligible harvest vouchers are available. Capture harvests in the field app or show ineligible vouchers to review blockers.'}
+                        {getHarvestVoucherEmptyMessage(role, showIneligible, t)}
                       </AlertDescription>
                     </Alert>
                   ) : (
@@ -435,9 +442,7 @@ export default function NewPackagePage() {
             <div className="space-y-6">
               <Card className="border-border bg-card">
                 <CardHeader>
-                  <CardTitle className="text-base">
-                    {isExporter || isImporter ? 'Shipment Preview' : 'Package Preview'}
-                  </CardTitle>
+                  <CardTitle className="text-base">{getPackageCreatePreviewTitle(role, t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
@@ -478,11 +483,11 @@ export default function NewPackagePage() {
                     disabled={isSubmitting || !isFormValid || !canCreatePackage}
                   >
                     {isSubmitting ? (
-                      'Creating...'
+                      getPackageCreateSubmitLabel(role, true, t)
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        {isExporter || isImporter ? 'Create Shipment' : 'Create Package'}
+                        {getPackageCreateSubmitLabel(role, false, t)}
                       </>
                     )}
                   </Button>

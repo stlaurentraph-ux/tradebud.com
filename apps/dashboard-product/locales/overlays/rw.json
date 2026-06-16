@@ -1,0 +1,22 @@
+{
+  "common.save": "Bika",
+  "common.cancel": "Hagarika",
+  "common.loading": "Birimo gutegurwa…",
+  "nav.dashboard": "Ikibaho",
+  "nav.settings": "Igenamiterere",
+  "nav.help": "Ubufasha",
+  "nav.shipments": "Kohereza",
+  "nav.harvests": "Umusaruro",
+  "nav.plots": "Imirima",
+  "nav.farmers": "Abahinzi",
+  "nav.compliance": "Kubahiriza amategeko",
+  "nav.members": "Abanyamuryango",
+  "settings.preferences.language": "Ururimi",
+  "settings.preferences.language_policy_origin": "Ururimi rw’ibihugu by’inkomoko mbere, hanyuma indimi z’ubucuruzi ku makipe y’ubuhinzi n’ohereza.",
+  "status.shipment.ready": "Byiteguye",
+  "status.shipment.sealed": "Byafunzwe",
+  "status.shipment.handed_off": "Byatanzwe",
+  "status.compliance.blocked": "Byabujijwe",
+  "workflow.review_queue.action.review_shipment": "Suzuma kohereza",
+  "workflow.review_queue.blocked": "Byabujijwe"
+}

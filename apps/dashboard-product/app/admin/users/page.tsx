@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +46,8 @@ import type { TenantRole } from '@/types';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { inviteUser, type AdminUser } from '@/lib/admin-service';
 import { useAdminData } from '@/lib/use-admin-data';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 interface User {
   id: string;
@@ -187,6 +189,9 @@ const STATUS_CONFIG = {
 };
 
 export default function UserManagementPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'user_management', { title: "User Management", subtitle: "Manage user accounts, roles, and access across your organization" });
   const { users: loadedUsers, organizations } = useAdminData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | TenantRole>('all');
@@ -261,13 +266,9 @@ export default function UserManagementPage() {
     <PermissionGate permission="admin:manage_users">
       <div className="flex flex-col">
         <AppHeader
-          title="User Management"
-          subtitle="Manage user accounts, roles, and access across your organization"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Admin', href: '/admin' },
-            { label: 'User Management' },
-          ]}
+          title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+          breadcrumbs={buildAppBreadcrumbs(t, { name: 'Admin', href: '/admin' }, { name: 'User Management' })}
           actions={
             <div className="flex gap-2">
               <Button variant="outline" asChild>

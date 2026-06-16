@@ -24,14 +24,56 @@ type AreaInfo = {
 
 type CaptureMode = 'walk' | 'vertex_avg' | 'manual_trace';
 
+const WALK_MIN_DISTANCE_M = 4;
+const WALK_MAX_ACCURACY_M = 12;
+
+function toRad(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function haversineMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function weightedAverageSamples(window: SamplePoint[]): Point | null {
+  if (window.length === 0) return null;
+
+  let weightSum = 0;
+  let latSum = 0;
+  let lonSum = 0;
+  for (const s of window) {
+    const acc = s.accuracyMeters;
+    const w = acc != null && acc > 0 ? 1 / (acc * acc) : 1;
+    weightSum += w;
+    latSum += s.latitude * w;
+    lonSum += s.longitude * w;
+  }
+  if (weightSum <= 0) return null;
+
+  return {
+    latitude: roundWgs84Coordinate(latSum / weightSum),
+    longitude: roundWgs84Coordinate(lonSum / weightSum),
+    timestamp: window[window.length - 1].timestamp,
+  };
+}
+
 function computeAreaFromPoints(points: Point[]): AreaInfo {
   if (points.length < 3) {
     return { squareMeters: 0, hectares: 0 };
   }
 
   const R = 6371000; // mean Earth radius in meters
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
 
   const lat0 =
     (points.reduce((sum, p) => sum + p.latitude, 0) / points.length) || points[0].latitude;
@@ -58,7 +100,7 @@ function computeAreaFromPoints(points: Point[]): AreaInfo {
   return { squareMeters: area, hectares };
 }
 
-export function useWalkPerimeter() {
+export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
   const [points, setPoints] = useState<Point[]>([]);
   const [samples, setSamples] = useState<SamplePoint[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -67,6 +109,59 @@ export function useWalkPerimeter() {
   const [precisionMeters, setPrecisionMeters] = useState<number | null>(null);
   const [mode, setMode] = useState<CaptureMode>('walk');
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+  const samplesRef = useRef<SamplePoint[]>([]);
+  const modeRef = useRef<CaptureMode>('walk');
+  const lastEmittedRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const pendingWalkSamplesRef = useRef<SamplePoint[]>([]);
+
+  useEffect(() => {
+    samplesRef.current = samples;
+  }, [samples]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  const clearWalkEmitState = () => {
+    lastEmittedRef.current = null;
+    pendingWalkSamplesRef.current = [];
+  };
+
+  const tryEmitWalkPoint = (sample: SamplePoint) => {
+    const last = lastEmittedRef.current;
+    const accuracy = sample.accuracyMeters;
+
+    if (accuracy != null && accuracy > WALK_MAX_ACCURACY_M && last) {
+      return;
+    }
+
+    pendingWalkSamplesRef.current.push(sample);
+
+    const dist = last
+      ? haversineMeters(last.latitude, last.longitude, sample.latitude, sample.longitude)
+      : Infinity;
+
+    if (last && dist < WALK_MIN_DISTANCE_M) {
+      return;
+    }
+
+    const window = pendingWalkSamplesRef.current;
+    pendingWalkSamplesRef.current = [];
+
+    const averaged = weightedAverageSamples(window);
+    if (!averaged) return;
+
+    lastEmittedRef.current = {
+      latitude: averaged.latitude,
+      longitude: averaged.longitude,
+    };
+
+    setPoints((prev) => {
+      const nextPoints = [...prev, averaged];
+      setArea(computeAreaFromPoints(nextPoints));
+      return nextPoints;
+    });
+  };
 
   const safeStopWatch = () => {
     const sub: any = watchRef.current;
@@ -91,8 +186,13 @@ export function useWalkPerimeter() {
       setLastError(null);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLastError('Location permission not granted');
+        options?.onLocationDenied?.();
+        setLastError('location_denied');
         return;
+      }
+
+      if (modeRef.current === 'walk') {
+        clearWalkEmitState();
       }
 
       setIsRecording(true);
@@ -128,36 +228,26 @@ export function useWalkPerimeter() {
             setPrecisionMeters(bestPrecision);
           }
 
-          const p: Point = {
+          const sample: SamplePoint = {
             latitude: roundWgs84Coordinate(latitude),
             longitude: roundWgs84Coordinate(longitude),
             timestamp: loc.timestamp ?? Date.now(),
+            accuracyMeters: bestPrecision,
+            altitudeMeters: typeof altitude === 'number' ? altitude : null,
+            altitudeAccuracyMeters:
+              typeof altitudeAccuracy === 'number' ? altitudeAccuracy : null,
+            headingDegrees: typeof heading === 'number' ? heading : null,
+            speedMps: typeof speed === 'number' ? speed : null,
           };
 
-          // Always keep a rolling sample buffer (used for vertex averaging).
           setSamples((prev) => {
-            const next: SamplePoint[] = [
-              ...prev,
-              {
-                ...p,
-                accuracyMeters: bestPrecision,
-                altitudeMeters: typeof altitude === 'number' ? altitude : null,
-                altitudeAccuracyMeters:
-                  typeof altitudeAccuracy === 'number' ? altitudeAccuracy : null,
-                headingDegrees: typeof heading === 'number' ? heading : null,
-                speedMps: typeof speed === 'number' ? speed : null,
-              },
-            ];
+            const next: SamplePoint[] = [...prev, sample];
             // Keep last ~10 minutes of samples (2s interval ≈ 300 samples)
             return next.length > 300 ? next.slice(next.length - 300) : next;
           });
 
-          if (mode === 'walk') {
-            setPoints((prev) => {
-              const nextPoints = [...prev, p];
-              setArea(computeAreaFromPoints(nextPoints));
-              return nextPoints;
-            });
+          if (modeRef.current === 'walk') {
+            tryEmitWalkPoint(sample);
           }
         },
       );
@@ -178,6 +268,7 @@ export function useWalkPerimeter() {
     setLastError(null);
     setArea({ squareMeters: 0, hectares: 0 });
     setPrecisionMeters(null);
+    clearWalkEmitState();
   };
 
   /** Load existing boundary vertices (e.g. editing a saved plot). */
@@ -191,10 +282,12 @@ export function useWalkPerimeter() {
     setPoints(pts);
     setArea(computeAreaFromPoints(pts));
     setLastError(null);
+    clearWalkEmitState();
   }, []);
 
   const setCaptureMode = (next: CaptureMode) => {
     setMode(next);
+    clearWalkEmitState();
     if (next !== 'walk') {
       // Vertex/manual modes use explicit vertices; do not accumulate walk points automatically.
       setPoints([]);
@@ -202,24 +295,26 @@ export function useWalkPerimeter() {
     }
   };
 
-  const addAveragedVertex = (seconds: number = 60) => {
+  const addAveragedVertex = (seconds: number = 60): boolean => {
     const now = Date.now();
+    const windowStart = now - seconds * 1000;
+    const window = samplesRef.current.filter((s) => s.timestamp >= windowStart);
+    if (window.length === 0) {
+      return false;
+    }
+
+    const averaged = weightedAverageSamples(window);
+    if (!averaged) {
+      return false;
+    }
+
+    setLastError(null);
     setPoints((prev) => {
-      const windowStart = now - seconds * 1000;
-      // Read the latest samples snapshot (closure is fine; samples updates frequently).
-      const window = samples.filter((s) => s.timestamp >= windowStart);
-      if (window.length === 0) {
-        return prev;
-      }
-      const avgLat = window.reduce((sum, p) => sum + p.latitude, 0) / window.length;
-      const avgLon = window.reduce((sum, p) => sum + p.longitude, 0) / window.length;
-      const nextPoints = [
-        ...prev,
-        { latitude: roundWgs84Coordinate(avgLat), longitude: roundWgs84Coordinate(avgLon), timestamp: now },
-      ];
+      const nextPoints = [...prev, { ...averaged, timestamp: now }];
       setArea(computeAreaFromPoints(nextPoints));
       return nextPoints;
     });
+    return true;
   };
 
   const addManualVertex = (latitude: number, longitude: number) => {
@@ -266,4 +361,3 @@ export function useWalkPerimeter() {
     replacePointsFromPlot,
   };
 }
-

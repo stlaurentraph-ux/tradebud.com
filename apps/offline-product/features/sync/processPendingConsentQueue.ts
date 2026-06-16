@@ -56,7 +56,10 @@ export async function processPendingConsentQueue(): Promise<ProcessPendingConsen
   let completed = 0;
   let failedActions = 0;
   const actions = (await loadPendingSyncActions())
-    .filter((row) => isConsentActionType(row.actionType))
+    .filter(
+      (row): row is PendingSyncAction & { actionType: ConsentQueueActionType } =>
+        isConsentActionType(row.actionType),
+    )
     .sort((a, b) => a.createdAt - b.createdAt);
 
   for (const row of actions) {
@@ -81,7 +84,10 @@ export async function processPendingConsentQueue(): Promise<ProcessPendingConsen
     }
 
     failedActions += 1;
-    await markPendingSyncAttempt(row.id, result.message ?? 'consent_queue_failed');
+    await markPendingSyncAttempt(row.id, {
+      attempts: row.attempts + 1,
+      lastError: result.message ?? 'consent_queue_failed',
+    });
   }
 
   return { completed, failedActions, skippedOffline: false };

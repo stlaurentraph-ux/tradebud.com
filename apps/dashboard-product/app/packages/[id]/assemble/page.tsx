@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, AlertCircle, ChevronRight, Lock } from 'lucide-react';
@@ -17,7 +17,51 @@ import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { usePackageDetail } from '@/lib/use-package-detail';
 import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { fetchAdoptionPromo } from '@/lib/billing-client';
-import { getBatchNavLabel } from '@/lib/supply-chain-terminology';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  formatPackageAssembleAllocateSummary,
+  formatPackageAssembleBlockersCount,
+  formatPackageAssembleLineageSummary,
+  formatPackageAssembleWeightMatchOk,
+  formatPackageAssembleWeightMustMatch,
+  getAssemblyBackLabel,
+  getAssemblyCancelLabel,
+  getAssemblyNextAllocateLabel,
+  getAssemblyNextSealLabel,
+  getAssemblyNextValidateLabel,
+  getBatchNavLabel,
+  getAssembleShipmentSubtitle,
+  getAssembleBreadcrumbLabel,
+  getAssemblePageTitle,
+  getAssembleSealedAlertMessage,
+  getBackToPackageDetailLabel,
+  getPackageLoadErrorPrefix,
+  getPackageNotFoundMessage,
+  buildPackageBreadcrumbs,
+  getPackageAssembleAdditionalBatchesLabel,
+  getPackageAssembleAllocateIntro,
+  getPackageAssembleDeclaredWeightLabel,
+  getPackageAssembleFirstSealFreeHint,
+  getPackageAssembleLiabilityBody,
+  getPackageAssembleLiabilityTitle,
+  getPackageAssembleLineageTotalLabel,
+  getPackageAssembleLoadingMessage,
+  getPackageAssembleNoVouchersAlert,
+  getPackageAssembleSealConfirmLabel,
+  getPackageAssembleSealCtaLabel,
+  getPackageAssembleSealDeclaredWeightLabel,
+  getPackageAssembleSealErrorToast,
+  getPackageAssembleSealSuccessToast,
+  getPackageAssembleSealWarning,
+  getPackageAssembleSelectIntro,
+  getPackageAssembleSelectedBatchesLabel,
+  getPackageAssembleStep1Title,
+  getPackageAssembleStep2Title,
+  getPackageAssembleStep3Title,
+  getPackageAssemblySteps,
+  getSealBillingHint,
+  getShipmentAssemblyStepTitle,
+} from '@/lib/workflow-terminology-labels';
 import {
   buildShipmentReference,
   recordShipmentAssembly,
@@ -58,8 +102,10 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const tenantId = user?.tenant_id ?? null;
-  const isCooperative = user?.active_role === 'cooperative';
 
   const { pkg, vouchers, isLoading, error } = usePackageDetail(id, tenantId);
   const { data: readiness } = usePackageReadiness(id);
@@ -144,12 +190,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
     readinessBlockers.length === 0 &&
     !isAlreadySealed;
 
-  const steps = [
-    { id: 'select_batches', label: 'Select Batches', description: 'Confirm voucher packages' },
-    { id: 'allocate_coverage', label: 'Allocate Coverage', description: 'Review shipment lines' },
-    { id: 'validate_issues', label: 'Validate Issues', description: 'Check blocking conditions' },
-    { id: 'seal_shipment', label: 'Seal Shipment', description: 'Finalize before EU filing' },
-  ] as const;
+  const steps = useMemo(() => getPackageAssemblySteps(t), [t]);
 
   const ensureShipmentHeader = async (): Promise<CanonicalShipmentHeader> => {
     if (existingHeader) {
@@ -190,13 +231,13 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   };
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading shipment assembly…</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{getPackageAssembleLoadingMessage(t)}</div>;
   }
 
   if (!pkg) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        {error ? `Failed to load package: ${error}` : 'Package not found.'}
+        {error ? `${getPackageLoadErrorPrefix(role, t)}: ${error}` : getPackageNotFoundMessage(role, t)}
       </div>
     );
   }
@@ -204,21 +245,18 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={`Assemble Shipment - ${pkg.code}`}
-        subtitle="Seal upstream shipment before downstream DDS filing"
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Shipments', href: '/packages' },
-          { label: pkg.code, href: `/packages/${pkg.id}` },
-          { label: 'Assemble Shipment' },
-        ]}
+        title={getAssemblePageTitle(pkg.code, t)}
+        subtitle={getAssembleShipmentSubtitle(role, t)}
+        breadcrumbs={buildPackageBreadcrumbs(role, pkg.code, pkg.id, {
+          label: getAssembleBreadcrumbLabel(t),
+        }, t)}
       />
 
       <div className="flex-1 p-6">
         <Button variant="ghost" size="sm" className="mb-6" asChild>
           <Link href={`/packages/${pkg.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Package
+            {getBackToPackageDetailLabel(role, t)}
           </Link>
         </Button>
 
@@ -226,8 +264,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
           <Alert className="mb-6 border-green-500/50 bg-green-500/10">
             <Check className="h-4 w-4 text-green-500" />
             <AlertDescription>
-              This package is already linked to sealed shipment {existingHeader.shipment_reference}.
-              Continue to compliance for filing.
+              {getAssembleSealedAlertMessage(role, existingHeader.shipment_reference, t)}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -263,13 +300,10 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'select_batches' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 1: Confirm {getBatchNavLabel(user?.active_role)}</CardTitle>
+                  <CardTitle>{getPackageAssembleStep1Title(getBatchNavLabel(user?.active_role, t), t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    This package is always included. Add more voucher bundles if this shipment spans
-                    multiple batches.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{getPackageAssembleSelectIntro(t)}</p>
 
                   <div className="rounded-lg border border-border p-3">
                     <div className="font-medium text-sm">{pkg.code}</div>
@@ -282,16 +316,13 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                   {vouchers.length === 0 ? (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        No harvest vouchers are linked to this package yet. Add vouchers from package
-                        creation before sealing.
-                      </AlertDescription>
+                      <AlertDescription>{getPackageAssembleNoVouchersAlert(t)}</AlertDescription>
                     </Alert>
                   ) : null}
 
                   {eligibleAdditionalPackages.length > 0 ? (
                     <div className="space-y-3">
-                      <p className="text-sm font-medium">Additional batches (optional)</p>
+                      <p className="text-sm font-medium">{getPackageAssembleAdditionalBatchesLabel(t)}</p>
                       {eligibleAdditionalPackages.map((candidate) => (
                         <label
                           key={candidate.id}
@@ -324,9 +355,9 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                     <Card className="bg-secondary/50 border-border">
                       <CardContent className="pt-4">
                         <div className="text-sm">
-                          <div className="text-muted-foreground">Batch lineage total</div>
+                          <div className="text-muted-foreground">{getPackageAssembleLineageTotalLabel(t)}</div>
                           <div className="text-lg font-semibold">
-                            {coveredQuantityKg.toLocaleString()} kg across {selectedPackageIds.length} batch(es)
+                            {formatPackageAssembleLineageSummary(coveredQuantityKg, selectedPackageIds.length, t)}
                           </div>
                         </div>
                       </CardContent>
@@ -335,10 +366,10 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
 
                   <div className="flex justify-between pt-4">
                     <Button variant="outline" asChild>
-                      <Link href={`/packages/${pkg.id}`}>Cancel</Link>
+                      <Link href={`/packages/${pkg.id}`}>{getAssemblyCancelLabel(t)}</Link>
                     </Button>
                     <Button disabled={!canProceedToAllocate} onClick={() => setCurrentStep('allocate_coverage')}>
-                      Next: Allocate Coverage
+                      {getAssemblyNextAllocateLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -349,24 +380,26 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'allocate_coverage' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 2: Allocate Coverage to Shipment Lines</CardTitle>
+                  <CardTitle>{getPackageAssembleStep2Title(t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Distribute batch lineage across shipment lines. Full line-level coverage editing
-                    ships with canonical shipment_lines.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{getPackageAssembleAllocateIntro(t)}</p>
 
                   <Alert>
                     <AlertDescription>
-                      {selectedPackageIds.length} batch(es) · {pkg.plots.length + selectedAdditionalPackages.reduce((sum, batch) => sum + batch.plots.length, 0)} contributing plot(s) ·{' '}
-                      {coveredQuantityKg.toLocaleString()} kg in this shipment draft.
+                      {formatPackageAssembleAllocateSummary(
+                        selectedPackageIds.length,
+                        pkg.plots.length +
+                          selectedAdditionalPackages.reduce((sum, batch) => sum + batch.plots.length, 0),
+                        coveredQuantityKg,
+                        t,
+                      )}
                     </AlertDescription>
                   </Alert>
 
                   <div className="space-y-2">
                     <label htmlFor="declared_quantity_kg" className="text-sm font-medium">
-                      Declared shipment weight (kg)
+                      {getPackageAssembleDeclaredWeightLabel(t)}
                     </label>
                     <Input
                       id="declared_quantity_kg"
@@ -381,17 +414,17 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                       <p className="text-xs text-destructive">{weightGuardrail.message}</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        Must match the batch lineage total ({coveredQuantityKg.toLocaleString()} kg).
+                        {formatPackageAssembleWeightMustMatch(coveredQuantityKg, t)}
                       </p>
                     )}
                   </div>
 
                   <div className="flex justify-between pt-4">
                     <Button variant="outline" onClick={() => setCurrentStep('select_batches')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <Button disabled={!canProceedToValidate} onClick={() => setCurrentStep('validate_issues')}>
-                      Next: Validate Issues
+                      {getAssemblyNextValidateLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -402,7 +435,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'validate_issues' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 3: Validate Role Classification &amp; Blocking Issues</CardTitle>
+                  <CardTitle>{getPackageAssembleStep3Title(t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {hasWeightMismatch ? (
@@ -418,7 +451,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                     <Alert className="border-green-500/50 bg-green-500/10">
                       <Check className="h-4 w-4 text-green-500" />
                       <AlertDescription className="text-green-700">
-                        Shipment weight matches batch lineage ({declaredKg.toLocaleString()} kg).
+                        {formatPackageAssembleWeightMatchOk(declaredKg, t)}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -427,7 +460,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
-                        {readinessBlockers.length} blocking readiness issue(s) on the primary package.
+                        {formatPackageAssembleBlockersCount(readinessBlockers.length, t)}
                       </AlertDescription>
                     </Alert>
                   ) : null}
@@ -442,13 +475,13 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
 
                   <div className="flex justify-between pt-4">
                     <Button variant="outline" onClick={() => setCurrentStep('allocate_coverage')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <Button
                       disabled={hasWeightMismatch || readinessBlockers.length > 0}
                       onClick={() => setCurrentStep('seal_shipment')}
                     >
-                      Next: Seal Shipment
+                      {getAssemblyNextSealLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -461,35 +494,32 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5" />
-                    Step 4: Seal Shipment
+                    {getShipmentAssemblyStepTitle(4, '', t)}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Alert className="border-amber-500/50 bg-amber-500/10">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-700">
-                      Sealing is binding. {isCooperative ? 'Cooperative operators' : 'Exporters'} assume
-                      liability for the accuracy of shipment data before EU filing.
+                      {getPackageAssembleSealWarning(role, t)}
                     </AlertDescription>
                   </Alert>
 
                   <div className="rounded-lg border border-border p-4 space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Selected batches</span>
+                      <span className="text-muted-foreground">{getPackageAssembleSelectedBatchesLabel(t)}</span>
                       <span className="font-medium">{selectedPackageIds.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Declared shipment weight</span>
+                      <span className="text-muted-foreground">{getPackageAssembleSealDeclaredWeightLabel(t)}</span>
                       <span className="font-medium">{declaredKg.toLocaleString()} kg</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Batch lineage total</span>
+                      <span className="text-muted-foreground">{getPackageAssembleLineageTotalLabel(t)}</span>
                       <span className="font-medium">{coveredQuantityKg.toLocaleString()} kg</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {firstSealFree
-                        ? 'Your first shipment seal is free. Using it ends the 3-month subscription-free offer this month.'
-                        : 'Sealing meters €1 origin usage for this month. Your importer pays €1 when they submit DDS to TRACES.'}
+                      {firstSealFree ? getPackageAssembleFirstSealFreeHint(t) : getSealBillingHint(user?.active_role, t)}
                     </p>
                   </div>
 
@@ -501,10 +531,9 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                       disabled={isAlreadySealed}
                     />
                     <label className="text-sm">
-                      <div className="font-medium">I acknowledge operator liability</div>
+                      <div className="font-medium">{getPackageAssembleLiabilityTitle(t)}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        I confirm this shipment data is accurate, complete, and compliant with EUDR
-                        requirements.
+                        {getPackageAssembleLiabilityBody(t)}
                       </div>
                     </label>
                   </div>
@@ -516,12 +545,12 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                       className="mt-1"
                       disabled={isAlreadySealed}
                     />
-                    <label className="text-sm">I confirm I want to seal this shipment now</label>
+                    <label className="text-sm">{getPackageAssembleSealConfirmLabel(t)}</label>
                   </div>
 
                   <div className="flex justify-between pt-4">
                     <Button variant="outline" onClick={() => setCurrentStep('validate_issues')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <PermissionGate permission="packages:seal_shipment">
                       <Button
@@ -532,13 +561,13 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                           try {
                             const header = await ensureShipmentHeader();
                             await sealCanonicalShipmentHeader(header.id);
-                            toast.success(
-                              'Shipment sealed. €1 origin usage metered for this month. Continue to compliance for filing.',
-                            );
+                            toast.success(getPackageAssembleSealSuccessToast(t));
                             router.push('/compliance');
                           } catch (sealError) {
                             toast.error(
-                              sealError instanceof Error ? sealError.message : 'Failed to seal shipment.',
+                              sealError instanceof Error
+                                ? sealError.message
+                                : getPackageAssembleSealErrorToast(t),
                             );
                           } finally {
                             setIsSealing(false);
@@ -546,7 +575,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                         }}
                       >
                         <Lock className="mr-2 h-4 w-4" />
-                        {isSealing ? 'Sealing…' : 'Seal & Finalize Shipment'}
+                        {getPackageAssembleSealCtaLabel(isSealing, t)}
                       </Button>
                     </PermissionGate>
                   </div>

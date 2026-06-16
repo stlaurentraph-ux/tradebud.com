@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import Link from 'next/link';
 import {
   Scale,
@@ -32,6 +32,38 @@ import {
   getLegalRoleDescription,
   getLegalRoleBadgeColor,
 } from '@/lib/rbac';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import {
+  getRoleDecisionsCancelLabel,
+  getRoleDecisionsClassifyAuditHint,
+  getRoleDecisionsClassifyDialogSubtitle,
+  getRoleDecisionsClassifyDialogTitle,
+  getRoleDecisionsClassifyJustificationLabel,
+  getRoleDecisionsClassifyJustificationPlaceholder,
+  getRoleDecisionsClassifyLabel,
+  getRoleDecisionsClassifyNewRoleLabel,
+  getRoleDecisionsClassifySelectRolePlaceholder,
+  getRoleDecisionsCloseLabel,
+  getRoleDecisionsConfirmClassificationLabel,
+  getRoleDecisionsDetailDialogSubtitle,
+  getRoleDecisionsDetailDialogTitle,
+  getRoleDecisionsDetailFieldLabel,
+  getRoleDecisionsEmptyState,
+  getRoleDecisionsFilterAllRolesLabel,
+  getRoleDecisionsHoldReasonPrefix,
+  getRoleDecisionsManualClassifyAlertBody,
+  getRoleDecisionsManualClassifyAlertTitle,
+  getRoleDecisionsManualClassifyCta,
+  getRoleDecisionsPendingSectionTitle,
+  getRoleDecisionsResolvedSectionTitle,
+  getRoleDecisionsReviewPendingCta,
+  getRoleDecisionsSearchPlaceholder,
+  getRoleDecisionsStatLabel,
+  getRoleDecisionsTableColumnLabel,
+  getRoleDecisionsViewDetailsLabel,
+  getRoleDecisionsViewLabel,
+} from '@/lib/workflow-terminology-labels';
 import type { LegalWorkflowRole, RoleDecision } from '@/types';
 const roleDecisions: (RoleDecision & {
   shipment_code: string;
@@ -52,6 +84,12 @@ const stats = {
 };
 
 export default function RoleDecisionsPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'role_decisions', {
+    title: 'Legal Role Decisions',
+    subtitle: 'Review and manage legal workflow role classifications per EUDR Section 5',
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<LegalWorkflowRole | 'all'>('all');
   const [selectedDecision, setSelectedDecision] = useState<(typeof roleDecisions)[number] | null>(null);
@@ -85,24 +123,20 @@ export default function RoleDecisionsPage() {
 
   return (
     <>
-      <AppHeader title="Role Decisions" />
+      <AppHeader
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Role Decisions' })}
+      />
 
       <div className="flex-1 space-y-6 p-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Legal Role Decisions</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Review and manage legal workflow role classifications per EUDR Section 5
-            </p>
-          </div>
-        </div>
-
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Decisions</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {getRoleDecisionsStatLabel('total', t)}
+              </CardTitle>
               <Scale className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -112,7 +146,9 @@ export default function RoleDecisionsPage() {
 
           <Card className={stats.pending > 0 ? 'border-red-500/50' : ''}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {getRoleDecisionsStatLabel('pending', t)}
+              </CardTitle>
               <AlertOctagon className={`h-4 w-4 ${stats.pending > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
             </CardHeader>
             <CardContent>
@@ -124,7 +160,9 @@ export default function RoleDecisionsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Operators</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {getRoleDecisionsStatLabel('operator', t)}
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
@@ -134,7 +172,9 @@ export default function RoleDecisionsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Simplified Path</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {getRoleDecisionsStatLabel('simplified', t)}
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-teal-500" />
             </CardHeader>
             <CardContent>
@@ -144,7 +184,9 @@ export default function RoleDecisionsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Downstream</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {getRoleDecisionsStatLabel('downstream', t)}
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
@@ -159,10 +201,9 @@ export default function RoleDecisionsPage() {
             <CardContent className="flex items-start gap-4 p-6">
               <AlertOctagon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <h4 className="font-semibold text-red-900">Manual Classification Required</h4>
+                <h4 className="font-semibold text-red-900">{getRoleDecisionsManualClassifyAlertTitle(t)}</h4>
                 <p className="text-sm text-red-700 mt-1">
-                  {stats.pending} shipment(s) are held with PENDING_MANUAL_CLASSIFICATION status.
-                  No DDS can be submitted and no shipment can be sealed until these are resolved.
+                  {getRoleDecisionsManualClassifyAlertBody(stats.pending, t)}
                 </p>
               </div>
               <Button
@@ -170,7 +211,7 @@ export default function RoleDecisionsPage() {
                 className="border-red-500 text-red-700 hover:bg-red-50"
                 onClick={() => setFilterRole('PENDING_MANUAL_CLASSIFICATION')}
               >
-                Review Pending
+                {getRoleDecisionsReviewPendingCta(t)}
               </Button>
             </CardContent>
           </Card>
@@ -181,7 +222,7 @@ export default function RoleDecisionsPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by shipment code or organization..."
+              placeholder={getRoleDecisionsSearchPlaceholder(t)}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -194,7 +235,7 @@ export default function RoleDecisionsPage() {
               onChange={(e) => setFilterRole(e.target.value as LegalWorkflowRole | 'all')}
               className="rounded-md border border-border bg-background px-3 py-2 text-sm"
             >
-              <option value="all">All Roles</option>
+              <option value="all">{getRoleDecisionsFilterAllRolesLabel(t)}</option>
               <option value="PENDING_MANUAL_CLASSIFICATION">Pending Classification</option>
               <option value="OPERATOR">Operator</option>
               <option value="MICRO_SMALL_PRIMARY_OPERATOR">Micro/Small Primary Operator</option>
@@ -211,7 +252,7 @@ export default function RoleDecisionsPage() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <AlertOctagon className="h-5 w-5 text-red-500" />
-              Pending Manual Classification ({pendingDecisions.length})
+              {getRoleDecisionsPendingSectionTitle(pendingDecisions.length, t)}
             </h2>
             <div className="grid gap-4">
               {pendingDecisions.map((decision) => (
@@ -237,7 +278,7 @@ export default function RoleDecisionsPage() {
                         </div>
                         {decision.hold_reason && (
                           <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-800">
-                            <strong>Hold Reason:</strong> {decision.hold_reason}
+                            <strong>{getRoleDecisionsHoldReasonPrefix(t)}</strong> {decision.hold_reason}
                           </div>
                         )}
                       </div>
@@ -247,7 +288,7 @@ export default function RoleDecisionsPage() {
                           size="sm"
                           onClick={() => setSelectedDecision(decision)}
                         >
-                          View Details
+                          {getRoleDecisionsViewDetailsLabel(t)}
                         </Button>
                         <PermissionGate permission="roles:manual_classify">
                           <Button
@@ -257,7 +298,7 @@ export default function RoleDecisionsPage() {
                               setClassifyDialogOpen(true);
                             }}
                           >
-                            Classify
+                            {getRoleDecisionsClassifyLabel(t)}
                           </Button>
                         </PermissionGate>
                       </div>
@@ -273,13 +314,13 @@ export default function RoleDecisionsPage() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
-            Resolved Decisions ({resolvedDecisions.length})
+            {getRoleDecisionsResolvedSectionTitle(resolvedDecisions.length, t)}
           </h2>
           <Card>
             <CardContent className="p-0">
               {resolvedDecisions.length === 0 ? (
                 <div className="p-6 text-sm text-muted-foreground">
-                  No role decisions available yet for this tenant.
+                  {getRoleDecisionsEmptyState(t)}
                 </div>
               ) : null}
               <div className="overflow-x-auto">
@@ -287,22 +328,22 @@ export default function RoleDecisionsPage() {
                   <thead>
                     <tr className="border-b border-border bg-secondary/30">
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Shipment
+                        {getRoleDecisionsTableColumnLabel('shipment', t)}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Organization
+                        {getRoleDecisionsTableColumnLabel('organization', t)}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Legal Role
+                        {getRoleDecisionsTableColumnLabel('legal_role', t)}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Workflow
+                        {getRoleDecisionsTableColumnLabel('workflow', t)}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Decided
+                        {getRoleDecisionsTableColumnLabel('decided', t)}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Actions
+                        {getRoleDecisionsTableColumnLabel('actions', t)}
                       </th>
                     </tr>
                   </thead>
@@ -341,7 +382,7 @@ export default function RoleDecisionsPage() {
                             size="sm"
                             onClick={() => setSelectedDecision(decision)}
                           >
-                            View
+                            {getRoleDecisionsViewLabel(t)}
                             <ChevronRight className="ml-1 h-4 w-4" />
                           </Button>
                         </td>
@@ -358,9 +399,11 @@ export default function RoleDecisionsPage() {
         <Dialog open={!!selectedDecision && !classifyDialogOpen} onOpenChange={() => setSelectedDecision(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Role Decision Details</DialogTitle>
+              <DialogTitle>{getRoleDecisionsDetailDialogTitle(t)}</DialogTitle>
               <DialogDescription>
-                Legal workflow role classification for {selectedDecision?.shipment_code}
+                {selectedDecision
+                  ? getRoleDecisionsDetailDialogSubtitle(selectedDecision.shipment_code, t)
+                  : null}
               </DialogDescription>
             </DialogHeader>
             {selectedDecision && (
@@ -368,7 +411,9 @@ export default function RoleDecisionsPage() {
                 {/* Summary */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Legal Role</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {getRoleDecisionsDetailFieldLabel('legal_role', t)}
+                    </Label>
                     <div className="mt-1">
                       <Badge className={getLegalRoleBadgeColor(selectedDecision.determined_role)}>
                         {getLegalRoleDisplayName(selectedDecision.determined_role)}
@@ -376,24 +421,32 @@ export default function RoleDecisionsPage() {
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Workflow Type</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {getRoleDecisionsDetailFieldLabel('workflow_type', t)}
+                    </Label>
                     <p className="mt-1 text-sm font-medium">
                       {selectedDecision.determined_workflow.replace(/_/g, ' ')}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Organization</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {getRoleDecisionsDetailFieldLabel('organization', t)}
+                    </Label>
                     <p className="mt-1 text-sm">{selectedDecision.organization_name}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Regulatory Profile</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      {getRoleDecisionsDetailFieldLabel('regulatory_profile', t)}
+                    </Label>
                     <p className="mt-1 text-sm">{selectedDecision.regulatory_profile_version}</p>
                   </div>
                 </div>
 
                 {/* Role Description */}
                 <div className="rounded-lg bg-secondary/50 p-4">
-                  <Label className="text-xs text-muted-foreground">Role Definition</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {getRoleDecisionsDetailFieldLabel('role_definition', t)}
+                  </Label>
                   <p className="mt-1 text-sm">
                     {getLegalRoleDescription(selectedDecision.determined_role)}
                   </p>
@@ -401,7 +454,9 @@ export default function RoleDecisionsPage() {
 
                 {/* Decision Path (Audit Trail) */}
                 <div>
-                  <Label className="text-xs text-muted-foreground">Decision Path</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {getRoleDecisionsDetailFieldLabel('decision_path', t)}
+                  </Label>
                   <div className="mt-2 space-y-2">
                     {selectedDecision.decision_path.map((step, index) => (
                       <div
@@ -422,7 +477,9 @@ export default function RoleDecisionsPage() {
                 {/* Hold Reason */}
                 {selectedDecision.hold_reason && (
                   <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-                    <Label className="text-xs text-red-600">Hold Reason</Label>
+                    <Label className="text-xs text-red-600">
+                      {getRoleDecisionsDetailFieldLabel('hold_reason', t)}
+                    </Label>
                     <p className="mt-1 text-sm text-red-800">{selectedDecision.hold_reason}</p>
                   </div>
                 )}
@@ -430,12 +487,12 @@ export default function RoleDecisionsPage() {
                 {/* Actions */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button variant="outline" onClick={() => setSelectedDecision(null)}>
-                    Close
+                    {getRoleDecisionsCloseLabel(t)}
                   </Button>
                   {selectedDecision.determined_role === 'PENDING_MANUAL_CLASSIFICATION' && (
                     <PermissionGate permission="roles:manual_classify">
                       <Button onClick={() => setClassifyDialogOpen(true)}>
-                        Manually Classify
+                        {getRoleDecisionsManualClassifyCta(t)}
                       </Button>
                     </PermissionGate>
                   )}
@@ -449,26 +506,28 @@ export default function RoleDecisionsPage() {
         <Dialog open={classifyDialogOpen} onOpenChange={setClassifyDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Manual Role Classification</DialogTitle>
+              <DialogTitle>{getRoleDecisionsClassifyDialogTitle(t)}</DialogTitle>
               <DialogDescription>
-                Override the automatic role decision for {selectedDecision?.shipment_code}
+                {selectedDecision
+                  ? getRoleDecisionsClassifyDialogSubtitle(selectedDecision.shipment_code, t)
+                  : null}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               {selectedDecision?.hold_reason && (
                 <div className="rounded-lg bg-amber-500/10 p-3 text-sm">
-                  <strong>Hold Reason:</strong> {selectedDecision.hold_reason}
+                  <strong>{getRoleDecisionsHoldReasonPrefix(t)}</strong> {selectedDecision.hold_reason}
                 </div>
               )}
 
               <div>
-                <Label>New Legal Role</Label>
+                <Label>{getRoleDecisionsClassifyNewRoleLabel(t)}</Label>
                 <select
                   value={selectedClassification}
                   onChange={(e) => setSelectedClassification(e.target.value as LegalWorkflowRole)}
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 >
-                  <option value="">Select a role...</option>
+                  <option value="">{getRoleDecisionsClassifySelectRolePlaceholder(t)}</option>
                   <option value="OPERATOR">Operator</option>
                   <option value="MICRO_SMALL_PRIMARY_OPERATOR">Micro/Small Primary Operator</option>
                   <option value="DOWNSTREAM_OPERATOR_FIRST">Downstream Operator (First)</option>
@@ -479,28 +538,28 @@ export default function RoleDecisionsPage() {
               </div>
 
               <div>
-                <Label>Justification (Required)</Label>
+                <Label>{getRoleDecisionsClassifyJustificationLabel(t)}</Label>
                 <Textarea
-                  placeholder="Explain why this manual classification is appropriate..."
+                  placeholder={getRoleDecisionsClassifyJustificationPlaceholder(t)}
                   value={classificationNotes}
                   onChange={(e) => setClassificationNotes(e.target.value)}
                   rows={4}
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  This will be recorded in the audit log with your user ID and timestamp.
+                  {getRoleDecisionsClassifyAuditHint(t)}
                 </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setClassifyDialogOpen(false)}>
-                  Cancel
+                  {getRoleDecisionsCancelLabel(t)}
                 </Button>
                 <Button
                   onClick={handleManualClassify}
                   disabled={!selectedClassification || !classificationNotes.trim()}
                 >
-                  Confirm Classification
+                  {getRoleDecisionsConfirmClassificationLabel(t)}
                 </Button>
               </div>
             </div>

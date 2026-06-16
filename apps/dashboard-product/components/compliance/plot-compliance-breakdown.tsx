@@ -1,10 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getPlotBreakdownAllReadyTitle,
+  getPlotBreakdownBlockingItem,
+  getPlotBreakdownBlockingTitle,
+  getPlotBreakdownComplianceBadge,
+  getPlotBreakdownDetailsSectionTitle,
+  getPlotBreakdownRiskPrefix,
+  getPlotBreakdownStatCompliantLabel,
+  getPlotBreakdownStatNonCompliantLabel,
+  getPlotBreakdownStatTotalLabel,
+  getPlotBreakdownSubtitle,
+  getPlotBreakdownTitle,
+  getPlotBreakdownViewDetailsCta,
+  getPlotDeforestationRiskLabel,
+  getPlotReadyMessage,
+} from '@/lib/workflow-terminology-labels';
 
 interface Plot {
   id: string;
@@ -20,44 +37,42 @@ interface PlotComplianceBreakdownProps {
 
 export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps) {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const compliantPlots = plots.filter((p) => p.status === 'compliant');
   const nonCompliantPlots = plots.filter((p) => p.status === 'non_compliant');
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">
-          {isImporter ? 'Evidence-by-Evidence Readiness Analysis' : 'Plot-by-Plot Compliance Analysis'}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isImporter
-            ? 'Detailed readiness assessment for all linked evidence records'
-            : 'Detailed deforestation assessment for all plots'}
-        </p>
+        <CardTitle className="text-lg">{getPlotBreakdownTitle(role, t)}</CardTitle>
+        <p className="text-sm text-muted-foreground mt-1">{getPlotBreakdownSubtitle(role, t)}</p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="border rounded-lg p-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">
-              {isImporter ? 'Total Records' : 'Total Plots'}
+              {getPlotBreakdownStatTotalLabel(role, t)}
             </p>
             <p className="text-2xl font-bold mt-1">{plots.length}</p>
           </div>
           <div className="border rounded-lg p-4 border-green-500/30 bg-green-500/10">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Compliant</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {getPlotBreakdownStatCompliantLabel(t)}
+            </p>
             <p className="text-2xl font-bold text-green-400 mt-1">{compliantPlots.length}</p>
           </div>
           <div className="border rounded-lg p-4 border-red-500/30 bg-red-500/10">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Non-Compliant</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              {getPlotBreakdownStatNonCompliantLabel(t)}
+            </p>
             <p className="text-2xl font-bold text-red-400 mt-1">{nonCompliantPlots.length}</p>
           </div>
         </div>
 
-        {/* Plot List */}
         <div>
-          <h4 className="font-medium mb-3">{isImporter ? 'Evidence Details' : 'Plot Details'}</h4>
+          <h4 className="font-medium mb-3">{getPlotBreakdownDetailsSectionTitle(role, t)}</h4>
           <div className="space-y-2">
             {plots.map((plot) => {
               const isCompliant = plot.status === 'compliant';
@@ -81,7 +96,8 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
                     <div>
                       <p className="font-medium text-sm">{plot.name}</p>
                       <p className={`text-xs ${isHighRisk ? 'text-red-400 font-medium' : 'text-muted-foreground'}`}>
-                        Risk: {plot.deforestation_risk.charAt(0).toUpperCase() + plot.deforestation_risk.slice(1)}
+                        {getPlotBreakdownRiskPrefix(t)}{' '}
+                        {getPlotDeforestationRiskLabel(plot.deforestation_risk, t)}
                       </p>
                     </div>
                   </div>
@@ -92,7 +108,7 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
                         : 'bg-red-500/20 text-red-400'
                     }`}
                   >
-                    {isCompliant ? 'Compliant' : 'Non-Compliant'}
+                    {getPlotBreakdownComplianceBadge(isCompliant, t)}
                   </span>
                 </div>
               );
@@ -100,34 +116,24 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
           </div>
         </div>
 
-        {/* Blocking Issues */}
         {nonCompliantPlots.length > 0 && (
           <div className="border-l-4 border-red-500 bg-red-500/10 p-4 rounded">
-            <h4 className="font-medium text-red-400 mb-2">Blocking Issues Detected</h4>
+            <h4 className="font-medium text-red-400 mb-2">{getPlotBreakdownBlockingTitle(t)}</h4>
             <ul className="text-sm text-red-300 space-y-1 list-disc list-inside">
               {nonCompliantPlots.map((plot, idx) => (
-                <li key={idx}>
-                  {plot.name} has deforestation evidence requiring resolution
-                </li>
+                <li key={idx}>{getPlotBreakdownBlockingItem(plot.name, t)}</li>
               ))}
             </ul>
             <Button variant="outline" size="sm" className="mt-3">
-              {isImporter ? 'View Exception Details' : 'View Evidence Details'}
+              {getPlotBreakdownViewDetailsCta(role, t)}
             </Button>
           </div>
         )}
 
-        {/* Ready for Submission Message */}
         {compliantPlots.length === plots.length && plots.length > 0 && (
           <div className="border-l-4 border-green-500 bg-green-500/10 p-4 rounded">
-            <h4 className="font-medium text-green-400 mb-1">
-              {isImporter ? 'All Records Ready' : 'All Plots Verified'}
-            </h4>
-            <p className="text-sm text-green-300">
-              {isImporter
-                ? 'This shipment is ready for declaration submission. Proceed to submit your DDS to the government portal.'
-                : 'This package is ready for TRACES submission. Proceed to the next step to submit your DDS to the government portal.'}
-            </p>
+            <h4 className="font-medium text-green-400 mb-1">{getPlotBreakdownAllReadyTitle(role, t)}</h4>
+            <p className="text-sm text-green-300">{getPlotReadyMessage(role, t)}</p>
           </div>
         )}
       </CardContent>

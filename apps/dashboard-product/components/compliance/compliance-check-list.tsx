@@ -1,9 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { AlertCircle, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getComplianceCheckCountSuffix,
+  getComplianceCheckListTitle,
+  getComplianceCheckOverallLabel,
+  getComplianceCheckStatusLabel,
+  getComplianceCheckSummaryTitle,
+} from '@/lib/workflow-terminology-labels';
 
 export type ComplianceCheckStatus = 'compliant' | 'warning' | 'failed' | 'pending';
 
@@ -20,36 +28,18 @@ interface ComplianceCheckListProps {
   loading?: boolean;
 }
 
-const statusConfig = {
-  compliant: {
-    icon: CheckCircle,
-    className: 'text-green-500',
-    bgClassName: 'bg-green-500/10 border-green-500/20',
-    label: 'Passed',
-  },
-  warning: {
-    icon: AlertTriangle,
-    className: 'text-amber-500',
-    bgClassName: 'bg-amber-500/10 border-amber-500/20',
-    label: 'Warning',
-  },
-  failed: {
-    icon: AlertCircle,
-    className: 'text-destructive',
-    bgClassName: 'bg-destructive/10 border-destructive/20',
-    label: 'Failed',
-  },
-  pending: {
-    icon: Clock,
-    className: 'text-primary',
-    bgClassName: 'bg-primary/10 border-primary/20',
-    label: 'Pending',
-  },
+const statusIconConfig = {
+  compliant: { icon: CheckCircle, className: 'text-green-500', bgClassName: 'bg-green-500/10 border-green-500/20' },
+  warning: { icon: AlertTriangle, className: 'text-amber-500', bgClassName: 'bg-amber-500/10 border-amber-500/20' },
+  failed: { icon: AlertCircle, className: 'text-destructive', bgClassName: 'bg-destructive/10 border-destructive/20' },
+  pending: { icon: Clock, className: 'text-primary', bgClassName: 'bg-primary/10 border-primary/20' },
 };
 
 export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProps) {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const totalChecks = checks.length;
   const passedChecks = checks.filter((c) => c.status === 'compliant').length;
   const failedChecks = checks.filter((c) => c.status === 'failed').length;
@@ -59,42 +49,38 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
 
   return (
     <div className="space-y-4">
-      {/* Compliance Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{isImporter ? 'Declaration Readiness Summary' : 'Compliance Summary'}</CardTitle>
+          <CardTitle className="text-lg">{getComplianceCheckSummaryTitle(role, t)}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">
-                {isImporter ? 'Overall Declaration Readiness' : 'Overall Compliance'}
-              </p>
+              <p className="text-sm text-muted-foreground">{getComplianceCheckOverallLabel(role, t)}</p>
               <p className="mt-1 text-3xl font-bold">{Math.round(compliancePercentage)}%</p>
             </div>
             <div className="space-y-1 text-right">
               <div className="flex gap-4 text-sm">
                 <div>
                   <span className="font-medium text-green-500">{passedChecks}</span>
-                  <span className="text-muted-foreground"> Passed</span>
+                  <span className="text-muted-foreground"> {getComplianceCheckCountSuffix('passed', t)}</span>
                 </div>
                 {warningChecks > 0 && (
                   <div>
                     <span className="font-medium text-amber-500">{warningChecks}</span>
-                    <span className="text-muted-foreground"> Warnings</span>
+                    <span className="text-muted-foreground"> {getComplianceCheckCountSuffix('warnings', t)}</span>
                   </div>
                 )}
                 {failedChecks > 0 && (
                   <div>
                     <span className="font-medium text-destructive">{failedChecks}</span>
-                    <span className="text-muted-foreground"> Failed</span>
+                    <span className="text-muted-foreground"> {getComplianceCheckCountSuffix('failed', t)}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Progress Bar */}
           <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
             <div
               className={`h-2 rounded-full transition-all ${
@@ -110,10 +96,9 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
         </CardContent>
       </Card>
 
-      {/* Compliance Checks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{isImporter ? 'Readiness Checks' : 'Compliance Checks'}</CardTitle>
+          <CardTitle className="text-lg">{getComplianceCheckListTitle(role, t)}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -125,7 +110,7 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
           ) : (
             <div className="space-y-3">
               {checks.map((check) => {
-                const config = statusConfig[check.status];
+                const config = statusIconConfig[check.status];
                 const Icon = config.icon;
 
                 return (
@@ -139,7 +124,7 @@ export function ComplianceCheckList({ checks, loading }: ComplianceCheckListProp
                       <span
                         className={`whitespace-nowrap rounded px-2 py-1 text-xs font-medium ${config.className}`}
                       >
-                        {config.label}
+                        {getComplianceCheckStatusLabel(check.status, t)}
                       </span>
                     </div>
                   </div>

@@ -1,28 +1,35 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { AsyncState } from '@/components/common/async-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useContentCalendar } from '@/lib/use-content';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import { getWorkflowAsyncStateCopy } from '@/lib/workflow-terminology-labels';
 
 export default function ContentCalendarPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'content_calendar', { title: "Content Calendar", subtitle: "Scheduled posts and newsletters over the next cycles." });
   const { items, isLoading, error, reload } = useContentCalendar();
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Content Calendar"
-        subtitle="Scheduled posts and newsletters over the next cycles."
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Content Calendar' }]}
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Content Calendar' })}
       />
       <div className="flex-1 p-6">
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading content calendar..." />
+          <AsyncState mode="loading" title={getWorkflowAsyncStateCopy('content.calendar', 'loading', t).title} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load content calendar" description={error} onRetry={reload} />
+          <AsyncState mode="error" title={getWorkflowAsyncStateCopy('content.calendar', 'error', t).title} description={error} onRetry={reload} />
         ) : items.length === 0 ? (
-          <AsyncState mode="empty" title="No content scheduled yet" description="Add calendar items to see publishing rhythm." />
+          <AsyncState mode="empty" title={getWorkflowAsyncStateCopy('content.calendar', 'empty', t).title} description={getWorkflowAsyncStateCopy('content.calendar', 'empty', t).description} />
         ) : (
           <div className="grid gap-4">
             {items.map((item) => (

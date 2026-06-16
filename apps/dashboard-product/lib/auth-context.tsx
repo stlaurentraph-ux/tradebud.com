@@ -11,7 +11,13 @@ import {
 } from 'react';
 import type { User, TenantRole } from '@/types';
 import { clearAuthTokens, setAuthTokens } from '@/lib/auth-session';
+import { decodeJwtPayload, mapClaimRoleToTenantRole } from '@/lib/auth-claims';
 import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
+import {
+  defaultActiveRoleForProfile,
+  resolveProfileTenantRoles,
+  type CommercialProfile,
+} from '@/lib/commercial-profile';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +28,7 @@ interface AuthContextType {
   logout: () => void;
   switchRole: (role: TenantRole) => void;
   applyTenantRoleFromProfile: (role: TenantRole) => void;
+  applyTenantRolesFromProfile: (profile: import('@/lib/commercial-profile').CommercialProfile | null) => void;
   updateProfile: (patch: { name?: string }) => void;
   impersonateDemo: (email: string) => Promise<void>;
 }
@@ -31,29 +38,6 @@ const DEV_SWITCHABLE_ROLES: TenantRole[] = ['cooperative', 'exporter', 'importer
 
 function isDevRoleOverrideEnabled(): boolean {
   return process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true';
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const parts = token.split('.');
-  if (parts.length < 2) return null;
-  try {
-    const payloadPart = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = payloadPart.padEnd(Math.ceil(payloadPart.length / 4) * 4, '=');
-    return JSON.parse(atob(padded)) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function mapClaimRoleToTenantRole(role: string | undefined): TenantRole {
-  if (role === 'importer') return 'importer';
-  if (role === 'cooperative') return 'cooperative';
-  if (role === 'country_reviewer' || role === 'reviewer') return 'country_reviewer';
-  if (role === 'sponsor') return 'sponsor';
-  if (role === 'compliance_manager' || role === 'compliance-manager') return 'importer';
-  // Signup stores admin until workspace setup picks exporter/importer/cooperative.
-  if (role === 'admin') return 'exporter';
-  return 'exporter';
 }
 
 function buildUserFromToken(token: string): User | null {
@@ -105,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser) as User;
+        if (storedToken) {
+          setAuthTokens(storedToken);
+        }
         startTransition(() => {
           setUser(parsed);
         });
@@ -115,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!storedUser && storedToken) {
       const tokenUser = buildUserFromToken(storedToken);
       if (tokenUser) {
+        setAuthTokens(storedToken);
         sessionStorage.setItem('tracebud_user', JSON.stringify(tokenUser));
         startTransition(() => {
           setUser(tokenUser);
@@ -217,15 +205,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
   }, [user]);
 
-  const applyTenantRoleFromProfile = useCallback((role: TenantRole) => {
+  const applyTenantRolesFromProfile = useCallback((profile: CommercialProfile | null) => {
     setUser((current) => {
-      if (!current) return current;
-      const roles = current.roles.includes(role) ? current.roles : [role];
-      const updatedUser: User = { ...current, roles, active_role: role };
+      if (!current || !profile) return current;
+      const roles = resolveProfileTenantRoles(profile);
+      const preferredActive =
+        current.active_role && roles.includes(current.active_role)
+          ? current.active_role
+          : defaultActiveRoleForProfile(profile);
+      const updatedUser: User = { ...current, roles, active_role: preferredActive };
       sessionStorage.setItem('tracebud_user', JSON.stringify(updatedUser));
       return updatedUser;
     });
   }, []);
+
+  const applyTenantRoleFromProfile = useCallback((role: TenantRole) => {
+    applyTenantRolesFromProfile({
+      tenant_id: user?.tenant_id ?? '',
+      organization_name: null,
+      country: null,
+      primary_role: role === 'importer' ? 'importer' : role === 'cooperative' ? 'exporter' : 'exporter',
+      supply_chain_roles: [role === 'cooperative' ? 'cooperative' : role],
+      team_size: null,
+      main_commodity: null,
+      primary_objective: null,
+      profile_skipped: false,
+      updated_at: new Date().toISOString(),
+    });
+  }, [applyTenantRolesFromProfile, user?.tenant_id]);
 
   const updateProfile = useCallback((patch: { name?: string }) => {
     setUser((current) => {
@@ -255,6 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         switchRole,
         applyTenantRoleFromProfile,
+        applyTenantRolesFromProfile,
         updateProfile,
         impersonateDemo,
       }}

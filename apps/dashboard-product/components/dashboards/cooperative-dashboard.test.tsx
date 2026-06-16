@@ -39,16 +39,16 @@ const virginMetrics = {
 };
 
 describe('CooperativeDashboard', () => {
-  it('renders campaigns overview for empty tenants', () => {
+  it('renders virgin-state onboarding panel for empty tenants', () => {
     render(<CooperativeDashboard metrics={virginMetrics} />);
-    expect(screen.getByText('Campaigns')).toBeInTheDocument();
-    expect(screen.queryByText('Welcome to your cooperative workspace')).not.toBeInTheDocument();
+    expect(screen.getByText('Onboard your cooperative')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Add member/i })).toBeInTheDocument();
   });
 
-  it('shows cooperative cockpit when metrics exist', () => {
+  it('hides shortcut deep-link cards for mature tenants', () => {
     render(<CooperativeDashboard metrics={mockMetrics} />);
-    expect(screen.getByText('Cooperative Operations Cockpit')).toBeInTheDocument();
-    expect(screen.queryByText('Welcome to your cooperative workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Members and Portability')).not.toBeInTheDocument();
+    expect(screen.queryByText('Field Capture and Plots')).not.toBeInTheDocument();
   });
 
   it('calculates correct verification rate', () => {
@@ -59,13 +59,12 @@ describe('CooperativeDashboard', () => {
   it('displays plots missing geometry count from pending plots', () => {
     render(<CooperativeDashboard metrics={mockMetrics} />);
     expect(screen.getByText('Plots missing geometry')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('Member actions needed')).toBeInTheDocument();
   });
 
-  it('renders member and field management sections', () => {
-    render(<CooperativeDashboard metrics={mockMetrics} />);
-    expect(screen.getByText('Members and Portability')).toBeInTheDocument();
-    expect(screen.getByText('Field Capture and Plots')).toBeInTheDocument();
+  it('renders member and field management sections only during virgin onboarding', () => {
+    render(<CooperativeDashboard metrics={virginMetrics} />);
+    expect(screen.getByText('Onboard your cooperative')).toBeInTheDocument();
   });
 
   it('shows cooperative activity section', () => {

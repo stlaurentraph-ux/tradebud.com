@@ -129,7 +129,7 @@ function StepRow({ step, isComplete, isActive, index }: StepRowProps) {
 // Main component
 // ─────────────────────────────────────────────────────────────
 
-export function OnboardingChecklistCard() {
+export function OnboardingChecklistCard({ suppressWhenBlockers = false }: { suppressWhenBlockers?: boolean }) {
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
   const isExporter = user?.active_role === 'exporter';
@@ -151,7 +151,7 @@ export function OnboardingChecklistCard() {
   const hasAction = (actionKey: string) =>
     typeof window !== 'undefined' && window.sessionStorage.getItem(`tracebud_onboarding_action_${actionKey}`) === '1';
 
-  if (!showChecklist || dismissed || dismissedFromStorage) return null;
+  if (!showChecklist || dismissed || dismissedFromStorage || suppressWhenBlockers) return null;
 
   const firstOverviewStepKey = config?.steps[0]?.key ?? null;
 

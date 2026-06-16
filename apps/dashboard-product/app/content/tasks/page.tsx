@@ -1,29 +1,36 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { AsyncState } from '@/components/common/async-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useContentTasks } from '@/lib/use-content';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import { getWorkflowAsyncStateCopy } from '@/lib/workflow-terminology-labels';
 
 export default function ContentTasksPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'content_tasks', { title: "Content Tasks", subtitle: "Execution queue for drafting, review, scheduling, and analysis." });
   const { tasks, isLoading, error, reload, setStatus } = useContentTasks();
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Content Tasks"
-        subtitle="Execution queue for drafting, review, scheduling, and analysis."
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Content Tasks' }]}
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Content Tasks' })}
       />
       <div className="flex-1 p-6">
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading content tasks..." />
+          <AsyncState mode="loading" title={getWorkflowAsyncStateCopy('content.tasks', 'loading', t).title} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load content tasks" description={error} onRetry={reload} />
+          <AsyncState mode="error" title={getWorkflowAsyncStateCopy('content.tasks', 'error', t).title} description={error} onRetry={reload} />
         ) : tasks.length === 0 ? (
-          <AsyncState mode="empty" title="No content tasks yet" description="Generate tasks from cadence settings." />
+          <AsyncState mode="empty" title={getWorkflowAsyncStateCopy('content.tasks', 'empty', t).title} description={getWorkflowAsyncStateCopy('content.tasks', 'empty', t).description} />
         ) : (
           <div className="grid gap-4">
             {tasks.map((task) => (

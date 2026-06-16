@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -18,11 +18,22 @@ import {
   recordShipmentAssembly,
   type ShipmentAssemblyRecord,
 } from '@/lib/shipment-assembly-service';
+import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
   getNewShipmentLabel,
+  getNewShipmentPageSubtitle,
+  getShipmentBatchSelectDescription,
+  getShipmentCreateAndAssembleLabel,
+  getShipmentCreatingLabel,
+  getShipmentLoadingBatchesMessage,
   getShipmentNavLabel,
-  SUPPLY_CHAIN_FLOW_HINT,
-} from '@/lib/supply-chain-terminology';
+  getShipmentNoEligibleBatchesMessage,
+  getShipmentSelectBatchesTitle,
+  getShipmentsListBackLabel,
+  getSupplyChainFlowHint,
+} from '@/lib/workflow-terminology-labels';
 import {
   sumBatchWeightKg,
   validateShipmentWeightGuardrail,
@@ -33,6 +44,9 @@ export default function NewShipmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const tenantId = user?.tenant_id ?? null;
   const { packages, isLoading: packagesLoading, error: packagesError } = useHarvestPackages(tenantId, {
     scope: 'tenant',
@@ -155,12 +169,12 @@ export default function NewShipmentPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={getNewShipmentLabel(user?.active_role)}
-        subtitle="Select batches (voucher packages) to combine into one EU-bound shipment"
+        title={getNewShipmentLabel(role, t)}
+        subtitle={getNewShipmentPageSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: getShipmentNavLabel(user?.active_role), href: '/shipments' },
-          { label: getNewShipmentLabel(user?.active_role) },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getShipmentNavLabel(role, t), href: '/shipments' },
+          { label: getNewShipmentLabel(role, t) },
         ]}
       />
 
@@ -168,29 +182,27 @@ export default function NewShipmentPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/shipments">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shipments
+            {getShipmentsListBackLabel(role, t)}
           </Link>
         </Button>
 
-        <p className="text-sm text-muted-foreground">{SUPPLY_CHAIN_FLOW_HINT}</p>
+        <p className="text-sm text-muted-foreground">{getSupplyChainFlowHint(t)}</p>
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Select Batches</CardTitle>
-                <CardDescription>
-                  Each batch is a voucher bundle from verified plots. Combine one or more batches into this shipment.
-                </CardDescription>
+                <CardTitle>{getShipmentSelectBatchesTitle(t)}</CardTitle>
+                <CardDescription>{getShipmentBatchSelectDescription(role, t)}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {packagesLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading batches…</p>
+                  <p className="text-sm text-muted-foreground">{getShipmentLoadingBatchesMessage(t)}</p>
                 ) : packagesError ? (
                   <p className="text-sm text-destructive">{packagesError}</p>
                 ) : eligiblePackages.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No eligible batches available. Create batches from harvest vouchers first.
+                    {getShipmentNoEligibleBatchesMessage(role, t)}
                   </p>
                 ) : (
                   eligiblePackages.map((pkg) => {
@@ -284,10 +296,10 @@ export default function NewShipmentPage() {
                   className="w-full"
                   disabled={isSubmitting || selectedPackageIds.length === 0 || weightMismatch}
                 >
-                  {isSubmitting ? 'Creating…' : (
+                  {isSubmitting ? getShipmentCreatingLabel(t) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Create &amp; Assemble
+                      {getShipmentCreateAndAssembleLabel(t)}
                     </>
                   )}
                 </Button>

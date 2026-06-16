@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,42 +19,36 @@ import {
 } from 'lucide-react';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs } from '@/lib/nav-labels';
+import {
+  getReportsDistributionSubtitle,
+  getReportsDistributionTitle,
+  getReportsFilterLabel,
+  getReportsGenerateButtonLabel,
+  getReportsGenerateCta,
+  getReportsPageHeader,
+  getReportsPeriodLabel,
+  getReportsQuickStatLabel,
+  getReportsReadinessStatusLabel,
+  getReportsRecentSubtitle,
+  getReportsRecentTitle,
+  getReportsSectionGenerateTitle,
+  getReportsTrendLegendLabel,
+  getReportsTrendSubtitle,
+  getReportsTrendTitle,
+  getReportsTypeCardCopy,
+  type ReportsAudience,
+} from '@/lib/workflow-terminology-labels';
 
 // Mock report data
-const reportTypes = [
-  {
-    id: 'compliance',
-    title: 'Compliance Report',
-    description: 'Full EUDR compliance status across all packages and plots',
-    icon: ShieldCheck,
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/10',
-  },
-  {
-    id: 'package',
-    title: 'Package Summary',
-    description: 'Overview of DDS packages with submission status',
-    icon: Package,
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
-  },
-  {
-    id: 'deforestation',
-    title: 'Deforestation Risk',
-    description: 'Plot-level deforestation risk assessment breakdown',
-    icon: MapPin,
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10',
-  },
-  {
-    id: 'activity',
-    title: 'Activity Log',
-    description: 'Detailed audit trail of all system activities',
-    icon: FileText,
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-  },
-];
+const reportTypeIds = ['compliance', 'package', 'deforestation', 'activity'] as const;
+const reportTypeStyles = {
+  compliance: { icon: ShieldCheck, color: 'text-green-400', bgColor: 'bg-green-500/10' },
+  package: { icon: Package, color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
+  deforestation: { icon: MapPin, color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
+  activity: { icon: FileText, color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
+} as const;
 
 const recentReports = [
   { id: 'rpt_001', name: 'Q2 2024 Compliance Report', type: 'compliance', date: '2024-06-20', status: 'completed', size: '2.4 MB' },
@@ -91,9 +85,13 @@ interface ImporterSummaryPayload {
 }
 
 export default function ReportsPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
   const isImporter = user?.active_role === 'importer';
   const isCooperative = user?.active_role === 'cooperative';
+  const audience: ReportsAudience = isImporter ? 'importer' : isCooperative ? 'cooperative' : 'default';
+  const pageHeader = getReportsPageHeader(audience, t);
   const selectedPeriod = '6months';
   const [cooperativeMetrics, setCooperativeMetrics] = useState({
     total_farmers: 0,
@@ -168,23 +166,47 @@ export default function ReportsPage() {
     );
     const warnings = Math.max(0, cooperativeMetrics.total_plots - compliant - blocked);
     const total = compliant + warnings + blocked;
+    const emptyRow = (status: 'Compliant' | 'Warnings' | 'Blocked') => ({
+      status,
+      label: getReportsReadinessStatusLabel(status, t),
+      count: 0,
+      percentage: 0,
+      color: status === 'Compliant' ? 'bg-green-500' : status === 'Warnings' ? 'bg-amber-500' : 'bg-red-500',
+    });
     if (total === 0) {
-      return [
-        { status: 'Compliant', count: 0, percentage: 0, color: 'bg-green-500' },
-        { status: 'Warnings', count: 0, percentage: 0, color: 'bg-amber-500' },
-        { status: 'Blocked', count: 0, percentage: 0, color: 'bg-red-500' },
-      ];
+      return [emptyRow('Compliant'), emptyRow('Warnings'), emptyRow('Blocked')];
     }
     return [
-      { status: 'Compliant', count: compliant, percentage: Math.round((compliant / total) * 100), color: 'bg-green-500' },
-      { status: 'Warnings', count: warnings, percentage: Math.round((warnings / total) * 100), color: 'bg-amber-500' },
-      { status: 'Blocked', count: blocked, percentage: Math.round((blocked / total) * 100), color: 'bg-red-500' },
+      {
+        status: 'Compliant' as const,
+        label: getReportsReadinessStatusLabel('Compliant', t),
+        count: compliant,
+        percentage: Math.round((compliant / total) * 100),
+        color: 'bg-green-500',
+      },
+      {
+        status: 'Warnings' as const,
+        label: getReportsReadinessStatusLabel('Warnings', t),
+        count: warnings,
+        percentage: Math.round((warnings / total) * 100),
+        color: 'bg-amber-500',
+      },
+      {
+        status: 'Blocked' as const,
+        label: getReportsReadinessStatusLabel('Blocked', t),
+        count: blocked,
+        percentage: Math.round((blocked / total) * 100),
+        color: 'bg-red-500',
+      },
     ];
-  }, [cooperativeMetrics.blocking_issues_count, cooperativeMetrics.compliant_plots, cooperativeMetrics.total_plots]);
+  }, [cooperativeMetrics.blocking_issues_count, cooperativeMetrics.compliant_plots, cooperativeMetrics.total_plots, t]);
 
   const importerReadinessDistribution = useMemo(() => {
     if (!importerSummary) {
-      return complianceDistribution;
+      return complianceDistribution.map((item) => ({
+        ...item,
+        label: getReportsReadinessStatusLabel(item.status as 'Compliant' | 'Warnings' | 'Blocked', t),
+      }));
     }
     const total = Math.max(
       importerSummary.shipments_ytd,
@@ -194,42 +216,40 @@ export default function ReportsPage() {
     );
     return [
       {
-        status: 'Compliant',
+        status: 'Compliant' as const,
+        label: getReportsReadinessStatusLabel('Compliant', t),
         count: importerSummary.readiness_distribution.compliant,
         percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.compliant / total) * 100) : 0,
         color: 'bg-green-500',
       },
       {
-        status: 'Warnings',
+        status: 'Warnings' as const,
+        label: getReportsReadinessStatusLabel('Warnings', t),
         count: importerSummary.readiness_distribution.warnings,
         percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.warnings / total) * 100) : 0,
         color: 'bg-amber-500',
       },
       {
-        status: 'Blocked',
+        status: 'Blocked' as const,
+        label: getReportsReadinessStatusLabel('Blocked', t),
         count: importerSummary.readiness_distribution.blocked,
         percentage: total > 0 ? Math.round((importerSummary.readiness_distribution.blocked / total) * 100) : 0,
         color: 'bg-red-500',
       },
     ];
-  }, [importerSummary]);
+  }, [importerSummary, t]);
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={isImporter || isCooperative ? 'Reporting' : 'Reports & Analytics'}
-        description={
-          isImporter
-            ? 'Generate annual and operational reporting snapshots with compliance traceability'
-            : isCooperative
-            ? 'Track cooperative health, premium distribution, and compliance readiness snapshots'
-            : 'Generate compliance reports and view analytics'
-        }
+        title={pageHeader.title}
+        description={pageHeader.description}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: isImporter || isCooperative ? 'Reporting' : 'Reports' })}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm">
               <Calendar className="w-4 h-4 mr-2" />
-              {selectedPeriod === '6months' ? 'Last 6 Months' : selectedPeriod}
+              {getReportsPeriodLabel(selectedPeriod, t)}
             </Button>
             <Button
               size="sm"
@@ -238,7 +258,7 @@ export default function ReportsPage() {
               }}
             >
               <FileText className="w-4 h-4 mr-2" />
-              {isImporter ? 'Generate Snapshot' : 'Generate Report'}
+              {getReportsGenerateCta(audience, t)}
             </Button>
           </div>
         }
@@ -262,7 +282,11 @@ export default function ReportsPage() {
                         : '78%'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isCooperative ? 'Member Data Completeness' : isImporter ? 'Declaration Readiness Rate' : 'Compliance Rate'}
+                    {isCooperative
+                      ? getReportsQuickStatLabel('member_data_completeness', audience, t)
+                      : isImporter
+                        ? getReportsQuickStatLabel('declaration_readiness', audience, t)
+                        : getReportsQuickStatLabel('compliance_rate', audience, t)}
                   </p>
                 </div>
               </div>
@@ -283,7 +307,11 @@ export default function ReportsPage() {
                         : '287'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isCooperative ? 'Active Members' : isImporter ? 'Compliant Evidence Records' : 'Compliant Plots'}
+                    {isCooperative
+                      ? getReportsQuickStatLabel('active_members', audience, t)
+                      : isImporter
+                        ? getReportsQuickStatLabel('compliant_evidence', audience, t)
+                        : getReportsQuickStatLabel('compliant_plots', audience, t)}
                   </p>
                 </div>
               </div>
@@ -304,7 +332,11 @@ export default function ReportsPage() {
                         : '299'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isCooperative ? 'Active Campaigns' : isImporter ? 'Shipments (YTD)' : 'Packages (YTD)'}
+                    {isCooperative
+                      ? getReportsQuickStatLabel('active_campaigns', audience, t)
+                      : isImporter
+                        ? getReportsQuickStatLabel('shipments_ytd', audience, t)
+                        : getReportsQuickStatLabel('packages_ytd', audience, t)}
                   </p>
                 </div>
               </div>
@@ -325,7 +357,11 @@ export default function ReportsPage() {
                         : '12'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isCooperative ? 'Mapped Plot Coverage' : isImporter ? 'Reporting Snapshots' : 'Reports Generated'}
+                    {isCooperative
+                      ? getReportsQuickStatLabel('mapped_plot_coverage', audience, t)
+                      : isImporter
+                        ? getReportsQuickStatLabel('reporting_snapshots', audience, t)
+                        : getReportsQuickStatLabel('reports_generated', audience, t)}
                   </p>
                 </div>
               </div>
@@ -338,16 +374,8 @@ export default function ReportsPage() {
           {/* Submission Trends */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                {isCooperative ? 'Operational Trend' : isImporter ? 'Declaration Trends' : 'Submission Trends'}
-              </CardTitle>
-              <CardDescription>
-                {isCooperative
-                  ? 'Monthly field-capture completion and governance approval cadence'
-                  : isImporter
-                    ? 'Monthly shipment declaration submissions and outcomes'
-                    : 'Monthly package submission and approval rates'}
-              </CardDescription>
+              <CardTitle className="text-base">{getReportsTrendTitle(audience, t)}</CardTitle>
+              <CardDescription>{getReportsTrendSubtitle(audience, t)}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -375,11 +403,11 @@ export default function ReportsPage() {
               <div className="flex gap-4 mt-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-primary/60" />
-                  {isCooperative ? 'Completed' : 'Approved'}
+                  {getReportsTrendLegendLabel('approved', audience, t)}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-amber-500/60" />
-                  {isCooperative ? 'Outstanding' : 'Pending'}
+                  {getReportsTrendLegendLabel('pending', audience, t)}
                 </div>
               </div>
             </CardContent>
@@ -388,16 +416,8 @@ export default function ReportsPage() {
           {/* Compliance Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                {isCooperative ? 'Readiness Distribution' : isImporter ? 'Readiness Distribution' : 'Compliance Distribution'}
-              </CardTitle>
-              <CardDescription>
-                {isCooperative
-                  ? 'Breakdown of cooperative readiness status'
-                  : isImporter
-                    ? 'Breakdown of shipment readiness status'
-                    : 'Breakdown of plot compliance status'}
-              </CardDescription>
+              <CardTitle className="text-base">{getReportsDistributionTitle(audience, t)}</CardTitle>
+              <CardDescription>{getReportsDistributionSubtitle(audience, t)}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -405,10 +425,13 @@ export default function ReportsPage() {
                   ? cooperativeReadinessDistribution
                   : isImporter
                     ? importerReadinessDistribution
-                    : complianceDistribution).map((item) => (
+                    : complianceDistribution.map((item) => ({
+                        ...item,
+                        label: getReportsReadinessStatusLabel(item.status as 'Compliant' | 'Warnings' | 'Blocked', t),
+                      }))).map((item) => (
                   <div key={item.status} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">{item.status}</span>
+                      <span className="text-sm">{'label' in item ? item.label : item.status}</span>
                       <span className="text-sm font-medium">{item.count} ({item.percentage}%)</span>
                     </div>
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
@@ -426,24 +449,28 @@ export default function ReportsPage() {
 
         {/* Report Types */}
         <div>
-          <h2 className="text-lg font-semibold mb-4">
-            {isCooperative ? 'Generate Cooperative Reports' : isImporter ? 'Generate Reporting Snapshots' : 'Generate Reports'}
-          </h2>
+          <h2 className="text-lg font-semibold mb-4">{getReportsSectionGenerateTitle(audience, t)}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {reportTypes.map((report) => (
-              <Card key={report.id} className="hover:border-primary/50 transition-colors cursor-pointer">
+            {reportTypeIds.map((reportId) => {
+              const report = reportTypeStyles[reportId];
+              const ReportIcon = report.icon;
+              return (
+              <Card key={reportId} className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardContent className="pt-6">
                   <div className={`w-10 h-10 rounded-lg ${report.bgColor} flex items-center justify-center mb-4`}>
-                    <report.icon className={`w-5 h-5 ${report.color}`} />
+                    <ReportIcon className={`w-5 h-5 ${report.color}`} />
                   </div>
-                  <h3 className="font-medium mb-1">{report.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">{report.description}</p>
+                  <h3 className="font-medium mb-1">{getReportsTypeCardCopy(reportId, 'title', t)}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {getReportsTypeCardCopy(reportId, 'description', t)}
+                  </p>
                   <Button variant="outline" size="sm" className="w-full">
-                    Generate
+                    {getReportsGenerateButtonLabel(t)}
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </div>
 
@@ -452,14 +479,12 @@ export default function ReportsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{isImporter ? 'Recent Snapshots' : 'Recent Reports'}</CardTitle>
-                <CardDescription>
-                  {isImporter ? 'Previously generated reporting snapshots' : 'Previously generated reports'}
-                </CardDescription>
+                <CardTitle>{getReportsRecentTitle(audience, t)}</CardTitle>
+                <CardDescription>{getReportsRecentSubtitle(audience, t)}</CardDescription>
               </div>
               <Button variant="outline" size="sm">
                 <Filter className="w-4 h-4 mr-2" />
-                Filter
+                {getReportsFilterLabel(t)}
               </Button>
             </div>
           </CardHeader>

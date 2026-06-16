@@ -1,4 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
@@ -20,12 +21,14 @@ export async function signInWithAppleNative(): Promise<Session> {
   }
 
   let credential: AppleAuthentication.AppleAuthenticationCredential;
+  const rawNonce = Crypto.randomUUID();
   try {
     credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
         AppleAuthentication.AppleAuthenticationScope.EMAIL,
       ],
+      nonce: rawNonce,
     });
   } catch (e) {
     const code = e && typeof e === 'object' && 'code' in e ? String((e as { code: string }).code) : '';
@@ -43,6 +46,7 @@ export async function signInWithAppleNative(): Promise<Session> {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'apple',
     token: credential.identityToken,
+    nonce: rawNonce,
   });
 
   if (error) {

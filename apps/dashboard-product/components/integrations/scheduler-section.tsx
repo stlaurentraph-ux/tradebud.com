@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { SchedulerConfig, StaleReleaseResult, TriggerSource } from '@/types/integrations';
 import { fetchRunSummary, fetchSchedulerConfig, triggerStaleSweeper } from '@/lib/integrations-v2-api';
+import { LocaleContext } from '@/lib/locale-context';
+import { getIntegrationsSchedulerLoadingLabel } from '@/lib/workflow-terminology-labels';
 
 function TokenStatusIndicator({ configured, version }: { configured: boolean; version: string | null }) {
   return (
@@ -127,6 +129,8 @@ function TriggerResultCard({ result }: { result: StaleReleaseResult | null }) {
 }
 
 export function SchedulerSection() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [isLoading, setIsLoading] = useState(true);
   const [config, setConfig] = useState<SchedulerConfig | null>(null);
   const [lastResult, setLastResult] = useState<StaleReleaseResult | null>(null);
@@ -195,7 +199,7 @@ export function SchedulerSection() {
       <div className="flex items-center justify-center p-12">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading scheduler config...</p>
+          <p className="text-sm text-muted-foreground">{getIntegrationsSchedulerLoadingLabel(t)}</p>
         </div>
       </div>
     );

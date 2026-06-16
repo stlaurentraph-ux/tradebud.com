@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -13,6 +14,7 @@ import {
   Settings,
   HelpCircle,
   ChevronDown,
+  ChevronRight,
   LogOut,
   ShieldCheck,
   RefreshCw,
@@ -38,11 +40,19 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/lib/auth-context';
 import { useLocale } from '@/lib/locale-context';
-import { getVisibleNavItems, getVisibleSecondaryNavItems, getRoleDisplayName } from '@/lib/rbac';
+import {
+  getVisibleNavSections,
+  getVisibleSecondaryNavItems,
+  getRoleDisplayName,
+  type NavItem,
+  type ResolvedNavSection,
+} from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
 import { DemoDataSidebarToggle } from '@/components/demo/demo-data-sidebar-toggle';
+import { translateNavItemName } from '@/lib/nav-labels';
 import type { TenantRole } from '@/types';
 import { useSponsorViewControls } from '@/lib/sponsor-view';
 
@@ -73,10 +83,7 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
 };
 
 function translateNavLabel(name: string, t: (key: string) => string): string {
-  if (name === 'Overview') return t('nav.overview');
-  if (name === 'Settings') return t('nav.settings');
-  if (name === 'Help') return t('nav.help');
-  return name;
+  return translateNavItemName(name, t);
 }
 
 const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
@@ -110,13 +117,102 @@ const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
   'Role Decisions': 'role-decisions',
 };
 
-export function AppSidebar() {
+function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || (href !== '/' && pathname.startsWith(href));
+}
+
+function SidebarNavLink({
+  item,
+  pathname,
+  withSponsorView,
+  t,
+}: {
+  item: NavItem;
+  pathname: string;
+  withSponsorView: (href: string) => string;
+  t: (key: string) => string;
+}) {
+  const isActive = isNavItemActive(pathname, item.href);
+  const Icon = iconMap[item.icon] || LayoutDashboard;
+
+  return (
+    <Link
+      href={withSponsorView(item.href)}
+      data-onboarding={
+        ONBOARDING_NAV_KEY_BY_NAME[item.name]
+          ? `nav-${ONBOARDING_NAV_KEY_BY_NAME[item.name]}`
+          : undefined
+      }
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
+        isActive
+          ? 'bg-white/20 text-white shadow-sm'
+          : 'text-white/75 hover:bg-white/10 hover:text-white'
+      )}
+      aria-label={item.name}
+    >
+      <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
+      {translateNavLabel(item.name, t)}
+    </Link>
+  );
+}
+
+function SidebarNavSection({
+  section,
+  pathname,
+  withSponsorView,
+  t,
+}: {
+  section: ResolvedNavSection;
+  pathname: string;
+  withSponsorView: (href: string) => string;
+  t: (key: string) => string;
+}) {
+  const hasActiveChild = section.items.some((item) => isNavItemActive(pathname, item.href));
+  const [manualOpen, setManualOpen] = useState(false);
+  const open = hasActiveChild || manualOpen;
+
+  const sectionLabel = t(section.labelKey);
+
+  return (
+    <Collapsible open={open} onOpenChange={setManualOpen} className="mb-1">
+      <CollapsibleTrigger
+        className={cn(
+          'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-widest transition-colors',
+          hasActiveChild ? 'text-white/70' : 'text-white/45 hover:text-white/60'
+        )}
+        aria-label={`${sectionLabel} section`}
+      >
+        <span>{sectionLabel}</span>
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-0.5">
+        {section.items.map((item) => (
+          <SidebarNavLink
+            key={item.name}
+            item={item}
+            pathname={pathname}
+            withSponsorView={withSponsorView}
+            t={t}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: string | null }) {
   const pathname = usePathname();
   const { user, logout, switchRole } = useAuth();
   const { t } = useLocale();
   const { sponsorView, setSponsorView } = useSponsorViewControls();
 
-  const navItems = getVisibleNavItems(user);
+  const { overview, sections } = getVisibleNavSections(user);
   const secondaryNavItems = getVisibleSecondaryNavItems(user);
   const showDevRoleSwitcher = isDevRoleSwitcherEnabled();
   const switchableRoles = user
@@ -161,14 +257,14 @@ export function AppSidebar() {
           )}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white text-xs font-bold flex-shrink-0">
-            {(user?.tenant_id?.slice(0, 2) || 'TB').toUpperCase()}
+            {(workspaceDisplayName?.slice(0, 2) || user?.tenant_id?.slice(0, 2) || 'TB').toUpperCase()}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-medium text-white">
-              {user?.tenant_id || 'Workspace'}
+              {workspaceDisplayName || user?.tenant_id || 'Workspace'}
             </span>
             <span className="truncate text-[10px] text-white/50">
-              Tracebud tenant
+              {workspaceDisplayName ? 'Organisation workspace' : 'Tracebud tenant'}
             </span>
           </div>
         </div>
@@ -249,34 +345,23 @@ export function AppSidebar() {
         <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/40">
           {t('nav.navigation')}
         </p>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href ||
-            (item.href !== '/' && pathname.startsWith(item.href));
-          const Icon = iconMap[item.icon] || LayoutDashboard;
-          // Derive a stable slug for spotlight targeting
-          const onboardingAttr = item.href === '/'
-            ? 'nav-overview'
-            : `nav-${item.href.replace(/^\//, '').replace(/\//g, '-')}`;
-
-          return (
-            <Link
-              key={item.name}
-              href={withSponsorView(item.href)}
-              data-onboarding={ONBOARDING_NAV_KEY_BY_NAME[item.name] ? `nav-${ONBOARDING_NAV_KEY_BY_NAME[item.name]}` : undefined}
-              aria-current={isActive ? 'page' : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors mb-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
-                isActive
-                  ? 'bg-white/20 text-white shadow-sm'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'
-              )}
-              aria-label={item.name}
-            >
-              <Icon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'text-white' : 'text-white/60')} />
-              {translateNavLabel(item.name, t)}
-            </Link>
-          );
-        })}
+        {overview && (
+          <SidebarNavLink
+            item={overview}
+            pathname={pathname}
+            withSponsorView={withSponsorView}
+            t={t}
+          />
+        )}
+        {sections.map((section) => (
+          <SidebarNavSection
+            key={section.id}
+            section={section}
+            pathname={pathname}
+            withSponsorView={withSponsorView}
+            t={t}
+          />
+        ))}
 
         {secondaryNavItems.length > 0 && (
           <>

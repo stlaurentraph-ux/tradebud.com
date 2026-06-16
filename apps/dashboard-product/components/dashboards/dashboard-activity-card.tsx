@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
+import type { TimelineEvent } from '@/components/ui/timeline-row';
 import { useDashboardActivity } from '@/lib/use-dashboard-activity';
 
 interface DashboardActivityCardProps {
@@ -11,6 +12,8 @@ interface DashboardActivityCardProps {
   emptyMessage: string;
   isVirginTenant?: boolean;
   fallbackEvents?: TimelineEvent[];
+  prefetchedEvents?: TimelineEvent[];
+  prefetchedLoaded?: boolean;
   maxHeight?: number;
 }
 
@@ -20,13 +23,19 @@ export function DashboardActivityCard({
   emptyMessage,
   isVirginTenant = false,
   fallbackEvents = [],
+  prefetchedEvents,
+  prefetchedLoaded = false,
   maxHeight = 250,
 }: DashboardActivityCardProps) {
-  const { events: liveActivity, loaded } = useDashboardActivity();
-  const events = useMemo(
-    () => (liveActivity.length > 0 ? liveActivity : fallbackEvents),
-    [liveActivity, fallbackEvents],
-  );
+  const useLiveActivity = prefetchedEvents === undefined;
+  const { events: liveActivity, loaded: liveLoaded } = useDashboardActivity(useLiveActivity);
+  const events = useMemo(() => {
+    if (prefetchedEvents !== undefined) {
+      return prefetchedEvents.length > 0 ? prefetchedEvents : fallbackEvents;
+    }
+    return liveActivity.length > 0 ? liveActivity : fallbackEvents;
+  }, [prefetchedEvents, liveActivity, fallbackEvents]);
+  const loaded = prefetchedEvents !== undefined ? prefetchedLoaded : liveLoaded;
   const showEmpty = isVirginTenant || (loaded && events.length === 0);
 
   return (

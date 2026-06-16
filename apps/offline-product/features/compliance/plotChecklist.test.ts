@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { computePlotReadinessChecklist, evaluateTenureParseGate } from './plotChecklist';
 
 describe('plotChecklist tenure parse gating', () => {

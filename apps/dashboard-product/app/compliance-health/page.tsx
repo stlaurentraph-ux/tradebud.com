@@ -1,9 +1,12 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSponsorView } from '@/lib/sponsor-view';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const warningRows = [
   { area: 'Missing geometry evidence', count: 147, trend: '+12%' },
@@ -13,6 +16,9 @@ const warningRows = [
 ];
 
 export default function ComplianceHealthPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'compliance_health', { title: "Compliance Health" });
   const sponsorView = useSponsorView();
   const kpis =
     sponsorView === 'country'
@@ -32,13 +38,13 @@ export default function ComplianceHealthPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Compliance Health"
+        title={pageHeader.title}
         subtitle={
           sponsorView === 'country'
             ? 'Cross-network board for origin-level readiness, deterioration signals, and escalation pressure'
             : 'Cross-network board for supplier compliance posture and buyer-impacting risk indicators'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Compliance Health' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Compliance Health' })}
       />
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-4">

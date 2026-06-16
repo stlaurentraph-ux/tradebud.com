@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Layers, MapPin, ShieldAlert, TreeDeciduous } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -13,6 +13,46 @@ import {
   type PlotScreeningContext,
 } from '@/lib/plot-screening-context';
 import { usePlotReviewQueue, type PlotReviewQueueItem } from '@/lib/use-plot-review-queue';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  buildPlotReviewBreadcrumbs,
+  getPlotReviewAutoClearBadgeLabel,
+  getPlotReviewClearCompliantLabel,
+  getPlotReviewDecisionFailedMessage,
+  getPlotReviewDialogCancelLabel,
+  getPlotReviewDialogConfirmLabel,
+  getPlotReviewDialogDescription,
+  getPlotReviewDialogReasonLabel,
+  getPlotReviewDialogReasonPlaceholder,
+  getPlotReviewDialogSavingLabel,
+  getPlotReviewDialogTitle,
+  getPlotReviewEmptyMessage,
+  getPlotReviewLoadingMessage,
+  getPlotReviewOpenPlotLabel,
+  getPlotReviewOverlapSummary,
+  getPlotReviewOverlapTitle,
+  getPlotReviewPageSubtitle,
+  getPlotReviewPageTitle,
+  getPlotReviewPhotosEmptyMessage,
+  getPlotReviewPhotosSummary,
+  getPlotReviewPhotosTitle,
+  getPlotReviewPriorityBadgeLabel,
+  getPlotReviewProducerFallback,
+  getPlotReviewAreaNaLabel,
+  getPlotReviewReasonMinLengthMessage,
+  getPlotReviewScreeningAlertTierLabel,
+  getPlotReviewScreeningContextAdjustedLabel,
+  getPlotReviewScreeningDatasetLabel,
+  getPlotReviewScreeningHitsHaLabel,
+  getPlotReviewScreeningLastScreenedLabel,
+  getPlotReviewScreeningMetricLabel,
+  getPlotReviewScreeningTitle,
+  getPlotReviewStatLabel,
+  getPlotReviewStatusLabel,
+  getPlotReviewTenureBanner,
+  getPlotReviewTenureCta,
+  getPlotReviewUpholdBlockLabel,
+} from '@/lib/workflow-terminology-labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,17 +68,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'under_review':
-      return 'Under review';
-    case 'degradation_risk':
-      return 'Overlap risk';
-    case 'deforestation_detected':
-      return 'Deforestation flagged';
-    default:
-      return status;
-  }
+function statusLabel(status: string, t?: (key: string) => string): string {
+  return getPlotReviewStatusLabel(status, t);
 }
 
 function formatHa(value: number | null): string {
@@ -51,18 +82,24 @@ function formatPct(value: number | null): string {
   return `${value.toFixed(1)}%`;
 }
 
-function ScreeningExplainabilityCard({ screening }: { screening: PlotScreeningContext }) {
+function ScreeningExplainabilityCard({
+  screening,
+  t,
+}: {
+  screening: PlotScreeningContext;
+  t?: (key: string) => string;
+}) {
   return (
     <div className="rounded-md border p-3 space-y-3 md:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium flex items-center gap-2">
           <TreeDeciduous className="h-4 w-4" />
-          GFW screening explainability
+          {getPlotReviewScreeningTitle(t)}
         </p>
         <div className="flex flex-wrap gap-2">
           {screening.signalTier ? (
             <Badge variant="outline" className="capitalize">
-              Alert tier: {screening.signalTier}
+              {getPlotReviewScreeningAlertTierLabel(screening.signalTier, t)}
             </Badge>
           ) : null}
           <Badge variant="outline" className={cn('capitalize', contextSignalClass(screening.signal))}>
@@ -70,7 +107,7 @@ function ScreeningExplainabilityCard({ screening }: { screening: PlotScreeningCo
           </Badge>
           {screening.contextAdjusted ? (
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-200">
-              Context-adjusted
+              {getPlotReviewScreeningContextAdjustedLabel(t)}
             </Badge>
           ) : null}
         </div>
@@ -78,21 +115,21 @@ function ScreeningExplainabilityCard({ screening }: { screening: PlotScreeningCo
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
         <div>
-          <p className="text-muted-foreground">Integrated alerts</p>
+          <p className="text-muted-foreground">{getPlotReviewScreeningMetricLabel('integrated_alerts', t)}</p>
           <p className="font-medium">
-            {screening.alertCount ?? 'n/a'} hits · {formatHa(screening.alertAreaHa)}
+            {getPlotReviewScreeningHitsHaLabel(screening.alertCount ?? 'n/a', formatHa(screening.alertAreaHa), t)}
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground">Tropical tree cover (avg)</p>
+          <p className="text-muted-foreground">{getPlotReviewScreeningMetricLabel('tree_cover', t)}</p>
           <p className="font-medium">{formatPct(screening.tropicalTreeCoverAvgPct)}</p>
         </div>
         <div>
-          <p className="text-muted-foreground">Hansen loss (post-cutoff)</p>
+          <p className="text-muted-foreground">{getPlotReviewScreeningMetricLabel('hansen_loss', t)}</p>
           <p className="font-medium">{formatHa(screening.treeCoverLossHa)}</p>
         </div>
         <div>
-          <p className="text-muted-foreground">Natural forest overlap</p>
+          <p className="text-muted-foreground">{getPlotReviewScreeningMetricLabel('natural_forest', t)}</p>
           <p className="font-medium">{formatHa(screening.naturalForestHa)}</p>
         </div>
       </div>
@@ -102,7 +139,7 @@ function ScreeningExplainabilityCard({ screening }: { screening: PlotScreeningCo
           <Layers className="h-3.5 w-3.5 mt-0.5" />
           {screening.datasets.map((layer) => (
             <span key={layer.dataset} className="rounded border px-2 py-0.5">
-              {layer.dataset}: {layer.ok ? 'ok' : layer.error ?? 'failed'}
+              {getPlotReviewScreeningDatasetLabel(layer.dataset, layer.ok, layer.error, t)}
             </span>
           ))}
         </div>
@@ -110,7 +147,7 @@ function ScreeningExplainabilityCard({ screening }: { screening: PlotScreeningCo
 
       {screening.screenedAt ? (
         <p className="text-xs text-muted-foreground">
-          Last screened {new Date(screening.screenedAt).toLocaleString()}
+          {getPlotReviewScreeningLastScreenedLabel(new Date(screening.screenedAt).toLocaleString(), t)}
         </p>
       ) : null}
     </div>
@@ -124,6 +161,8 @@ function priorityClass(priority: PlotReviewQueueItem['reviewPriority']): string 
 }
 
 export default function PlotReviewQueuePage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
   const { items, isLoading, error, submitDecision } = usePlotReviewQueue(true);
   const canAdjudicate = hasAnyPermission(user, ['compliance:approve', 'compliance:resolve_issue']);
@@ -153,7 +192,7 @@ export default function PlotReviewQueuePage() {
 
   const handleSubmit = async () => {
     if (!selected || reason.trim().length < 8) {
-      setSubmitError('Enter a reason with at least 8 characters.');
+      setSubmitError(getPlotReviewReasonMinLengthMessage(t));
       return;
     }
     setIsSubmitting(true);
@@ -163,7 +202,7 @@ export default function PlotReviewQueuePage() {
       setDialogOpen(false);
       setSelected(null);
     } catch (submitErr) {
-      setSubmitError(submitErr instanceof Error ? submitErr.message : 'Decision failed.');
+      setSubmitError(submitErr instanceof Error ? submitErr.message : getPlotReviewDecisionFailedMessage(t));
     } finally {
       setIsSubmitting(false);
     }
@@ -173,23 +212,16 @@ export default function PlotReviewQueuePage() {
     <PermissionGate permission="compliance:view">
       <div className="flex flex-col">
         <AppHeader
-          title="Plot review queue"
-          subtitle="Adjudicate satellite flags, overlap risk, and ground-truth evidence before plots clear to compliant"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Compliance', href: '/compliance' },
-            { label: 'Plot review' },
-          ]}
+          title={getPlotReviewPageTitle(t)}
+          subtitle={getPlotReviewPageSubtitle(t)}
+          breadcrumbs={buildPlotReviewBreadcrumbs(t)}
         />
 
         <div className="flex-1 space-y-6 p-6">
           <div className="rounded-md border bg-secondary/20 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-3">
-            <p className="text-muted-foreground">
-              Producer-in-possession tenure files with low AI confidence route to the tenure document
-              review queue.
-            </p>
+            <p className="text-muted-foreground">{getPlotReviewTenureBanner(t)}</p>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/compliance/tenure-review">Open tenure review queue</Link>
+              <Link href="/compliance/tenure-review">{getPlotReviewTenureCta(t)}</Link>
             </Button>
           </div>
 
@@ -203,19 +235,19 @@ export default function PlotReviewQueuePage() {
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold">{counts.total}</p>
-                <p className="text-sm text-muted-foreground mt-1">Plots awaiting review</p>
+                <p className="text-sm text-muted-foreground mt-1">{getPlotReviewStatLabel('awaiting', t)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold text-red-600">{counts.high}</p>
-                <p className="text-sm text-muted-foreground mt-1">High priority</p>
+                <p className="text-sm text-muted-foreground mt-1">{getPlotReviewStatLabel('high_priority', t)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold text-emerald-600">{counts.autoEligible}</p>
-                <p className="text-sm text-muted-foreground mt-1">Auto-clearance eligible</p>
+                <p className="text-sm text-muted-foreground mt-1">{getPlotReviewStatLabel('auto_clear', t)}</p>
               </CardContent>
             </Card>
           </div>
@@ -223,11 +255,11 @@ export default function PlotReviewQueuePage() {
           <div className="space-y-3">
             {isLoading ? (
               <div className="rounded-lg border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
-                Loading plot review queue…
+                {getPlotReviewLoadingMessage(t)}
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-lg border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
-                No plots currently require compliance review.
+                {getPlotReviewEmptyMessage(t)}
               </div>
             ) : (
               items.map((item) => {
@@ -243,19 +275,21 @@ export default function PlotReviewQueuePage() {
                             {item.name}
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
-                            {item.farmer_name ?? 'Producer'} ·{' '}
-                            {item.area_ha != null ? `${Number(item.area_ha).toFixed(2)} ha` : 'Area n/a'}
+                            {item.farmer_name ?? getPlotReviewProducerFallback(t)} ·{' '}
+                            {item.area_ha != null
+                              ? `${Number(item.area_ha).toFixed(2)} ha`
+                              : getPlotReviewAreaNaLabel(t)}
                             {item.production_system ? ` · ${item.production_system}` : ''}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Badge variant="outline" className={cn('capitalize', priorityClass(item.reviewPriority))}>
-                            {item.reviewPriority} priority
+                            {getPlotReviewPriorityBadgeLabel(item.reviewPriority, t)}
                           </Badge>
-                          <Badge variant="outline">{statusLabel(item.status)}</Badge>
+                          <Badge variant="outline">{statusLabel(item.status, t)}</Badge>
                           {item.autoClearanceEligible ? (
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-200">
-                              Auto-clear eligible
+                              {getPlotReviewAutoClearBadgeLabel(t)}
                             </Badge>
                           ) : null}
                         </div>
@@ -266,34 +300,38 @@ export default function PlotReviewQueuePage() {
                         <div className="rounded-md border p-3 space-y-1">
                           <p className="font-medium flex items-center gap-2">
                             <ShieldAlert className="h-4 w-4" />
-                            Overlap signals
+                            {getPlotReviewOverlapTitle(t)}
                           </p>
                           <p className="text-muted-foreground">
-                            SINAPH overlap: {item.sinaph_overlap ? 'yes' : 'no'} · Indigenous overlap:{' '}
-                            {item.indigenous_overlap ? 'yes' : 'no'}
+                            {getPlotReviewOverlapSummary(item.sinaph_overlap, item.indigenous_overlap, t)}
                           </p>
                         </div>
                         <div className="rounded-md border p-3 space-y-1">
                           <p className="font-medium flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4" />
-                            Ground-truth photos
+                            {getPlotReviewPhotosTitle(t)}
                           </p>
                           {photos ? (
                             <p className="text-muted-foreground">
-                              {photos.clearanceVerifiedCount}/{photos.minRequired} clearance-verified (
-                              {photos.geoVerifiedCount} on-plot, {photos.timestampVerifiedCount} after{' '}
-                              {photos.cutoffDate})
+                              {getPlotReviewPhotosSummary(
+                                photos.clearanceVerifiedCount,
+                                photos.minRequired,
+                                photos.geoVerifiedCount,
+                                photos.timestampVerifiedCount,
+                                photos.cutoffDate,
+                                t,
+                              )}
                             </p>
                           ) : (
-                            <p className="text-muted-foreground">No synced photo batch yet.</p>
+                            <p className="text-muted-foreground">{getPlotReviewPhotosEmptyMessage(t)}</p>
                           )}
                         </div>
-                        {screening ? <ScreeningExplainabilityCard screening={screening} /> : null}
+                        {screening ? <ScreeningExplainabilityCard screening={screening} t={t} /> : null}
                       </div>
 
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/plots/${item.id}`}>Open plot</Link>
+                          <Link href={`/plots/${item.id}`}>{getPlotReviewOpenPlotLabel(t)}</Link>
                         </Button>
                         {canAdjudicate ? (
                           <div className="flex gap-2">
@@ -303,10 +341,10 @@ export default function PlotReviewQueuePage() {
                               onClick={() => openDecision(item, 'uphold')}
                             >
                               <AlertTriangle className="mr-1 h-4 w-4" />
-                              Uphold block
+                              {getPlotReviewUpholdBlockLabel(t)}
                             </Button>
                             <Button size="sm" onClick={() => openDecision(item, 'clear')}>
-                              Clear to compliant
+                              {getPlotReviewClearCompliantLabel(t)}
                             </Button>
                           </div>
                         ) : null}
@@ -322,32 +360,30 @@ export default function PlotReviewQueuePage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {action === 'clear' ? 'Clear plot review' : 'Uphold plot block'}
-              </DialogTitle>
+              <DialogTitle>{getPlotReviewDialogTitle(action, t)}</DialogTitle>
               <DialogDescription>
                 {selected
-                  ? `${selected.name} — ${statusLabel(selected.status)}. This decision is audited.`
+                  ? getPlotReviewDialogDescription(selected.name, statusLabel(selected.status, t), t)
                   : null}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              <Label htmlFor="plot-review-reason">Reason</Label>
+              <Label htmlFor="plot-review-reason">{getPlotReviewDialogReasonLabel(t)}</Label>
               <Textarea
                 id="plot-review-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Explain the evidence reviewed and why this outcome is justified."
+                placeholder={getPlotReviewDialogReasonPlaceholder(t)}
                 rows={4}
               />
               {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSubmitting}>
-                Cancel
+                {getPlotReviewDialogCancelLabel(t)}
               </Button>
               <Button onClick={() => void handleSubmit()} disabled={isSubmitting}>
-                {isSubmitting ? 'Saving…' : action === 'clear' ? 'Confirm clearance' : 'Confirm uphold'}
+                {isSubmitting ? getPlotReviewDialogSavingLabel(t) : getPlotReviewDialogConfirmLabel(action, t)}
               </Button>
             </DialogFooter>
           </DialogContent>

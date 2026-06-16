@@ -4,6 +4,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Inject,
   NotFoundException,
   Param,
   Patch,
@@ -13,8 +14,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Pool } from 'pg';
+import { resolveFieldActorRole } from '../auth/field-app-auth';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { PG_POOL } from '../db/db.module';
 import { ConsentPurposeCode, ConsentService } from './consent.service';
 import { PushNotificationService } from './push-notification.service';
 
@@ -35,7 +39,20 @@ export class ConsentController {
   constructor(
     private readonly consentService: ConsentService,
     private readonly pushNotifications: PushNotificationService,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
+
+  private async requireFieldProducerUserId(req: any, message: string): Promise<string> {
+    const actorRole = await resolveFieldActorRole(this.pool, req.user);
+    if (actorRole !== 'farmer') {
+      throw new ForbiddenException(message);
+    }
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return userId;
+  }
 
   private requireOrgConsentRole(req: any): void {
     const role = deriveRoleFromSupabaseUser(req.user);
@@ -72,42 +89,30 @@ export class ConsentController {
 
   @Get('v1/me/consent-grants')
   async listMine(@Req() req: any) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer') {
-      throw new ForbiddenException('Only producers can list their consent grants');
-    }
-    const userId = req.user?.id as string | undefined;
-    if (!userId) {
-      throw new ForbiddenException('Missing authenticated user');
-    }
+    const userId = await this.requireFieldProducerUserId(
+      req,
+      'Only producers can list their consent grants',
+    );
     const items = await this.consentService.listForFarmerUser(userId);
     return { items };
   }
 
   @Post('v1/me/consent-grants/:id/approve')
   async approveMine(@Param('id') id: string, @Req() req: any) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer') {
-      throw new ForbiddenException('Only producers can approve consent grants');
-    }
-    const userId = req.user?.id as string | undefined;
-    if (!userId) {
-      throw new ForbiddenException('Missing authenticated user');
-    }
+    const userId = await this.requireFieldProducerUserId(
+      req,
+      'Only producers can approve consent grants',
+    );
     const grant = await this.consentService.approveGrant(id, userId);
     return { consent_grant_id: grant.id, status: grant.status, granted_at: grant.granted_at };
   }
 
   @Post('v1/me/consent-grants/:id/deny')
   async denyMine(@Param('id') id: string, @Req() req: any) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer') {
-      throw new ForbiddenException('Only producers can deny consent grants');
-    }
-    const userId = req.user?.id as string | undefined;
-    if (!userId) {
-      throw new ForbiddenException('Missing authenticated user');
-    }
+    const userId = await this.requireFieldProducerUserId(
+      req,
+      'Only producers can deny consent grants',
+    );
     const grant = await this.consentService.denyGrant(id, userId);
     return { consent_grant_id: grant.id, status: grant.status };
   }
@@ -118,14 +123,10 @@ export class ConsentController {
     @Body() body: { revocation_reason?: string },
     @Req() req: any,
   ) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer') {
-      throw new ForbiddenException('Only producers can revoke consent grants');
-    }
-    const userId = req.user?.id as string | undefined;
-    if (!userId) {
-      throw new ForbiddenException('Missing authenticated user');
-    }
+    const userId = await this.requireFieldProducerUserId(
+      req,
+      'Only producers can revoke consent grants',
+    );
     const grant = await this.consentService.revokeGrant(id, userId, body?.revocation_reason ?? '');
     return {
       consent_grant_id: grant.id,
@@ -154,6 +155,7 @@ export class ConsentController {
     @Req() req: any,
   ) {
     const role = deriveRoleFromSupabaseUser(req.user);
+    const actorRole = await resolveFieldActorRole(this.pool, req.user);
     const allowedRoles = new Set([
       'farmer',
       'agent',
@@ -161,7 +163,7 @@ export class ConsentController {
       'exporter',
       'compliance_manager',
     ]);
-    if (!role || !allowedRoles.has(role)) {
+    if ((!role || !allowedRoles.has(role)) && !actorRole) {
       throw new ForbiddenException('This account cannot register push devices');
     }
     const userId = req.user?.id as string | undefined;
@@ -178,14 +180,10 @@ export class ConsentController {
 
   @Post('v1/me/gdpr-erasure-request')
   async requestGdprErasure(@Body() body: { details?: string }, @Req() req: any) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer') {
-      throw new ForbiddenException('Only producers can request GDPR erasure');
-    }
-    const userId = req.user?.id as string | undefined;
-    if (!userId) {
-      throw new ForbiddenException('Missing authenticated user');
-    }
+    const userId = await this.requireFieldProducerUserId(
+      req,
+      'Only producers can request GDPR erasure',
+    );
     return this.consentService.recordGdprErasureRequest(userId, body?.details ?? '');
   }
 

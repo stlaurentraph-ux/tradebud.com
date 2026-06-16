@@ -1,9 +1,12 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSponsorView } from '@/lib/sponsor-view';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const actions = [
   { action: 'Access escalation: North Highlands Cooperative', scope: 'Org scope', status: 'Pending approval' },
@@ -12,18 +15,21 @@ const actions = [
 ];
 
 export default function DelegatedAdminPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'delegated_admin', { title: "Delegated Admin" });
   const sponsorView = useSponsorView();
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Delegated Admin"
+        title={pageHeader.title}
         subtitle={
           sponsorView === 'country'
             ? 'Policy-bound interventions for network activation and cooperative support'
             : 'Policy-bound interventions for supplier enablement and compliance performance'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Delegated Admin' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Delegated Admin' })}
       />
       <div className="flex-1 space-y-6 p-6">
         <Card>

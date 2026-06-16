@@ -1,15 +1,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const VALID_PROFILES = new Set(['preview', 'production']);
 
-function parseProfile(argv) {
+const TEST_CREDENTIAL_KEYS = [
+  'EXPO_PUBLIC_TRACEBUD_TEST_EMAIL',
+  'EXPO_PUBLIC_TRACEBUD_TEST_PASSWORD',
+];
+
+const DEV_ONLY_FLAGS = [
+  'EXPO_PUBLIC_ALLOW_TEST_AUTH',
+  'EXPO_PUBLIC_ALLOW_LOCALHOST_API',
+  'EXPO_PUBLIC_ALLOW_INSECURE_API',
+];
+
+function parseArgs(argv) {
   const profileArg = argv.find((arg) => arg.startsWith('--profile='));
   const profile = profileArg ? profileArg.split('=')[1] : 'production';
   if (!VALID_PROFILES.has(profile)) {
     throw new Error(`Invalid --profile. Use one of: ${[...VALID_PROFILES].join(', ')}`);
   }
-  return profile;
+  const verifyOAuth = argv.includes('--verify-oauth');
+  return { profile, verifyOAuth };
 }
 
 function loadEnvFileIfPresent(filePath) {
@@ -26,6 +39,17 @@ function loadEnvFileIfPresent(filePath) {
   }
 }
 
+function loadEasProfileEnv(eas, profile, { override = false } = {}) {
+  const env = eas?.build?.[profile]?.env;
+  if (!env || typeof env !== 'object') return;
+  for (const [key, value] of Object.entries(env)) {
+    if (value == null || String(value).trim() === '') continue;
+    if (override || !process.env[key]) {
+      process.env[key] = String(value).trim();
+    }
+  }
+}
+
 function requireEnv(name, issues) {
   const value = process.env[name];
   if (!value || String(value).trim().length === 0) {
@@ -39,10 +63,19 @@ function isLocalhost(url) {
   return /:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url);
 }
 
+function isTruthyFlag(value) {
+  return value === '1' || value === 'true';
+}
+
 function readEasJson(projectRoot) {
   const easPath = path.join(projectRoot, 'eas.json');
   const raw = fs.readFileSync(easPath, 'utf8');
   return JSON.parse(raw);
+}
+
+function readAppJson(projectRoot) {
+  const appPath = path.join(projectRoot, 'app.json');
+  return JSON.parse(fs.readFileSync(appPath, 'utf8'));
 }
 
 function checkEasConfig(eas, profile, issues) {
@@ -59,17 +92,130 @@ function checkEasConfig(eas, profile, issues) {
   }
 }
 
+function checkEasProjectId(appJson, profile, issues) {
+  const projectId = appJson?.expo?.extra?.eas?.projectId;
+  if (!projectId || String(projectId).trim().length === 0) {
+    issues.push('app.json missing expo.extra.eas.projectId (required for Expo push tokens).');
+    return;
+  }
+  if (profile === 'production' && !/^[0-9a-f-]{36}$/i.test(String(projectId))) {
+    issues.push(`app.json expo.extra.eas.projectId does not look like a UUID: ${projectId}`);
+  }
+}
+
+function checkAppConfigPush(projectRoot, profile, warnings) {
+  if (profile !== 'production') return;
+  const configPath = path.join(projectRoot, 'app.config.js');
+  if (!fs.existsSync(configPath)) {
+    warnings.push('app.config.js not found; cannot verify expo-notifications plugin wiring.');
+    return;
+  }
+  const text = fs.readFileSync(configPath, 'utf8');
+  if (!text.includes('expo-notifications')) {
+    warnings.push('app.config.js does not reference expo-notifications for production builds.');
+  }
+  if (!text.includes('aps-environment')) {
+    warnings.push('app.config.js does not set iOS aps-environment for production push.');
+  }
+}
+
+function checkEnvMapForProduction(envMap, label, issues) {
+  if (!envMap || typeof envMap !== 'object') return;
+  for (const key of DEV_ONLY_FLAGS) {
+    if (isTruthyFlag(envMap[key])) {
+      issues.push(`${label} sets ${key}=1 (forbidden for production).`);
+    }
+  }
+  for (const key of TEST_CREDENTIAL_KEYS) {
+    const value = envMap[key];
+    if (value != null && String(value).trim().length > 0) {
+      issues.push(`${label} sets ${key} (forbidden for production).`);
+    }
+  }
+}
+
+function checkProcessEnvProduction(issues) {
+  for (const key of TEST_CREDENTIAL_KEYS) {
+    const value = process.env[key];
+    if (value != null && String(value).trim().length > 0) {
+      issues.push(`Production preflight forbids ${key} in the environment.`);
+    }
+  }
+}
+
+function validateSentryDsn(dsn, issues) {
+  if (!dsn) return;
+  try {
+    const parsed = new URL(dsn);
+    if (parsed.protocol !== 'https:') {
+      issues.push('EXPO_PUBLIC_SENTRY_DSN must use HTTPS.');
+    }
+    if (!parsed.hostname.includes('sentry')) {
+      issues.push('EXPO_PUBLIC_SENTRY_DSN hostname does not look like a Sentry ingest URL.');
+    }
+  } catch {
+    issues.push('EXPO_PUBLIC_SENTRY_DSN is not a valid URL.');
+  }
+}
+
+function validateSupabaseUrl(supabaseUrl, profile, issues) {
+  if (!supabaseUrl) return;
+  let parsed;
+  try {
+    parsed = new URL(supabaseUrl);
+  } catch {
+    issues.push(`EXPO_PUBLIC_SUPABASE_URL is not a valid URL: ${supabaseUrl}`);
+    return;
+  }
+  if (profile === 'production' && parsed.protocol !== 'https:') {
+    issues.push('Production preflight requires EXPO_PUBLIC_SUPABASE_URL to use HTTPS.');
+  }
+  if (profile === 'production' && isLocalhost(supabaseUrl)) {
+    issues.push('Production preflight forbids localhost Supabase URLs.');
+  }
+  if (!parsed.hostname.includes('supabase')) {
+    issues.push('EXPO_PUBLIC_SUPABASE_URL hostname does not look like a Supabase project URL.');
+  }
+}
+
+function validateAnonKey(anonKey, issues) {
+  if (!anonKey) return;
+  if (anonKey.length < 100) {
+    issues.push('EXPO_PUBLIC_SUPABASE_ANON_KEY looks too short.');
+  }
+  if (!anonKey.startsWith('eyJ')) {
+    issues.push('EXPO_PUBLIC_SUPABASE_ANON_KEY does not look like a JWT.');
+  }
+}
+
+function runOAuthVerify(projectRoot) {
+  const script = path.join(projectRoot, 'scripts', 'verify-oauth-providers.mjs');
+  const result = spawnSync(process.execPath, [script], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+    env: process.env,
+  });
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
+}
+
 function main() {
-  const profile = parseProfile(process.argv.slice(2));
+  const { profile, verifyOAuth } = parseArgs(process.argv.slice(2));
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
+
+  const eas = readEasJson(projectRoot);
+  // eas.json profile env wins over .env.local for release checks (local may use LAN API for dev).
+  loadEasProfileEnv(eas, profile, { override: true });
+
   const issues = [];
   const warnings = [];
 
   const apiUrl = requireEnv('EXPO_PUBLIC_API_URL', issues);
-  requireEnv('EXPO_PUBLIC_SUPABASE_URL', issues);
-  requireEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', issues);
+  const supabaseUrl = requireEnv('EXPO_PUBLIC_SUPABASE_URL', issues);
+  const anonKey = requireEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', issues);
 
   if (apiUrl) {
     let parsed;
@@ -88,22 +234,40 @@ function main() {
     }
   }
 
-  const allowTestAuth = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
-  const allowLocalhostApi = process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API === '1';
-  const allowInsecureApi = process.env.EXPO_PUBLIC_ALLOW_INSECURE_API === '1';
+  validateSupabaseUrl(supabaseUrl, profile, issues);
+  validateAnonKey(anonKey, issues);
+
+  const allowTestAuth = isTruthyFlag(process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH);
+  const allowLocalhostApi = isTruthyFlag(process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API);
+  const allowInsecureApi = isTruthyFlag(process.env.EXPO_PUBLIC_ALLOW_INSECURE_API);
 
   if (profile === 'production') {
+    checkProcessEnvProduction(issues);
+    checkEnvMapForProduction(eas?.build?.production?.env, 'eas.json production profile', issues);
+
     if (allowTestAuth) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_TEST_AUTH=1.');
     if (allowLocalhostApi) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_LOCALHOST_API=1.');
     if (allowInsecureApi) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_INSECURE_API=1.');
-    if (!process.env.EXPO_PUBLIC_SENTRY_DSN?.trim()) {
+
+    const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+    if (!sentryDsn) {
       issues.push(
-        'Production preflight requires EXPO_PUBLIC_SENTRY_DSN (set in .env.local or EAS env/secrets).',
+        'Production preflight requires EXPO_PUBLIC_SENTRY_DSN (set in .env.local or EAS production secrets).',
       );
+    } else {
+      validateSentryDsn(sentryDsn, issues);
     }
+
     if (!process.env.SENTRY_AUTH_TOKEN?.trim()) {
       warnings.push(
         'SENTRY_AUTH_TOKEN is unset; production builds will not upload source maps to Sentry. Run: eas secret:create --name SENTRY_AUTH_TOKEN',
+      );
+    }
+
+    const sentryEnv = process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT?.trim();
+    if (sentryEnv && sentryEnv !== 'production') {
+      warnings.push(
+        `EXPO_PUBLIC_SENTRY_ENVIRONMENT is "${sentryEnv}" (expected "production" for store builds).`,
       );
     }
   } else {
@@ -112,8 +276,10 @@ function main() {
     if (allowInsecureApi) warnings.push('Preview allows insecure HTTP API transport.');
   }
 
-  const eas = readEasJson(projectRoot);
   checkEasConfig(eas, profile, issues);
+  const appJson = readAppJson(projectRoot);
+  checkEasProjectId(appJson, profile, issues);
+  checkAppConfigPush(projectRoot, profile, warnings);
 
   if (warnings.length > 0) {
     for (const warning of warnings) {
@@ -130,6 +296,11 @@ function main() {
   }
 
   console.log(`Preflight passed for profile "${profile}".`);
+
+  if (verifyOAuth) {
+    console.log('\nRunning OAuth provider verification…');
+    runOAuthVerify(projectRoot);
+  }
 }
 
 main();

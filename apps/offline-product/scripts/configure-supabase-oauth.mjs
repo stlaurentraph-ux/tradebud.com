@@ -30,7 +30,14 @@ const PROJECT_REF = process.env.SUPABASE_PROJECT_REF?.trim() || 'uzsktajlnofosxe
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN?.trim();
 const SITE_URL = process.env.SUPABASE_SITE_URL?.trim() || 'https://dashboard.tracebud.com';
 const REDIRECT_URLS =
-  process.env.SUPABASE_REDIRECT_URLS?.trim() || 'tracebudoffline://auth/callback';
+  process.env.SUPABASE_REDIRECT_URLS?.trim() ||
+  [
+    'tracebudoffline://auth/callback',
+    'tracebudoffline://**',
+    'exp://**',
+    'exp://**/--/auth/callback',
+    'https://dashboard.tracebud.com/**',
+  ].join(',');
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID?.trim() || 'com.tracebud.app';
 
 if (!ACCESS_TOKEN) {
@@ -101,6 +108,7 @@ async function main() {
     patch.external_apple_client_id = appleServicesId;
     patch.external_apple_secret = appleSecret;
     patch.external_apple_email_optional = true;
+    patch.external_apple_skip_nonce_check = true;
     const extraIds = [APPLE_BUNDLE_ID].filter((id) => id && id !== appleServicesId);
     if (extraIds.length > 0) {
       patch.external_apple_additional_client_ids = extraIds.join(',');

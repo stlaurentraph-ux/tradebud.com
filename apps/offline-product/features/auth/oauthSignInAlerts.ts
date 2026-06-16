@@ -10,15 +10,19 @@ export function showOAuthSignInFailureAlert(
   const body =
     messageCode === 'sign_in_apple_not_completed'
       ? t('sign_in_apple_not_completed')
+      : messageCode === 'sign_in_field_bootstrap_failed'
+        ? t('sign_in_field_bootstrap_failed')
       : messageCode === 'sign_in_oauth_needs_signup'
       ? t('sign_in_oauth_needs_signup')
       : messageCode === 'sign_in_oauth_cancelled'
         ? t('sign_in_oauth_cancelled')
         : messageCode === 'sign_in_oauth_failed'
           ? t('sign_in_oauth_failed')
+          : messageCode === 'sign_in_oauth_provider_disabled'
+            ? t('sign_in_oauth_provider_disabled')
           : messageCode;
 
-  if (messageCode === 'sign_in_oauth_cancelled') {
+  if (messageCode === 'sign_in_oauth_cancelled' || messageCode === 'sign_in_field_bootstrap_failed') {
     Alert.alert(t('sign_in'), body);
     return;
   }

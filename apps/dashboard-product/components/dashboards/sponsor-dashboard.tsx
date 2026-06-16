@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useContext, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { useSponsorViewControls } from '@/lib/sponsor-view';
+import { useSponsorView } from '@/lib/sponsor-view';
 import {
   ArrowRight,
   Banknote,
@@ -18,8 +18,30 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { deriveInterventionCounts } from '@/lib/sponsor-dashboard-mappers';
+import { useSponsorDashboardSummary } from '@/lib/use-sponsor-dashboard-summary';
 import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
 import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
+import { VirginStatePanel } from '@/components/dashboards/virgin-state-panel';
+import { SponsorNetworkHero } from '@/components/dashboards/sponsor-network-hero';
+import { SponsorNetworkCoverage } from '@/components/dashboards/sponsor-network-coverage';
+import { SponsorRoleClassification } from '@/components/dashboards/sponsor-role-classification';
+import { SponsorTransparencyPanel } from '@/components/dashboards/sponsor-transparency-panel';
+import { NorthStarKpi } from '@/components/dashboards/north-star-kpi';
+import { DashboardQuickActions } from '@/components/dashboards/dashboard-quick-actions';
+import { DeferredDashboardSection } from '@/components/dashboards/deferred-dashboard-section';
+import { getNorthStarForRole } from '@/lib/dashboard-north-star';
+import type { DashboardHomeResources } from '@/lib/dashboard-home-data';
+import { homeActivityProps, homeCampaignProps } from '@/lib/dashboard-home-props';
+import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
+import { LocaleContext } from '@/lib/locale-context';
+import { translateNavItemName } from '@/lib/nav-labels';
+import {
+  formatSponsorBillingQuickHint,
+  formatSponsorStatHint,
+  getNorthStarPriorityLabel,
+  getSponsorDashboardLabels,
+  getSponsorInterventionItems,
+} from '@/lib/terminology-labels';
 
 interface SponsorDashboardProps {
   metrics: {
@@ -29,15 +51,18 @@ interface SponsorDashboardProps {
     compliant_plots: number;
     total_farmers: number;
   };
+  home?: DashboardHomeResources;
 }
 
 type BackendOrganisation = {
   id?: string;
   name?: string;
   country?: string;
+  type?: string;
+  status?: string;
   onboardingCompleteness?: number;
   relationship?: string;
-  fundingCoverage?: string;
+  roleInNetwork?: string;
 };
 
 type BackendCampaign = {
@@ -51,17 +76,56 @@ type BackendCampaign = {
   commodity?: string;
 };
 
-export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
-  const { sponsorView, setSponsorView } = useSponsorViewControls();
-  const [organisations, setOrganisations] = useState<BackendOrganisation[]>([]);
-  const [campaigns, setCampaigns] = useState<BackendCampaign[]>([]);
-  const [orgCount, setOrgCount] = useState<number | null>(null);
-  const [campaignCount, setCampaignCount] = useState<number | null>(null);
-  const [draftCampaignCount, setDraftCampaignCount] = useState<number>(0);
-  const atRiskOrgs = useMemo(
-    () => organisations.filter((org) => Number(org.onboardingCompleteness ?? 0) < 80).length,
-    [organisations]
+function mapOrganisationRecord(record: Record<string, unknown>): BackendOrganisation {
+  const completenessRaw = Number(record.onboardingCompleteness);
+  const status = String(record.status ?? '').toUpperCase();
+  return {
+    id: String(record.id ?? ''),
+    name: String(record.name ?? 'Unnamed Organisation'),
+    country: String(record.country ?? 'Unknown'),
+    type: String(record.type ?? record.roleInNetwork ?? 'partner'),
+    status,
+    onboardingCompleteness: Number.isFinite(completenessRaw)
+      ? completenessRaw
+      : status === 'ACTIVE'
+        ? 85
+        : status === 'PENDING'
+          ? 55
+          : 0,
+    relationship: typeof record.relationship === 'string' ? record.relationship : undefined,
+    roleInNetwork: typeof record.roleInNetwork === 'string' ? record.roleInNetwork : undefined,
+  };
+}
+
+export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const copy = useMemo(() => getSponsorDashboardLabels(t), [t]);
+  const sponsorView = useSponsorView();
+  const fetchedSummary = useSponsorDashboardSummary(!home?.sponsorSummary, {
+    total_plots: metrics.total_plots,
+    compliant_plots: metrics.compliant_plots,
+  });
+  const summary = home?.sponsorSummary
+    ? { ...home.sponsorSummary, isLoading: false, error: null }
+    : fetchedSummary;
+
+  const organisations = useMemo(
+    () =>
+      summary.rawOrganisations
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map(mapOrganisationRecord),
+    [summary.rawOrganisations],
   );
+  const campaigns = summary.rawCampaigns;
+  const orgCount = summary.organisationCount;
+  const campaignCount = summary.campaignCount;
+  const draftCampaignCount = summary.draftCampaignCount;
+  const countryCoverage = summary.countryCoverage;
+  const commodityCoverage = summary.commodityCoverage;
+  const networkRoles = summary.networkRoles;
+  const transparencyMetrics = summary.transparencyMetrics;
+
   const withSponsorView = (href: string) => {
     const separator = href.includes('?') ? '&' : '?';
     return `${href}${separator}sponsorView=${sponsorView}`;
@@ -72,44 +136,10 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
       ? ['Network', 'Organisations', 'Compliance Health', 'Programmes', 'Reporting']
       : ['Compliance Health', 'Programmes', 'Reporting', 'Billing & Coverage', 'Requests'];
 
-  useEffect(() => {
-    const token = window.sessionStorage.getItem('tracebud_token');
-    fetch('/api/admin/organizations', {
-      method: 'GET',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      cache: 'no-store',
-    })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (Array.isArray(payload)) {
-          const typed = payload.filter((item): item is BackendOrganisation => Boolean(item) && typeof item === 'object');
-          setOrganisations(typed);
-          setOrgCount(typed.length);
-        }
-      })
-      .catch(() => undefined);
-
-    fetch('/api/requests/campaigns', {
-      method: 'GET',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      cache: 'no-store',
-    })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (!Array.isArray(payload)) return;
-        const typed = payload.filter((item): item is BackendCampaign => Boolean(item) && typeof item === 'object');
-        setCampaigns(typed);
-        setCampaignCount(payload.length);
-        setDraftCampaignCount(
-          typed.filter(
-            (item) =>
-              typeof item.status === 'string' && item.status.toUpperCase() === 'DRAFT'
-          ).length
-        );
-      })
-      .catch(() => undefined);
-
-  }, []);
+  const atRiskOrgs = useMemo(
+    () => organisations.filter((org) => Number(org.onboardingCompleteness ?? 0) < 80).length,
+    [organisations],
+  );
 
   const networkHealthSegments = useMemo(
     () =>
@@ -127,7 +157,7 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
           escalations: hasCompleteness && complianceRate < 80 ? 1 : 0,
         };
       }),
-    [organisations]
+    [organisations],
   );
 
   const sponsorProgrammes = useMemo(
@@ -147,82 +177,111 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
           status: status === 'DRAFT' ? 'Draft' : status === 'COMPLETED' ? 'Completed' : 'Active',
         };
       }),
-    [campaigns]
+    [campaigns],
   );
 
   const interventionQueue = useMemo(() => {
-    const { pendingApprovals, uncoveredCoverage, belowReadiness } = deriveInterventionCounts(organisations, campaigns);
-    return [
-      {
-        title: `${pendingApprovals} policy exceptions pending approval`,
-        area: 'Delegated Admin',
-      },
-      {
-        title: `${uncoveredCoverage} organisations with uncovered billing dependencies`,
-        area: 'Billing & Coverage',
-      },
-      {
-        title: `${belowReadiness} organisations below readiness threshold`,
-        area: 'Issues',
-      },
-    ];
-  }, [organisations, campaigns]);
+    const { pendingApprovals, uncoveredCoverage, belowReadiness } = deriveInterventionCounts(
+      organisations,
+      campaigns,
+    );
+    return getSponsorInterventionItems(
+      { pendingApprovals, uncoveredCoverage, belowReadiness },
+      t,
+    );
+  }, [organisations, campaigns, t]);
 
   const sponsorOverviewStats = useMemo(
     () => [
       {
-        label: 'Governed organisations',
-        value: orgCount !== null ? String(orgCount) : '--',
-        hint: orgCount !== null ? `${Math.max(0, Math.round(orgCount * 0.1))} pending activation` : 'Loading organisations',
+        label: copy.statCountries,
+        value: String(transparencyMetrics?.countriesCovered ?? 0),
+        hint: formatSponsorStatHint('countries', {
+          count: transparencyMetrics?.governedOrganisations ?? 0,
+        }, t),
         icon: Building2,
         tone: 'text-blue-600 bg-blue-100',
       },
       {
-        label: 'Active farmers',
-        value: metrics.total_farmers > 0 ? metrics.total_farmers.toLocaleString() : '--',
-        hint: metrics.total_plots > 0 ? `${metrics.total_plots.toLocaleString()} mapped plots` : 'Awaiting field data',
-        icon: Users,
+        label: copy.statCommodities,
+        value: String(transparencyMetrics?.commoditiesTracked ?? 0),
+        hint:
+          campaignCount !== null
+            ? formatSponsorStatHint('commodities', { count: campaignCount }, t)
+            : formatSponsorStatHint('commodities_loading', {}, t),
+        icon: Handshake,
         tone: 'text-emerald-600 bg-emerald-100',
       },
       {
-        label: 'Compliance health',
-        value: metrics.total_plots > 0 ? `${Math.round((metrics.compliant_plots / metrics.total_plots) * 100)}%` : '--',
-        hint: `${atRiskOrgs} high-risk segments`,
+        label: copy.statRoles,
+        value: String(transparencyMetrics?.networkRolesRepresented ?? 0),
+        hint: formatSponsorStatHint('roles', { count: transparencyMetrics?.activeContacts ?? 0 }, t),
+        icon: Users,
+        tone: 'text-cyan-700 bg-cyan-100',
+      },
+      {
+        label: copy.statTransparency,
+        value:
+          transparencyMetrics?.transparencyIndex != null
+            ? `${transparencyMetrics.transparencyIndex}%`
+            : '--',
+        hint: formatSponsorStatHint('transparency', { count: atRiskOrgs }, t),
         icon: ShieldCheck,
         tone: 'text-purple-600 bg-purple-100',
       },
-      {
-        label: 'Delegated admin alerts',
-        value: campaignCount !== null ? String(draftCampaignCount) : '--',
-        hint:
-          campaignCount !== null
-            ? `${draftCampaignCount} draft campaigns pending launch`
-            : 'Loading campaign signals',
-        icon: Scale,
-        tone: 'text-amber-700 bg-amber-100',
-      },
     ],
-    [orgCount, metrics.total_farmers, metrics.total_plots, metrics.compliant_plots, atRiskOrgs, campaignCount, draftCampaignCount]
+    [transparencyMetrics, campaignCount, atRiskOrgs, copy, t],
   );
+
+  const isVirginTenant = isVirginTenantForRole('sponsor', {
+    total_packages: metrics.total_packages,
+    total_plots: metrics.total_plots,
+    total_farmers: metrics.total_farmers,
+    organisation_count: orgCount,
+    contact_count: summary.contactCount,
+  });
+
+  if (isVirginTenant) {
+    return (
+      <VirginStatePanel
+        role="sponsor"
+        progress={{
+          organisation_count: orgCount,
+          contact_count: summary.contactCount,
+          outgoing_requests_pending: campaignCount,
+        }}
+      />
+    );
+  }
+
+  const northStar = getNorthStarForRole('sponsor', {
+    transparencyIndex: transparencyMetrics?.transparencyIndex ?? null,
+    atRiskOrganisations: atRiskOrgs,
+  }, t);
 
   return (
     <div className="space-y-6">
-      <CampaignsOverviewCard
-        title="Programmes"
-        description="Launch sponsor-funded programme campaigns to collect compliance data across your governed network"
-        createHref={withSponsorView('/programmes?new=1')}
-        listHref={withSponsorView('/programmes')}
-        createLabel="New programme"
-        emptyTitle="No programmes yet"
-        emptyDescription="Create your first programme campaign to onboard cooperatives and collect missing evidence."
-        emptyCtaLabel="Launch first programme"
-        listLinkLabel="View all programmes"
+      {northStar ? <NorthStarKpi config={northStar} priorityLabel={getNorthStarPriorityLabel(t)} /> : null}
+      <SponsorNetworkHero
+        sponsorView={sponsorView}
+        countriesCovered={transparencyMetrics?.countriesCovered ?? 0}
+        commoditiesTracked={transparencyMetrics?.commoditiesTracked ?? 0}
+        withSponsorView={withSponsorView}
       />
 
-      <span className="sr-only">
-        Network metrics snapshot: {metrics.total_packages} packages, {metrics.total_plots} plots (
-        {metrics.compliant_plots} compliant), {metrics.total_farmers} farmers.
-      </span>
+      <CampaignsOverviewCard
+        title={copy.campaignTitle}
+        description={copy.campaignDescription}
+        createHref={withSponsorView('/programmes?new=1')}
+        listHref={withSponsorView('/programmes')}
+        createLabel={copy.campaignCreate}
+        emptyTitle={copy.campaignEmptyTitle}
+        emptyDescription={copy.campaignEmptyDescription}
+        emptyCtaLabel={copy.campaignEmptyCta}
+        listLinkLabel={copy.campaignListLink}
+        {...homeCampaignProps(home)}
+      />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {sponsorOverviewStats.map((stat) => (
           <Card key={stat.label}>
@@ -242,88 +301,86 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
         ))}
       </div>
 
+      <DeferredDashboardSection minHeight={320}>
+      <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardContent className="p-6">
           <div>
-            <CardTitle>Sponsor Emphasis</CardTitle>
-            <CardDescription>
-              Same governance workspace, with default priorities tuned for country programmes or brand sponsors.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={sponsorView === 'country' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSponsorView('country')}
-            >
-              Country Sponsor
-            </Button>
-            <Button
-              variant={sponsorView === 'brand' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSponsorView('brand')}
-            >
-              Brand Sponsor
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {emphasisOrder.map((section, index) => (
-              <Badge key={section} variant={index < 2 ? 'default' : 'secondary'}>
-                {index + 1}. {section}
-              </Badge>
-            ))}
+            <p className="text-sm font-medium">{copy.emphasisTitle}</p>
+            <p className="text-sm text-muted-foreground">
+              {sponsorView === 'country' ? copy.emphasisCountry : copy.emphasisBrand}{' '}
+              {copy.emphasisSwitchHint}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {emphasisOrder.map((section, index) => (
+                <Badge key={section} variant={index < 2 ? 'default' : 'secondary'}>
+                  {index + 1}. {t ? translateNavItemName(section, t) : section}
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      <SponsorNetworkCoverage
+        countries={countryCoverage}
+        commodities={commodityCoverage}
+        organisationsHref={withSponsorView('/organisations')}
+      />
+
+      <SponsorRoleClassification roles={networkRoles} inviteHref={withSponsorView('/contacts/add?mode=contact')} />
+
+      {transparencyMetrics ? (
+        <SponsorTransparencyPanel
+          metrics={transparencyMetrics}
+          complianceHealthHref={withSponsorView('/compliance-health')}
+        />
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Network Health Snapshot</CardTitle>
-              <CardDescription>
-                Sponsor-scoped visibility across member organisations, compliance posture, and escalation pressure.
-              </CardDescription>
+          <CardContent className="pt-0">
+            <div className="flex items-center justify-between border-b py-4">
+              <div>
+                <p className="text-lg font-semibold">{copy.networkHealthTitle}</p>
+                <p className="text-sm text-muted-foreground">{copy.networkHealthDescription}</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={withSponsorView('/organisations')}>
+                  {copy.networkHealthViewAll}
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={withSponsorView('/organisations')}>
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               {networkHealthSegments.map((org) => (
                 <div
                   key={org.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow"
+                  className="flex items-center justify-between rounded-lg border bg-card p-4 transition-shadow hover:shadow-sm"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{org.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {org.country} • Risk tier {org.riskTier}
+                        {org.country} · Risk tier {org.riskTier}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-sm font-medium">{org.complianceRate}%</p>
-                      <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div className="mt-1 h-1.5 w-20 rounded-full bg-gray-200">
                         <div
                           className={cn(
                             'h-1.5 rounded-full',
                             org.complianceRate >= 90
                               ? 'bg-emerald-500'
                               : org.complianceRate >= 70
-                              ? 'bg-amber-500'
-                              : 'bg-red-500'
+                                ? 'bg-amber-500'
+                                : 'bg-red-500',
                           )}
                           style={{ width: `${org.complianceRate}%` }}
                         />
@@ -332,24 +389,19 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
                     <Badge
                       className={cn(
                         'capitalize',
-                        org.status === 'At Risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                        org.status === 'At Risk' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800',
                       )}
                     >
                       {org.status}
                     </Badge>
-                    {org.escalations > 0 && (
-                      <Badge variant="outline" className="text-amber-600">
-                        {org.escalations} escalations
-                      </Badge>
-                    )}
                   </div>
                 </div>
               ))}
               {networkHealthSegments.length === 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  <p>No organisation data yet. Add organisations to populate health insights.</p>
+                  <p>{copy.networkHealthEmpty}</p>
                   <Button asChild className="mt-4" size="sm">
-                    <Link href={withSponsorView('/organisations')}>Add organisations</Link>
+                    <Link href={withSponsorView('/organisations')}>{copy.networkHealthAddOrgs}</Link>
                   </Button>
                 </div>
               ) : null}
@@ -358,43 +410,41 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
         </Card>
 
         <DashboardActivityCard
-          title="Governance Activity"
-          description="Latest delegated admin, policy, and coverage events"
-          emptyMessage="Governance activity will appear once organisations, programmes, and shipments generate events."
+          title={copy.governanceActivityTitle}
+          description={copy.governanceActivityDescription}
+          emptyMessage={copy.governanceActivityEmpty}
           maxHeight={280}
+          {...homeActivityProps(home)}
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Programme Performance</CardTitle>
-              <CardDescription>Track sponsor-funded interventions and Open Chain profile outcomes</CardDescription>
+          <CardContent className="pt-0">
+            <div className="flex items-center justify-between border-b py-4">
+              <div>
+                <p className="text-lg font-semibold">{copy.programmeTitle}</p>
+                <p className="text-sm text-muted-foreground">{copy.programmeDescription}</p>
+              </div>
+              <Button asChild>
+                <Link href={withSponsorView('/programmes?new=1')}>
+                  <Handshake className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {copy.programmeNewCta}
+                </Link>
+              </Button>
             </div>
-            <Button asChild>
-              <Link href={withSponsorView('/programmes?new=1')}>
-                <Handshake className="mr-2 h-4 w-4" />
-                New programme
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               {sponsorProgrammes.map((programme) => (
-                <div
-                  key={programme.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card"
-                >
+                <div key={programme.id} className="flex items-center justify-between rounded-lg border bg-card p-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex flex-wrap items-center gap-3">
                       <p className="font-medium text-foreground">{programme.title}</p>
                       <Badge variant="outline" className="text-xs">
                         {programme.scope}
                       </Badge>
                       <Badge variant="secondary">{programme.status}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">Adoption coverage and outcome signal across governed entities</p>
+                    <p className="text-sm text-muted-foreground">{copy.programmeAdoptionHint}</p>
                   </div>
                   <div className="w-36">
                     <p className="mb-1 text-right text-sm font-medium">{programme.adoption}%</p>
@@ -406,74 +456,77 @@ export function SponsorDashboard({ metrics }: SponsorDashboardProps) {
               ))}
               {sponsorProgrammes.length === 0 ? (
                 <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  <p>No programme campaigns yet. Launch one to populate this section.</p>
+                  <p>{copy.programmeEmpty}</p>
                   <Button asChild className="mt-4" size="sm" variant="outline">
-                    <Link href={withSponsorView('/programmes?new=1')}>Launch first programme</Link>
+                    <Link href={withSponsorView('/programmes?new=1')}>{copy.programmeEmptyCta}</Link>
                   </Button>
                 </div>
               ) : null}
             </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader>
-            <CardTitle>Intervention Queue</CardTitle>
-            <CardDescription>Urgent sponsor-level actions requiring bounded intervention</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {interventionQueue.map((item) => (
-              <div key={item.area} className="rounded-md border p-3">
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="text-xs text-muted-foreground">{item.area}</p>
-              </div>
-            ))}
+          <CardContent className="pt-6">
+            <p className="text-lg font-semibold">{copy.interventionTitle}</p>
+            <p className="mb-4 text-sm text-muted-foreground">{copy.interventionDescription}</p>
+            <div className="space-y-3">
+              {interventionQueue.map((item) => (
+                <div key={item.area} className="rounded-md border p-3">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.area}</p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      <DashboardQuickActions visible={isVirginTenant} className="grid gap-4 md:grid-cols-3">
+        <Card className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="pt-6">
             <Link href={withSponsorView('/delegated-admin')} className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Scale className="h-6 w-6 text-blue-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                <Scale className="h-6 w-6 text-blue-600" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Delegated Admin</p>
-                <p className="text-sm text-muted-foreground">Review scoped interventions</p>
+                <p className="font-medium text-foreground">{copy.quickDelegatedAdmin}</p>
+                <p className="text-sm text-muted-foreground">{copy.quickDelegatedAdminHint}</p>
               </div>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="pt-6">
             <Link href={withSponsorView('/reports')} className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Gauge className="h-6 w-6 text-purple-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                <Gauge className="h-6 w-6 text-purple-600" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Network Reporting</p>
-                <p className="text-sm text-muted-foreground">Analyse health and programme outcomes</p>
+                <p className="font-medium text-foreground">{copy.quickReporting}</p>
+                <p className="text-sm text-muted-foreground">{copy.quickReportingHint}</p>
               </div>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="pt-6">
             <Link href={withSponsorView('/billing-coverage')} className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Banknote className="h-6 w-6 text-amber-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100">
+                <Banknote className="h-6 w-6 text-amber-600" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Billing & Coverage</p>
-                <p className="text-sm text-muted-foreground">{atRiskOrgs} at-risk orgs with funding dependencies</p>
+                <p className="font-medium text-foreground">{copy.quickBilling}</p>
+                <p className="text-sm text-muted-foreground">{formatSponsorBillingQuickHint(atRiskOrgs, t)}</p>
               </div>
             </Link>
           </CardContent>
         </Card>
+      </DashboardQuickActions>
       </div>
+      </DeferredDashboardSection>
     </div>
   );
 }

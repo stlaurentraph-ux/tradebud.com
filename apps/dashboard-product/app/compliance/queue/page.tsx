@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Filter, AlertTriangle } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -11,6 +11,21 @@ import { PermissionGate } from '@/components/common/permission-gate';
 import { SeverityBadge } from '@/components/ui/severity-badge';
 import { usePackages } from '@/lib/use-packages';
 import { cn } from '@/lib/utils';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  buildComplianceQueueBreadcrumbs,
+  getComplianceQueueEmptyMessage,
+  getComplianceQueueFilterAllLabel,
+  getComplianceQueueFilterGroupLabel,
+  getComplianceQueueFiltersLabel,
+  getComplianceQueueLoadingMessage,
+  getComplianceQueuePageSubtitle,
+  getComplianceQueuePageTitle,
+  getComplianceQueueReviewIssuesLabel,
+  getComplianceQueueRiskSuffixLabel,
+  getComplianceQueueStatLabel,
+  getComplianceQueueStatusLabel,
+} from '@/lib/workflow-terminology-labels';
 import type { DDSPackage } from '@/types';
 
 // Canonical compliance severity levels
@@ -88,20 +103,16 @@ function getSLAColor(hoursRemaining: number): string {
   return 'text-emerald-600 bg-emerald-100';
 }
 
-function getStatusLabel(status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED') {
-  switch (status) {
-    case 'RESOLVED':
-      return 'Resolved';
-    case 'ESCALATED':
-      return 'Escalated';
-    case 'IN_PROGRESS':
-      return 'In Progress';
-    default:
-      return 'Open';
-  }
+function getStatusLabel(
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED',
+  t?: (key: string) => string,
+) {
+  return getComplianceQueueStatusLabel(status, t);
 }
 
 export default function ComplianceQueuePage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { packages, isLoading, error } = usePackages();
   const [selectedStatus, setSelectedStatus] = useState<
     'all' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED'
@@ -142,13 +153,9 @@ export default function ComplianceQueuePage() {
     <PermissionGate permission="compliance:view">
       <div className="flex flex-col">
         <AppHeader
-          title="Compliance Issues Queue"
-          subtitle="Review and resolve compliance issues sorted by severity and SLA"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Compliance' },
-            { label: 'Issues Queue' },
-          ]}
+          title={getComplianceQueuePageTitle(t)}
+          subtitle={getComplianceQueuePageSubtitle(t)}
+          breadcrumbs={buildComplianceQueueBreadcrumbs(t)}
         />
 
         <div className="flex-1 space-y-6 p-6">
@@ -164,7 +171,7 @@ export default function ComplianceQueuePage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-3xl font-bold text-destructive">{blockingCount}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Blocking Issues</p>
+                  <p className="text-sm text-muted-foreground mt-1">{getComplianceQueueStatLabel('blocking', t)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -172,7 +179,7 @@ export default function ComplianceQueuePage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-3xl font-bold text-amber-600">{pendingCount}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Packages Pending</p>
+                  <p className="text-sm text-muted-foreground mt-1">{getComplianceQueueStatLabel('pending', t)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -182,7 +189,7 @@ export default function ComplianceQueuePage() {
                   <p className="text-3xl font-bold text-foreground">
                     {sortedQueue.filter((p) => p.sla_hours_remaining <= 4).length}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">Critical SLA</p>
+                  <p className="text-sm text-muted-foreground mt-1">{getComplianceQueueStatLabel('critical_sla', t)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -190,7 +197,7 @@ export default function ComplianceQueuePage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <p className="text-3xl font-bold text-foreground">{sortedQueue.length}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Total in Queue</p>
+                  <p className="text-sm text-muted-foreground mt-1">{getComplianceQueueStatLabel('total', t)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -201,13 +208,13 @@ export default function ComplianceQueuePage() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-base font-medium">Filters</CardTitle>
+                <CardTitle className="text-base font-medium">{getComplianceQueueFiltersLabel(t)}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-4">
                 <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{getComplianceQueueFilterGroupLabel('status', t)}</span>
                   {(['all', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'ESCALATED'] as const).map(
                     (status) => (
                       <Button
@@ -217,13 +224,13 @@ export default function ComplianceQueuePage() {
                         onClick={() => setSelectedStatus(status)}
                         className="capitalize"
                       >
-                        {status === 'all' ? 'all' : getStatusLabel(status)}
+                        {status === 'all' ? getComplianceQueueFilterAllLabel(t) : getStatusLabel(status, t)}
                       </Button>
                     ),
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Risk:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{getComplianceQueueFilterGroupLabel('risk', t)}</span>
                   {(['all', 'low', 'medium', 'high'] as const).map((risk) => (
                     <Button
                       key={risk}
@@ -237,7 +244,7 @@ export default function ComplianceQueuePage() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">Severity:</span>
+                  <span className="text-sm font-medium text-muted-foreground">{getComplianceQueueFilterGroupLabel('severity', t)}</span>
                   {(['all', 'BLOCKING', 'WARNING', 'INFO'] as const).map((sev) => (
                     <Button
                       key={sev}
@@ -258,11 +265,11 @@ export default function ComplianceQueuePage() {
           <div className="space-y-3">
             {isLoading ? (
               <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
-                <p className="text-sm text-muted-foreground">Loading compliance queue...</p>
+                <p className="text-sm text-muted-foreground">{getComplianceQueueLoadingMessage(t)}</p>
               </div>
             ) : filteredQueue.length === 0 ? (
               <div className="rounded-lg border border-border bg-secondary/30 py-12 text-center">
-                <p className="text-sm text-muted-foreground">No packages match the selected filters</p>
+                <p className="text-sm text-muted-foreground">{getComplianceQueueEmptyMessage(t)}</p>
               </div>
             ) : (
               filteredQueue.map((item) => {
@@ -288,7 +295,7 @@ export default function ComplianceQueuePage() {
                                 {item.code}
                               </Link>
                               <Badge variant="outline" className={cn('capitalize', getRiskColor(item.risk_level))}>
-                                {item.risk_level} Risk
+                                {item.risk_level} {getComplianceQueueRiskSuffixLabel(t)}
                               </Badge>
                               {maxSeverity !== 'INFO' && (
                                 <SeverityBadge severity={maxSeverity} />
@@ -330,7 +337,7 @@ export default function ComplianceQueuePage() {
                         <div className="flex items-center gap-2 justify-end">
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/compliance/issues?package=${item.id}`}>
-                              Review Issues
+                              {getComplianceQueueReviewIssuesLabel(t)}
                               <ChevronRight className="ml-1 h-3 w-3" />
                             </Link>
                           </Button>

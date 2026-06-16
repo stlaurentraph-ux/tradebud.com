@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { toast } from 'sonner';
 import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,11 @@ import {
   releaseStaleClaims,
   retryRun,
 } from '@/lib/integrations-v2-api';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getIntegrationsReleaseStaleLabel,
+  getIntegrationsRunQueueLoadErrorLabel,
+} from '@/lib/workflow-terminology-labels';
 
 type ConfirmAction =
   | { type: 'claim'; run: IntegrationRun }
@@ -26,6 +31,8 @@ type ConfirmAction =
   | { type: 'retry'; run: IntegrationRun };
 
 export function RunQueueSection() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [isLoading, setIsLoading] = useState(true);
   const [runs, setRuns] = useState<IntegrationRun[]>([]);
   const [summary, setSummary] = useState<RunSummary>({
@@ -65,11 +72,11 @@ export function RunQueueSection() {
       setSummary(summaryState);
       setRuns(queueRuns);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load run operations data.');
+      toast.error(error instanceof Error ? error.message : getIntegrationsRunQueueLoadErrorLabel(t));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Load initial data
   useEffect(() => {
@@ -235,7 +242,7 @@ export function RunQueueSection() {
           className="flex-shrink-0"
         >
           <Clock className="mr-1.5 h-4 w-4" />
-          Release Stale ({summary.staleClaimCount})
+          {getIntegrationsReleaseStaleLabel(summary.staleClaimCount, t)}
         </Button>
       </div>
 

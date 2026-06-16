@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> EAS build: ios / profile simulator (includes EXPO_PUBLIC_STORE_DEMO=1)"
+echo "==> EAS build: ios / profile simulator"
 EAS_BUILD_NO_EXPO_GO_WARNING=true EAS_NO_VCS=1 node scripts/eas-build.mjs \
   --platform ios \
   --profile simulator \

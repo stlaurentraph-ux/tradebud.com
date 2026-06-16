@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Scale, Wallet, Users, FileCheck } from 'lucide-react';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const premiumDecisions = [
   { id: 'PD-0182', status: 'approved', amount: '$18,240', split: '70% cash / 30% services' },
@@ -13,6 +15,9 @@ const premiumDecisions = [
 ];
 
 export default function GovernancePage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'governance', { title: "Governance", subtitle: "Manage cooperative structure, premium distribution, portability review, and Open Chain readiness" });
   const [insights, setInsights] = useState({
     total_farmers: 0,
     portability_reviews_pending: 0,
@@ -35,9 +40,9 @@ export default function GovernancePage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Governance"
-        subtitle="Manage cooperative structure, premium distribution, portability review, and Open Chain readiness"
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Governance' }]}
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Governance' })}
       />
 
       <div className="flex-1 space-y-6 p-6">

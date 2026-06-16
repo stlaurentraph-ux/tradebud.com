@@ -1,0 +1,22 @@
+{
+  "common.save": "አስቀምጥ",
+  "common.cancel": "ሰርዝ",
+  "common.loading": "በመጫን ላይ…",
+  "nav.dashboard": "ዳሽቦርድ",
+  "nav.settings": "ቅንብሮች",
+  "nav.help": "እገዛ",
+  "nav.shipments": "ማጓጓዣዎች",
+  "nav.harvests": "መከራ",
+  "nav.plots": "ቦታዎች",
+  "nav.farmers": "ገበሬዎች",
+  "nav.compliance": "ተገዢነት",
+  "nav.members": "አባላት",
+  "settings.preferences.language": "ቋንቋ",
+  "settings.preferences.language_policy_origin": "የመነሻ ሀገሮች ቋንቋዎች በመጀመሪያ፣ ከዚያ ለመሬት እና ላክ ቡድኖች የንግድ ቋንቋዎች።",
+  "status.shipment.ready": "ዝግጁ",
+  "status.shipment.sealed": "ተዘግቷል",
+  "status.shipment.handed_off": "ተላልፏል",
+  "status.compliance.blocked": "ተከለክሏል",
+  "workflow.review_queue.action.review_shipment": "ማጓጓዣ ይገምግሙ",
+  "workflow.review_queue.blocked": "ተከለክሏል"
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useContext, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -26,10 +26,72 @@ import { toast } from 'sonner';
 import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages/package-status-badge';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { BlockerCard } from '@/components/ui/blocker-card';
+import { ShipmentStateTimeline } from '@/components/packages/shipment-state-timeline';
+import { Timeline } from '@/components/ui/timeline-row';
+import { packageToTimelineEvents } from '@/lib/package-timeline';
 import { generateHarvestPackage, submitHarvestPackage } from '@/lib/harvest-package-actions';
 import { usePackageDetail } from '@/lib/use-package-detail';
 import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  buildPackageBreadcrumbs,
+  formatPackagePlotMeta,
+  formatPackageSeasonYear,
+  getAssembleShipmentActionLabel,
+  getAssociatedProducersCardTitle,
+  getCommonCancelLabel,
+  getGenerateFilingArtifactsLabel,
+  getGenerateFilingArtifactsSuccessToast,
+  getLiabilityAcknowledgementBody,
+  getLinkProducerActionLabel,
+  getNoProducersLinkedMessage,
+  getPackageAddFirstPlotLabel,
+  getPackageAddPlotLabel,
+  getPackageAssociatedPlotsTitle,
+  getPackageCodeLabel,
+  getPackageCreatedLabel,
+  getPackageDetailBackLabel,
+  getPackageDetailComplianceStatusLabel,
+  getPackageDetailStatusCardTitle,
+  getPackageDetailsSidebarTitle,
+  getPackageFilingStatusPrefix,
+  getPackageFilingWorkflowHint,
+  getPackageFilingWorkflowTitle,
+  getPackageFpicLabel,
+  getPackageFpicStatusLabel,
+  getPackageGenerateErrorMessage,
+  getPackageLaborLabel,
+  getPackageLaborStatusLabel,
+  getPackageLiabilityAcknowledgeLabel,
+  getPackageLiabilityModalTitle,
+  getPackageLoadErrorPrefix,
+  getPackageLoadingMessage,
+  getPackageLoadingReadinessMessage,
+  getPackageNoPlotsMessage,
+  getPackagePendingStatusLabel,
+  getPackagePreflightBlockersDescription,
+  getPackagePreflightBlockersTitle,
+  getPackageQuickStatsPlotsLabel,
+  getPackageQuickStatsTitle,
+  getPackageQuickStatsTotalHaLabel,
+  getPackageReadinessBlockersHeading,
+  getPackageReadinessEntityLabel,
+  getPackageRecentEventsTitle,
+  getPackageRemediationRunComplianceLabel,
+  getPackageSeasonYearLabel,
+  getPackageSlaImmediateLabel,
+  getPackageSubmitActionLabel,
+  getPackageSubmitErrorMessage,
+  getPackageSubmitSuccessToast,
+  getPackageSubmittedAwaitingMessage,
+  getPackageSubmittedDateLabel,
+  getPackageUpdatedLabel,
+  getPackageVerifiedStatusLabel,
+  getQuickStatsProducerLabel,
+  getRunPackageComplianceLabel,
+  getTracesReferenceLabel,
+} from '@/lib/workflow-terminology-labels';
 
 interface PackageDetailPageProps {
   params: Promise<{ id: string }>;
@@ -37,7 +99,9 @@ interface PackageDetailPageProps {
 
 export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const { user } = useAuth();
-  const isCooperative = user?.active_role === 'cooperative';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const { id } = use(params);
   const { pkg, isLoading, error, refetch } = usePackageDetail(id, user?.tenant_id ?? null);
   const { data: readiness, isLoading: readinessLoading } = usePackageReadiness(id);
@@ -55,7 +119,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
 
   const readinessBlockers =
     readiness?.blockers.map((issue) => issue.message) ??
-    (readinessLoading ? ['Loading readiness checks...'] : []);
+    (readinessLoading ? [getPackageLoadingReadinessMessage(t)] : []);
   const canGenerate = pkg?.status === 'DRAFT' && readinessBlockers.length === 0;
   const canSubmit = pkg?.status === 'READY' && readinessBlockers.length === 0;
 
@@ -67,10 +131,10 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
       await generateHarvestPackage(pkg.id);
       setShowLiabilityModal(false);
       refetch();
-      toast.success('Filing artifacts generated. Package is ready to submit.');
+      toast.success(getGenerateFilingArtifactsSuccessToast(role, t));
     } catch (generateError) {
       const message =
-        generateError instanceof Error ? generateError.message : 'Failed to generate filing artifacts.';
+        generateError instanceof Error ? generateError.message : getPackageGenerateErrorMessage(t);
       setActionError(message);
       toast.error(message);
     } finally {
@@ -87,12 +151,10 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
       const result = await submitHarvestPackage(pkg.id, idempotencyKey);
       refetch();
       toast.success(
-        result.replayed
-          ? 'Submission replayed from idempotency cache.'
-          : `Package submitted${result.tracesReference ? ` (${result.tracesReference})` : ''}.`,
+        getPackageSubmitSuccessToast(role, result.tracesReference, result.replayed, t),
       );
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : 'Failed to submit package.';
+      const message = submitError instanceof Error ? submitError.message : getPackageSubmitErrorMessage(role, t);
       setActionError(message);
       toast.error(message);
     } finally {
@@ -103,28 +165,26 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   if (isLoading || !pkg) {
     return (
       <div className="flex flex-col p-6 text-sm text-muted-foreground">
-        {error ? `Failed to load package: ${error}` : 'Loading package details...'}
+        {error ? `${getPackageLoadErrorPrefix(role, t)}: ${error}` : getPackageLoadingMessage(role, t)}
       </div>
     );
   }
+
+  const timelineEvents = packageToTimelineEvents(pkg);
 
   return (
     <div className="flex flex-col">
       <AppHeader
         title={pkg.code}
         subtitle={pkg.supplier_name}
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Shipments', href: '/packages' },
-          { label: pkg.code },
-        ]}
+        breadcrumbs={buildPackageBreadcrumbs(role, pkg.code, pkg.id, undefined, t)}
         actions={
           <div className="flex items-center gap-2">
             <PermissionGate permission="compliance:run_check">
               <Button variant="outline" asChild>
                 <Link href={`/compliance?package=${pkg.id}`}>
                   <ShieldCheck className="mr-2 h-4 w-4" />
-                  Run Compliance
+                  {getRunPackageComplianceLabel(role, t)}
                 </Link>
               </Button>
             </PermissionGate>
@@ -137,7 +197,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                   disabled={!canSubmit || pendingAction !== null}
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  {pendingAction === 'submit' ? 'Submitting...' : 'Submit downstream handoff'}
+                  {getPackageSubmitActionLabel(role, pendingAction === 'submit', t)}
                 </Button>
               </PermissionGate>
             )}
@@ -146,7 +206,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 <Button asChild variant="default">
                   <Link href={`/packages/${pkg.id}/assemble`}>
                     <Lock className="mr-2 h-4 w-4" />
-                    Assemble Shipment
+                    {getAssembleShipmentActionLabel(role, t)}
                   </Link>
                 </Button>
               </PermissionGate>
@@ -173,7 +233,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         <Button variant="ghost" size="sm" className="mb-4" asChild>
           <Link href="/packages">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shipments
+            {getPackageDetailBackLabel(role, t)}
           </Link>
         </Button>
 
@@ -185,25 +245,41 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
               <BlockerCard
                 blockerType="INVALID_STATE"
                 severity="BLOCKING"
-                title="Filing preflight blockers"
-                description={`Resolve the following before generating or submitting: ${readinessBlockers.join(', ')}`}
-                relatedEntityLabel="Package readiness requirements"
-                slaCountdown="Immediate action required"
+                title={getPackagePreflightBlockersTitle(role, t)}
+                description={getPackagePreflightBlockersDescription(role, readinessBlockers, t)}
+                relatedEntityLabel={getPackageReadinessEntityLabel(role, t)}
+                slaCountdown={getPackageSlaImmediateLabel(t)}
                 remediationAction={{
-                  label: 'Run compliance checks',
+                  label: getPackageRemediationRunComplianceLabel(t),
                   href: `/compliance?package=${pkg.id}`,
                 }}
               />
             )}
 
+            <ShipmentStateTimeline
+              status={pkg.status}
+              packageId={pkg.id}
+              blockingCount={readinessBlockers.length}
+            />
+
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-medium">{getPackageRecentEventsTitle(role, t)}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Timeline events={timelineEvents} maxHeight={240} compact />
+              </CardContent>
+            </Card>
+
             {/* Backend filing workflow */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Filing Workflow</CardTitle>
+                <CardTitle className="text-base font-medium">{getPackageFilingWorkflowTitle(role, t)}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Current backend status: <span className="font-medium text-foreground">{pkg.status}</span>
+                  {getPackageFilingWorkflowHint(role, t)} {getPackageFilingStatusPrefix(t)}{' '}
+                  <span className="font-medium text-foreground">{pkg.status}</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {pkg.status === 'DRAFT' && (
@@ -213,7 +289,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                         disabled={!canGenerate || pendingAction !== null}
                       >
                         <Lock className="mr-2 h-4 w-4" />
-                        {pendingAction === 'generate' ? 'Generating...' : 'Generate filing artifacts'}
+                        {getGenerateFilingArtifactsLabel(pendingAction === 'generate', t)}
                       </Button>
                     </PermissionGate>
                   )}
@@ -226,20 +302,22 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                         disabled={!canSubmit || pendingAction !== null}
                       >
                         <Send className="mr-2 h-4 w-4" />
-                        {pendingAction === 'submit' ? 'Submitting...' : 'Submit to downstream'}
+                        {getPackageSubmitActionLabel(role, pendingAction === 'submit', t)}
                       </Button>
                     </PermissionGate>
                   )}
                   {pkg.status === 'SUBMITTED' && (
                     <p className="text-sm text-muted-foreground">
-                      This package has been submitted and is awaiting downstream processing.
+                      {getPackageSubmittedAwaitingMessage(role, t)}
                     </p>
                   )}
                 </div>
 
                 {readinessBlockers.length > 0 && (
                   <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
-                    <p className="text-sm font-semibold text-amber-900 mb-2">Readiness blockers:</p>
+                    <p className="text-sm font-semibold text-amber-900 mb-2">
+                      {getPackageReadinessBlockersHeading(t)}
+                    </p>
                     <ul className="space-y-1">
                       {readinessBlockers.map((issue, index) => (
                         <li key={index} className="text-sm text-amber-800 flex items-start gap-2">
@@ -256,24 +334,24 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Package Status Card */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Package Status</CardTitle>
+                <CardTitle className="text-base font-medium">{getPackageDetailStatusCardTitle(role, t)}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Package Status</span>
+                    <span className="text-xs text-muted-foreground">{getPackageDetailStatusCardTitle(role, t)}</span>
                     <PackageStatusBadge status={pkg.status} size="md" />
                   </div>
                   <Separator orientation="vertical" className="h-10" />
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Compliance Status</span>
+                    <span className="text-xs text-muted-foreground">{getPackageDetailComplianceStatusLabel(t)}</span>
                     <ComplianceStatusBadge status={pkg.compliance_status} size="md" />
                   </div>
                   {pkg.traces_reference && (
                     <>
                       <Separator orientation="vertical" className="h-10" />
                       <div className="flex flex-col gap-1">
-                        <span className="text-xs text-muted-foreground">Downstream Reference</span>
+                        <span className="text-xs text-muted-foreground">{getTracesReferenceLabel(role, t)}</span>
                         <span className="text-sm font-medium text-primary">{pkg.traces_reference}</span>
                       </div>
                     </>
@@ -285,11 +363,11 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Plots List */}
             <Card className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-base font-medium">Associated Plots</CardTitle>
+                <CardTitle className="text-base font-medium">{getPackageAssociatedPlotsTitle(t)}</CardTitle>
                 <PermissionGate permission="plots:create">
                   <Button variant="outline" size="sm">
                     <MapPin className="mr-2 h-4 w-4" />
-                    Add Plot
+                    {getPackageAddPlotLabel(t)}
                   </Button>
                 </PermissionGate>
               </CardHeader>
@@ -297,10 +375,10 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 {pkg.plots.length === 0 ? (
                   <div className="py-8 text-center">
                     <MapPin className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                    <p className="mt-2 text-sm text-muted-foreground">No plots associated yet</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{getPackageNoPlotsMessage(t)}</p>
                     <PermissionGate permission="plots:create">
                       <Button variant="outline" size="sm" className="mt-4">
-                        Add First Plot
+                        {getPackageAddFirstPlotLabel(t)}
                       </Button>
                     </PermissionGate>
                   </div>
@@ -319,7 +397,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                           <div>
                             <p className="text-sm font-medium text-foreground">{plot.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {plot.area_hectares} ha - Risk: {plot.deforestation_risk}
+                              {formatPackagePlotMeta(plot.area_hectares, plot.deforestation_risk, t)}
                             </p>
                           </div>
                         </div>
@@ -330,7 +408,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                             }`}
                           />
                           <span className="text-xs text-muted-foreground">
-                            {plot.verified ? 'Verified' : 'Pending'}
+                            {plot.verified ? getPackageVerifiedStatusLabel(t) : getPackagePendingStatusLabel(t)}
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </div>
@@ -344,11 +422,11 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Associated people list */}
             <Card className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
-                <CardTitle className="text-base font-medium">{isCooperative ? 'Associated Members' : 'Associated Producers'}</CardTitle>
+                <CardTitle className="text-base font-medium">{getAssociatedProducersCardTitle(role, t)}</CardTitle>
                 <PermissionGate permission="farmers:create">
                   <Button variant="outline" size="sm">
                     <Users className="mr-2 h-4 w-4" />
-                    {isCooperative ? 'Link Member' : 'Link Producer'}
+                    {getLinkProducerActionLabel(role, t)}
                   </Button>
                 </PermissionGate>
               </CardHeader>
@@ -356,7 +434,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                 {pkg.farmers.length === 0 ? (
                   <div className="py-8 text-center">
                     <Users className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                    <p className="mt-2 text-sm text-muted-foreground">{isCooperative ? 'No members linked yet' : 'No producers linked yet'}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{getNoProducersLinkedMessage(role, t)}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -374,11 +452,12 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                             <p className="text-sm font-medium text-foreground">{farmer.name}</p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span className={farmer.fpic_signed ? 'text-primary' : 'text-chart-4'}>
-                                FPIC: {farmer.fpic_signed ? 'Signed' : 'Pending'}
+                                {getPackageFpicLabel(t)} {getPackageFpicStatusLabel(farmer.fpic_signed, t)}
                               </span>
                               <span>-</span>
                               <span className={farmer.labor_compliant ? 'text-primary' : 'text-chart-4'}>
-                                Labor: {farmer.labor_compliant ? 'Compliant' : 'Pending'}
+                                {getPackageLaborLabel(t)}{' '}
+                                {getPackageLaborStatusLabel(farmer.labor_compliant, t)}
                               </span>
                             </div>
                           </div>
@@ -390,7 +469,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                             }`}
                           />
                           <span className="text-xs text-muted-foreground">
-                            {farmer.verified ? 'Verified' : 'Pending'}
+                            {farmer.verified ? getPackageVerifiedStatusLabel(t) : getPackagePendingStatusLabel(t)}
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </div>
@@ -407,7 +486,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Package Details */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Package Details</CardTitle>
+                <CardTitle className="text-base font-medium">{getPackageDetailsSidebarTitle(role, t)}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -415,7 +494,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Package Code</p>
+                    <p className="text-xs text-muted-foreground">{getPackageCodeLabel(role, t)}</p>
                     <p className="text-sm font-medium">{pkg.code}</p>
                   </div>
                 </div>
@@ -425,10 +504,8 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Season / Year</p>
-                    <p className="text-sm font-medium">
-                      Season {pkg.season} {pkg.year}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{getPackageSeasonYearLabel(t)}</p>
+                    <p className="text-sm font-medium">{formatPackageSeasonYear(pkg.season, pkg.year, t)}</p>
                   </div>
                 </div>
                 <Separator />
@@ -437,7 +514,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Created</p>
+                    <p className="text-xs text-muted-foreground">{getPackageCreatedLabel(t)}</p>
                     <p className="text-sm font-medium">
                       {new Date(pkg.created_at).toLocaleDateString()}
                     </p>
@@ -449,7 +526,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Last Updated</p>
+                    <p className="text-xs text-muted-foreground">{getPackageUpdatedLabel(t)}</p>
                     <p className="text-sm font-medium">
                       {new Date(pkg.updated_at).toLocaleDateString()}
                     </p>
@@ -463,7 +540,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                         <Send className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Submitted</p>
+                        <p className="text-xs text-muted-foreground">{getPackageSubmittedDateLabel(t)}</p>
                         <p className="text-sm font-medium">
                           {new Date(pkg.submitted_at).toLocaleDateString()}
                         </p>
@@ -477,29 +554,29 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
             {/* Quick Stats */}
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">
-                <CardTitle className="text-base font-medium">Quick Stats</CardTitle>
+                <CardTitle className="text-base font-medium">{getPackageQuickStatsTitle(t)}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">{pkg.plots.length}</p>
-                    <p className="text-xs text-muted-foreground">Plots</p>
+                    <p className="text-xs text-muted-foreground">{getPackageQuickStatsPlotsLabel(t)}</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">{pkg.farmers.length}</p>
-                    <p className="text-xs text-muted-foreground">{isCooperative ? 'Members' : 'Producers'}</p>
+                    <p className="text-xs text-muted-foreground">{getQuickStatsProducerLabel(role, t)}</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">
                       {pkg.plots.reduce((sum, p) => sum + p.area_hectares, 0).toFixed(1)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Total Ha</p>
+                    <p className="text-xs text-muted-foreground">{getPackageQuickStatsTotalHaLabel(t)}</p>
                   </div>
                   <div className="rounded-lg bg-secondary p-3 text-center">
                     <p className="text-2xl font-bold text-foreground">
                       {pkg.plots.filter((p) => p.verified).length}
                     </p>
-                    <p className="text-xs text-muted-foreground">Verified</p>
+                    <p className="text-xs text-muted-foreground">{getPackageVerifiedStatusLabel(t)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -513,17 +590,15 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <Card className="w-96">
             <CardHeader>
-              <CardTitle>Liability Acknowledgement</CardTitle>
+              <CardTitle>{getPackageLiabilityModalTitle(t)}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg bg-amber-50 p-4 border border-amber-200">
-                <p className="text-sm text-amber-900">
-                  By generating filing artifacts, you acknowledge full liability for the accuracy of all data and compliance with EUDR regulations.
-                </p>
+                <p className="text-sm text-amber-900">{getLiabilityAcknowledgementBody(role, t)}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setShowLiabilityModal(false)}>
-                  Cancel
+                  {getCommonCancelLabel(t)}
                 </Button>
                 <Button
                   onClick={() => {
@@ -532,7 +607,9 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                   className="bg-red-600 hover:bg-red-700"
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {pendingAction === 'generate' ? 'Generating...' : 'I Acknowledge'}
+                  {pendingAction === 'generate'
+                    ? getGenerateFilingArtifactsLabel(true, t)
+                    : getPackageLiabilityAcknowledgeLabel(t)}
                 </Button>
               </div>
             </CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,39 @@ import {
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Plus, Filter, ChevronRight, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { listContacts, type ContactRecord, type ContactStatus } from '@/lib/contact-service';
+import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getAddProducerCtaLabel,
+  getProducerComplianceLabel,
+  getProducersEmptyCtaLabel,
+  getProducersEmptyFilterMessage,
+  getProducersEmptyNoneMessage,
+  getProducersFiltersLabel,
+  getProducersFilterApplyLabel,
+  getProducersFilterClearLabel,
+  getProducersFilterComplianceLabel,
+  getProducersFilterComplianceOption,
+  getProducersFilterDialogDescription,
+  getProducersFilterDialogTitle,
+  getProducersFilterFpicLabel,
+  getProducersFilterFpicOption,
+  getProducersFilterStatusLabel,
+  getProducersFilterStatusOption,
+  getProducersPageSubtitle,
+  getProducersPageTitle,
+  getProducersSearchPlaceholder,
+  getProducersStatCompliantHint,
+  getProducersStatCompliantLabel,
+  getProducersStatFpicHint,
+  getProducersStatFpicLabel,
+  getProducersStatPartialHint,
+  getProducersStatPartialLabel,
+  getProducersStatTotalHint,
+  getProducersStatTotalLabel,
+  getProducersTableColumnLabel,
+  getProducersTableTitle,
+} from '@/lib/workflow-terminology-labels';
 
 type ComplianceFilter = 'all' | 'compliant' | 'partial' | 'non_compliant';
 type FpicFilter = 'all' | 'signed' | 'pending';
@@ -35,12 +68,6 @@ const complianceColors = {
   partial: 'text-yellow-400 bg-yellow-400/10',
 };
 
-const complianceLabels = {
-  compliant: 'Compliant',
-  non_compliant: 'Non-Compliant',
-  partial: 'Partial',
-};
-
 function deriveComplianceStatus(contact: ContactRecord): 'compliant' | 'non_compliant' | 'partial' {
   if (contact.status === 'blocked' || contact.status === 'inactive') return 'non_compliant';
   if (contact.status === 'submitted' && contact.consent_status === 'granted') return 'compliant';
@@ -48,6 +75,10 @@ function deriveComplianceStatus(contact: ContactRecord): 'compliant' | 'non_comp
 }
 
 export default function FarmersPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const { user } = useAuth();
+  const role = user?.active_role;
   const [producers, setProducers] = useState<ContactRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,19 +127,20 @@ export default function FarmersPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Producers"
-        description="Manage producer identities, onboarding status, and linked plot portfolios"
+        title={getProducersPageTitle(role, t)}
+        description={getProducersPageSubtitle(role, t)}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setIsFilterDialogOpen(true)}>
               <Filter className="w-4 h-4 mr-2" />
-              Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
+              {getProducersFiltersLabel(t)}
+              {activeFilters > 0 ? ` (${activeFilters})` : ''}
             </Button>
             <PermissionGate permission="farmers:create">
               <Button size="sm" asChild>
                 <Link href="/farmers/new">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Producer
+                  {getAddProducerCtaLabel(role, t)}
                 </Link>
               </Button>
             </PermissionGate>
@@ -126,32 +158,32 @@ export default function FarmersPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Total Producers</div>
+              <div className="text-sm font-medium text-muted-foreground">{getProducersStatTotalLabel(role, t)}</div>
               <div className="text-3xl font-bold mt-2">{producers.length}</div>
-              <p className="text-xs text-muted-foreground mt-2">Active in directory</p>
+              <p className="text-xs text-muted-foreground mt-2">{getProducersStatTotalHint(t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Compliant</div>
+              <div className="text-sm font-medium text-muted-foreground">{getProducersStatCompliantLabel(t)}</div>
               <div className="text-3xl font-bold text-green-400 mt-2">{compliantCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">All requirements met</p>
+              <p className="text-xs text-muted-foreground mt-2">{getProducersStatCompliantHint(t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">Partial Compliance</div>
+              <div className="text-sm font-medium text-muted-foreground">{getProducersStatPartialLabel(t)}</div>
               <div className="text-3xl font-bold text-yellow-400 mt-2">{partialCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">Some requirements pending</p>
+              <p className="text-xs text-muted-foreground mt-2">{getProducersStatPartialHint(t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">With FPIC Consent</div>
+              <div className="text-sm font-medium text-muted-foreground">{getProducersStatFpicLabel(t)}</div>
               <div className="text-3xl font-bold mt-2">
                 {producers.filter((producer) => producer.consent_status === 'granted').length}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Consent granted</p>
+              <p className="text-xs text-muted-foreground mt-2">{getProducersStatFpicHint(t)}</p>
             </CardContent>
           </Card>
         </div>
@@ -160,7 +192,7 @@ export default function FarmersPage() {
           <CardContent className="pt-6">
             <input
               type="text"
-              placeholder="Search by producer name, email, or cooperative..."
+              placeholder={getProducersSearchPlaceholder(role, t)}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -170,19 +202,19 @@ export default function FarmersPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Registered Producers</CardTitle>
+            <CardTitle className="text-lg">{getProducersTableTitle(role, t)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Cooperative</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>FPIC</TableHead>
-                    <TableHead>Compliance</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('name', t)}</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('phone', t)}</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('cooperative', t)}</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('status', t)}</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('fpic', t)}</TableHead>
+                    <TableHead>{getProducersTableColumnLabel('compliance', t)}</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -193,20 +225,20 @@ export default function FarmersPage() {
                         {producers.length === 0 ? (
                           <div className="flex flex-col items-center gap-3 text-center">
                             <p className="text-muted-foreground">
-                              No producers yet. Add your first producer to start building your upstream directory.
+                              {getProducersEmptyNoneMessage(role, t)}
                             </p>
                             <PermissionGate permission="farmers:create">
                               <Button size="sm" asChild>
                                 <Link href="/farmers/new">
                                   <Plus className="mr-2 h-4 w-4" />
-                                  Add first producer
+                                  {getProducersEmptyCtaLabel(role, t)}
                                 </Link>
                               </Button>
                             </PermissionGate>
                           </div>
                         ) : (
                           <p className="text-center text-muted-foreground">
-                            No producers match your search or filters.
+                            {getProducersEmptyFilterMessage(role, t)}
                           </p>
                         )}
                       </TableCell>
@@ -237,7 +269,7 @@ export default function FarmersPage() {
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded ${complianceColors[compliance]}`}
                             >
-                              {complianceLabels[compliance]}
+                              {getProducerComplianceLabel(compliance, t)}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -261,49 +293,49 @@ export default function FarmersPage() {
       <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Filter producers</DialogTitle>
-            <DialogDescription>Narrow the producer directory by compliance, consent, and onboarding status.</DialogDescription>
+            <DialogTitle>{getProducersFilterDialogTitle(role, t)}</DialogTitle>
+            <DialogDescription>{getProducersFilterDialogDescription(role, t)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Compliance</Label>
+              <Label>{getProducersFilterComplianceLabel(t)}</Label>
               <select
                 value={complianceFilter}
                 onChange={(event) => setComplianceFilter(event.target.value as ComplianceFilter)}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               >
-                <option value="all">All compliance states</option>
-                <option value="compliant">Compliant</option>
-                <option value="partial">Partial</option>
-                <option value="non_compliant">Non-compliant</option>
+                <option value="all">{getProducersFilterComplianceOption('all', t)}</option>
+                <option value="compliant">{getProducersFilterComplianceOption('compliant', t)}</option>
+                <option value="partial">{getProducersFilterComplianceOption('partial', t)}</option>
+                <option value="non_compliant">{getProducersFilterComplianceOption('non_compliant', t)}</option>
               </select>
             </div>
             <div className="space-y-2">
-              <Label>FPIC consent</Label>
+              <Label>{getProducersFilterFpicLabel(t)}</Label>
               <select
                 value={fpicFilter}
                 onChange={(event) => setFpicFilter(event.target.value as FpicFilter)}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               >
-                <option value="all">All consent states</option>
-                <option value="signed">Consent granted</option>
-                <option value="pending">Consent pending</option>
+                <option value="all">{getProducersFilterFpicOption('all', t)}</option>
+                <option value="signed">{getProducersFilterFpicOption('signed', t)}</option>
+                <option value="pending">{getProducersFilterFpicOption('pending', t)}</option>
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Onboarding status</Label>
+              <Label>{getProducersFilterStatusLabel(t)}</Label>
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as ContactStatus | 'all')}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
               >
-                <option value="all">All statuses</option>
-                <option value="new">New</option>
-                <option value="invited">Invited</option>
-                <option value="engaged">Engaged</option>
-                <option value="submitted">Submitted</option>
-                <option value="inactive">Inactive</option>
-                <option value="blocked">Blocked</option>
+                <option value="all">{getProducersFilterStatusOption('all', t)}</option>
+                <option value="new">{getProducersFilterStatusOption('new', t)}</option>
+                <option value="invited">{getProducersFilterStatusOption('invited', t)}</option>
+                <option value="engaged">{getProducersFilterStatusOption('engaged', t)}</option>
+                <option value="submitted">{getProducersFilterStatusOption('submitted', t)}</option>
+                <option value="inactive">{getProducersFilterStatusOption('inactive', t)}</option>
+                <option value="blocked">{getProducersFilterStatusOption('blocked', t)}</option>
               </select>
             </div>
           </div>
@@ -316,9 +348,9 @@ export default function FarmersPage() {
                 setStatusFilter('all');
               }}
             >
-              Clear filters
+              {getProducersFilterClearLabel(t)}
             </Button>
-            <Button onClick={() => setIsFilterDialogOpen(false)}>Apply</Button>
+            <Button onClick={() => setIsFilterDialogOpen(false)}>{getProducersFilterApplyLabel(t)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

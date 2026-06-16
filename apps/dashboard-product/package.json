@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint --config ../../eslint.config.mjs . --max-warnings 0",
     "test": "vitest run",
+    "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
+    "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",
     "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs"
   },
   "dependencies": {

@@ -1,15 +1,17 @@
+import type { Session } from '@supabase/supabase-js';
+
+import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import {
   clearPersistedSyncAuth,
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
-import type { Plot } from '@/features/state/AppStateContext';
-import type { UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
-import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
+import { shouldBootstrapFieldAppProfile } from '@/features/auth/fieldAppEligibility';
 import { ensureFarmerOAuthProfile, getEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
+import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
-import type { Session } from '@supabase/supabase-js';
+import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 export async function completeOAuthFarmerSession(params: {
   session: Session;
@@ -28,10 +30,7 @@ export async function completeOAuthFarmerSession(params: {
   }
 
   const nameFromSession =
-    resolveFarmerDisplayName({
-      fullName: params.fullName || getNameFromSession(params.session),
-      email,
-    }) ?? '';
+    params.fullName || getNameFromSession(params.session) || '';
 
   await saveAndApplyOAuthSyncAuth(
     email,
@@ -39,10 +38,17 @@ export async function completeOAuthFarmerSession(params: {
     params.session.access_token,
     params.session.expires_at,
   );
-  if (nameFromSession) {
-    await ensureFarmerOAuthProfile(nameFromSession);
-  } else {
-    await ensureFarmerOAuthProfile();
+  await ensureFarmerOAuthProfile(nameFromSession, params.session);
+
+  if (params.farmerId && shouldBootstrapFieldAppProfile(params.session)) {
+    const bootstrap = await bootstrapFieldAppProducer({
+      farmerId: params.farmerId,
+      fullName: nameFromSession || undefined,
+    });
+    if (!bootstrap.ok) {
+      await clearPersistedSyncAuth();
+      return { ok: false, message: bootstrap.message };
+    }
   }
 
   const res = await testBackendLogin();
@@ -53,5 +59,12 @@ export async function completeOAuthFarmerSession(params: {
 
   void registerFarmerPushToken();
 
-  return { ok: true, sync: null, missingName: !nameFromSession };
+  if (params.farmerId && params.localPlots) {
+    await runAutoBackup({
+      farmerId: params.farmerId,
+      localPlots: params.localPlots,
+    });
+  }
+
+  return { ok: true, missingName: !nameFromSession };
 }

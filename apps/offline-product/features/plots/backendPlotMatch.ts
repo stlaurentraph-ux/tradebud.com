@@ -1,9 +1,10 @@
 /**
- * Resolve a backend plot row for a local plot: prefer exact name match, else
- * closest area_ha among rows with the same geometry kind (point vs polygon).
+ * Resolve a backend plot row for a local plot.
+ * Prefer stable client id (`plot.id` stored in server `name`), then legacy display name.
  */
 
 export type LocalPlotForBackendMatch = {
+  id: string;
   name?: string;
   areaHectares: number;
   kind: 'point' | 'polygon';
@@ -13,13 +14,19 @@ export function findBackendPlotForLocal(
   localPlot: LocalPlotForBackendMatch,
   backendRows: unknown[],
 ): unknown | null {
-  const byName = (backendRows as { name?: string }[]).find(
-    (p) => String(p?.name ?? '') === String(localPlot.name ?? ''),
-  );
-  if (byName) return byName;
+  const rows = backendRows as { id?: unknown; name?: string; area_ha?: unknown; kind?: unknown }[];
+
+  const byClientId = rows.find((p) => String(p?.name ?? '') === String(localPlot.id));
+  if (byClientId) return byClientId;
+
+  const displayName = String(localPlot.name ?? '');
+  if (displayName) {
+    const byName = rows.find((p) => String(p?.name ?? '') === displayName);
+    if (byName) return byName;
+  }
 
   const targetArea = Number(localPlot.areaHectares);
-  const byAreaKind = (backendRows as { area_ha?: unknown; kind?: unknown }[])
+  const byAreaKind = rows
     .map((p) => ({
       p,
       area: Number(p?.area_ha ?? NaN),

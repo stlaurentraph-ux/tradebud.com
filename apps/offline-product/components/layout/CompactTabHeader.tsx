@@ -13,7 +13,7 @@ export type CompactTabHeaderProps = {
   paddingTop: number;
   /** Optional sync badge — only when there is pending work (omit online/offline noise). */
   badge?: ReactNode;
-  /** Left slot: Home = brand; Settings / My Plots = back button */
+  /** Left slot: Home = brand; other tabs = spacer or in-flow back */
   left: ReactNode;
   /** When set, shows the standard centered title (Settings, My Plots). Home omits this. */
   centerTitle?: string;
@@ -93,7 +93,11 @@ export function CompactTabHeader({
   );
 }
 
-/** Home only: logo + Tracebud + subtitle, left-aligned; logo size from `HOME_HEADER_LOGO_PX`. */
+export function TabHeaderSpacer() {
+  return <View style={compactTabHeaderStyles.headerSideSlot} />;
+}
+
+/** Home only: logo + Tracebud, left-aligned; logo size from `HOME_HEADER_LOGO_PX`. */
 export function HomeHeaderBrandLeft({ logoSize = HOME_HEADER_LOGO_PX }: { logoSize?: number }) {
   return (
     <View style={homeBrandStyles.row}>

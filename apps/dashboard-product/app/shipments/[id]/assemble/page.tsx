@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, AlertCircle, ChevronRight, Lock } from 'lucide-react';
@@ -14,7 +14,36 @@ import { PermissionGate } from '@/components/common/permission-gate';
 import { useAuth } from '@/lib/auth-context';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { listShipmentAssemblies } from '@/lib/shipment-assembly-service';
-import { getBatchNavLabel, getShipmentNavLabel } from '@/lib/supply-chain-terminology';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  formatShipmentAssembleAllocateSummary,
+  formatShipmentAssembleWeightMatchOk,
+  getAssemblyBackLabel,
+  getAssemblyNextAllocateLabel,
+  getAssemblyNextSealLabel,
+  getAssemblyNextValidateLabel,
+  getBatchNavLabel,
+  getSealBillingHint,
+  getShipmentAssembleAllocateIntro,
+  getShipmentAssembleBreadcrumbLabel,
+  getShipmentAssembleFirstSealFreeHint,
+  getShipmentAssembleLiabilityTitle,
+  getShipmentAssembleNoBatchesAlert,
+  getShipmentAssemblePageTitle,
+  getShipmentAssembleSealConfirmLabel,
+  getShipmentAssembleSealCtaLabel,
+  getShipmentAssembleSealDeclaredWeightLabel,
+  getShipmentAssembleSealErrorToast,
+  getShipmentAssembleSealLineageTotalLabel,
+  getShipmentAssembleSealSuccessToast,
+  getShipmentAssembleStep1Intro,
+  getShipmentAssemblyStepTitle,
+  getShipmentAssemblySteps,
+  getShipmentBackToShipmentLabel,
+  getShipmentLoadingAssemblyMessage,
+  getShipmentNavLabel,
+} from '@/lib/workflow-terminology-labels';
 import {
   RULE_SHIPMENT_WEIGHT_MISMATCH,
   sumBatchWeightKg,
@@ -38,6 +67,8 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const tenantId = user?.tenant_id ?? null;
   const { packages } = useHarvestPackages(tenantId, { scope: 'tenant' });
 
@@ -93,31 +124,26 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
     !hasWeightMismatch &&
     !isAlreadySealed;
 
-  const steps = [
-    { id: 'select_batches', label: 'Included Batches', description: 'Voucher packages in this shipment' },
-    { id: 'allocate_coverage', label: 'Allocate Coverage', description: 'Assign to shipment lines' },
-    { id: 'validate_issues', label: 'Validate Issues', description: 'Check blocking conditions' },
-    { id: 'seal_shipment', label: 'Seal Shipment', description: 'Finalize before EU filing' },
-  ] as const;
+  const steps = getShipmentAssemblySteps(t);
 
   if (loadError) {
     return <div className="p-6 text-sm text-destructive">{loadError}</div>;
   }
 
   if (!shipment) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading shipment assembly…</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{getShipmentLoadingAssemblyMessage(t)}</div>;
   }
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={`Assemble ${shipment.shipment_reference}`}
+        title={getShipmentAssemblePageTitle(shipment.shipment_reference, t)}
         subtitle={shipment.label}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: getShipmentNavLabel(user?.active_role), href: '/shipments' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getShipmentNavLabel(user?.active_role, t), href: '/shipments' },
           { label: shipment.shipment_reference, href: `/shipments/${shipment.id}` },
-          { label: 'Assemble' },
+          { label: getShipmentAssembleBreadcrumbLabel(t) },
         ]}
       />
 
@@ -125,7 +151,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
         <Button variant="ghost" size="sm" className="mb-6" asChild>
           <Link href={`/shipments/${shipment.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shipment
+            {getShipmentBackToShipmentLabel(t)}
           </Link>
         </Button>
 
@@ -150,17 +176,16 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'select_batches' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 1: Included {getBatchNavLabel(user?.active_role)}</CardTitle>
+                  <CardTitle>
+                    {getShipmentAssemblyStepTitle(1, getBatchNavLabel(user?.active_role, t), t)}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    These voucher bundles are locked into this shipment. Edit batch membership from shipment
-                    settings before sealing.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{getShipmentAssembleStep1Intro(t)}</p>
                   {includedBatches.length === 0 ? (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>No linked batches found. Add batches when creating the shipment.</AlertDescription>
+                      <AlertDescription>{getShipmentAssembleNoBatchesAlert(t)}</AlertDescription>
                     </Alert>
                   ) : (
                     <div className="space-y-2">
@@ -177,7 +202,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                   )}
                   <div className="flex justify-end">
                     <Button onClick={() => setCurrentStep('allocate_coverage')} disabled={includedBatches.length === 0}>
-                      Next: Allocate Coverage
+                      {getAssemblyNextAllocateLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -188,25 +213,26 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'allocate_coverage' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 2: Allocate Coverage</CardTitle>
+                  <CardTitle>{getShipmentAssemblyStepTitle(2, '', t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Map batch lineage to shipment lines before EU filing. Full line-level coverage editing ships with
-                    canonical shipment_headers.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{getShipmentAssembleAllocateIntro(t)}</p>
                   <Alert>
                     <AlertDescription>
-                      {includedBatches.length} batch(es) · {totalPlots} contributing plot(s) ·{' '}
-                      {liveCoveredQuantityKg.toLocaleString()} kg batch lineage in this shipment draft.
+                      {formatShipmentAssembleAllocateSummary(
+                        includedBatches.length,
+                        totalPlots,
+                        liveCoveredQuantityKg,
+                        t,
+                      )}
                     </AlertDescription>
                   </Alert>
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep('select_batches')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <Button onClick={() => setCurrentStep('validate_issues')}>
-                      Next: Validate Issues
+                      {getAssemblyNextValidateLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -217,7 +243,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
             {currentStep === 'validate_issues' && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Step 3: Validate Issues</CardTitle>
+                  <CardTitle>{getShipmentAssemblyStepTitle(3, '', t)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {hasWeightMismatch ? (
@@ -233,16 +259,16 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                     <Alert className="border-green-500/50 bg-green-500/10">
                       <Check className="h-4 w-4 text-green-500" />
                       <AlertDescription className="text-green-700">
-                        Shipment weight matches batch lineage ({declaredQuantityKg.toLocaleString()} kg).
+                        {formatShipmentAssembleWeightMatchOk(declaredQuantityKg, t)}
                       </AlertDescription>
                     </Alert>
                   )}
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep('allocate_coverage')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <Button onClick={() => setCurrentStep('seal_shipment')} disabled={hasWeightMismatch}>
-                      Next: Seal Shipment
+                      {getAssemblyNextSealLabel(t)}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -255,7 +281,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5" />
-                    Step 4: Seal Shipment
+                    {getShipmentAssemblyStepTitle(4, '', t)}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -267,17 +293,17 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                   )}
                   <div className="rounded-lg border border-border p-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Declared shipment weight</span>
+                      <span className="text-muted-foreground">{getShipmentAssembleSealDeclaredWeightLabel(t)}</span>
                       <span className="font-medium">{declaredQuantityKg.toLocaleString()} kg</span>
                     </div>
                     <div className="mt-2 flex justify-between">
-                      <span className="text-muted-foreground">Batch lineage total</span>
+                      <span className="text-muted-foreground">{getShipmentAssembleSealLineageTotalLabel(t)}</span>
                       <span className="font-medium">{liveCoveredQuantityKg.toLocaleString()} kg</span>
                     </div>
                     <p className="mt-3 text-xs text-muted-foreground">
                       {firstSealFree
-                        ? 'Your first shipment seal is free. Using it ends the 3-month subscription-free offer this month — subscription billing starts next month.'
-                        : 'Sealing meters €1 origin usage for this month&apos;s invoice. Your importer pays €1 when they submit DDS to TRACES.'}
+                        ? getShipmentAssembleFirstSealFreeHint(t)
+                        : getSealBillingHint(user?.active_role, t)}
                     </p>
                   </div>
                   <div className="flex items-start gap-3 rounded-lg border border-border p-3 bg-secondary/50">
@@ -287,7 +313,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                       className="mt-1"
                     />
                     <label className="text-sm">
-                      <div className="font-medium">I acknowledge operator liability for this EU shipment</div>
+                      <div className="font-medium">{getShipmentAssembleLiabilityTitle(t)}</div>
                     </label>
                   </div>
                   <div className="flex items-start gap-3 rounded-lg border border-border p-3">
@@ -296,11 +322,11 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                       onCheckedChange={(checked) => setSealConfirmed(checked === true)}
                       className="mt-1"
                     />
-                    <label className="text-sm">I confirm I want to seal this shipment now</label>
+                    <label className="text-sm">{getShipmentAssembleSealConfirmLabel(t)}</label>
                   </div>
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep('validate_issues')}>
-                      Back
+                      {getAssemblyBackLabel(t)}
                     </Button>
                     <PermissionGate permission="packages:seal_shipment">
                       <Button
@@ -314,13 +340,11 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                               (await resolveCanonicalShipmentHeaderId(shipment.external_id ?? shipment.id)) ??
                               shipment.id;
                             await sealCanonicalShipmentHeader(headerId);
-                            toast.success(
-                              'Shipment sealed. €1 origin usage metered for this month. Continue to compliance for filing.',
-                            );
+                            toast.success(getShipmentAssembleSealSuccessToast(t));
                             router.push('/compliance');
                           } catch (error) {
                             toast.error(
-                              error instanceof Error ? error.message : 'Failed to seal shipment.',
+                              error instanceof Error ? error.message : getShipmentAssembleSealErrorToast(t),
                             );
                           } finally {
                             setIsSealing(false);
@@ -328,7 +352,7 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                         }}
                       >
                         <Lock className="mr-2 h-4 w-4" />
-                        {isSealing ? 'Sealing…' : 'Seal Shipment'}
+                        {getShipmentAssembleSealCtaLabel(isSealing, t)}
                       </Button>
                     </PermissionGate>
                   </div>

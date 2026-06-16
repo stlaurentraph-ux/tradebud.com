@@ -14,8 +14,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
-  StyleSheet,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,16 +22,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Radius, Spacing } from '@/constants/theme';
+import { Brand, Spacing } from '@/constants/theme';
 import {
   clearPersistedSyncAuth,
-  getAuthCredentials,
   hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
   testBackendLogin,
-} from '@/features/api/postPlot';
+} from '@/features/api/syncAuthSession';
+import { getAuthCredentials } from '@/features/api/postPlot';
 import { BackupConsentModal } from '@/components/auth/BackupConsentModal';
 import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
+import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
+import { authSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
@@ -46,16 +46,16 @@ import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
+import { runAutoBackup } from '@/features/sync/runAutoBackup';
 import {
   listUnsyncedLocalPlots,
-  uploadUnsyncedPlotsForFarmer,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { getSetting, setSetting } from '@/features/state/persistence';
+import { getSetting, loadPendingSyncActions, setSetting } from '@/features/state/persistence';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
 
@@ -90,6 +90,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const [hint, setHint] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
+  const [emailMode, setEmailMode] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
@@ -128,13 +129,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
   const offerBackupAfterAuth = useCallback(async () => {
     const unsynced = await countUnsyncedPlots();
-    if (unsynced <= 0) return;
+    const pendingQueue = await loadPendingSyncActions().catch(() => []);
+    if (unsynced <= 0 && pendingQueue.length === 0) return;
     if ((await hasDataProcessingConsent()) && farmer?.id) {
-      const sync = await uploadUnsyncedPlotsForFarmer({ farmerId: farmer.id, localPlots: plots });
-      showBackupResultAlert(sync);
+      const backup = await runAutoBackup({ farmerId: farmer.id, localPlots: plots });
+      showBackupResultAlert(backup.plotResult);
       return;
     }
-    setBackupPlotCount(unsynced);
+    setBackupPlotCount(unsynced || plots.length || pendingQueue.length);
     setBackupModalVisible(true);
   }, [countUnsyncedPlots, farmer?.id, plots, showBackupResultAlert]);
 
@@ -159,9 +161,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
     setBackupBusy(true);
     try {
-      const sync = await runBackupWithConsent({ farmerId: farmer.id, localPlots: plots });
+      const backup = await runBackupWithConsent({ farmerId: farmer.id, localPlots: plots });
       setBackupModalVisible(false);
-      showBackupResultAlert(sync);
+      showBackupResultAlert(backup?.plotResult ?? null);
       const cb = backupConfirmedCallbackRef.current;
       backupConfirmedCallbackRef.current = undefined;
       if (cb) await cb();
@@ -257,6 +259,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setVisible(false);
     setHint(null);
     setPassword('');
+    setEmailMode(false);
     onSuccessRef.current = undefined;
   }, []);
 
@@ -266,6 +269,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       onSuccessRef.current = options?.onSuccess;
       setHint(null);
       setPassword('');
+      setEmailMode(false);
       void refreshAuth();
       setVisible(true);
     },
@@ -273,18 +277,20 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   );
 
   const titleKey =
-    variant === 'after_plot' ? 'plot_saved_sign_in_title' : 'sign_in_to_backup_title';
+    variant === 'after_plot'
+      ? 'plot_saved_sign_in_title'
+      : variant === 'sync'
+        ? 'sign_in_to_sync_title'
+        : 'sign_in_to_tracebud_title';
 
   const bodyKey =
     variant === 'after_plot'
       ? 'plot_saved_sign_in_body'
       : variant === 'sync'
-        ? 'sign_in_to_backup_body'
-        : 'sign_in_sub';
+        ? 'sign_in_to_sync_body'
+        : 'sign_in_oauth_sub';
 
-  const finishSuccessfulSignIn = async (
-    sync: import('@/features/sync/plotServerSync').UploadUnsyncedPlotsResult | null,
-  ) => {
+  const finishSuccessfulSignIn = async () => {
     setIsSignedIn(true);
     setPassword('');
     await syncLocalFarmerFromAuth();
@@ -307,11 +313,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         setIsSignedIn(false);
         if (
           result.message === 'sign_in_oauth_needs_signup' ||
-          result.message === 'sign_in_oauth_failed'
+          result.message === 'sign_in_oauth_failed' ||
+          result.message === 'sign_in_oauth_provider_disabled' ||
+          result.message === 'sign_in_field_bootstrap_failed'
         ) {
           closeSignIn();
           showOAuthSignInFailureAlert(t, result.message, () => {
-            void openCreateAccount();
+            if (result.message !== 'sign_in_field_bootstrap_failed') {
+              void openCreateAccount();
+            }
           });
           return;
         }
@@ -329,7 +339,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider });
       const { email: signedInEmail } = getAuthCredentials();
       if (signedInEmail) setEmail(signedInEmail);
-      await finishSuccessfulSignIn(result.sync);
+      await finishSuccessfulSignIn();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setHint(message);
@@ -373,7 +383,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'password' });
-      await finishSuccessfulSignIn(result.sync);
+      await finishSuccessfulSignIn();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setHint(message);
@@ -439,111 +449,120 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       />
       <Modal visible={visible} transparent animationType="fade" onRequestClose={closeSignIn}>
         <KeyboardAvoidingView
-          style={styles.keyboardRoot}
+          style={authSheetStyles.keyboardRoot}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         >
           <Pressable
-            style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}
+            style={[authSheetStyles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
             onPress={closeSignIn}
           >
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-              automaticallyAdjustKeyboardInsets
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-            >
-            <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.headerRow}>
-                <View style={styles.iconWrap}>
-                  <Ionicons
-                    name={variant === 'after_plot' ? 'checkmark-circle' : 'log-in-outline'}
-                    size={26}
-                    color={Brand.primary}
-                  />
-                </View>
-                <Pressable onPress={closeSignIn} hitSlop={12} style={styles.closeBtn}>
-                  <Ionicons name="close" size={22} color="#6B7280" />
+            <Pressable style={authSheetStyles.card} onPress={(e) => e.stopPropagation()}>
+              <View style={authSheetStyles.headerRow}>
+                {emailMode ? (
+                  <Pressable
+                    onPress={() => {
+                      setEmailMode(false);
+                      setHint(null);
+                    }}
+                    hitSlop={12}
+                    style={authSheetStyles.closeBtn}
+                  >
+                    <Ionicons name="chevron-back" size={22} color="#6B7280" />
+                  </Pressable>
+                ) : null}
+                <ThemedText type="defaultSemiBold" style={authSheetStyles.title}>
+                  {emailMode ? t('sign_in_with_email_title') : t(titleKey)}
+                </ThemedText>
+                <Pressable onPress={closeSignIn} hitSlop={12} style={authSheetStyles.closeBtn}>
+                  <Ionicons name="close" size={20} color="#6B7280" />
                 </Pressable>
               </View>
-              <ThemedText type="title" style={styles.title}>
-                {t(titleKey)}
-              </ThemedText>
-              <ThemedText type="default" style={styles.body}>
-                {t(bodyKey)}
-              </ThemedText>
-              <View style={styles.oauthRow}>
-                <Button
-                  variant="outline"
-                  fullWidth
-                  disabled={loading || oauthLoading !== null}
-                  onPress={() => void handleOAuthSignIn('google')}
-                >
-                  {oauthLoading === 'google' ? t('sign_in_oauth_busy') : t('sign_in_with_google')}
-                </Button>
-                <Button
-                  variant="outline"
-                  fullWidth
-                  disabled={loading || oauthLoading !== null}
-                  onPress={() => void handleOAuthSignIn('apple')}
-                >
-                  {oauthLoading === 'apple' ? t('sign_in_oauth_busy') : t('sign_in_with_apple')}
-                </Button>
-              </View>
-              <ThemedText type="caption" style={styles.oauthDivider}>
-                {t('sign_in_or_email')}
-              </ThemedText>
-              <Input
-                label={t('label_email')}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                placeholder="you@example.com"
-                containerStyle={styles.input}
-              />
-              <Input
-                label={t('label_password')}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder="••••••••"
-                containerStyle={styles.input}
-              />
-              {hint ? (
-                <ThemedText type="caption" style={styles.hint}>
-                  {hint}
+              {!emailMode ? (
+                <ThemedText type="caption" style={authSheetStyles.subtitle}>
+                  {t(bodyKey)}
                 </ThemedText>
               ) : null}
-              {loading || oauthLoading ? (
-                <ActivityIndicator color={Brand.primary} style={{ marginVertical: Spacing.sm }} />
+              {!emailMode ? (
+                <>
+                  <OAuthProviderButtons
+                    disabled={loading}
+                    loadingProvider={oauthLoading}
+                    busyLabel={t('sign_in_oauth_busy')}
+                    googleLabel={t('sign_in_with_google')}
+                    appleLabel={t('sign_in_with_apple')}
+                    onGoogle={() => void handleOAuthSignIn('google')}
+                    onApple={() => void handleOAuthSignIn('apple')}
+                  />
+                  <Pressable
+                    onPress={() => {
+                      setHint(null);
+                      setEmailMode(true);
+                    }}
+                    style={authSheetStyles.textLink}
+                    disabled={loading || oauthLoading !== null}
+                  >
+                    <ThemedText type="defaultSemiBold" style={authSheetStyles.textLinkLabel}>
+                      {t('sign_in_use_email')}
+                    </ThemedText>
+                  </Pressable>
+                </>
               ) : (
-                <Button variant="primary" fullWidth onPress={() => void handleSignIn()}>
-                  {t('sign_in')}
-                </Button>
+                <>
+                  <Input
+                    label={t('label_email')}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    placeholder="you@example.com"
+                    dense
+                  />
+                  <Input
+                    label={t('label_password')}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    placeholder="••••••••"
+                    dense
+                  />
+                  {hint ? (
+                    <ThemedText type="caption" style={authSheetStyles.hint}>
+                      {hint}
+                    </ThemedText>
+                  ) : null}
+                  {loading || oauthLoading ? (
+                    <ActivityIndicator color={Brand.primary} style={{ marginVertical: Spacing.xs }} />
+                  ) : (
+                    <Button variant="primary" size="sm" fullWidth onPress={() => void handleSignIn()}>
+                      {t('sign_in')}
+                    </Button>
+                  )}
+                </>
               )}
-              <Pressable
-                onPress={() => {
-                  closeSignIn();
-                  void openCreateAccount();
-                }}
-                style={styles.secondaryLinkBtn}
-              >
-                <ThemedText type="defaultSemiBold" style={styles.secondaryLinkText}>
-                  {t('create_account')}
-                </ThemedText>
-              </Pressable>
-              <Pressable onPress={closeSignIn} style={styles.skipBtn}>
-                <ThemedText type="defaultSemiBold" style={styles.skipText}>
-                  {t('sign_in_skip')}
-                </ThemedText>
-              </Pressable>
+              {!emailMode ? (
+                <View style={authSheetStyles.footerRow}>
+                  <Pressable
+                    onPress={() => {
+                      closeSignIn();
+                      void openCreateAccount();
+                    }}
+                    style={authSheetStyles.footerLink}
+                  >
+                    <ThemedText type="defaultSemiBold" style={authSheetStyles.footerLinkText}>
+                      {t('create_account')}
+                    </ThemedText>
+                  </Pressable>
+                  <ThemedText style={authSheetStyles.footerDot}>·</ThemedText>
+                  <Pressable onPress={closeSignIn} style={authSheetStyles.footerLink}>
+                    <ThemedText type="defaultSemiBold" style={authSheetStyles.footerMutedText}>
+                      {t('sign_in_skip')}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              ) : null}
             </Pressable>
-            </ScrollView>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
@@ -558,84 +577,3 @@ export function useSignInSheet(): SignInSheetContextValue {
   }
   return ctx;
 }
-
-const styles = StyleSheet.create({
-  keyboardRoot: {
-    flex: 1,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'flex-end',
-    paddingHorizontal: Spacing.md,
-  },
-  scroll: {
-    flexGrow: 0,
-    maxHeight: '100%',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-    paddingTop: Spacing.md,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.xl,
-    padding: 20,
-    gap: 12,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.lg,
-    backgroundColor: '#E6F7EF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 22,
-    lineHeight: 28,
-    color: '#0B4F3B',
-  },
-  body: {
-    color: '#4B5563',
-    lineHeight: 22,
-  },
-  oauthRow: {
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  oauthDivider: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    marginVertical: Spacing.xs,
-  },
-  input: {
-    marginTop: 4,
-  },
-  hint: {
-    color: Brand.warning,
-  },
-  secondaryLinkBtn: {
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  secondaryLinkText: {
-    color: Brand.primary,
-  },
-  skipBtn: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  skipText: {
-    color: '#6B7280',
-  },
-});

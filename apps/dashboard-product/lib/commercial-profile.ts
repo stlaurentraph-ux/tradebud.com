@@ -1,10 +1,16 @@
 import type { TenantRole } from '@/types';
+import {
+  normalizeSupplyChainRoles,
+  primaryTenantRoleFromSupplyChainRoles,
+  resolveTenantRolesFromProfile,
+} from '@/lib/org-supply-chain-roles';
 
 export interface CommercialProfile {
   tenant_id: string;
   organization_name: string | null;
   country: string | null;
   primary_role: string | null;
+  supply_chain_roles?: string[] | null;
   team_size: string | null;
   main_commodity: string | null;
   primary_objective: string | null;
@@ -17,7 +23,8 @@ export function isWorkspaceSetupComplete(profile: CommercialProfile | null | und
   const organizationName = profile.organization_name?.trim() ?? '';
   const country = profile.country?.trim() ?? '';
   const primaryRole = profile.primary_role?.trim() ?? '';
-  return organizationName.length > 0 && country.length > 0 && primaryRole.length > 0;
+  const supplyRoles = normalizeSupplyChainRoles(profile.supply_chain_roles);
+  return organizationName.length > 0 && country.length > 0 && (primaryRole.length > 0 || supplyRoles.length > 0);
 }
 
 export function commercialPrimaryRoleToTenantRole(
@@ -26,6 +33,20 @@ export function commercialPrimaryRoleToTenantRole(
   if (primaryRole === 'importer') return 'importer';
   if (primaryRole === 'compliance_manager') return 'importer';
   return 'exporter';
+}
+
+export function resolveProfileTenantRoles(profile: CommercialProfile | null | undefined): TenantRole[] {
+  if (!profile) return ['exporter'];
+  return resolveTenantRolesFromProfile(profile);
+}
+
+export function defaultActiveRoleForProfile(profile: CommercialProfile | null | undefined): TenantRole {
+  const roles = resolveProfileTenantRoles(profile);
+  const explicit = normalizeSupplyChainRoles(profile?.supply_chain_roles);
+  if (explicit.length > 0) {
+    return primaryTenantRoleFromSupplyChainRoles(explicit);
+  }
+  return roles[0] ?? 'exporter';
 }
 
 export async function fetchCommercialProfile(): Promise<CommercialProfile | null> {

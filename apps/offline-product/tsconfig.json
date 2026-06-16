@@ -17,6 +17,7 @@
   ],
   "exclude": [
     "node_modules",
-    "design/v0-prototype/**"
+    "design/v0-prototype/**",
+    "features/testing/**"
   ]
 }

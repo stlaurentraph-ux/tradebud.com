@@ -151,7 +151,7 @@ export async function safeFetch<T = any>(
 export async function safeAuthenticatedFetch<T = any>(
   url: string,
   accessToken: string | null,
-  options?: Omit<SafeFetchOptions, 'headers'>,
+  options?: SafeFetchOptions,
 ): Promise<SafeFetchResponse<T>> {
   if (!accessToken) {
     const error = new Error('No access token available');
@@ -163,15 +163,16 @@ export async function safeAuthenticatedFetch<T = any>(
     };
   }
 
+  const { headers: optionHeaders, ...rest } = options ?? {};
   const headers = {
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
-    ...options?.headers,
+    ...optionHeaders,
   };
 
   return safeFetch<T>(url, {
-    ...options,
+    ...rest,
     headers,
-    context: { authenticated: true, ...options?.context },
+    context: { authenticated: true, ...rest.context },
   });
 }

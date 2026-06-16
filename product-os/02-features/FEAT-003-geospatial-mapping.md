@@ -269,6 +269,15 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
   - shows a contextual `Retry` action when a run fails, preserving the same cutoff input for rapid re-execution
 - Added panel regression coverage for both new behaviors (metadata visibility and retry affordance after failure).
 
+### S4 code slice 1 - FDP coffee commodity screening (Africa pilot)
+
+- Integrated Forest Data Partnership `model_2025b` coffee probability as a convergence-of-evidence layer alongside GFW alerts.
+- Pilot geographies: Nigeria (`NG`), Rwanda (`RW`), Tanzania (`TZ`); commodity resolved from tenant `main_commodity` with `coffee` default.
+- New backend modules: `fdp-commodity-profiles.ts`, `fdp-commodity-fusion.ts`, `fdp-commodity.service.ts`; Earth Engine worker at `scripts/fdp-screening-worker/`.
+- `deforestation_screening` snapshots now include `commodityContext`, `commodityAdjusted`, and `fdpModelVersion` when worker is enabled.
+- Fusion rules: never weaken `deforestation_detected`; downgrade amber→compliant for legitimate shade-grown/agroforestry coffee; flag mismatch/emerging signals to `under_review`.
+- Feature-flagged via `FDP_ENABLED` + `FDP_SCREENING_WORKER_URL`; smoke via `npm run check:fdp`.
+
 ## Risks
 
 - Scope creep beyond MVP boundary

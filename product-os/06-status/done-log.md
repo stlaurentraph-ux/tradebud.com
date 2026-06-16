@@ -2,6 +2,17 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app pre-field A-grade pass 2: `qa:full` green (25 tests), Play asset sync script, strict store preflight, i18n queue smoke v2, auth session unit tests.
+- Field app pre-field A-grade hardening: OAuth-unified API auth, log PII redaction, security preflight, launch grade tracker.
+- Field app store ops slice delivered: `STORE_OPS_CHECKLIST.md`, `npm run store:preflight`, Play/App Store asset docs, push Info.plist string.
+- Field app device smoke checklist v2 delivered: OAuth/permissions/tenant/network soak steps + `qa:device` summary wiring.
+- Field app Settings notifications toggle delivered: explicit enable flow in Backup & sync with push deny alert and status badge.
+- Field app production preflight + push permissions slice delivered: hardened `release-preflight.mjs`, OAuth verify script, push deny analytics and i18n helper.
+- Field app safe release + permissions slice delivered: `qa:full` gates `release:*:safe`; location deny UX with Settings shortcut on walk + declaration GPS.
+- Field app TypeScript CI gate delivered: zero `tsc` errors on production paths; OAuth secure storage; plot attestation persistence; consent queue types; typecheck in CI + `qa:full`.
+- Field app auto-backup slice delivered: `runAutoBackup` on sign-in/consent/foreground bridge; queue drain after plot upload; HLC/mutex tests; device smoke checklist.
+- Field app device QA slice delivered: `qa:preflight` wiring gate, vitest unit tests (`backendPlotMatch`, Sentry bridge), CI test + i18n placeholder steps; plot detail uses `finish_setup_chip`; sync queue drain mutex.
+- Field app production hardening slice delivered: harvest offline queue (`submitHarvestRecord`), stable `clientPlotId` uploads, `logError`→Sentry, declaration GPS moved to Settings Advanced.
 - Field app full design-review UX pass delivered: short post-capture save path, Home/My Plots/Plot detail/Settings polish on `cursor/v0-design-review-a74f`.
 - Field app map-first walk-my-plot UX delivered in React Native: simplified landing, taller map, farmer-friendly GPS strip and stats, direct walk flow on `WalkPerimeterScreen.tsx`.
 - Field app v0 design review pack delivered: `apps/offline-product/design/V0_DESIGN_REVIEW.md`, `V0_WALK_PLOT_PROMPT.md`, and `README.md` on branch `cursor/v0-design-review-a74f` for v0-by-Vercel walk-my-plot and full-app visual simplification.

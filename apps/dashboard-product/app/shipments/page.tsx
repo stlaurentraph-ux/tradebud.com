@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,11 +31,15 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { useShipmentHeaders } from '@/lib/use-shipment-headers';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
   getNewShipmentLabel,
+  getShipmentAssembleCtaLabel,
   getShipmentNavLabel,
   getShipmentPageSubtitle,
-} from '@/lib/supply-chain-terminology';
+  getWorkflowOperationsNavLabel,
+} from '@/lib/workflow-terminology-labels';
 import type { ShipmentStatus } from '@/types';
 
 const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon: typeof Clock }> = {
@@ -51,7 +55,11 @@ const STATUS_CONFIG: Record<ShipmentStatus, { label: string; color: string; icon
 
 export default function ShipmentsPage() {
   const { user } = useAuth();
-  const isCooperative = user?.active_role === 'cooperative';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
+  const shipmentNavLabel = useMemo(() => getShipmentNavLabel(role, t), [role, t]);
+  const isCooperative = role === 'cooperative';
   const tenantId = user?.tenant_id ?? null;
   const { shipments, isLoading, error } = useShipmentHeaders(tenantId);
 
@@ -97,19 +105,19 @@ export default function ShipmentsPage() {
     <PermissionGate permission="packages:view">
       <div className="flex flex-col">
         <AppHeader
-          title={getShipmentNavLabel(user?.active_role)}
-          subtitle={getShipmentPageSubtitle(user?.active_role)}
+          title={shipmentNavLabel}
+          subtitle={getShipmentPageSubtitle(role, t)}
           breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Operations' },
-            { label: getShipmentNavLabel(user?.active_role) },
+            { label: getDashboardBreadcrumbLabel(t), href: '/' },
+            { label: getWorkflowOperationsNavLabel(t) },
+            { label: shipmentNavLabel },
           ]}
           actions={
             <PermissionGate permission="packages:create">
               <Button asChild>
                 <Link href="/shipments/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  {getNewShipmentLabel(user?.active_role)}
+                  {getNewShipmentLabel(role, t)}
                 </Link>
               </Button>
             </PermissionGate>
@@ -314,7 +322,7 @@ export default function ShipmentsPage() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem asChild>
                                       <Link href={`/shipments/${shipment.id}/assemble`}>
-                                        Assemble &amp; Seal
+                                        {getShipmentAssembleCtaLabel(t)}
                                       </Link>
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>

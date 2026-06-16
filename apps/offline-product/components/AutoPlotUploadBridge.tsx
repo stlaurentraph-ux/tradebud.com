@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import { useAppState } from '@/features/state/AppStateContext';
-import { uploadUnsyncedPlotsForFarmer } from '@/features/sync/plotServerSync';
+import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 const DEBOUNCE_MS = 1600;
 
 /**
- * When the user is signed in (Supabase session available) and has local plots,
- * uploads any plots missing on the Tracebud server — same as My Plots → Upload plot.
- * Runs shortly after plots/farmer change and when the app returns to the foreground.
+ * When signed in, uploads missing plots and drains the offline sync queue.
+ * Runs after plot/farmer changes and when the app returns to the foreground.
  */
 export function AutoPlotUploadBridge() {
   const { farmer, plots } = useAppState();
@@ -17,21 +17,18 @@ export function AutoPlotUploadBridge() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const run = useCallback(async () => {
-    if (!farmer?.id || plots.length === 0) return;
+    if (!farmer?.id || !hasSyncAuthSession()) return;
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      await uploadUnsyncedPlotsForFarmer({
-        farmerId: farmer.id,
-        localPlots: plots,
-      });
+      await runAutoBackup({ farmerId: farmer.id, localPlots: plots });
     } finally {
       inFlight.current = false;
     }
   }, [farmer?.id, plots]);
 
   useEffect(() => {
-    if (!farmer?.id || plots.length === 0) return;
+    if (!farmer?.id || !hasSyncAuthSession()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;

@@ -1,22 +1,34 @@
 'use client';
 
+import { useContext, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
   AlertTriangle,
-  CheckCircle2,
   XCircle,
   Clock,
   FileSearch,
   BarChart3,
   MapPin,
   ArrowRight,
-  Flag,
-  Scale,
 } from 'lucide-react';
 import type { ShipmentStatus } from '@/types';
+import { VirginStatePanel } from '@/components/dashboards/virgin-state-panel';
+import { NorthStarKpi } from '@/components/dashboards/north-star-kpi';
+import { MiniReviewQueue } from '@/components/dashboards/mini-review-queue';
+import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
+import { DashboardQuickActions } from '@/components/dashboards/dashboard-quick-actions';
+import { getNorthStarForRole } from '@/lib/dashboard-north-star';
+import type { DashboardHomeResources } from '@/lib/dashboard-home-data';
+import { homeActivityProps, homePackageProps } from '@/lib/dashboard-home-props';
+import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getNorthStarPriorityLabel,
+  getReviewerDashboardLabels,
+  getReviewerJurisdictionActivityHint,
+} from '@/lib/terminology-labels';
 
 interface ReviewerDashboardProps {
   metrics: {
@@ -27,180 +39,101 @@ interface ReviewerDashboardProps {
     blocking_issues_count?: number;
     yield_failures_count?: number;
   };
+  home?: DashboardHomeResources;
 }
 
-export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
+export function ReviewerDashboard({ metrics, home }: ReviewerDashboardProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const copy = useMemo(() => getReviewerDashboardLabels(t), [t]);
+
   const pendingReview = metrics.packages_by_status?.READY || 0;
   const blockingIssuesCount = metrics.blocking_issues_count ?? 0;
   const yieldFailuresCount = metrics.yield_failures_count ?? 0;
-  const flaggedItems = blockingIssuesCount + yieldFailuresCount;
+  const isVirginTenant = isVirginTenantForRole('country_reviewer', metrics);
+
+  if (isVirginTenant) {
+    return (
+      <VirginStatePanel
+        role="country_reviewer"
+        progress={{ total_packages: metrics.total_packages, total_plots: metrics.total_plots }}
+      />
+    );
+  }
+
+  const northStar = getNorthStarForRole('country_reviewer', metrics, t);
 
   return (
     <div className="space-y-6">
-      {/* Review Queue Banner */}
-      <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50">
-        <CardContent className="flex items-center justify-between p-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-purple-900">Compliance Review Queue</h3>
-            <p className="text-sm text-purple-700">
-              {pendingReview} packages awaiting your compliance review
-            </p>
-          </div>
-          <Button asChild className="bg-purple-600 hover:bg-purple-700">
-            <Link href="/compliance">
-              <FileSearch className="mr-2 h-4 w-4" />
-              Start Reviewing
-            </Link>
-          </Button>
+      {northStar ? <NorthStarKpi config={northStar} priorityLabel={getNorthStarPriorityLabel(t)} /> : null}
+      <MiniReviewQueue role="country_reviewer" {...homePackageProps(home)} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{copy.triageTitle}</CardTitle>
+          <CardDescription>{copy.triageDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Link
+            href="/compliance/issues"
+            className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+          >
+            <div className="flex items-center gap-3">
+              <XCircle className="h-5 w-5 text-red-600" />
+              <div>
+                <div className="font-medium">{copy.triageBlocking}</div>
+                <div className="text-sm text-muted-foreground">{copy.triageBlockingHint}</div>
+              </div>
+            </div>
+            <Badge variant="outline">{blockingIssuesCount}</Badge>
+          </Link>
+
+          <Link
+            href="/compliance/issues"
+            className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div>
+                <div className="font-medium">{copy.triageYieldWarnings}</div>
+                <div className="text-sm text-muted-foreground">{copy.triageYieldHint}</div>
+              </div>
+            </div>
+            <Badge variant="outline">{yieldFailuresCount}</Badge>
+          </Link>
+
+          <Link
+            href="/compliance/queue"
+            className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+          >
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-purple-600" />
+              <div>
+                <div className="font-medium">{copy.triagePendingReview}</div>
+                <div className="text-sm text-muted-foreground">{copy.triagePendingHint}</div>
+              </div>
+            </div>
+            <Badge variant="outline">{pendingReview}</Badge>
+          </Link>
         </CardContent>
       </Card>
 
-      {/* Key Metrics for Reviewers */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{pendingReview}</div>
-            <p className="text-xs text-muted-foreground mt-1">Packages to review</p>
-          </CardContent>
-        </Card>
+      <DashboardActivityCard
+        isVirginTenant={isVirginTenant}
+        emptyMessage={getReviewerJurisdictionActivityHint(t)}
+        {...homeActivityProps(home)}
+      />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Flagged Items</CardTitle>
-            <Flag className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{flaggedItems}</div>
-            <p className="text-xs text-muted-foreground mt-1">Require investigation</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              {(metrics.packages_by_status?.SEALED || 0) + (metrics.packages_by_status?.SUBMITTED || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Plots</CardTitle>
-            <MapPin className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics.total_plots}</div>
-            <p className="text-xs text-muted-foreground mt-1">Under jurisdiction</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Review Overview */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Compliance Verification Status</CardTitle>
-            <CardDescription>Overview of compliance checks in your jurisdiction</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { label: 'Approved - No Issues', count: metrics.compliant_plots, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-              { label: 'Under Review', count: pendingReview, icon: Clock, color: 'text-purple-600', bg: 'bg-purple-100' },
-              { label: 'Amber Flag - Manual Check', count: yieldFailuresCount, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-100' },
-              { label: 'Red Flag - Non-Compliant', count: blockingIssuesCount, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.bg}`}>
-                  <item.icon className={`h-5 w-5 ${item.color}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{item.label}</div>
-                </div>
-                <div className={`text-xl font-bold ${item.color}`}>{item.count}</div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Review Priority Queue</CardTitle>
-            <CardDescription>Items requiring immediate attention</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {pendingReview === 0 && metrics.total_packages === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Priority alerts will appear when exporters submit packages for your jurisdiction.
-              </p>
-            ) : (
-              <>
-                <Link
-                  href="/compliance/issues"
-                  className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 transition-colors hover:bg-red-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                    <div>
-                      <div className="font-medium text-red-900">Deforestation Alerts</div>
-                      <div className="text-sm text-red-700">Post-2020 satellite anomalies detected</div>
-                    </div>
-                  </div>
-                  <Badge className="bg-red-100 text-red-700">{blockingIssuesCount}</Badge>
-                </Link>
-
-                <Link
-                  href="/compliance/issues"
-                  className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 transition-colors hover:bg-amber-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <div>
-                      <div className="font-medium text-amber-900">Protected Area Overlaps</div>
-                      <div className="text-sm text-amber-700">Plots near conservation zones</div>
-                    </div>
-                  </div>
-                  <Badge className="bg-amber-100 text-amber-700">{yieldFailuresCount}</Badge>
-                </Link>
-
-                <Link
-                  href="/compliance"
-                  className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 p-4 transition-colors hover:bg-purple-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <Scale className="h-5 w-5 text-purple-600" />
-                    <div>
-                      <div className="font-medium text-purple-900">Land Tenure Verification</div>
-                      <div className="text-sm text-purple-700">Documentation pending review</div>
-                    </div>
-                  </div>
-                  <Badge className="bg-purple-100 text-purple-700">{pendingReview}</Badge>
-                </Link>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions for Reviewers */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <DashboardQuickActions visible={isVirginTenant} className="grid gap-4 md:grid-cols-3">
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/compliance">
+          <Link href="/compliance/queue">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
                 <FileSearch className="h-6 w-6 text-purple-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Review Queue</h4>
-                <p className="text-sm text-muted-foreground">Process pending verifications</p>
+                <h4 className="font-semibold">{copy.quickReviewQueue}</h4>
+                <p className="text-sm text-muted-foreground">{copy.quickReviewQueueHint}</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
@@ -214,8 +147,8 @@ export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
                 <MapPin className="h-6 w-6 text-teal-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Plot Registry</h4>
-                <p className="text-sm text-muted-foreground">View all registered plots</p>
+                <h4 className="font-semibold">{copy.quickPlotRegistry}</h4>
+                <p className="text-sm text-muted-foreground">{copy.quickPlotRegistryHint}</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
@@ -229,14 +162,14 @@ export function ReviewerDashboard({ metrics }: ReviewerDashboardProps) {
                 <BarChart3 className="h-6 w-6 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold">Generate Reports</h4>
-                <p className="text-sm text-muted-foreground">Export compliance data</p>
+                <h4 className="font-semibold">{copy.quickReports}</h4>
+                <p className="text-sm text-muted-foreground">{copy.quickReportsHint}</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Link>
         </Card>
-      </div>
+      </DashboardQuickActions>
     </div>
   );
 }

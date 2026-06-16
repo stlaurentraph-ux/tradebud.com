@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Layers, Lock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -8,11 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
   getBatchNavLabel,
+  getShipmentAssembleCtaLabel,
   getShipmentNavLabel,
-  SUPPLY_CHAIN_FLOW_HINT,
-} from '@/lib/supply-chain-terminology';
+  getShipmentStatusTitle,
+  getShipmentsListBackLabel,
+  getSupplyChainFlowHint,
+} from '@/lib/workflow-terminology-labels';
 import { sumBatchWeightKg } from '@/lib/shipment-weight-guardrail';
 import {
   getCanonicalShipmentHeader,
@@ -44,6 +49,9 @@ function assemblyToHeader(assembly: ShipmentAssemblyRecord): CanonicalShipmentHe
 export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) {
   const { id } = use(params);
   const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const tenantId = user?.tenant_id ?? null;
   const { packages } = useHarvestPackages(tenantId, { scope: 'tenant' });
   const [shipment, setShipment] = useState<CanonicalShipmentHeader | null>(null);
@@ -117,8 +125,8 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
         title={shipment.shipment_reference}
         subtitle={shipment.label}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: getShipmentNavLabel(user?.active_role), href: '/shipments' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getShipmentNavLabel(role, t), href: '/shipments' },
           { label: shipment.shipment_reference },
         ]}
         actions={
@@ -126,7 +134,7 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
             <Button asChild>
               <Link href={`/shipments/${shipment.id}/assemble`}>
                 <Lock className="mr-2 h-4 w-4" />
-                Assemble &amp; Seal
+                {getShipmentAssembleCtaLabel(t)}
               </Link>
             </Button>
           ) : undefined
@@ -137,18 +145,18 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
         <Button variant="ghost" size="sm" asChild>
           <Link href="/shipments">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Shipments
+            {getShipmentsListBackLabel(role, t)}
           </Link>
         </Button>
 
-        <p className="text-sm text-muted-foreground">{SUPPLY_CHAIN_FLOW_HINT}</p>
+        <p className="text-sm text-muted-foreground">{getSupplyChainFlowHint(t)}</p>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Layers className="h-4 w-4" />
-                Included {getBatchNavLabel(user?.active_role)}
+                Included {getBatchNavLabel(role, t)}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -175,7 +183,7 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Shipment status</CardTitle>
+              <CardTitle className="text-base">{getShipmentStatusTitle(t)}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">

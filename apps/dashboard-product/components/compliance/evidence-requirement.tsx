@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
@@ -9,6 +9,19 @@ import {
   type EvidenceItem,
 } from '@/lib/compliance-doc-reason-codes';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getEvidenceItemStatusLabel,
+  getEvidenceRequirementAutonomousCheck,
+  getEvidenceRequirementAutonomousDocChecksTitle,
+  getEvidenceRequirementMissingHint,
+  getEvidenceRequirementMissingTitle,
+  getEvidenceRequirementProvidedTitle,
+  getEvidenceRequirementRemediationPrefix,
+  getEvidenceRequirementUploadCta,
+  getEvidenceRequirementVerifiedSummary,
+  getEvidenceRequirementViewDetailsCta,
+} from '@/lib/workflow-terminology-labels';
 
 interface EvidenceRequirementProps {
   plotId: string;
@@ -23,7 +36,9 @@ export function EvidenceRequirement({
   missingEvidence,
 }: EvidenceRequirementProps) {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const [expanded, setExpanded] = useState(true);
 
   const verifiedCount = requiredEvidence.filter((e) => e.status === 'verified').length;
@@ -53,10 +68,10 @@ export function EvidenceRequirement({
             <div>
               <CardTitle className="text-base">{plotName}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                {verifiedCount}/{requiredEvidence.length} {isImporter ? 'evidence records verified' : 'evidence items verified'}
+                {getEvidenceRequirementVerifiedSummary(verifiedCount, requiredEvidence.length, role, t)}
               </p>
               <p className="text-xs mt-1 text-muted-foreground">
-                Autonomous check: {evaluation.status === 'pass' ? 'pass' : evaluation.status}
+                {getEvidenceRequirementAutonomousCheck(evaluation.status, t)}
               </p>
             </div>
           </div>
@@ -68,10 +83,9 @@ export function EvidenceRequirement({
 
       {expanded && (
         <CardContent className="space-y-4">
-          {/* Provided Evidence */}
           {requiredEvidence.length > 0 && (
             <div>
-              <h4 className="font-medium text-sm mb-3">Provided Evidence</h4>
+              <h4 className="font-medium text-sm mb-3">{getEvidenceRequirementProvidedTitle(t)}</h4>
               <div className="space-y-2">
                 {requiredEvidence.map((evidence) => (
                   <div
@@ -101,7 +115,7 @@ export function EvidenceRequirement({
                               : 'bg-red-500/20 text-red-400'
                         }`}
                       >
-                        {evidence.status.charAt(0).toUpperCase() + evidence.status.slice(1)}
+                        {getEvidenceItemStatusLabel(evidence.status, t)}
                       </span>
                     </div>
                   </div>
@@ -110,18 +124,17 @@ export function EvidenceRequirement({
             </div>
           )}
 
-          {/* Missing Evidence */}
           {missingEvidence.length > 0 && (
             <div>
-              <h4 className="font-medium text-sm mb-3 text-red-400">Missing Evidence</h4>
+              <h4 className="font-medium text-sm mb-3 text-red-400">
+                {getEvidenceRequirementMissingTitle(t)}
+              </h4>
               <div className="space-y-2">
                 {missingEvidence.map((item, idx) => (
                   <div key={idx} className="p-3 rounded-lg border border-red-500/30 bg-red-500/10">
                     <p className="text-sm font-medium text-red-400">{item}</p>
                     <p className="text-xs text-red-300/80 mt-1">
-                      {isImporter
-                        ? 'This evidence type is required before declaration submission'
-                        : 'This evidence type is required to verify deforestation compliance'}
+                      {getEvidenceRequirementMissingHint(role, t)}
                     </p>
                   </div>
                 ))}
@@ -131,7 +144,9 @@ export function EvidenceRequirement({
 
           {evaluation.reasons.length > 0 && (
             <div>
-              <h4 className="font-medium text-sm mb-3">Autonomous document checks</h4>
+              <h4 className="font-medium text-sm mb-3">
+                {getEvidenceRequirementAutonomousDocChecksTitle(t)}
+              </h4>
               <div className="space-y-2">
                 {evaluation.reasons.map((reason, index) => (
                   <div
@@ -145,7 +160,9 @@ export function EvidenceRequirement({
                     <p className="text-sm font-medium">
                       {reason.code}: {reason.message}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Remediation: {reason.remediation}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getEvidenceRequirementRemediationPrefix(t)} {reason.remediation}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -154,10 +171,10 @@ export function EvidenceRequirement({
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" size="sm">
-              Upload Evidence
+              {getEvidenceRequirementUploadCta(t)}
             </Button>
             <Button variant="outline" size="sm">
-              {isImporter ? 'View Readiness Details' : 'View Details'}
+              {getEvidenceRequirementViewDetailsCta(role, t)}
             </Button>
           </div>
         </CardContent>

@@ -13,7 +13,6 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
-import { seedStoreScreenshotDemo } from '@/features/demo/storeScreenshotDemo';
 import {
   deletePlotLocalData,
   initDatabase,
@@ -67,6 +66,10 @@ export type Plot = {
   declaredAreaHectares?: number;
   discrepancyPercent?: number;
   precisionMetersAtSave?: number | null;
+  landTenureDeclared?: boolean;
+  landTenureDeclaredAt?: number;
+  noDeforestationDeclared?: boolean;
+  noDeforestationDeclaredAt?: number;
 };
 
 type AppStateContextValue = {
@@ -80,7 +83,7 @@ type AppStateContextValue = {
   updatePlot: (plotId: string, patch: Partial<Plot>) => void;
   removePlot: (plotId: string) => void;
   updateFarmerProfilePhoto: (uri: string | null) => void;
-  /** Reload farmer + plots from SQLite (e.g. after seeding store screenshot demo). */
+  /** Reload farmer + plots from SQLite. */
   reloadFromDisk: () => Promise<void>;
 };
 
@@ -100,13 +103,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           if (loaded.farmer) setFarmerState(loaded.farmer);
           if (loaded.plots.length > 0) setPlots(loaded.plots);
-        }
-        if (process.env.EXPO_PUBLIC_STORE_DEMO === '1') {
-          const demo = await seedStoreScreenshotDemo();
-          if (!cancelled) {
-            setFarmerState(demo.farmer);
-            setPlots(demo.plots);
-          }
         }
       } catch (error) {
         if (__DEV__) {

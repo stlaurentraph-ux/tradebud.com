@@ -56,6 +56,23 @@ export type DeforestationScreeningContextSnapshot = {
   queriedAt: string;
 };
 
+export type DeforestationScreeningCommodityContextSnapshot = {
+  signal: 'unknown' | 'legitimate' | 'mismatch' | 'emerging';
+  modelVersion: '2025b';
+  commodity: string;
+  countryCode: string | null;
+  baselineYear: number;
+  declaredProbMean: number | null;
+  declaredProbP50: number | null;
+  competingCommodity: string | null;
+  competingProbMean: number | null;
+  temporalStability: 'stable' | 'emerging' | 'declining' | 'unknown';
+  yearsScreened: number[];
+  layers: Array<{ commodity: string; year: number; ok: boolean; error?: string }>;
+  queriedAt: string;
+  skippedReason?: string;
+};
+
 export type DeforestationScreeningSnapshot = {
   cutoffDate: string;
   alertCount: number | null;
@@ -67,6 +84,9 @@ export type DeforestationScreeningSnapshot = {
   screenedAt: string;
   context?: DeforestationScreeningContextSnapshot;
   contextAdjusted?: boolean;
+  commodityContext?: DeforestationScreeningCommodityContextSnapshot;
+  commodityAdjusted?: boolean;
+  fdpModelVersion?: '2025b' | null;
 };
 
 export function overlapToPlotStatus(sinaphOverlap: boolean, indigenousOverlap: boolean): PlotComplianceStatus {

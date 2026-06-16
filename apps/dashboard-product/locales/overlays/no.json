@@ -1,0 +1,11 @@
+{
+  "nav.settings": "Innstillinger",
+  "nav.shipments": "Forsendelser",
+  "nav.compliance": "Samsvar",
+  "nav.harvests": "Høstinger",
+  "nav.plots": "Tomter",
+  "settings.preferences.language_policy_eu": "EU-samsvarsspråk pluss engelsk og andre utviklede markeder for importører og revisorer.",
+  "status.shipment.handed_off": "Overlevert",
+  "status.shipment.submitted_importer": "Sendt til TRACES",
+  "workflow.review_queue.importer.title": "Gjennomgangs-kø"
+}

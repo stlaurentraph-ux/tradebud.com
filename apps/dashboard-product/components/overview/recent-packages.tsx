@@ -5,31 +5,24 @@ import { ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { DDSPackage, ShipmentStatus, PackageComplianceStatus } from '@/types';
+import type { DDSPackage } from '@/types';
+import { useAuth } from '@/lib/auth-context';
+import { useLocale } from '@/lib/locale-context';
+import {
+  getComplianceStatusLabel,
+  getComplianceStatusStyles,
+  getShipmentStatusLabel,
+  getShipmentStatusStyles,
+} from '@/lib/status-labels';
 
 interface RecentPackagesProps {
   packages: DDSPackage[];
 }
 
-const statusVariants: Record<ShipmentStatus, { label: string; className: string }> = {
-  DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground' },
-  READY: { label: 'Ready', className: 'bg-chart-2/20 text-chart-2' },
-  SEALED: { label: 'Sealed', className: 'bg-primary/20 text-primary' },
-  SUBMITTED: { label: 'Submitted', className: 'bg-chart-5/20 text-chart-5' },
-  ACCEPTED: { label: 'Accepted', className: 'bg-primary/20 text-primary' },
-  REJECTED: { label: 'Rejected', className: 'bg-destructive/20 text-destructive' },
-  ARCHIVED: { label: 'Archived', className: 'bg-muted text-muted-foreground' },
-  ON_HOLD: { label: 'On Hold', className: 'bg-chart-3/20 text-chart-3' },
-};
-
-const complianceVariants: Record<PackageComplianceStatus, { label: string; className: string }> = {
-  PASSED: { label: 'Passed', className: 'bg-primary/20 text-primary' },
-  WARNINGS: { label: 'Warnings', className: 'bg-chart-3/20 text-chart-3' },
-  BLOCKED: { label: 'Blocked', className: 'bg-destructive/20 text-destructive' },
-  PENDING: { label: 'Pending', className: 'bg-muted text-muted-foreground' },
-};
-
 export function RecentPackages({ packages }: RecentPackagesProps) {
+  const { user } = useAuth();
+  const { t } = useLocale();
+  const role = user?.active_role;
   const recentPackages = packages.slice(0, 5);
 
   return (
@@ -46,8 +39,10 @@ export function RecentPackages({ packages }: RecentPackagesProps) {
       <CardContent>
         <div className="space-y-3">
           {recentPackages.map((pkg) => {
-            const status = statusVariants[pkg.status];
-            const compliance = complianceVariants[pkg.compliance_status];
+            const statusLabel = getShipmentStatusLabel(pkg.status, role, t);
+            const statusClassName = getShipmentStatusStyles(pkg.status);
+            const complianceLabel = getComplianceStatusLabel(pkg.compliance_status, t);
+            const complianceClassName = getComplianceStatusStyles(pkg.compliance_status);
 
             return (
               <Link
@@ -58,8 +53,8 @@ export function RecentPackages({ packages }: RecentPackagesProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium text-foreground">{pkg.code}</span>
-                    <Badge variant="outline" className={`text-[10px] ${status.className} border-0`}>
-                      {status.label}
+                    <Badge variant="outline" className={`text-[10px] ${statusClassName} border-0`}>
+                      {statusLabel}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{pkg.supplier_name}</p>
@@ -69,8 +64,8 @@ export function RecentPackages({ packages }: RecentPackagesProps) {
                     <span>{pkg.farmers.length} producers</span>
                   </div>
                 </div>
-                <Badge variant="outline" className={`text-[10px] ${compliance.className} border-0`}>
-                  {compliance.label}
+                <Badge variant="outline" className={`text-[10px] ${complianceClassName} border-0`}>
+                  {complianceLabel}
                 </Badge>
               </Link>
             );

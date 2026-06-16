@@ -1,5 +1,7 @@
 # App Store screenshots
 
+See also **`STORE_OPS_CHECKLIST.md`** (metadata, privacy labels, submit steps).
+
 ## iPhone 6.7" (required)
 
 Path: `ios/6.7-inch/` — **1290 × 2796 px** PNGs.
@@ -8,6 +10,7 @@ Regenerate:
 
 ```bash
 npm run generate:store-screenshots
+npm run store:preflight
 ```
 
 ## Upload in App Store Connect

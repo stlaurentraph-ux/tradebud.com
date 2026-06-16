@@ -1,9 +1,12 @@
 'use client';
 
+import { useContext } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 import { Badge } from '@/components/ui/badge';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 const cooperativeGuides = [
   'Member onboarding and consent capture',
@@ -22,19 +25,22 @@ const defaultGuides = [
 ];
 
 export default function HelpPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'help', { title: "Help" });
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Help"
+        title={pageHeader.title}
         subtitle={
           isCooperative
             ? 'Guidance for field operations, consent, portability, governance, and shipment readiness'
             : 'Workflow guidance, troubleshooting, and support resources'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Help' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Help' })}
       />
       <div className="flex-1 space-y-6 p-6">
         <Card>

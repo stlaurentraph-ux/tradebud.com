@@ -22,6 +22,7 @@ export const ANALYTICS_EVENTS = {
   CONSENT_GRANT_APPROVED: 'consent_grant_approved',
   CONSENT_GRANT_DENIED: 'consent_grant_denied',
   CONSENT_GRANT_REVOKED: 'consent_grant_revoked',
+  PUSH_PERMISSION_DENIED: 'push_permission_denied',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

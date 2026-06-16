@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,6 +33,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setIsLoading(true);
 
     try {
@@ -54,9 +58,51 @@ export default function LoginPage() {
       }
       router.push(safeNext);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const message = err instanceof Error ? err.message : 'Login failed';
+      if (message.toLowerCase().includes('invalid login credentials')) {
+        setError('Incorrect email or password. Check your credentials or reset your password below.');
+      } else if (message.toLowerCase().includes('email not confirmed')) {
+        setError('Confirm your email using the link we sent you, then sign in again.');
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setNotice(null);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Enter your email address above, then choose forgot password.');
+      return;
+    }
+
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      setError('Password reset is unavailable in this environment. Contact support@tracebud.com.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/confirm`
+          : 'https://dashboard.tracebud.com/auth/confirm';
+      const { error: resetError } = await client.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo,
+      });
+      if (resetError) {
+        throw resetError;
+      }
+      setNotice(`If an account exists for ${trimmedEmail}, a password reset link is on its way.`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not send password reset email.');
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -122,9 +168,19 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
+                    onClick={() => void handleForgotPassword()}
+                    disabled={isLoading || isResettingPassword}
+                  >
+                    {isResettingPassword ? 'Sending reset link…' : 'Forgot password?'}
+                  </button>
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -136,11 +192,17 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && (
+              {notice ? (
+                <div className="rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-800">
+                  {notice}
+                </div>
+              ) : null}
+
+              {error ? (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                   {error}
                 </div>
-              )}
+              ) : null}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Signing in...' : 'Sign in'}

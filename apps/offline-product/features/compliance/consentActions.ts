@@ -53,6 +53,7 @@ export async function performConsentAction(params: {
         grantId: params.grantId,
         revocationReason: params.revocationReason,
       }),
+      lastError: null,
     });
     return { ok: true, queued: true };
   }
@@ -74,6 +75,7 @@ export async function performConsentAction(params: {
         grantId: params.grantId,
         revocationReason: params.revocationReason,
       }),
+      lastError: null,
     });
     return { ok: true, queued: true };
   }

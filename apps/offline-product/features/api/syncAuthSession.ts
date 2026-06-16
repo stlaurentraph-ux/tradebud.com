@@ -263,6 +263,19 @@ export async function getAuthenticatedSupabaseClient(): Promise<SupabaseClient |
   });
 }
 
+/** Supabase Auth user for the current sync session (JWT claims including app_metadata). */
+export async function getSyncAuthUser() {
+  const client = await getAuthenticatedSupabaseClient();
+  if (!client) {
+    return null;
+  }
+  const { data, error } = await client.auth.getUser();
+  if (error || !data.user) {
+    return null;
+  }
+  return data.user;
+}
+
 /** Supabase Auth user id for the current sync session (matches storage RLS path prefix). */
 export async function getAuthenticatedSupabaseUserId(): Promise<string | null> {
   const supabase = await getAuthenticatedSupabaseClient();

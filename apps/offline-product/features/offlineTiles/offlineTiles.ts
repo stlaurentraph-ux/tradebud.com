@@ -1,5 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 
+import { buildFieldMapTileUrl } from '@/features/mapping/fieldMapTiles';
+
 export type OfflineTilesDownloadPreset = {
   id: string;
   label: string;
@@ -12,7 +14,7 @@ export type OfflineTilesBbox = { west: number; south: number; east: number; nort
 export type OfflineTilesPackMeta = {
   id: string;
   label: string;
-  source: 'osm_raster' | 'mbtiles_extract';
+  source: 'osm_raster' | 'esri_world_imagery' | 'mbtiles_extract';
   bbox: OfflineTilesBbox;
   zooms: number[];
   createdAt: number;
@@ -153,7 +155,7 @@ export async function downloadOfflineTiles(preset: OfflineTilesDownloadPreset): 
           continue;
         }
 
-        const url = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+        const url = buildFieldMapTileUrl(z, x, y);
         const res = await FileSystem.downloadAsync(url, path).catch(() => null);
         if (res?.status === 200) {
           downloaded++;
@@ -242,7 +244,7 @@ export async function downloadOfflineTilePack(params: {
           continue;
         }
 
-        const url = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+        const url = buildFieldMapTileUrl(z, x, y);
         const res = await FileSystem.downloadAsync(url, path).catch(() => null);
         if (res?.status === 200) {
           downloaded++;
@@ -258,7 +260,7 @@ export async function downloadOfflineTilePack(params: {
   const meta: OfflineTilesPackMeta = {
     id: params.packId,
     label: params.label,
-    source: 'osm_raster',
+    source: 'esri_world_imagery',
     bbox: params.bbox,
     zooms: params.zooms,
     createdAt: Date.now(),

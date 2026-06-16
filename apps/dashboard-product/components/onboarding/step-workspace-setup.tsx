@@ -11,6 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SupplyChainRolePicker } from '@/components/settings/supply-chain-role-picker';
+import {
+  defaultSupplyChainRoleForSignupPrimary,
+  ensurePrimaryInSupplyChainRoles,
+  signupPrimarySupportsSupplyChainRoles,
+  type SupplyChainRoleId,
+} from '@/lib/org-supply-chain-roles';
 
 export type PrimaryRole =
   | 'importer'
@@ -23,6 +30,7 @@ export interface WorkspaceSetupData {
   organizationName: string;
   country: string;
   primaryRole: PrimaryRole | '';
+  supplyChainRoles: SupplyChainRoleId[];
 }
 
 interface StepWorkspaceSetupProps {
@@ -90,7 +98,20 @@ export function StepWorkspaceSetup({
   const isValid =
     data.organizationName.trim().length > 0 &&
     data.country.length > 0 &&
-    data.primaryRole.length > 0;
+    data.primaryRole.length > 0 &&
+    (!signupPrimarySupportsSupplyChainRoles(data.primaryRole) || data.supplyChainRoles.length > 0);
+
+  const selectPrimaryRole = (role: PrimaryRole) => {
+    const defaultRole = defaultSupplyChainRoleForSignupPrimary(role);
+    const nextSupplyChainRoles = signupPrimarySupportsSupplyChainRoles(role)
+      ? ensurePrimaryInSupplyChainRoles(role, data.supplyChainRoles.length > 0 ? data.supplyChainRoles : [defaultRole])
+      : data.supplyChainRoles;
+    onChange({
+      ...data,
+      primaryRole: role,
+      supplyChainRoles: nextSupplyChainRoles,
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -142,7 +163,7 @@ export function StepWorkspaceSetup({
               key={role.value}
               type="button"
               disabled={isSubmitting}
-              onClick={() => onChange({ ...data, primaryRole: role.value })}
+              onClick={() => selectPrimaryRole(role.value)}
               className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 data.primaryRole === role.value
                   ? 'border-primary bg-secondary text-foreground'
@@ -165,6 +186,20 @@ export function StepWorkspaceSetup({
           ))}
         </div>
       </div>
+
+      {signupPrimarySupportsSupplyChainRoles(data.primaryRole) ? (
+        <div className="space-y-2">
+          <Label>Supply chain roles performed by this organisation</Label>
+          <p className="text-xs text-muted-foreground">
+            Select every workflow you run in one tenant. Use a preset or pick roles individually.
+          </p>
+          <SupplyChainRolePicker
+            selected={data.supplyChainRoles}
+            onChange={(supplyChainRoles) => onChange({ ...data, supplyChainRoles })}
+            disabled={isSubmitting}
+          />
+        </div>
+      ) : null}
 
       {error && (
         <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">

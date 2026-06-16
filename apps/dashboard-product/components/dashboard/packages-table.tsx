@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   Search,
   Filter,
@@ -18,6 +18,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-context";
+import { LocaleContext } from "@/lib/locale-context";
+import { getPackageSubmitActionLabel } from "@/lib/workflow-terminology-labels";
+import type { User } from "@/types";
 
 export interface DdsPackage {
   id: string;
@@ -41,6 +45,7 @@ interface PackagesTableProps {
   loading?: boolean;
   onViewPackage?: (id: string) => void;
   onSubmitToTraces?: (id: string) => void;
+  activeRole?: User['active_role'];
 }
 
 export function PackagesTable({
@@ -48,7 +53,12 @@ export function PackagesTable({
   loading,
   onViewPackage,
   onSubmitToTraces,
+  activeRole,
 }: PackagesTableProps) {
+  const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = activeRole ?? user?.active_role;
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredPackages = packages.filter(
@@ -187,7 +197,7 @@ export function PackagesTable({
                                 onClick={() => onSubmitToTraces?.(pkg.id)}
                               >
                                 <ExternalLink className="mr-2 h-4 w-4" />
-                                Submit downstream handoff
+                                {getPackageSubmitActionLabel(role, false, t)}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

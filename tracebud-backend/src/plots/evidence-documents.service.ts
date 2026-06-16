@@ -282,13 +282,15 @@ export class EvidenceDocumentsService {
           linked_entity_type,
           linked_entity_id,
           resolution_path,
-          due_at
+          due_at,
+          owner_role
         )
-        VALUES ($1, $2, 'open', $3, $4, 'tenure_verification', $5, $6, NOW() + INTERVAL '3 days')
+        VALUES ($1, $2, 'open', $3, $4, 'tenure_verification', $5, $6, NOW() + INTERVAL '3 days', 'exporter')
         ON CONFLICT (linked_entity_id)
           WHERE linked_entity_type = 'tenure_verification' AND status = 'open'
         DO UPDATE SET
           description = EXCLUDED.description,
+          owner_role = COALESCE(compliance_issues.owner_role, EXCLUDED.owner_role),
           updated_at = NOW()
       `,
       [

@@ -19,12 +19,26 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "qa:preflight": "node ./scripts/device-qa-preflight.mjs",
+    "security:preflight": "node ./scripts/security-preflight.mjs",
+    "qa:full": "npm run lint && npm run typecheck && npm run security:preflight && npm run i18n:en:placeholder:assert && npm run test && npm run i18n:queue:smoke && npm run qa:preflight",
+    "qa:device": "node ./scripts/device-qa-smoke.mjs",
+    "store:preflight": "node ./scripts/store-ops-preflight.mjs",
+    "store:assets:sync": "python3 ./scripts/sync-google-play-assets.py",
+    "credentials:setup": "bash ./scripts/setup-eas-credentials.sh",
+    "generate:store-screenshots": "python3 ./scripts/generate-app-store-screenshots.py",
+    "store:screenshots:capture": "bash ./scripts/run-store-screenshot-capture.sh",
+    "i18n:en:placeholder:assert": "node ./scripts/i18n-en-placeholder-assert.mjs",
     "release:preflight:preview": "node ./scripts/release-preflight.mjs --profile=preview",
     "release:preflight:production": "node ./scripts/release-preflight.mjs --profile=production",
+    "release:preflight:production:online": "node ./scripts/release-preflight.mjs --profile=production --verify-oauth",
     "release:slo:gate": "node ./scripts/release-rollout-slo-gate.mjs",
     "release:preview": "eas build --platform all --profile preview",
     "release:production": "eas build --platform all --profile production",
-    "release:production:safe": "npm run release:preflight:production && npm run release:production",
+    "release:preview:safe": "npm run qa:full && npm run release:preflight:preview && npm run release:preview",
+    "release:production:safe": "npm run qa:full && npm run store:assets:sync && npm run store:preflight -- --strict && npm run release:preflight:production && npm run release:production",
     "submit:production": "eas submit --platform all --profile production",
     "update:preview": "eas update --branch preview --message \"preview ota\"",
     "update:production": "eas update --branch production --message \"production ota\"",
@@ -33,7 +47,9 @@
     "run:simulator": "bash ./scripts/run-ios-simulator.sh",
     "open:simulator": "bash ./scripts/open-tracebud-simulator.sh",
     "capture:screenshot": "bash ./scripts/capture-simulator-screenshot.sh",
-    "start:store-demo": "EXPO_PUBLIC_STORE_DEMO=1 expo start"
+    "oauth:verify": "node ./scripts/verify-oauth-providers.mjs",
+    "oauth:redirects:merge": "node ./scripts/merge-supabase-redirect-urls.mjs",
+    "oauth:supabase:configure": "node ./scripts/configure-supabase-oauth.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -89,7 +105,8 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "expo-module-scripts": "^55.0.2",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^3.2.6"
   },
   "private": true
 }

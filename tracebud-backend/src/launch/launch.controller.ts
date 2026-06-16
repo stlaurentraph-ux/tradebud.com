@@ -50,6 +50,23 @@ export class LaunchController {
     return { profile };
   }
 
+  @Patch('supply-chain-roles')
+  @ApiOperation({
+    summary: 'Update enabled supply chain roles for this tenant',
+  })
+  async updateSupplyChainRoles(
+    @Req() req: any,
+    @Body() body: { supplyChainRoles?: string[] },
+  ): Promise<{ profile: any }> {
+    const tenantId = this.getTenantId(req);
+    const profile = await this.launchService.saveSupplyChainRoles({
+      tenantId,
+      supplyChainRoles: Array.isArray(body.supplyChainRoles) ? body.supplyChainRoles : [],
+      actorUserId: (req?.user?.id as string | undefined) ?? null,
+    });
+    return { profile };
+  }
+
   @Patch('state/upgrade')
   @ApiOperation({
     summary: 'Mark tenant as paid-active',

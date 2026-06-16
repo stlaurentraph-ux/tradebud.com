@@ -3,8 +3,14 @@
 import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Loader2 } from 'lucide-react';
+import { useContext } from 'react';
 import { cn } from '@/lib/utils';
-import { STATUS_ICONS, STATUS_LABELS, type StatusType } from '@/lib/constants/status';
+import { STATUS_ICONS, type StatusType } from '@/lib/constants/status';
+import { t as translate } from '@/lib/i18n';
+import { LocaleContext } from '@/lib/locale-context';
+import { useAuth } from '@/lib/auth-context';
+import { getStatusChipLabel, getStatusChipLoadingLabel } from '@/lib/status-labels';
+import type { User } from '@/types';
 
 /**
  * StatusChip - Canonical entity state indicator
@@ -80,6 +86,7 @@ export interface StatusChipProps
     VariantProps<typeof statusChipVariants> {
   status: StatusType;
   label?: string;
+  role?: User['active_role'];
   showIcon?: boolean;
   loading?: boolean;
   disabled?: boolean;
@@ -88,6 +95,7 @@ export interface StatusChipProps
 export function StatusChip({
   status,
   label,
+  role: roleOverride,
   showIcon = true,
   loading = false,
   disabled = false,
@@ -96,8 +104,14 @@ export function StatusChip({
   className,
   ...props
 }: StatusChipProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t ?? ((key: string) => translate(key, 'en'));
+  const { user } = useAuth();
+  const role = roleOverride ?? user?.active_role;
   const Icon = loading ? Loader2 : STATUS_ICONS[status];
-  const displayLabel = label || STATUS_LABELS[status];
+  const displayLabel = loading
+    ? getStatusChipLoadingLabel(t)
+    : label ?? getStatusChipLabel(status, role, t);
 
   return (
     <div
@@ -122,7 +136,7 @@ export function StatusChip({
           aria-hidden="true"
         />
       )}
-      <span>{loading ? 'pending...' : displayLabel}</span>
+      <span>{displayLabel}</span>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   View,
@@ -15,57 +15,62 @@ import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
+import { requestForegroundLocationOrAlert } from '@/features/permissions/locationPermission';
+import {
+  alertPushPermissionDenied,
+  getPushPermissionStatus,
+  type PushPermissionResult,
+} from '@/features/permissions/pushPermission';
+import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
-import { CompactTabHeader } from '@/components/layout/CompactTabHeader';
+import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { ThemedText } from '@/components/themed-text';
-import { compactTabHeaderStyles } from '@/constants/compactTabHeader';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
-  clearPersistedSyncAuth,
   fetchPlotsForFarmer,
-  getAuthCredentials,
   getTracebudApiBaseUrl,
-  hydrateSyncAuthFromSettings,
   postAuditEventToBackend,
   testBackendLogin,
 } from '@/features/api/postPlot';
 import {
+  clearPersistedSyncAuth,
+  getAuthCredentials,
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
+import {
   buildDeclarationBundle,
   declarationBundleToJson,
 } from '@/features/compliance/declarationBundle';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getSetting,
   loadPendingSyncActions,
   setSetting,
   type PendingSyncAction,
 } from '@/features/state/persistence';
-import { formatHsHeading, getCommodityDefinition } from '@/features/compliance/commodityCatalog';
 import {
   listUnsyncedLocalPlots,
   subscribeServerPlotSyncChanged,
   uploadUnsyncedPlotsForFarmer,
 } from '@/features/sync/plotServerSync';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
+import { withSyncQueueLock } from '@/features/sync/syncQueueMutex';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Brand, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { signInAndSyncPlots } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
-import { localeNames } from '@/features/i18n/config';
-import { storeDemoToolsEnabled } from '@/features/demo/storeDemoToolsEnabled';
-import { seedStoreScreenshotDemo } from '@/features/demo/storeScreenshotDemo';
 import {
   footprintBytesToMb,
   measureTracebudStorageFootprint,
   type TracebudStorageFootprint,
 } from '@/features/storage/measureTracebudFootprint';
 import { useAppState } from '@/features/state/AppStateContext';
+import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
@@ -84,9 +89,12 @@ const fsAny = FileSystem as unknown as {
 };
 
 export default function SettingsScreen() {
-  const { lang, languageCode, openLanguagePicker, t } = useLanguage();
-  const { farmer, plots, setFarmer, updateFarmerProfilePhoto, reloadFromDisk } = useAppState();
-  const { refreshAuth } = useSignInSheet();
+  const { languageCode, openLanguagePicker, t } = useLanguage();
+  const params = useLocalSearchParams<{ focus?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const syncSectionY = useRef(0);
+  const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
+  const { refreshAuth, openSignIn } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -107,15 +115,19 @@ export default function SettingsScreen() {
     harvest: 0,
     photos_sync: 0,
     evidence_sync: 0,
+    consent_approve: 0,
+    consent_deny: 0,
+    consent_revoke: 0,
   });
   /** Local plots with no matching server row (by name). */
   const [unsyncedPlotCount, setUnsyncedPlotCount] = useState(0);
   const [syncEmail, setSyncEmail] = useState('');
-  const [syncPassword, setSyncPassword] = useState('');
-  const [syncSigningIn, setSyncSigningIn] = useState(false);
   const [syncAuthHint, setSyncAuthHint] = useState<string | null>(null);
   const [syncSignedIn, setSyncSignedIn] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [helpTipsOpen, setHelpTipsOpen] = useState(false);
+  const [queueDetailsOpen, setQueueDetailsOpen] = useState(false);
   const [vertexAvgSeconds, setVertexAvgSeconds] = useState<60 | 120>(120);
   const [queueActionFilter, setQueueActionFilter] = useState<
     Record<PendingSyncAction['actionType'], boolean>
@@ -123,20 +135,33 @@ export default function SettingsScreen() {
     harvest: true,
     photos_sync: true,
     evidence_sync: true,
+    consent_approve: true,
+    consent_deny: true,
+    consent_revoke: true,
   });
   const [queueAttemptScope, setQueueAttemptScope] = useState<PendingSyncAttemptScope>('all');
-  const [storeDemoBusy, setStoreDemoBusy] = useState(false);
-  const [storeDemoMessage, setStoreDemoMessage] = useState<string | null>(null);
   const [storageFootprint, setStorageFootprint] = useState<TracebudStorageFootprint | null>(null);
   const [storageMeasuring, setStorageMeasuring] = useState(false);
   const [queueSmartSweepEnabled, setQueueSmartSweepEnabled] = useState(false);
   const [queueSmartSweepCap, setQueueSmartSweepCap] = useState<25 | 50 | 100 | 200>(100);
+  const [pushPermission, setPushPermission] = useState<PushPermissionResult | 'unknown'>('unknown');
+  const [pushRegisterBusy, setPushRegisterBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+
+  const refreshPushPermission = useCallback(async () => {
+    if (Platform.OS === 'web') {
+      setPushPermission('unavailable');
+      return;
+    }
+    const status = await getPushPermissionStatus();
+    setPushPermission(status);
+  }, []);
 
   const refreshSavedSyncEmail = useCallback(async () => {
     await hydrateSyncAuthFromSettings();
-    const { email, password } = getAuthCredentials();
+    const { email } = getAuthCredentials();
     if (email) setSyncEmail(email);
-    setSyncSignedIn(Boolean(email?.trim() && password));
+    setSyncSignedIn(hasSyncAuthSession());
   }, []);
 
   const refreshSyncMetrics = useCallback(async () => {
@@ -148,7 +173,7 @@ export default function SettingsScreen() {
           acc[row.actionType] += 1;
           return acc;
         },
-        { harvest: 0, photos_sync: 0, evidence_sync: 0 },
+        { harvest: 0, photos_sync: 0, evidence_sync: 0, consent_approve: 0, consent_deny: 0, consent_revoke: 0 },
       ),
     );
     const retryingRows = rows.filter((row) => (row.attempts ?? 0) > 0);
@@ -175,8 +200,7 @@ export default function SettingsScreen() {
       .sort((a, b) => a - b)[0];
     setQueueNextRetrySeconds(nextRetryMs != null ? Math.ceil(nextRetryMs / 1000) : null);
 
-    const { email, password } = getAuthCredentials();
-    const canQueryServer = Boolean(farmer?.id && email?.trim() && password);
+    const canQueryServer = Boolean(farmer?.id && hasSyncAuthSession());
     if (!canQueryServer) {
       setUnsyncedPlotCount(0);
       return;
@@ -194,6 +218,7 @@ export default function SettingsScreen() {
       void (async () => {
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
+        await refreshPushPermission();
         const v = await getSetting('vertexAveragingSeconds').catch(() => null);
         setVertexAvgSeconds(v === '60' ? 60 : 120);
         const storedAttemptScope = await getSetting('syncQueueAttemptScope').catch(() => null);
@@ -216,7 +241,7 @@ export default function SettingsScreen() {
           setQueueSmartSweepCap(Number(storedSmartSweepCap) as 25 | 50 | 100 | 200);
         }
       })();
-    }, [refreshSavedSyncEmail, refreshSyncMetrics]),
+    }, [refreshSavedSyncEmail, refreshSyncMetrics, refreshPushPermission]),
   );
 
   useEffect(() => {
@@ -283,6 +308,19 @@ export default function SettingsScreen() {
         cancelled = true;
       };
     }, []),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (params.focus !== 'backup') return;
+      const timer = setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, syncSectionY.current - 8),
+          animated: true,
+        });
+      }, 120);
+      return () => clearTimeout(timer);
+    }, [params.focus]),
   );
 
   const usedMb = storageFootprint ? footprintBytesToMb(storageFootprint.totalBytes) : 0;
@@ -355,9 +393,8 @@ export default function SettingsScreen() {
       return;
     }
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(t('warning'), t('simplified_declaration_location_denied'));
+      const granted = await requestForegroundLocationOrAlert(t);
+      if (!granted) {
         return;
       }
       const pos = await Location.getCurrentPositionAsync({
@@ -386,6 +423,41 @@ export default function SettingsScreen() {
     });
   };
 
+  const enablePushNotifications = async () => {
+    if (Platform.OS === 'web') {
+      setPushMessage(t('settings_notifications_unavailable'));
+      return;
+    }
+    if (!syncSignedIn) {
+      setPushMessage(t('settings_notifications_sign_in_hint'));
+      return;
+    }
+    setPushRegisterBusy(true);
+    setPushMessage(null);
+    try {
+      const result = await registerFarmerPushToken({
+        alertOnDeny: true,
+        onPermissionDenied: () => alertPushPermissionDenied(t),
+      });
+      await refreshPushPermission();
+      if (result.ok) {
+        setPushMessage(t('settings_notifications_enabled'));
+        return;
+      }
+      if (result.reason === 'denied') {
+        setPushMessage(t('settings_notifications_denied'));
+        return;
+      }
+      if (result.reason === 'unavailable') {
+        setPushMessage(t('settings_notifications_unavailable'));
+        return;
+      }
+      setPushMessage(t('settings_notifications_failed'));
+    } finally {
+      setPushRegisterBusy(false);
+    }
+  };
+
   const displayProfileEmail = syncSignedIn
     ? syncEmail.trim() || getAuthCredentials().email || '—'
     : t('profile_email_none');
@@ -406,8 +478,6 @@ export default function SettingsScreen() {
 
   const exitProfileEditCancel = () => {
     setNameInput(farmer?.name ?? '');
-    setSyncPassword('');
-    setSyncAuthHint(null);
     void refreshSavedSyncEmail();
     setProfileEditing(false);
   };
@@ -427,108 +497,10 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const onSignInForSync = async () => {
-    setSyncSigningIn(true);
-    setSyncAuthHint(null);
-    try {
-      const res = await signInAndSyncPlots({
-        email: syncEmail,
-        password: syncPassword,
-        farmerId: farmer?.id,
-        localPlots: plots,
-      });
-      if (res.ok) {
-        setSyncSignedIn(true);
-        setSyncAuthHint(null);
-        setSyncPassword('');
-        setSyncMessage(null);
-        await refreshAuth();
-        if (farmer?.id) {
-          const bits: string[] = [];
-          const appendQueueResultBits = (
-            qr: Awaited<ReturnType<typeof processPendingSyncQueue>>,
-            label?: string,
-          ) => {
-            if (label) bits.push(label);
-            if (qr.fetchFailed) {
-              bits.push(t('sync_queue_fetch_failed'));
-              return;
-            }
-            if (qr.completed > 0) bits.push(t('sync_queue_sent', { n: qr.completed }));
-            if (qr.droppedInvalid > 0) bits.push(t('sync_queue_dropped_invalid', { n: qr.droppedInvalid }));
-            if (qr.failedActions > 0) {
-              bits.push(t('sync_queue_failed_remain', { n: qr.failedActions }));
-              if (qr.firstError) bits.push(qr.firstError);
-            }
-          };
-          if (selectedQueueActionTypes.length === 0) {
-            setSyncMessage(t('sync_queue_no_action_selected'));
-          } else if (queueSmartSweepEnabled) {
-            const retryingPass = await processPendingSyncQueue({
-              farmerId: farmer.id,
-              localPlots: plots,
-              actionTypes: selectedQueueActionTypes,
-              attemptScope: 'retrying_only',
-              maxActions: queueSmartSweepCap,
-            });
-            appendQueueResultBits(retryingPass, t('sync_queue_smart_pass_retrying'));
-            const firstPassProcessed =
-              retryingPass.completed + retryingPass.failedActions + retryingPass.droppedInvalid;
-            const remainingBudget = Math.max(0, queueSmartSweepCap - firstPassProcessed);
-            if (!retryingPass.fetchFailed) {
-              if (remainingBudget > 0) {
-                const firstAttemptPass = await processPendingSyncQueue({
-                  farmerId: farmer.id,
-                  localPlots: plots,
-                  actionTypes: selectedQueueActionTypes,
-                  attemptScope: 'first_attempt_only',
-                  maxActions: remainingBudget,
-                });
-                appendQueueResultBits(firstAttemptPass, t('sync_queue_smart_pass_first'));
-              } else {
-                bits.push(t('sync_queue_smart_cap_reached'));
-              }
-            }
-            bits.push(queueFilterSummaryLabel);
-            bits.push(queueAttemptScopeSummaryLabel);
-            setSyncMessage(bits.join('\n\n'));
-          } else {
-            const qr = await processPendingSyncQueue({
-              farmerId: farmer.id,
-              localPlots: plots,
-              actionTypes: selectedQueueActionTypes,
-              attemptScope: queueAttemptScope,
-            });
-            if (qr.fetchFailed) {
-              setSyncMessage(t('sync_queue_fetch_failed'));
-            } else if (qr.completed > 0 || qr.failedActions > 0 || qr.droppedInvalid > 0) {
-              appendQueueResultBits(qr);
-              bits.push(queueFilterSummaryLabel);
-              bits.push(queueAttemptScopeSummaryLabel);
-              setSyncMessage(bits.join('\n\n'));
-            }
-          }
-        }
-        void refreshSyncMetrics();
-      } else {
-        setSyncSignedIn(false);
-        setSyncAuthHint(
-          res.message === 'enter_email_password' ? t('enter_email_password') : res.message,
-        );
-      }
-    } catch (e) {
-      setSyncSignedIn(false);
-      setSyncAuthHint(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSyncSigningIn(false);
-    }
-  };
-
   const onSignOutSync = async () => {
     await clearPersistedSyncAuth();
     setSyncSignedIn(false);
     setSyncEmail('');
-    setSyncPassword('');
     setSyncAuthHint(t('signed_out_device'));
     setSyncMessage(null);
     await refreshAuth();
@@ -539,6 +511,7 @@ export default function SettingsScreen() {
     setSyncNowBusy(true);
     setSyncMessage(null);
     try {
+      await withSyncQueueLock(async () => {
       const res = await testBackendLogin();
       if (!res.ok) {
         setSyncMessage(res.message);
@@ -644,6 +617,7 @@ export default function SettingsScreen() {
       parts.push(queueAttemptScopeSummaryLabel);
 
       setSyncMessage(parts.filter(Boolean).join('\n\n'));
+      });
     } finally {
       setSyncNowBusy(false);
       await refreshSyncMetrics();
@@ -720,52 +694,22 @@ export default function SettingsScreen() {
     }
   };
 
-  const loadStoreDemoData = async () => {
-    setStoreDemoBusy(true);
-    setStoreDemoMessage(null);
-    try {
-      await seedStoreScreenshotDemo();
-      await reloadFromDisk();
-      setStoreDemoMessage(t('settings_store_demo_loaded'));
-    } catch {
-      setStoreDemoMessage(t('settings_store_demo_failed'));
-    } finally {
-      setStoreDemoBusy(false);
-    }
-  };
-
   return (
     <ThemedView style={styles.container}>
       <CompactTabHeader
         paddingTop={insets.top}
-        badge={
-          totalSyncPending > 0 ? (
-            <Badge variant="warning" size="sm">
-              {t('pending_count', { n: totalSyncPending })}
-            </Badge>
-          ) : null
-        }
-        left={
-          <Pressable onPress={() => router.push('/')} style={compactTabHeaderStyles.backButton}>
-            <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
-            <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
-              {t('back')}
-            </ThemedText>
-          </Pressable>
-        }
+        left={<TabHeaderSpacer />}
         centerTitle={t('settings_title')}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
         textInverseColor={colors.textInverse}
       />
 
-      <ThemedScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.sectionTitleAbove}>
-          <Ionicons name="person-circle-outline" size={22} color={Brand.primary} />
-          <ThemedText type="subtitle" style={styles.sectionTitleAboveText}>
-            {t('your_profile')}
-          </ThemedText>
-        </View>
+      <ThemedScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         <Card variant="outlined" padding="none" style={styles.card}>
           <CardContent style={styles.cardInner}>
             {!profileEditing ? (
@@ -782,66 +726,11 @@ export default function SettingsScreen() {
                     <ThemedText type="subtitle" style={styles.profileReadonlyName}>
                       {farmer?.name?.trim() ? farmer.name.trim() : t('profile_no_name')}
                     </ThemedText>
-                    <ThemedText type="defaultSemiBold" style={[styles.greenText, styles.profileReadonlyLocation]}>
-                      {t('farmer_region')}
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {displayProfileEmail}
                     </ThemedText>
                   </View>
                 </View>
-                <View style={styles.profileReadonlyField}>
-                  <ThemedText type="default" style={styles.profileReadonlyLabel}>
-                    {t('label_email')}
-                  </ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
-                    {displayProfileEmail}
-                  </ThemedText>
-                </View>
-                {farmer?.postalAddress?.trim() ? (
-                  <View style={styles.profileReadonlyField}>
-                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
-                      {t('settings_postal_label')}
-                    </ThemedText>
-                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
-                      {farmer.postalAddress.trim()}
-                    </ThemedText>
-                  </View>
-                ) : null}
-                {farmer?.commodityCode ? (
-                  <View style={styles.profileReadonlyField}>
-                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
-                      {t('settings_commodity_label')}
-                    </ThemedText>
-                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
-                      {t(
-                        `commodity_${farmer.commodityCode}` as
-                          | 'commodity_coffee'
-                          | 'commodity_cocoa'
-                          | 'commodity_rubber'
-                          | 'commodity_soy'
-                          | 'commodity_timber',
-                      )}
-                      {(() => {
-                        const hs = getCommodityDefinition(farmer.commodityCode)?.hsCode;
-                        return hs ? ` · HS ${formatHsHeading(hs)}` : '';
-                      })()}
-                    </ThemedText>
-                  </View>
-                ) : null}
-                {farmer?.declarationLatitude != null &&
-                farmer?.declarationLongitude != null &&
-                Number.isFinite(farmer.declarationLatitude) &&
-                Number.isFinite(farmer.declarationLongitude) ? (
-                  <View style={styles.profileReadonlyField}>
-                    <ThemedText type="default" style={styles.profileReadonlyLabel}>
-                      {t('settings_declaration_geo_label')}
-                    </ThemedText>
-                    <ThemedText type="defaultSemiBold" style={styles.profileReadonlyValue}>
-                      {Math.abs(farmer.declarationLatitude).toFixed(6)}°
-                      {farmer.declarationLatitude >= 0 ? 'N' : 'S'},{' '}
-                      {Math.abs(farmer.declarationLongitude).toFixed(6)}°
-                      {farmer.declarationLongitude >= 0 ? 'E' : 'W'}
-                    </ThemedText>
-                  </View>
-                ) : null}
                 <Button variant="secondary" size="md" fullWidth onPress={enterProfileEdit}>
                   {t('profile_edit')}
                 </Button>
@@ -881,105 +770,6 @@ export default function SettingsScreen() {
                   containerStyle={styles.nameInputWrap}
                 />
 
-                {farmer ? (
-                  <View style={{ marginTop: 12, gap: 8 }}>
-                    <ThemedText type="defaultSemiBold">{t('settings_declaration_geo_label')}</ThemedText>
-                    <ThemedText type="caption" style={styles.mutedText}>
-                      {t('simplified_declaration_geo_body')}
-                    </ThemedText>
-                    {farmer.declarationLatitude != null &&
-                    farmer.declarationLongitude != null &&
-                    Number.isFinite(farmer.declarationLatitude) &&
-                    Number.isFinite(farmer.declarationLongitude) ? (
-                      <ThemedText type="caption">
-                        {Math.abs(farmer.declarationLatitude).toFixed(6)}°
-                        {farmer.declarationLatitude >= 0 ? 'N' : 'S'},{' '}
-                        {Math.abs(farmer.declarationLongitude).toFixed(6)}°
-                        {farmer.declarationLongitude >= 0 ? 'E' : 'W'}
-                      </ThemedText>
-                    ) : null}
-                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                      <Button variant="secondary" size="md" onPress={() => void captureDeclarationGeo()}>
-                        {t('simplified_declaration_capture_gps')}
-                      </Button>
-                      {farmer.declarationLatitude != null && farmer.declarationLongitude != null ? (
-                        <Button variant="outline" size="md" onPress={clearDeclarationGeo}>
-                          {t('simplified_declaration_clear_gps')}
-                        </Button>
-                      ) : null}
-                    </View>
-                  </View>
-                ) : null}
-
-                <View style={styles.profileDivider} />
-
-                <View style={styles.syncAccountHeader}>
-                  <Ionicons
-                    name={syncSignedIn ? 'checkmark-circle-outline' : 'log-in-outline'}
-                    size={20}
-                    color={Brand.primary}
-                  />
-                  <ThemedText type="defaultSemiBold" style={styles.syncAccountTitle}>
-                    {syncSignedIn ? t('tracebud_account') : t('sign_in_sync_plots')}
-                  </ThemedText>
-                </View>
-                {syncSignedIn ? (
-                  <>
-                    <ThemedText type="defaultSemiBold" style={styles.syncSignedInEmail}>
-                      {t('signed_in_as')}{' '}
-                      {syncEmail.trim() ? syncEmail : getAuthCredentials().email || '—'}
-                    </ThemedText>
-                    <ThemedText type="default" style={styles.syncAccountSub}>
-                      {t('plot_sync_note')}
-                    </ThemedText>
-                  </>
-                ) : (
-                  <>
-                    <ThemedText type="default" style={styles.syncAccountSub}>
-                      {t('sign_in_sub')}
-                    </ThemedText>
-                    <Input
-                      label={t('label_email')}
-                      value={syncEmail}
-                      onChangeText={setSyncEmail}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      keyboardType="email-address"
-                      placeholder="you@example.com"
-                      containerStyle={styles.syncInput}
-                    />
-                    <Input
-                      label={t('label_password')}
-                      value={syncPassword}
-                      onChangeText={setSyncPassword}
-                      secureTextEntry
-                      placeholder="••••••••"
-                      containerStyle={styles.syncInput}
-                    />
-                  </>
-                )}
-                <View style={styles.syncActions}>
-                  {!syncSignedIn ? (
-                    <View style={styles.syncPrimaryBtnWrap}>
-                      {syncSigningIn ? (
-                        <ActivityIndicator color={Brand.primary} />
-                      ) : (
-                        <Button variant="primary" size="md" fullWidth onPress={() => void onSignInForSync()}>
-                          {t('sign_in')}
-                        </Button>
-                      )}
-                    </View>
-                  ) : null}
-                  <Button variant="outline" size="md" fullWidth onPress={() => void onSignOutSync()}>
-                    {t('sign_out_device')}
-                  </Button>
-                </View>
-                {syncAuthHint ? (
-                  <ThemedText type="default" style={styles.syncAuthHint}>
-                    {syncAuthHint}
-                  </ThemedText>
-                ) : null}
-
                 <View style={styles.profileEditActions}>
                   <Button variant="primary" size="md" fullWidth onPress={exitProfileEditSave} disabled={!farmer}>
                     {t('profile_save')}
@@ -993,436 +783,612 @@ export default function SettingsScreen() {
           </CardContent>
         </Card>
 
-        <Card variant="outlined" padding="none" style={styles.card}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.rowHeaderInline}>
-              <View style={styles.sectionHeaderRow}>
-                <Ionicons name="language-outline" size={20} color={Brand.primary} />
-                <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                  {t('language')}
-                </ThemedText>
-              </View>
-              <Pressable onPress={openLanguagePicker} hitSlop={10}>
-                <ThemedText type="defaultSemiBold" style={styles.greenText}>
-                  {localeNames[lang]}
-                </ThemedText>
-              </Pressable>
-            </View>
-          </CardContent>
-        </Card>
-
         {!profileEditing ? (
-          <Card variant="outlined" padding="none" style={styles.card}>
-            <CardContent style={styles.cardInner}>
-              <Pressable
-                onPress={() => router.push('/data-sharing')}
-                style={styles.dataSharingRow}
-                accessibilityRole="button"
-              >
-                <View style={styles.dataSharingRowMain}>
+          <>
+            <Card
+              variant="outlined"
+              padding="none"
+              style={styles.card}
+              onLayout={(e) => {
+                syncSectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
+              <CardContent style={styles.cardInner}>
+                <View style={styles.backupCardHeader}>
                   <View style={styles.sectionHeaderRow}>
-                    <Ionicons name="shield-checkmark-outline" size={20} color={Brand.primary} />
+                    <Ionicons name="cloud-upload-outline" size={20} color={Brand.primary} />
                     <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                      {t('data_sharing_title')}
+                      {t('sync_status_section')}
+                    </ThemedText>
+                  </View>
+                  <ThemedText
+                    type="caption"
+                    style={[
+                      styles.backupStatusText,
+                      totalSyncPending > 0 ? styles.backupStatusPending : styles.backupStatusOk,
+                    ]}
+                  >
+                    {totalSyncPending > 0
+                      ? t('settings_backup_status_pending', { n: totalSyncPending })
+                      : t('up_to_date')}
+                  </ThemedText>
+                </View>
+                <ThemedText type="caption" style={styles.backupIntroText}>
+                  {t('settings_backup_sync_body')}
+                </ThemedText>
+
+                {syncSignedIn ? (
+                  <View style={styles.backupAccountRow}>
+                    <ThemedText type="caption" style={styles.backupAccountEmail} numberOfLines={1}>
+                      {syncEmail.trim() ? syncEmail : getAuthCredentials().email || '—'}
+                    </ThemedText>
+                    <Pressable onPress={() => void onSignOutSync()} hitSlop={8}>
+                      <ThemedText type="caption" style={styles.backupSignOutLink}>
+                        {t('sign_out_device')}
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                <View style={styles.btnWrap}>
+                  {syncSignedIn ? (
+                    <Button
+                      variant={totalSyncPending > 0 ? 'primary' : 'secondary'}
+                      size="md"
+                      fullWidth
+                      loading={syncNowBusy}
+                      disabled={syncNowBusy}
+                      onPress={() => void runSyncNow()}
+                    >
+                      {t('sync_now')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      fullWidth
+                      onPress={() =>
+                        openSignIn({
+                          variant: 'sync',
+                          onSuccess: async () => {
+                            await refreshSavedSyncEmail();
+                            await refreshSyncMetrics();
+                            setSyncAuthHint(null);
+                          },
+                        })
+                      }
+                    >
+                      {t('sign_in_to_backup_title')}
+                    </Button>
+                  )}
+                </View>
+
+                {syncMessage ? (
+                  <ThemedText type="caption" style={styles.syncHint}>
+                    {syncMessage}
+                  </ThemedText>
+                ) : null}
+                {syncAuthHint ? (
+                  <ThemedText type="caption" style={styles.syncAuthHint}>
+                    {syncAuthHint}
+                  </ThemedText>
+                ) : null}
+                {queuePendingCount > 0 && queueLastError ? (
+                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                    {t('settings_sync_upload_issue')}
+                  </ThemedText>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            {Platform.OS !== 'web' ? (
+              <Card variant="outlined" padding="none" style={styles.card}>
+                <CardContent style={styles.cardInner}>
+                  <View style={styles.notificationsCardHeader}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons name="notifications-outline" size={20} color={Brand.primary} />
+                      <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                        {t('settings_notifications_title')}
+                      </ThemedText>
+                    </View>
+                    <ThemedText
+                      type="caption"
+                      style={[
+                        styles.backupStatusText,
+                        pushPermission === 'granted'
+                          ? styles.backupStatusOk
+                          : pushPermission === 'denied'
+                            ? styles.backupStatusPending
+                            : styles.backupStatusMuted,
+                      ]}
+                    >
+                      {pushPermission === 'granted'
+                        ? t('settings_notifications_status_on')
+                        : pushPermission === 'denied'
+                          ? t('settings_notifications_status_off')
+                          : t('settings_notifications_status_unknown')}
                     </ThemedText>
                   </View>
                   <ThemedText type="caption" style={styles.mutedText}>
-                    {t('data_sharing_settings_body')}
+                    {t('settings_notifications_body')}
                   </ThemedText>
-                </View>
-                <View style={styles.dataSharingRowAction}>
-                  <ThemedText type="defaultSemiBold" style={styles.greenText}>
-                    {t('data_sharing_manage')}
-                  </ThemedText>
-                  <Ionicons name="chevron-forward" size={18} color="#0A7F59" />
-                </View>
-              </Pressable>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card variant="outlined" padding="none" style={styles.card}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.sectionHeaderRow}>
-              <Ionicons name="locate-outline" size={20} color={Brand.primary} />
-              <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                {t('settings_vertex_avg_title')}
-              </ThemedText>
-            </View>
-            <ThemedText type="caption" style={styles.mutedText}>
-              {t('settings_vertex_avg_body')}
-            </ThemedText>
-            <View style={styles.vertexAvgRow}>
-              <Pressable
-                onPress={() => {
-                  setVertexAvgSeconds(60);
-                  void setSetting('vertexAveragingSeconds', '60');
-                }}
-                style={[
-                  styles.vertexAvgChip,
-                  vertexAvgSeconds === 60 && styles.vertexAvgChipSelected,
-                ]}
-              >
-                <ThemedText
-                  type="defaultSemiBold"
-                  style={vertexAvgSeconds === 60 ? styles.vertexAvgChipTextSelected : undefined}
-                >
-                  {t('settings_vertex_60')}
-                </ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setVertexAvgSeconds(120);
-                  void setSetting('vertexAveragingSeconds', '120');
-                }}
-                style={[
-                  styles.vertexAvgChip,
-                  vertexAvgSeconds === 120 && styles.vertexAvgChipSelected,
-                ]}
-              >
-                <ThemedText
-                  type="defaultSemiBold"
-                  style={vertexAvgSeconds === 120 ? styles.vertexAvgChipTextSelected : undefined}
-                >
-                  {t('settings_vertex_120')}
-                </ThemedText>
-              </Pressable>
-            </View>
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined" padding="none" style={styles.card}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.rowHeaderInline}>
-              <View style={styles.sectionHeaderRow}>
-                <Ionicons name="sync-outline" size={20} color={Brand.primary} />
-                <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                  {t('sync_status_section')}
-                </ThemedText>
-              </View>
-              <Badge variant={totalSyncPending > 0 ? 'warning' : 'success'} size="md">
-                {totalSyncPending > 0 ? t('pending_count', { n: totalSyncPending }) : t('up_to_date')}
-              </Badge>
-            </View>
-            <ThemedText type="caption" style={styles.backupIntroText}>
-              {t('settings_data_on_device')}
-            </ThemedText>
-            <ThemedText type="caption" style={styles.mutedText}>
-              {t('settings_backup_sync_body')}
-            </ThemedText>
-            <ThemedText type="caption" style={styles.mutedText}>
-              {t('settings_api_base')}: {getTracebudApiBaseUrl()}
-            </ThemedText>
-            <ThemedText type="caption" style={styles.syncAuthHint}>
-              {t('settings_api_url_hint')}
-            </ThemedText>
-            <View style={styles.btnWrap}>
-              <Button
-                variant="secondary"
-                size="md"
-                fullWidth
-                loading={syncNowBusy}
-                disabled={syncNowBusy}
-                onPress={() => void runSyncNow()}
-              >
-                {t('sync_now')}
-              </Button>
-            </View>
-            {syncMessage ? (
-              <ThemedText type="default" style={styles.syncHint}>
-                {syncMessage}
-              </ThemedText>
-            ) : null}
-            {queuePendingCount > 0 ? (
-              <View style={styles.syncQueueHealth}>
-                <ThemedText type="caption">
-                  {t('sync_queue_health_summary', {
-                    pending: queuePendingCount,
-                    retrying: queueRetryingCount,
-                    max: queueMaxAttempts,
-                  })}
-                </ThemedText>
-                {queueLastError ? (
-                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    {t('sync_queue_latest_error_label')}
-                    {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}: {queueLastError}
-                  </ThemedText>
-                ) : null}
-                {queueNextRetrySeconds != null ? (
-                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
-                  </ThemedText>
-                ) : null}
-                <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
-                <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
-                <View style={styles.syncQueueFilterRow}>
-                  <Pressable
-                    onPress={() =>
-                      setQueueSmartSweepEnabled((prev) => {
-                        const next = !prev;
-                        void setSetting('syncQueueSmartSweepEnabled', next ? '1' : '0');
-                        return next;
-                      })
-                    }
-                    style={[
-                      styles.syncQueueFilterChip,
-                      queueSmartSweepEnabled && styles.syncQueueFilterChipActive,
-                    ]}
-                    accessibilityRole="button"
-                  >
-                    <ThemedText
-                      type="caption"
-                      style={queueSmartSweepEnabled ? styles.syncQueueFilterChipTextActive : undefined}
-                    >
-                      {t('sync_queue_smart_sweep_label')}
+                  {pushPermission !== 'granted' ? (
+                    <View style={styles.btnWrap}>
+                      <Button
+                        variant="outline"
+                        size="md"
+                        fullWidth
+                        loading={pushRegisterBusy}
+                        disabled={pushRegisterBusy}
+                        onPress={() => void enablePushNotifications()}
+                      >
+                        {t('settings_notifications_enable')}
+                      </Button>
+                    </View>
+                  ) : null}
+                  {pushMessage ? (
+                    <ThemedText type="caption" style={styles.syncHint}>
+                      {pushMessage}
                     </ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={resetQueueRetryPreferences}
-                    style={styles.syncQueueFilterChip}
-                    accessibilityRole="button"
-                  >
-                    <ThemedText type="caption">{t('sync_queue_reset_preferences_label')}</ThemedText>
-                  </Pressable>
-                </View>
-                {queueSmartSweepEnabled ? (
-                  <View style={styles.syncQueueFilterRow}>
-                    {([25, 50, 100, 200] as const).map((cap) => {
-                      const enabled = queueSmartSweepCap === cap;
-                      return (
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            <Card variant="outlined" padding="none" style={styles.card}>
+              <CardContent style={styles.cardInner}>
+                <Pressable
+                  onPress={() => router.push('/data-sharing')}
+                  style={styles.dataSharingRow}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.dataSharingRowMain}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons name="shield-checkmark-outline" size={20} color={Brand.primary} />
+                      <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                        {t('data_sharing_title')}
+                      </ThemedText>
+                    </View>
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {t('data_sharing_settings_body')}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.dataSharingRowAction}>
+                    <ThemedText type="defaultSemiBold" style={styles.greenText}>
+                      {t('data_sharing_manage')}
+                    </ThemedText>
+                    <Ionicons name="chevron-forward" size={18} color="#0A7F59" />
+                  </View>
+                </Pressable>
+              </CardContent>
+            </Card>
+
+            <Card variant="outlined" padding="none" style={styles.card}>
+              <CardContent style={styles.cardInner}>
+                <Pressable
+                  onPress={() => setAdvancedOpen((open) => !open)}
+                  style={styles.advancedToggle}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons name="options-outline" size={20} color={Brand.primary} />
+                    <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                      {t('settings_advanced')}
+                    </ThemedText>
+                  </View>
+                  <Ionicons
+                    name={advancedOpen ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={Brand.primary}
+                  />
+                </Pressable>
+                {!advancedOpen ? (
+                  <ThemedText type="caption" style={styles.mutedText}>
+                    {t('settings_advanced_body')}
+                  </ThemedText>
+                ) : null}
+                {advancedOpen ? (
+                  <View style={styles.advancedBody}>
+                    {farmer ? (
+                      <View style={styles.advancedSection}>
+                        <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
+                          {t('settings_declaration_geo_label')}
+                        </ThemedText>
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {t('simplified_declaration_geo_body')}
+                        </ThemedText>
+                        {farmer.declarationLatitude != null &&
+                        farmer.declarationLongitude != null &&
+                        Number.isFinite(farmer.declarationLatitude) &&
+                        Number.isFinite(farmer.declarationLongitude) ? (
+                          <ThemedText type="caption">
+                            {Math.abs(farmer.declarationLatitude).toFixed(6)}°
+                            {farmer.declarationLatitude >= 0 ? 'N' : 'S'},{' '}
+                            {Math.abs(farmer.declarationLongitude).toFixed(6)}°
+                            {farmer.declarationLongitude >= 0 ? 'E' : 'W'}
+                          </ThemedText>
+                        ) : null}
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                          <Button variant="secondary" size="md" onPress={() => void captureDeclarationGeo()}>
+                            {t('simplified_declaration_capture_gps')}
+                          </Button>
+                          {farmer.declarationLatitude != null && farmer.declarationLongitude != null ? (
+                            <Button variant="outline" size="md" onPress={clearDeclarationGeo}>
+                              {t('simplified_declaration_clear_gps')}
+                            </Button>
+                          ) : null}
+                        </View>
+                      </View>
+                    ) : null}
+
+                    <View style={styles.advancedSection}>
+                      <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
+                        {t('settings_vertex_avg_title')}
+                      </ThemedText>
+                      <ThemedText type="caption" style={styles.mutedText}>
+                        {t('settings_vertex_avg_body')}
+                      </ThemedText>
+                      <View style={styles.vertexAvgRow}>
                         <Pressable
-                          key={cap}
                           onPress={() => {
-                            setQueueSmartSweepCap(cap);
-                            void setSetting('syncQueueSmartSweepCap', String(cap));
+                            setVertexAvgSeconds(60);
+                            void setSetting('vertexAveragingSeconds', '60');
                           }}
-                          style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
-                          accessibilityRole="button"
+                          style={[
+                            styles.vertexAvgChip,
+                            vertexAvgSeconds === 60 && styles.vertexAvgChipSelected,
+                          ]}
                         >
                           <ThemedText
-                            type="caption"
-                            style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                            type="defaultSemiBold"
+                            style={vertexAvgSeconds === 60 ? styles.vertexAvgChipTextSelected : undefined}
                           >
-                            Cap {cap}
+                            {t('settings_vertex_60')}
                           </ThemedText>
                         </Pressable>
-                      );
-                    })}
+                        <Pressable
+                          onPress={() => {
+                            setVertexAvgSeconds(120);
+                            void setSetting('vertexAveragingSeconds', '120');
+                          }}
+                          style={[
+                            styles.vertexAvgChip,
+                            vertexAvgSeconds === 120 && styles.vertexAvgChipSelected,
+                          ]}
+                        >
+                          <ThemedText
+                            type="defaultSemiBold"
+                            style={vertexAvgSeconds === 120 ? styles.vertexAvgChipTextSelected : undefined}
+                          >
+                            {t('settings_vertex_120')}
+                          </ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.advancedSection}>
+                      <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
+                        {t('local_storage')}
+                      </ThemedText>
+                      <View style={styles.storageBarTrack}>
+                        {storageFootprint && storageFootprint.totalBytes > 0 ? (
+                          <>
+                            {storageFootprint.mediaBytes > 0 ? (
+                              <View style={[styles.storageBarSegment, { flex: storageFootprint.mediaBytes }]} />
+                            ) : null}
+                            {storageFootprint.offlineTilesBytes > 0 ? (
+                              <View
+                                style={[
+                                  styles.storageBarSegment,
+                                  styles.storageBarSegmentMaps,
+                                  { flex: storageFootprint.offlineTilesBytes },
+                                ]}
+                              />
+                            ) : null}
+                            {storageFootprint.sqliteBytes > 0 ? (
+                              <View
+                                style={[
+                                  styles.storageBarSegment,
+                                  styles.storageBarSegmentData,
+                                  { flex: storageFootprint.sqliteBytes },
+                                ]}
+                              />
+                            ) : null}
+                          </>
+                        ) : null}
+                      </View>
+                      {storageMeasuring ? (
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {t('storage_footprint_measuring')}
+                        </ThemedText>
+                      ) : (
+                        <>
+                          <ThemedText type="caption" style={styles.mutedText}>
+                            {t('mb_used', { used: usedMb })}
+                          </ThemedText>
+                          {storageBreakdown ? (
+                            <ThemedText type="caption" style={styles.storageBreakdownText}>
+                              {t('storage_footprint_breakdown', storageBreakdown)}
+                            </ThemedText>
+                          ) : null}
+                        </>
+                      )}
+                    </View>
+
+                    <View style={styles.advancedSection}>
+                      <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
+                        {t('declaration_audit_section')}
+                      </ThemedText>
+                      <ThemedText type="caption" style={styles.mutedText}>
+                        {t('declaration_audit_body')}
+                      </ThemedText>
+                      <View style={styles.btnWrap}>
+                        <Button variant="outline" size="md" fullWidth onPress={() => void shareDeclarationBundle()}>
+                          {t('declaration_export_json')}
+                        </Button>
+                      </View>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        fullWidth
+                        loading={declarationBusy}
+                        disabled={declarationBusy}
+                        onPress={() => void syncDeclarationSnapshotToServer()}
+                      >
+                        {t('declaration_sync_server')}
+                      </Button>
+                    </View>
+
+                    {queuePendingCount > 0 ? (
+                      <View style={styles.advancedSection}>
+                        <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
+                          {t('settings_sync_show_details')}
+                        </ThemedText>
+                        <Pressable
+                          onPress={() => setQueueDetailsOpen((open) => !open)}
+                          style={styles.queueDetailsToggle}
+                          accessibilityRole="button"
+                        >
+                          <ThemedText type="defaultSemiBold" style={styles.greenText}>
+                            {queueDetailsOpen
+                              ? t('settings_sync_hide_details')
+                              : t('settings_sync_show_details')}
+                          </ThemedText>
+                          <Ionicons
+                            name={queueDetailsOpen ? 'chevron-up' : 'chevron-down'}
+                            size={18}
+                            color={Brand.primary}
+                          />
+                        </Pressable>
+                        {queueDetailsOpen ? (
+                          <View style={styles.syncQueueHealth}>
+                            <ThemedText type="caption">
+                              {t('sync_queue_health_summary', {
+                                pending: queuePendingCount,
+                                retrying: queueRetryingCount,
+                                max: queueMaxAttempts,
+                              })}
+                            </ThemedText>
+                            {queueLastError ? (
+                              <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                                {t('sync_queue_latest_error_label')}
+                                {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}:{' '}
+                                {queueLastError}
+                              </ThemedText>
+                            ) : null}
+                            {queueNextRetrySeconds != null ? (
+                              <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                                {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
+                              </ThemedText>
+                            ) : null}
+                            {__DEV__ ? (
+                              <>
+                                <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
+                                <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
+                                <View style={styles.syncQueueFilterRow}>
+                                  <Pressable
+                                    onPress={() =>
+                                      setQueueSmartSweepEnabled((prev) => {
+                                        const next = !prev;
+                                        void setSetting('syncQueueSmartSweepEnabled', next ? '1' : '0');
+                                        return next;
+                                      })
+                                    }
+                                    style={[
+                                      styles.syncQueueFilterChip,
+                                      queueSmartSweepEnabled && styles.syncQueueFilterChipActive,
+                                    ]}
+                                    accessibilityRole="button"
+                                  >
+                                    <ThemedText
+                                      type="caption"
+                                      style={
+                                        queueSmartSweepEnabled
+                                          ? styles.syncQueueFilterChipTextActive
+                                          : undefined
+                                      }
+                                    >
+                                      {t('sync_queue_smart_sweep_label')}
+                                    </ThemedText>
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={resetQueueRetryPreferences}
+                                    style={styles.syncQueueFilterChip}
+                                    accessibilityRole="button"
+                                  >
+                                    <ThemedText type="caption">
+                                      {t('sync_queue_reset_preferences_label')}
+                                    </ThemedText>
+                                  </Pressable>
+                                </View>
+                                {queueSmartSweepEnabled ? (
+                                  <View style={styles.syncQueueFilterRow}>
+                                    {([25, 50, 100, 200] as const).map((cap) => {
+                                      const enabled = queueSmartSweepCap === cap;
+                                      return (
+                                        <Pressable
+                                          key={cap}
+                                          onPress={() => {
+                                            setQueueSmartSweepCap(cap);
+                                            void setSetting('syncQueueSmartSweepCap', String(cap));
+                                          }}
+                                          style={[
+                                            styles.syncQueueFilterChip,
+                                            enabled && styles.syncQueueFilterChipActive,
+                                          ]}
+                                          accessibilityRole="button"
+                                        >
+                                          <ThemedText
+                                            type="caption"
+                                            style={
+                                              enabled ? styles.syncQueueFilterChipTextActive : undefined
+                                            }
+                                          >
+                                            Cap {cap}
+                                          </ThemedText>
+                                        </Pressable>
+                                      );
+                                    })}
+                                  </View>
+                                ) : null}
+                                <View style={styles.syncQueueFilterRow}>
+                                  {(
+                                    [
+                                      ['all', t('sync_queue_attempt_chip_all')],
+                                      ['retrying_only', t('sync_queue_attempt_chip_retrying')],
+                                      ['first_attempt_only', t('sync_queue_attempt_chip_first')],
+                                    ] as const
+                                  ).map(([scope, label]) => {
+                                    const enabled = queueAttemptScope === scope;
+                                    return (
+                                      <Pressable
+                                        key={scope}
+                                        onPress={() => {
+                                          setQueueAttemptScope(scope);
+                                          setQueueSmartSweepEnabled(false);
+                                          void setSetting('syncQueueAttemptScope', scope);
+                                          void setSetting('syncQueueSmartSweepEnabled', '0');
+                                        }}
+                                        style={[
+                                          styles.syncQueueFilterChip,
+                                          enabled && styles.syncQueueFilterChipActive,
+                                        ]}
+                                        accessibilityRole="button"
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={
+                                            enabled ? styles.syncQueueFilterChipTextActive : undefined
+                                          }
+                                        >
+                                          {label}
+                                        </ThemedText>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                                <View style={styles.syncQueueFilterRow}>
+                                  {(
+                                    [
+                                      ['harvest', t('sync_queue_filter_harvest')],
+                                      ['photos_sync', t('sync_queue_filter_photos')],
+                                      ['evidence_sync', t('sync_queue_filter_evidence')],
+                                    ] as const
+                                  ).map(([actionType, label]) => {
+                                    const enabled = queueActionFilter[actionType];
+                                    const count = queueCountByActionType[actionType] ?? 0;
+                                    return (
+                                      <Pressable
+                                        key={actionType}
+                                        onPress={() =>
+                                          setQueueActionFilter((prev) => ({
+                                            ...prev,
+                                            [actionType]: !prev[actionType],
+                                          }))
+                                        }
+                                        style={[
+                                          styles.syncQueueFilterChip,
+                                          enabled && styles.syncQueueFilterChipActive,
+                                        ]}
+                                        accessibilityRole="button"
+                                      >
+                                        <ThemedText
+                                          type="caption"
+                                          style={
+                                            enabled ? styles.syncQueueFilterChipTextActive : undefined
+                                          }
+                                        >
+                                          {label} ({count})
+                                        </ThemedText>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </View>
+                              </>
+                            ) : null}
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+
+                    {__DEV__ ? (
+                      <ThemedText type="caption" style={styles.mutedText}>
+                        {t('settings_api_base')}: {getTracebudApiBaseUrl()}
+                      </ThemedText>
+                    ) : null}
                   </View>
                 ) : null}
-                <View style={styles.syncQueueFilterRow}>
-                  {(
-                    [
-                      ['all', t('sync_queue_attempt_chip_all')],
-                      ['retrying_only', t('sync_queue_attempt_chip_retrying')],
-                      ['first_attempt_only', t('sync_queue_attempt_chip_first')],
-                    ] as const
-                  ).map(([scope, label]) => {
-                    const enabled = queueAttemptScope === scope;
-                    return (
-                      <Pressable
-                        key={scope}
-                        onPress={() => {
-                          setQueueAttemptScope(scope);
-                          setQueueSmartSweepEnabled(false);
-                          void setSetting('syncQueueAttemptScope', scope);
-                          void setSetting('syncQueueSmartSweepEnabled', '0');
-                        }}
-                        style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
-                        accessibilityRole="button"
-                      >
-                        <ThemedText
-                          type="caption"
-                          style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
-                        >
-                          {label}
-                        </ThemedText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <View style={styles.syncQueueFilterRow}>
-                  {(
-                    [
-                      ['harvest', 'Harvest'],
-                      ['photos_sync', 'Photos'],
-                      ['evidence_sync', 'Evidence'],
-                    ] as const
-                  ).map(([actionType, label]) => {
-                    const enabled = queueActionFilter[actionType];
-                    const count = queueCountByActionType[actionType] ?? 0;
-                    return (
-                      <Pressable
-                        key={actionType}
-                        onPress={() =>
-                          setQueueActionFilter((prev) => ({
-                            ...prev,
-                            [actionType]: !prev[actionType],
-                          }))
-                        }
-                        style={[styles.syncQueueFilterChip, enabled && styles.syncQueueFilterChipActive]}
-                        accessibilityRole="button"
-                      >
-                        <ThemedText
-                          type="caption"
-                          style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
-                        >
-                          {label} ({count})
-                        </ThemedText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        <Card variant="outlined" padding="none" style={styles.card}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.sectionHeaderRow}>
-              <Ionicons name="document-text-outline" size={20} color={Brand.primary} />
-              <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                {t('declaration_audit_section')}
-              </ThemedText>
-            </View>
-            <ThemedText type="caption" style={styles.mutedText}>
-              {t('declaration_audit_body')}
-            </ThemedText>
-            <View style={[styles.btnWrap, { marginTop: 10 }]}>
-              <Button variant="outline" size="md" fullWidth onPress={() => void shareDeclarationBundle()}>
-                {t('declaration_export_json')}
-              </Button>
-            </View>
-            <View style={styles.btnWrap}>
-              <Button
-                variant="secondary"
-                size="md"
-                fullWidth
-                loading={declarationBusy}
-                disabled={declarationBusy}
-                onPress={() => void syncDeclarationSnapshotToServer()}
-              >
-                {t('declaration_sync_server')}
-              </Button>
-            </View>
-          </CardContent>
-        </Card>
-
-        <Card variant="outlined" padding="none" style={styles.card}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.sectionHeaderRow}>
-              <Ionicons name="phone-portrait-outline" size={20} color={Brand.primary} />
-              <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                {t('local_storage')}
-              </ThemedText>
-            </View>
-            <View style={styles.storageBarTrack}>
-              {storageFootprint && storageFootprint.totalBytes > 0 ? (
-                <>
-                  {storageFootprint.mediaBytes > 0 ? (
-                    <View style={[styles.storageBarSegment, { flex: storageFootprint.mediaBytes }]} />
-                  ) : null}
-                  {storageFootprint.offlineTilesBytes > 0 ? (
-                    <View
-                      style={[
-                        styles.storageBarSegment,
-                        styles.storageBarSegmentMaps,
-                        { flex: storageFootprint.offlineTilesBytes },
-                      ]}
-                    />
-                  ) : null}
-                  {storageFootprint.sqliteBytes > 0 ? (
-                    <View
-                      style={[
-                        styles.storageBarSegment,
-                        styles.storageBarSegmentData,
-                        { flex: storageFootprint.sqliteBytes },
-                      ]}
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </View>
-            {storageMeasuring ? (
-              <ThemedText type="default" style={styles.mutedText}>
-                {t('storage_footprint_measuring')}
-              </ThemedText>
-            ) : (
-              <>
-                <ThemedText type="default" style={styles.mutedText}>
-                  {t('mb_used', { used: usedMb })}
-                </ThemedText>
-                {storageBreakdown ? (
-                  <ThemedText type="default" style={styles.storageBreakdownText}>
-                    {t('storage_footprint_breakdown', storageBreakdown)}
+            <Card variant="outlined" padding="none" style={[styles.card, styles.helpCard]}>
+              <CardContent style={styles.cardInner}>
+                <View style={styles.sectionHeaderRow}>
+                  <Ionicons name="information-circle-outline" size={20} color={Brand.primary} />
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                      {t('need_help')}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {t('help_contact_hint')}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.btnWrap}>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    onPress={() => {
+                      Linking.openURL('mailto:support@tracebud.com').catch(() => undefined);
+                    }}
+                  >
+                    {t('contact_us_btn')}
+                  </Button>
+                </View>
+                <Pressable
+                  onPress={() => setHelpTipsOpen((open) => !open)}
+                  style={styles.helpTipsToggle}
+                  accessibilityRole="button"
+                >
+                  <ThemedText type="defaultSemiBold" style={styles.greenText}>
+                    {helpTipsOpen ? t('help_hide_tips') : t('help_show_tips')}
+                  </ThemedText>
+                  <Ionicons
+                    name={helpTipsOpen ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color={Brand.primary}
+                  />
+                </Pressable>
+                {helpTipsOpen ? (
+                  <ThemedText type="caption" style={styles.helpFarmerTips}>
+                    {t('help_farmer_body')}
                   </ThemedText>
                 ) : null}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {storeDemoToolsEnabled ? (
-          <Card variant="outlined" padding="none" style={styles.card}>
-            <CardContent style={styles.cardInner}>
-              <View style={styles.sectionHeaderRow}>
-                <Ionicons name="camera-outline" size={20} color={Brand.primary} />
-                <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                  {t('settings_store_demo_title')}
-                </ThemedText>
-              </View>
-              <ThemedText type="default" style={styles.mutedText}>
-                {t('settings_store_demo_body')}
-              </ThemedText>
-              <View style={styles.btnWrap}>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  fullWidth
-                  loading={storeDemoBusy}
-                  disabled={storeDemoBusy}
-                  onPress={() => void loadStoreDemoData()}
-                >
-                  {t('settings_store_demo_load')}
-                </Button>
-              </View>
-              {storeDemoMessage ? (
-                <ThemedText type="default" style={styles.greenText}>
-                  {storeDemoMessage}
-                </ThemedText>
-              ) : null}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </>
         ) : null}
-
-        <Card variant="outlined" padding="none" style={[styles.card, styles.helpCard]}>
-          <CardContent style={styles.cardInner}>
-            <View style={styles.sectionHeaderRow}>
-              <Ionicons name="information-circle-outline" size={20} color={Brand.primary} />
-              <View style={{ flex: 1 }}>
-                <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
-                  {t('need_help')}
-                </ThemedText>
-                <ThemedText type="default" style={styles.helpSub}>
-                  {t('contact_us')}
-                </ThemedText>
-              </View>
-            </View>
-            <View style={styles.btnWrap}>
-              <Button
-                variant="secondary"
-                size="md"
-                fullWidth
-                onPress={() => {
-                  Linking.openURL('mailto:support@tracebud.com').catch(() => undefined);
-                }}
-              >
-                {t('contact_us_btn')}
-              </Button>
-            </View>
-          </CardContent>
-        </Card>
       </ThemedScrollView>
     </ThemedView>
   );
@@ -1603,10 +1569,82 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   backupIntroText: {
-    marginTop: 8,
-    color: '#0B4F3B',
+    marginTop: 6,
+    color: '#666666',
     lineHeight: 20,
+  },
+  backupCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  notificationsCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  backupStatusText: {
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
+  },
+  backupStatusOk: {
+    color: Brand.success,
+  },
+  backupStatusPending: {
+    color: Brand.warning,
+  },
+  backupStatusMuted: {
+    color: '#666666',
+  },
+  backupAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5E5',
+  },
+  backupAccountEmail: {
+    flex: 1,
+    color: '#444444',
+  },
+  backupSignOutLink: {
+    color: Brand.primary,
+    fontWeight: '600',
+  },
+  queueDetailsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  advancedBody: {
+    marginTop: 12,
+    gap: 20,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5E5',
+  },
+  advancedSection: {
+    gap: 8,
+  },
+  advancedSectionTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#111111',
   },
   dataSharingRow: {
     gap: 12,
@@ -1654,50 +1692,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#EAF8F2',
     borderColor: '#AEE6D3',
   },
-  helpSub: {
-    color: '#0A7F59',
-    marginTop: 4,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  profileDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E5E5E5',
-    marginVertical: 16,
-  },
-  syncAccountHeader: {
+  helpTipsToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  syncAccountTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#111111',
-  },
-  syncAccountSub: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#666666',
-    marginBottom: 12,
-  },
-  syncSignedInEmail: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#111111',
-    marginBottom: 6,
-  },
-  syncInput: {
-    marginBottom: 12,
-  },
-  syncActions: {
-    gap: 10,
+    justifyContent: 'space-between',
     marginTop: 4,
+    paddingVertical: 6,
   },
-  syncPrimaryBtnWrap: {
-    minHeight: 48,
-    justifyContent: 'center',
+  helpFarmerTips: {
+    color: '#1F6B57',
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
   },
   syncAuthHint: {
     marginTop: 12,

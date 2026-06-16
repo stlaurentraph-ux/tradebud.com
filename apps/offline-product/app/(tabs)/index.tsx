@@ -10,7 +10,6 @@ import { CompactTabHeader, HomeHeaderBrandLeft } from '@/components/layout/Compa
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { Brand, Colors, Radius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -26,15 +25,7 @@ import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
-import {
-  fetchAssignedAssessmentRequests,
-  updateAssessmentRequestStatus,
-  type FarmerAssessmentRequest,
-} from '@/features/api/postPlot';
-import {
-  getStoreDemoBackendPlots,
-  isStoreDemoFarmer,
-} from '@/features/demo/storeDemoApiFixtures';
+import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
 import { scaleText } from '@/features/demo/storeUiScale';
 
 const HOME_SCREEN_PAD = 16;
@@ -55,16 +46,37 @@ export default function HomeScreen() {
   const [loadingBackend, setLoadingBackend] = useState(false);
   const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
-  const [assessmentRequests, setAssessmentRequests] = useState<FarmerAssessmentRequest[]>([]);
-  const [assessmentError, setAssessmentError] = useState<string | null>(null);
-  const [assessmentSavingId, setAssessmentSavingId] = useState<string | null>(null);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
 
   useFocusEffect(
     useCallback(() => {
       void refreshAuth();
-    }, [refreshAuth]),
+      loadPendingSyncActions()
+        .then((rows) => setPendingCount(rows.length))
+        .catch(() => undefined);
+      if (farmer?.id && isSignedIn) {
+        fetchPlotsForFarmer(farmer.id)
+          .then((rows) => setBackendPlots(rows ?? []))
+          .catch(() => setBackendPlots([]));
+      }
+    }, [refreshAuth, farmer?.id, isSignedIn]),
   );
+
+  const unsyncedPlotCount = useMemo(() => {
+    if (!isSignedIn || plots.length === 0) return 0;
+    return listUnsyncedLocalPlots(plots, backendPlots).length;
+  }, [plots, backendPlots, isSignedIn]);
+
+  const totalPendingSync = pendingCount + unsyncedPlotCount;
+  const needsBackupAttention = isSignedIn && totalPendingSync > 0;
+
+  const openBackupFlow = useCallback(() => {
+    if (!isSignedIn) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+    router.navigate('/(tabs)/settings?focus=backup');
+  }, [isSignedIn, openSignIn]);
 
   useEffect(() => {
     loadPendingSyncActions()
@@ -72,10 +84,8 @@ export default function HomeScreen() {
       .catch(() => undefined);
   }, [plots.length, farmer?.id]);
 
-  const demoFarmerActive = Boolean(farmer && isStoreDemoFarmer(farmer.id));
-
   useEffect(() => {
-    if (!farmer || (!isSignedIn && !demoFarmerActive)) {
+    if (!farmer || !isSignedIn) {
       setBackendPlots([]);
       setLoadingBackend(false);
       return;
@@ -85,7 +95,7 @@ export default function HomeScreen() {
       .then((rows) => setBackendPlots(rows ?? []))
       .catch(() => setBackendPlots([]))
       .finally(() => setLoadingBackend(false));
-  }, [farmer, isSignedIn, demoFarmerActive, t]);
+  }, [farmer, isSignedIn, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,36 +162,7 @@ export default function HomeScreen() {
     };
   }, [plots, backendPlots, t]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchAssignedAssessmentRequests()
-      .then((rows) => {
-        if (!cancelled) {
-          setAssessmentRequests(rows);
-          setAssessmentError(null);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setAssessmentRequests([]);
-          setAssessmentError(error instanceof Error ? error.message : 'Assessment requests unavailable');
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [farmer?.id]);
-
   const counts = useMemo(() => {
-    if (demoFarmerActive) {
-      const demoRows = getStoreDemoBackendPlots();
-      const compliant = demoRows.filter((p) => p.status === 'compliant').length;
-      return {
-        plotsCount: demoRows.length,
-        compliant,
-        pending: Math.max(0, demoRows.length - compliant),
-      };
-    }
     const plotsCount = plots.length;
     const compliant = plots.filter((p) => {
       if (plotChecklistDoneById[p.id] === true) return true;
@@ -190,7 +171,7 @@ export default function HomeScreen() {
     }).length;
     const pending = Math.max(0, plotsCount - compliant);
     return { plotsCount, compliant, pending };
-  }, [plots, backendPlots, plotChecklistDoneById, demoFarmerActive]);
+  }, [plots, backendPlots, plotChecklistDoneById]);
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
@@ -198,12 +179,21 @@ export default function HomeScreen() {
     if (farmer && !farmer.name?.trim()) return 'add_name';
     return 'register_plot';
   }, [plots.length, farmer]);
-  const nextAssessment =
-    assessmentRequests.find((item) => ['sent', 'opened', 'in_progress', 'needs_changes'].includes(item.status)) ??
-    null;
+  const homeTiles = useMemo(() => {
+    const openPlotSection = (sub: 'documents' | 'voucher') => {
+      if (plots.length === 0) {
+        if (sub === 'documents') router.push('/documents');
+        else router.navigate('/(tabs)/harvests');
+        return;
+      }
+      if (plots.length === 1) {
+        router.push(`/plot/${encodeURIComponent(plots[0]!.id)}?sub=${sub}`);
+        return;
+      }
+      router.navigate('/(tabs)/explore');
+    };
 
-  const homeTiles = useMemo(
-    () => [
+    const all = [
       {
         key: 'register_plot',
         title: t('register_plot_tile'),
@@ -212,6 +202,7 @@ export default function HomeScreen() {
         tint: '#BFEEDB',
         iconColor: '#0B7B59',
         onPress: () => router.navigate('/(tabs)/record'),
+        showWhenEmpty: true,
       },
       {
         key: 'log_harvest',
@@ -221,6 +212,7 @@ export default function HomeScreen() {
         tint: '#F8EDC8',
         iconColor: '#B45A00',
         onPress: () => router.navigate('/(tabs)/harvests'),
+        showWhenEmpty: true,
       },
       {
         key: 'documents',
@@ -229,14 +221,8 @@ export default function HomeScreen() {
         icon: 'document-text-outline' as const,
         tint: '#DCE9FF',
         iconColor: '#2454D7',
-        onPress: () => {
-          const first = plots[0];
-          if (first?.id) {
-            router.push(`/plot/${encodeURIComponent(first.id)}?sub=documents`);
-            return;
-          }
-          router.push('/documents');
-        },
+        onPress: () => openPlotSection('documents'),
+        showWhenEmpty: false,
       },
       {
         key: 'vouchers',
@@ -245,18 +231,15 @@ export default function HomeScreen() {
         icon: 'qr-code-outline' as const,
         tint: '#F0E3FF',
         iconColor: '#7A1FD1',
-        onPress: () => {
-          const first = plots[0];
-          if (first?.id) {
-            router.push(`/plot/${encodeURIComponent(first.id)}?sub=voucher`);
-            return;
-          }
-          router.navigate('/(tabs)/harvests');
-        },
+        onPress: () => openPlotSection('voucher'),
+        showWhenEmpty: false,
       },
-    ],
-    [t, plots],
-  );
+    ];
+    if (plots.length === 0) {
+      return all.filter((tile) => tile.showWhenEmpty);
+    }
+    return all;
+  }, [t, plots]);
 
   const homeTileLabelsKey = useMemo(
     () => homeTiles.map((tile) => `${tile.title}\0${tile.subtitle}`).join('\n'),
@@ -279,31 +262,10 @@ export default function HomeScreen() {
     setUniformTileHeight((prev) => (prev === max ? prev : max));
   }, []);
 
-  const markAssessmentProgress = async (requestId: string, status: 'opened' | 'in_progress' | 'submitted') => {
-    setAssessmentSavingId(requestId);
-    try {
-      await updateAssessmentRequestStatus({ requestId, status });
-      const rows = await fetchAssignedAssessmentRequests();
-      setAssessmentRequests(rows);
-      setAssessmentError(null);
-    } catch (error) {
-      setAssessmentError(error instanceof Error ? error.message : 'Could not update assessment');
-    } finally {
-      setAssessmentSavingId((prev) => (prev === requestId ? null : prev));
-    }
-  };
-
   return (
     <ThemedView style={styles.screen}>
       <CompactTabHeader
         paddingTop={insets.top}
-        badge={
-          pendingCount > 0 ? (
-            <Badge variant="warning" size="sm">
-              {t('pending_count', { n: pendingCount })}
-            </Badge>
-          ) : null
-        }
         left={<HomeHeaderBrandLeft />}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
@@ -458,7 +420,7 @@ export default function HomeScreen() {
             <Pressable
               onPress={() =>
                 router.navigate(
-                  `/(tabs)/explore?plotId=${encodeURIComponent(actionRequired.plotId)}&focus=photos`,
+                  `/plot/${encodeURIComponent(actionRequired.plotId)}?sub=photos`,
                 )
               }
               style={styles.completeNowRow}
@@ -473,42 +435,44 @@ export default function HomeScreen() {
 
         {counts.plotsCount > 0 ? (
         <Pressable
-          onPress={pendingCount > 0 ? () => router.navigate('/(tabs)/settings?focus=backup') : undefined}
-          disabled={pendingCount === 0}
-          accessibilityRole={pendingCount > 0 ? 'button' : undefined}
-          accessibilityLabel={pendingCount > 0 ? t('home_backup_tap') : undefined}
-          style={({ pressed }) => [pendingCount > 0 && pressed && styles.syncCardPressed]}
+          onPress={openBackupFlow}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isSignedIn
+              ? needsBackupAttention
+                ? t('home_backup_tap')
+                : t('sync_status_section')
+              : t('sign_in_to_backup_title')
+          }
+          style={({ pressed }) => [pressed && styles.syncCardPressed]}
         >
           <Card variant="outlined" style={styles.syncCard}>
             <View style={styles.syncHeader}>
               <View style={styles.syncTitleRow}>
                 <Ionicons
-                  name={pendingCount > 0 ? 'cloud-upload-outline' : 'cloud-done-outline'}
+                  name={needsBackupAttention ? 'cloud-upload-outline' : 'cloud-done-outline'}
                   size={16}
-                  color={pendingCount > 0 ? Brand.warning : Brand.success}
+                  color={needsBackupAttention ? Brand.warning : isSignedIn ? Brand.success : Brand.primary}
                 />
                 <ThemedText type="defaultSemiBold">{t('sync_status')}</ThemedText>
               </View>
               <View style={styles.syncHeaderTrailing}>
-                <View
-                  style={[
-                    styles.pendingPill,
-                    { backgroundColor: pendingCount > 0 ? 'rgba(221,107,32,0.14)' : 'rgba(56,161,105,0.14)' },
-                  ]}
-                >
-                  <ThemedText
-                    type="caption"
-                    style={{ color: pendingCount > 0 ? Brand.warning : Brand.success }}
+                {needsBackupAttention ? (
+                  <View
+                    style={[
+                      styles.pendingPill,
+                      { backgroundColor: 'rgba(221,107,32,0.14)' },
+                    ]}
                   >
-                    {t('pending_count', { n: pendingCount })}
-                  </ThemedText>
-                </View>
-                {pendingCount > 0 ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                    <ThemedText type="caption" style={{ color: Brand.warning }}>
+                      {t('pending_count', { n: totalPendingSync })}
+                    </ThemedText>
+                  </View>
                 ) : null}
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
               </View>
             </View>
-            {pendingCount === 0 ? (
+            {!needsBackupAttention && isSignedIn ? (
               <View style={styles.progressBarTrack}>
                 <View style={[styles.progressFill, styles.progressFillComplete]} />
               </View>
@@ -517,83 +481,21 @@ export default function HomeScreen() {
               type="caption"
               style={[
                 styles.syncCaption,
-                pendingCount > 0 ? styles.syncCaptionPending : styles.syncCaptionComplete,
+                needsBackupAttention
+                  ? styles.syncCaptionPending
+                  : isSignedIn
+                    ? styles.syncCaptionComplete
+                    : styles.syncCaptionOptional,
               ]}
             >
-              {pendingCount > 0 ? t('backup_waiting', { n: pendingCount }) : t('backup_up_to_date')}
+              {needsBackupAttention
+                ? t('backup_waiting', { n: totalPendingSync })
+                : isSignedIn
+                  ? t('backup_up_to_date')
+                  : t('home_sign_in_backup_caption')}
             </ThemedText>
-            {pendingCount > 0 ? (
-              <ThemedText type="caption" style={styles.syncTapHint}>
-                {t('home_backup_tap')}
-              </ThemedText>
-            ) : null}
           </Card>
         </Pressable>
-        ) : null}
-
-        {__DEV__ ? (
-        <Card variant="outlined" style={styles.syncCard}>
-          <View style={styles.syncHeader}>
-            <View style={styles.syncTitleRow}>
-              <Ionicons name="clipboard-outline" size={16} color={colors.textSecondary} />
-              <ThemedText type="defaultSemiBold">Assessment Tasks</ThemedText>
-            </View>
-            <View style={styles.pendingPill}>
-              <ThemedText type="caption">{assessmentRequests.length} assigned</ThemedText>
-            </View>
-          </View>
-          {assessmentError ? (
-            <ThemedText type="caption" style={{ color: Brand.warning }}>
-              {assessmentError}
-            </ThemedText>
-          ) : nextAssessment ? (
-            <View style={{ gap: 8 }}>
-              <ThemedText type="defaultSemiBold">{nextAssessment.title}</ThemedText>
-              <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                {nextAssessment.pathway} · status: {nextAssessment.status}
-              </ThemedText>
-              <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-                Questionnaire: {nextAssessment.questionnaire_id ?? 'not linked'}
-              </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {nextAssessment.status === 'sent' ? (
-                  <Pressable
-                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'opened')}
-                    style={styles.onboardingPill}
-                  >
-                    <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Open task'}
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-                {(nextAssessment.status === 'opened' || nextAssessment.status === 'needs_changes') ? (
-                  <Pressable
-                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'in_progress')}
-                    style={styles.onboardingPill}
-                  >
-                    <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Start form'}
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-                {nextAssessment.status === 'in_progress' ? (
-                  <Pressable
-                    onPress={() => void markAssessmentProgress(nextAssessment.id, 'submitted')}
-                    style={styles.onboardingPill}
-                  >
-                    <ThemedText type="caption">
-                      {assessmentSavingId === nextAssessment.id ? 'Saving...' : 'Submit to dashboard'}
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ) : (
-            <ThemedText type="caption" style={{ color: colors.textSecondary }}>
-              No pending assessments right now.
-            </ThemedText>
-          )}
-        </Card>
         ) : null}
       </ThemedScrollView>
     </ThemedView>
@@ -866,10 +768,8 @@ const styles = StyleSheet.create({
   syncCaptionPending: {
     color: '#B45309',
   },
-  syncTapHint: {
-    color: '#0B7B59',
-    fontWeight: '600',
-    marginTop: 2,
+  syncCaptionOptional: {
+    color: '#4B6B5F',
   },
   onboardingCard: {
     borderRadius: 18,
@@ -916,14 +816,5 @@ const styles = StyleSheet.create({
   },
   onboardingCtaText: {
     color: '#FFFFFF',
-  },
-  onboardingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: '#E6F7EF',
   },
 });

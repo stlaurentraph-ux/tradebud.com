@@ -16,6 +16,7 @@ export const DASHBOARD_EVENTS = {
   ONBOARDING_COMPLETED: 'onboarding_completed',
   UI_ACTION_FAILED: 'dashboard_ui_action_failed',
   REACT_RENDER_ERROR: 'dashboard_react_render_error',
+  UPSTREAM_BLOCKER_ALERT_CLICKED: 'dashboard_upstream_blocker_alert_clicked',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];

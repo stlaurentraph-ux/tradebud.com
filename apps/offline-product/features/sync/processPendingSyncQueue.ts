@@ -18,6 +18,7 @@ import {
   type PendingSyncAction,
 } from '@/features/state/persistence';
 import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export type ProcessPendingSyncQueueResult = {
   /** Actions removed from the queue after successful API calls. */
@@ -74,7 +75,15 @@ export async function processPendingSyncQueue(params: {
   const resolveBackendPlotId = (localPlotId: string): string | null => {
     const local = params.localPlots.find((p) => p.id === localPlotId);
     if (!local) return null;
-    const hit = findBackendPlotForLocal(local, backendRows);
+    const hit = findBackendPlotForLocal(
+      {
+        id: local.id,
+        name: local.name,
+        areaHectares: local.areaHectares,
+        kind: local.kind,
+      },
+      backendRows,
+    );
     return hit != null && (hit as { id?: unknown }).id != null
       ? String((hit as { id: unknown }).id)
       : null;
@@ -153,6 +162,11 @@ export async function processPendingSyncQueue(params: {
         await postHarvestToBackend({ ...payload, plotId: sid, hlcTimestamp: a.hlcTimestamp, clientEventId: `pending-sync-${a.id}` } as Parameters<
           typeof postHarvestToBackend
         >[0]);
+        trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
+          plotId: localId,
+          serverPlotId: sid,
+          source: 'sync_queue',
+        });
       } else if (a.actionType === 'photos_sync') {
         const localId = String(payload?.plotId ?? '');
         const sid = resolveBackendPlotId(localId);
@@ -300,6 +314,20 @@ export async function processPendingSyncQueue(params: {
         },
       }).catch(() => undefined);
     }
+  }
+
+  if (completed > 0) {
+    trackEvent(ANALYTICS_EVENTS.SYNC_QUEUE_DRAINED, {
+      completed,
+      failedActions,
+      droppedInvalid,
+    });
+  }
+  if (failedActions > 0) {
+    trackEvent(ANALYTICS_EVENTS.SYNC_ACTION_FAILED, {
+      failedActions,
+      firstError: firstError ?? null,
+    });
   }
 
   return {

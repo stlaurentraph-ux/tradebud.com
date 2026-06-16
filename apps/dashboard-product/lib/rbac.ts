@@ -376,6 +376,98 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   ],
 };
 
+/** Collapsible sidebar sections — Overview stays standalone above groups. */
+export interface NavSectionDefinition {
+  id: string;
+  labelKey: string;
+  itemNames: string[];
+}
+
+const ROLE_NAV_SECTIONS: Record<TenantRole, NavSectionDefinition[]> = {
+  exporter: [
+    { id: 'engagement', labelKey: 'nav.section.engagement', itemNames: ['Campaigns'] },
+    {
+      id: 'origins',
+      labelKey: 'nav.section.origins',
+      itemNames: ['Producers', 'Plots', 'Lots & Batches'],
+    },
+    { id: 'export', labelKey: 'nav.section.export', itemNames: ['Shipments', 'Evidence'] },
+    {
+      id: 'operations',
+      labelKey: 'nav.section.operations',
+      itemNames: ['Requests', 'Issues', 'Audit Log'],
+    },
+  ],
+  importer: [
+    { id: 'network', labelKey: 'nav.section.network', itemNames: ['Network'] },
+    {
+      id: 'compliance_ops',
+      labelKey: 'nav.section.compliance_ops',
+      itemNames: ['Shipments', 'Compliance', 'Evidence'],
+    },
+    {
+      id: 'engagement',
+      labelKey: 'nav.section.engagement',
+      itemNames: ['Campaigns', 'Requests'],
+    },
+    {
+      id: 'governance',
+      labelKey: 'nav.section.governance',
+      itemNames: ['Reporting', 'Issues', 'Audit Log'],
+    },
+  ],
+  cooperative: [
+    {
+      id: 'members',
+      labelKey: 'nav.section.members',
+      itemNames: ['Members', 'Plots', 'Field Operations'],
+    },
+    { id: 'production', labelKey: 'nav.section.production', itemNames: ['Lots & Batches'] },
+    { id: 'export', labelKey: 'nav.section.export', itemNames: ['Shipments', 'Evidence'] },
+    {
+      id: 'programme',
+      labelKey: 'nav.section.programme',
+      itemNames: ['Requests', 'Governance', 'Reporting', 'Issues', 'Audit Log'],
+    },
+  ],
+  country_reviewer: [
+    {
+      id: 'review',
+      labelKey: 'nav.section.review',
+      itemNames: ['DDS Packages', 'Plots', 'Compliance', 'Role Decisions'],
+    },
+    { id: 'records', labelKey: 'nav.section.records', itemNames: ['Reports', 'Audit Log'] },
+  ],
+  sponsor: [
+    {
+      id: 'programme',
+      labelKey: 'nav.section.programme',
+      itemNames: ['Organisations', 'Compliance Health', 'Programmes'],
+    },
+    {
+      id: 'administration',
+      labelKey: 'nav.section.administration',
+      itemNames: ['Delegated Admin', 'Billing & Coverage'],
+    },
+    {
+      id: 'operations',
+      labelKey: 'nav.section.operations',
+      itemNames: ['Reporting', 'Requests', 'Issues', 'Audit Log'],
+    },
+  ],
+};
+
+export interface ResolvedNavSection {
+  id: string;
+  labelKey: string;
+  items: NavItem[];
+}
+
+export interface VisibleNavLayout {
+  overview: NavItem | null;
+  sections: ResolvedNavSection[];
+}
+
 export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Overview', href: '/', icon: 'LayoutDashboard', permission: 'plots:view', mvp: true },
   { name: 'Network', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
@@ -487,6 +579,32 @@ export function getVisibleNavItems(user: User | null): NavItem[] {
   return allowedItems
     .map((name) => navByName.get(name))
     .filter((item): item is NavItem => item !== undefined && isRouteEnabled(item.href));
+}
+
+/**
+ * Group visible nav items into Overview + collapsible sections for sidebar IA.
+ */
+export function getVisibleNavSections(user: User | null): VisibleNavLayout {
+  const items = getVisibleNavItems(user);
+  if (!user) {
+    return { overview: null, sections: [] };
+  }
+
+  const itemsByName = new Map(items.map((item) => [item.name, item] as const));
+  const overview = itemsByName.get('Overview') ?? null;
+  const sectionDefs = ROLE_NAV_SECTIONS[user.active_role] ?? [];
+
+  const sections = sectionDefs
+    .map((section) => ({
+      id: section.id,
+      labelKey: section.labelKey,
+      items: section.itemNames
+        .map((name) => itemsByName.get(name))
+        .filter((item): item is NavItem => item !== undefined),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  return { overview, sections };
 }
 
 /**

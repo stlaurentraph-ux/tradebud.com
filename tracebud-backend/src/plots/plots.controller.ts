@@ -1,7 +1,10 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Inject, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Pool } from 'pg';
+import { resolveFieldActorRole } from '../auth/field-app-auth';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
+import { PG_POOL } from '../db/db.module';
 import { CreatePlotDto } from './dto/create-plot.dto';
 import { SyncPlotEvidenceDto } from './dto/sync-plot-evidence.dto';
 import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
@@ -24,6 +27,7 @@ export class PlotsController {
   constructor(
     private readonly plotsService: PlotsService,
     private readonly consentService: ConsentService,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
 
   private requireTenantClaim(req: any) {
@@ -34,8 +38,8 @@ export class PlotsController {
   }
 
   private async enforceSyncPlotScope(plotId: string, req: any, assignmentId?: string) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer' && role !== 'agent') {
+    const role = await resolveFieldActorRole(this.pool, req.user);
+    if (!role) {
       throw new ForbiddenException('Only farmers or agents can sync plot metadata');
     }
     const userId = req.user?.id as string | undefined;
@@ -192,8 +196,9 @@ export class PlotsController {
   async create(@Body() dto: CreatePlotDto, @Req() req: any) {
     this.requireTenantClaim(req);
     const userId = req.user?.id as string | undefined;
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer' && role !== 'agent' && role !== 'exporter') {
+    const actorRole = await resolveFieldActorRole(this.pool, req.user);
+    const jwtRole = deriveRoleFromSupabaseUser(req.user);
+    if (actorRole !== 'farmer' && actorRole !== 'agent' && jwtRole !== 'exporter') {
       throw new ForbiddenException('Only farmers, agents, or exporters can create plots');
     }
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
@@ -211,11 +216,11 @@ export class PlotsController {
   ) {
     this.requireTenantClaim(req);
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
-    const role = deriveRoleFromSupabaseUser(req.user);
+    const actorRole = await resolveFieldActorRole(this.pool, req.user);
     const resolvedScope = scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
 
     if (resolvedScope === 'tenant') {
-      if (role === 'farmer') {
+      if (actorRole === 'farmer') {
         throw new ForbiddenException('Farmers must provide farmerId scope');
       }
       if (!tenantId) {
@@ -230,7 +235,7 @@ export class PlotsController {
     if (!scopedFarmerId) {
       throw new ForbiddenException('farmerId is required when scope=farmer');
     }
-    if (role === 'farmer') {
+    if (actorRole === 'farmer') {
       const userId = req.user?.id as string | undefined;
       if (!userId) {
         throw new ForbiddenException('Missing authenticated user');

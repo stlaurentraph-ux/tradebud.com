@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { FileText, Hand, Loader2, Sparkles } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -10,6 +10,41 @@ import { tenureParseStatusLabel } from '@/lib/use-plot-tenure-verification';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  buildTenureReviewBreadcrumbs,
+  getTenureReviewAiConfidenceLabel,
+  getTenureReviewAiDetectedLabel,
+  getTenureReviewAiExtractionTitle,
+  getTenureReviewAiNoneDetectedMessage,
+  getTenureReviewCadastralAwaitingMessage,
+  getTenureReviewCadastralMatchMessage,
+  getTenureReviewCadastralMismatchMessage,
+  getTenureReviewCadastralTitle,
+  getTenureReviewConfirmCta,
+  getTenureReviewConfirmFailedMessage,
+  getTenureReviewDialogCancelLabel,
+  getTenureReviewDialogConfirmLabel,
+  getTenureReviewDialogDescription,
+  getTenureReviewDialogNoteLabel,
+  getTenureReviewDialogNotePlaceholder,
+  getTenureReviewDialogReasonLabel,
+  getTenureReviewDialogReasonPlaceholder,
+  getTenureReviewDialogSavingLabel,
+  getTenureReviewDialogTitle,
+  getTenureReviewDocumentFallback,
+  getTenureReviewEmptyMessage,
+  getTenureReviewLoadingMessage,
+  getTenureReviewMissingReviewQualityMessage,
+  getTenureReviewMissingTitle,
+  getTenureReviewOpenPlotLabel,
+  getTenureReviewPageSubtitle,
+  getTenureReviewPageTitle,
+  getTenureReviewPlotFallback,
+  getTenureReviewProducerFallback,
+  getTenureReviewReasonMinLengthMessage,
+  getTenureReviewStatLabel,
+} from '@/lib/workflow-terminology-labels';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +62,8 @@ function formatTenureType(value: unknown): string | null {
 }
 
 export default function TenureReviewPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { items, isLoading, error, confirmReview } = useTenureReviewQueue();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
@@ -57,7 +94,7 @@ export default function TenureReviewPage() {
 
   const handleConfirm = async () => {
     if (!selected || reason.trim().length < 8) {
-      setSubmitError('Enter a reason with at least 8 characters.');
+      setSubmitError(getTenureReviewReasonMinLengthMessage(t));
       return;
     }
     setIsSubmitting(true);
@@ -66,7 +103,7 @@ export default function TenureReviewPage() {
       await confirmReview(selected.plot_id, selected.id, reason.trim(), note.trim() || undefined);
       setSelectedId(null);
     } catch (submitErr) {
-      setSubmitError(submitErr instanceof Error ? submitErr.message : 'Confirmation failed.');
+      setSubmitError(submitErr instanceof Error ? submitErr.message : getTenureReviewConfirmFailedMessage(t));
     } finally {
       setIsSubmitting(false);
     }
@@ -76,13 +113,9 @@ export default function TenureReviewPage() {
     <PermissionGate permission="compliance:view">
       <div className="flex flex-col">
         <AppHeader
-          title="Tenure document review"
-          subtitle="Confirm AI tenure extractions for producer-in-possession and informal land evidence"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Compliance', href: '/compliance' },
-            { label: 'Tenure review' },
-          ]}
+          title={getTenureReviewPageTitle(t)}
+          subtitle={getTenureReviewPageSubtitle(t)}
+          breadcrumbs={buildTenureReviewBreadcrumbs(t)}
         />
 
         <div className="flex-1 space-y-6 p-6">
@@ -96,19 +129,19 @@ export default function TenureReviewPage() {
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold">{counts.total}</p>
-                <p className="text-sm text-muted-foreground mt-1">Documents awaiting review</p>
+                <p className="text-sm text-muted-foreground mt-1">{getTenureReviewStatLabel('awaiting', t)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold text-amber-600">{counts.manual}</p>
-                <p className="text-sm text-muted-foreground mt-1">Manual review required</p>
+                <p className="text-sm text-muted-foreground mt-1">{getTenureReviewStatLabel('manual', t)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-3xl font-bold text-red-600">{counts.failed}</p>
-                <p className="text-sm text-muted-foreground mt-1">Parse failed</p>
+                <p className="text-sm text-muted-foreground mt-1">{getTenureReviewStatLabel('failed', t)}</p>
               </CardContent>
             </Card>
           </div>
@@ -117,18 +150,18 @@ export default function TenureReviewPage() {
             {isLoading ? (
               <div className="rounded-lg border bg-secondary/30 py-12 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading tenure review queue…
+                {getTenureReviewLoadingMessage(t)}
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-lg border bg-secondary/30 py-12 text-center text-sm text-muted-foreground">
-                No tenure documents currently require human review.
+                {getTenureReviewEmptyMessage(t)}
               </div>
             ) : (
               items.map((item) => {
                 const label =
                   item.evidence_label?.trim() ||
                   item.storage_path.split('/').pop() ||
-                  'Tenure document';
+                  getTenureReviewDocumentFallback(t);
                 const tenureType = formatTenureType(item.parse_result?.tenure_type);
                 const missing = Array.isArray(item.parse_result?.clauses_missing)
                   ? (item.parse_result?.clauses_missing as string[])
@@ -147,7 +180,8 @@ export default function TenureReviewPage() {
                             {label}
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
-                            {item.plot_name ?? 'Plot'} · {item.farmer_name ?? 'Producer'}
+                            {item.plot_name ?? getTenureReviewPlotFallback(t)} ·{' '}
+                            {item.farmer_name ?? getTenureReviewProducerFallback(t)}
                           </p>
                         </div>
                         <Badge variant="destructive">
@@ -161,43 +195,49 @@ export default function TenureReviewPage() {
                         <div className="rounded-md border p-3 space-y-1">
                           <p className="font-medium flex items-center gap-2">
                             <Hand className="h-4 w-4" />
-                            AI extraction
+                            {getTenureReviewAiExtractionTitle(t)}
                           </p>
                           <p className="text-muted-foreground">
-                            {tenureType ? `Detected: ${tenureType}` : 'No tenure type detected'}
+                            {tenureType
+                              ? getTenureReviewAiDetectedLabel(tenureType, t)
+                              : getTenureReviewAiNoneDetectedMessage(t)}
                           </p>
                           {item.parse_confidence != null ? (
                             <p className="text-muted-foreground">
-                              Confidence {Math.round(item.parse_confidence * 100)}%
+                              {getTenureReviewAiConfidenceLabel(Math.round(item.parse_confidence * 100), t)}
                             </p>
                           ) : null}
                         </div>
                         <div className="rounded-md border p-3 space-y-1">
-                          <p className="font-medium">Cadastral cross-check</p>
+                          <p className="font-medium">{getTenureReviewCadastralTitle(t)}</p>
                           <p className="text-muted-foreground">
                             {crossCheck?.keys_match === true
-                              ? 'Declared Clave matches document extraction.'
+                              ? getTenureReviewCadastralMatchMessage(t)
                               : crossCheck?.keys_match === false
-                                ? `Mismatch: declared ${String(crossCheck?.declared_cadastral_key ?? 'n/a')} vs extracted ${String(crossCheck?.extracted_parcel_reference ?? 'n/a')}`
-                                : 'Awaiting declared Clave or clearer extraction.'}
+                                ? getTenureReviewCadastralMismatchMessage(
+                                    String(crossCheck?.declared_cadastral_key ?? 'n/a'),
+                                    String(crossCheck?.extracted_parcel_reference ?? 'n/a'),
+                                    t,
+                                  )
+                                : getTenureReviewCadastralAwaitingMessage(t)}
                           </p>
                         </div>
                         <div className="rounded-md border p-3 space-y-1 md:col-span-2">
-                          <p className="font-medium">Missing elements</p>
+                          <p className="font-medium">{getTenureReviewMissingTitle(t)}</p>
                           <p className="text-muted-foreground">
                             {missing.length > 0
                               ? missing.slice(0, 4).join(', ')
-                              : 'Review document quality and issuer details.'}
+                              : getTenureReviewMissingReviewQualityMessage(t)}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/plots/${item.plot_id}`}>Open plot</Link>
+                          <Link href={`/plots/${item.plot_id}`}>{getTenureReviewOpenPlotLabel(t)}</Link>
                         </Button>
                         <Button size="sm" onClick={() => openConfirm(item.id)}>
-                          Confirm tenure review
+                          {getTenureReviewConfirmCta(t)}
                         </Button>
                       </div>
                     </CardContent>
@@ -211,39 +251,36 @@ export default function TenureReviewPage() {
         <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelectedId(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm tenure review</DialogTitle>
-              <DialogDescription>
-                Accept this tenure document after manual review. This clears the compliance issue and
-                allows the plot land checklist to pass when other requirements are met.
-              </DialogDescription>
+              <DialogTitle>{getTenureReviewDialogTitle(t)}</DialogTitle>
+              <DialogDescription>{getTenureReviewDialogDescription(t)}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="tenure-review-reason">Reason</Label>
+                <Label htmlFor="tenure-review-reason">{getTenureReviewDialogReasonLabel(t)}</Label>
                 <Textarea
                   id="tenure-review-reason"
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
-                  placeholder="Explain why this document is acceptable for EUDR land-use evidence."
+                  placeholder={getTenureReviewDialogReasonPlaceholder(t)}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tenure-review-note">Note (optional)</Label>
+                <Label htmlFor="tenure-review-note">{getTenureReviewDialogNoteLabel(t)}</Label>
                 <Textarea
                   id="tenure-review-note"
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
-                  placeholder="Optional reviewer note for audit trail."
+                  placeholder={getTenureReviewDialogNotePlaceholder(t)}
                 />
               </div>
               {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSelectedId(null)} disabled={isSubmitting}>
-                Cancel
+                {getTenureReviewDialogCancelLabel(t)}
               </Button>
               <Button onClick={() => void handleConfirm()} disabled={isSubmitting}>
-                {isSubmitting ? 'Saving…' : 'Confirm review'}
+                {isSubmitting ? getTenureReviewDialogSavingLabel(t) : getTenureReviewDialogConfirmLabel(t)}
               </Button>
             </DialogFooter>
           </DialogContent>

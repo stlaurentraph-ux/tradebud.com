@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
@@ -9,7 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusChip } from '@/components/ui/status-chip';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
 import { usePackages } from '@/lib/use-packages';
+import {
+  getDdsLoadingMessage,
+  getDdsNewPackageLabel,
+  getDdsPreflightChecks,
+  getDdsPreflightScoreLabel,
+  getDdsPreflightTracesHint,
+  getDdsReadyForTracesMessage,
+  getDdsTabLabels,
+  getDdsWorkspaceSubtitle,
+  getDdsWorkspaceTitle,
+} from '@/lib/workflow-terminology-labels';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import type { DDSPackage } from '@/types';
 
 // Canonical DDS states from spec
@@ -25,52 +39,6 @@ type DDSStatus =
   | 'WITHDRAWAL_REQUESTED'
   | 'WITHDRAWN'
   | 'SUPERSEDED';
-
-// 7-Step Pre-flight Checklist
-const PREFLIGHT_CHECKS = [
-  {
-    id: 'deforestation',
-    name: 'Deforestation Check',
-    description: 'Verify no deforestation on or after cutoff date',
-    status: 'pass' as const,
-  },
-  {
-    id: 'degradation',
-    name: 'Degradation Check',
-    description: 'Verify no degradation on or after cutoff date',
-    status: 'pass' as const,
-  },
-  {
-    id: 'tenure',
-    name: 'Tenure Check',
-    description: 'Verify legitimate tenure or possession',
-    status: 'pass' as const,
-  },
-  {
-    id: 'protected_area',
-    name: 'Protected Area Check',
-    description: 'Verify no protected areas involvement',
-    status: 'pass' as const,
-  },
-  {
-    id: 'fpic',
-    name: 'FPIC Check',
-    description: 'Verify Free Prior Informed Consent obtained',
-    status: 'pass' as const,
-  },
-  {
-    id: 'yield_capacity',
-    name: 'Yield Capacity Check',
-    description: 'Verify production capacity & competence',
-    status: 'pass' as const,
-  },
-  {
-    id: 'completeness',
-    name: 'Data Completeness',
-    description: 'Verify all required fields populated',
-    status: 'pass' as const,
-  },
-];
 
 type DDSWorkspaceItem = {
   id: string;
@@ -103,8 +71,15 @@ function mapPackageToDDSStatus(pkg: DDSPackage): DDSStatus {
 }
 
 export default function DDSWorkspacePage() {
+  const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const role = user?.active_role;
   const { packages, isLoading, error } = usePackages();
   const [selectedDDS, setSelectedDDS] = useState<string | null>(null);
+
+  const preflightChecks = useMemo(() => getDdsPreflightChecks(t), [t]);
+  const ddsTabs = useMemo(() => getDdsTabLabels(t), [t]);
 
   const ddsPackages = useMemo<DDSWorkspaceItem[]>(
     () =>
@@ -117,7 +92,7 @@ export default function DDSWorkspacePage() {
         farmers: pkg.farmers.length,
         preflightScore: pkg.compliance_status === 'BLOCKED' ? 4 : pkg.compliance_status === 'WARNINGS' ? 6 : 7,
       })),
-    [packages]
+    [packages],
   );
 
   const firstPackageId = ddsPackages[0]?.id ?? null;
@@ -140,18 +115,18 @@ export default function DDSWorkspacePage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="DDS Workspace"
-        subtitle="Manage Deforestation Due Diligence packages with canonical states"
+        title={getDdsWorkspaceTitle(t)}
+        subtitle={getDdsWorkspaceSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'DDS Workspace' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getDdsWorkspaceTitle(t) },
         ]}
         actions={
           <PermissionGate permission="packages:create">
             <Button asChild>
               <Link href="/dds/new">
                 <Plus className="mr-2 h-4 w-4" />
-                New DDS Package
+                {getDdsNewPackageLabel(t)}
               </Link>
             </Button>
           </PermissionGate>
@@ -166,9 +141,9 @@ export default function DDSWorkspacePage() {
         )}
         <Tabs defaultValue="packages" className="w-full">
           <TabsList>
-            <TabsTrigger value="packages">DDS Packages</TabsTrigger>
-            <TabsTrigger value="preflight">Pre-flight Checklist</TabsTrigger>
-            <TabsTrigger value="states">State Diagram</TabsTrigger>
+            <TabsTrigger value="packages">{ddsTabs.packages}</TabsTrigger>
+            <TabsTrigger value="preflight">{ddsTabs.preflight}</TabsTrigger>
+            <TabsTrigger value="states">{ddsTabs.states}</TabsTrigger>
           </TabsList>
 
           {/* DDS Packages Tab */}
@@ -178,7 +153,7 @@ export default function DDSWorkspacePage() {
               <div className="lg:col-span-2 space-y-2">
                 {isLoading && (
                   <div className="rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
-                    Loading DDS packages...
+                    {getDdsLoadingMessage(t)}
                   </div>
                 )}
                 {!isLoading &&
@@ -214,7 +189,7 @@ export default function DDSWorkspacePage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Pre-flight Score</p>
+                      <p className="text-sm text-muted-foreground">{getDdsPreflightScoreLabel(t)}</p>
                       <p className="text-2xl font-bold">{selected.preflightScore}/7</p>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -240,12 +215,12 @@ export default function DDSWorkspacePage() {
               <CardHeader>
                 <CardTitle>7-Step Pre-flight Checklist</CardTitle>
                 <CardDescription>
-                  All checks must pass before submission to TRACES NT
+                  {getDdsPreflightTracesHint(role, t)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {PREFLIGHT_CHECKS.map((check) => (
+                  {preflightChecks.map((check) => (
                     <div
                       key={check.id}
                       className="flex items-start gap-4 rounded-lg border p-4 hover:bg-secondary/50"
@@ -276,7 +251,7 @@ export default function DDSWorkspacePage() {
                     ✓ Pre-flight Check Passed
                   </p>
                   <p className="text-sm text-emerald-800 mt-1">
-                    All 7 checks passed. This DDS package is ready for submission to TRACES NT.
+                    {getDdsReadyForTracesMessage(role, t)}
                   </p>
                 </div>
               </CardContent>

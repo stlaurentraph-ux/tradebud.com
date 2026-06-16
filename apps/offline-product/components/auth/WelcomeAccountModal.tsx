@@ -1,7 +1,9 @@
-import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { ThemedText } from '@/components/themed-text';
+import { authSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Radius, Spacing } from '@/constants/theme';
 
 type WelcomeAccountModalProps = {
@@ -27,36 +29,36 @@ export function WelcomeAccountModal({
   onSignIn,
   onSkip,
 }: WelcomeAccountModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onSkip}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          <Image
-            source={require('../../assets/images/tracebud-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <ThemedText type="title" style={styles.title}>
+      <Pressable
+        style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
+        onPress={onSkip}
+      >
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <ThemedText type="defaultSemiBold" style={styles.title}>
             {title}
           </ThemedText>
-          <ThemedText type="default" style={styles.body}>
+          <ThemedText type="caption" style={styles.body}>
             {body}
           </ThemedText>
           <View style={styles.actions}>
-            <Button variant="primary" fullWidth onPress={onCreateAccount}>
+            <Button variant="primary" size="sm" fullWidth onPress={onCreateAccount}>
               {createAccountLabel}
             </Button>
-            <Button variant="outline" fullWidth onPress={onSignIn}>
+            <Button variant="outline" size="sm" fullWidth onPress={onSignIn}>
               {signInLabel}
             </Button>
           </View>
-          <Pressable onPress={onSkip} hitSlop={12} style={styles.skipBtn}>
-            <ThemedText type="defaultSemiBold" style={styles.skipText}>
+          <Pressable onPress={onSkip} hitSlop={12} style={authSheetStyles.footerLink}>
+            <ThemedText type="defaultSemiBold" style={authSheetStyles.footerMutedText}>
               {skipLabel}
             </ThemedText>
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -64,43 +66,30 @@ export function WelcomeAccountModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'center',
-    padding: Spacing.lg,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.md,
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  logo: {
-    width: 56,
-    height: 56,
-    marginBottom: Spacing.xs,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 16,
+    gap: 8,
   },
   title: {
     color: Brand.primary,
-    textAlign: 'center',
-    fontSize: 22,
+    fontSize: 18,
+    lineHeight: 24,
   },
   body: {
-    textAlign: 'center',
-    color: '#4B5563',
-    marginBottom: Spacing.sm,
-    lineHeight: 22,
+    color: '#6B7280',
+    lineHeight: 18,
   },
   actions: {
     width: '100%',
     gap: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  skipBtn: {
-    marginTop: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  skipText: {
-    color: '#6B7280',
+    marginTop: 4,
   },
 });

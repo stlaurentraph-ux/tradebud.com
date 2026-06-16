@@ -4,6 +4,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -12,8 +13,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Pool } from 'pg';
+import { resolveFieldActorRole } from '../auth/field-app-auth';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
+import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -34,6 +38,7 @@ export class HarvestController {
     private readonly harvestService: HarvestService,
     private readonly launchService: LaunchService,
     private readonly consentService: ConsentService,
+    @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
 
   private async filterVouchersForTenantAccess(
@@ -89,8 +94,8 @@ export class HarvestController {
   async create(@Body() dto: CreateHarvestDto, @Req() req: any) {
     this.requireTenantClaim(req);
     const userId = req.user?.id as string | undefined;
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer' && role !== 'agent') {
+    const role = await resolveFieldActorRole(this.pool, req.user);
+    if (!role) {
       throw new ForbiddenException('Only farmers or agents can record harvests');
     }
     if (role === 'farmer') {
@@ -114,14 +119,17 @@ export class HarvestController {
     @Req() req: any,
   ) {
     const tenantId = this.getTenantId(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
+    const jwtRole = deriveRoleFromSupabaseUser(req.user);
+    const fieldRole = await resolveFieldActorRole(this.pool, req.user);
+    const isDashboardOperator =
+      jwtRole === 'admin' || DASHBOARD_HARVEST_ROLES.has(jwtRole);
     const resolvedScope = scope === 'tenant' || !farmerId?.trim() ? 'tenant' : 'farmer';
 
     if (resolvedScope === 'tenant') {
-      if (role === 'farmer') {
+      if (fieldRole === 'farmer' && !isDashboardOperator) {
         throw new ForbiddenException('Farmers must provide farmerId scope');
       }
-      this.assertDashboardHarvestRole(role);
+      this.assertDashboardHarvestRole(jwtRole);
       const vouchers = await this.harvestService.listVouchersForTenant(tenantId);
       const scoped = await this.filterVouchersForTenantAccess(tenantId, vouchers);
       return { vouchers: scoped };
@@ -132,7 +140,7 @@ export class HarvestController {
       throw new ForbiddenException('farmerId is required when scope=farmer');
     }
 
-    if (role === 'farmer') {
+    if (fieldRole === 'farmer') {
       const userId = req.user?.id as string | undefined;
       if (!userId) {
         throw new ForbiddenException('Missing authenticated user');
@@ -141,8 +149,8 @@ export class HarvestController {
       if (!owned) {
         throw new ForbiddenException('Farmer scope violation');
       }
-    } else if (role !== 'admin') {
-      this.assertDashboardHarvestRole(role);
+    } else if (jwtRole !== 'admin') {
+      this.assertDashboardHarvestRole(jwtRole);
       const inTenant = await this.harvestService.isFarmerInTenant(scopedFarmerId, tenantId);
       if (!inTenant) {
         throw new ForbiddenException('Farmer scope violation');

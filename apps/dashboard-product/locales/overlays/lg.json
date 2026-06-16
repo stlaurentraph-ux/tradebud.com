@@ -1,0 +1,22 @@
+{
+  "common.save": "Tereka",
+  "common.cancel": "Sazaamu",
+  "common.loading": "Kiteekateeka…",
+  "nav.dashboard": "Ddaasiboodi",
+  "nav.settings": "Enteekateeka",
+  "nav.help": "Obuyambi",
+  "nav.shipments": "Okutambuza",
+  "nav.harvests": "Enkungula",
+  "nav.plots": "Obutundu",
+  "nav.farmers": "Abalimi",
+  "nav.compliance": "Okugondera amateeka",
+  "nav.members": "Bammemba",
+  "settings.preferences.language": "Olulimi",
+  "settings.preferences.language_policy_origin": "Ennimi z’amawanga agavaamu okusooka, oluvannyuma ennimi z’ebyobusuubuzi ku ttiimu z’omu nnimiro n’okutambuza.",
+  "status.shipment.ready": "Tegeeredde",
+  "status.shipment.sealed": "Kizziddwa",
+  "status.shipment.handed_off": "Kiweereddwayo",
+  "status.compliance.blocked": "Kigaaniddwa",
+  "workflow.review_queue.action.review_shipment": "Kebera okutambuza",
+  "workflow.review_queue.blocked": "Kigaaniddwa"
+}

@@ -39,7 +39,6 @@ if ! command -v pod >/dev/null 2>&1; then
   exec bash "$SCRIPT_DIR/run-ios-simulator.sh"
 fi
 
-export EXPO_PUBLIC_STORE_DEMO=1
 echo "==> Building Tracebud locally (first run may take 10–15 min)…"
 npx expo run:ios --device "$DEVICE_ID"
 
@@ -47,6 +46,6 @@ cat <<EOF
 
 Tracebud should be open in Simulator.
 
-Demo data loads on launch. Capture: ⌘S or npm run capture:screenshot -- iphone-01-home.png
+Capture: ⌘S or npm run capture:screenshot -- iphone-01-home.png
 
 EOF

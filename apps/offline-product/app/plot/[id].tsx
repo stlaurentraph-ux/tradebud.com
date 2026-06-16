@@ -25,6 +25,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
+import { ProgressRing } from '@/components/ui/ProgressRing';
 import { Badge } from '@/components/ui/badge';
 import { Button as UiButton } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,12 +52,14 @@ import {
   savePlotCadastralKey,
   savePlotTenure,
   enqueuePendingSync,
+  getSetting,
   type PlotPhoto,
   type PlotTitlePhoto,
   type PlotEvidenceItem,
 } from '@/features/state/persistence';
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
+import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import { syncPlotLegalToBackend } from '@/features/api/postPlot';
 import {
@@ -64,8 +67,10 @@ import {
   computePlotReadinessChecklist,
 } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 
 type Sub = 'photos' | 'documents' | 'harvests' | 'voucher';
+type SetupTarget = Sub | 'settings';
 
 export default function PlotDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -74,7 +79,7 @@ export default function PlotDetailScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { id, sub } = useLocalSearchParams<{ id: string; sub?: Sub }>();
   const { plots, farmer, updatePlot } = useAppState();
-  const { t, lang } = useLanguage();
+  const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
   const plot = useMemo(() => plots.find((p) => p.id === plotId) ?? null, [plots, plotId]);
@@ -105,6 +110,22 @@ export default function PlotDetailScreen() {
   const [legalSyncReason, setLegalSyncReason] = useState('');
   const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
   const [legalitySyncBusy, setLegalitySyncBusy] = useState(false);
+  const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
+  const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
+
+  const plotMapRegion = useMemo(
+    () => (plot ? computeRegionFromPlot(plot) : undefined),
+    [plot],
+  );
+
+  useEffect(() => {
+    getSetting('offlineTilesEnabled')
+      .then((v) => setOfflineTilesEnabled(v === '1'))
+      .catch(() => undefined);
+    getSetting('offlineTilesActivePackId')
+      .then((v) => setOfflineTilesPackId(v && v.length > 0 ? v : null))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!plotId) return;
@@ -282,9 +303,7 @@ export default function PlotDetailScreen() {
   const isCompliant = !overlapFlags.sinaph && !overlapFlags.indigenous;
 
   const plotStatusRows = useMemo(() => {
-    const evidenceKinds = evidence
-      .map((e) => e.kind)
-      .filter((k): k is string => typeof k === 'string' && k.length > 0);
+    const evidenceKinds = evidence.map((e) => e.kind);
     const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
       computePlotReadinessChecklist({
         groundTruthPhotoCount: photos.length,
@@ -307,7 +326,7 @@ export default function PlotDetailScreen() {
       title: string;
       hint: string;
       done: boolean;
-      target: Sub | null;
+      target: SetupTarget | null;
     }[] = [
       {
         id: 'ground',
@@ -352,7 +371,7 @@ export default function PlotDetailScreen() {
       title: t('plot_status_sync'),
       hint: t('plot_status_sync_hint'),
       done: syncOk,
-      target: null,
+      target: 'settings',
     });
     return rows;
   }, [
@@ -378,11 +397,37 @@ export default function PlotDetailScreen() {
     [plotStatusRows],
   );
 
+  const nextSetupRow = plotStatusRemainingRows[0];
+
+  const openNextSetupStep = useCallback(() => {
+    if (!nextSetupRow) return;
+    if (nextSetupRow.target === 'settings') {
+      router.push('/(tabs)/settings?focus=backup');
+      return;
+    }
+    if (nextSetupRow.target) {
+      setActive(nextSetupRow.target);
+    }
+  }, [nextSetupRow]);
+
+  const openSetupRow = useCallback((row: (typeof plotStatusRows)[number]) => {
+    if (row.target === 'settings') {
+      router.push('/(tabs)/settings?focus=backup');
+      return;
+    }
+    if (row.target) {
+      setActive(row.target);
+    }
+  }, []);
+
   const addGroundTruthPhoto = async () => {
     if (!plot) return;
     setNote(null);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      Alert.alert(t('evidence_perm_camera_title'), t('evidence_perm_camera_body'));
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
     if (result.canceled || !result.assets?.[0]?.uri) return;
     const uri = result.assets[0].uri;
@@ -475,7 +520,10 @@ export default function PlotDetailScreen() {
   const addLandTitlePhoto = async () => {
     if (!plot) return;
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      Alert.alert(t('evidence_perm_camera_title'), t('evidence_perm_camera_body'));
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
     if (result.canceled || !result.assets?.[0]?.uri) return;
     persistPlotTitlePhoto({
@@ -499,27 +547,32 @@ export default function PlotDetailScreen() {
           <Pressable onPress={() => (active ? setActive(null) : router.back())} style={styles.backPill}>
             <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              Back
+              {t('back')}
             </ThemedText>
           </Pressable>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
               {active === 'photos'
-                ? 'Photo Vault'
+                ? t('plot_photo_vault')
                 : active === 'documents'
-                  ? 'Land Documents'
+                  ? t('plot_land_documents')
                   : active === 'harvests'
-                    ? 'Harvest Records'
+                    ? t('plot_harvest_records')
                     : active === 'voucher'
-                      ? 'Compliance Voucher'
-                      : 'Plot Details'}
+                      ? t('plot_compliance_voucher')
+                      : t('plot_detail_title')}
             </ThemedText>
           </View>
-          <View style={styles.langPillCompact}>
+          <Pressable
+            onPress={openLanguagePicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('language_picker_title')}
+            style={styles.langPillCompact}
+          >
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {String(lang).toUpperCase()}
             </ThemedText>
-          </View>
+          </Pressable>
         </View>
       </LinearGradient>
 
@@ -527,6 +580,30 @@ export default function PlotDetailScreen() {
         {active == null ? (
         <>
         <Card variant="outlined" style={styles.card}>
+          {plot ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('plot_map_view_boundary')}
+              onPress={() =>
+                router.push(`/(tabs)/record?editPlotId=${encodeURIComponent(plot.id)}`)
+              }
+              style={styles.plotMapHeroPress}
+            >
+              <PlotMapPreview
+                plot={plot}
+                region={plotMapRegion}
+                offlineTilesEnabled={offlineTilesEnabled}
+                offlineTilesPackId={offlineTilesPackId}
+                width="100%"
+                height={176}
+                borderRadius={12}
+                showAttribution
+              />
+              <ThemedText type="caption" style={styles.plotMapCaption}>
+                {t('plot_map_view_boundary')}
+              </ThemedText>
+            </Pressable>
+          ) : null}
           <View style={styles.rowHeader}>
             <View style={styles.plotTitleBlock}>
               <ThemedText type="defaultSemiBold" style={styles.plotTitleFull}>
@@ -582,27 +659,56 @@ export default function PlotDetailScreen() {
           </View>
           <View style={styles.plotStatusBadgeRow}>
             <Badge variant={checklistComplete ? 'success' : 'warning'} size="sm">
-              {checklistComplete ? t('status_compliant') : t('status_action_needed')}
+              {checklistComplete ? t('status_compliant') : t('finish_setup_chip')}
             </Badge>
           </View>
-          <View style={styles.summaryMetaRow}>
-            <View style={styles.summaryMetaCell}>
-              <ThemedText type="caption">{t('plot_geoid_label')}</ThemedText>
-              <ThemedText type="defaultSemiBold">
-                {plot ? `HN-COP-${new Date(plot.createdAt).getFullYear()}-${String(plot.id).slice(-3)}` : '—'}
-              </ThemedText>
-            </View>
-            <View style={styles.summaryMetaCell}>
-              <ThemedText type="caption">{t('plot_registered_label')}</ThemedText>
-              <ThemedText type="defaultSemiBold">
-                {plot ? new Date(plot.createdAt).toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : '—'}
-              </ThemedText>
-            </View>
-          </View>
+          {plot ? (
+            <ThemedText type="caption" style={styles.plotRegisteredLine}>
+              {t('plot_registered_label')}:{' '}
+              {new Date(plot.createdAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric',
+              })}
+            </ThemedText>
+          ) : null}
         </Card>
+
+        {!checklistComplete && nextSetupRow ? (
+          <Pressable
+            onPress={openNextSetupStep}
+            style={({ pressed }) => [styles.nextStepBanner, pressed && styles.nextStepBannerPressed]}
+          >
+            <View style={styles.nextStepIconWrap}>
+              <Ionicons name="arrow-forward-circle" size={28} color="#0A7F59" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="caption" style={styles.nextStepEyebrow}>
+                {t('plot_next_step_title')}
+              </ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.nextStepTitle}>
+                {nextSetupRow.title}
+              </ThemedText>
+              <ThemedText type="caption" style={styles.nextStepHint}>
+                {nextSetupRow.hint}
+              </ThemedText>
+            </View>
+            <ThemedText type="caption" style={styles.nextStepCta}>
+              {t('plot_next_step_cta')}
+            </ThemedText>
+          </Pressable>
+        ) : null}
 
         <Card variant="outlined" style={styles.statusChecklistCard}>
           <View style={styles.progressHeaderRow}>
+            <ProgressRing
+              progress={
+                plotStatusRows.length > 0
+                  ? (plotStatusRows.length - checklistOpenCount) / plotStatusRows.length
+                  : 0
+              }
+              centerLabel={`${plotStatusRows.length - checklistOpenCount}/${plotStatusRows.length}`}
+            />
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -633,7 +739,7 @@ export default function PlotDetailScreen() {
                   <Pressable
                     key={row.id}
                     disabled={!row.target}
-                    onPress={() => row.target && setActive(row.target)}
+                    onPress={() => openSetupRow(row)}
                     style={({ pressed }) => [
                       styles.statusRow,
                       styles.statusRowOpen,
@@ -676,10 +782,10 @@ export default function PlotDetailScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B' }}>
-                {isCompliant ? 'Deforestation Check Passed' : 'Deforestation Check Pending'}
+                {isCompliant ? t('plot_deforestation_passed') : t('plot_deforestation_pending')}
               </ThemedText>
               <ThemedText type="default" style={{ color: '#1F6B57' }}>
-                {isCompliant ? 'No forest loss detected since Dec 31, 2020' : 'Review required before compliance approval'}
+                {isCompliant ? t('plot_deforestation_passed_body') : t('plot_deforestation_pending_body')}
               </ThemedText>
             </View>
           </View>
@@ -737,12 +843,13 @@ export default function PlotDetailScreen() {
           <>
             <Card variant="outlined" style={styles.photoIntroCard}>
               <ThemedText type="default" style={styles.photoIntroText}>
-                These timestamped photos serve as evidence during EU audits to prove agricultural activity vs. deforestation.
+                {t('plot_photo_intro')}
               </ThemedText>
             </Card>
             <View style={styles.photoVaultGrid}>
-              {(['North', 'East', 'South', 'West'] as const).map((dir, idx) => {
+              {(['north', 'east', 'south', 'west'] as const).map((dir, idx) => {
                 const p = photos[idx];
+                const dirLabel = t(`plot_dir_${dir}` as 'plot_dir_north');
                 return (
                   <Pressable key={dir} style={styles.photoVaultSlot} onPress={addGroundTruthPhoto}>
                     {p?.uri ? (
@@ -751,10 +858,16 @@ export default function PlotDetailScreen() {
                       <Ionicons name="image-outline" size={42} color="#ACACAC" />
                     )}
                     <ThemedText type="defaultSemiBold" style={styles.photoVaultTitle}>
-                      {dir} View
+                      {t('plot_photo_dir_view', { dir: dirLabel })}
                     </ThemedText>
                     <ThemedText type="caption" style={styles.photoVaultDate}>
-                      {p?.takenAt ? new Date(p.takenAt).toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'Tap to capture'}
+                      {p?.takenAt
+                        ? new Date(p.takenAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: '2-digit',
+                            year: 'numeric',
+                          })
+                        : t('plot_photo_tap_capture')}
                     </ThemedText>
                   </Pressable>
                 );
@@ -762,7 +875,7 @@ export default function PlotDetailScreen() {
             </View>
             <View style={{ marginTop: 10 }}>
               <Button
-                title="Update Photos"
+                title={t('plot_photo_update')}
                 variant="secondary"
                 style={{ backgroundColor: '#0A7F59' }}
                 onPress={addGroundTruthPhoto}
@@ -886,7 +999,7 @@ export default function PlotDetailScreen() {
                   <Card variant="outlined" style={styles.harvestSummaryCard}>
                     <View style={styles.rowHeader}>
                       <ThemedText type="title" style={styles.harvestSummaryTitle}>
-                        Season Total
+                        {t('plot_harvest_season_total')}
                       </ThemedText>
                       <ThemedText type="title" style={styles.harvestSummaryKg}>
                         {`${Math.round(seasonTotalKg).toLocaleString()} kg`}
@@ -894,10 +1007,10 @@ export default function PlotDetailScreen() {
                     </View>
                     <View style={[styles.rowHeader, { marginTop: 4 }]}>
                       <ThemedText type="default" style={styles.harvestSubText}>
-                        {`Yield cap (${plot ? plot.areaHectares.toFixed(1) : '2.4'} ha)`}
+                        {t('plot_harvest_yield_cap', { ha: plot ? plot.areaHectares.toFixed(1) : '2.4' })}
                       </ThemedText>
                       <ThemedText type="defaultSemiBold" style={styles.harvestSubText}>
-                        {`${yieldCapKg.toLocaleString()} kg max`}
+                        {t('plot_harvest_yield_max', { kg: yieldCapKg.toLocaleString() })}
                       </ThemedText>
                     </View>
                     <View style={styles.harvestProgressTrack}>
@@ -916,7 +1029,7 @@ export default function PlotDetailScreen() {
                             </ThemedText>
                           </View>
                           <ThemedText type="subtitle" style={styles.harvestCoopText}>
-                            Coop El Sol
+                            {t('plot_harvest_no_coop')}
                           </ThemedText>
                         </View>
                       </Card>
@@ -924,7 +1037,7 @@ export default function PlotDetailScreen() {
                   ) : (
                     <Card variant="outlined" style={styles.harvestRowCard}>
                       <ThemedText type="default" style={styles.harvestDateText}>
-                        No harvest records yet
+                        {t('plot_harvest_no_records')}
                       </ThemedText>
                     </Card>
                   )}
@@ -975,10 +1088,10 @@ export default function PlotDetailScreen() {
                         </View>
                       </View>
                       <ThemedText type="title" style={styles.voucherTitle}>
-                        Compliance Voucher
+                        {t('plot_voucher_title')}
                       </ThemedText>
                       <ThemedText type="default" style={styles.voucherSubtitle}>
-                        Scan to verify EUDR compliance
+                        {t('plot_voucher_subtitle')}
                       </ThemedText>
                       <View style={styles.voucherCodeWrap}>
                         <ThemedText type="defaultSemiBold" style={styles.voucherCodeText}>
@@ -989,7 +1102,7 @@ export default function PlotDetailScreen() {
                   </Card>
 
                   <ThemedText type="default" style={styles.voucherBodyText}>
-                    This QR code is your digital proof of compliance. Share it with any buyer to verify your plot meets EUDR requirements.
+                    {t('plot_voucher_body')}
                   </ThemedText>
 
                   <View style={{ marginTop: 6 }}>
@@ -1219,6 +1332,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginBottom: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
   progressTrack: {
     flex: 1,
@@ -1580,6 +1698,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  plotRegisteredLine: {
+    marginTop: 8,
+    color: '#6B7280',
+  },
+  nextStepBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#AEE6D3',
+    backgroundColor: '#E8F7F0',
+    marginBottom: 4,
+  },
+  nextStepBannerPressed: {
+    opacity: 0.92,
+  },
+  nextStepIconWrap: {
+    width: 36,
+    alignItems: 'center',
+  },
+  nextStepEyebrow: {
+    color: '#0A7F59',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontSize: 11,
+  },
+  nextStepTitle: {
+    marginTop: 2,
+    color: '#0B4F3B',
+    fontSize: 16,
+  },
+  nextStepHint: {
+    marginTop: 4,
+    color: '#1F6B57',
+    lineHeight: 18,
+  },
+  nextStepCta: {
+    color: '#0A7F59',
+    fontWeight: '700',
+    maxWidth: 72,
+    textAlign: 'right',
+  },
   plotRenameBtn: {
     padding: 5,
     borderRadius: 999,
@@ -1588,6 +1751,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F8F1',
     marginTop: 2,
     flexShrink: 0,
+  },
+  plotMapHeroPress: {
+    marginBottom: 14,
+  },
+  plotMapCaption: {
+    marginTop: 8,
+    color: '#0A7F59',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   renameModalKeyboardRoot: {
     flex: 1,

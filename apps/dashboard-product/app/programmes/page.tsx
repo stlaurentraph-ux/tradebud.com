@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Send } from 'lucide-react';
 import { useSponsorView } from '@/lib/sponsor-view';
 import { NewRequestWizardDialog, type NewRequestResult } from '@/components/requests/wizard/new-request-wizard-dialog';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 type ProgrammeStatus = 'Draft' | 'Sent' | 'Completed' | 'Archived';
 
@@ -99,6 +101,9 @@ function toProgrammeCampaign(record: Record<string, unknown>): ProgrammeCampaign
 }
 
 export default function ProgrammesPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'programmes', { title: "Programmes" });
   const searchParams = useSearchParams();
   const sponsorView = useSponsorView();
   const [statusTab, setStatusTab] = useState<ProgrammeStatus>('Draft');
@@ -217,13 +222,13 @@ export default function ProgrammesPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="Programmes"
+        title={pageHeader.title}
         subtitle={
           sponsorView === 'country'
             ? 'Run sponsor programme campaigns and bulk requests to upstream organisations across the origin network'
             : 'Run sponsor programme campaigns and bulk requests to suppliers across the sponsored value chain'
         }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Programmes' }]}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'Programmes' })}
         actions={
           <Button onClick={() => setIsWizardOpen(true)} disabled={isSaving}>
             <Plus className="mr-2 h-4 w-4" />

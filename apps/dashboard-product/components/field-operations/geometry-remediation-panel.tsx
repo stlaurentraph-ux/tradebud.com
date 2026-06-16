@@ -1,11 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  getGeometryRemediationEmptyMessage,
+  getGeometryRemediationFarmerSuffix,
+  getGeometryRemediationLoadingMessage,
+  getGeometryRemediationMemberFixHint,
+  getGeometryRemediationOpenPlotsCta,
+  getGeometryRemediationPanelDescription,
+  getGeometryRemediationPanelTitle,
+  getGeometryRemediationRecentBadge,
+  getGeometryRemediationUnnamedPlot,
+} from '@/lib/workflow-terminology-labels';
 
 type GeometryRemediationItem = {
   id: string;
@@ -24,6 +36,8 @@ type GeometryRemediationResponse = {
 };
 
 export function GeometryRemediationPanel() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [data, setData] = useState<GeometryRemediationResponse>({ total: 0, items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,22 +70,21 @@ export function GeometryRemediationPanel() {
         <div>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-amber-600" />
-            Boundary capture follow-up
+            {getGeometryRemediationPanelTitle(t)}
           </CardTitle>
-          <CardDescription>
-            Recent mobile uploads rejected for self-intersection, overlap, or GPS sliver shape. Ask the
-            member to redo the boundary on their phone, then retry upload.
-          </CardDescription>
+          <CardDescription>{getGeometryRemediationPanelDescription(t)}</CardDescription>
         </div>
-        {data.total > 0 ? <Badge variant="outline">{data.total} recent</Badge> : null}
+        {data.total > 0 ? (
+          <Badge variant="outline">{getGeometryRemediationRecentBadge(data.total, t)}</Badge>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading geometry rejections…</p>
+          <p className="text-sm text-muted-foreground">{getGeometryRemediationLoadingMessage(t)}</p>
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : data.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No recent boundary rejections for this cooperative.</p>
+          <p className="text-sm text-muted-foreground">{getGeometryRemediationEmptyMessage(t)}</p>
         ) : (
           data.items.map((item) => (
             <div key={item.id} className="rounded-lg border p-3">
@@ -79,7 +92,7 @@ export function GeometryRemediationPanel() {
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="text-sm font-medium">
-                    {item.clientPlotId ?? item.plotId ?? 'Unnamed plot'}
+                    {item.clientPlotId ?? item.plotId ?? getGeometryRemediationUnnamedPlot(t)}
                     {item.code ? (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">({item.code})</span>
                     ) : null}
@@ -87,11 +100,9 @@ export function GeometryRemediationPanel() {
                   <p className="text-sm text-muted-foreground">{item.message}</p>
                   <p className="text-xs text-muted-foreground">
                     {item.timestamp ? new Date(item.timestamp).toLocaleString() : '—'}
-                    {item.farmerId ? ` · farmer ${String(item.farmerId).slice(0, 8)}…` : ''}
+                    {item.farmerId ? getGeometryRemediationFarmerSuffix(item.farmerId, t) : ''}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Member fix: Plot details → Redo boundary on map → Upload plot to Tracebud.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{getGeometryRemediationMemberFixHint(t)}</p>
                 </div>
               </div>
             </div>
@@ -99,7 +110,7 @@ export function GeometryRemediationPanel() {
         )}
         <div className="flex flex-wrap gap-2 pt-1">
           <Button asChild size="sm" variant="secondary">
-            <Link href="/plots">Open plot registry</Link>
+            <Link href="/plots">{getGeometryRemediationOpenPlotsCta(t)}</Link>
           </Button>
         </div>
       </CardContent>

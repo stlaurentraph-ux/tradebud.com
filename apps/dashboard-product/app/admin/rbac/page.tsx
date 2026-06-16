@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TenantRole, LegalWorkflowRole, CommercialTier } from '@/types';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 // Canonical tenant roles
 const TENANT_ROLES: { role: TenantRole; label: string; tier: CommercialTier }[] = [
@@ -39,7 +41,7 @@ const PERMISSION_GROUPS = [
       { key: 'packages:edit', label: 'Edit Packages' },
       { key: 'packages:delete', label: 'Delete Packages' },
       { key: 'packages:seal_shipment', label: 'Seal Shipment' },
-      { key: 'packages:submit_traces', label: 'Submit to TRACES' },
+      { key: 'packages:submit_traces', label: 'Submit to TRACES (importer only)' },
       { key: 'packages:approve', label: 'Approve Packages' },
     ],
   },
@@ -179,19 +181,18 @@ const LEGAL_ROLE_PERMISSIONS: Record<LegalWorkflowRole, string[]> = {
 };
 
 export default function RBACMatrixPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'rbac_matrix', { title: "RBAC Permission Matrix", subtitle: "View role-based access control permissions for commercial and legal workflow roles" });
   const [activeTab, setActiveTab] = useState<'commercial' | 'legal'>('commercial');
 
   return (
     <PermissionGate permission="admin:view">
       <div className="flex flex-col">
         <AppHeader
-          title="RBAC Permission Matrix"
-          subtitle="View role-based access control permissions for commercial and legal workflow roles"
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Admin', href: '/admin' },
-            { label: 'RBAC Matrix' },
-          ]}
+          title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+          breadcrumbs={buildAppBreadcrumbs(t, { name: 'Admin', href: '/admin' }, { name: 'RBAC Matrix' })}
           actions={
             <Button variant="outline" asChild>
               <Link href="/admin">

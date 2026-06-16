@@ -9,21 +9,26 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useAuth } from '@/lib/auth-context';
 import {
-  getAvailableLocales,
+  clampLocaleForRole,
+  getAvailableLocalesForRole,
+  getLocaleLabel,
+  type Locale,
+} from '@/lib/locale-policy';
+import {
   getCurrentLocale,
   getCurrentTimezone,
-  getLocaleLabel,
   setLocale as persistLocale,
   setTimezone as persistTimezone,
   t as translate,
   type DashboardTimezone,
-  type Locale,
 } from '@/lib/i18n';
 
 interface LocaleContextType {
   locale: Locale;
   timezone: DashboardTimezone;
+  availableLocales: Locale[];
   setLocale: (locale: Locale) => void;
   setTimezone: (timezone: DashboardTimezone) => void;
   t: (key: string) => string;
@@ -32,22 +37,33 @@ interface LocaleContextType {
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const role = user?.active_role ?? null;
   const [locale, setLocaleState] = useState<Locale>('en');
   const [timezone, setTimezoneState] = useState<DashboardTimezone>('UTC');
+  const availableLocales = useMemo(() => getAvailableLocalesForRole(role), [role]);
 
   useEffect(() => {
-    setLocaleState(getCurrentLocale());
+    const resolved = getCurrentLocale(role);
+    const clamped = clampLocaleForRole(resolved, role);
+    setLocaleState(clamped);
     setTimezoneState(getCurrentTimezone());
-    document.documentElement.lang = getCurrentLocale();
-  }, []);
+    document.documentElement.lang = clamped;
+    if (clamped !== resolved) {
+      persistLocale(clamped);
+    }
+  }, [role]);
 
-  const setLocale = useCallback((next: Locale) => {
-    if (!getAvailableLocales().includes(next)) return;
-    persistLocale(next);
-    setLocaleState(next);
-    document.documentElement.lang = next;
-    window.dispatchEvent(new CustomEvent('tracebud:locale-change', { detail: { locale: next } }));
-  }, []);
+  const setLocale = useCallback(
+    (next: Locale) => {
+      if (!availableLocales.includes(next)) return;
+      persistLocale(next);
+      setLocaleState(next);
+      document.documentElement.lang = next;
+      window.dispatchEvent(new CustomEvent('tracebud:locale-change', { detail: { locale: next } }));
+    },
+    [availableLocales],
+  );
 
   const setTimezone = useCallback((next: DashboardTimezone) => {
     persistTimezone(next);
@@ -57,8 +73,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const t = useCallback((key: string) => translate(key, locale), [locale]);
 
   const value = useMemo(
-    () => ({ locale, timezone, setLocale, setTimezone, t }),
-    [locale, timezone, setLocale, setTimezone, t],
+    () => ({ locale, timezone, availableLocales, setLocale, setTimezone, t }),
+    [locale, timezone, availableLocales, setLocale, setTimezone, t],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
@@ -72,4 +88,4 @@ export function useLocale(): LocaleContextType {
   return context;
 }
 
-export { getLocaleLabel };
+export { getLocaleLabel, LocaleContext };

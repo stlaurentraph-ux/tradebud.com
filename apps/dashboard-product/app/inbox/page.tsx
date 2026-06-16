@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { InboxFulfillmentDialog } from '@/components/inbox/inbox-fulfillment-dialog';
 import { PermissionGate } from '@/components/common/permission-gate';
@@ -12,6 +12,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Inbox } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useInboxRequests, type InboxRequest } from '@/lib/use-requests';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs } from '@/lib/nav-labels';
+import {
+  getInboxCardTitle,
+  getInboxCompletedLabel,
+  getInboxEmptyDescription,
+  getInboxEmptyTitle,
+  getInboxFulfillButtonLabel,
+  getInboxLoadingMessage,
+  getInboxPageSubtitle,
+  getInboxPageTitle,
+  getInboxStatusLabel,
+  getInboxTableColumnLabel,
+} from '@/lib/workflow-terminology-labels';
 
 type InboxStatus = 'Pending' | 'Fulfilled';
 
@@ -27,8 +41,11 @@ function mapStatus(request: InboxRequest): InboxStatus {
 }
 
 export default function InboxPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
+  const role = user?.active_role;
+  const isImporter = role === 'importer';
   const { requests: backendRequests, isLoading, error, respond, reload } = useInboxRequests(
     user?.tenant_id ?? null,
   );
@@ -63,22 +80,21 @@ export default function InboxPage() {
     await reload();
   };
 
+  const pageTitle = getInboxPageTitle(role, t);
+  const breadcrumbName = isImporter ? 'Requests' : 'Inbox';
+
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={isImporter ? 'Requests' : 'Inbox'}
-        subtitle={
-          isImporter
-            ? 'Fulfill inbound requests from downstream partners and customers'
-            : 'Review and fulfill requests received from downstream partners'
-        }
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: isImporter ? 'Requests' : 'Inbox' }]}
+        title={pageTitle}
+        subtitle={getInboxPageSubtitle(role, t)}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: breadcrumbName })}
       />
 
       <div className="flex-1 space-y-6 p-6">
         <Card>
           <CardHeader>
-            <CardTitle>{isImporter ? 'Inbound Requests' : 'Incoming Requests'}</CardTitle>
+            <CardTitle>{getInboxCardTitle(role, t)}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {error ? (
@@ -90,7 +106,7 @@ export default function InboxPage() {
               <TabsList>
                 {INBOX_STATUS_TABS.map((status) => (
                   <TabsTrigger key={status} value={status}>
-                    {status}
+                    {getInboxStatusLabel(status, t)}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -98,29 +114,25 @@ export default function InboxPage() {
 
             {isLoading ? (
               <div className="rounded-lg border p-10 text-center text-sm text-muted-foreground">
-                Loading requests...
+                {getInboxLoadingMessage(t)}
               </div>
             ) : filteredRequests.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center">
                 <Inbox className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                <p className="font-medium text-foreground">No {statusTab.toLowerCase()} requests</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {isImporter
-                    ? 'Requests from downstream customers and regulators appear here for response and fulfillment.'
-                    : 'When downstream partners send requests, they will appear here for response and fulfillment.'}
-                </p>
+                <p className="font-medium text-foreground">{getInboxEmptyTitle(statusTab, t)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{getInboxEmptyDescription(role, t)}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{isImporter ? 'Inbound ID' : 'Request ID'}</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>From</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('id', role, t)}</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('title', role, t)}</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('from', role, t)}</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('type', role, t)}</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('due', role, t)}</TableHead>
+                    <TableHead>{getInboxTableColumnLabel('status', role, t)}</TableHead>
+                    <TableHead className="text-right">{getInboxTableColumnLabel('actions', role, t)}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -132,17 +144,19 @@ export default function InboxPage() {
                       <TableCell>{request.request_type.replace(/_/g, ' ').toLowerCase()}</TableCell>
                       <TableCell>{new Date(request.due_at).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge className={statusBadgeClass[request.displayStatus]}>{request.displayStatus}</Badge>
+                        <Badge className={statusBadgeClass[request.displayStatus]}>
+                          {getInboxStatusLabel(request.displayStatus, t)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         {request.displayStatus === 'Pending' ? (
                           <PermissionGate permission="requests:respond">
                             <Button size="sm" onClick={() => openFulfillment(request)}>
-                              Fulfill
+                              {getInboxFulfillButtonLabel(t)}
                             </Button>
                           </PermissionGate>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Completed</span>
+                          <span className="text-xs text-muted-foreground">{getInboxCompletedLabel(t)}</span>
                         )}
                       </TableCell>
                     </TableRow>

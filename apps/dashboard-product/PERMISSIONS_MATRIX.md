@@ -37,7 +37,6 @@ This matrix defines baseline permissions for the unified multi-tenant dashboard.
 - `dds.read`
 - `dds.write`
 - `compliance.read`
-- `traces.submit`
 - `reports.read`
 - `reports.export`
 
@@ -50,6 +49,11 @@ This matrix defines baseline permissions for the unified multi-tenant dashboard.
 - `compliance.read`
 - `reports.read`
 - `reports.export`
+
+### `importer_compliance_manager` (or compliance_manager)
+
+- All `importer_analyst` permissions
+- `traces.submit` — EU operator filing to TRACES (importers/brands only)
 
 ### `cooperative_manager`
 

@@ -1,8 +1,15 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Pool } from 'pg';
 import { HarvestController } from './harvest.controller';
 import type { HarvestService } from './harvest.service';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import type { ConsentService } from '../consent/consent.service';
+
+function makePoolMock(): Pool {
+  return {
+    query: jest.fn().mockResolvedValue({ rows: [] }),
+  } as unknown as Pool;
+}
 
 function makeConsentMock(): jest.Mocked<Pick<ConsentService, 'canTenantAccessVoucher'>> {
   return {
@@ -14,11 +21,13 @@ function makeController(
   service: ReturnType<typeof makeServiceMock>,
   launch = createLaunchServiceMock(),
   consent = makeConsentMock(),
+  pool = makePoolMock(),
 ) {
   return new HarvestController(
     service as unknown as HarvestService,
     launch,
     consent as unknown as ConsentService,
+    pool,
   );
 }
 
@@ -98,6 +107,28 @@ describe('HarvestController scope and role boundaries', () => {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
       }),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('allows linked dashboard user to list own farmer vouchers', async () => {
+    const service = makeServiceMock();
+    service.isFarmerOwnedByUser.mockResolvedValue(true);
+    service.listVouchersForFarmer.mockResolvedValue([{ id: 'v_1', qr_code_ref: 'V-LINKED01' }] as any);
+    const pool = makePoolMock();
+    (pool.query as jest.Mock).mockResolvedValue({ rows: [{}] });
+    const controller = makeController(service, createLaunchServiceMock(), makeConsentMock(), pool);
+
+    await expect(
+      controller.listVouchers('farmer_self', 'farmer', {
+        user: {
+          id: 'user_1',
+          email: 'admin@tracebud.com',
+          app_metadata: { tenant_id: 'tenant_1', role: 'admin' },
+        },
+      }),
+    ).resolves.toEqual([{ id: 'v_1', qr_code_ref: 'V-LINKED01' }]);
+
+    expect(service.isFarmerOwnedByUser).toHaveBeenCalledWith('farmer_self', 'user_1');
+    expect(service.listVouchersForFarmer).toHaveBeenCalledWith('farmer_self');
   });
 
   it('rejects non-exporter package detail access', async () => {

@@ -3,11 +3,18 @@
 import { useEffect, useState } from 'react';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
 
-export function useDashboardActivity() {
+export function useDashboardActivity(enabled = true) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(!enabled);
 
   useEffect(() => {
+    if (!enabled) {
+      setEvents([]);
+      setLoaded(true);
+      return;
+    }
+
+    setLoaded(false);
     const token = window.sessionStorage.getItem('tracebud_token');
     fetch('/api/dashboard/activity', {
       method: 'GET',
@@ -22,7 +29,7 @@ export function useDashboardActivity() {
       })
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, []);
+  }, [enabled]);
 
   return { events, loaded };
 }

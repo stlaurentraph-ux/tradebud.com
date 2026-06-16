@@ -1,3 +1,264 @@
+### 2026-06-15 (dashboard: role-decisions + reports i18n)
+- Localized `/role-decisions` (stats, alerts, table, dialogs) and `/reports` (role-aware headers, stats, charts, report cards).
+- Founder-os content calendar/tasks/review async states wired; integrations run-queue/scheduler loading labels.
+- Expanded overlay script for `workflow.role_decisions.*` and `workflow.reports.*` (+ npm `i18n:expand-workflow-overlays`).
+
+### 2026-06-15 (dashboard: issue detail route + overlay expansion)
+- Wired `/compliance/[id]` with issues API fetch, detail card, SLA ladder, and async states.
+- Fixed integrations page to use `translatePageHeader`; localized tab labels.
+- Added `scripts/expand-workflow-overlays.mjs` (+184 de / +190 sw workflow keys); founder-os content async i18n.
+
+### 2026-06-15 (dashboard: SLA wiring + field-ops/compliance detail i18n)
+- Mounted `SLASummaryCard` and `SLAEscalationLadder` on issues page when issues have SLA due dates.
+- Localized compliance issue detail route, field operations page, and geometry remediation panel.
+- Added `mapIssueRecordToSlaIssue` adapter; expanded `de`/`sw` overlays for field-ops and inbox/outreach loading keys.
+
+### 2026-06-15 (dashboard: plot breakdown + SLA ladder i18n)
+- Localized PlotComplianceBreakdown stats, risk labels, blocking list, and ready states.
+- Wired SLA escalation ladder components (progress, timeline, extension dialog, summary card).
+- Added compliance hub package ID line; expanded `de`/`sw` overlays for plot, SLA, issues, and inbox keys.
+
+### 2026-06-15 (dashboard: SLA + compliance components i18n)
+- Localized issue SLA labels (overdue/today/due), ComplianceCheckList, EvidenceRequirement, and ComplianceReviewHub.
+- Expanded `de`/`sw` overlays for checks, evidence, SLA, inbox, and outreach keys.
+
+### 2026-06-15 (dashboard: issues detail/kanban + compliance backend i18n)
+- Localized issues detail dialog, list badges, and kanban cards (columns, severity, ownership, remediation actions).
+- Localized compliance hub backend readiness check title, status description, plot fallbacks, and tenure evidence label.
+- Expanded `de`/`sw` overlays for issues kanban and compliance hub backend keys.
+
+### 2026-06-15 (dashboard: issues/inbox/outreach/compliance hub i18n)
+- Wired content review status badges; issues kanban filters, alerts, create form, and empty states.
+- Localized inbox and outreach page headers, tabs, tables, and empty states with role-aware importer vs exporter copy.
+- Localized compliance hub score stats, readiness reason codes, evidence section, and CTAs.
+- Expanded `de`/`sw` overlays for inbox, outreach, issues, and compliance hub keys.
+
+### 2026-06-16 (dashboard: producers table + content review body i18n)
+- Localized producers directory table columns and content review stat cards, queue title, and empty state.
+- Expanded `de`/`sw` overlays for review queues, producer filters/table, async states, and content review.
+
+### 2026-06-16 (dashboard: review queue card bodies + producer filters i18n)
+- Localized plot-review card bodies (overlap, photos, GFW metrics, decision dialog) and tenure-review AI/cadastral copy.
+- Wired producers filter dialog option labels; expanded `de`/`sw` overlays for review queues and async states.
+
+### 2026-06-16 (dashboard: plot/tenure review queues + async states i18n)
+- Localized `/compliance/plot-review` and `/compliance/tenure-review` headers, stats, GFW screening metrics, and confirm dialogs.
+- Completed producers stat cards/filter dialog and plots summary cards (cooperative variants).
+- Wired `getWorkflowAsyncStateCopy` on CRM, content, and founder-os async loading/error/empty states.
+
+### 2026-06-16 (dashboard: compliance queue + producers + plots i18n)
+- Extended `workflow-terminology-labels` with compliance issues queue, role-aware producers/members directory, and plots inventory copy.
+- Wired `/compliance/queue`, `/farmers`, `/farmers/new`, `/farmers/[id]`, `/plots`, and `/plots/[id]` to locale helpers; `sw`/`de` overlay starters for new keys.
+
+### 2026-06-16 (dashboard: admin/governance breadcrumbs + page headers)
+- Added `buildAppBreadcrumbs` and `translatePageHeader` in `nav-labels.ts`; wired 19 sponsor/admin routes (activity, governance, CRM, content, programmes, audit-log, admin users/RBAC, etc.).
+- Added `page.*` locale keys in `en.json`; `de`/`sw` overlays for new nav + page header keys.
+- Fixed misplaced `LocaleContext` imports from bulk script; **404** dashboard tests passing.
+
+### 2026-06-16 (field app: pre-field A-grade pass 2)
+- Fixed `settings.tsx` lint; i18n queue smoke reads `messages/*.json` (v2); `sync-google-play-assets.py` + `store:assets:sync`; `store:preflight --strict` green; `syncAuthSession` unit tests (25 total); bearer-token security gates; `release:production:safe` syncs Play assets + strict store gate.
+
+### 2026-06-16 (field app: pre-field A-grade hardening)
+- Unified `postPlot` → `syncAuthSession` (OAuth plot upload); PII redaction in `logError`; `security:preflight` + `LAUNCH_GRADE_TRACKER.md`; `release-health-report.example.json`.
+
+### 2026-06-16 (field app: store ops checklist + preflight)
+- `STORE_OPS_CHECKLIST.md`, `store:preflight` (iOS screenshots, privacy strings, eas submit); Play README; `release:production:safe` includes store gate; iOS push usage string in `app.json`.
+
+### 2026-06-16 (field app: device smoke checklist v2)
+- Expanded `DEVICE_SMOKE_CHECKLIST.md`: OAuth, permissions table, notifications, tenant/session, flaky network; `qa:device` summary footer; preflight section asserts.
+
+### 2026-06-16 (field app: settings notifications toggle)
+- Backup & sync card: notification status badge + Enable button (`alertOnDeny` push registration); OAuth-safe unsynced plot count on Settings.
+
+### 2026-06-16 (field app: production preflight + push permissions)
+- `release-preflight.mjs`: EAS env merge, Sentry/Supabase validation, forbid test creds/dev flags on production, EAS projectId + push plugin checks; `--verify-oauth` + `release:preflight:production:online`.
+- Push permission helper (`perm_push_*`), `registerFarmerPushToken` result + `push_permission_denied` analytics.
+
+### 2026-06-16 (dashboard: exporter + cooperative home i18n)
+- Extended `terminology-labels.ts` with origin-role dashboard copy, north-star labels, and handoff/seal terminology.
+- Wired `exporter-dashboard.tsx` and `cooperative-dashboard.tsx` to locale keys; exporter `SUBMITTED` shows "Handed off" via role-aware status labels.
+
+### 2026-06-16 (dashboard: shipment lifecycle i18n + workflow breadcrumbs)
+- Localized `ShipmentStateTimeline` via `status.lifecycle.*` keys (title, current status, blockers, on-hold/rejected messages).
+- Wired `getDashboardBreadcrumbLabel` on compliance child routes, farmers/plots detail, inbox, outreach, and field operations.
+
+### 2026-06-16 (dashboard: package detail page i18n)
+- Wired `/packages/[id]` plots, producers, sidebar, quick stats, liability modal, blockers, and filing workflow copy.
+- Localized `getPackagePreflightBlockersDescription` and `getPackageSubmitSuccessToast` (was English-only passthrough).
+
+### 2026-06-16 (dashboard: package assemble + child-route i18n)
+- Wired `/packages/[id]/assemble` four-step seal wizard and shared `workflow.assembly.*` labels on shipment assemble.
+- Localized package child-route breadcrumbs (submit, compliance, edit, timeline) and placeholder copy.
+
+### 2026-06-16 (dashboard: FPIC evidence i18n + north-star consolidation)
+- Wired FPIC repository UI (summary cards, filters, provenance, upload/child routes) through `workflow-terminology-labels`; DDS `/dds/new` breadcrumbs and copy.
+- Consolidated `getNorthStarForRole(role, metrics, t)` to use `terminology-labels` helpers; simplified all five role dashboards.
+- Expanded `de`/`sw` overlays for DDS, shipment assemble, and evidence workflow keys.
+
+### 2026-06-16 (dashboard: validation errors + workflow UI string i18n)
+- Moved `validatePackageCreateForm` into `workflow-terminology-labels.ts` with locale-aware field errors; `package-create-validation.ts` now re-exports.
+- Wired shipment assemble step labels, DDS workspace/preflight checks, package-create validation `t`, legacy `packages-table`, and `dashboard-north-star` exporter/importer labels via `terminology-labels`.
+
+### 2026-06-16 (dashboard: shipment, harvest, DDS/FPIC workflow i18n)
+- Extended `workflow-terminology-labels.ts` for shipment create/detail/assemble, harvest intake/detail, DDS workspace, evidence/FPIC, plot breakdown, and dashboard home subtitles.
+- Wired `/shipments/new`, `/shipments/[id]`, `/shipments/[id]/assemble`, `/harvests/new`, `/harvests/[id]`, `/dds`, `/fpic`, `plot-compliance-breakdown`, and `dashboard-home-client` to `LocaleContext`.
+
+### 2026-06-16 (dashboard: package detail + create workflow i18n)
+- Extended `workflow-terminology-labels.ts` with package detail, create, assemble, timeline, and table copy; `buildPackageBreadcrumbs` now accepts locale `t`.
+- Wired `/packages/[id]`, `/packages/new`, child routes (assemble, submit, edit, compliance, timeline), and `packages-table` to `LocaleContext`.
+- Synced `workflow.package.*` keys to `en.json`; workflow terminology tests cover breadcrumbs and TRACES/handoff labels.
+
+### 2026-06-16 (dashboard: workflow hub pages i18n)
+- Added `lib/workflow-terminology-labels.ts` — locale-backed wrappers over `supply-chain-terminology` for packages, compliance, harvests, issues, and shipments hub copy.
+- Wired `/packages`, `/compliance`, `/compliance/issues`, `/harvests`, and `/shipments` to `LocaleContext` with role-aware TRACES vs handoff language preserved.
+- Added `workflow.*` keys to `en.json` and workflow terminology tests.
+
+### 2026-06-16 (dashboard: reviewer + sponsor home i18n)
+- Extended `terminology-labels.ts` with reviewer triage/quick-action copy, sponsor programme/network/intervention labels, and role-specific north-star overlays.
+- Wired `reviewer-dashboard.tsx` and `sponsor-dashboard.tsx` to `LocaleContext`; sponsor stats, intervention queue, and emphasis badges use locale-backed helpers.
+- Added `dashboard.reviewer.*`, `dashboard.sponsor.*`, and north-star keys to `en.json`; terminology-labels tests cover both roles (387 tests passing).
+
+### 2026-06-16 (dashboard: importer home terminology i18n)
+- Added `lib/terminology-labels.ts` for locale-backed importer dashboard copy, north-star labels, and shared TRACES/handoff terminology.
+- Wired `importer-dashboard.tsx`, review queue descriptions, and `NorthStarKpi` priority label to i18n keys (`dashboard.importer.*`, `terminology.*`).
+
+### 2026-06-16 (dashboard: locale overlay packs for origin + EU languages)
+- i18n now merges `locales/en.json` with per-locale overlays; untranslated keys fall back to English.
+- Added overlay packs: full shell for `de`/`sw`, priority keys for `rw`/`lg`/`am`, starter keys for `it`/`nl`/`pt`/`no`/`id`/`vi`/`hi`/`ar`.
+- `npm run i18n:build-overlays` regenerates `locales/overlays/*.json` from `scripts/build-dashboard-locale-overlays.mjs`.
+
+### 2026-06-16 (dashboard: role-aware locale policy)
+- Added `lib/locale-policy.ts`: importers/reviewers get EU + English + developed (`en/fr/de/es/it/nl/pt/no`); exporters/cooperatives get origin-first (`sw/rw/lg/am/id/vi/hi/ar` + trade langs); sponsors get all 16 locales aligned with the field app.
+- Settings language picker groups options by region; locale clamps when role changes; untranslated locales fall back to English strings.
+
+### 2026-06-16 (dashboard: review queue i18n + StatusChip role wiring)
+- Added `lib/workflow-labels.ts` with locale keys for mini review queue copy, actions, risk/blocked badges, and relative age.
+- `MiniReviewQueue` passes `role` to `StatusChip` and resolves all visible strings via `workflow.*` keys (`en`/`fr`/`es`).
+- Fixed `StatusChip` / `LocaleContext` test breakage with optional locale fallback (no provider required in unit tests).
+
+### 2026-06-16 (field app: safe release gate + location permissions)
+- `release:production:safe` / `release:preview:safe` now run `qa:full` before EAS preflight + build.
+- Shared `locationPermission` helper: farmer-friendly deny alert + Open Settings; wired to walk plot + declaration GPS.
+
+### 2026-06-16 (field app: TypeScript CI gate)
+- Cleared `tsc --noEmit` across production paths: plot attestation fields + SQLite migration, OAuth credential storage, consent queue action types, notification platform barrels, `auth.ts` → `syncAuthSession` delegation.
+- CI `app` job + `npm run qa:full` now run `npm run typecheck`; stale `features/testing/**` excluded from app tsconfig (still covered by vitest).
+
+### 2026-06-16 (dashboard: StatusChip role-aware i18n)
+- `StatusChip` now resolves labels via `getStatusChipLabel` with `useAuth` + `useLocale` (optional `role` override).
+- DDS/issue chip states added to `status-labels.ts` and locale files; exporter dashboard pipeline uses exporter role labels.
+
+### 2026-06-16 (dashboard: status enum labels i18n)
+- Centralized shipment/compliance status labels in `lib/status-labels.ts` with role-aware TRACES vs handoff copy (`SUBMITTED`, `ACCEPTED`).
+- Wired badges, shipment lifecycle timeline, recent packages list, and pipeline chart to locale keys (`status.shipment.*`, `status.compliance.*`).
+
+### 2026-06-16 (dashboard: i18n nav labels + shared component terminology)
+- Added `lib/nav-labels.ts` mapping all RBAC nav item names to `nav.*` locale keys (`en`/`fr`/`es`); sidebar now translates every visible label.
+- Finished terminology on `packages-table`, `packages/new` create flow, compliance back-link, and shipments list/detail back-links.
+
+### 2026-06-16 (dashboard: package detail breadcrumbs + workflow terminology)
+- Added `buildPackageBreadcrumbs` and package child-route helpers in `supply-chain-terminology.ts`.
+- Wired `/packages/[id]` detail, assemble, timeline, edit, compliance, submit, and list/create back-links with role-aware shipment vs TRACES copy.
+
+### 2026-06-16 (dashboard: harvest flow terminology)
+- Extended `lib/supply-chain-terminology.ts` with harvest/batch helpers (list, intake, detail, voucher selection, shipment batch assembly).
+- Wired `/harvests`, `/harvests/new`, `/harvests/[id]`, `/packages/new` voucher section, `/shipments/new` batch picker, and role-aware voucher validation.
+
+### 2026-06-16 (dashboard: sidebar nav IA + issues terminology)
+- Sidebar navigation grouped into collapsible role-aware sections via `getVisibleNavSections` in `lib/rbac.ts` (Overview standalone; 3–4 sections per role).
+- `app-sidebar.tsx` renders section headers with expand/collapse; active-route sections stay open; i18n keys added for section labels (`en`/`fr`/`es`).
+- Issues page and legacy `components/dashboard/packages-table.tsx` wired to `supply-chain-terminology` (TRACES vs handoff copy).
+
+### 2026-06-16 (dashboard: workflow page terminology)
+- Extended `lib/supply-chain-terminology.ts` with role-aware copy for packages, compliance, DDS, evidence, assemble/seal, and submit actions.
+- Wired terminology through `/packages`, `/packages/new`, `/packages/[id]`, `/compliance`, `/dds`, `/fpic`, assemble flows, and package tables.
+
+### 2026-06-16 (dashboard: P3 role parity + lifecycle consolidation)
+- Trial/suspension lifecycle moved from standalone home banner into `DashboardAttentionStrip`; launch state prefetched server-side with summary.
+- Reviewer mature tenants: compact home (north-star + review queue + issue triage + activity; KPI grids hidden).
+- Sponsor below-fold panels lazy-mount via `DeferredDashboardSection`; duplicate sponsor view toggle removed from dashboard (sidebar only).
+
+### 2026-06-16 (field app: home sync visibility + help/runbook)
+- Home backup card counts unsynced plots + queue (aligned with My Plots); tap opens sign-in or Settings backup.
+- Settings help: farmer troubleshooting copy; `INCIDENT_RUNBOOK.md` for ops.
+
+### 2026-06-16 (field app: plot detail map hero)
+- Shared `PlotMapPreview` + `computeRegionFromPlot`; My Plots thumbnails unchanged via `PlotListThumbnail`.
+- Plot detail: Esri satellite hero map with polygon/point overlay; tap opens walk/boundary editor.
+
+### 2026-06-16 (field app: auto-backup + offline recovery slice)
+- `runAutoBackup` wired: sign-in (password + OAuth), backup consent, `AutoPlotUploadBridge` (foreground + plot changes).
+- Reentrant `withSyncQueueLock`; removed nested lock deadlock from `processPendingSyncQueue`.
+- Restored `signInWithOAuthAndSyncPlots`; OAuth session completes with plot upload + queue drain.
+- HLC + mutex unit tests; `DEVICE_SMOKE_CHECKLIST.md` + `npm run qa:device`.
+
+### 2026-06-16 (field app: device QA slice + status consistency)
+- Slice 4 (post-hardening): `npm run qa:preflight` static wiring gate (harvest queue, client plot id, Sentry bridge, sync mutex); `npm run qa:full` for lint + tests + i18n smoke.
+- Vitest config + unit tests: `backendPlotMatch.test.ts`, `ErrorLogger.sentry.test.ts`; CI `app` job runs placeholder assert, tests, qa preflight.
+- Plot detail status badge aligned with My Plots (`finish_setup_chip` vs `status_action_needed`).
+- `processPendingSyncQueue` serialized via `withSyncQueueLock`; launch checklist marks backoff + queue cap done.
+
+### 2026-06-16 (dashboard: RSC summary prefetch + terminology sweep)
+- Home `app/page.tsx` is now a Server Component: reads `tracebud_session` cookie and prefetches dashboard summary before paint.
+- Shared loaders: `lib/load-dashboard-summary.ts`, `lib/auth-claims.ts`; client hook accepts `initialSummary` for stale-while-revalidate refresh.
+- Dashboard copy for handoff vs TRACES filing centralized in `lib/supply-chain-terminology.ts` (north-star, review queue, role dashboards).
+
+### 2026-06-16 (dashboard: P1 cognitive-load cleanup)
+- Canonical virgin/mature thresholds in `lib/dashboard-maturity.ts`; mature tenants no longer see duplicate quick-action grids or gradient onboarding banners.
+- Legacy launch onboarding dialog removed from home; virgin panel OR getting-started checklist OR attention strip (blockers/trial/errors).
+- Header chrome trimmed (dead search, fake notification badge, static date filter).
+- Sponsor summary merged into `GET /api/dashboard/summary` (`sponsor` payload) — one home fetch instead of parallel sponsor-summary call.
+- Sidebar shows commercial `organization_name` when profile is loaded (falls back to tenant id).
+- TRACES filing copy centralized in `lib/supply-chain-terminology.ts`.
+
+### 2026-06-16 (backend: FDP coffee commodity screening — Africa pilot)
+- Integrated Google Forest Data Partnership `model_2025b` coffee probability layer for deforestation screening convergence-of-evidence.
+- Pilot countries: Nigeria, Rwanda, Tanzania; worker at `tracebud-backend/scripts/fdp-screening-worker/` (Earth Engine + FastAPI).
+- Backend fusion extends GFW amber auto-clear for shade-grown/agroforestry when FDP reads legitimate pre-cutoff coffee; mismatch/emerging signals route to `under_review`.
+- Files: `fdp-commodity-*.ts`, `plots.service.ts`, `plot-compliance-status.ts`, `check-fdp-connectivity.mjs`, `product-os/02-features/FEAT-003-geospatial-mapping.md`.
+
+### 2026-06-16 (dashboard: Phase E/F + multi-role organisations)
+- Phase E: sponsor BFF `/api/dashboard/sponsor-summary` replaces 3 client fetches; shared `build-dashboard-summary` for base metrics.
+- Phase F: progressive virgin-state unlock (one active step, progress bar, locked future steps).
+- Multi-role orgs: `supply_chain_roles[]` on commercial profile, signup multi-select, Settings panel with presets, sidebar role switcher hydration.
+- Dashboard P0: single summary fetch returns packages+campaigns; prefetched home data passed to child cards; `DashboardSkeleton` loading gate; reviewer issue triage replaces misleading satellite alert labels.
+
+### 2026-06-16 (dashboard: Phase D mini review queue on homepage)
+- Importer and country reviewer dashboards show top-5 inline review queue with per-shipment actions (review, resolve hold, prepare TRACES filing).
+- Shared `lib/compliance-review-queue.ts` sorts by compliance severity, status, and risk.
+
+### 2026-06-16 (dashboard: intuitive homepage + importer-only TRACES)
+- Unified attention strip (blockers, upstream, yield, trial, onboarding) replaces scattered homepage banners; onboarding checklist hides when blockers exist.
+- North-star KPI card per role (priority metric + single CTA); exporter copy reframed as importer handoff, not TRACES submit.
+- `traces.submit` removed from exporter in permissions matrix; importer/compliance manager owns EU filing.
+
+### 2026-06-16 (dashboard: sponsor network oversight dashboard)
+- Rebuilt sponsor homepage for multi-country / multi-commodity oversight: hero, country & commodity coverage, supply chain role classification, transparency scorecard.
+- Aggregates organisations, programmes, and contacts; virgin state waits for network entities (not only field metrics).
+- Feature doc: `product-os/02-features/FEAT-sponsor-network-dashboard.md`.
+
+### 2026-06-16 (dashboard: upstream blocker homepage alerts)
+- `GET /api/dashboard/summary` now includes `upstream_blockers_count` and `owned_blocking_issues_count` from `/v1/requests/issues`.
+- Homepage `UpstreamBlockerHomeAlert` banner with CTA to `/compliance/issues?ownership=upstream_blocker` and analytics event on click.
+
+### 2026-06-16 (dashboard + backend: cross-tenant compliance issue ownership)
+- Canonical `compliance_issues` rows stay tenant-owned with `owner_role` metadata (migration `tb_v16_044`).
+- Downstream tenants see read-only `upstream_blocker` issues when inbox + shared package lineage overlaps — no duplicate owned rows.
+- Issues API/UI expose `issue_kind`, remediation owner role/org, and `can_update_status`; Kanban blocks status edits on non-owned issues.
+- Tests: dashboard 318+; backend `requests.service.issues` + `issue-ownership` specs.
+
+### 2026-06-16 (dashboard: Phase 3 UX hardening)
+- Phase 1 carryover: `VirginStatePanel` for all five roles; login forgot-password + clearer auth errors; internal tools fenced in production (`NEXT_PUBLIC_ENABLE_INTERNAL_TOOLS`); `/shipments` → `/packages` redirect.
+- Compliance issues: `compliance_issues` table union in backend list; `PATCH /v1/requests/issues/:id` for persisted issues; Kanban shows remediation links for derived campaign/request issues.
+- Tests: 316 passing in `apps/dashboard-product`.
+
+### 2026-06-16 (dashboard: Phase 2 UX hardening)
+- Shipment lifecycle timeline on package detail + `/packages/[id]/timeline` (state machine, recent events, blocker context).
+- Compliance issues Kanban board with SLA urgency labels; backend issues load for all roles; list/kanban toggle.
+- `GET /api/dashboard/summary` consolidates homepage metrics (packages, campaigns, inbox, cooperative insights).
+- Server-side auth middleware via `tracebud_session` cookie (mirrors Supabase JWT from login); unauthenticated users redirect to `/login?next=…`.
+- Tests: 307 passing in `apps/dashboard-product`.
+
 ### 2026-06-16 (field app: full design-review UX pass — short save path + all screens)
 - Walk plot: save boundary immediately after capture (`shortPath`); simplified success screen with finish-later chips; draw/centroid use same path.
 - Home: hide stats/sync for new users; farmer-friendly Ready/To finish labels.

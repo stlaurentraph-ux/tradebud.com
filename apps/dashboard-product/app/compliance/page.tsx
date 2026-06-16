@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
@@ -15,10 +15,49 @@ import { usePackageReadiness } from '@/lib/use-package-readiness';
 import { usePackageEvidenceDocuments } from '@/lib/use-package-evidence-documents';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  getComplianceBackLinkLabel,
+  getComplianceBlockerAlertTail,
+  getComplianceHubCompliantLabel,
+  getComplianceHubEvidenceRecordsLabel,
+  getComplianceHubEvidenceVerificationTitle,
+  getComplianceHubIssuesDetectedAlert,
+  getComplianceHubIssuesLabel,
+  getComplianceHubLoadingEvidence,
+  getComplianceHubLoadingReadiness,
+  getComplianceHubNoEvidenceRequirements,
+  getComplianceHubNoPlotEvidence,
+  getComplianceHubPackageIdLine,
+  getComplianceHubProceedExportCta,
+  getComplianceHubReadinessTitle,
+  getComplianceHubReadyHandoffCta,
+  getComplianceHubRemediationPrefix,
+  getComplianceHubResolveIssuesCta,
+  getComplianceHubScoreLabel,
+  getComplianceHubStatusPrefix,
+  getComplianceHubTotalPlotsLabel,
+  getComplianceHubBackendReadinessTitle,
+  getComplianceHubDeclaredAreaEvidence,
+  getComplianceHubPlotFallbackName,
+  getComplianceHubReadinessStatusDescription,
+  getComplianceHubEmptyHint,
+  getComplianceNoReasonCodesMessage,
+  getComplianceOverviewTitle,
+  getCompliancePageSubtitle,
+  getCompliancePageTitle,
+  getComplianceReadinessEmptyHint,
+  getComplianceReasonCodeRemediation,
+  getPackageDetailBackLabel,
+  getWorkflowComplianceNavLabel,
+} from '@/lib/workflow-terminology-labels';
 import { ComplianceReviewHub } from '@/components/compliance/compliance-review-hub';
 
 export default function CompliancePage() {
   const { user } = useAuth();
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const searchParams = useSearchParams();
   const packageId = searchParams.get('package');
   const { data: readiness, isLoading: isReadinessLoading, error: readinessError } = usePackageReadiness(packageId);
@@ -31,24 +70,15 @@ export default function CompliancePage() {
 
   const backHref = packageId ? `/packages/${packageId}` : '/compliance';
 
-  const reasonCodeRemediation: Record<string, string> = {
-    DOC_MISSING: 'Upload missing document artifacts and re-run readiness checks.',
-    DOC_PENDING_REVIEW: 'Complete reviewer validation before submission.',
-    DOC_REJECTED: 'Upload corrected documents and request a fresh review.',
-    DOC_STALE: 'Refresh outdated documents with current evidence versions.',
-    DOC_SOURCE_MISSING: 'Attach source metadata for audit traceability.',
-    TENURE_REVIEW_REQUIRED:
-      'Open Tenure review and confirm AI tenure extractions for affected plots before submitting this package.',
-    TENURE_PARSE_PENDING:
-      'Wait for tenure document AI review to finish, or refresh plot tenure status after farmers sync evidence.',
-  };
+  const isImporter = user?.active_role === 'importer';
+  const role = user?.active_role;
 
   const backendChecks = readiness
     ? [
         {
           id: 'backend-check-status',
-          title: 'Backend Readiness Status',
-          description: `Package readiness is ${readiness.status}.`,
+          title: getComplianceHubBackendReadinessTitle(t),
+          description: getComplianceHubReadinessStatusDescription(readiness.status, role, t),
           status:
             readiness.status === 'ready_to_submit'
               ? ('compliant' as const)
@@ -78,7 +108,7 @@ export default function CompliancePage() {
     evidenceDocuments?.map((document, index) => {
       return {
         plotId: document.plotId ?? `plot_${index + 1}`,
-        plotName: document.source || `Plot ${index + 1}`,
+        plotName: document.source || getComplianceHubPlotFallbackName(index + 1, t),
         requiredEvidence: [
           {
             id: document.evidenceId,
@@ -89,13 +119,12 @@ export default function CompliancePage() {
             source: document.source,
           },
         ],
-        missingEvidence: document.type === 'tenure_evidence' ? ['Declared area evidence'] : [],
+        missingEvidence:
+          document.type === 'tenure_evidence' ? [getComplianceHubDeclaredAreaEvidence(t)] : [],
       };
     }) ?? [];
 
-  const evidenceRows = backendEvidenceRows.length > 0
-    ? backendEvidenceRows
-    : [];
+  const evidenceRows = backendEvidenceRows.length > 0 ? backendEvidenceRows : [];
 
   React.useEffect(() => {
     if (packageId && readiness) {
@@ -103,29 +132,14 @@ export default function CompliancePage() {
     }
   }, [packageId, readiness]);
 
-  const isCooperative = user?.active_role === 'cooperative';
-  const isImporter = user?.active_role === 'importer';
-
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={
-          isCooperative
-            ? 'Cooperative Data Readiness Check'
-            : isImporter
-              ? 'Compliance'
-              : 'Zero-Risk Pre-Flight Check'
-        }
-        subtitle={
-          isCooperative
-            ? 'Validate member evidence and plot readiness before downstream handoff'
-            : isImporter
-              ? 'Validate role decisions, references, and declaration readiness before submission'
-              : 'Comprehensive compliance verification before downstream handoff'
-        }
+        title={getCompliancePageTitle(role, t)}
+        subtitle={getCompliancePageSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Compliance' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getWorkflowComplianceNavLabel(t) },
         ]}
       />
 
@@ -135,7 +149,7 @@ export default function CompliancePage() {
           <Button variant="ghost" size="sm" className="mb-2" asChild>
             <Link href={backHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {isImporter ? 'Back to Shipment' : 'Back to Package'}
+              {getComplianceBackLinkLabel(role, t)}
             </Link>
           </Button>
         )}
@@ -144,9 +158,7 @@ export default function CompliancePage() {
             <ComplianceReviewHub />
             <Card>
               <CardContent className="p-6 text-sm text-muted-foreground">
-                {isImporter
-                  ? 'Select a shipment from Shipments to run declaration readiness checks.'
-                  : 'Select a shipment from Shipments to run package compliance checks, or use the review queues above for field evidence.'}
+                {getComplianceHubEmptyHint(role, t)}
               </CardContent>
             </Card>
           </div>
@@ -160,32 +172,36 @@ export default function CompliancePage() {
               </div>
               <div>
                 <CardTitle className="text-lg">
-                  {isImporter ? 'Shipment Compliance Overview' : 'Package Compliance Overview'}
+                  {getComplianceOverviewTitle(role, t)}
                 </CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">ID: {packageId ?? 'n/a'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {getComplianceHubPackageIdLine(packageId, t)}
+                </p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Compliance Score</p>
+                <p className="text-sm text-muted-foreground">{getComplianceHubScoreLabel(t)}</p>
                 <p className="mt-1 text-2xl font-bold text-primary">
                   {readiness?.status === 'ready_to_submit' ? '100%' : readiness ? '0%' : '--'}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">{isImporter ? 'Evidence Records' : 'Total Plots'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {isImporter ? getComplianceHubEvidenceRecordsLabel(t) : getComplianceHubTotalPlotsLabel(t)}
+                </p>
                 <p className="mt-1 text-2xl font-bold">{backendPlotCount}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Compliant</p>
+                <p className="text-sm text-muted-foreground">{getComplianceHubCompliantLabel(t)}</p>
                 <p className="mt-1 text-2xl font-bold text-green-500">
                   {canSubmit ? backendPlotCount : Math.max(0, backendPlotCount - backendIssuesCount)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Issues</p>
+                <p className="text-sm text-muted-foreground">{getComplianceHubIssuesLabel(t)}</p>
                 <p className="mt-1 text-2xl font-bold text-destructive">
                   {backendIssuesCount}
                 </p>
@@ -199,9 +215,8 @@ export default function CompliancePage() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Issues Detected:</strong>{' '}
-              {backendIssuesCount} blocker(s) detected by backend readiness checks.
-              Deforestation concerns and evidence gaps must be resolved before shipment handoff.
+              {getComplianceHubIssuesDetectedAlert(backendIssuesCount, t)}{' '}
+              {getComplianceBlockerAlertTail(role, t)}
             </AlertDescription>
           </Alert>
         )}
@@ -213,11 +228,11 @@ export default function CompliancePage() {
         {packageId ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Backend Readiness Reason Codes</CardTitle>
+              <CardTitle className="text-lg">{getComplianceHubReadinessTitle(t)}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {isReadinessLoading ? (
-                <p className="text-sm text-muted-foreground">Loading readiness diagnostics...</p>
+                <p className="text-sm text-muted-foreground">{getComplianceHubLoadingReadiness(t)}</p>
               ) : null}
               {readinessError ? (
                 <Alert variant="destructive">
@@ -228,7 +243,8 @@ export default function CompliancePage() {
               {readiness ? (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Status: <span className="font-medium text-foreground">{readiness.status}</span>
+                    {getComplianceHubStatusPrefix(t)}{' '}
+                    <span className="font-medium text-foreground">{readiness.status}</span>
                   </p>
                   {[...readiness.blockers, ...readiness.warnings].length > 0 ? (
                     [...readiness.blockers, ...readiness.warnings].map((issue, index) => (
@@ -244,26 +260,21 @@ export default function CompliancePage() {
                           {issue.code}: {issue.message}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Remediation:{' '}
-                          {reasonCodeRemediation[issue.code] ??
-                            'Resolve the flagged readiness issue and re-run checks.'}
+                          {getComplianceHubRemediationPrefix(t)}{' '}
+                          {getComplianceReasonCodeRemediation(issue.code, t)}
                         </p>
                       </div>
                     ))
                   ) : (
                     <p className="text-sm text-emerald-700">
-                      {isImporter
-                        ? 'No backend readiness reason codes reported for this shipment.'
-                        : 'No backend readiness reason codes reported for this package.'}
+                      {getComplianceNoReasonCodesMessage(role, t)}
                     </p>
                   )}
                 </div>
               ) : null}
               {!isReadinessLoading && !readinessError && !readiness ? (
                 <p className="text-sm text-muted-foreground">
-                  {isImporter
-                    ? 'Select a shipment from Shipments to load backend readiness diagnostics.'
-                    : 'Select a package from Packages to load backend readiness diagnostics.'}
+                  {getComplianceReadinessEmptyHint(role, t)}
                 </p>
               ) : null}
             </CardContent>
@@ -284,17 +295,17 @@ export default function CompliancePage() {
         ) : (
           <Card>
             <CardContent className="p-6 text-sm text-muted-foreground">
-              No plot evidence loaded for this package yet.
+              {getComplianceHubNoPlotEvidence(t)}
             </CardContent>
           </Card>
         )}
 
         {/* Evidence Requirements */}
         <div>
-          <h2 className="mb-4 text-xl font-bold">Evidence Verification</h2>
+          <h2 className="mb-4 text-xl font-bold">{getComplianceHubEvidenceVerificationTitle(t)}</h2>
           <div className="space-y-4">
             {isEvidenceDocumentsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading package evidence diagnostics...</p>
+              <p className="text-sm text-muted-foreground">{getComplianceHubLoadingEvidence(t)}</p>
             ) : null}
             {evidenceDocumentsError ? (
               <Alert variant="destructive">
@@ -312,7 +323,7 @@ export default function CompliancePage() {
               />
             ))}
             {evidenceRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No evidence requirements to display.</p>
+              <p className="text-sm text-muted-foreground">{getComplianceHubNoEvidenceRequirements(t)}</p>
             ) : null}
           </div>
         </div>
@@ -323,20 +334,20 @@ export default function CompliancePage() {
             <>
               <Button size="lg" className="flex-1">
                 <CheckCircle className="mr-2 h-4 w-4" />
-                Ready for Shipment Handoff
+                {getComplianceHubReadyHandoffCta(t)}
               </Button>
               <Button variant="outline" size="lg">
-                Proceed to Export
+                {getComplianceHubProceedExportCta(t)}
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" size="lg" className="flex-1">
-                Resolve Issues
+                {getComplianceHubResolveIssuesCta(t)}
               </Button>
               <Button variant="outline" size="lg">
-                {isImporter ? 'Back to Shipments' : 'Back to Packages'}
+                {getPackageDetailBackLabel(role, t)}
               </Button>
             </>
           )}

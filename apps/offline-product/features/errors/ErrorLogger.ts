@@ -3,6 +3,9 @@
  * Handles network errors, validation errors, auth errors, and server errors.
  */
 
+import { isSentryEnabled, reportErrorToSentry } from '@/features/observability/sentryClient';
+import { sanitizeLogContext } from '@/features/security/sanitizeLogContext';
+
 export type ErrorCategory = 'network' | 'auth' | 'validation' | 'server' | 'unknown';
 
 export interface ClassifiedError {
@@ -128,7 +131,8 @@ export function getUserMessage(classified: ClassifiedError): string {
  * Log an error with classification and context.
  */
 export function logError(error: unknown, context?: Record<string, unknown>): ClassifiedError {
-  const classified = classifyError(error, context);
+  const safeContext = sanitizeLogContext(context);
+  const classified = classifyError(error, safeContext);
   const userMessage = getUserMessage(classified);
   const stackTrace = error instanceof Error ? error.stack : undefined;
 
@@ -149,8 +153,16 @@ export function logError(error: unknown, context?: Record<string, unknown>): Cla
     console.error(`[ErrorLogger] ${classified.category}:`, {
       message: classified.message,
       code: classified.code,
-      context,
+      context: safeContext,
       stackTrace,
+    });
+  }
+
+  if (classified.category !== 'validation' && isSentryEnabled()) {
+    reportErrorToSentry(classified.originalError ?? new Error(classified.message), {
+      category: classified.category,
+      code: classified.code,
+      ...safeContext,
     });
   }
 

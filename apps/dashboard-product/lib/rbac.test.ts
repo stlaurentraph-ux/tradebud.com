@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@/types';
-import { getVisibleNavItems } from './rbac';
+import { getVisibleNavItems, getVisibleNavSections } from './rbac';
 
 function makeUser(activeRole: User['active_role']): User {
   return {
@@ -106,5 +106,47 @@ describe('rbac navigation visibility', () => {
     expect(names).toContain('Issues');
     expect(names).toContain('Audit Log');
     expect(names).not.toContain('Shipments');
+  });
+
+  it('groups importer navigation into overview plus collapsible sections', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'true');
+    const importer = makeUser('importer');
+    const layout = getVisibleNavSections(importer);
+
+    expect(layout.overview?.name).toBe('Overview');
+    expect(layout.sections.map((section) => section.id)).toEqual([
+      'network',
+      'compliance_ops',
+      'engagement',
+      'governance',
+    ]);
+    expect(layout.sections.find((section) => section.id === 'compliance_ops')?.items.map((item) => item.name)).toEqual([
+      'Shipments',
+      'Compliance',
+      'Evidence',
+    ]);
+
+    const flatNames = [
+      ...(layout.overview ? [layout.overview.name] : []),
+      ...layout.sections.flatMap((section) => section.items.map((item) => item.name)),
+    ];
+    const visibleNames = getVisibleNavItems(importer).map((item) => item.name);
+    expect(flatNames).toHaveLength(visibleNames.length);
+    expect([...flatNames].sort()).toEqual([...visibleNames].sort());
+  });
+
+  it('groups sponsor navigation without shipment-first labels', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'true');
+    const sponsor = makeUser('sponsor');
+    const layout = getVisibleNavSections(sponsor);
+
+    expect(layout.sections.map((section) => section.id)).toEqual([
+      'programme',
+      'administration',
+      'operations',
+    ]);
+    expect(layout.sections.flatMap((section) => section.items.map((item) => item.name))).not.toContain('Shipments');
   });
 });

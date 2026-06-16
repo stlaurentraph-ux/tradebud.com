@@ -1,7 +1,13 @@
-import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
+import MapView, { Circle, Polyline, Region } from 'react-native-maps';
 import { View } from 'react-native';
 import type { Plot } from '@/features/state/AppStateContext';
-import { getOfflineTilesUrlTemplate } from '@/features/offlineTiles/offlineTiles';
+import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
+import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
+import {
+  fieldMapUsesCustomTiles,
+  FIELD_MAP_VIEW_UI_PROPS,
+  resolveFieldMapTileMode,
+} from '@/features/mapping/fieldMapTiles';
 
 export function PlotMap(props: {
   plot: Plot;
@@ -10,20 +16,21 @@ export function PlotMap(props: {
   offlineTilesEnabled: boolean;
   offlineTilesPackId: string | null;
 }) {
+  const tileMode = resolveFieldMapTileMode(props);
+
   return (
     <View style={{ height: 220, borderRadius: 12, overflow: 'hidden' }}>
       <MapView
         style={{ flex: 1 }}
         initialRegion={props.region}
-        mapType={props.offlineTilesEnabled || props.lowDataMap ? 'none' : 'standard'}
+        {...FIELD_MAP_VIEW_UI_PROPS}
+        mapType={fieldMapUsesCustomTiles(tileMode) ? 'none' : 'standard'}
       >
-        {props.offlineTilesEnabled ? (
-          <UrlTile
-            urlTemplate={getOfflineTilesUrlTemplate(props.offlineTilesPackId ?? undefined)}
-            maximumZ={18}
-            flipY={false}
-          />
-        ) : null}
+        <FieldMapLayers
+          lowDataMap={props.lowDataMap}
+          offlineTilesEnabled={props.offlineTilesEnabled}
+          offlineTilesPackId={props.offlineTilesPackId}
+        />
         {props.plot.kind === 'polygon' && props.plot.points.length > 2 ? (
           <Polyline
             coordinates={[...props.plot.points, props.plot.points[0]]}
@@ -32,10 +39,19 @@ export function PlotMap(props: {
           />
         ) : null}
         {props.plot.points[0] ? (
-          <Marker coordinate={props.plot.points[0]} title={props.plot.name} />
+          <Circle
+            center={props.plot.points[0]}
+            radius={18}
+            fillColor="rgba(10, 127, 89, 0.35)"
+            strokeColor="#0A7F59"
+            strokeWidth={2}
+          />
         ) : null}
       </MapView>
+      <FieldMapAttribution
+        lowDataMap={props.lowDataMap}
+        offlineTilesEnabled={props.offlineTilesEnabled}
+      />
     </View>
   );
 }
-

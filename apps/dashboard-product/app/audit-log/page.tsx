@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { Download, Filter, Calendar, User, Package, MapPin, FileText } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
 
 interface AuditLogEntry {
   id: string;
@@ -93,6 +95,9 @@ const entityLabels: Record<'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 
 };
 
 export default function AuditLogPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'audit_log', { title: "Audit Log" });
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
   const getEntityLabel = (entity: 'package' | 'plot' | 'farmer' | 'harvest' | 'fpic' | 'compliance') => {
@@ -137,16 +142,13 @@ export default function AuditLogPage() {
     <PermissionGate permission="audit:view">
       <div className="flex flex-col">
         <AppHeader
-          title="Audit Log"
+          title={pageHeader.title}
           subtitle={
             isCooperative
               ? 'Immutable trail across member, consent, portability, batch, shipment, and premium-governance events'
               : 'Complete activity trail for compliance and 5-year retention'
           }
-          breadcrumbs={[
-            { label: 'Dashboard', href: '/' },
-            { label: 'Audit Log' },
-          ]}
+          breadcrumbs={buildAppBreadcrumbs(t, { name: 'Audit Log' })}
           actions={
             <PermissionGate permission="audit:export">
               <Button variant="outline">

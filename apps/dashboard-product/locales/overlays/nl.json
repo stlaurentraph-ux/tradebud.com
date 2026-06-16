@@ -1,0 +1,11 @@
+{
+  "nav.settings": "Instellingen",
+  "nav.shipments": "Zendingen",
+  "nav.compliance": "Compliance",
+  "nav.harvests": "Oogsten",
+  "nav.plots": "Percelen",
+  "settings.preferences.language_policy_eu": "EU-compliance-talen plus Engels en andere ontwikkelde markten voor importeurs en reviewers.",
+  "status.shipment.handed_off": "Overgedragen",
+  "status.shipment.submitted_importer": "Ingediend bij TRACES",
+  "workflow.review_queue.importer.title": "Beoordelingswachtrij"
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useContext, useState } from 'react';
 import { AsyncState } from '@/components/common/async-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useOutreachTemplates } from '@/lib/use-crm';
+import { LocaleContext } from '@/lib/locale-context';
+import { getWorkflowAsyncStateCopy } from '@/lib/workflow-terminology-labels';
 
 export default function FounderOsCrmTemplatesPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [query, setQuery] = useState('');
   const [form, setForm] = useState({ name: '', stage: 'follow_up', channel: 'linkedin', content: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -56,11 +60,11 @@ export default function FounderOsCrmTemplatesPage() {
           </CardContent>
         </Card>
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading templates..." />
+          <AsyncState mode="loading" title={getWorkflowAsyncStateCopy('crm.templates', 'loading', t).title} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load templates" description={error} onRetry={reload} />
+          <AsyncState mode="error" title={getWorkflowAsyncStateCopy('crm.templates', 'error', t).title} description={error} onRetry={reload} />
         ) : filtered.length === 0 ? (
-          <AsyncState mode="empty" title="No templates found" description="Adjust your filter or seed template data." />
+          <AsyncState mode="empty" title={getWorkflowAsyncStateCopy('crm.templates', 'empty', t).title} description={getWorkflowAsyncStateCopy('crm.templates', 'empty', t).description} />
         ) : (
           filtered.map((template) => (
             <Card key={template.id}>

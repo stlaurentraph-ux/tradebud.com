@@ -61,12 +61,17 @@ export interface OperationalIssueRecord {
   severity: 'INFO' | 'WARNING' | 'BLOCKING';
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   owner: string | null;
-  linked_entity_type: 'campaign' | 'request';
+  linked_entity_type: string;
   linked_entity_id: string;
   linked_entity_name: string;
   due_date: string | null;
   created_at: string;
   resolution_path: string | null;
+  issue_kind: 'canonical' | 'campaign' | 'request' | 'upstream_blocker';
+  owner_role: string | null;
+  owner_organisation_name: string | null;
+  source_issue_id: string | null;
+  can_update_status: boolean;
 }
 
 export interface EvidenceFeedRecord {
@@ -1031,75 +1036,291 @@ export class RequestsService {
 
   async listOperationalIssues(tenantId: string): Promise<OperationalIssueRecord[]> {
     try {
-      const result = await this.pool.query<OperationalIssueRecord>(
-        `
-          SELECT
-            CONCAT('issue_campaign_', rc.id) AS id,
-            rc.title AS title,
-            COALESCE(NULLIF(rc.description, ''), 'Campaign requires remediation follow-up.') AS description,
-            CASE
-              WHEN rc.status = 'EXPIRED' THEN 'BLOCKING'
-              WHEN rc.status IN ('RUNNING', 'PARTIAL') AND rc.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
-              ELSE 'INFO'
-            END AS severity,
-            CASE
-              WHEN rc.status = 'EXPIRED' THEN 'open'
-              WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'in_progress'
-              WHEN rc.status = 'COMPLETED' THEN 'resolved'
-              WHEN rc.status = 'CANCELLED' THEN 'closed'
-              ELSE 'open'
-            END AS status,
-            NULL::text AS owner,
-            'campaign'::text AS linked_entity_type,
-            rc.id AS linked_entity_id,
-            rc.title AS linked_entity_name,
-            rc.due_at::text AS due_date,
-            rc.created_at::text AS created_at,
-            CASE
-              WHEN rc.status = 'EXPIRED' THEN 'Escalate overdue campaign and collect missing evidence from supplier.'
-              WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'Track recipients, send reminders, and close missing evidence gaps.'
-              ELSE 'Review completion and archive if no further remediation is needed.'
-            END AS resolution_path
-          FROM request_campaigns rc
-          WHERE rc.tenant_id = $1
-          UNION ALL
-          SELECT
-            CONCAT('issue_request_', ir.id) AS id,
-            ir.title AS title,
-            'Inbound request is pending response from recipient organization.' AS description,
-            CASE
-              WHEN ir.due_at < NOW() THEN 'BLOCKING'
-              WHEN ir.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
-              ELSE 'INFO'
-            END AS severity,
-            CASE
-              WHEN ir.status = 'RESPONDED' THEN 'resolved'
-              WHEN ir.due_at < NOW() THEN 'open'
-              ELSE 'in_progress'
-            END AS status,
-            NULL::text AS owner,
-            'request'::text AS linked_entity_type,
-            ir.id AS linked_entity_id,
-            ir.title AS linked_entity_name,
-            ir.due_at::text AS due_date,
-            ir.created_at::text AS created_at,
-            'Respond to request and attach required shipment or evidence artifacts.' AS resolution_path
-          FROM inbox_requests ir
-          WHERE ir.recipient_tenant_id = $1
-          ORDER BY created_at DESC
-          LIMIT 100
-        `,
-        [tenantId],
-      );
-      return result.rows.map((row) => ({
-        ...row,
-        due_date: row.due_date ? new Date(row.due_date).toISOString() : null,
-        created_at: new Date(row.created_at).toISOString(),
-      }));
+      const [owned, upstream] = await Promise.all([
+        this.listOwnedOperationalIssues(tenantId),
+        this.listUpstreamBlockerIssues(tenantId),
+      ]);
+      return [...owned, ...upstream]
+        .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))
+        .slice(0, 100);
     } catch (error) {
       const pgError = error as { code?: string; message?: string } | null;
       if (pgError?.code === '42P01') {
         return [];
+      }
+      throw error;
+    }
+  }
+
+  private normalizeOperationalIssue(
+    row: OperationalIssueRecord & { due_date?: string | null; created_at: string; can_update_status?: boolean },
+  ): OperationalIssueRecord {
+    return {
+      ...row,
+      due_date: row.due_date ? new Date(row.due_date).toISOString() : null,
+      created_at: new Date(row.created_at).toISOString(),
+      can_update_status: Boolean(row.can_update_status),
+    };
+  }
+
+  private async listOwnedOperationalIssues(tenantId: string): Promise<OperationalIssueRecord[]> {
+    const result = await this.pool.query<OperationalIssueRecord>(
+      `
+        SELECT
+          CONCAT('issue_campaign_', rc.id) AS id,
+          rc.title AS title,
+          COALESCE(NULLIF(rc.description, ''), 'Campaign requires remediation follow-up.') AS description,
+          CASE
+            WHEN rc.status = 'EXPIRED' THEN 'BLOCKING'
+            WHEN rc.status IN ('RUNNING', 'PARTIAL') AND rc.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
+            ELSE 'INFO'
+          END AS severity,
+          CASE
+            WHEN rc.status = 'EXPIRED' THEN 'open'
+            WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'in_progress'
+            WHEN rc.status = 'COMPLETED' THEN 'resolved'
+            WHEN rc.status = 'CANCELLED' THEN 'closed'
+            ELSE 'open'
+          END AS status,
+          NULL::text AS owner,
+          'campaign'::text AS linked_entity_type,
+          rc.id AS linked_entity_id,
+          rc.title AS linked_entity_name,
+          rc.due_at::text AS due_date,
+          rc.created_at::text AS created_at,
+          CASE
+            WHEN rc.status = 'EXPIRED' THEN 'Escalate overdue campaign and collect missing evidence from supplier.'
+            WHEN rc.status IN ('RUNNING', 'PARTIAL') THEN 'Track recipients, send reminders, and close missing evidence gaps.'
+            ELSE 'Review completion and archive if no further remediation is needed.'
+          END AS resolution_path,
+          'campaign'::text AS issue_kind,
+          COALESCE(tcp.primary_role, 'exporter')::text AS owner_role,
+          tcp.organization_name AS owner_organisation_name,
+          NULL::text AS source_issue_id,
+          false AS can_update_status
+        FROM request_campaigns rc
+        LEFT JOIN tenant_commercial_profiles tcp ON tcp.tenant_id = rc.tenant_id::text
+        WHERE rc.tenant_id::text = $1::text
+        UNION ALL
+        SELECT
+          CONCAT('issue_request_', ir.id) AS id,
+          ir.title AS title,
+          'Inbound request is pending response from recipient organization.' AS description,
+          CASE
+            WHEN ir.due_at < NOW() THEN 'BLOCKING'
+            WHEN ir.due_at <= NOW() + INTERVAL '2 days' THEN 'WARNING'
+            ELSE 'INFO'
+          END AS severity,
+          CASE
+            WHEN ir.status = 'RESPONDED' THEN 'resolved'
+            WHEN ir.due_at < NOW() THEN 'open'
+            ELSE 'in_progress'
+          END AS status,
+          NULL::text AS owner,
+          'request'::text AS linked_entity_type,
+          ir.id AS linked_entity_id,
+          ir.title AS linked_entity_name,
+          ir.due_at::text AS due_date,
+          ir.created_at::text AS created_at,
+          'Respond to request and attach required shipment or evidence artifacts.' AS resolution_path,
+          'request'::text AS issue_kind,
+          COALESCE(recipient_tcp.primary_role, 'importer')::text AS owner_role,
+          recipient_tcp.organization_name AS owner_organisation_name,
+          NULL::text AS source_issue_id,
+          false AS can_update_status
+        FROM inbox_requests ir
+        LEFT JOIN tenant_commercial_profiles recipient_tcp
+          ON recipient_tcp.tenant_id = ir.recipient_tenant_id
+        WHERE ir.recipient_tenant_id = $1::text
+        UNION ALL
+        SELECT
+          CONCAT('issue_compliance_', ci.id::text) AS id,
+          ci.title AS title,
+          ci.description AS description,
+          ci.severity AS severity,
+          ci.status AS status,
+          NULL::text AS owner,
+          ci.linked_entity_type::text AS linked_entity_type,
+          ci.linked_entity_id AS linked_entity_id,
+          COALESCE(NULLIF(ci.title, ''), ci.linked_entity_id) AS linked_entity_name,
+          ci.due_at::text AS due_date,
+          ci.created_at::text AS created_at,
+          COALESCE(
+            ci.resolution_path,
+            'Review the linked entity and update issue status when remediation is complete.'
+          ) AS resolution_path,
+          'canonical'::text AS issue_kind,
+          COALESCE(ci.owner_role, 'exporter')::text AS owner_role,
+          owner_tcp.organization_name AS owner_organisation_name,
+          NULL::text AS source_issue_id,
+          true AS can_update_status
+        FROM compliance_issues ci
+        LEFT JOIN tenant_commercial_profiles owner_tcp ON owner_tcp.tenant_id = ci.tenant_id::text
+        WHERE ci.tenant_id::text = $1::text
+          AND ci.status <> 'closed'
+      `,
+      [tenantId],
+    );
+    return result.rows.map((row) => this.normalizeOperationalIssue(row));
+  }
+
+  private async listUpstreamBlockerIssues(tenantId: string): Promise<OperationalIssueRecord[]> {
+    try {
+      const result = await this.pool.query<OperationalIssueRecord>(
+        `
+          SELECT
+            CONCAT('issue_upstream_', ci.id::text) AS id,
+            ci.title AS title,
+            CONCAT(
+              'Upstream organisation must resolve this before your shared shipments can clear. ',
+              ci.description
+            ) AS description,
+            ci.severity AS severity,
+            ci.status AS status,
+            NULL::text AS owner,
+            ci.linked_entity_type::text AS linked_entity_type,
+            ci.linked_entity_id AS linked_entity_id,
+            COALESCE(NULLIF(ci.title, ''), ci.linked_entity_id) AS linked_entity_name,
+            ci.due_at::text AS due_date,
+            ci.created_at::text AS created_at,
+            COALESCE(
+              ci.resolution_path,
+              'Request missing upstream evidence via campaign or inbox. Status updates are owned by the upstream organisation.'
+            ) AS resolution_path,
+            'upstream_blocker'::text AS issue_kind,
+            COALESCE(ci.owner_role, 'exporter')::text AS owner_role,
+            owner_tcp.organization_name AS owner_organisation_name,
+            CONCAT('issue_compliance_', ci.id::text) AS source_issue_id,
+            false AS can_update_status
+          FROM compliance_issues ci
+          LEFT JOIN tenant_commercial_profiles owner_tcp ON owner_tcp.tenant_id = ci.tenant_id::text
+          WHERE ci.tenant_id IS NOT NULL
+            AND ci.tenant_id::text <> $1::text
+            AND ci.status IN ('open', 'in_progress')
+            AND EXISTS (
+              SELECT 1
+              FROM inbox_requests ir
+              WHERE ir.recipient_tenant_id = $1::text
+                AND ir.sender_tenant_id = ci.tenant_id::text
+            )
+            AND (
+              (
+                ci.linked_entity_type = 'tenure_verification'
+                AND EXISTS (
+                  SELECT 1
+                  FROM plot_tenure_verification ptv
+                  JOIN plot p ON p.id = ptv.plot_id
+                  JOIN harvest_transaction ht ON ht.plot_id = p.id
+                  JOIN voucher v ON v.transaction_id = ht.id
+                  JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+                  JOIN dds_package dp ON dp.id = dpv.dds_package_id
+                  JOIN farmer_profile fp ON fp.id = dp.farmer_id
+                  JOIN tenant_signup_contacts tsc
+                    ON tsc.tenant_id = ci.tenant_id::text
+                   AND fp.user_id = NULLIF(tsc.user_id, '')::uuid
+                  WHERE ptv.id::text = ci.linked_entity_id
+                )
+              )
+              OR (
+                ci.linked_entity_type = 'plot'
+                AND EXISTS (
+                  SELECT 1
+                  FROM plot p
+                  JOIN harvest_transaction ht ON ht.plot_id = p.id
+                  JOIN voucher v ON v.transaction_id = ht.id
+                  JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+                  JOIN dds_package dp ON dp.id = dpv.dds_package_id
+                  JOIN farmer_profile fp ON fp.id = dp.farmer_id
+                  JOIN tenant_signup_contacts tsc
+                    ON tsc.tenant_id = ci.tenant_id::text
+                   AND fp.user_id = NULLIF(tsc.user_id, '')::uuid
+                  WHERE p.id::text = ci.linked_entity_id
+                )
+              )
+            )
+        `,
+        [tenantId],
+      );
+      return result.rows.map((row) => this.normalizeOperationalIssue(row));
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async updateOperationalIssueStatus(
+    tenantId: string,
+    issueId: string,
+    status: 'open' | 'in_progress' | 'resolved' | 'closed',
+  ): Promise<OperationalIssueRecord> {
+    const prefix = 'issue_compliance_';
+    if (!issueId.startsWith(prefix)) {
+      throw new BadRequestException(
+        'Only persisted compliance issues support manual status updates. Open the linked campaign or request to progress derived issues.',
+      );
+    }
+
+    const complianceIssueId = issueId.slice(prefix.length);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(complianceIssueId)) {
+      throw new BadRequestException('Invalid compliance issue id.');
+    }
+
+    if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+      throw new BadRequestException('Invalid issue status.');
+    }
+
+    try {
+      const result = await this.pool.query<OperationalIssueRecord>(
+        `
+          UPDATE compliance_issues ci
+          SET
+            status = $3,
+            updated_at = NOW()
+          FROM tenant_commercial_profiles owner_tcp
+          WHERE ci.id = $2::uuid
+            AND ci.tenant_id::text = $1::text
+            AND owner_tcp.tenant_id = ci.tenant_id::text
+          RETURNING
+            CONCAT('issue_compliance_', ci.id::text) AS id,
+            ci.title AS title,
+            ci.description AS description,
+            ci.severity AS severity,
+            ci.status AS status,
+            NULL::text AS owner,
+            ci.linked_entity_type::text AS linked_entity_type,
+            ci.linked_entity_id AS linked_entity_id,
+            COALESCE(NULLIF(ci.title, ''), ci.linked_entity_id) AS linked_entity_name,
+            ci.due_at::text AS due_date,
+            ci.created_at::text AS created_at,
+            COALESCE(
+              ci.resolution_path,
+              'Review the linked entity and update issue status when remediation is complete.'
+            ) AS resolution_path,
+            'canonical'::text AS issue_kind,
+            COALESCE(ci.owner_role, 'exporter')::text AS owner_role,
+            owner_tcp.organization_name AS owner_organisation_name,
+            NULL::text AS source_issue_id,
+            true AS can_update_status
+        `,
+        [tenantId, complianceIssueId, status],
+      );
+
+      const row = result.rows[0];
+      if (!row) {
+        throw new BadRequestException('Compliance issue not found.');
+      }
+
+      return this.normalizeOperationalIssue(row);
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        throw new BadRequestException('Compliance issues are not available in this environment.');
+      }
+      if (error instanceof BadRequestException) {
+        throw error;
       }
       throw error;
     }

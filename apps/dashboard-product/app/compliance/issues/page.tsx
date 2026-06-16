@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
   Plus,
@@ -34,90 +35,76 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { PermissionGate } from '@/components/common/permission-gate';
+import {
+  ComplianceIssuesKanban,
+  type ComplianceIssueRecord,
+  type ComplianceIssueSeverity,
+  type ComplianceIssueStatus,
+} from '@/components/compliance/compliance-issues-kanban';
+import { SLAEscalationLadder, SLASummaryCard } from '@/components/compliance/sla-escalation-ladder';
+import { issueSlaRowClass, mapIssueRecordToSlaIssue } from '@/lib/compliance-issue-sla';
+import { canPersistIssueStatus } from '@/lib/compliance-issue-ownership';
+import { getIssueRemediationHref } from '@/lib/compliance-issue-remediation';
+import { issueKindBadgeClass } from '@/lib/compliance-issue-ownership';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { LocaleContext } from '@/lib/locale-context';
+import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
+import {
+  getIssuesBlockingAlert,
+  getIssuesCancelLabel,
+  getIssuesCreateButtonLabel,
+  getIssuesCreateDialogDescription,
+  getIssuesCreateDialogTitle,
+  getIssuesCreateSubmitLabel,
+  getIssuesDetailLabel,
+  getIssuesEmptyMessage,
+  getIssuesFilterPlaceholder,
+  getIssuesFormLabel,
+  getIssuesFormPlaceholder,
+  getIssuesKanbanStatusLabel,
+  getIssuesKindLabel,
+  getIssuesLinkedEntityDisplayLine,
+  getIssuesLinkedEntityTypeLabel,
+  getIssuesLoadingMessage,
+  getIssuesOpenRemediationLabel,
+  getIssuesOwnerPrefix,
+  getIssuesOwnerRoleLabel,
+  getIssuesOwnershipAlertDescription,
+  getIssuesOwnershipFilterLabel,
+  getIssuesPageSubtitle,
+  getIssuesPageTitle,
+  getIssuesRequestUpstreamRemediationLabel,
+  getIssuesSearchPlaceholder,
+  getIssuesSeverityLabel,
+  getIssuesSlaLabel,
+  getIssuesUpstreamBlockerAlert,
+  getIssuesViewModeLabel,
+  getWorkflowComplianceNavLabel,
+  getWorkflowIssuesNavLabel,
+} from '@/lib/workflow-terminology-labels';
 
-type IssueSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
-type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+type ComplianceIssue = ComplianceIssueRecord;
+type IssueSeverity = ComplianceIssueSeverity;
+type IssueStatus = ComplianceIssueStatus;
 
-interface ComplianceIssue {
-  id: string;
-  title: string;
-  description: string;
-  severity: IssueSeverity;
-  status: IssueStatus;
-  owner?: string;
-  linkedEntity: {
-    type: 'plot' | 'batch' | 'package' | 'farmer' | 'campaign' | 'request';
-    id: string;
-    name: string;
-  };
-  createdAt: string;
-  dueDate?: string;
-  resolutionPath?: string;
-}
+type LinkedEntityType = 'plot' | 'batch' | 'package' | 'farmer' | 'campaign' | 'request';
 
-type LinkedEntityType = ComplianceIssue['linkedEntity']['type'];
-
-const mockIssues: ComplianceIssue[] = process.env.NODE_ENV !== 'production' ? [
-  {
-    id: 'iss_1001',
-    title: 'Duplicate member identity requires merge review',
-    description: 'Two member profiles share national ID and overlapping plot links.',
-    severity: 'WARNING',
-    status: 'open',
-    owner: 'Data Steward Team',
-    linkedEntity: {
-      type: 'farmer',
-      id: 'member_447',
-      name: 'Member 447 / Member 448',
-    },
-    createdAt: '2026-04-19T12:10:00.000Z',
-    dueDate: '2026-04-26T00:00:00.000Z',
-    resolutionPath: 'Run duplicate review workflow, confirm canonical member, relink plots and evidence.',
-  },
-  {
-    id: 'iss_1002',
-    title: 'Yield cap blocked on batch BATCH-2026-043',
-    description: 'Recorded intake exceeds expected biological capacity by >1.1x.',
-    severity: 'BLOCKING',
-    status: 'in_progress',
-    owner: 'Compliance Lead',
-    linkedEntity: {
-      type: 'batch',
-      id: 'BATCH-2026-043',
-      name: 'Valley Group Lot 7',
-    },
-    createdAt: '2026-04-20T09:02:00.000Z',
-    dueDate: '2026-04-24T00:00:00.000Z',
-    resolutionPath: 'Collect supporting harvest evidence and submit yield exception for committee review.',
-  },
-  {
-    id: 'iss_1003',
-    title: 'Portability export pending governance sign-off',
-    description: 'Full member history export requested without pre-approved portability policy.',
-    severity: 'INFO',
-    status: 'open',
-    owner: 'Governance Committee',
-    linkedEntity: {
-      type: 'package',
-      id: 'PORT-2026-009',
-      name: 'Portability Request #009',
-    },
-    createdAt: '2026-04-21T14:42:00.000Z',
-    dueDate: '2026-04-28T00:00:00.000Z',
-    resolutionPath: 'Approve portability request or request member-side consent amendment.',
-  },
-] : [];
+type IssuesViewMode = 'kanban' | 'list';
+type IssueKindFilter = ComplianceIssue['issueKind'] | 'all';
 
 export default function ComplianceIssuesPage() {
   const { user } = useAuth();
-  const isImporter = user?.active_role === 'importer';
-  const isCooperative = user?.active_role === 'cooperative';
-  const [issues, setIssues] = useState<ComplianceIssue[]>(mockIssues);
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const searchParams = useSearchParams();
+  const role = user?.active_role;
+  const [issues, setIssues] = useState<ComplianceIssue[]>([]);
+  const [viewMode, setViewMode] = useState<IssuesViewMode>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<IssueStatus | 'all'>('all');
+  const [kindFilter, setKindFilter] = useState<IssueKindFilter>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<ComplianceIssue | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -139,10 +126,23 @@ export default function ComplianceIssuesPage() {
   });
 
   const localBlockingCount = issues.filter((i) => i.severity === 'BLOCKING' && i.status === 'open').length;
-  const blockingIssuesCount = isCooperative ? (backendBlockingCount ?? localBlockingCount) : localBlockingCount;
+  const upstreamBlockerCount = issues.filter((i) => i.issueKind === 'upstream_blocker' && i.status === 'open').length;
+  const blockingIssuesCount = role === 'cooperative' ? (backendBlockingCount ?? localBlockingCount) : localBlockingCount;
 
   useEffect(() => {
-    if (!isCooperative) {
+    const ownership = searchParams.get('ownership');
+    if (
+      ownership === 'upstream_blocker' ||
+      ownership === 'canonical' ||
+      ownership === 'campaign' ||
+      ownership === 'request'
+    ) {
+      setKindFilter(ownership);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (role !== 'cooperative') {
       setBackendBlockingCount(null);
       return;
     }
@@ -156,10 +156,10 @@ export default function ComplianceIssuesPage() {
         }
       })
       .catch(() => undefined);
-  }, [isCooperative]);
+  }, [role]);
 
   useEffect(() => {
-    if (!isImporter) {
+    if (!user) {
       return;
     }
     const token = window.sessionStorage.getItem('tracebud_token');
@@ -174,12 +174,17 @@ export default function ComplianceIssuesPage() {
           severity: IssueSeverity;
           status: IssueStatus;
           owner?: string | null;
-          linked_entity_type: 'campaign' | 'request';
+          linked_entity_type: LinkedEntityType;
           linked_entity_id: string;
           linked_entity_name: string;
           due_date?: string | null;
           created_at: string;
           resolution_path?: string | null;
+          issue_kind?: ComplianceIssue['issueKind'];
+          owner_role?: string | null;
+          owner_organisation_name?: string | null;
+          source_issue_id?: string | null;
+          can_update_status?: boolean;
         }>;
         if (!response.ok || !Array.isArray(payload)) {
           return;
@@ -200,12 +205,17 @@ export default function ComplianceIssuesPage() {
             createdAt: item.created_at,
             dueDate: item.due_date ?? undefined,
             resolutionPath: item.resolution_path ?? undefined,
+            issueKind: item.issue_kind,
+            ownerRole: item.owner_role ?? undefined,
+            ownerOrganisationName: item.owner_organisation_name ?? undefined,
+            sourceIssueId: item.source_issue_id ?? undefined,
+            canUpdateStatus: item.can_update_status,
           })),
         );
       })
       .catch(() => undefined)
       .finally(() => setIsLoadingIssues(false));
-  }, [isImporter]);
+  }, [user]);
 
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -214,8 +224,13 @@ export default function ComplianceIssuesPage() {
       issue.linkedEntity.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSeverity = severityFilter === 'all' || issue.severity === severityFilter;
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-    return matchesSearch && matchesSeverity && matchesStatus;
+    const matchesKind = kindFilter === 'all' || issue.issueKind === kindFilter;
+    return matchesSearch && matchesSeverity && matchesStatus && matchesKind;
   });
+
+  const slaTrackedIssues = filteredIssues
+    .filter((issue) => issue.dueDate)
+    .map((issue) => mapIssueRecordToSlaIssue(issue));
 
   const handleCreateIssue = () => {
     if (!newIssue.title || !newIssue.linkedEntityId) return;
@@ -245,8 +260,43 @@ export default function ComplianceIssuesPage() {
     setIsCreateDialogOpen(false);
   };
 
-  const handleUpdateStatus = (issueId: string, newStatus: IssueStatus) => {
+  const handleUpdateStatus = async (issueId: string, newStatus: IssueStatus) => {
+    const issue = issues.find((item) => item.id === issueId);
+    if (!canPersistIssueStatus(issueId, issue?.canUpdateStatus)) {
+      return;
+    }
+
+    const previousIssues = issues;
     setIssues(issues.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i)));
+
+    const token = window.sessionStorage.getItem('tracebud_token');
+    const response = await fetch(`/api/requests/issues/${encodeURIComponent(issueId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!response.ok) {
+      setIssues(previousIssues);
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as {
+      id?: string;
+      status?: IssueStatus;
+    } | null;
+
+    if (payload?.id && payload.status) {
+      setIssues((current) =>
+        current.map((issue) =>
+          issue.id === payload.id ? { ...issue, status: payload.status as IssueStatus } : issue,
+        ),
+      );
+    }
+
     if (newStatus === 'resolved' || newStatus === 'closed') {
       markOnboardingAction('submission_reviewed');
     }
@@ -290,18 +340,12 @@ export default function ComplianceIssuesPage() {
   return (
     <div className="flex flex-col">
       <AppHeader
-        title={isImporter || isCooperative ? 'Issues' : 'Compliance Issues'}
-        subtitle={
-          isImporter
-            ? 'Manage blockers, warnings, and escalations linked to shipment and declaration workflows'
-            : isCooperative
-              ? 'Resolve field, lineage, consent, portability, and premium-governance blockers'
-            : 'Manage and track compliance blockers'
-        }
+        title={getIssuesPageTitle(role, t)}
+        subtitle={getIssuesPageSubtitle(role, t)}
         breadcrumbs={[
-          { label: 'Dashboard', href: '/' },
-          { label: 'Compliance', href: '/compliance' },
-          { label: isImporter ? 'Issues' : 'Issues' },
+          { label: getDashboardBreadcrumbLabel(t), href: '/' },
+          { label: getWorkflowComplianceNavLabel(t), href: '/compliance' },
+          { label: getWorkflowIssuesNavLabel(t) },
         ]}
         actions={
           <PermissionGate permission="compliance:create_issue">
@@ -309,35 +353,29 @@ export default function ComplianceIssuesPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  {isImporter ? 'New Exception' : isCooperative ? 'New Cooperative Issue' : 'New Issue'}
+                  {getIssuesCreateButtonLabel(role, t)}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>
-                    {isImporter ? 'Create Workflow Exception' : isCooperative ? 'Create Cooperative Issue' : 'Create Compliance Issue'}
-                  </DialogTitle>
+                  <DialogTitle>{getIssuesCreateDialogTitle(role, t)}</DialogTitle>
                   <DialogDescription>
-                    {isImporter
-                      ? 'Add a new blocker or warning to track declaration remediation.'
-                      : isCooperative
-                        ? 'Track operational blockers like duplicate members, blocked yield checks, consent gaps, portability reviews, or premium approvals.'
-                      : 'Add a new compliance issue for tracking'}
+                    {getIssuesCreateDialogDescription(role, t)}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Title</Label>
+                    <Label>{getIssuesFormLabel('title', t)}</Label>
                     <Input
-                      placeholder="Issue title"
+                      placeholder={getIssuesFormPlaceholder('title', t)}
                       value={newIssue.title}
                       onChange={(e) => setNewIssue({ ...newIssue, title: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label>Description</Label>
+                    <Label>{getIssuesFormLabel('description', t)}</Label>
                     <Textarea
-                      placeholder="Detailed description"
+                      placeholder={getIssuesFormPlaceholder('description', t)}
                       value={newIssue.description}
                       onChange={(e) => setNewIssue({ ...newIssue, description: e.target.value })}
                       rows={4}
@@ -345,46 +383,46 @@ export default function ComplianceIssuesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Severity</Label>
+                      <Label>{getIssuesFormLabel('severity', t)}</Label>
                       <Select value={newIssue.severity} onValueChange={(v) => setNewIssue({ ...newIssue, severity: v as IssueSeverity })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="INFO">Info</SelectItem>
-                          <SelectItem value="WARNING">Warning</SelectItem>
-                          <SelectItem value="BLOCKING">Blocking</SelectItem>
+                          <SelectItem value="INFO">{getIssuesSeverityLabel('INFO', t)}</SelectItem>
+                          <SelectItem value="WARNING">{getIssuesSeverityLabel('WARNING', t)}</SelectItem>
+                          <SelectItem value="BLOCKING">{getIssuesSeverityLabel('BLOCKING', t)}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label>Linked Entity Type</Label>
+                      <Label>{getIssuesFormLabel('linked_entity_type', t)}</Label>
                       <Select value={newIssue.linkedEntityType} onValueChange={(v) => setNewIssue({ ...newIssue, linkedEntityType: v as LinkedEntityType })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="plot">Plot</SelectItem>
-                          <SelectItem value="batch">Batch</SelectItem>
-                          <SelectItem value="package">Package</SelectItem>
-                          <SelectItem value="farmer">{isCooperative ? 'Member' : 'Farmer'}</SelectItem>
+                          <SelectItem value="plot">{getIssuesLinkedEntityTypeLabel('plot', role, t)}</SelectItem>
+                          <SelectItem value="batch">{getIssuesLinkedEntityTypeLabel('batch', role, t)}</SelectItem>
+                          <SelectItem value="package">{getIssuesLinkedEntityTypeLabel('package', role, t)}</SelectItem>
+                          <SelectItem value="farmer">{getIssuesLinkedEntityTypeLabel('farmer', role, t)}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div>
-                    <Label>Entity ID</Label>
+                    <Label>{getIssuesFormLabel('entity_id', t)}</Label>
                     <Input
-                      placeholder="plot_001, batch_001, etc."
+                      placeholder={getIssuesFormPlaceholder('entity_id', t)}
                       value={newIssue.linkedEntityId}
                       onChange={(e) => setNewIssue({ ...newIssue, linkedEntityId: e.target.value })}
                     />
                   </div>
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancel
+                      {getIssuesCancelLabel(t)}
                     </Button>
-                    <Button onClick={handleCreateIssue}>Create Issue</Button>
+                    <Button onClick={handleCreateIssue}>{getIssuesCreateSubmitLabel(t)}</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -394,21 +432,57 @@ export default function ComplianceIssuesPage() {
       />
 
       <div className="flex-1 p-6">
+        <Alert className="mb-6 border-border bg-muted/30">
+          <Info className="h-4 w-4" />
+          <AlertDescription>{getIssuesOwnershipAlertDescription(t)}</AlertDescription>
+        </Alert>
+
+        {upstreamBlockerCount > 0 ? (
+          <Alert className="mb-6 border-violet-300 bg-violet-50">
+            <AlertTriangle className="h-4 w-4 text-violet-700" />
+            <AlertDescription className="text-violet-900">
+              {getIssuesUpstreamBlockerAlert(upstreamBlockerCount, t)}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {blockingIssuesCount > 0 && (
           <Alert className="mb-6 border-red-500/50 bg-red-500/10">
             <AlertCircle className="h-4 w-4 text-red-500" />
             <AlertDescription className="text-red-700">
-                {blockingIssuesCount} blocking issue(s) preventing shipment sealing.
+              {getIssuesBlockingAlert(blockingIssuesCount, t)}
             </AlertDescription>
           </Alert>
         )}
 
+        {slaTrackedIssues.length > 0 ? (
+          <SLASummaryCard issues={slaTrackedIssues} className="mb-6" />
+        ) : null}
+
         {/* Filters */}
         <div className="mb-6 flex flex-wrap items-center gap-4">
+          <div className="flex rounded-md border border-border p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('kanban')}
+            >
+              {getIssuesViewModeLabel('kanban', t)}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('list')}
+            >
+              {getIssuesViewModeLabel('list', t)}
+            </Button>
+          </div>
           <div className="relative flex-1 min-w-64">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search issues..."
+              placeholder={getIssuesSearchPlaceholder(t)}
               className="pl-9"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -416,25 +490,37 @@ export default function ComplianceIssuesPage() {
           </div>
           <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as IssueSeverity | 'all')}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Filter by severity" />
+              <SelectValue placeholder={getIssuesFilterPlaceholder('severity', t)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Severities</SelectItem>
-              <SelectItem value="BLOCKING">Blocking</SelectItem>
-              <SelectItem value="WARNING">Warning</SelectItem>
-              <SelectItem value="INFO">Info</SelectItem>
+              <SelectItem value="all">{getIssuesSeverityLabel('all', t)}</SelectItem>
+              <SelectItem value="BLOCKING">{getIssuesSeverityLabel('BLOCKING', t)}</SelectItem>
+              <SelectItem value="WARNING">{getIssuesSeverityLabel('WARNING', t)}</SelectItem>
+              <SelectItem value="INFO">{getIssuesSeverityLabel('INFO', t)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as IssueStatus | 'all')}>
             <SelectTrigger className="w-40">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder={getIssuesFilterPlaceholder('status', t)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="all">{getIssuesKanbanStatusLabel('all', t)}</SelectItem>
+              <SelectItem value="open">{getIssuesKanbanStatusLabel('open', t)}</SelectItem>
+              <SelectItem value="in_progress">{getIssuesKanbanStatusLabel('in_progress', t)}</SelectItem>
+              <SelectItem value="resolved">{getIssuesKanbanStatusLabel('resolved', t)}</SelectItem>
+              <SelectItem value="closed">{getIssuesKanbanStatusLabel('closed', t)}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as IssueKindFilter)}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder={getIssuesFilterPlaceholder('ownership', t)} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{getIssuesOwnershipFilterLabel('all', t)}</SelectItem>
+              <SelectItem value="canonical">{getIssuesOwnershipFilterLabel('canonical', t)}</SelectItem>
+              <SelectItem value="upstream_blocker">{getIssuesOwnershipFilterLabel('upstream_blocker', t)}</SelectItem>
+              <SelectItem value="campaign">{getIssuesOwnershipFilterLabel('campaign', t)}</SelectItem>
+              <SelectItem value="request">{getIssuesOwnershipFilterLabel('request', t)}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -443,24 +529,31 @@ export default function ComplianceIssuesPage() {
         {isLoadingIssues ? (
           <Card>
             <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              Loading issues...
+              {getIssuesLoadingMessage(t)}
             </CardContent>
           </Card>
         ) : filteredIssues.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <CheckCircle className="mx-auto h-8 w-8 text-green-500" />
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isImporter ? 'No workflow exceptions found' : isCooperative ? 'No cooperative issues found' : 'No compliance issues found'}
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{getIssuesEmptyMessage(role, t)}</p>
             </CardContent>
           </Card>
+        ) : viewMode === 'kanban' ? (
+          <ComplianceIssuesKanban
+            issues={filteredIssues}
+            onSelectIssue={(issue) => {
+              setSelectedIssue(issue);
+              setIsDetailDialogOpen(true);
+            }}
+            onAdvanceStatus={(issueId, newStatus) => handleUpdateStatus(issueId, newStatus)}
+          />
         ) : (
           <div className="space-y-3">
             {filteredIssues.map((issue) => (
               <Card
                 key={issue.id}
-                className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                className={`cursor-pointer transition-colors hover:bg-secondary/50 ${issueSlaRowClass(issue.dueDate)}`}
                 onClick={() => {
                   setSelectedIssue(issue);
                   setIsDetailDialogOpen(true);
@@ -477,20 +570,33 @@ export default function ComplianceIssuesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getSeverityBadgeColor(issue.severity)} variant="outline">
-                            {issue.severity}
+                            {getIssuesSeverityLabel(issue.severity, t)}
                           </Badge>
-                          <Badge className={getStatusBadgeColor(issue.status)}>{issue.status}</Badge>
+                          <Badge className={getStatusBadgeColor(issue.status)}>
+                            {getIssuesKanbanStatusLabel(issue.status, t)}
+                          </Badge>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                        <span>{issue.linkedEntity.type}: {issue.linkedEntity.name}</span>
-                        {issue.owner && <span>Owner: {issue.owner}</span>}
-                        {issue.dueDate && (
+                        <span>
+                          {getIssuesLinkedEntityDisplayLine(
+                            issue.linkedEntity.type,
+                            issue.linkedEntity.name,
+                            role,
+                            t,
+                          )}
+                        </span>
+                        {issue.owner ? (
+                          <span>
+                            {getIssuesOwnerPrefix(t)} {issue.owner}
+                          </span>
+                        ) : null}
+                        {getIssuesSlaLabel(issue.dueDate, t) ? (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            Due: {new Date(issue.dueDate).toLocaleDateString()}
+                            {getIssuesSlaLabel(issue.dueDate, t)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -503,66 +609,107 @@ export default function ComplianceIssuesPage() {
         {/* Issue Detail Dialog */}
         {selectedIssue && (
           <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
               <DialogHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {getSeverityIcon(selectedIssue.severity)}
                     <div>
                       <DialogTitle>{selectedIssue.title}</DialogTitle>
-                      <p className="text-sm text-muted-foreground mt-1">ID: {selectedIssue.id}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {getIssuesDetailLabel('id', t)}: {selectedIssue.id}
+                      </p>
                     </div>
                   </div>
                   <Badge className={getSeverityBadgeColor(selectedIssue.severity)} variant="outline">
-                    {selectedIssue.severity}
+                    {getIssuesSeverityLabel(selectedIssue.severity, t)}
                   </Badge>
                 </div>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-muted-foreground">Description</Label>
+                  <Label className="text-muted-foreground">{getIssuesDetailLabel('description', t)}</Label>
                   <p className="text-sm mt-1">{selectedIssue.description}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Select
-                      value={selectedIssue.status}
-                      onValueChange={(newStatus) => {
-                        handleUpdateStatus(selectedIssue.id, newStatus as IssueStatus);
-                        setSelectedIssue({ ...selectedIssue, status: newStatus as IssueStatus });
-                      }}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-muted-foreground">{getIssuesDetailLabel('status', t)}</Label>
+                    {canPersistIssueStatus(selectedIssue.id, selectedIssue.canUpdateStatus) ? (
+                      <Select
+                        value={selectedIssue.status}
+                        onValueChange={(newStatus) => {
+                          void handleUpdateStatus(selectedIssue.id, newStatus as IssueStatus);
+                          setSelectedIssue({ ...selectedIssue, status: newStatus as IssueStatus });
+                        }}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">{getIssuesKanbanStatusLabel('open', t)}</SelectItem>
+                          <SelectItem value="in_progress">
+                            {getIssuesKanbanStatusLabel('in_progress', t)}
+                          </SelectItem>
+                          <SelectItem value="resolved">{getIssuesKanbanStatusLabel('resolved', t)}</SelectItem>
+                          <SelectItem value="closed">{getIssuesKanbanStatusLabel('closed', t)}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="mt-1 text-sm">{getIssuesKanbanStatusLabel(selectedIssue.status, t)}</p>
+                    )}
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Linked Entity</Label>
-                    <p className="text-sm mt-1">
-                      {selectedIssue.linkedEntity.type}: {selectedIssue.linkedEntity.name}
-                    </p>
+                    <Label className="text-muted-foreground">{getIssuesDetailLabel('ownership', t)}</Label>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {selectedIssue.issueKind ? (
+                        <Badge variant="outline" className={issueKindBadgeClass(selectedIssue.issueKind)}>
+                          {getIssuesKindLabel(selectedIssue.issueKind, t)}
+                        </Badge>
+                      ) : null}
+                      <span className="text-sm text-muted-foreground">
+                        {getIssuesOwnerRoleLabel(selectedIssue.ownerRole, t)}
+                        {selectedIssue.ownerOrganisationName
+                          ? ` · ${selectedIssue.ownerOrganisationName}`
+                          : ''}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                {selectedIssue.owner && (
+                {selectedIssue.resolutionPath ? (
                   <div>
-                    <Label className="text-muted-foreground">Owner</Label>
-                    <p className="text-sm mt-1">{selectedIssue.owner}</p>
-                  </div>
-                )}
-                {selectedIssue.resolutionPath && (
-                  <div>
-                    <Label className="text-muted-foreground">Resolution Path</Label>
+                    <Label className="text-muted-foreground">{getIssuesDetailLabel('resolution_path', t)}</Label>
                     <p className="text-sm mt-1">{selectedIssue.resolutionPath}</p>
                   </div>
-                )}
+                ) : null}
+                {getIssueRemediationHref(selectedIssue) ? (
+                  <Button asChild variant="outline">
+                    <a href={getIssueRemediationHref(selectedIssue) ?? '#'}>
+                      {selectedIssue.issueKind === 'upstream_blocker'
+                        ? getIssuesRequestUpstreamRemediationLabel(t)
+                        : getIssuesOpenRemediationLabel(t)}
+                    </a>
+                  </Button>
+                ) : null}
+                <div>
+                  <Label className="text-muted-foreground">{getIssuesDetailLabel('linked_entity', t)}</Label>
+                  <p className="text-sm mt-1">
+                    {getIssuesLinkedEntityDisplayLine(
+                      selectedIssue.linkedEntity.type,
+                      selectedIssue.linkedEntity.name,
+                      role,
+                      t,
+                    )}
+                  </p>
+                </div>
+                {selectedIssue.owner ? (
+                  <div>
+                    <Label className="text-muted-foreground">{getIssuesDetailLabel('assigned_owner', t)}</Label>
+                    <p className="text-sm mt-1">{selectedIssue.owner}</p>
+                  </div>
+                ) : null}
+                {selectedIssue.dueDate ? (
+                  <SLAEscalationLadder issue={mapIssueRecordToSlaIssue(selectedIssue)} />
+                ) : null}
               </div>
             </DialogContent>
           </Dialog>

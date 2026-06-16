@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Clock, ArrowUp, CheckCircle, XCircle, Bell, Calendar, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,32 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  formatSlaTimeRemaining,
+  getIssuesCancelLabel,
+  getIssuesSeverityLabel,
+  getSlaEscalationActionLabel,
+  getSlaEscalationCurrentBadge,
+  getSlaEscalationLevelName,
+  getSlaEscalationSeverityDescription,
+  getSlaEscalationTargetRole,
+  getSlaEscalationTimelineTitle,
+  getSlaEscalationTriggerLabel,
+  getSlaExtensionCurrentDeadlineLabel,
+  getSlaExtensionDialogDescription,
+  getSlaExtensionDialogTitle,
+  getSlaExtensionReasonLabel,
+  getSlaExtensionReasonPlaceholder,
+  getSlaExtensionSubmitCta,
+  getSlaManualEscalateCta,
+  getSlaProgressLabel,
+  getSlaRequestExtensionCta,
+  getSlaSummaryAtRiskLabel,
+  getSlaSummaryBreachedLabel,
+  getSlaSummaryOnTrackLabel,
+  getSlaSummaryTitle,
+} from '@/lib/workflow-terminology-labels';
 import type { ComplianceIssue, ComplianceIssueSeverity } from '@/types';
 
 // ============================================================
@@ -197,12 +223,8 @@ export function calculateSLAStatus(issue: ComplianceIssue): {
   };
 }
 
-export function formatTimeRemaining(hours: number): string {
-  if (hours <= 0) return 'Overdue';
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  if (hours < 24) return `${Math.round(hours)}h`;
-  if (hours < 48) return `${Math.round(hours)}h (${Math.round(hours / 24)}d)`;
-  return `${Math.round(hours / 24)}d`;
+export function formatTimeRemaining(hours: number, t?: (key: string) => string): string {
+  return formatSlaTimeRemaining(hours, t);
 }
 
 // ============================================================
@@ -219,6 +241,8 @@ interface SLAProgressBarProps {
  * SLA Progress Bar - visual indicator of time remaining
  */
 export function SLAProgressBar({ issue, showLabel = true, className }: SLAProgressBarProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { hoursRemaining, percentageRemaining, isBreached } = calculateSLAStatus(issue);
 
   const getProgressColor = () => {
@@ -232,9 +256,9 @@ export function SLAProgressBar({ issue, showLabel = true, className }: SLAProgre
     <div className={cn('space-y-1', className)}>
       {showLabel && (
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">SLA</span>
+          <span className="text-muted-foreground">{getSlaProgressLabel(t)}</span>
           <span className={cn(isBreached ? 'text-red-500 font-medium' : 'text-muted-foreground')}>
-            {formatTimeRemaining(hoursRemaining)}
+            {formatSlaTimeRemaining(hoursRemaining, t)}
           </span>
         </div>
       )}
@@ -257,6 +281,8 @@ interface SLACountdownBadgeProps {
  * SLA Countdown Badge - compact display of time remaining
  */
 export function SLACountdownBadge({ issue, size = 'md' }: SLACountdownBadgeProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const { hoursRemaining, isBreached } = calculateSLAStatus(issue);
 
   const getBadgeStyle = () => {
@@ -269,7 +295,7 @@ export function SLACountdownBadge({ issue, size = 'md' }: SLACountdownBadgeProps
   return (
     <Badge className={cn(getBadgeStyle(), size === 'sm' && 'text-xs px-2 py-0.5')}>
       <Clock className={cn('mr-1', size === 'sm' ? 'h-3 w-3' : 'h-4 w-4')} />
-      {formatTimeRemaining(hoursRemaining)}
+      {formatSlaTimeRemaining(hoursRemaining, t)}
     </Badge>
   );
 }
@@ -288,6 +314,8 @@ export function SLAEscalationLadder({
   onRequestExtension,
   onManualEscalate,
 }: SLAEscalationLadderProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
   const [extensionReason, setExtensionReason] = useState('');
   const config = SLA_CONFIGS[issue.severity];
@@ -326,10 +354,14 @@ export function SLAEscalationLadder({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              SLA Escalation Timeline
+              {getSlaEscalationTimelineTitle(t)}
             </CardTitle>
             <CardDescription>
-              {issue.severity} severity - {config.initial_sla_hours}h initial SLA
+              {getSlaEscalationSeverityDescription(
+                getIssuesSeverityLabel(issue.severity, t),
+                config.initial_sla_hours,
+                t,
+              )}
             </CardDescription>
           </div>
           <SLACountdownBadge issue={issue} />
@@ -375,21 +407,20 @@ export function SLAEscalationLadder({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={cn('font-medium', status === 'pending' && 'text-muted-foreground')}>
-                          {level.name}
+                          {getSlaEscalationLevelName(level.name, t)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {level.target_role} - {level.action}
+                          {getSlaEscalationTargetRole(level.target_role, t)} -{' '}
+                          {getSlaEscalationActionLabel(level.action, t)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">
-                          {level.trigger_hours_before_breach === 0
-                            ? 'At breach'
-                            : `${level.trigger_hours_before_breach}h before due`}
+                          {getSlaEscalationTriggerLabel(level.trigger_hours_before_breach, t)}
                         </p>
                         {status === 'active' && (
                           <Badge variant="outline" className="mt-1">
-                            Current
+                            {getSlaEscalationCurrentBadge(t)}
                           </Badge>
                         )}
                       </div>
@@ -405,7 +436,7 @@ export function SLAEscalationLadder({
             {!isBreached && (
               <Button variant="outline" size="sm" onClick={() => setExtensionDialogOpen(true)}>
                 <Calendar className="mr-2 h-4 w-4" />
-                Request Extension
+                {getSlaRequestExtensionCta(t)}
               </Button>
             )}
             {onManualEscalate && (
@@ -415,7 +446,7 @@ export function SLAEscalationLadder({
                 onClick={() => onManualEscalate(issue.id, 'Compliance Lead')}
               >
                 <ArrowUp className="mr-2 h-4 w-4" />
-                Manual Escalate
+                {getSlaManualEscalateCta(t)}
               </Button>
             )}
           </div>
@@ -425,22 +456,20 @@ export function SLAEscalationLadder({
         <Dialog open={extensionDialogOpen} onOpenChange={setExtensionDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Request SLA Extension</DialogTitle>
-              <DialogDescription>
-                Provide a reason for extending the SLA deadline. This will be recorded in the audit log.
-              </DialogDescription>
+              <DialogTitle>{getSlaExtensionDialogTitle(t)}</DialogTitle>
+              <DialogDescription>{getSlaExtensionDialogDescription(t)}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Current Deadline</Label>
+                <Label>{getSlaExtensionCurrentDeadlineLabel(t)}</Label>
                 <p className="text-sm text-muted-foreground">
                   {new Date(issue.sla_due_at || '').toLocaleString()}
                 </p>
               </div>
               <div>
-                <Label>Reason for Extension</Label>
+                <Label>{getSlaExtensionReasonLabel(t)}</Label>
                 <Textarea
-                  placeholder="Explain why an extension is needed..."
+                  placeholder={getSlaExtensionReasonPlaceholder(t)}
                   value={extensionReason}
                   onChange={(e) => setExtensionReason(e.target.value)}
                   rows={3}
@@ -449,10 +478,10 @@ export function SLAEscalationLadder({
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setExtensionDialogOpen(false)}>
-                Cancel
+                {getIssuesCancelLabel(t)}
               </Button>
               <Button onClick={handleRequestExtension} disabled={!extensionReason.trim()}>
-                Submit Request
+                {getSlaExtensionSubmitCta(t)}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -471,6 +500,8 @@ interface SLASummaryCardProps {
  * SLA Summary Card - overview of SLA status across issues
  */
 export function SLASummaryCard({ issues, className }: SLASummaryCardProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
   const breached = issues.filter((i) => calculateSLAStatus(i).isBreached).length;
   const atRisk = issues.filter((i) => {
     const status = calculateSLAStatus(i);
@@ -481,21 +512,21 @@ export function SLASummaryCard({ issues, className }: SLASummaryCardProps) {
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">SLA Health</CardTitle>
+        <CardTitle className="text-sm font-medium">{getSlaSummaryTitle(t)}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-emerald-600">{healthy}</p>
-            <p className="text-xs text-muted-foreground">On Track</p>
+            <p className="text-xs text-muted-foreground">{getSlaSummaryOnTrackLabel(t)}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-amber-600">{atRisk}</p>
-            <p className="text-xs text-muted-foreground">At Risk</p>
+            <p className="text-xs text-muted-foreground">{getSlaSummaryAtRiskLabel(t)}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-red-600">{breached}</p>
-            <p className="text-xs text-muted-foreground">Breached</p>
+            <p className="text-xs text-muted-foreground">{getSlaSummaryBreachedLabel(t)}</p>
           </div>
         </div>
       </CardContent>

@@ -109,6 +109,9 @@ describe('CreateAccountPage', () => {
           });
         }
       }
+      if (input === '/api/launch/supply-chain-roles') {
+        return new Response(JSON.stringify({ profile: { supply_chain_roles: ['importer'] } }), { status: 200 });
+      }
       if (input === '/api/launch/commercial-profile') {
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }

@@ -1,7 +1,7 @@
 'use client';
 
+import { useContext, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
@@ -11,15 +11,27 @@ import {
   AlertTriangle,
   Wallet,
   ArrowRight,
-  Scale,
   Package,
   FileCheck,
   ClipboardList,
-  Send,
 } from 'lucide-react';
 import { CampaignsOverviewCard } from '@/components/dashboards/campaigns-overview-card';
 import { DashboardActivityCard } from '@/components/dashboards/dashboard-activity-card';
+import { NorthStarKpi } from '@/components/dashboards/north-star-kpi';
+import { getNorthStarForRole } from '@/lib/dashboard-north-star';
 import type { ShipmentStatus } from '@/types';
+import { VirginStatePanel } from '@/components/dashboards/virgin-state-panel';
+import { DashboardQuickActions } from '@/components/dashboards/dashboard-quick-actions';
+import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
+import { LocaleContext } from '@/lib/locale-context';
+import {
+  formatCooperativeBadge,
+  formatCooperativePlotCoverageHint,
+  getCooperativeDashboardLabels,
+  getNorthStarPriorityLabel,
+} from '@/lib/terminology-labels';
+import type { DashboardHomeResources } from '@/lib/dashboard-home-data';
+import { homeActivityProps, homeCampaignProps } from '@/lib/dashboard-home-props';
 
 interface CooperativeDashboardProps {
   metrics: {
@@ -35,169 +47,173 @@ interface CooperativeDashboardProps {
     geometry_remediation_count?: number;
     packages_by_status?: Partial<Record<ShipmentStatus, number>>;
   };
+  home?: DashboardHomeResources;
 }
 
-export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
+export function CooperativeDashboard({ metrics, home }: CooperativeDashboardProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const copy = useMemo(() => getCooperativeDashboardLabels(t), [t]);
+
   const pendingPlots = metrics.total_plots - metrics.compliant_plots;
-  const verificationRate = metrics.total_plots > 0
-    ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) 
-    : 0;
+  const verificationRate =
+    metrics.total_plots > 0 ? Math.round((metrics.compliant_plots / metrics.total_plots) * 100) : 0;
   const incomingPending = metrics.incoming_requests_pending ?? 0;
-  const outgoingPending = metrics.outgoing_requests_pending ?? 0;
   const membersMissingConsent = metrics.members_missing_consent ?? 0;
   const requestsOverdue = metrics.requests_overdue ?? 0;
   const portabilityPending = metrics.portability_reviews_pending ?? 0;
   const blockingIssues = metrics.blocking_issues_count ?? 0;
   const readyShipments =
     (metrics.packages_by_status?.READY ?? 0) + (metrics.packages_by_status?.SEALED ?? 0);
-  const isVirginTenant =
-    metrics.total_farmers === 0 && metrics.total_plots === 0 && (metrics.packages_by_status?.DRAFT ?? 0) === 0;
+  const isVirginTenant = isVirginTenantForRole('cooperative', metrics);
+
+  if (isVirginTenant) {
+    return (
+      <VirginStatePanel
+        role="cooperative"
+        progress={{
+          total_plots: metrics.total_plots,
+          total_farmers: metrics.total_farmers,
+          total_packages: metrics.packages_by_status
+            ? Object.values(metrics.packages_by_status).reduce((a, b) => a + (b ?? 0), 0)
+            : 0,
+        }}
+      />
+    );
+  }
+
+  const northStar = getNorthStarForRole('cooperative', metrics, t);
 
   return (
     <div className="space-y-6">
+      {northStar ? <NorthStarKpi config={northStar} priorityLabel={getNorthStarPriorityLabel(t)} /> : null}
       <CampaignsOverviewCard
-        description="Launch campaigns to collect missing plot geometry, evidence, and member data from your network"
+        description={copy.campaignDescription}
         createHref="/outreach?new=1"
         listHref="/outreach"
-        emptyDescription="Create your first campaign to request missing field data and evidence from cooperative members."
-        emptyCtaLabel="Launch first campaign"
+        emptyDescription={copy.campaignEmptyDescription}
+        emptyCtaLabel={copy.campaignEmptyCta}
+        {...homeCampaignProps(home)}
       />
-
-      {/* Primary Action Banner */}
-      <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50">
-        <CardContent className="flex items-center justify-between p-6">
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-teal-900">Cooperative Operations Cockpit</h3>
-            <p className="text-sm text-teal-700">
-              Connect member readiness, field capture quality, blocked batches, shipment readiness, and governance actions.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline" className="border-teal-300 hover:bg-teal-100">
-              <Link href="/outreach?new=1">
-                <Send className="mr-2 h-4 w-4" />
-                Launch campaign
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="border-teal-300 hover:bg-teal-100">
-              <Link href="/field-operations">
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Field Queues
-              </Link>
-            </Button>
-            <Button asChild className="bg-teal-600 hover:bg-teal-700">
-              <Link href="/governance">
-                <Scale className="mr-2 h-4 w-4" />
-                Review Governance
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Members</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{copy.kpiMembers}</CardTitle>
             <Users className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics.total_farmers}</div>
-            <p className="text-xs text-muted-foreground mt-1">Profiles managed by cooperative</p>
+            <p className="text-xs text-muted-foreground mt-1">{copy.kpiMembersHint}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Mapped Plot Coverage</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{copy.kpiPlotCoverage}</CardTitle>
             <MapPin className="h-4 w-4 text-teal-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{verificationRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">{metrics.compliant_plots}/{metrics.total_plots} plots compliant</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatCooperativePlotCoverageHint(metrics.compliant_plots, metrics.total_plots, t)}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Blocked Batch Alerts</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{copy.kpiBlockedBatches}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">{blockingIssues}</div>
-            <p className="text-xs text-muted-foreground mt-1">Yield appeal and evidence follow-up</p>
+            <p className="text-xs text-muted-foreground mt-1">{copy.kpiBlockedBatchesHint}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Premium Governance</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{copy.kpiPremiumGovernance}</CardTitle>
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">{portabilityPending}</div>
-            <p className="text-xs text-muted-foreground mt-1">Portability reviews awaiting sign-off</p>
+            <p className="text-xs text-muted-foreground mt-1">{copy.kpiPremiumGovernanceHint}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Readiness and Cooperative Health</CardTitle>
-          <CardDescription>Operational readiness signals blended with cooperative-strength indicators.</CardDescription>
+          <CardTitle>{copy.healthTitle}</CardTitle>
+          <CardDescription>{copy.healthDescription}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Members missing consent</p>
+            <p className="text-sm font-medium">{copy.healthConsentTitle}</p>
             <p className="mt-2 text-2xl font-bold text-amber-600">{membersMissingConsent}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Prioritize portability-ready consent renewals</p>
+            <p className="mt-1 text-xs text-muted-foreground">{copy.healthConsentHint}</p>
           </div>
           <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Plots missing geometry</p>
+            <p className="text-sm font-medium">{copy.healthGeometryTitle}</p>
             <p className="mt-2 text-2xl font-bold text-red-600">{Math.max(0, pendingPlots)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Point-only and invalid geometry records in queue</p>
+            <p className="mt-1 text-xs text-muted-foreground">{copy.healthGeometryHint}</p>
           </div>
           <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Requests overdue</p>
+            <p className="text-sm font-medium">{copy.healthOverdueTitle}</p>
             <p className="mt-2 text-2xl font-bold">{requestsOverdue}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Inbound partner asks past SLA</p>
+            <p className="mt-1 text-xs text-muted-foreground">{copy.healthOverdueHint}</p>
           </div>
         </CardContent>
       </Card>
 
       <DashboardActivityCard
-        title="Cooperative activity"
-        description="Member onboarding, batch intake, campaigns, and shipment events"
+        title={copy.activityTitle}
+        description={copy.activityDescription}
         isVirginTenant={isVirginTenant}
-        emptyMessage="Activity will appear once members are onboarded and field capture or batch workflows begin."
+        emptyMessage={copy.activityEmpty}
+        {...homeActivityProps(home)}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <DashboardQuickActions visible={isVirginTenant} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-teal-600" />
-              Members and Portability
+              {copy.panelMembersTitle}
             </CardTitle>
-            <CardDescription>Manage producer identity, consent status, and transfer readiness.</CardDescription>
+            <CardDescription>{copy.panelMembersDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/contacts/add?mode=contact" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Add member</span>
-              <Badge variant="outline">New</Badge>
+            <Link
+              href="/contacts/add?mode=contact"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionAddMember}</span>
+              <Badge variant="outline">{copy.badgeNew}</Badge>
             </Link>
-            <Link href="/contacts" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Open member directory</span>
+            <Link
+              href="/contacts"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionMemberDirectory}</span>
               <Badge variant="outline">{metrics.total_farmers}</Badge>
             </Link>
-            <Link href="/governance" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Review portability queue</span>
-              <Badge variant="outline">{portabilityPending} pending</Badge>
+            <Link
+              href="/governance"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionPortabilityQueue}</span>
+              <Badge variant="outline">{formatCooperativeBadge('pending', portabilityPending, t)}</Badge>
             </Link>
-            <Link href="/fpic" className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100">
+            <Link
+              href="/fpic"
+              className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100"
+            >
               <div className="flex items-center gap-2">
                 <FileCheck className="h-4 w-4 text-amber-700" />
-                <span className="font-medium text-amber-700">Consent artifacts missing</span>
+                <span className="font-medium text-amber-700">{copy.actionConsentMissing}</span>
               </div>
               <ArrowRight className="h-4 w-4 text-amber-700" />
             </Link>
@@ -208,19 +224,25 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-teal-600" />
-              Field Capture and Plots
+              {copy.panelFieldTitle}
             </CardTitle>
-            <CardDescription>Close data gaps in plot geometry and field operations quality.</CardDescription>
+            <CardDescription>{copy.panelFieldDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/plots" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Plot registry and map review</span>
-              <Badge variant="outline">{metrics.total_plots} plots</Badge>
+            <Link
+              href="/plots"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionPlotRegistry}</span>
+              <Badge variant="outline">{formatCooperativeBadge('plots', metrics.total_plots, t)}</Badge>
             </Link>
-            <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100">
+            <Link
+              href="/field-operations"
+              className="flex items-center justify-between rounded-lg bg-amber-50 p-3 transition-colors hover:bg-amber-100"
+            >
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-amber-700" />
-                <span className="font-medium text-amber-800">Boundary capture follow-up</span>
+                <span className="font-medium text-amber-800">{copy.actionBoundaryFollowup}</span>
               </div>
               {(metrics.geometry_remediation_count ?? 0) > 0 ? (
                 <Badge variant="outline">{metrics.geometry_remediation_count}</Badge>
@@ -228,19 +250,25 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
                 <ArrowRight className="h-4 w-4 text-amber-700" />
               )}
             </Link>
-            <Link href="/field-operations" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
+            <Link
+              href="/field-operations"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4" />
-                <span className="font-medium">Field remediation queues</span>
+                <span className="font-medium">{copy.actionFieldRemediation}</span>
               </div>
               {incomingPending > 0 ? (
-                <Badge variant="outline">{incomingPending} pending</Badge>
+                <Badge variant="outline">{formatCooperativeBadge('pending', incomingPending, t)}</Badge>
               ) : null}
             </Link>
-            <Link href="/compliance/issues" className="flex items-center justify-between rounded-lg bg-red-50 p-3 transition-colors hover:bg-red-100">
+            <Link
+              href="/compliance/issues"
+              className="flex items-center justify-between rounded-lg bg-red-50 p-3 transition-colors hover:bg-red-100"
+            >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-700" />
-                <span className="font-medium text-red-700">Duplicate and deforestation flags</span>
+                <span className="font-medium text-red-700">{copy.actionDuplicateFlags}</span>
               </div>
               <ArrowRight className="h-4 w-4 text-red-700" />
             </Link>
@@ -251,37 +279,49 @@ export function CooperativeDashboard({ metrics }: CooperativeDashboardProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-teal-600" />
-              Batches, Shipments, and Premiums
+              {copy.panelBatchesTitle}
             </CardTitle>
-            <CardDescription>Monitor aggregation integrity and cooperative value-distribution flows.</CardDescription>
+            <CardDescription>{copy.panelBatchesDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/harvests/new" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Add batch input</span>
-              <Badge variant="outline">New</Badge>
+            <Link
+              href="/harvests/new"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionAddBatch}</span>
+              <Badge variant="outline">{copy.badgeNew}</Badge>
             </Link>
-            <Link href="/harvests" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Lots and batch integrity</span>
+            <Link
+              href="/harvests"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionBatchIntegrity}</span>
               {blockingIssues > 0 ? (
-                <Badge variant="outline">{blockingIssues} blocked</Badge>
+                <Badge variant="outline">{formatCooperativeBadge('blocked', blockingIssues, t)}</Badge>
               ) : null}
             </Link>
-            <Link href="/packages" className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted">
-              <span className="font-medium">Shipment seal readiness</span>
+            <Link
+              href="/packages"
+              className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
+            >
+              <span className="font-medium">{copy.actionShipmentReadiness}</span>
               {readyShipments > 0 ? (
-                <Badge variant="outline">{readyShipments} ready</Badge>
+                <Badge variant="outline">{formatCooperativeBadge('ready', readyShipments, t)}</Badge>
               ) : null}
             </Link>
-            <Link href="/governance" className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100">
+            <Link
+              href="/governance"
+              className="flex items-center justify-between rounded-lg bg-emerald-50 p-3 transition-colors hover:bg-emerald-100"
+            >
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-700" />
-                <span className="font-medium text-emerald-700">Premium approvals and payout split</span>
+                <span className="font-medium text-emerald-700">{copy.actionPremiumPayout}</span>
               </div>
               <ArrowRight className="h-4 w-4 text-emerald-700" />
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </DashboardQuickActions>
     </div>
   );
 }

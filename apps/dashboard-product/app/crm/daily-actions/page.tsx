@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { AsyncState } from '@/components/common/async-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,17 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDailyActions } from '@/lib/use-crm';
+import { LocaleContext } from '@/lib/locale-context';
+import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import { getWorkflowAsyncStateCopy } from '@/lib/workflow-terminology-labels';
 
 export default function CrmDailyActionsPage() {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const pageHeader = translatePageHeader(t, 'crm_daily_actions', { title: "CRM Daily Actions", subtitle: "Prioritized outreach actions for today." });
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const { actions, isLoading, error, reload, markComplete } = useDailyActions(date);
 
   return (
     <div className="flex flex-col">
       <AppHeader
-        title="CRM Daily Actions"
-        subtitle="Prioritized outreach actions for today."
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'CRM Daily Actions' }]}
+        title={pageHeader.title}
+        subtitle={pageHeader.subtitle}
+        breadcrumbs={buildAppBreadcrumbs(t, { name: 'CRM Daily Actions' })}
         actions={
           <Input
             type="date"
@@ -30,11 +36,11 @@ export default function CrmDailyActionsPage() {
       />
       <div className="flex-1 p-6">
         {isLoading ? (
-          <AsyncState mode="loading" title="Loading daily actions..." />
+          <AsyncState mode="loading" title={getWorkflowAsyncStateCopy('crm.daily_actions', 'loading', t).title} />
         ) : error ? (
-          <AsyncState mode="error" title="Failed to load daily actions" description={error} onRetry={reload} />
+          <AsyncState mode="error" title={getWorkflowAsyncStateCopy('crm.daily_actions', 'error', t).title} description={error} onRetry={reload} />
         ) : actions.length === 0 ? (
-          <AsyncState mode="empty" title="No actions for this day" description="Try another date or generate actions in Supabase." />
+          <AsyncState mode="empty" title={getWorkflowAsyncStateCopy('crm.daily_actions', 'empty', t).title} description={getWorkflowAsyncStateCopy('crm.daily_actions', 'empty', t).description} />
         ) : (
           <div className="grid gap-4">
             {actions.map((action) => (

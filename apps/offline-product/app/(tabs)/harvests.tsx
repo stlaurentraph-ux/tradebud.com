@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -16,15 +16,23 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
   fetchPlotsForFarmer,
   fetchVouchersForFarmer,
-  postHarvestToBackend,
 } from '@/features/api/postPlot';
-import { loadPendingSyncActions } from '@/features/state/persistence';
-import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import { validateHarvestKg } from '@/features/validation/validators';
-import { logError } from '@/features/errors/ErrorLogger';
+
+type HarvestLoggedMode = 'synced' | 'queued';
+
+function normalizeVoucherRows(payload: unknown): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { vouchers?: unknown }).vouchers)) {
+    return (payload as { vouchers: any[] }).vouchers;
+  }
+  return [];
+}
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
@@ -32,7 +40,8 @@ export default function HarvestsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const params = useLocalSearchParams<{ plotId?: string }>();
   const { farmer, plots: localPlots } = useAppState();
-  const { t, lang } = useLanguage();
+  const { t, lang, openLanguagePicker } = useLanguage();
+  const { isSignedIn, openSignIn } = useSignInSheet();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
@@ -41,40 +50,27 @@ export default function HarvestsScreen() {
   const [showNewHarvestLog, setShowNewHarvestLog] = useState(false);
   const [showRecordWeight, setShowRecordWeight] = useState(false);
   const [showHarvestLogged, setShowHarvestLogged] = useState(false);
+  const [loggedMode, setLoggedMode] = useState<HarvestLoggedMode>('synced');
+  const [lastQrRef, setLastQrRef] = useState<string | null>(null);
+  const [queuedMessageKey, setQueuedMessageKey] = useState<string | null>(null);
   const [weightInput, setWeightInput] = useState('');
-  const [queuePendingCount, setQueuePendingCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadPendingSyncActions()
-        .then((rows) => setQueuePendingCount(rows.length))
-        .catch(() => setQueuePendingCount(0));
-    }, []),
-  );
-
-  const unsyncedPlotCount = useMemo(() => {
-    if (!farmer) return 0;
-    return listUnsyncedLocalPlots(localPlots, backendPlots).length;
-  }, [farmer, localPlots, backendPlots]);
-
-  const totalSyncPending = queuePendingCount + unsyncedPlotCount;
 
   useEffect(() => {
-    if (!farmer) {
+    if (!farmer || !isSignedIn) {
       setBackendPlots([]);
       setVouchers([]);
       return;
     }
     Promise.all([fetchPlotsForFarmer(farmer.id), fetchVouchersForFarmer(farmer.id)])
-      .then(([plotsRows, voucherRows]) => {
+      .then(([plotsRows, voucherPayload]) => {
         setBackendPlots(plotsRows ?? []);
-        setVouchers(voucherRows ?? []);
+        setVouchers(normalizeVoucherRows(voucherPayload));
       })
       .catch(() => {
         setBackendPlots([]);
         setVouchers([]);
       });
-  }, [farmer, params.plotId]);
+  }, [farmer, isSignedIn, params.plotId]);
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
   const mergedHarvestPlots = useMemo(() => {
@@ -153,12 +149,31 @@ export default function HarvestsScreen() {
   const selectedAvailable = Math.max(0, selectedCap - selectedUsed);
   const numericWeight = Number(weightInput.trim().replace(',', '.'));
   const canRecord = Boolean(
-    farmer &&
+    isSignedIn &&
+      farmer &&
       selectedPlotId &&
+      selectedPlot &&
+      !selectedPlot.localOnly &&
       Number.isFinite(numericWeight) &&
       numericWeight > 0 &&
       numericWeight <= selectedAvailable,
   );
+
+  const resetLoggedState = () => {
+    setShowHarvestLogged(false);
+    setLoggedMode('synced');
+    setLastQrRef(null);
+    setQueuedMessageKey(null);
+  };
+
+  const startNewHarvestFlow = () => {
+    if (!isSignedIn) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+    setMessage(null);
+    setShowNewHarvestLog(true);
+  };
 
   return (
     <ThemedView style={styles.screen}>
@@ -168,19 +183,13 @@ export default function HarvestsScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
-        {totalSyncPending > 0 ? (
-          <View style={styles.headerTopRow}>
-            <Badge variant="warning" size="sm">
-              {t('pending_count', { n: totalSyncPending })}
-            </Badge>
-          </View>
-        ) : null}
         <View style={styles.headerRowCompact}>
-          <View style={[styles.headerSideSlot, styles.headerSideLeft]}>
+            <View style={[styles.headerSideSlot, styles.headerSideLeft]}>
+            {showHarvestLogged || showRecordWeight || showNewHarvestLog ? (
             <Pressable
               onPress={() => {
                 if (showHarvestLogged) {
-                  setShowHarvestLogged(false);
+                  resetLoggedState();
                   return;
                 }
                 if (showRecordWeight) {
@@ -191,7 +200,6 @@ export default function HarvestsScreen() {
                   setShowNewHarvestLog(false);
                   return;
                 }
-                router.push('/');
               }}
               style={styles.backButton}
             >
@@ -200,18 +208,28 @@ export default function HarvestsScreen() {
                 {t('back')}
               </ThemedText>
             </Pressable>
+            ) : (
+              <View style={styles.headerSideSlot} />
+            )}
           </View>
           <View style={[styles.headerSideSlot, styles.headerSideRight]}>
-            <View style={styles.langPillCompact}>
+            <Pressable
+              onPress={openLanguagePicker}
+              accessibilityRole="button"
+              accessibilityLabel={t('language_picker_title')}
+              style={styles.langPillCompact}
+            >
               <ThemedText type="caption" style={{ color: colors.textInverse }}>
                 {String(lang).toUpperCase()}
               </ThemedText>
-            </View>
+            </Pressable>
           </View>
           <View style={styles.headerTitleWrap} pointerEvents="none">
             <ThemedText numberOfLines={1} type="defaultSemiBold" style={styles.headerTitleCompact}>
               {showHarvestLogged
-                ? t('harvest_header_logged')
+                ? loggedMode === 'queued'
+                  ? t('harvest_queued_success_title')
+                  : t('harvest_header_logged')
                 : showRecordWeight
                   ? t('harvest_header_weight')
                   : showNewHarvestLog
@@ -226,25 +244,71 @@ export default function HarvestsScreen() {
         {showHarvestLogged ? (
           <>
             <View style={styles.harvestLoggedHeroWrap}>
-              <View style={styles.harvestLoggedIconWrap}>
-                <Ionicons name="checkmark" size={52} color="#0A9F68" />
+              <View
+                style={[
+                  styles.harvestLoggedIconWrap,
+                  loggedMode === 'queued' ? styles.harvestQueuedIconWrap : null,
+                ]}
+              >
+                <Ionicons
+                  name={loggedMode === 'queued' ? 'cloud-offline-outline' : 'checkmark'}
+                  size={loggedMode === 'queued' ? 44 : 52}
+                  color="#0A9F68"
+                />
               </View>
             </View>
             <ThemedText type="title" style={styles.harvestLoggedTitle}>
-              {t('harvest_logged_title')}
+              {loggedMode === 'queued'
+                ? t('harvest_queued_success_title')
+                : t('harvest_logged_title')}
             </ThemedText>
             <ThemedText type="default" style={styles.harvestLoggedBody}>
-              {t('harvest_logged_body')}
+              {loggedMode === 'queued'
+                ? t(queuedMessageKey ?? 'harvest_queued_success_body')
+                : t('harvest_logged_body')}
             </ThemedText>
 
-            <Card variant="outlined" style={styles.harvestLoggedQrCard}>
-              <View style={styles.harvestLoggedQrWrap}>
-                <Ionicons name="qr-code-outline" size={78} color="#A7A7A7" />
-              </View>
-              <ThemedText type="subtitle" style={styles.harvestLoggedQrText}>
-                {t('harvest_share_qr')}
-              </ThemedText>
-            </Card>
+            {loggedMode === 'synced' && lastQrRef ? (
+              <Card variant="outlined" style={styles.harvestLoggedQrCard}>
+                <View style={styles.harvestLoggedQrWrap}>
+                  <QRCode
+                    value={lastQrRef}
+                    size={176}
+                    color="#111111"
+                    backgroundColor="#FFFFFF"
+                    ecl="M"
+                  />
+                </View>
+                <Pressable
+                  onPress={() => void Share.share({ message: lastQrRef })}
+                  style={styles.voucherCodePill}
+                >
+                  <ThemedText type="defaultSemiBold" style={styles.voucherCodeText}>
+                    {lastQrRef}
+                  </ThemedText>
+                </Pressable>
+                <ThemedText type="caption" style={styles.harvestLoggedQrText}>
+                  {t('harvest_share_qr')}
+                </ThemedText>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  fullWidth
+                  onPress={() => void Share.share({ message: lastQrRef, title: 'Tracebud voucher' })}
+                >
+                  {t('harvest_copy_voucher_code')}
+                </Button>
+              </Card>
+            ) : loggedMode === 'synced' ? (
+              <Card variant="outlined" style={styles.harvestLoggedQrCard}>
+                <View style={styles.harvestLoggedQrWrap}>
+                  <Ionicons name="qr-code-outline" size={78} color="#A7A7A7" />
+                </View>
+                <ThemedText type="caption" style={styles.harvestLoggedQrText}>
+                  {t('harvest_share_qr')}
+                </ThemedText>
+              </Card>
+            ) : null}
 
             <Button
               variant="secondary"
@@ -252,7 +316,7 @@ export default function HarvestsScreen() {
               style={{ backgroundColor: '#0A9F68' }}
               textStyle={styles.btnTextOnGreen}
               onPress={() => {
-                setShowHarvestLogged(false);
+                resetLoggedState();
                 setShowNewHarvestLog(true);
                 setShowRecordWeight(false);
               }}
@@ -265,7 +329,10 @@ export default function HarvestsScreen() {
               fullWidth
               style={styles.harvestLoggedBackBtn}
               textStyle={styles.btnTextOnGray}
-              onPress={() => router.push('/')}
+              onPress={() => {
+                resetLoggedState();
+                router.push('/');
+              }}
             >
               {t('back_to_home')}
             </Button>
@@ -345,17 +412,41 @@ export default function HarvestsScreen() {
                     return;
                   }
 
-                  await postHarvestToBackend({ farmerId: farmer.id, plotId: selectedPlotId, kg: validation.value });
-                  const voucherRows = await fetchVouchersForFarmer(farmer.id);
-                  setVouchers(voucherRows ?? []);
+                  const result = await submitHarvestRecord({
+                    farmerId: farmer.id,
+                    selectedPlotId,
+                    kg: validation.value,
+                    localPlots,
+                    backendPlots,
+                  });
+                  if (result.status === 'error') {
+                    setMessage(result.message);
+                    return;
+                  }
+                  if (result.status === 'queued') {
+                    setLoggedMode('queued');
+                    setQueuedMessageKey(result.messageKey);
+                    setLastQrRef(null);
+                    setWeightInput('');
+                    setShowRecordWeight(false);
+                    setShowNewHarvestLog(false);
+                    setShowHarvestLogged(true);
+                    setMessage(null);
+                    return;
+                  }
+
+                  const voucherPayload = await fetchVouchersForFarmer(farmer.id);
+                  setVouchers(normalizeVoucherRows(voucherPayload));
+                  setLoggedMode('synced');
+                  setQueuedMessageKey(null);
+                  setLastQrRef(result.qrCodeRef);
                   setWeightInput('');
                   setShowRecordWeight(false);
                   setShowNewHarvestLog(false);
                   setShowHarvestLogged(true);
-                  setMessage(t('harvest_recorded_msg'));
+                  setMessage(null);
                 } catch (e) {
-                  const error = logError(e, { context: 'harvest_submission', plotId: selectedPlotId });
-                  setMessage(error.message);
+                  setMessage(e instanceof Error ? e.message : String(e));
                 }
               }}
             >
@@ -383,12 +474,23 @@ export default function HarvestsScreen() {
                     <Pressable
                       key={p.id}
                       onPress={() => {
+                        if (p.localOnly) {
+                          Alert.alert(t('harvest_backup_first_title'), t('harvest_backup_first'));
+                          return;
+                        }
                         setSelectedPlotId(p.id);
                         setWeightInput('');
                         setShowRecordWeight(true);
                       }}
                     >
-                      <Card variant="outlined" style={[styles.selectPlotCard, selected && styles.selectPlotCardSelected]}>
+                      <Card
+                        variant="outlined"
+                        style={[
+                          styles.selectPlotCard,
+                          selected && styles.selectPlotCardSelected,
+                          p.localOnly ? styles.selectPlotCardDisabled : null,
+                        ]}
+                      >
                         <View style={styles.plotIconWrap}>
                           <Ionicons name="leaf-outline" size={22} color="#0B8B63" />
                         </View>
@@ -427,15 +529,38 @@ export default function HarvestsScreen() {
           </View>
         </Card>
 
-        <Button
-          variant="secondary"
-          style={{ backgroundColor: '#0A7F59' }}
-          textStyle={styles.btnTextOnGreen}
-          fullWidth
-          onPress={() => setShowNewHarvestLog(true)}
-        >
-          {t('start_new_harvest')}
-        </Button>
+        {!isSignedIn ? (
+          <Card variant="outlined" style={styles.signInHarvestCard}>
+            <View style={styles.signInHarvestIconWrap}>
+              <Ionicons name="log-in-outline" size={22} color="#0B6F50" />
+            </View>
+            <ThemedText type="defaultSemiBold" style={styles.signInHarvestTitle}>
+              {t('harvest_sign_in_to_record')}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.signInHarvestBody}>
+              {t('harvest_sign_in_to_record_body')}
+            </ThemedText>
+            <Button
+              variant="secondary"
+              style={{ backgroundColor: '#0A7F59' }}
+              textStyle={styles.btnTextOnGreen}
+              fullWidth
+              onPress={() => openSignIn({ variant: 'sync' })}
+            >
+              {t('sign_in')}
+            </Button>
+          </Card>
+        ) : (
+          <Button
+            variant="secondary"
+            style={{ backgroundColor: '#0A7F59' }}
+            textStyle={styles.btnTextOnGreen}
+            fullWidth
+            onPress={startNewHarvestFlow}
+          >
+            {t('start_new_harvest')}
+          </Button>
+        )}
 
         <SectionHeader title={t('recent_deliveries')} />
         {recentDeliveries.length === 0 ? (
@@ -487,11 +612,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 6,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingTop: 4,
   },
   headerRowCompact: {
     position: 'relative',
@@ -677,6 +797,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  harvestQueuedIconWrap: {
+    backgroundColor: '#E8F4EC',
+  },
   harvestLoggedTitle: {
     textAlign: 'center',
     color: '#1C1C1C',
@@ -706,6 +829,48 @@ const styles = StyleSheet.create({
   harvestLoggedQrText: {
     marginTop: 10,
     color: '#666666',
+    textAlign: 'center',
+  },
+  voucherCodePill: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#ECECEC',
+  },
+  voucherCodeText: {
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  signInHarvestCard: {
+    borderRadius: 18,
+    borderColor: '#AEE6D3',
+    backgroundColor: '#F4FBF8',
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  signInHarvestIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DDEFE8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInHarvestTitle: {
+    color: '#0B4F3B',
+    textAlign: 'center',
+  },
+  signInHarvestBody: {
+    color: '#4B5563',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  selectPlotCardDisabled: {
+    opacity: 0.72,
+    backgroundColor: '#F3F4F6',
   },
   harvestLoggedBackBtn: {
     backgroundColor: '#DFDFDF',
@@ -715,6 +880,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderColor: '#AEE6D3',
     backgroundColor: '#DDEFE8',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
   rowCard: { padding: 12 },
   deliveryCard: { padding: 14, borderRadius: 16 },
