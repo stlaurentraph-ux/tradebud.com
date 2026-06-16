@@ -1,4 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -8,37 +9,74 @@ type FieldPositionMarkerProps = {
   coordinate: MapCoordinate;
   variant: 'you' | 'start' | 'vertex' | 'standpoint';
   label?: string;
+  /** Keep custom marker visible while coordinate updates (walk capture). */
+  followPosition?: boolean;
 };
 
-export function FieldPositionMarker({ coordinate, variant, label }: FieldPositionMarkerProps) {
+const MARKER_Z_INDEX = Platform.OS === 'android' ? 20 : undefined;
+
+/** Custom Marker children need a brief tracksViewChanges window or maps fall back to the default pin. */
+function useMarkerViewTracking(
+  variant: FieldPositionMarkerProps['variant'],
+  followPosition: boolean,
+) {
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  useEffect(() => {
+    if (followPosition) {
+      setTracksViewChanges(true);
+      return;
+    }
+    setTracksViewChanges(true);
+    const timer = setTimeout(() => setTracksViewChanges(false), 600);
+    return () => clearTimeout(timer);
+  }, [followPosition, variant]);
+
+  const onMarkerLayout = useCallback(() => {
+    if (followPosition) return;
+    requestAnimationFrame(() => setTracksViewChanges(false));
+  }, [followPosition]);
+
+  return { tracksViewChanges: followPosition || tracksViewChanges, onMarkerLayout };
+}
+
+export function FieldPositionMarker({
+  coordinate,
+  variant,
+  label,
+  followPosition = false,
+}: FieldPositionMarkerProps) {
+  const { tracksViewChanges, onMarkerLayout } = useMarkerViewTracking(variant, followPosition);
+
   return (
     <Marker
       coordinate={coordinate}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={false}
+      tracksViewChanges={tracksViewChanges}
+      zIndex={MARKER_Z_INDEX}
       title={label}
     >
       {variant === 'you' ? (
-        <View style={styles.youWrap}>
+        <View style={styles.youWrap} onLayout={onMarkerLayout}>
           <View style={styles.youPulse} />
           <View style={styles.youCore}>
             <Ionicons name="footsteps" size={16} color="#FFFFFF" />
           </View>
         </View>
       ) : variant === 'standpoint' ? (
-        <View style={styles.standpointWrap}>
+        <View style={styles.standpointWrap} onLayout={onMarkerLayout}>
           <View style={styles.standpointCore}>
             <Ionicons name="camera" size={14} color="#FFFFFF" />
           </View>
         </View>
       ) : variant === 'start' ? (
-        <View style={styles.startWrap}>
+        <View style={styles.startWrap} onLayout={onMarkerLayout}>
           <View style={styles.startCore}>
             <Ionicons name="flag" size={12} color="#FFFFFF" />
           </View>
         </View>
       ) : (
-        <View style={styles.vertexWrap}>
+        <View style={styles.vertexWrap} onLayout={onMarkerLayout}>
           <View style={styles.vertexCore} />
         </View>
       )}

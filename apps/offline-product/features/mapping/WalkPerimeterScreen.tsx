@@ -31,7 +31,7 @@ import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
 import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
-import { regionFromCoordinates } from '@/features/mapping/fieldMapRegion';
+import { regionFromCoordinates, type MapCoordinate } from '@/features/mapping/fieldMapRegion';
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Brand, Colors } from '@/constants/theme';
 import { scaleText } from '@/features/demo/storeUiScale';
@@ -149,6 +149,9 @@ export function WalkPerimeterScreen() {
   const [mapScrollLock, setMapScrollLock] = useState(false);
   const walkMapRef = useRef<MapView>(null);
   const lastMapAnimateAtRef = useRef(0);
+  const previewWatchRef = useRef<Location.LocationSubscription | null>(null);
+  const [previewPosition, setPreviewPosition] = useState<MapCoordinate | null>(null);
+  const [previewPrecisionMeters, setPreviewPrecisionMeters] = useState<number | null>(null);
 
   const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
 
@@ -333,7 +336,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   );
 
   useEffect(() => {
-    if (!isRecording && points.length === 0 && samples.length === 0) return;
+    if (!isRecording && points.length === 0 && samples.length === 0) {
+      if (previewPosition) {
+        walkMapRef.current?.animateToRegion(regionFromCoordinates([previewPosition], 1.2), 380);
+      }
+      return;
+    }
+
     const now = Date.now();
     if (isRecording && now - lastMapAnimateAtRef.current < 1200) return;
     lastMapAnimateAtRef.current = now;
@@ -349,7 +358,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     if (coords.length === 0) return;
 
     walkMapRef.current?.animateToRegion(regionFromCoordinates(coords, isRecording ? 1.55 : 1.35), 380);
-  }, [isRecording, points, samples]);
+  }, [isRecording, points, previewPosition, samples]);
 
   const finishNewPlotSave = useCallback(
     (name: string, tryServerUpload: () => void) => {
@@ -497,16 +506,23 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
   const canContinueToCaptureMethod = estimatedSize != null;
+  const effectivePrecisionMeters = isRecording ? precisionMeters : (previewPrecisionMeters ?? precisionMeters);
   const gpsStrengthLabel =
-    precisionMeters == null
+    effectivePrecisionMeters == null
       ? t('walk_gps_unknown')
-      : precisionMeters <= 6
+      : effectivePrecisionMeters <= 6
         ? t('walk_gps_strong')
-        : precisionMeters <= 10
+        : effectivePrecisionMeters <= 10
           ? t('walk_gps_fair')
           : t('walk_gps_weak');
   const gpsStrengthColor =
-    precisionMeters == null ? '#9CA3AF' : precisionMeters <= 6 ? '#10B981' : precisionMeters <= 10 ? '#F59E0B' : '#EF4444';
+    effectivePrecisionMeters == null
+      ? '#9CA3AF'
+      : effectivePrecisionMeters <= 6
+        ? '#10B981'
+        : effectivePrecisionMeters <= 10
+          ? '#F59E0B'
+          : '#EF4444';
   const isWalkCaptureMode = captureMethod === 'walk' && selectedMethodPage === 'walk';
   const isWalkLandingState =
     captureMethod === 'walk' && selectedMethodPage === 'walk' && !isRecording && points.length === 0;
@@ -543,6 +559,68 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const showCapturePage = !showCompletionPage;
   const walkActionsPinned = showCapturePage && isWalkCaptureMode;
+
+  const mapCoordDisplay = previewPosition ?? {
+    latitude: deviceRegion?.latitude ?? mapAnchorRegion.latitude,
+    longitude: deviceRegion?.longitude ?? mapAnchorRegion.longitude,
+  };
+
+  useEffect(() => {
+    const active = showCapturePage && captureMethod === 'walk' && !isRecording;
+    if (!active) {
+      if (previewWatchRef.current) {
+        previewWatchRef.current.remove();
+        previewWatchRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled || status !== 'granted') return;
+
+        const sub = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 2500,
+            distanceInterval: 3,
+          },
+          (loc) => {
+            const latitude = roundWgs84Coordinate(loc.coords.latitude);
+            const longitude = roundWgs84Coordinate(loc.coords.longitude);
+            setPreviewPosition({ latitude, longitude });
+            setDeviceRegion({
+              latitude,
+              longitude,
+              latitudeDelta: 0.002,
+              longitudeDelta: 0.002,
+            });
+            if (typeof loc.coords.accuracy === 'number') {
+              setPreviewPrecisionMeters(loc.coords.accuracy);
+            }
+          },
+        );
+
+        if (cancelled) {
+          sub.remove();
+          return;
+        }
+        previewWatchRef.current = sub;
+      } catch {
+        // Map keeps plot/default anchor region.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (previewWatchRef.current) {
+        previewWatchRef.current.remove();
+        previewWatchRef.current = null;
+      }
+    };
+  }, [captureMethod, isRecording, showCapturePage]);
 
   const handleSavePointPlot = (options?: { shortPath?: boolean }) => {
     if (!canSavePointPlot) return;
@@ -1245,9 +1323,11 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                     <PlotBoundaryOverlays
                       vertices={points}
                       liveTrail={liveWalkTrail}
+                      userPosition={previewPosition}
                       isRecording={isRecording}
                       showYouMarker
                       showStartMarker={points.length > 0}
+                      youMarkerFollowsPosition={isRecording}
                     />
                   </MapView>
                   {isRecording ? (
@@ -1264,7 +1344,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   <FieldMapAttribution lowDataMap={lowDataMap} offlineTilesEnabled={offlineTilesEnabled} />
                   <View style={styles.coordChip}>
                     <ThemedText type="caption">
-                      {formatLatLon(mapAnchorRegion.latitude, mapAnchorRegion.longitude)}
+                      {formatLatLon(mapCoordDisplay.latitude, mapCoordDisplay.longitude)}
                     </ThemedText>
                   </View>
                 </View>
@@ -1282,7 +1362,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                 </View>
 
                 {isWalkLandingState &&
-                (precisionMeters == null || precisionMeters > 10) &&
+                (effectivePrecisionMeters == null || effectivePrecisionMeters > 10) &&
                 !isRecording ? (
                   <View style={styles.gpsWaitBanner}>
                     <Ionicons name="navigate-outline" size={18} color="#B45309" />
