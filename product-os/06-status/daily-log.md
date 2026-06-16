@@ -1,3 +1,8 @@
+### 2026-06-16 (field app: v0 design review branch for walk-my-plot UX)
+- Added `apps/offline-product/design/V0_DESIGN_REVIEW.md` — full offline app UX audit with walk plot as critical path.
+- Added `apps/offline-product/design/V0_WALK_PLOT_PROMPT.md` — copy-paste v0.dev prompts (map capture, landing, success, full app).
+- Added `apps/offline-product/design/README.md` — v0 workflow index on branch `cursor/v0-design-review-a74f`.
+
 ### 2026-06-15 (field app: REACT-NATIVE-1 production crash fix + Sentry wiring)
 - Root cause: `SignInSheetContext` called nonexistent `reloadAppState()` after `alignFarmerWithAuthUser` rekey → unhandled `TypeError: undefined is not a function` on signed-in refresh (63 events / 7 users in Sentry `REACT-NATIVE-1`).
 - Fix: use `reloadFromDisk` from `AppStateContext`; harden push notification bridges; align Sentry Expo plugin project slug to `react-native`.

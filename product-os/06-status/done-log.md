@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app v0 design review pack delivered: `apps/offline-product/design/V0_DESIGN_REVIEW.md`, `V0_WALK_PLOT_PROMPT.md`, and `README.md` on branch `cursor/v0-design-review-a74f` for v0-by-Vercel walk-my-plot and full-app visual simplification.
 - Field app production crash fix delivered (`REACT-NATIVE-1`): `SignInSheetContext` now calls `reloadFromDisk` after auth rekey instead of undefined `reloadAppState`; push bridges hardened; Sentry Expo config aligned to `tracebud/react-native`; OTA published to preview + production.
 - Marketing Vercel deploy fix delivered: `outputFileTracingExcludes` prevents Turbopack from bundling `public/` static assets into `/api/*` serverless functions (749MB → ~2MB traced).
 ## Initial entries
