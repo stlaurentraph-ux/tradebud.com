@@ -2,7 +2,7 @@
 
 ## Work now
 
-- Field app v0 design review branch ready: `cursor/v0-design-review-a74f` — use `apps/offline-product/design/V0_WALK_PLOT_PROMPT.md` in v0.dev; full audit in `V0_DESIGN_REVIEW.md` (walk-my-plot simplification is critical path).
+- Field app v0 design review branch ready: `cursor/v0-design-review-a74f` — RN walk-my-plot UX implemented; design prompts in `apps/offline-product/design/`.
 - FEAT-009 dashboard integration-ops hardening moved to live contracts: high-priority scheduler/run-queue TODO paths are now API-wired through new dashboard V2 proxy routes (`summary`, `retry-queue`, `claim`, `release`, `retry`, `release-stale`, `release-stale/trigger`, questionnaire run history), removing mock-only execution for these operator actions.
 - Beta-release readiness track is now formalized: controlled beta go/no-go checklist is published at `product-os/04-quality/beta-go-no-go-checklist.md` with explicit invite-only scope, waived official gates (`P0-02`, `P0-03`), and required fail-closed/security/test evidence for tenant-safe rollout.
 - Importer dashboard IA foundation is being aligned to Tier 3 compliance operations: sidebar/order now maps to `Overview -> Network -> Shipments -> Compliance -> Evidence -> Campaigns -> Requests -> Reporting -> Issues -> Audit Log` with settings/help as support destinations.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -109,6 +109,7 @@ function hasSelfIntersection(points: LatLng[]): boolean {
 
 export function WalkPerimeterScreen() {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const {
@@ -622,10 +623,18 @@ export function WalkPerimeterScreen() {
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
   const canContinueToCaptureMethod = estimatedSize != null;
-  const gpsStrength =
-    precisionMeters == null ? 'Unknown' : precisionMeters <= 6 ? 'Strong' : precisionMeters <= 10 ? 'Fair' : 'Weak';
-  const satelliteCount =
-    precisionMeters == null ? 12 : Math.max(8, Math.min(20, Math.round(24 - precisionMeters)));
+  const gpsStrengthLabel =
+    precisionMeters == null
+      ? t('walk_gps_unknown')
+      : precisionMeters <= 6
+        ? t('walk_gps_strong')
+        : precisionMeters <= 10
+          ? t('walk_gps_fair')
+          : t('walk_gps_weak');
+  const gpsStrengthColor =
+    precisionMeters == null ? '#9CA3AF' : precisionMeters <= 6 ? '#10B981' : precisionMeters <= 10 ? '#F59E0B' : '#EF4444';
+  const walkMapHeight = Math.max(280, Math.round(windowHeight * 0.5));
+  const isWalkCaptureMode = captureMethod === 'walk' && selectedMethodPage === 'walk';
   const isWalkLandingState =
     captureMethod === 'walk' && selectedMethodPage === 'walk' && !isRecording && points.length === 0;
   const producerProfileComplete = isProducerProfileComplete(farmer);
@@ -946,6 +955,21 @@ export function WalkPerimeterScreen() {
     }
   };
 
+  const handleWalkStopAndSave = () => {
+    if (isRecording) {
+      stopRecording();
+    }
+    if (points.length < 3 || area.squareMeters <= 0) {
+      Alert.alert(t('walk_connect_points'), t('walk_help'));
+      return;
+    }
+    if (editingPlot) {
+      handleSavePlot();
+      return;
+    }
+    setShowRegistrationPage(true);
+  };
+
   const logPlotComplianceDeclared = (plotId: string, plotName: string) => {
     try {
       logAuditEvent({
@@ -1132,26 +1156,26 @@ export function WalkPerimeterScreen() {
           </Pressable>
           <ThemedText numberOfLines={1} type="defaultSemiBold" style={styles.headerTitleCompact}>
             {showRegistrationPage
-              ? 'Registration'
+              ? t('walk_header_registration')
               : showProducerProfilePage
               ? t('plot_register_producer_later_title')
               : showCompletionPage
-              ? 'Registration Complete'
+              ? t('walk_header_registration_complete')
               : showPhotosPage
-              ? 'Ground-Truth Photos'
+              ? t('walk_header_ground_photos')
               : showDeclarationsPage
-              ? 'Declarations'
+              ? t('walk_header_declarations')
               : showDetailedForm
               ? editingPlot
-                ? 'Edit plot boundary'
+                ? t('walk_header_edit_boundary')
                 : selectedMethodPage === 'walk'
-                  ? 'Walk Perimeter'
+                  ? t('walk_header_walk_my_plot')
                   : selectedMethodPage === 'draw'
-                    ? 'Draw on Map'
+                    ? t('walk_method_draw')
                     : selectedMethodPage === 'centroid'
-                      ? 'Centroid Only'
-                      : 'Register Plot'
-              : 'Register Plot'}
+                      ? t('walk_method_centroid')
+                      : t('walk_header_register_plot')
+              : t('walk_header_register_plot')}
           </ThemedText>
           <View style={styles.langPill}>
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
@@ -1166,15 +1190,17 @@ export function WalkPerimeterScreen() {
       >
         {!showDetailedForm ? (
           <>
-            <Card variant="outlined" style={styles.plotRegistrationCard}>
-              <View style={styles.plotRegistrationRow}>
-                <Ionicons name="information-circle-outline" size={22} color="#0F8A64" />
+            <Card variant="outlined" style={styles.plotLandingHeroCard}>
+              <View style={styles.plotLandingHeroRow}>
+                <View style={styles.plotLandingIconWrap}>
+                  <Ionicons name="walk-outline" size={28} color="#0A7F59" />
+                </View>
                 <View style={{ flex: 1 }}>
-                  <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B' }}>
-                    Plot Registration
+                  <ThemedText type="defaultSemiBold" style={styles.plotLandingHeadline}>
+                    {t('walk_landing_headline')}
                   </ThemedText>
-                  <ThemedText type="caption" style={{ marginTop: 4, color: '#1F6B57' }}>
-                    Register your plot to receive EUDR compliance certification and access EU markets.
+                  <ThemedText type="caption" style={styles.plotLandingSubhead}>
+                    {t('walk_landing_subhead')}
                   </ThemedText>
                 </View>
               </View>
@@ -1182,12 +1208,12 @@ export function WalkPerimeterScreen() {
 
             <Card variant="elevated" style={styles.card}>
               <CardHeader>
-                <ThemedText type="subtitle">Plot Name</ThemedText>
+                <ThemedText type="subtitle">{t('walk_plot_name_label')}</ThemedText>
               </CardHeader>
               <CardContent>
                 <Input
                   label=""
-                  placeholder="e.g., Finca Nueva"
+                  placeholder={t('walk_plot_name_ph')}
                   value={plotName}
                   onChangeText={setPlotName}
                 />
@@ -1201,7 +1227,7 @@ export function WalkPerimeterScreen() {
 
             <Card variant="elevated" style={styles.card}>
               <CardHeader>
-                <ThemedText type="subtitle">Estimated Plot Size</ThemedText>
+                <ThemedText type="subtitle">{t('walk_estimated_size')}</ThemedText>
               </CardHeader>
               <CardContent>
                 <View style={styles.sizeGrid}>
@@ -1212,9 +1238,9 @@ export function WalkPerimeterScreen() {
                       estimatedSize === 'lt4' && styles.sizeCardSelected,
                     ]}
                   >
-                    <ThemedText type="defaultSemiBold">{'< 4 Hectares'}</ThemedText>
+                    <ThemedText type="defaultSemiBold">{t('walk_size_under_4')}</ThemedText>
                     <ThemedText type="caption" style={{ marginTop: 6 }}>
-                      Point or polygon capture
+                      {t('walk_size_under_4_body')}
                     </ThemedText>
                   </Pressable>
                   <Pressable
@@ -1224,32 +1250,26 @@ export function WalkPerimeterScreen() {
                       estimatedSize === 'gte4' && styles.sizeCardSelected,
                     ]}
                   >
-                    <ThemedText type="defaultSemiBold">{'>= 4 Hectares'}</ThemedText>
+                    <ThemedText type="defaultSemiBold">{t('walk_size_over_4')}</ThemedText>
                     <ThemedText type="caption" style={{ marginTop: 6 }}>
-                      Full polygon required
+                      {t('walk_size_over_4_body')}
                     </ThemedText>
                   </Pressable>
                 </View>
               </CardContent>
             </Card>
 
-            <Card variant="outlined" style={styles.contiguityCard}>
-              <View style={styles.contiguityRow}>
-                <Ionicons name="information-circle-outline" size={24} color="#245EB5" />
-                <View style={{ flex: 1 }}>
-                  <ThemedText type="defaultSemiBold" style={{ color: '#15356F' }}>
-                    Contiguity Rule
-                  </ThemedText>
-                  <ThemedText
-                    type="caption"
-                    style={{ marginTop: 4, color: '#1D468C', fontSize: 12, lineHeight: 20, fontWeight: '600' }}
-                  >
-                    Fields separated by roads, rivers, or railways must be registered as separate
-                    plots with unique GeoIDs.
-                  </ThemedText>
-                </View>
-              </View>
-            </Card>
+            <Pressable
+              onPress={() =>
+                Alert.alert(t('walk_contiguity_title'), t('walk_contiguity_body'))
+              }
+              style={styles.contiguityHelpLink}
+            >
+              <Ionicons name="help-circle-outline" size={16} color="#6B7280" />
+              <ThemedText type="caption" style={styles.contiguityHelpText}>
+                {t('walk_contiguity_title')}
+              </ThemedText>
+            </Pressable>
 
             <View style={styles.continueButtonWrap}>
               <Button
@@ -1263,10 +1283,12 @@ export function WalkPerimeterScreen() {
                   }
                   ensureMinimalFarmerForPlot();
                   setShowDetailedForm(true);
-                  setSelectedMethodPage(null);
+                  setCaptureMethod('walk');
+                  setCaptureMode('walk');
+                  setSelectedMethodPage('walk');
                 }}
               >
-                {t('walk_continue')}
+                {t('walk_start_mapping')}
               </Button>
             </View>
           </>
@@ -2078,69 +2100,17 @@ export function WalkPerimeterScreen() {
               </>
             ) : showCapturePage && captureMethod === 'walk' ? (
               <>
-                {isWalkLandingState ? (
-                  <View style={styles.instructionsRow}>
-                    <Pressable
-                      style={styles.instructionsButton}
-                      onPress={() =>
-                        Alert.alert(
-                          'Walk perimeter instructions',
-                          '1) Wait until GPS signal is Fair or Strong.\n2) Tap Start Recording.\n3) Walk around the full boundary.\n4) Return to the start point to close the shape.\n5) Save when the estimated area looks correct.',
-                        )
-                      }
-                    >
-                      <Ionicons name="information-circle-outline" size={14} color="#0A7F59" />
-                      <ThemedText type="caption" style={styles.instructionsButtonText}>
-                        See instructions
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                ) : null}
-                <Card variant="outlined" style={styles.gpsSignalCard}>
-                  <View style={styles.gpsSignalHeader}>
-                    <View style={styles.sectionTitleRow}>
-                      <Ionicons name="locate-outline" size={19} color="#0F8A64" />
-                      <ThemedText type="defaultSemiBold" style={{ color: '#111827' }}>
-                        GPS Signal
-                      </ThemedText>
-                    </View>
-                    <View style={styles.gpsSignalBadge}>
-                      <ThemedText type="caption" style={styles.gpsSignalBadgeText}>
-                        {gpsStrength}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.gpsSignalMetaRow}>
-                    <View style={styles.gpsSignalMetaCell}>
-                      <ThemedText type="caption">HDOP</ThemedText>
-                      <ThemedText type="defaultSemiBold">
-                        {precisionMeters != null ? Math.max(0.8, precisionMeters / 5).toFixed(1) : '—'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.gpsSignalMetaCell}>
-                      <ThemedText type="caption" numberOfLines={1} style={styles.gpsMetaLabel}>
-                        Satellites
-                      </ThemedText>
-                      <ThemedText type="defaultSemiBold">{satelliteCount}</ThemedText>
-                    </View>
-                    <View style={styles.gpsSignalMetaCell}>
-                      <ThemedText type="caption">Mode</ThemedText>
-                      <ThemedText type="defaultSemiBold">L1/L5</ThemedText>
-                    </View>
-                  </View>
-                </Card>
-
-                <View style={styles.walkMapPanel}>
+                <View style={[styles.walkMapPanel, { minHeight: walkMapHeight }]}>
                   {showWalkFieldPreview && points.length === 0 ? (
                     <Image
                       source={STORE_DEMO_WALK_FIELD_MAP}
-                      style={styles.walkMapDemo}
+                      style={[styles.walkMapDemo, { height: walkMapHeight }]}
                       resizeMode="cover"
                       accessibilityLabel={t('walk_title')}
                     />
                   ) : (
                     <MapView
-                      style={styles.walkMap}
+                      style={[styles.walkMap, { height: walkMapHeight - 8 }]}
                       initialRegion={mapAnchorRegion}
                       region={points.length === 0 ? mapAnchorRegion : undefined}
                       mapType={walkMapType}
@@ -2187,41 +2157,88 @@ export function WalkPerimeterScreen() {
                   </View>
                 </View>
 
+                <View style={styles.gpsStrip}>
+                  <View style={[styles.gpsStripDot, { backgroundColor: gpsStrengthColor }]} />
+                  <ThemedText type="defaultSemiBold" style={styles.gpsStripLabel}>
+                    {t('walk_gps_signal')}: {gpsStrengthLabel}
+                  </ThemedText>
+                  {isWalkLandingState ? (
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() =>
+                        Alert.alert(t('walk_instructions_title'), t('walk_instructions_body'))
+                      }
+                    >
+                      <Ionicons name="information-circle-outline" size={18} color="#0A7F59" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
                 <View style={styles.walkStatsRow}>
                   <View style={styles.walkStatCard}>
-                    <Ionicons name="time-outline" size={20} color="#A3A3A3" />
-                    <ThemedText type="subtitle" style={styles.walkStatValue}>{formatTime(recordingSeconds)}</ThemedText>
-                    <ThemedText type="caption" style={styles.walkStatLabel}>Duration</ThemedText>
+                    <Ionicons name="time-outline" size={20} color="#6B7280" />
+                    <ThemedText type="subtitle" style={styles.walkStatValue}>
+                      {formatTime(recordingSeconds)}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.walkStatLabel}>
+                      {t('walk_time')}
+                    </ThemedText>
                   </View>
                   <View style={styles.walkStatCard}>
-                    <Ionicons name="location-outline" size={22} color="#0F8A64" />
-                    <ThemedText type="subtitle" style={styles.walkStatValue}>{waypointCount}</ThemedText>
-                    <ThemedText type="caption" style={styles.walkStatLabel}>Waypoints</ThemedText>
+                    <Ionicons name="leaf-outline" size={20} color="#0F8A64" />
+                    <ThemedText type="subtitle" style={styles.walkStatValue}>
+                      {area.hectares > 0 ? area.hectares.toFixed(1) : '0.0'}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.walkStatLabel}>
+                      {t('walk_area')}
+                    </ThemedText>
                   </View>
                   <View style={styles.walkStatCard}>
-                    <Ionicons name="paper-plane-outline" size={22} color="#2E6CC4" />
-                    <ThemedText type="subtitle" style={styles.walkStatValue}>{area.hectares.toFixed(1)}</ThemedText>
-                    <ThemedText type="caption" style={styles.walkStatLabel}>Est. Ha</ThemedText>
+                    <Ionicons
+                      name="locate-outline"
+                      size={20}
+                      color={gpsStrengthColor}
+                    />
+                    <ThemedText type="subtitle" style={styles.walkStatValue}>
+                      {gpsStrengthLabel}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.walkStatLabel}>
+                      {t('walk_gps_signal')}
+                    </ThemedText>
                   </View>
                 </View>
 
-                {isRecording && (captureMethod === 'walk' || captureMethod === 'centroid') ? (
-                  <Card variant="outlined" style={styles.averagingCard}>
-                    <View style={styles.averagingHeaderRow}>
-                      <ThemedText type="defaultSemiBold" style={styles.averagingTitle}>
-                        Waypoint Averaging
-                      </ThemedText>
-                      <ThemedText type="defaultSemiBold" style={styles.averagingPercent}>
-                        {averagingProgressPercent}%
-                      </ThemedText>
-                    </View>
-                    <View style={styles.averagingTrack}>
-                      <View style={[styles.averagingFill, { width: `${averagingProgressPercent}%` }]} />
-                    </View>
-                    <ThemedText type="caption" style={styles.averagingBody}>
-                      Averaging 60-120 seconds to filter multipath errors
+                {isWalkLandingState ? (
+                  <>
+                    <ThemedText type="caption" style={styles.walkTipText}>
+                      {t('walk_tip_walk_edge')}
                     </ThemedText>
-                  </Card>
+                    <View style={styles.walkStepsRow}>
+                      {[
+                        t('walk_tip_step_wait_gps'),
+                        t('walk_tip_step_start'),
+                        t('walk_tip_step_walk'),
+                        t('walk_tip_step_return'),
+                      ].map((label, index) => (
+                        <View key={label} style={styles.walkStepChip}>
+                          <View style={styles.walkStepNumber}>
+                            <ThemedText type="caption" style={styles.walkStepNumberText}>
+                              {index + 1}
+                            </ThemedText>
+                          </View>
+                          <ThemedText numberOfLines={2} type="caption" style={styles.walkStepLabel}>
+                            {label}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+
+                {isRecording ? (
+                  <View style={styles.averagingTrackCompact}>
+                    <View style={[styles.averagingFill, { width: `${averagingProgressPercent}%` }]} />
+                  </View>
                 ) : null}
               </>
             ) : showCapturePage && captureMethod === 'draw' ? (
@@ -2292,7 +2309,7 @@ export function WalkPerimeterScreen() {
                   </View>
                 </View>
               </>
-            ) : showCapturePage && captureMethod !== 'centroid' ? (
+            ) : showCapturePage && captureMethod !== 'centroid' && captureMethod !== 'walk' ? (
               <View style={styles.buttonRow}>
                 <View style={styles.buttonCell}>
                   <Button variant={mode === 'walk' ? 'primary' : 'secondary'} onPress={() => setCaptureMode('walk')} disabled={mode === 'walk'} fullWidth>
@@ -2312,7 +2329,54 @@ export function WalkPerimeterScreen() {
               </View>
             ) : null}
 
-            {showCapturePage && captureMethod !== 'draw' ? (
+            {showCapturePage && isWalkCaptureMode ? (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                {!isRecording ? (
+                  <Button
+                    variant="secondary"
+                    style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
+                    icon={<Ionicons name="play-outline" size={20} color="#FFFFFF" />}
+                    onPress={startRecording}
+                    fullWidth
+                  >
+                    {points.length === 0 ? t('start_walking') : t('walk_start_recording')}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
+                    icon={<Ionicons name="stop-outline" size={20} color="#FFFFFF" />}
+                    onPress={handleWalkStopAndSave}
+                    fullWidth
+                  >
+                    {t('walk_stop_and_save')}
+                  </Button>
+                )}
+                {!isRecording && points.length >= 3 ? (
+                  <Button variant="primary" onPress={handleWalkStopAndSave} fullWidth>
+                    {editingPlot ? t('walk_save_boundary') : t('walk_complete_geolocation')}
+                  </Button>
+                ) : null}
+                {isWalkLandingState ? (
+                  <Pressable
+                    onPress={() => setSelectedMethodPage(null)}
+                    style={styles.otherWaysLink}
+                  >
+                    <ThemedText type="caption" style={styles.otherWaysLinkText}>
+                      {t('walk_other_ways_map')}
+                    </ThemedText>
+                    <Ionicons name="chevron-forward" size={14} color="#6B7280" />
+                  </Pressable>
+                ) : null}
+                {!isWalkLandingState && (points.length > 0 || isRecording) ? (
+                  <Button variant="ghost" onPress={reset} fullWidth>
+                    {t('reset')}
+                  </Button>
+                ) : null}
+              </View>
+            ) : null}
+
+            {showCapturePage && captureMethod !== 'draw' && captureMethod !== 'walk' ? (
               <View style={{ marginTop: isWalkLandingState ? 8 : 10 }}>
                 <Button
                   variant="secondary"
@@ -2322,12 +2386,12 @@ export function WalkPerimeterScreen() {
                   disabled={isRecording}
                   fullWidth
                 >
-                  {isRecording ? 'Recording…' : captureMethod === 'centroid' ? 'Start center capture' : 'Start Recording'}
+                  {isRecording ? t('walk_recording') : captureMethod === 'centroid' ? t('walk_start_center') : t('walk_start_recording')}
                 </Button>
               </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage && captureMethod !== 'draw' ? (
+            {!isWalkLandingState && showCapturePage && captureMethod !== 'draw' && captureMethod !== 'walk' ? (
               <View style={[styles.buttonRow, { marginTop: 10 }]}>
                 <View style={styles.buttonCell}>
                   <Button variant="outline" onPress={stopRecording} disabled={!isRecording} fullWidth>
@@ -2376,7 +2440,7 @@ export function WalkPerimeterScreen() {
               </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage && isRecording ? (
+            {!isWalkLandingState && showCapturePage && isRecording && captureMethod !== 'walk' ? (
               <View style={styles.statsGrid}>
                 <View style={styles.statChip}>
                   <ThemedText type="caption" style={styles.statLabel}>
@@ -2413,7 +2477,7 @@ export function WalkPerimeterScreen() {
               </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage && captureMethod !== 'centroid' ? (
+            {!isWalkLandingState && showCapturePage && captureMethod !== 'centroid' && captureMethod !== 'walk' ? (
             <View style={{ marginTop: 10 }}>
               <Button
                 variant={captureMethod === 'draw' ? 'primary' : 'danger'}
@@ -2427,12 +2491,12 @@ export function WalkPerimeterScreen() {
                 }}
                 disabled={!canSavePlot}
               >
-                {editingPlot ? 'Save boundary update' : 'Complete geolocation'}
+                {editingPlot ? t('walk_save_boundary') : t('walk_complete_geolocation')}
               </Button>
             </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage && estimatedSize === 'lt4' ? (
+            {!isWalkLandingState && showCapturePage && estimatedSize === 'lt4' && captureMethod !== 'walk' ? (
               <View style={{ marginTop: 8 }}>
                 <Button
                   variant="secondary"
@@ -2455,10 +2519,10 @@ export function WalkPerimeterScreen() {
               </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage ? (
+            {!isWalkLandingState && showCapturePage && captureMethod !== 'walk' ? (
               <Input
-                label="Declared area (hectares, optional, max 5% difference)"
-                placeholder="e.g. 1.50"
+                label={t('walk_declared_area_label')}
+                placeholder={t('walk_declared_area_ph')}
                 keyboardType="decimal-pad"
                 value={declaredAreaHaInput}
                 onChangeText={setDeclaredAreaHaInput}
@@ -2468,18 +2532,18 @@ export function WalkPerimeterScreen() {
 
             {!isWalkLandingState && showCapturePage && lastError ? <ThemedText type="subtitle">{lastError}</ThemedText> : null}
 
-            {!isWalkLandingState && showCapturePage ? (
+            {!isWalkLandingState && showCapturePage && captureMethod !== 'walk' ? (
               <View style={{ marginTop: 10 }}>
                 <Checkbox
                   checked={lowDataMap}
                   onChange={setLowDataMap}
-                  label={lowDataMap ? 'Low-data map mode enabled' : 'Enable low-data map mode'}
-                  description="Use blank map to reduce data usage; enable offline tiles for full offline maps."
+                  label={lowDataMap ? t('walk_low_data_on') : t('walk_low_data_off')}
+                  description={t('walk_low_data_desc')}
                 />
               </View>
             ) : null}
 
-            {!isWalkLandingState && showCapturePage && mode === 'vertex_avg' ? (
+            {!isWalkLandingState && showCapturePage && mode === 'vertex_avg' && captureMethod !== 'walk' ? (
               <Card variant="outlined" style={styles.gpsInfoCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                   <Ionicons name="information-circle-outline" size={18} color={Brand.primary} />
@@ -3092,6 +3156,123 @@ const styles = StyleSheet.create({
     backgroundColor: '#DDEFE8',
     borderRadius: 16,
     padding: 12,
+  },
+  plotLandingHeroCard: {
+    marginTop: 2,
+    borderColor: '#AEE6D3',
+    backgroundColor: '#E8F7F0',
+    borderRadius: 18,
+    padding: 16,
+  },
+  plotLandingHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  plotLandingIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plotLandingHeadline: {
+    color: '#0B4F3B',
+    fontSize: scaleText(18),
+    lineHeight: scaleText(26),
+  },
+  plotLandingSubhead: {
+    marginTop: 6,
+    color: '#1F6B57',
+    fontSize: scaleText(14),
+    lineHeight: scaleText(20),
+  },
+  contiguityHelpLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  contiguityHelpText: {
+    color: '#6B7280',
+  },
+  gpsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  gpsStripDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+  gpsStripLabel: {
+    flex: 1,
+    color: '#111827',
+  },
+  walkTipText: {
+    textAlign: 'center',
+    color: '#4B5563',
+    fontSize: scaleText(14),
+    lineHeight: scaleText(20),
+  },
+  walkStepsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  walkStepChip: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  walkStepNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: '#E6F7EF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walkStepNumberText: {
+    color: '#0A7F59',
+    fontWeight: '700',
+    fontSize: 11,
+  },
+  walkStepLabel: {
+    color: '#6B7280',
+    textAlign: 'center',
+    fontSize: 10,
+    lineHeight: 14,
+  },
+  averagingTrackCompact: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  otherWaysLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+  },
+  otherWaysLinkText: {
+    color: '#6B7280',
   },
   plotRegistrationRow: {
     flexDirection: 'row',

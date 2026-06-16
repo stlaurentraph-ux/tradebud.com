@@ -1,3 +1,8 @@
+### 2026-06-16 (field app: map-first walk my plot UX in React Native)
+- `WalkPerimeterScreen`: simplified landing (name + size → walk map), map ~50% viewport, GPS strip (Strong/Fair/Weak only), Time/Area/GPS stats, pictogram steps, Start walking / Stop and save CTAs, Other ways to map link.
+- Home tile renamed to "Walk my plot" / "Map your field with GPS" (`en.json`).
+- Skips capture-method picker by default; contiguity rule moved to help link.
+
 ### 2026-06-16 (field app: v0 design review branch for walk-my-plot UX)
 - Added `apps/offline-product/design/V0_DESIGN_REVIEW.md` — full offline app UX audit with walk plot as critical path.
 - Added `apps/offline-product/design/V0_WALK_PLOT_PROMPT.md` — copy-paste v0.dev prompts (map capture, landing, success, full app).
