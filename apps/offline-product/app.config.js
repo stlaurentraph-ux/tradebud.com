@@ -52,10 +52,14 @@ module.exports = ({ config }) => {
       'aps-environment': 'production',
     };
   }
-  ios.associatedDomains = [
-    ...(ios.associatedDomains ?? []),
-    'applinks:app.tracebud.com',
-  ].filter((value, index, arr) => arr.indexOf(value) === index);
+  // Universal links require Associated Domains on the provisioning profile (production).
+  // Preview/ad-hoc profiles use EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1 instead.
+  if (profile === 'production' || profile === 'simulator') {
+    ios.associatedDomains = [
+      ...(ios.associatedDomains ?? []),
+      'applinks:app.tracebud.com',
+    ].filter((value, index, arr) => arr.indexOf(value) === index);
+  }
 
   const android = { ...(config.android ?? appJson.expo.android) };
   const existingFilters = android.intentFilters ?? [];

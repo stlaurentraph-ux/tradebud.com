@@ -15,6 +15,7 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
         "EXPO_PUBLIC_OAUTH_BRIDGE_URL": "https://app.tracebud.com/auth/callback",
         "EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL": "https://app.tracebud.com/auth/confirm",
+        "EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME": "1",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
