@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
-import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { deriveBatchStatus } from '@/lib/exporter-batch-store';
 import { recordBatchIntake } from '@/lib/batch-intake-service';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
@@ -92,6 +91,7 @@ export default function NewHarvestPage() {
     try {
       const status = deriveBatchStatus(weightKg, plotArea, expectedYield);
       const result = await recordBatchIntake(user.tenant_id, {
+        id: `batch_${Date.now()}`,
         batch_id: form.batchId.trim() || `BATCH-${Date.now()}`,
         plot_id: form.plotId.trim() || `plot_${Date.now()}`,
         plot_name: form.plotName.trim(),
@@ -101,10 +101,8 @@ export default function NewHarvestPage() {
         expected_yield_kg_per_ha: expectedYield,
         date: new Date(form.harvestDate).toISOString(),
         status,
-        note: form.note.trim() || undefined,
       });
 
-      markOnboardingAction('batch_intake_recorded');
       toast.success(getHarvestRecordSuccessToast(result.persistedRemotely, t));
       router.push('/harvests');
     } catch (submitError) {

@@ -25,6 +25,7 @@ export interface NorthStarMetrics {
   compliant_plots?: number;
   total_farmers?: number;
   blocking_issues_count?: number;
+  yield_failures_count?: number;
   members_missing_consent?: number;
   incoming_requests_pending?: number;
   transparencyIndex?: number | null;

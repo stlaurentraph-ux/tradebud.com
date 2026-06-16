@@ -98,7 +98,9 @@ export default function ContentReviewPage() {
                   needsReview.slice(0, 10).map((item) => (
                     <div key={item.id} className="flex items-center justify-between rounded border p-2 text-sm">
                       <span>{item.hook ?? item.content_ideas?.title ?? getContentReviewUntitledLabel(t)}</span>
-                      <Badge variant="outline">{getContentReviewStatusLabel(item.review_status, t)}</Badge>
+                      <Badge variant="outline">
+                        {getContentReviewStatusLabel(item.review_status ?? 'pending', t)}
+                      </Badge>
                     </div>
                   ))
                 )}

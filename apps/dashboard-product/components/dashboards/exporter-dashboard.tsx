@@ -61,7 +61,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
   const t = localeContext?.t;
   const copy = useMemo(() => getExporterDashboardLabels(t), [t]);
 
-  const shipmentStates = {
+  const shipmentStates: Record<ShipmentStatus, number> = {
     DRAFT: metrics.packages_by_status?.DRAFT || 0,
     READY: metrics.packages_by_status?.READY || 0,
     SEALED: metrics.packages_by_status?.SEALED || 0,
@@ -69,6 +69,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
     ACCEPTED: metrics.packages_by_status?.ACCEPTED || 0,
     REJECTED: metrics.packages_by_status?.REJECTED || 0,
     ON_HOLD: metrics.packages_by_status?.ON_HOLD || 0,
+    ARCHIVED: metrics.packages_by_status?.ARCHIVED || 0,
   };
 
   const slaSnapshots = buildShipmentSlaSnapshots(packages, shipmentStates);
@@ -194,7 +195,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
               <div key={item.status} className={`rounded p-2 border ${item.className}`}>
                 <p className="text-muted-foreground">{getShipmentStatusLabel(item.status, 'exporter', t)}</p>
                 <p className={`text-lg font-semibold ${item.valueClass}`}>
-                  {shipmentStates[item.status]}
+                  {shipmentStates[item.status] ?? 0}
                 </p>
               </div>
             ))}

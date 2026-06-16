@@ -18,7 +18,6 @@ import {
   recordShipmentAssembly,
   type ShipmentAssemblyRecord,
 } from '@/lib/shipment-assembly-service';
-import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {

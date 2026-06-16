@@ -431,7 +431,7 @@ export default function ReportsPage() {
                       }))).map((item) => (
                   <div key={item.status} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">{'label' in item ? item.label : item.status}</span>
+                      <span className="text-sm">{item.label}</span>
                       <span className="text-sm font-medium">{item.count} ({item.percentage}%)</span>
                     </div>
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">

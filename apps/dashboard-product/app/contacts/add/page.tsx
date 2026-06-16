@@ -87,7 +87,8 @@ interface ImportResult {
 
 function resolveAddPageMode(mode: AddMode): 'select' | 'contact' | 'organization' | 'csv' {
   if (mode.includes('csv')) return 'csv';
-  return mode;
+  if (mode === 'contact' || mode === 'organization') return mode;
+  return 'select';
 }
 
 export default function AddContactPage() {

@@ -115,8 +115,7 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
   const requiredFields = fields.filter((f) => f.required).map((f) => f.value);
 
   const parseCsv = (text: string): { headers: string[]; rows: CsvRow[] } => {
-    const lines = text.split(/?
-/).filter((line) => line.trim());
+    const lines = text.split(/\r?\n/).filter((line) => line.trim());
     if (lines.length === 0) return { headers: [], rows: [] };
 
     const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
@@ -280,8 +279,7 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
 
   const downloadTemplate = () => {
     const headers = fields.filter((f) => f.value !== 'skip').map((f) => f.label);
-    const csv = headers.join(',') + '
-';
+    const csv = headers.join(',') + '\n';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

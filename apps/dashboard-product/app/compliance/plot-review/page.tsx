@@ -303,7 +303,11 @@ export default function PlotReviewQueuePage() {
                             {getPlotReviewOverlapTitle(t)}
                           </p>
                           <p className="text-muted-foreground">
-                            {getPlotReviewOverlapSummary(item.sinaph_overlap, item.indigenous_overlap, t)}
+                            {getPlotReviewOverlapSummary(
+                              item.sinaph_overlap ?? false,
+                              item.indigenous_overlap ?? false,
+                              t,
+                            )}
                           </p>
                         </div>
                         <div className="rounded-md border p-3 space-y-1">

@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Timeline, type TimelineEvent } from '@/components/ui/timeline-row';
-import type { TimelineEvent } from '@/components/ui/timeline-row';
 import { useDashboardActivity } from '@/lib/use-dashboard-activity';
 
 interface DashboardActivityCardProps {

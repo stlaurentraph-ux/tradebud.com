@@ -7667,6 +7667,7 @@ export function getIntegrationsToastMessage(
     force_released: 'workflow.integrations.toast.force_released',
     retry: 'workflow.integrations.toast.retry',
     action_failed: 'workflow.integrations.toast.action_failed',
+    bulk_released: 'workflow.integrations.toast.bulk_released',
     bulk_release_failed: 'workflow.integrations.toast.bulk_release_failed',
   } as const;
   const fallbackMap = {
@@ -7675,6 +7676,7 @@ export function getIntegrationsToastMessage(
     force_released: 'Force released run {{runId}}',
     retry: 'Retry initiated for run {{runId}}',
     action_failed: 'Run action failed.',
+    bulk_released: 'Released {{count}} stale claims',
     bulk_release_failed: 'Failed to release stale claims.',
   } as const;
   return wf(keyMap[kind], fallbackMap[kind], t, {
