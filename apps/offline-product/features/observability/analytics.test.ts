@@ -38,6 +38,19 @@ describe('analytics', () => {
     );
   });
 
+  it('escalates oauth callback failures to Sentry signals', () => {
+    trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+      source: 'cold_start',
+      reason: 'missing_initial_url',
+    });
+
+    expect(sentryMocks.captureAnalyticsSignal).toHaveBeenCalledWith(
+      ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE,
+      { source: 'cold_start', reason: 'missing_initial_url' },
+      'warning',
+    );
+  });
+
   it('no-ops remote reporting when sentry is disabled', () => {
     sentryMocks.isSentryEnabled.mockReturnValue(false);
 

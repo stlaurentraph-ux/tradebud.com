@@ -25,6 +25,7 @@
     "security:preflight": "node ./scripts/security-preflight.mjs",
     "qa:full": "npm run lint && npm run typecheck && npm run security:preflight && npm run i18n:en:placeholder:assert && npm run test && npm run i18n:queue:smoke && npm run qa:preflight",
     "qa:device": "node ./scripts/device-qa-smoke.mjs",
+    "qa:tenant-isolation": "node ./scripts/field-tenant-isolation-smoke.mjs",
     "store:preflight": "node ./scripts/store-ops-preflight.mjs",
     "store:assets:sync": "python3 ./scripts/sync-google-play-assets.py",
     "credentials:setup": "bash ./scripts/setup-eas-credentials.sh",

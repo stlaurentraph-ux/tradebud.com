@@ -9,6 +9,15 @@ export const ANALYTICS_EVENTS = {
   SESSION_START: 'session_start',
   SIGN_IN_SUCCESS: 'sign_in_success',
   SIGN_IN_FAILURE: 'sign_in_failure',
+  OAUTH_SIGN_IN_STARTED: 'oauth_sign_in_started',
+  OAUTH_CALLBACK_STARTED: 'oauth_callback_started',
+  OAUTH_CALLBACK_SUCCESS: 'oauth_callback_success',
+  OAUTH_CALLBACK_FAILURE: 'oauth_callback_failure',
+  EMAIL_CONFIRM_SIGNUP_SENT: 'email_confirm_signup_sent',
+  EMAIL_CONFIRM_SIGNUP_SESSION: 'email_confirm_signup_session',
+  PHOTO_VAULT_CAPTURE_STARTED: 'photo_vault_capture_started',
+  PHOTO_VAULT_CAPTURE_SUCCESS: 'photo_vault_capture_success',
+  PHOTO_VAULT_CAPTURE_BLOCKED: 'photo_vault_capture_blocked',
   PLOT_CREATED: 'plot_created',
   HARVEST_SUBMIT_SUCCESS: 'harvest_submit_success',
   HARVEST_SUBMIT_FAILURE: 'harvest_submit_failure',
@@ -25,14 +34,18 @@ export const ANALYTICS_EVENTS = {
   PUSH_PERMISSION_DENIED: 'push_permission_denied',
 } as const;
 
+export type OAuthAnalyticsSource = 'in_app' | 'cold_start';
+
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];
 
 const FAILURE_EVENTS = new Set<AnalyticsEventName>([
   ANALYTICS_EVENTS.SIGN_IN_FAILURE,
+  ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE,
   ANALYTICS_EVENTS.HARVEST_SUBMIT_FAILURE,
   ANALYTICS_EVENTS.SYNC_ACTION_FAILED,
   ANALYTICS_EVENTS.UI_ACTION_FAILED,
   ANALYTICS_EVENTS.REACT_RENDER_ERROR,
+  ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED,
 ]);
 
 export function trackEvent(

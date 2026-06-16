@@ -304,6 +304,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     setOauthLoading(provider);
     setHint(null);
+    trackEvent(ANALYTICS_EVENTS.OAUTH_SIGN_IN_STARTED, { provider, source: 'in_app' });
     try {
       const result = await signInWithOAuthAndSyncPlots({
         provider,
@@ -333,11 +334,12 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         setHint(message);
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: provider,
+          source: 'in_app',
           reason: result.message,
         });
         return;
       }
-      trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider });
+      trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider, source: 'in_app' });
       const { email: signedInEmail } = getAuthCredentials();
       if (signedInEmail) setEmail(signedInEmail);
       await finishSuccessfulSignIn();
@@ -347,6 +349,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       setIsSignedIn(false);
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
         method: provider,
+        source: 'in_app',
         reason: 'exception',
         message,
       });

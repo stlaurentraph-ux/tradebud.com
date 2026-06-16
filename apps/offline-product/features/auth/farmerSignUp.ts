@@ -7,6 +7,7 @@ import { mapSignUpError } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 import { clearPersistedSyncAuth, signInAndSyncPlots, type SignInSyncResult } from '@/features/auth/signInSync';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export async function signUpWithEmailAndSyncPlots(params: {
   fullName: string;
@@ -45,8 +46,13 @@ export async function signUpWithEmailAndSyncPlots(params: {
   }
 
   if (!data.session) {
+    trackEvent(ANALYTICS_EVENTS.EMAIL_CONFIRM_SIGNUP_SENT, {
+      redirect: getFieldAppEmailConfirmUrl(),
+    });
     return { ok: false, message: 'farmer_signup_confirm_email' };
   }
+
+  trackEvent(ANALYTICS_EVENTS.EMAIL_CONFIRM_SIGNUP_SESSION, { immediate: true });
 
   return signInAndSyncPlots({
     email,

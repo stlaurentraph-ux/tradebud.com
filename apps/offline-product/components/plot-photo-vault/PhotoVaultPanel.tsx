@@ -32,6 +32,7 @@ import {
   type PlotPhoto,
 } from '@/features/state/persistence';
 import type { TranslateFn } from '@/features/i18n/translate';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 type PhotoVaultPanelProps = {
   plot: Plot;
@@ -94,12 +95,27 @@ export function PhotoVaultPanel({ plot, photos, onPhotosChange, t }: PhotoVaultP
     if (captureBusy) return;
     setActiveDirection(direction);
     setCaptureBusy(true);
+    trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_STARTED, {
+      plotId: plot.id,
+      direction,
+      plotKind: plot.kind,
+    });
     try {
       if (gps.permissionDenied) {
+        trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED, {
+          plotId: plot.id,
+          direction,
+          reason: 'gps_permission_denied',
+        });
         Alert.alert(t('evidence_perm_camera_title'), t('photo_vault_gps_permission_body'));
         return;
       }
       if (!gps.captureReady || !gps.position) {
+        trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED, {
+          plotId: plot.id,
+          direction,
+          reason: plot.kind === 'point' ? 'off_plot_point' : 'off_plot_polygon',
+        });
         Alert.alert(
           t('photo_vault_gps_blocked_title'),
           plot.kind === 'point'
@@ -111,15 +127,32 @@ export function PhotoVaultPanel({ plot, photos, onPhotosChange, t }: PhotoVaultP
 
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
+        trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED, {
+          plotId: plot.id,
+          direction,
+          reason: 'camera_permission_denied',
+        });
         Alert.alert(t('evidence_perm_camera_title'), t('evidence_perm_camera_body'));
         return;
       }
 
       const result = await ImagePicker.launchCameraAsync({ quality: 0.65, exif: true });
-      if (result.canceled || !result.assets?.[0]?.uri) return;
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED, {
+          plotId: plot.id,
+          direction,
+          reason: 'camera_cancelled',
+        });
+        return;
+      }
 
       const coords = (await readDeviceCaptureCoordinates()) ?? gps.position;
       if (!isAtPhotoCaptureLocation(coords.latitude, coords.longitude, plot)) {
+        trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED, {
+          plotId: plot.id,
+          direction,
+          reason: 'capture_off_plot',
+        });
         Alert.alert(t('photo_vault_gps_blocked_title'), t('photo_vault_capture_off_plot'));
         return;
       }
@@ -134,6 +167,11 @@ export function PhotoVaultPanel({ plot, photos, onPhotosChange, t }: PhotoVaultP
       });
       const updated = await loadPhotosForPlot(plot.id);
       onPhotosChange(updated);
+      trackEvent(ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_SUCCESS, {
+        plotId: plot.id,
+        direction,
+        plotKind: plot.kind,
+      });
       void logAuditEvent({
         eventType: 'ground_truth_photo_captured',
         payload: {

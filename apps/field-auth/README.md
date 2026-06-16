@@ -17,7 +17,24 @@ Minimal Next.js host for **field-app-only** auth flows — separate from `dashbo
 2. Domain: **`app.tracebud.com`**
 3. Env (production):
    - `APPLE_TEAM_ID` — `6RT8K5RM6Z` (default in code)
-   - `ANDROID_APP_LINK_SHA256` — comma-separated SHA-256 cert fingerprints from EAS / Play Console
+   - `ANDROID_APP_LINK_SHA256` — comma-separated SHA-256 cert fingerprints
+
+### Android App Links fingerprints
+
+Set **both** fingerprints when the app is on Google Play (comma-separated, no spaces):
+
+| Source | Where to find it | Used for |
+|--------|------------------|----------|
+| **EAS upload keystore** | `eas credentials -p android` → Keystore → SHA256 | Internal/preview APKs, sideload |
+| **Play App Signing** | Play Console → **App integrity** → **App signing** → SHA-256 | Store installs (production) |
+
+Example:
+
+```bash
+ANDROID_APP_LINK_SHA256=0F:FC:C5:85:...:FF:49,AB:CD:EF:...:01:23
+```
+
+After updating, redeploy field-auth on Vercel so `/.well-known/assetlinks.json` serves both.
 
 ## Supabase redirect allow-list
 
