@@ -36,6 +36,7 @@ export default function AuthConfirmPage() {
     }
 
     const accessToken = hashParams.access_token;
+
     if (accessToken) {
       hydrateSessionFromToken(accessToken);
       setStatus('success');
