@@ -6,6 +6,11 @@
 
 import { summarizeTenureAiParseStatus } from '@/features/compliance/plotTenureAiReview';
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
+import {
+  isGroundTruthPhotoSetComplete,
+} from '@/features/compliance/groundTruthPhotoGeo';
+import type { Plot } from '@/features/state/AppStateContext';
+import type { PlotPhoto } from '@/features/state/persistence.native';
 
 export const MIN_GROUND_TRUTH_PHOTOS = 4;
 
@@ -56,7 +61,11 @@ function evidenceHasKind(kinds: readonly string[], kind: string): boolean {
  *   When there is no server match, pass `null` / omit so FPIC/permit are not required.
  */
 export function computePlotReadinessChecklist(params: {
-  groundTruthPhotoCount: number;
+  /** Prefer geo-verified direction slots when plot is available. */
+  groundTruthPhotos?: PlotPhoto[];
+  plot?: Plot | null;
+  /** Legacy count-only check when photos/plot are omitted (tests, partial callers). */
+  groundTruthPhotoCount?: number;
   titlePhotoCount: number;
   evidenceKinds: readonly string[];
   /** True when a local plot is linked to a server row (name/area match or known plot id). */
@@ -67,7 +76,10 @@ export function computePlotReadinessChecklist(params: {
 }): PlotReadinessChecklist {
   const minG = params.minGroundTruthPhotos ?? MIN_GROUND_TRUTH_PHOTOS;
   const flags = params.backendFlags ?? null;
-  const groundOk = params.groundTruthPhotoCount >= minG;
+  const groundOk =
+    params.groundTruthPhotos && params.plot
+      ? isGroundTruthPhotoSetComplete(params.groundTruthPhotos, params.plot)
+      : (params.groundTruthPhotoCount ?? 0) >= minG;
   const hasTenureEvidence = evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
   const hasLandEvidence = params.titlePhotoCount > 0 || hasTenureEvidence;
   const tenureParseGate = evaluateTenureParseGate({

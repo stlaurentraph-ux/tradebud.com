@@ -52,6 +52,34 @@ module.exports = ({ config }) => {
       'aps-environment': 'production',
     };
   }
+  ios.associatedDomains = [
+    ...(ios.associatedDomains ?? []),
+    'applinks:app.tracebud.com',
+  ].filter((value, index, arr) => arr.indexOf(value) === index);
+
+  const android = { ...(config.android ?? appJson.expo.android) };
+  const existingFilters = android.intentFilters ?? [];
+  const hasAppLinkFilter = existingFilters.some(
+    (filter: { data?: { host?: string }[] }) =>
+      filter.data?.some((d) => d.host === 'app.tracebud.com'),
+  );
+  if (!hasAppLinkFilter) {
+    android.intentFilters = [
+      ...existingFilters,
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [
+          {
+            scheme: 'https',
+            host: 'app.tracebud.com',
+            pathPrefix: '/auth',
+          },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ];
+  }
 
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
   const extra = {
@@ -64,6 +92,7 @@ module.exports = ({ config }) => {
     ...appJson.expo,
     ...config,
     ios,
+    android,
     plugins,
     extra,
   };

@@ -1,33 +1,15 @@
-import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export type OAuthProvider = 'google' | 'apple';
-
-/** Register in Supabase → Authentication → URL configuration → Redirect URLs */
-export function getOAuthRedirectUri(): string {
-  const scheme = Constants.expoConfig?.scheme ?? 'tracebudoffline';
-  const schemeStr = typeof scheme === 'string' ? scheme : 'tracebudoffline';
-  const nativeUri = `${schemeStr}://auth/callback`;
-
-  // Dev client, EAS preview, and store builds use the app scheme.
-  if (Constants.appOwnership !== 'expo') {
-    return nativeUri;
-  }
-
-  const expoUri = Linking.createURL('auth/callback');
-  if (__DEV__) {
-    console.log('[oauth] Expo Go redirect URI:', expoUri);
-  }
-  return expoUri;
-}
 
 async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<string> {
   let linkingSubscription: { remove: () => void } | null = null;
@@ -83,6 +65,7 @@ async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<st
 async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session> {
   const supabase = getSupabaseAuthClient();
   const redirectTo = getOAuthRedirectUri();
+  const redirectMatchPrefix = getOAuthRedirectMatchPrefix();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -101,7 +84,7 @@ async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session>
     throw new Error('Could not start OAuth sign-in.');
   }
 
-  const callbackUrl = await openOAuthBrowser(data.url, redirectTo);
+  const callbackUrl = await openOAuthBrowser(data.url, redirectMatchPrefix);
   return sessionFromOAuthCallbackUrl(callbackUrl);
 }
 

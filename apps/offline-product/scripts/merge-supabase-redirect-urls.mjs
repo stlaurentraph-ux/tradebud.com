@@ -45,6 +45,9 @@ const REQUIRED_REDIRECTS = [
   'tracebudoffline://**',
   'exp://**',
   'exp://**/--/auth/callback',
+  'https://app.tracebud.com/**',
+  'https://app.tracebud.com/auth/callback',
+  'https://app.tracebud.com/auth/confirm',
   'https://dashboard.tracebud.com/**',
 ];
 

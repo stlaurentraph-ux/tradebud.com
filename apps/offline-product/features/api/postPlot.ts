@@ -1,6 +1,7 @@
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import { getAccessTokenFromSupabase } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
+import { ensureFieldProducerBootstrapped } from './fieldAppBootstrap';
 
 export {
   clearPersistedSyncAuth,
@@ -117,6 +118,8 @@ export async function postPlotToBackend(params: {
   if (!accessToken) {
     return { ok: false, reason: 'no_access_token' };
   }
+
+  await ensureFieldProducerBootstrapped(params.farmerId);
 
   try {
     const res = await fetch(`${API_BASE_URL}/v1/plots`, {

@@ -17,6 +17,7 @@ const RECOMMENDED_REDIRECT_PATTERNS = [
   'exp://**',
   'exp://**/--/auth/callback',
   'https://dashboard.tracebud.com/**',
+  'https://dashboard.tracebud.com/auth/mobile-callback',
 ];
 const REQUIRED_PROVIDERS = ['google', 'apple', 'email'];
 

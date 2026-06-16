@@ -33,3 +33,30 @@ export async function registerPushDevice(params: {
     }
   }
 }
+
+export async function unregisterPushDevice(params: { pushToken: string }): Promise<void> {
+  const token = await getAccessTokenFromSupabase();
+  if (!token) {
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/me/push-devices/unregister`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        push_token: params.pushToken,
+      }),
+    });
+    if (!res.ok && typeof __DEV__ !== 'undefined' && __DEV__) {
+      const body = await res.text().catch(() => '');
+      console.warn(`Push device unregister failed (${res.status}): ${body}`);
+    }
+  } catch (error) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('Push device unregister error:', error);
+    }
+  }
+}

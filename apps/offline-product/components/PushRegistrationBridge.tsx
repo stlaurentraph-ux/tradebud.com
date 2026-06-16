@@ -6,6 +6,8 @@ import {
   hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
+import { PUSH_NOTIFICATIONS_OPT_IN_KEY } from '@/features/notifications/pushSettings';
+import { getSetting } from '@/features/state/persistence';
 
 /** Re-register Expo push token after sign-in and when the app returns to foreground. */
 export function PushRegistrationBridge() {
@@ -16,6 +18,10 @@ export function PushRegistrationBridge() {
       try {
         await hydrateSyncAuthFromSettings();
         if (!hasSyncAuthSession()) {
+          return;
+        }
+        const optIn = await getSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY).catch(() => null);
+        if (optIn === '0') {
           return;
         }
         const now = Date.now();

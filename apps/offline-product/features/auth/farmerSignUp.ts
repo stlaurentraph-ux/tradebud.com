@@ -1,7 +1,9 @@
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import type { Plot } from '@/features/state/AppStateContext';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
+import { getFieldAppEmailConfirmUrl } from '@/features/auth/fieldAppAuthUrls';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
+import { mapSignUpError } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 import { clearPersistedSyncAuth, signInAndSyncPlots, type SignInSyncResult } from '@/features/auth/signInSync';
@@ -29,6 +31,7 @@ export async function signUpWithEmailAndSyncPlots(params: {
     email,
     password,
     options: {
+      emailRedirectTo: getFieldAppEmailConfirmUrl(),
       data: {
         full_name: fullName,
         role: 'farmer',
@@ -38,7 +41,7 @@ export async function signUpWithEmailAndSyncPlots(params: {
   });
 
   if (error) {
-    return { ok: false, message: error.message };
+    return { ok: false, message: mapSignUpError(error) };
   }
 
   if (!data.session) {

@@ -220,6 +220,7 @@
   "plot_title_uploaded": "Land title uploaded",
   "plot_upload_document": "Upload document",
   "plot_upload_network_error": "Could not reach Tracebud. Back up this plot from My Plots when you are online.",
+  "plot_upload_account_error": "Plot saved on this device. Online backup needs a field-app sign-in — open Settings, sign out, then sign in again and tap Sync Now.",
   "plot_upload_server_error": "Server rejected the upload. Open My Plots to retry backup.",
   "plot_verified": "Verified",
   "plot_voucher_body": "This QR code is your digital proof of compliance. Share it with any buyer to verify your plot meets EUDR requirements.",

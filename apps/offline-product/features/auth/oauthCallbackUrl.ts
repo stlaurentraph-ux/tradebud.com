@@ -53,6 +53,7 @@ export async function sessionFromOAuthCallbackUrl(url: string): Promise<Session>
 export function isOAuthCallbackUrl(url: string): boolean {
   return (
     url.includes('auth/callback') ||
+    url.includes('app.tracebud.com/auth/') ||
     url.includes('code=') ||
     url.includes('access_token=') ||
     url.includes('error=')

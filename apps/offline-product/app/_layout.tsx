@@ -40,6 +40,7 @@ export default function RootLayout() {
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                 <Stack.Screen name="documents" options={{ headerShown: false }} />
                 <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />

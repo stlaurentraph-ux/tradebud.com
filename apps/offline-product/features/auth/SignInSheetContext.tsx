@@ -43,6 +43,7 @@ import {
   shouldUpdateBootstrappedFarmer,
 } from '@/features/auth/farmerProfileBootstrap';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
+import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
@@ -341,7 +342,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (signedInEmail) setEmail(signedInEmail);
       await finishSuccessfulSignIn();
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
       setHint(message);
       setIsSignedIn(false);
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
@@ -365,12 +366,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots: plots,
       });
       if (!result.ok) {
-        let message =
-          result.message === 'enter_email_password'
-            ? t('enter_email_password')
-            : result.message === 'sign_in_invalid_credentials'
-              ? t('sign_in_invalid_credentials')
-              : result.message;
+        let message = formatSignInErrorMessage(t, result.message);
         if (variant === 'after_plot' && result.message === 'sign_in_invalid_credentials') {
           message = `${message} ${t('plot_still_on_device')}`;
         }
@@ -385,7 +381,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'password' });
       await finishSuccessfulSignIn();
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
       setHint(message);
       setIsSignedIn(false);
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {

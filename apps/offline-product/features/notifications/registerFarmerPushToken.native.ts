@@ -2,9 +2,12 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 
-import { registerPushDevice } from '@/features/api/pushDevices';
+import { registerPushDevice, unregisterPushDevice } from '@/features/api/pushDevices';
 import { requestPushPermission } from '@/features/permissions/pushPermission';
+import { getSetting } from '@/features/state/persistence';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
+
+import { PUSH_NOTIFICATIONS_OPT_IN_KEY } from '@/features/notifications/pushSettings';
 
 export type RegisterFarmerPushTokenOptions = {
   /** When true, invoke `onPermissionDenied` after the user declines push access. */
@@ -14,7 +17,7 @@ export type RegisterFarmerPushTokenOptions = {
 
 export type RegisterFarmerPushTokenResult =
   | { ok: true }
-  | { ok: false; reason: 'denied' | 'unavailable' | 'no_token' };
+  | { ok: false; reason: 'denied' | 'unavailable' | 'no_token' | 'opted_out' };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -26,11 +29,28 @@ Notifications.setNotificationHandler({
   }),
 });
 
+async function readCurrentExpoPushToken(): Promise<string | null> {
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId ??
+    Constants.expoConfig?.extra?.projectId;
+  const tokenResult = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId: String(projectId) } : undefined,
+  );
+  const pushToken = tokenResult.data?.trim();
+  return pushToken || null;
+}
+
 export async function registerFarmerPushToken(
   options?: RegisterFarmerPushTokenOptions,
 ): Promise<RegisterFarmerPushTokenResult> {
   if (Platform.OS === 'web') {
     return { ok: false, reason: 'unavailable' };
+  }
+
+  const optIn = await getSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY).catch(() => null);
+  if (optIn === '0') {
+    return { ok: false, reason: 'opted_out' };
   }
 
   const permission = await requestPushPermission();
@@ -45,14 +65,7 @@ export async function registerFarmerPushToken(
     return { ok: false, reason: 'denied' };
   }
 
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ??
-    Constants.easConfig?.projectId ??
-    Constants.expoConfig?.extra?.projectId;
-  const tokenResult = await Notifications.getExpoPushTokenAsync(
-    projectId ? { projectId: String(projectId) } : undefined,
-  );
-  const pushToken = tokenResult.data?.trim();
+  const pushToken = await readCurrentExpoPushToken();
   if (!pushToken) {
     return { ok: false, reason: 'no_token' };
   }
@@ -62,4 +75,15 @@ export async function registerFarmerPushToken(
     platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'unknown',
   });
   return { ok: true };
+}
+
+/** Remove this device's push token from Tracebud and respect local opt-out. */
+export async function unregisterFarmerPushToken(): Promise<void> {
+  if (Platform.OS === 'web') {
+    return;
+  }
+  const pushToken = await readCurrentExpoPushToken().catch(() => null);
+  if (pushToken) {
+    await unregisterPushDevice({ pushToken });
+  }
 }

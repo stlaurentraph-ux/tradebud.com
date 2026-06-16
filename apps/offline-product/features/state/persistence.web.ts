@@ -10,6 +10,7 @@ export type PlotPhoto = {
   takenAt: number;
   latitude?: number | null;
   longitude?: number | null;
+  direction?: 'north' | 'east' | 'south' | 'west' | null;
 };
 
 export type PlotTitlePhoto = {
@@ -111,6 +112,15 @@ export async function loadLocalAuditEvents(params?: { limit?: number }): Promise
 
 export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
   memPhotos.unshift({ id: nextId(), ...photo });
+}
+
+export async function upsertPlotGroundPhoto(photo: Omit<PlotPhoto, 'id'>) {
+  if (photo.direction) {
+    memPhotos = memPhotos.filter(
+      (p) => !(p.plotId === photo.plotId && p.direction === photo.direction),
+    );
+  }
+  await persistPlotPhoto(photo);
 }
 
 export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {

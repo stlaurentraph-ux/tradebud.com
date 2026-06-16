@@ -10,3 +10,7 @@ export async function registerFarmerPushToken(
 ): Promise<RegisterFarmerPushTokenResult> {
   return { ok: false, reason: 'unavailable' };
 }
+
+export async function unregisterFarmerPushToken(): Promise<void> {
+  return;
+}

@@ -11,6 +11,7 @@ export type PlotPhoto = {
   takenAt: number;
   latitude?: number | null;
   longitude?: number | null;
+  direction?: 'north' | 'east' | 'south' | 'west' | null;
 };
 
 export type PlotTitlePhoto = {
@@ -176,6 +177,7 @@ export async function initDatabase() {
   await ensureFarmerSchemaExtras(db);
   await ensurePendingSyncSchemaExtras(db);
   await ensurePlotSchemaExtras(db);
+  await ensurePlotPhotosSchemaExtras(db);
 }
 
 async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
@@ -206,6 +208,14 @@ async function ensurePendingSyncSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
   if (!has('lastAttemptAt')) {
     await db.execAsync('ALTER TABLE pending_sync ADD COLUMN lastAttemptAt INTEGER;');
+  }
+}
+
+async function ensurePlotPhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(plot_photos);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('direction')) {
+    await db.execAsync('ALTER TABLE plot_photos ADD COLUMN direction TEXT;');
   }
 }
 
@@ -407,9 +417,28 @@ export async function loadLocalAuditEvents(params?: { limit?: number }): Promise
 export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO plot_photos (plotId, uri, takenAt, latitude, longitude) VALUES (?, ?, ?, ?, ?);`,
-    [photo.plotId, photo.uri, photo.takenAt, photo.latitude ?? null, photo.longitude ?? null],
+    `INSERT INTO plot_photos (plotId, uri, takenAt, latitude, longitude, direction) VALUES (?, ?, ?, ?, ?, ?);`,
+    [
+      photo.plotId,
+      photo.uri,
+      photo.takenAt,
+      photo.latitude ?? null,
+      photo.longitude ?? null,
+      photo.direction ?? null,
+    ],
   );
+}
+
+/** Replace any prior ground-truth photo for the same plot + direction. */
+export async function upsertPlotGroundPhoto(photo: Omit<PlotPhoto, 'id'>) {
+  const db = await getDb();
+  if (photo.direction) {
+    await db.runAsync('DELETE FROM plot_photos WHERE plotId = ? AND direction = ?;', [
+      photo.plotId,
+      photo.direction,
+    ]);
+  }
+  await persistPlotPhoto(photo);
 }
 
 export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
@@ -425,6 +454,13 @@ export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
     takenAt: row.takenAt,
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
+    direction:
+      row.direction === 'north' ||
+      row.direction === 'east' ||
+      row.direction === 'south' ||
+      row.direction === 'west'
+        ? row.direction
+        : null,
   }));
 }
 

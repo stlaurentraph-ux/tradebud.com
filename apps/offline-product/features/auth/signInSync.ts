@@ -1,14 +1,14 @@
 import {
   clearPersistedSyncAuth,
-  getSyncAuthUser,
+  getSupabaseAuthClient,
   hasSyncAuthSession,
-  saveAndApplySyncAuth,
+  saveAndApplyPasswordSession,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import type { Plot } from '@/features/state/AppStateContext';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
-import { shouldBootstrapFieldAppProfile } from '@/features/auth/fieldAppEligibility';
+import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 import { runAutoBackup } from '@/features/sync/runAutoBackup';
@@ -33,22 +33,35 @@ export async function signInAndSyncPlots(params: {
   if (!email || !params.password) {
     return { ok: false, message: 'enter_email_password' };
   }
-  await saveAndApplySyncAuth(email, params.password);
+
+  const supabase = getSupabaseAuthClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: params.password,
+  });
+  if (error) {
+    return { ok: false, message: mapPasswordSignInError(error) };
+  }
+  if (!data.session) {
+    return { ok: false, message: 'sign_in_failed' };
+  }
+
+  await saveAndApplyPasswordSession(email, params.password, data.session);
+
   if (params.farmerId) {
-    const user = await getSyncAuthUser();
-    if (user && shouldBootstrapFieldAppProfile({ user } as never)) {
-      const bootstrap = await bootstrapFieldAppProducer({
-        farmerId: params.farmerId,
-      });
-      if (!bootstrap.ok) {
-        await clearPersistedSyncAuth();
-        return { ok: false, message: bootstrap.message };
-      }
+    const bootstrap = await bootstrapFieldAppProducer({
+      farmerId: params.farmerId,
+    });
+    if (!bootstrap.ok) {
+      await clearPersistedSyncAuth();
+      return { ok: false, message: bootstrap.message };
     }
   }
   const res = await testBackendLogin();
   if (!res.ok) {
-    return { ok: false, message: res.message };
+    await clearPersistedSyncAuth();
+    const code = normalizeSignInErrorCode(res.message);
+    return { ok: false, message: code === res.message ? res.message : code };
   }
   if (params.farmerId && params.localPlots) {
     await runAutoBackup({

@@ -55,7 +55,7 @@ export default function DocumentsScreen() {
   const addProfileDoc = async (kind: PlotEvidenceKind, label: string) => {
     if (!farmer?.id) return;
     const picked = await DocumentPicker.getDocumentAsync({
-      type: ['image/*', 'application/pdf', '*/*'],
+      type: '*/*',
       copyToCacheDirectory: true,
       multiple: false,
     });

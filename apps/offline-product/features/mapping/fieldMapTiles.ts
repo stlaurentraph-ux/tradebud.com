@@ -52,6 +52,17 @@ export const FIELD_MAP_VIEW_UI_PROPS = {
   showsPointsOfInterest: false,
 } as const;
 
+/** Interactive capture maps — pinch zoom / pan without parent scroll stealing gestures. */
+export const FIELD_MAP_CAPTURE_UI_PROPS = {
+  ...FIELD_MAP_VIEW_UI_PROPS,
+  zoomEnabled: true,
+  scrollEnabled: true,
+  rotateEnabled: false,
+  pitchEnabled: false,
+  showsUserLocation: false,
+  showsMyLocationButton: false,
+} as const;
+
 /** MapView must hide the native street basemap when satellite tiles are shown. */
 export function fieldMapUsesCustomTiles(mode: FieldMapTileMode): boolean {
   return mode !== 'none';

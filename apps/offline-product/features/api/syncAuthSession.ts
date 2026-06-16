@@ -10,6 +10,7 @@ import {
   saveSyncAuthCredentials,
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
+import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
@@ -112,10 +113,10 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
       refresh_token: currentRefreshToken,
     });
     if (error) {
-      throw new Error(`Supabase session refresh failed: ${error.message}`);
+      throw new Error('sign_in_session_expired');
     }
     if (!data.session) {
-      throw new Error('Supabase session refresh failed: no session returned');
+      throw new Error('sign_in_session_expired');
     }
     if (data.session.refresh_token && data.session.refresh_token !== currentRefreshToken) {
       currentRefreshToken = data.session.refresh_token;
@@ -137,10 +138,10 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
       password: currentPassword,
     });
     if (error) {
-      throw new Error(`Supabase login failed: ${error.message}`);
+      throw new Error(mapPasswordSignInError(error));
     }
     if (!data.session) {
-      throw new Error('Supabase login failed: no session returned');
+      throw new Error('sign_in_failed');
     }
     applySessionToCache(data.session);
     return data.session.access_token;
@@ -214,6 +215,15 @@ export async function saveAndApplySyncAuth(email: string, password: string): Pro
   const e = email.trim();
   await saveSyncAuthCredentials(e, password);
   applyPasswordAuth(e, password);
+}
+
+export async function saveAndApplyPasswordSession(
+  email: string,
+  password: string,
+  session: { access_token: string; expires_at?: number | null },
+): Promise<void> {
+  await saveAndApplySyncAuth(email, password);
+  applySessionToCache(session);
 }
 
 export async function saveAndApplyOAuthSyncAuth(

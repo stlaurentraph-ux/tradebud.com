@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -82,6 +82,13 @@ export function PlotEvidencePanel({
   const [fpicSignerName, setFpicSignerName] = useState('');
   const [evidenceReason, setEvidenceReason] = useState('');
   const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const notifySync = (message: string, alertTitle?: string) => {
+    setSyncMessage(message);
+    onSyncMessage?.(message);
+    Alert.alert(alertTitle ?? t('evidence_sync_button'), message);
+  };
 
   const counts = useMemo(() => {
     const byKind = (kind: PlotEvidenceKind) => evidence.filter((i) => i.kind === kind).length;
@@ -108,6 +115,9 @@ export function PlotEvidencePanel({
       kind,
       defaultLabel,
       pickMessages: {
+        pick_source_title: t('evidence_pick_source_title'),
+        pick_source_body: t('evidence_pick_source_body'),
+        pick_browse_files: t('evidence_pick_browse_files'),
         pick_failed_title: t('evidence_pick_failed_title'),
         pick_failed_body: t('evidence_pick_failed_body'),
         pick_photo_library: t('evidence_pick_photo_library'),
@@ -155,15 +165,34 @@ export function PlotEvidencePanel({
   };
 
   const runSync = async () => {
-    if (!serverPlotId || !farmerId) {
-      onSyncMessage?.(t('evidence_sync_need_plot'));
+    if (!farmerId) {
+      notifySync(t('evidence_sync_sign_in_for_files'));
+      return;
+    }
+    if (evidence.length === 0) {
+      notifySync(t('evidence_sync_need_documents'), t('evidence_sync_title'));
       return;
     }
     if (evidenceReason.trim().length === 0) {
-      onSyncMessage?.(t('evidence_sync_need_reason'));
+      notifySync(t('evidence_sync_need_reason'), t('evidence_sync_need_reason'));
+      return;
+    }
+    if (!serverPlotId) {
+      enqueuePendingSync({
+        createdAt: Date.now(),
+        actionType: 'evidence_sync',
+        payloadJson: JSON.stringify({
+          plotId: scopeId,
+          farmerId,
+          reason: evidenceReason.trim(),
+        }),
+        lastError: 'Plot not on server — upload from My Plots first.',
+      });
+      notifySync(t('plot_documents_legality_queued_no_server'), t('evidence_sync_title'));
       return;
     }
     setSyncBusy(true);
+    setSyncMessage(null);
     onSyncMessage?.(null);
     try {
       const summary = await syncPlotEvidenceWithFiles({
@@ -183,7 +212,10 @@ export function PlotEvidencePanel({
       if (summary.notSignedIn) {
         parts.push(t('evidence_sync_sign_in_for_files'));
       }
-      onSyncMessage?.(parts.join(' '));
+      const message = parts.join(' ');
+      setSyncMessage(message);
+      onSyncMessage?.(message);
+      Alert.alert(t('evidence_sync_button'), message);
       await onSyncComplete?.();
     } catch (e) {
       enqueuePendingSync({
@@ -196,9 +228,10 @@ export function PlotEvidencePanel({
         }),
         lastError: e instanceof Error ? e.message : String(e),
       });
-      onSyncMessage?.(
-        e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short'),
-      );
+      const queued =
+        e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short');
+      setSyncMessage(queued);
+      onSyncMessage?.(queued);
     } finally {
       setSyncBusy(false);
     }
@@ -328,10 +361,20 @@ export function PlotEvidencePanel({
           <View style={{ marginTop: 10 }}>
             <Button
               title={syncBusy ? t('evidence_sync_busy') : t('evidence_sync_button')}
-              disabled={syncBusy || evidence.length === 0}
+              disabled={syncBusy}
               onPress={() => void runSync()}
             />
           </View>
+          {evidence.length === 0 ? (
+            <ThemedText type="caption" style={{ marginTop: 8, opacity: 0.85 }}>
+              {t('evidence_sync_need_documents_hint')}
+            </ThemedText>
+          ) : null}
+          {syncMessage ? (
+            <ThemedText type="caption" style={{ marginTop: 8 }}>
+              {syncMessage}
+            </ThemedText>
+          ) : null}
         </Card>
       ) : null}
     </View>

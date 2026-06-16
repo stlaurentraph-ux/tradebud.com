@@ -13,6 +13,8 @@
         "EXPO_APPLE_TEAM_TYPE": "COMPANY_OR_ORGANIZATION",
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
         "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
+        "EXPO_PUBLIC_OAUTH_BRIDGE_URL": "https://app.tracebud.com/auth/callback",
+        "EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL": "https://app.tracebud.com/auth/confirm",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -24,6 +26,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
         "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
+        "EXPO_PUBLIC_OAUTH_BRIDGE_URL": "https://app.tracebud.com/auth/callback",
+        "EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL": "https://app.tracebud.com/auth/confirm",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -36,6 +40,8 @@
         "EXPO_PUBLIC_API_URL": "https://api.tracebud.com/api",
         "EXPO_PUBLIC_SUPABASE_URL": "https://uzsktajlnofosxeqwdwl.supabase.co",
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_OAUTH_BRIDGE_URL": "https://app.tracebud.com/auth/callback",
+        "EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL": "https://app.tracebud.com/auth/confirm",
         "SENTRY_ORG": "tracebud",
         "SENTRY_PROJECT": "react-native",
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true"

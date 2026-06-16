@@ -19,6 +19,7 @@ import {
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer, fetchVouchersForFarmer } from '@/features/api/postPlot';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
+import { isGroundTruthPhotoSetComplete } from '@/features/compliance/groundTruthPhotoGeo';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
@@ -142,7 +143,8 @@ export default function PlotsScreen() {
             .map((e: { kind?: string }) => e.kind)
             .filter((k): k is string => typeof k === 'string' && k.length > 0);
           const { done } = computePlotReadinessChecklist({
-            groundTruthPhotoCount: photos.length,
+            groundTruthPhotos: photos,
+            plot: p,
             titlePhotoCount: titleRows.length,
             evidenceKinds,
             isSyncedToServer: Boolean(backendMatch),

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Alert, Animated, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import MapView, { Marker, Polyline, Region } from 'react-native-maps';
+import MapView, { Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +29,9 @@ import {
 } from '@/features/state/persistence';
 import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
-import { fieldMapUsesCustomTiles, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
+import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
+import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
+import { regionFromCoordinates } from '@/features/mapping/fieldMapRegion';
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Brand, Colors } from '@/constants/theme';
 import { scaleText } from '@/features/demo/storeUiScale';
@@ -145,6 +147,8 @@ export function WalkPerimeterScreen() {
   const [alternateCaptureOpen, setAlternateCaptureOpen] = useState(false);
   const [walkInstructionsOpen, setWalkInstructionsOpen] = useState(false);
   const [mapScrollLock, setMapScrollLock] = useState(false);
+  const walkMapRef = useRef<MapView>(null);
+  const lastMapAnimateAtRef = useRef(0);
 
   const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
 
@@ -284,14 +288,7 @@ export function WalkPerimeterScreen() {
 
   const mapAnchorRegion = useMemo((): Region => {
     if (points.length > 0) {
-      const lats = points.map((p) => p.latitude);
-      const lons = points.map((p) => p.longitude);
-      return {
-        latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
-        longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
-        latitudeDelta: 0.003,
-        longitudeDelta: 0.003,
-      };
+      return regionFromCoordinates(points, 1.45);
     }
     if (deviceRegion) return deviceRegion;
 if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null) {
@@ -325,6 +322,34 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     () => resolveFieldMapTileMode({ lowDataMap, offlineTilesEnabled }),
     [lowDataMap, offlineTilesEnabled],
   );
+
+  const liveWalkTrail = useMemo(
+    () =>
+      samples.map((s) => ({
+        latitude: s.latitude,
+        longitude: s.longitude,
+      })),
+    [samples],
+  );
+
+  useEffect(() => {
+    if (!isRecording && points.length === 0 && samples.length === 0) return;
+    const now = Date.now();
+    if (isRecording && now - lastMapAnimateAtRef.current < 1200) return;
+    lastMapAnimateAtRef.current = now;
+
+    const coords = points.map((p) => ({ latitude: p.latitude, longitude: p.longitude }));
+    if (samples.length > 0) {
+      const last = samples[samples.length - 1];
+      coords.push({
+        latitude: last.latitude,
+        longitude: last.longitude,
+      });
+    }
+    if (coords.length === 0) return;
+
+    walkMapRef.current?.animateToRegion(regionFromCoordinates(coords, isRecording ? 1.55 : 1.35), 380);
+  }, [isRecording, points, samples]);
 
   const finishNewPlotSave = useCallback(
     (name: string, tryServerUpload: () => void) => {
@@ -369,13 +394,14 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         return;
       }
       if (result.reason === 'server_error' || result.reason === 'network_error') {
-        Alert.alert(
-          t('plot_saved_title'),
-          result.message ??
-            (result.reason === 'network_error'
-              ? 'Could not reach Tracebud. Upload this plot from My Plots when you are online.'
-              : 'Server rejected the upload. Open My Plots → Upload plot to Tracebud to retry.'),
-        );
+        const raw = result.message ?? '';
+        const friendly =
+          /tenant claim/i.test(raw)
+            ? t('plot_upload_account_error')
+            : result.reason === 'network_error'
+              ? t('plot_upload_network_error')
+              : t('plot_upload_server_error');
+        Alert.alert(t('plot_saved_title'), friendly);
       }
     },
     [openSignIn, t],
@@ -887,6 +913,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       <View style={styles.bodyFlex}>
         <ThemedScrollView
           scrollEnabled={!mapScrollLock}
+          nestedScrollEnabled
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.container,
@@ -1197,11 +1224,17 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               </>
             ) : showCapturePage && captureMethod === 'walk' ? (
               <>
-                <View style={[styles.walkMapPanel, { minHeight: walkMapHeight }]}>
+                <View
+                  style={[styles.walkMapPanel, { minHeight: walkMapHeight }]}
+                  onTouchStart={() => setMapScrollLock(true)}
+                  onTouchEnd={() => setMapScrollLock(false)}
+                  onTouchCancel={() => setMapScrollLock(false)}
+                >
                   <MapView
+                    ref={walkMapRef}
                     style={[styles.walkMap, { height: walkMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
-                    region={points.length === 0 ? mapAnchorRegion : undefined}
+                    {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
                   >
                     <FieldMapLayers
@@ -1209,27 +1242,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       offlineTilesEnabled={offlineTilesEnabled}
                       offlineTilesPackId={offlineTilesPackId}
                     />
-                    {points.length > 0 ? (
-                      <>
-                        <Polyline
-                          coordinates={[
-                            ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-                            ...(points.length > 2
-                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                              : []),
-                          ]}
-                          strokeColor={Brand.primary}
-                          strokeWidth={isRecording ? 4 : 3}
-                        />
-                        <Marker
-                          coordinate={{
-                            latitude: points[points.length - 1].latitude,
-                            longitude: points[points.length - 1].longitude,
-                          }}
-                          title={t('walk_last_point')}
-                        />
-                      </>
-                    ) : null}
+                    <PlotBoundaryOverlays
+                      vertices={points}
+                      liveTrail={liveWalkTrail}
+                      isRecording={isRecording}
+                      showYouMarker
+                      showStartMarker={points.length > 0}
+                    />
                   </MapView>
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
@@ -1401,6 +1420,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   <MapView
                     style={styles.drawMap}
                     initialRegion={mapAnchorRegion}
+                    {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
                     moveOnMarkerPress={false}
                     onPress={(e) => {
@@ -1413,28 +1433,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       offlineTilesEnabled={offlineTilesEnabled}
                       offlineTilesPackId={offlineTilesPackId}
                     />
-                    {points.length > 0 ? (
-                      <>
-                        <Polyline
-                          coordinates={[
-                            ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-                            ...(points.length > 2
-                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                              : []),
-                          ]}
-                          strokeColor={Brand.primary}
-                          strokeWidth={3}
-                        />
-                        {points.map((p, idx) => (
-                          <Marker
-                            key={`draw-point-${idx}`}
-                            coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-                            title={`Point ${idx + 1}`}
-                            tappable={false}
-                          />
-                        ))}
-                      </>
-                    ) : null}
+                    <PlotBoundaryOverlays
+                      vertices={points}
+                      showYouMarker={false}
+                      showStartMarker={points.length > 0}
+                      showVertexMarkers
+                    />
                   </MapView>
 
                   {points.length === 0 ? (
@@ -1461,11 +1465,16 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   </View>
                 </Card>
 
-                <View style={styles.drawMapPanel}>
+                <View
+                  style={styles.drawMapPanel}
+                  onTouchStart={() => setMapScrollLock(true)}
+                  onTouchEnd={() => setMapScrollLock(false)}
+                  onTouchCancel={() => setMapScrollLock(false)}
+                >
                   <MapView
                     style={styles.drawMap}
                     initialRegion={mapAnchorRegion}
-                    region={points.length > 0 ? mapAnchorRegion : undefined}
+                    {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
                   >
                     <FieldMapLayers
@@ -1473,27 +1482,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       offlineTilesEnabled={offlineTilesEnabled}
                       offlineTilesPackId={offlineTilesPackId}
                     />
-                    {points.length > 0 ? (
-                      <>
-                        <Polyline
-                          coordinates={[
-                            ...points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-                            ...(points.length > 2
-                              ? [{ latitude: points[0].latitude, longitude: points[0].longitude }]
-                              : []),
-                          ]}
-                          strokeColor={Brand.primary}
-                          strokeWidth={3}
-                        />
-                        {points.map((p, idx) => (
-                          <Marker
-                            key={`corner-point-${idx}`}
-                            coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-                            title={`Corner ${idx + 1}`}
-                          />
-                        ))}
-                      </>
-                    ) : null}
+                    <PlotBoundaryOverlays
+                      vertices={points}
+                      showYouMarker={false}
+                      showStartMarker={points.length > 0}
+                      showVertexMarkers
+                    />
                   </MapView>
                   {points.length === 0 ? (
                     <View style={styles.drawMapOverlay} pointerEvents="none">

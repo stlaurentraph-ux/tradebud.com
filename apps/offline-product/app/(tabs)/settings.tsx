@@ -7,6 +7,7 @@ import {
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,7 +22,8 @@ import {
   getPushPermissionStatus,
   type PushPermissionResult,
 } from '@/features/permissions/pushPermission';
-import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
+import { registerFarmerPushToken, unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
+import { PUSH_NOTIFICATIONS_OPT_IN_KEY } from '@/features/notifications/pushSettings';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -64,6 +66,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Brand, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { SetPasswordCard } from '@/components/auth/SetPasswordCard';
 import {
   footprintBytesToMb,
   measureTracebudStorageFootprint,
@@ -120,7 +123,8 @@ export default function SettingsScreen() {
     consent_revoke: 0,
   });
   /** Local plots with no matching server row (by name). */
-  const [unsyncedPlotCount, setUnsyncedPlotCount] = useState(0);
+  const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
+  const [plotsFetchState, setPlotsFetchState] = useState<'idle' | 'loading' | 'ok' | 'failed'>('idle');
   const [syncEmail, setSyncEmail] = useState('');
   const [syncAuthHint, setSyncAuthHint] = useState<string | null>(null);
   const [syncSignedIn, setSyncSignedIn] = useState(false);
@@ -145,16 +149,20 @@ export default function SettingsScreen() {
   const [queueSmartSweepEnabled, setQueueSmartSweepEnabled] = useState(false);
   const [queueSmartSweepCap, setQueueSmartSweepCap] = useState<25 | 50 | 100 | 200>(100);
   const [pushPermission, setPushPermission] = useState<PushPermissionResult | 'unknown'>('unknown');
+  const [pushOptIn, setPushOptIn] = useState(true);
   const [pushRegisterBusy, setPushRegisterBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState<string | null>(null);
 
   const refreshPushPermission = useCallback(async () => {
     if (Platform.OS === 'web') {
       setPushPermission('unavailable');
+      setPushOptIn(false);
       return;
     }
     const status = await getPushPermissionStatus();
     setPushPermission(status);
+    const optIn = await getSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY).catch(() => null);
+    setPushOptIn(optIn !== '0');
   }, []);
 
   const refreshSavedSyncEmail = useCallback(async () => {
@@ -202,14 +210,19 @@ export default function SettingsScreen() {
 
     const canQueryServer = Boolean(farmer?.id && hasSyncAuthSession());
     if (!canQueryServer) {
-      setUnsyncedPlotCount(0);
+      setBackendPlots([]);
+      setPlotsFetchState('idle');
       return;
     }
+    setPlotsFetchState('loading');
     try {
       const backend = await fetchPlotsForFarmer(farmer!.id);
-      setUnsyncedPlotCount(listUnsyncedLocalPlots(plots, backend ?? []).length);
+      setBackendPlots(backend ?? []);
+      setPlotsFetchState('ok');
     } catch {
-      // Keep previous unsynced count on network errors so we don't flash "up to date" incorrectly.
+      // Match home screen: empty server list ⇒ treat local plots as not verified until reachable.
+      setBackendPlots([]);
+      setPlotsFetchState('failed');
     }
   }, [farmer, plots]);
 
@@ -258,7 +271,39 @@ export default function SettingsScreen() {
     setNameInput(farmer?.name ?? '');
   }, [farmer?.id, farmer?.name]);
 
+  const unsyncedPlotCount = useMemo(() => {
+    if (!syncSignedIn || plots.length === 0) return 0;
+    return listUnsyncedLocalPlots(plots, backendPlots).length;
+  }, [plots, backendPlots, syncSignedIn]);
+
   const totalSyncPending = queuePendingCount + unsyncedPlotCount;
+
+  const backupStatusLabel = useMemo(() => {
+    if (!syncSignedIn) {
+      return totalSyncPending > 0
+        ? t('settings_backup_status_pending', { n: totalSyncPending })
+        : t('up_to_date');
+    }
+    if (plotsFetchState === 'failed') {
+      return totalSyncPending > 0
+        ? t('backup_waiting', { n: totalSyncPending })
+        : t('sync_plots_fetch_failed');
+    }
+    if (plotsFetchState === 'loading' && plots.length > 0) {
+      return t('settings_backup_status_checking');
+    }
+    if (totalSyncPending > 0) {
+      return t('backup_waiting', { n: totalSyncPending });
+    }
+    return t('backup_up_to_date');
+  }, [syncSignedIn, plotsFetchState, plots.length, totalSyncPending, t]);
+
+  const backupStatusNeedsAttention = useMemo(
+    () =>
+      syncSignedIn &&
+      (plotsFetchState === 'failed' || plotsFetchState === 'loading' || totalSyncPending > 0),
+    [syncSignedIn, plotsFetchState, totalSyncPending],
+  );
   const selectedQueueActionTypes = useMemo(
     () =>
       (Object.entries(queueActionFilter)
@@ -267,11 +312,16 @@ export default function SettingsScreen() {
     [queueActionFilter],
   );
   const queueFilterSummaryLabel = useMemo(() => {
-    const labels = selectedQueueActionTypes.map((actionType) => {
+    const labelForAction = (actionType: PendingSyncAction['actionType']) => {
       if (actionType === 'harvest') return t('sync_queue_filter_harvest');
       if (actionType === 'photos_sync') return t('sync_queue_filter_photos');
+      if (actionType === 'evidence_sync') return t('sync_queue_filter_evidence');
+      if (actionType === 'consent_approve') return t('sync_queue_filter_consent');
+      if (actionType === 'consent_deny') return t('sync_queue_filter_consent');
+      if (actionType === 'consent_revoke') return t('sync_queue_filter_consent');
       return t('sync_queue_filter_evidence');
-    });
+    };
+    const labels = [...new Set(selectedQueueActionTypes.map(labelForAction))];
     if (labels.length === 0) return t('sync_queue_filter_none');
     return t('sync_queue_filter_summary', { labels: labels.join(', ') });
   }, [selectedQueueActionTypes, t]);
@@ -423,6 +473,8 @@ export default function SettingsScreen() {
     });
   };
 
+  const notificationsEnabled = pushOptIn && pushPermission === 'granted';
+
   const enablePushNotifications = async () => {
     if (Platform.OS === 'web') {
       setPushMessage(t('settings_notifications_unavailable'));
@@ -435,6 +487,8 @@ export default function SettingsScreen() {
     setPushRegisterBusy(true);
     setPushMessage(null);
     try {
+      await setSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY, '1');
+      setPushOptIn(true);
       const result = await registerFarmerPushToken({
         alertOnDeny: true,
         onPermissionDenied: () => alertPushPermissionDenied(t),
@@ -444,7 +498,13 @@ export default function SettingsScreen() {
         setPushMessage(t('settings_notifications_enabled'));
         return;
       }
+      if (result.reason === 'opted_out') {
+        setPushMessage(t('settings_notifications_disabled'));
+        return;
+      }
       if (result.reason === 'denied') {
+        await setSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY, '0');
+        setPushOptIn(false);
         setPushMessage(t('settings_notifications_denied'));
         return;
       }
@@ -456,6 +516,30 @@ export default function SettingsScreen() {
     } finally {
       setPushRegisterBusy(false);
     }
+  };
+
+  const disablePushNotifications = async () => {
+    setPushRegisterBusy(true);
+    setPushMessage(null);
+    try {
+      await setSetting(PUSH_NOTIFICATIONS_OPT_IN_KEY, '0');
+      setPushOptIn(false);
+      await unregisterFarmerPushToken();
+      setPushMessage(t('settings_notifications_disabled'));
+    } catch {
+      setPushMessage(t('settings_notifications_disable_failed'));
+    } finally {
+      setPushRegisterBusy(false);
+    }
+  };
+
+  const onNotificationsToggle = (enabled: boolean) => {
+    if (pushRegisterBusy) return;
+    if (enabled) {
+      void enablePushNotifications();
+      return;
+    }
+    void disablePushNotifications();
   };
 
   const displayProfileEmail = syncSignedIn
@@ -498,6 +582,7 @@ export default function SettingsScreen() {
   };
 
   const onSignOutSync = async () => {
+    await unregisterFarmerPushToken().catch(() => undefined);
     await clearPersistedSyncAuth();
     setSyncSignedIn(false);
     setSyncEmail('');
@@ -613,8 +698,6 @@ export default function SettingsScreen() {
         });
         appendQueueResultParts(queueRes);
       }
-      parts.push(queueFilterSummaryLabel);
-      parts.push(queueAttemptScopeSummaryLabel);
 
       setSyncMessage(parts.filter(Boolean).join('\n\n'));
       });
@@ -805,17 +888,20 @@ export default function SettingsScreen() {
                     type="caption"
                     style={[
                       styles.backupStatusText,
-                      totalSyncPending > 0 ? styles.backupStatusPending : styles.backupStatusOk,
+                      backupStatusNeedsAttention ? styles.backupStatusPending : styles.backupStatusOk,
                     ]}
                   >
-                    {totalSyncPending > 0
-                      ? t('settings_backup_status_pending', { n: totalSyncPending })
-                      : t('up_to_date')}
+                    {backupStatusLabel}
                   </ThemedText>
                 </View>
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
+                {syncSignedIn && plotsFetchState === 'failed' && totalSyncPending > 0 ? (
+                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                    {t('sync_plots_fetch_failed')}
+                  </ThemedText>
+                ) : null}
 
                 {syncSignedIn ? (
                   <View style={styles.backupAccountRow}>
@@ -829,6 +915,14 @@ export default function SettingsScreen() {
                     </Pressable>
                   </View>
                 ) : null}
+
+                <SetPasswordCard
+                  signedIn={syncSignedIn}
+                  t={t}
+                  onPasswordSaved={() => {
+                    void refreshSavedSyncEmail();
+                  }}
+                />
 
                 <View style={styles.btnWrap}>
                   {syncSignedIn ? (
@@ -891,38 +985,47 @@ export default function SettingsScreen() {
                         {t('settings_notifications_title')}
                       </ThemedText>
                     </View>
-                    <ThemedText
-                      type="caption"
-                      style={[
-                        styles.backupStatusText,
-                        pushPermission === 'granted'
-                          ? styles.backupStatusOk
-                          : pushPermission === 'denied'
-                            ? styles.backupStatusPending
-                            : styles.backupStatusMuted,
-                      ]}
-                    >
-                      {pushPermission === 'granted'
-                        ? t('settings_notifications_status_on')
-                        : pushPermission === 'denied'
+                    <Switch
+                      value={notificationsEnabled}
+                      onValueChange={onNotificationsToggle}
+                      disabled={pushRegisterBusy || !syncSignedIn}
+                      trackColor={{ false: '#D1D5DB', true: Brand.primary }}
+                      thumbColor="#FFFFFF"
+                      accessibilityLabel={t('settings_notifications_title')}
+                    />
+                  </View>
+                  <ThemedText
+                    type="caption"
+                    style={[
+                      styles.backupStatusText,
+                      notificationsEnabled ? styles.backupStatusOk : styles.backupStatusPending,
+                    ]}
+                  >
+                    {notificationsEnabled
+                      ? t('settings_notifications_status_on')
+                      : pushPermission === 'denied'
+                        ? t('settings_notifications_status_off')
+                        : !pushOptIn
                           ? t('settings_notifications_status_off')
                           : t('settings_notifications_status_unknown')}
-                    </ThemedText>
-                  </View>
+                  </ThemedText>
                   <ThemedText type="caption" style={styles.mutedText}>
                     {t('settings_notifications_body')}
                   </ThemedText>
-                  {pushPermission !== 'granted' ? (
+                  {!syncSignedIn ? (
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {t('settings_notifications_sign_in_hint')}
+                    </ThemedText>
+                  ) : null}
+                  {pushPermission === 'denied' && pushOptIn ? (
                     <View style={styles.btnWrap}>
                       <Button
                         variant="outline"
                         size="md"
                         fullWidth
-                        loading={pushRegisterBusy}
-                        disabled={pushRegisterBusy}
-                        onPress={() => void enablePushNotifications()}
+                        onPress={() => Linking.openSettings()}
                       >
-                        {t('settings_notifications_enable')}
+                        {t('open_settings')}
                       </Button>
                     </View>
                   ) : null}

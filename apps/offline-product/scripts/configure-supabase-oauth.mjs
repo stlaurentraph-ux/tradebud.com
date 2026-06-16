@@ -36,6 +36,7 @@ const REDIRECT_URLS =
     'tracebudoffline://**',
     'exp://**',
     'exp://**/--/auth/callback',
+    'https://app.tracebud.com/**',
     'https://dashboard.tracebud.com/**',
   ].join(',');
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID?.trim() || 'com.tracebud.app';

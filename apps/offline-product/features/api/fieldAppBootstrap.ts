@@ -1,4 +1,4 @@
-import { getAccessTokenFromSupabase, getTracebudApiBaseUrl } from '@/features/api/syncAuthSession';
+import { getAccessTokenFromSupabase, getTracebudApiBaseUrl, hasSyncAuthSession } from '@/features/api/syncAuthSession';
 
 export async function bootstrapFieldAppProducer(params: {
   farmerId: string;
@@ -41,4 +41,13 @@ export async function bootstrapFieldAppProducer(params: {
   }
 
   return { ok: true };
+}
+
+/** Best-effort server link before plot sync (creates farmer_profile when missing). */
+export async function ensureFieldProducerBootstrapped(farmerId: string): Promise<void> {
+  const scopedFarmerId = farmerId.trim();
+  if (!scopedFarmerId || !hasSyncAuthSession()) {
+    return;
+  }
+  await bootstrapFieldAppProducer({ farmerId: scopedFarmerId }).catch(() => undefined);
 }

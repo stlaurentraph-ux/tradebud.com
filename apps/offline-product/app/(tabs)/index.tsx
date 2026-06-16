@@ -24,6 +24,7 @@ import {
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
+import { isGroundTruthPhotoSetComplete } from '@/features/compliance/groundTruthPhotoGeo';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
 import { scaleText } from '@/features/demo/storeUiScale';
@@ -114,7 +115,8 @@ export default function HomeScreen() {
             .map((e: { kind?: string }) => e.kind)
             .filter((k): k is string => typeof k === 'string' && k.length > 0);
           const { done } = computePlotReadinessChecklist({
-            groundTruthPhotoCount: photos.length,
+            groundTruthPhotos: photos,
+            plot: p,
             titlePhotoCount: titleRows.length,
             evidenceKinds,
             isSyncedToServer: Boolean(backendMatch),
@@ -145,7 +147,7 @@ export default function HomeScreen() {
           continue;
         }
         const photos = await loadPhotosForPlot(p.id).catch(() => []);
-        if ((photos?.length ?? 0) < 4) {
+        if (!isGroundTruthPhotoSetComplete(photos, p)) {
           if (!cancelled) {
             setActionRequired({
               message: t('home_action_plot_photos', { name: p.name }),

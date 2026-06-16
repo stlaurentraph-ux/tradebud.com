@@ -16,6 +16,7 @@ import { ThemedText } from '@/components/themed-text';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
 import { authSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
+import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile } from '@/features/auth/oauthSession';
 import {
@@ -73,7 +74,6 @@ export function CreateAccountWizard({
   }, [visible, reset]);
 
   const resolveMessage = (code: string): string => {
-    if (code === 'enter_email_password') return t('enter_email_password');
     if (code === 'farmer_signup_name_required') return t('farmer_signup_name_required');
     if (code === 'farmer_signup_confirm_email') return t('farmer_signup_confirm_email');
     if (code === 'sign_in_oauth_cancelled') return t('sign_in_oauth_cancelled');
@@ -81,7 +81,7 @@ export function CreateAccountWizard({
     if (code === 'sign_in_dashboard_account') return t('sign_in_dashboard_account');
     if (code === 'sign_in_apple_not_completed') return t('sign_in_apple_not_completed');
     if (code === 'sign_in_oauth_failed') return t('sign_in_oauth_failed');
-    return code;
+    return formatSignInErrorMessage(t, code);
   };
 
   const finishSuccess = (sync: UploadUnsyncedPlotsResult | null) => {
@@ -107,7 +107,7 @@ export function CreateAccountWizard({
       }
       finishSuccess(null);
     } catch (e) {
-      setHint(e instanceof Error ? e.message : String(e));
+      setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -133,7 +133,7 @@ export function CreateAccountWizard({
       }
       finishSuccess(null);
     } catch (e) {
-      setHint(e instanceof Error ? e.message : String(e));
+      setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setOauthBusy(null);
     }
@@ -150,7 +150,7 @@ export function CreateAccountWizard({
       await ensureFarmerOAuthProfile(fullName.trim());
       finishSuccess(null);
     } catch (e) {
-      setHint(e instanceof Error ? e.message : String(e));
+      setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }

@@ -6,7 +6,6 @@ import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
-import { shouldBootstrapFieldAppProfile } from '@/features/auth/fieldAppEligibility';
 import { ensureFarmerOAuthProfile, getEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -40,7 +39,7 @@ export async function completeOAuthFarmerSession(params: {
   );
   await ensureFarmerOAuthProfile(nameFromSession, params.session);
 
-  if (params.farmerId && shouldBootstrapFieldAppProfile(params.session)) {
+  if (params.farmerId) {
     const bootstrap = await bootstrapFieldAppProducer({
       farmerId: params.farmerId,
       fullName: nameFromSession || undefined,

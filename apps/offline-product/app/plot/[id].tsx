@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { PhotoVaultPanel } from '@/components/plot-photo-vault/PhotoVaultPanel';
 import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
@@ -47,7 +47,6 @@ import {
   loadPlotTenure,
   loadTitlePhotosForPlot,
   loadEvidenceForPlot,
-  persistPlotPhoto,
   persistPlotTitlePhoto,
   savePlotCadastralKey,
   savePlotTenure,
@@ -60,12 +59,14 @@ import {
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
+import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import { syncPlotLegalToBackend } from '@/features/api/postPlot';
 import {
   MIN_GROUND_TRUTH_PHOTOS,
   computePlotReadinessChecklist,
 } from '@/features/compliance/plotChecklist';
+import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 
@@ -109,6 +110,7 @@ export default function PlotDetailScreen() {
   const [informalTenureNote, setInformalTenureNote] = useState('');
   const [legalSyncReason, setLegalSyncReason] = useState('');
   const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
+  const [docSyncTone, setDocSyncTone] = useState<'success' | 'error' | 'info'>('info');
   const [legalitySyncBusy, setLegalitySyncBusy] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
@@ -306,7 +308,8 @@ export default function PlotDetailScreen() {
     const evidenceKinds = evidence.map((e) => e.kind);
     const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
       computePlotReadinessChecklist({
-        groundTruthPhotoCount: photos.length,
+        groundTruthPhotos: photos,
+        plot,
         titlePhotoCount: titlePhotos.length,
         evidenceKinds,
         isSyncedToServer: Boolean(backendPlotId),
@@ -320,6 +323,7 @@ export default function PlotDetailScreen() {
             : null,
       });
     const minG = MIN_GROUND_TRUTH_PHOTOS;
+    const verifiedGround = plot ? countGeoVerifiedGroundTruthDirections(photos, plot) : 0;
 
     const rows: {
       id: string;
@@ -330,7 +334,7 @@ export default function PlotDetailScreen() {
     }[] = [
       {
         id: 'ground',
-        title: t('plot_status_ground', { current: photos.length, min: minG }),
+        title: t('plot_status_ground', { current: verifiedGround, min: minG }),
         hint: t('plot_status_ground_hint'),
         done: groundOk,
         target: 'photos',
@@ -375,7 +379,8 @@ export default function PlotDetailScreen() {
     });
     return rows;
   }, [
-    photos.length,
+    photos,
+    plot,
     titlePhotos.length,
     evidence,
     overlapFlags.indigenous,
@@ -420,39 +425,63 @@ export default function PlotDetailScreen() {
     }
   }, []);
 
-  const addGroundTruthPhoto = async () => {
+  const notifyDocSync = (message: string, alertTitle?: string, tone: 'success' | 'error' | 'info' = 'error') => {
+    setDocSyncMessage(message);
+    setDocSyncTone(tone);
+    Alert.alert(alertTitle ?? t('plot_documents_legality_sync_button'), message);
+  };
+
+  const queueLandTitleSync = async (reason: string) => {
     if (!plot) return;
-    setNote(null);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t('evidence_perm_camera_title'), t('evidence_perm_camera_body'));
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    const uri = result.assets[0].uri;
-    const takenAt = Date.now();
-    const firstPoint = plot.points[0];
-    persistPlotPhoto({
-      plotId: plot.id,
-      uri,
-      takenAt,
-      latitude: firstPoint?.latitude ?? null,
-      longitude: firstPoint?.longitude ?? null,
+    await savePlotCadastralKey(plot.id, cadastralKey.trim() || null);
+    await savePlotTenure(plot.id, {
+      informalTenure,
+      informalTenureNote: informalTenureNote.trim() || null,
     });
-    const updated = await loadPhotosForPlot(plot.id);
-    setPhotos(updated);
+    enqueuePendingSync({
+      createdAt: Date.now(),
+      actionType: 'photos_sync',
+      payloadJson: JSON.stringify({
+        legal: {
+          cadastralKey: cadastralKey.trim() || null,
+          informalTenure: informalTenure ? true : null,
+          informalTenureNote: informalTenureNote.trim() || null,
+          reason,
+        },
+        plotId: plot.id,
+        kind: 'land_title',
+        photos: titlePhotos.map((p) => ({
+          cadastralKey: cadastralKey.trim() || null,
+          informalTenure: informalTenure ? true : null,
+          informalTenureNote: informalTenureNote.trim() || null,
+          uri: p.uri,
+          takenAt: p.takenAt,
+        })),
+        note: 'Land title photos sync from plot detail',
+      }),
+      lastError: 'Plot not on server — upload from My Plots first.',
+    });
+    notifyDocSync(t('plot_documents_legality_queued_no_server'), undefined, 'info');
   };
 
   const syncLegalityAndTitlePhotos = async () => {
-    if (!plot || !farmer?.id) return;
+    if (!plot) return;
+    if (!farmer?.id) {
+      notifyDocSync(t('evidence_sync_sign_in_for_files'));
+      return;
+    }
     const reason = legalSyncReason.trim();
     if (!reason) {
-      setDocSyncMessage(t('plot_documents_legality_need_reason'));
+      notifyDocSync(t('plot_documents_legality_need_reason'), t('evidence_sync_need_reason'));
       return;
     }
     if (!backendPlotId) {
-      setDocSyncMessage(t('evidence_sync_need_plot'));
+      setLegalitySyncBusy(true);
+      try {
+        await queueLandTitleSync(reason);
+      } finally {
+        setLegalitySyncBusy(false);
+      }
       return;
     }
     setLegalitySyncBusy(true);
@@ -479,11 +508,13 @@ export default function PlotDetailScreen() {
         informalTenureNote: informalTenureNote.trim() || null,
         note: 'Land title photos sync from plot detail',
       });
-      setDocSyncMessage(
+      const okMessage =
         summary.uploadedCount > 0
           ? t('plot_documents_legality_sync_ok_files', { n: summary.uploadedCount })
-          : t('plot_documents_legality_sync_ok'),
-      );
+          : t('plot_documents_legality_sync_ok');
+      setDocSyncMessage(okMessage);
+      setDocSyncTone('success');
+      Alert.alert(t('plot_documents_legality_sync_button'), okMessage);
       await refreshTenureVerification();
     } catch (e) {
       enqueuePendingSync({
@@ -512,6 +543,7 @@ export default function PlotDetailScreen() {
       setDocSyncMessage(
         e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short'),
       );
+      setDocSyncTone('info');
     } finally {
       setLegalitySyncBusy(false);
     }
@@ -519,16 +551,24 @@ export default function PlotDetailScreen() {
 
   const addLandTitlePhoto = async () => {
     if (!plot) return;
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t('evidence_perm_camera_title'), t('evidence_perm_camera_body'));
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
+    const file = await pickEvidenceFile({
+      pick_source_title: t('evidence_pick_source_title'),
+      pick_source_body: t('evidence_pick_source_body'),
+      pick_browse_files: t('evidence_pick_browse_files'),
+      pick_failed_title: t('evidence_pick_failed_title'),
+      pick_failed_body: t('evidence_pick_failed_body'),
+      pick_photo_library: t('evidence_pick_photo_library'),
+      pick_take_photo: t('evidence_pick_take_photo'),
+      pick_cancel: t('cancel'),
+      perm_library_title: t('evidence_perm_library_title'),
+      perm_library_body: t('evidence_perm_library_body'),
+      perm_camera_title: t('evidence_perm_camera_title'),
+      perm_camera_body: t('evidence_perm_camera_body'),
+    });
+    if (!file) return;
     persistPlotTitlePhoto({
       plotId: plot.id,
-      uri: result.assets[0].uri,
+      uri: file.uri,
       takenAt: Date.now(),
     });
     const updated = await loadTitlePhotosForPlot(plot.id);
@@ -839,49 +879,13 @@ export default function PlotDetailScreen() {
         </>
         ) : null}
 
-        {active === 'photos' ? (
-          <>
-            <Card variant="outlined" style={styles.photoIntroCard}>
-              <ThemedText type="default" style={styles.photoIntroText}>
-                {t('plot_photo_intro')}
-              </ThemedText>
-            </Card>
-            <View style={styles.photoVaultGrid}>
-              {(['north', 'east', 'south', 'west'] as const).map((dir, idx) => {
-                const p = photos[idx];
-                const dirLabel = t(`plot_dir_${dir}` as 'plot_dir_north');
-                return (
-                  <Pressable key={dir} style={styles.photoVaultSlot} onPress={addGroundTruthPhoto}>
-                    {p?.uri ? (
-                      <Image source={{ uri: p.uri }} style={styles.photoVaultImage} />
-                    ) : (
-                      <Ionicons name="image-outline" size={42} color="#ACACAC" />
-                    )}
-                    <ThemedText type="defaultSemiBold" style={styles.photoVaultTitle}>
-                      {t('plot_photo_dir_view', { dir: dirLabel })}
-                    </ThemedText>
-                    <ThemedText type="caption" style={styles.photoVaultDate}>
-                      {p?.takenAt
-                        ? new Date(p.takenAt).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: '2-digit',
-                            year: 'numeric',
-                          })
-                        : t('plot_photo_tap_capture')}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View style={{ marginTop: 10 }}>
-              <Button
-                title={t('plot_photo_update')}
-                variant="secondary"
-                style={{ backgroundColor: '#0A7F59' }}
-                onPress={addGroundTruthPhoto}
-              />
-            </View>
-          </>
+        {active === 'photos' && plot ? (
+          <PhotoVaultPanel
+            plot={plot}
+            photos={photos}
+            onPhotosChange={setPhotos}
+            t={t}
+          />
         ) : null}
 
         {active === 'documents' && plot ? (
@@ -932,6 +936,11 @@ export default function PlotDetailScreen() {
                 onChangeText={setLegalSyncReason}
                 containerStyle={{ marginTop: 10 }}
               />
+              {!backendPlotId && farmer?.id ? (
+                <ThemedText type="caption" style={{ marginTop: 10, color: colors.error }}>
+                  {t('plot_documents_plot_not_synced_hint')}
+                </ThemedText>
+              ) : null}
               <View style={{ marginTop: 10 }}>
                 <Button
                   title={legalitySyncBusy ? t('evidence_sync_busy') : t('plot_documents_legality_sync_button')}
@@ -939,6 +948,22 @@ export default function PlotDetailScreen() {
                   onPress={() => void syncLegalityAndTitlePhotos()}
                 />
               </View>
+              {docSyncMessage ? (
+                <ThemedText
+                  type="caption"
+                  style={{
+                    marginTop: 8,
+                    color:
+                      docSyncTone === 'success'
+                        ? colors.tint
+                        : docSyncTone === 'info'
+                          ? undefined
+                          : colors.error,
+                  }}
+                >
+                  {docSyncMessage}
+                </ThemedText>
+              ) : null}
             </Card>
 
             <PlotEvidencePanel
@@ -954,11 +979,6 @@ export default function PlotDetailScreen() {
               onSyncComplete={refreshTenureVerification}
             />
 
-            {docSyncMessage ? (
-              <ThemedText type="caption" style={{ marginTop: 8 }}>
-                {docSyncMessage}
-              </ThemedText>
-            ) : null}
           </>
         ) : null}
 
