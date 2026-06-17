@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNumber, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsDateString, IsEmail, IsNumber, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 
 export class CreateHarvestDto {
   @ApiProperty()
@@ -41,5 +41,21 @@ export class CreateHarvestDto {
   @IsOptional()
   @IsString()
   clientEventId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Buyer tenant id when farmer picks a registered buyer from consent list',
+  })
+  @IsOptional()
+  @IsString()
+  deliverToTenantId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Buyer contact email when farmer directs delivery (resolved to tenant at sync)',
+  })
+  @IsOptional()
+  @IsEmail()
+  deliverToEmail?: string;
 }
 

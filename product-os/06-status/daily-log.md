@@ -1,3 +1,103 @@
+### 2026-06-17 (exporter: align /farmers with supplier directory)
+- Exporters hitting `/farmers` or `/farmers/new` redirect to `/contacts` and `/contacts/add?mode=csv`.
+- Suppliers empty state: "No suppliers yet" + primary **Import supplier list** CTA; producer detail breadcrumbs link back to `/contacts`.
+
+- Vouchers no longer broadcast to every linked buyer: `intended_recipient_tenant_id` on create + `voucher_buyer_claims` on desk QR register.
+- Field app **Deliver to** step (buyer picker from active consent grants, email, or QR-only).
+- Dashboard register-delivery uses `POST /v1/harvest/vouchers/claim`; pending browse lists only directed/claimed vouchers.
+- Migration: `tb_v16_044_voucher_delivery_routing.sql`.
+
+- Plots list table shows lazy-loaded satellite thumbnails (`PlotMapThumbnail` + `IntersectionObserver` + map-preview API).
+- Geometry reviewer panel uses shared `PlotSatelliteMap` with dual-polygon overlay (current green + suggested orange dashed) at 280px retina quality.
+- Per-tenant **high-res map tiles** flag (`high_res_map_tiles` in supply chain roles) switches to MapTiler when `NEXT_PUBLIC_MAPTILER_API_KEY` is set; Settings checkbox added.
+
+### 2026-06-17 (mobile: multi-plot delivery session)
+- Field app **Multi-plot delivery trip** wizard: add multiple plot lines per cooperative visit, yield cap per line, sequential voucher submit, share-all QR codes.
+- Analytics: `multi_plot_delivery_started` / `multi_plot_delivery_submitted`; shared `plotYieldCapacity` helpers.
+
+### 2026-06-17 (quality: cooperative voucher intake QA pack)
+- Published `product-os/04-quality/cooperative-voucher-intake-qa.md` with automated pre-gates + staging manual path (mobile vouchers → desk receive → batch assembly).
+
+### 2026-06-17 (field app: Maestro + sqlite tests + OTA sign-off gate)
+- Maestro flows (land title, tenure, mark corners), testIDs, `persistence.sqlite.test.ts`, `DEVICE_SMOKE_SIGNOFF.json` gate on `update:preview:safe`.
+
+- Added `field-app-regression-ledger.md`, `field-regression-guard.mjs` (unawaited `persist*` / `enqueuePendingSync`), expanded `DEVICE_SMOKE_CHECKLIST.md` for land docs auto-upload + mapping UX.
+- CI runs regression guard; preview OTA should use `npm run update:preview:safe` after device smoke sign-off.
+
+- Geometry & audit history moved to `/plots/[id]/history`; main plot detail shows a link card instead of the heavy collapsible panel.
+- Dedicated history page loads `PlotGeometryHistoryPanel` immediately with breadcrumbs back to plot summary.
+
+### 2026-06-17 (dashboard: plot detail map retina + interactive hero)
+- Plot detail satellite map now measures container width, renders at up to 2× device pixel ratio, and fits up to zoom 19.
+- Taller hero (420–480px), pan/drag + zoom controls; shared `PlotSatelliteMap` component for retina tile stitching.
+
+### 2026-06-17 (dashboard: cooperative voucher-first harvest intake)
+- Cooperatives default to **Receive delivery** on `/harvests` (QR scan / voucher search → assemble batch); desk **Record batch input** gated like exporters unless **integrated harvest capture** is enabled in Settings.
+- `HarvestReceiveDeliveryPanel`, `GET /api/harvest/vouchers/by-qr`, package create pre-selects `?voucherIds=`; cooperative dashboard + onboarding CTAs point to `#receive-delivery`.
+- RBAC: removed default `harvests:create|edit|request_exception` from cooperative permissions; policy uses voucher-first intake for cooperative and exporter roles.
+
+### 2026-06-17 (dashboard: plot detail progressive disclosure)
+- Plot detail reframed: slim map hero with single readiness headline, unified “What’s missing?” card, and collapsible sections (Documents, Screening, History, Field ops).
+- Shared `PlotDetailProvider` deduplicates map preview, evidence, legal sync, and tenure verification fetches.
+- History and screening collapsed by default; geometry loads only when History section expands. Breadcrumb/title use plot name.
+
+### 2026-06-17 (dashboard: exporter harvest capture policy + lineage reframe)
+- Exporters default to **link received lots** (`/harvests`) instead of **record batches** (`/harvests/new`); lineage step renamed `link_received_lots`.
+- Harvest batch creation gated to cooperative role or tenants with cooperative in supply chain roles / explicit **integrated harvest capture** flag (Settings).
+- RBAC: removed `harvests:create|edit|request_exception` from default exporter permissions; policy helper `canCreateHarvestBatch` overrides when integrated capture is enabled.
+
+### 2026-06-17 (FEAT-003 S5 Phase C: geometry capture metadata + dashboard badge)
+- Persist geometry confidence snapshot on local plot save + `POST /v1/plots` (`geometry_capture` JSONB).
+- Map preview API returns metadata; plot detail map hero shows low/moderate GPS confidence badges.
+
+### 2026-06-17 (FEAT-003 S5 Phase B: offline manual trace gate)
+- Draw-on-map blocked offline without satellite imagery (`GEO-108`); routes to `/offline-maps` download screen.
+- Online Esri tiles via `pingFieldMapImagery`; offline pack must cover plot coordinates; audit `plot_manual_trace_saved` stores pack id.
+
+### 2026-06-17 (FEAT-003 S5: geometry confidence + manual trace plan)
+- Published execution plan `product-os/01-roadmap/feat-003-s5-geometry-confidence-manual-trace.md` (phases A–D).
+- Phase A shipped: `plotGeometryConfidence` scoring, mobile `GeometryConfidenceBanner`, analytics events; no silent satellite affine.
+
+### 2026-06-17 (offline: ground-truth photo save UX)
+- Split camera vs save busy state in `GroundTruthPhotoCapture`: aim screen no longer shows "Opening camera…" after "Use photo".
+- Optimistic photo list update + N/E/S/W thumbnail strip on stand/aim; preview shows "Saving photo…" while persisting.
+
+### 2026-06-17 (dashboard: plot detail field ops accordion)
+- Assignment lifecycle moved under collapsed **Advanced — Field operations** on plot detail; visible only to exporter and cooperative roles.
+- Panel lazy-loads when expanded; importers and reviewers no longer see operator UUID controls by default.
+
+### 2026-06-17 (dashboard: plot detail EUDR readiness + screening labels)
+- Map hero now labels **Deforestation screening** (not “Compliance status”) with human-readable screening outcomes.
+- Added **EUDR readiness** checklist on plot detail: tenure, evidence, ground-truth photos, and field capture gaps so `compliant` screening is not read as dossier-complete.
+- Map-preview API now returns ground-truth photo verification counts for readiness.
+
+### 2026-06-17 (dashboard: plot detail map hero)
+- Added read-only `PlotMapHero` on `/plots/[id]` with Esri satellite tiles, polygon/pin overlay, and capture/screening summary badges.
+- New backend `GET /v1/plots/:id/map-preview` + dashboard proxy `/api/plots/[id]/map-preview` (tenant consent + auth pass-through).
+- Replaced placeholder “Plot Record” card; geometry history and compliance panels unchanged below map.
+
+### 2026-06-16 (offline: photo wizard — inward gate + N/E/S/W compass)
+- Photo capture is now a one-action-per-screen wizard: stand (walk in) → aim (N/E/S/W + compass) → preview → summary.
+- Inward gate: ≥20 m from plot border (scales down on small plots, 5 m floor); compass ±25° before shutter.
+- Walk completion shows slim header until 4/4 photos done; **48** offline tests green.
+
+### 2026-06-16 (offline: post-walk inline ground-truth photos)
+- Added shared `GroundTruthPhotoCapture` (map, on-plot GPS gate, Photo 1–4 slots); embedded on walk completion screen after short-path save.
+- Completion logic: `isGroundTruthPhotoSetComplete` requires four clearance-verified on-plot photos; `nextGroundTruthPhotoSlotIndex` helper.
+- Refactored `PhotoVaultPanel` to wrapper; removed orange standpoint marker from photo map.
+- Updated `en.json` farmer copy (no cardinal/inward jargon); **47** offline vitest tests green.
+
+### 2026-06-17 (dashboard: exporter A+ slice 9 — lineage visibility + seal analytics)
+- Added exporter home **lineage checklist** (`ExporterLineageProgressCard`) with step CTAs until seal milestone.
+- Added **lineage summary** card on exporter package detail (`PackageLineageSummaryCard`) for producer → plot → batch QA.
+- Instrumented `dashboard_package_seal_success` / `_failure` and `dashboard_exporter_lineage_step_clicked` analytics events.
+- Packages table now uses mobile card layout below `md` breakpoint; **23** new `en.json` keys; **444** tests passing.
+
+### 2026-06-17 (dashboard: A+ slice 8 — attention strip i18n)
+- Added `dashboard-attention-copy.ts` with localized owned/upstream/yield/trial/summary/onboarding attention messages and severity/aria chrome.
+- Wired `buildDashboardAttentionItems` and `DashboardAttentionStrip` through locale `t`; registered manifest in `workflow-copy-manifest.ts`.
+- Synced **31** `workflow.dashboard.attention.*` keys into `en.json`; **435** dashboard tests passing.
+
 ### 2026-06-16 (dashboard: A+ slice 3 — legacy signup wizard + error fallbacks)
 - Fully localized `create-account-wizard.tsx` via `getSignupCopy` / `getAuthCopy` helpers (legacy component; live flow uses `/create-account` step components).
 - Added `workflow-error-copy` with `resolveWorkflowErrorMessage`; wired inbox fulfillment, plots, field ops, evidence, billing upgrade errors.
@@ -310,6 +410,16 @@
 - Phase F: progressive virgin-state unlock (one active step, progress bar, locked future steps).
 - Multi-role orgs: `supply_chain_roles[]` on commercial profile, signup multi-select, Settings panel with presets, sidebar role switcher hydration.
 - Dashboard P0: single summary fetch returns packages+campaigns; prefetched home data passed to child cards; `DashboardSkeleton` loading gate; reviewer issue triage replaces misleading satellite alert labels.
+
+### 2026-06-17 (field app: preview OTA — FEAT-003 S5)
+- Published `eas update` to `preview` branch (iOS + Android), runtime `1.0.0`.
+- Message: geometry confidence, manual trace gate, capture metadata, photo UX.
+- Dashboard: https://expo.dev/accounts/raphstl/projects/tracebud-offline/updates/8b4c2db8-f501-47f0-905a-75d538db630d (iOS group)
+
+### 2026-06-16 (FEAT-003 S5 Phase D: geometry reviewer assist)
+- Dashboard `PlotGeometryReviewerPanel` on plot detail: satellite underlay, current vs simplified boundary preview, 5% area variance guard, audited Apply.
+- Backend `PATCH /v1/plots/:id/geometry` extended to exporter/cooperative/admin/country_reviewer with tenant scope; audit payload includes `reviewerAssist`.
+- Analytics: `plot_geometry_revision_applied`.
 
 ### 2026-06-16 (dashboard: Phase D mini review queue on homepage)
 - Importer and country reviewer dashboards show top-5 inline review queue with per-shipment actions (review, resolve hold, prepare TRACES filing).

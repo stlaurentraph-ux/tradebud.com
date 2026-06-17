@@ -2,6 +2,7 @@ import type { ShipmentStatus, TenantRole } from '@/types';
 
 export interface VirginProgressSignals {
   total_packages?: number;
+  total_harvest_batches?: number;
   total_plots?: number;
   total_farmers?: number;
   packages_by_status?: Partial<Record<ShipmentStatus, number>>;
@@ -10,6 +11,7 @@ export interface VirginProgressSignals {
   outgoing_requests_pending?: number;
   contacts_uploaded?: boolean;
   campaign_created?: boolean;
+  first_plot_captured?: boolean;
 }
 
 const VIRGIN_STEPS_BY_ROLE: Record<TenantRole, number> = {
@@ -37,9 +39,12 @@ export function countCompletedVirginSteps(role: TenantRole, signals: VirginProgr
   switch (role) {
     case 'exporter': {
       let completed = 0;
-      if (farmers > 0) completed = 1;
-      if (plots > 0) completed = Math.max(completed, 2);
-      if (packages > 0) completed = Math.max(completed, 3);
+      const hasProducers = farmers > 0 || signals.contacts_uploaded;
+      const hasPlots = plots > 0 || signals.first_plot_captured;
+      const linkedLots = (signals.total_harvest_batches ?? 0) > 0;
+      if (hasProducers) completed = 1;
+      if (hasPlots) completed = Math.max(completed, 2);
+      if (linkedLots || packages > 0) completed = Math.max(completed, 3);
       if (readyOrSealed > 0) completed = 4;
       return completed;
     }
@@ -72,12 +77,17 @@ export function countCompletedVirginSteps(role: TenantRole, signals: VirginProgr
   }
 }
 
-export function readVirginOnboardingFlags(): Pick<VirginProgressSignals, 'contacts_uploaded' | 'campaign_created'> {
+export function readVirginOnboardingFlags(): Pick<
+  VirginProgressSignals,
+  'contacts_uploaded' | 'campaign_created' | 'first_plot_captured'
+> {
   if (typeof window === 'undefined') {
-    return { contacts_uploaded: false, campaign_created: false };
+    return { contacts_uploaded: false, campaign_created: false, first_plot_captured: false };
   }
   return {
     contacts_uploaded: window.sessionStorage.getItem('tracebud_onboarding_action_contacts_uploaded') === '1',
     campaign_created: window.sessionStorage.getItem('tracebud_onboarding_action_campaign_created') === '1',
+    first_plot_captured:
+      window.sessionStorage.getItem('tracebud_onboarding_action_first_plot_captured') === '1',
   };
 }

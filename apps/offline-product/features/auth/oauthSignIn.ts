@@ -94,5 +94,13 @@ export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<
     return signInWithAppleNative();
   }
 
+  if (provider === 'google' && Platform.OS !== 'web') {
+    const { isGoogleNativeSignInConfigured } = await import('@/features/auth/googleOAuthConfig');
+    if (isGoogleNativeSignInConfigured()) {
+      const { signInWithGoogleNative } = await import('@/features/auth/googleSignIn.native');
+      return signInWithGoogleNative();
+    }
+  }
+
   return signInWithOAuthBrowser(provider);
 }

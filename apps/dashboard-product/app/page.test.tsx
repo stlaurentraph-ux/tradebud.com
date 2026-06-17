@@ -85,10 +85,6 @@ vi.mock('@/components/dashboards/dashboard-attention-strip', () => ({
   DashboardAttentionStrip: () => null,
 }));
 
-vi.mock('@/components/onboarding/onboarding-checklist-card', () => ({
-  OnboardingChecklistCard: () => <div>Onboarding Checklist</div>,
-}));
-
 vi.mock('@/lib/onboarding-context', () => ({
   useOnboarding: () => ({
     phase: 'checklist',

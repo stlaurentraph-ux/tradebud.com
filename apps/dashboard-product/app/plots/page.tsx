@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Filter, ChevronRight, MapPin, CheckCircle, AlertTriangle, XCircle, AlertCircle } from 'lucide-react';
+import { Plus, Filter, ChevronRight, MapPin, Send } from 'lucide-react';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { PlotsDataGuidanceCard } from '@/components/plots/plots-data-guidance-card';
+import { PlotMapThumbnail } from '@/components/plots/plot-map-thumbnail';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { LocaleContext } from '@/lib/locale-context';
 import {
-  getPlotDeforestationRiskLabel,
-  getPlotsAddCtaLabel,
-  getPlotsEmptyMessage,
+  getPlotsFieldCaptureColumnLabel,
   getPlotsFiltersLabel,
   getPlotsOriginColumnLabel,
   getPlotsPageSubtitle,
@@ -33,20 +35,88 @@ import {
   getPlotsStatLabel,
   getPlotsTableTitle,
 } from '@/lib/workflow-terminology-labels';
+import { readApiErrorMessage } from '@/lib/api-error-message';
+import { listContacts, type ContactRecord } from '@/lib/contact-service';
+import { validatePlotCreateInput } from '@/lib/plot-create-validation';
+import { useTenantPlots } from '@/lib/use-tenant-plots';
+import {
+  getPlotInventoryFieldCaptureDetail,
+  getPlotInventoryFieldCaptureShortLabel,
+  getPlotInventoryRiskDetail,
+  getPlotInventoryRiskShortLabel,
+  resolvePlotInventoryDisplayRisk,
+  resolvePlotInventoryFieldCaptureShort,
+  summarizePlotInventory,
+  type PlotInventoryDisplayRisk,
+  type PlotInventoryFieldCaptureShort,
+} from '@/lib/plot-inventory';
+import {
+  getPlotsCreateDialogFormHeading,
+  getPlotsCreateDialogIntro,
+  getPlotsCreateDialogProducerGenerateLabel,
+  getPlotsCreateDialogProducerHint,
+  getPlotsCreateDialogProducerLabel,
+  getPlotsCreateDialogProducerPendingSuffix,
+  getPlotsCreateDialogProducerSelectPlaceholder,
+  getPlotsCreateDialogTitle,
+  getPlotsEmptyGuidanceMessage,
+  getPlotsRegisterManualCtaLabel,
+  getPlotsRequestCtaLabel,
+  getPlotsCreateSuccessToast,
+  PLOTS_DATA_REQUEST_HREF,
+} from '@/lib/plot-create-copy';
 
-const riskColors = {
+const riskBadgeStyles: Record<PlotInventoryDisplayRisk, string> = {
   low: 'text-green-400 bg-green-400/10',
   medium: 'text-amber-400 bg-amber-400/10',
   high: 'text-red-400 bg-red-400/10',
-  unknown: 'text-slate-500 bg-slate-200/40',
+  pending: 'text-slate-500 bg-slate-500/10',
 };
 
-const RiskIcon = ({ risk }: { risk: 'low' | 'medium' | 'high' | 'unknown' }) => {
-  if (risk === 'low') return <CheckCircle className="w-4 h-4 text-green-400" />;
-  if (risk === 'medium') return <AlertTriangle className="w-4 h-4 text-amber-400" />;
-  if (risk === 'high') return <XCircle className="w-4 h-4 text-red-400" />;
-  return <AlertCircle className="w-4 h-4 text-slate-500" />;
+const fieldCaptureBadgeStyles: Record<PlotInventoryFieldCaptureShort, string> = {
+  mapped: 'text-green-400 bg-green-400/10',
+  pin_ok: 'text-green-400 bg-green-400/10',
+  pin: 'text-amber-400 bg-amber-400/10',
+  review: 'text-amber-400 bg-amber-400/10',
+  pending: 'text-slate-500 bg-slate-500/10',
 };
+
+function InventoryBadge({
+  label,
+  title,
+  className,
+}: {
+  label: string;
+  title: string;
+  className: string;
+}) {
+  const badge = (
+    <span
+      className={`inline-block text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap ${className}`}
+    >
+      {label}
+    </span>
+  );
+
+  if (!title.trim()) {
+    return badge;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex cursor-help rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          aria-label={title}
+        >
+          {badge}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{title}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export default function PlotsPage() {
   const localeContext = useContext(LocaleContext);
@@ -54,22 +124,19 @@ export default function PlotsPage() {
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
   const role = user?.active_role;
-  const [plots, setPlots] = useState<Array<{
-    id: string;
-    name: string;
-    farmer_name?: string;
-    area_hectares: number;
-    deforestation_risk: 'low' | 'medium' | 'high' | 'unknown';
-    evidence: unknown[];
-    verified: boolean;
-  }>>([]);
+  const { plots, isLoading: isPlotsLoading, error: plotsLoadError, reload: reloadPlots } = useTenantPlots(
+    user?.tenant_id ?? null,
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [producerContacts, setProducerContacts] = useState<ContactRecord[]>([]);
   const [newPlot, setNewPlot] = useState({
     name: '',
     farmerId: '',
+    linkedContactId: '',
+    producerName: '',
     clientPlotId: '',
     declaredAreaHa: '',
     latitude: '',
@@ -83,18 +150,32 @@ export default function PlotsPage() {
   );
 
   const totalArea = plots.reduce((sum, p) => sum + p.area_hectares, 0);
-  const lowRiskCount = plots.filter((p) => p.deforestation_risk === 'low').length;
-  const mediumRiskCount = plots.filter((p) => p.deforestation_risk === 'medium').length;
-  const highRiskCount = plots.filter((p) => p.deforestation_risk === 'high').length;
+  const plotSummary = summarizePlotInventory(plots);
+
+  useEffect(() => {
+    if (!isCreateDialogOpen) return;
+    void listContacts()
+      .then((contacts) => setProducerContacts(contacts.filter((contact) => contact.contact_type === 'farmer')))
+      .catch(() => setProducerContacts([]));
+  }, [isCreateDialogOpen]);
 
   const handleCreatePlot = async () => {
     setCreateError(null);
+
+    const validationError = validatePlotCreateInput(newPlot);
+    if (validationError) {
+      setCreateError(validationError);
+      return;
+    }
+
     setIsCreating(true);
     try {
       const token = typeof window !== 'undefined' ? window.sessionStorage.getItem('tracebud_token') : null;
       const payload = {
         farmerId: newPlot.farmerId.trim(),
         clientPlotId: newPlot.clientPlotId.trim(),
+        name: newPlot.name.trim() || newPlot.clientPlotId.trim(),
+        ...(newPlot.linkedContactId ? { producerContactId: newPlot.linkedContactId } : {}),
         geometry: {
           type: 'Point',
           coordinates: [Number(newPlot.longitude), Number(newPlot.latitude)],
@@ -109,28 +190,18 @@ export default function PlotsPage() {
         },
         body: JSON.stringify(payload),
       });
-      const body = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
       if (!response.ok) {
-        throw new Error(body.error ?? 'Failed to create plot.');
+        throw new Error(await readApiErrorMessage(response, 'Failed to create plot.'));
       }
-      const createdId = body.id ?? `plot_${Date.now()}`;
-      setPlots((previous) => [
-        {
-          id: createdId,
-          name: newPlot.name.trim() || newPlot.clientPlotId.trim(),
-          area_hectares: Number(newPlot.declaredAreaHa) || 0,
-          farmer_name: user?.name ?? (isCooperative ? 'Member' : 'Producer'),
-          deforestation_risk: 'unknown',
-          evidence: [],
-          verified: false,
-        },
-        ...previous,
-      ]);
       markOnboardingAction('first_plot_captured');
+      toast.success(getPlotsCreateSuccessToast(t));
+      reloadPlots();
       setIsCreateDialogOpen(false);
       setNewPlot({
         name: '',
         farmerId: '',
+        linkedContactId: '',
+        producerName: '',
         clientPlotId: '',
         declaredAreaHa: '',
         latitude: '',
@@ -149,25 +220,35 @@ export default function PlotsPage() {
         title={getPlotsPageTitle(t)}
         description={getPlotsPageSubtitle(role, t)}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm">
               <Filter className="w-4 h-4 mr-2" />
               {getPlotsFiltersLabel(t)}
             </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={PLOTS_DATA_REQUEST_HREF}>
+                <Send className="w-4 h-4 mr-2" />
+                {getPlotsRequestCtaLabel(t)}
+              </Link>
+            </Button>
             <Button
               size="sm"
+              variant="secondary"
               onClick={() => {
+                setCreateError(null);
                 setIsCreateDialogOpen(true);
               }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {getPlotsAddCtaLabel(t)}
+              {getPlotsRegisterManualCtaLabel(t)}
             </Button>
           </div>
         }
       />
 
       <main className="flex-1 p-6 space-y-6">
+        <PlotsDataGuidanceCard role={role} t={t} />
+
         {/* Plots Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -179,24 +260,26 @@ export default function PlotsPage() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className={plotSummary.needs_action > 0 ? 'border-amber-200 bg-amber-50/40' : undefined}>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('low', role, t)}</div>
-              <div className="text-3xl font-bold text-green-400 mt-2">{lowRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('low', role, t)}</p>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('needs_action', role, t)}</div>
+              <div className={`text-3xl font-bold mt-2 ${plotSummary.needs_action > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                {plotSummary.needs_action}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('needs_action', role, t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('medium', role, t)}</div>
-              <div className="text-3xl font-bold text-amber-400 mt-2">{mediumRiskCount}</div>
-              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('medium', role, t)}</p>
+              <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('mapped', role, t)}</div>
+              <div className="text-3xl font-bold text-green-400 mt-2">{plotSummary.mapped}</div>
+              <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('mapped', role, t)}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-sm font-medium text-muted-foreground">{getPlotsStatLabel('high', role, t)}</div>
-              <div className="text-3xl font-bold text-red-400 mt-2">{highRiskCount}</div>
+              <div className="text-3xl font-bold text-red-400 mt-2">{plotSummary.high_risk}</div>
               <p className="text-xs text-muted-foreground mt-2">{getPlotsStatHint('high', role, t)}</p>
             </CardContent>
           </Card>
@@ -221,55 +304,79 @@ export default function PlotsPage() {
             <CardTitle className="text-lg">{getPlotsTableTitle(role, t)}</CardTitle>
           </CardHeader>
           <CardContent>
+            <TooltipProvider delayDuration={200}>
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-20">Map</TableHead>
                     <TableHead>Plot Name</TableHead>
                     <TableHead>{getPlotsOriginColumnLabel(role, t)}</TableHead>
                     <TableHead>Area (ha)</TableHead>
-                    <TableHead>Deforestation Risk</TableHead>
+                    <TableHead>Deforestation screening</TableHead>
+                    <TableHead>{getPlotsFieldCaptureColumnLabel(t)}</TableHead>
                     <TableHead>Evidence</TableHead>
-                    <TableHead>Verified</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPlots.length === 0 ? (
+                  {isPlotsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        {getPlotsEmptyMessage(t)}
+                      <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
+                        Loading plots…
+                      </TableCell>
+                    </TableRow>
+                  ) : plotsLoadError ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center text-sm text-destructive">
+                        {plotsLoadError}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredPlots.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-8 text-center">
+                        <p className="text-sm text-muted-foreground">{getPlotsEmptyGuidanceMessage(role, t)}</p>
+                        <Button asChild size="sm" variant="outline" className="mt-4">
+                          <Link href={PLOTS_DATA_REQUEST_HREF}>{getPlotsRequestCtaLabel(t)}</Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredPlots.map((plot) => {
+                      const displayRisk = resolvePlotInventoryDisplayRisk(plot);
+                      const fieldCaptureShort = resolvePlotInventoryFieldCaptureShort(plot);
+
                       return (
                         <TableRow key={plot.id}>
+                          <TableCell>
+                            <PlotMapThumbnail plotId={plot.id} />
+                          </TableCell>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-muted-foreground" />
-                              {plot.name}
+                              <MapPin className="w-4 h-4 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{plot.name}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-sm">{plot.farmer_name || 'Unknown'}</TableCell>
                           <TableCell>{plot.area_hectares.toFixed(2)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <RiskIcon risk={plot.deforestation_risk} />
-                              <span className={`text-xs font-medium px-2 py-1 rounded ${riskColors[plot.deforestation_risk]}`}>
-                                {getPlotDeforestationRiskLabel(plot.deforestation_risk, t)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {plot.evidence.length} document{plot.evidence.length !== 1 ? 's' : ''}
+                            <InventoryBadge
+                              label={getPlotInventoryRiskShortLabel(displayRisk)}
+                              title={getPlotInventoryRiskDetail(plot)}
+                              className={riskBadgeStyles[displayRisk]}
+                            />
                           </TableCell>
                           <TableCell>
-                            {plot.verified ? (
-                              <CheckCircle className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <AlertTriangle className="w-4 h-4 text-amber-400" />
-                            )}
+                            <InventoryBadge
+                              label={getPlotInventoryFieldCaptureShortLabel(fieldCaptureShort)}
+                              title={getPlotInventoryFieldCaptureDetail(plot)}
+                              className={fieldCaptureBadgeStyles[fieldCaptureShort]}
+                            />
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {plot.evidence.length === 0
+                              ? '—'
+                              : `${plot.evidence.length} doc${plot.evidence.length !== 1 ? 's' : ''}`}
                           </TableCell>
                           <TableCell>
                             <Link href={`/plots/${plot.id}`}>
@@ -285,23 +392,78 @@ export default function PlotsPage() {
                 </TableBody>
               </Table>
             </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
       </main>
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create plot</DialogTitle>
-            <DialogDescription>Creates a real plot record via backend `/v1/plots`.</DialogDescription>
+            <DialogTitle>{getPlotsCreateDialogTitle(t)}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+              <p>{getPlotsCreateDialogIntro(role, t)}</p>
+              <Button asChild size="sm" variant="link" className="mt-2 h-auto p-0 text-amber-950 underline">
+                <Link href={PLOTS_DATA_REQUEST_HREF}>{getPlotsRequestCtaLabel(t)}</Link>
+              </Button>
+            </div>
+            <p className="text-sm font-medium text-foreground">{getPlotsCreateDialogFormHeading(t)}</p>
+            <div className="space-y-3">
             <div>
               <Label>Plot name</Label>
               <Input value={newPlot.name} onChange={(e) => setNewPlot({ ...newPlot, name: e.target.value })} />
             </div>
             <div>
-              <Label>{isCooperative ? 'Member ID (UUID)' : 'Producer ID (UUID)'}</Label>
-              <Input value={newPlot.farmerId} onChange={(e) => setNewPlot({ ...newPlot, farmerId: e.target.value })} />
+              <Label>{getPlotsCreateDialogProducerLabel(role, t)}</Label>
+              {producerContacts.length > 0 ? (
+                <select
+                  className="mb-2 flex h-10 w-full rounded-md border border-input bg-secondary px-3 py-2 text-sm"
+                  value=""
+                  onChange={(event) => {
+                    const contact = producerContacts.find((item) => item.id === event.target.value);
+                    if (!contact) return;
+                    setNewPlot((previous) => ({
+                      ...previous,
+                      linkedContactId: contact.id,
+                      producerName: contact.full_name,
+                      farmerId: contact.farmer_profile_id ?? (previous.farmerId || crypto.randomUUID()),
+                    }));
+                  }}
+                >
+                  <option value="">{getPlotsCreateDialogProducerSelectPlaceholder(role, t)}</option>
+                  {producerContacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.full_name}
+                      {contact.farmer_profile_id ? '' : getPlotsCreateDialogProducerPendingSuffix(t)}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <div className="flex gap-2">
+                <Input
+                  value={newPlot.farmerId}
+                  onChange={(e) => setNewPlot({ ...newPlot, farmerId: e.target.value })}
+                  className="text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() =>
+                    setNewPlot((previous) => ({
+                      ...previous,
+                      farmerId: crypto.randomUUID(),
+                    }))
+                  }
+                >
+                  {getPlotsCreateDialogProducerGenerateLabel(role, t)}
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {getPlotsCreateDialogProducerHint(role, t)}
+              </p>
             </div>
             <div>
               <Label>Client Plot ID</Label>
@@ -322,11 +484,12 @@ export default function PlotsPage() {
               </div>
             </div>
             {createError ? <p className="text-sm text-destructive">{createError}</p> : null}
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
             <Button onClick={() => void handleCreatePlot()} disabled={isCreating}>
-              {isCreating ? 'Creating...' : 'Create plot'}
+              {isCreating ? 'Saving...' : getPlotsRegisterManualCtaLabel(t)}
             </Button>
           </DialogFooter>
         </DialogContent>

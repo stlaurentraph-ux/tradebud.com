@@ -1,5 +1,7 @@
+import type { ContactActivityType } from '@/lib/contact-activity-types';
+
 export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
-export type ContactType = 'exporter' | 'cooperative' | 'farmer' | 'other';
+export type { ContactActivityType, ContactActivityType as ContactType } from '@/lib/contact-activity-types';
 
 export interface ContactRecord {
   id: string;
@@ -7,7 +9,7 @@ export interface ContactRecord {
   email: string;
   phone: string | null;
   organization: string | null;
-  contact_type: ContactType;
+  contact_type: ContactActivityType;
   status: ContactStatus;
   country: string | null;
   tags: string[];
@@ -67,7 +69,7 @@ export async function createContact(input: {
   email: string;
   phone?: string | null;
   organization?: string | null;
-  contact_type?: ContactType;
+  contact_type?: ContactActivityType;
   country?: string | null;
   tags?: string[];
   consent_status?: 'unknown' | 'granted' | 'revoked';

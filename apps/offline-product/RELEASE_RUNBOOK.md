@@ -55,9 +55,14 @@ npm run release:preflight:production:online
 OTA (only after validation):
 
 ```bash
-npm run update:preview
+npm run qa:device
+# Complete §2 + §7 on a physical device, then:
+npm run qa:device:signoff -- --tester "You" --device "Phone" --os "iOS 18" --build preview
+npm run update:preview:safe
 npm run update:production
 ```
+
+`update:preview:safe` runs unit tests, field regression guard, and **device sign-off assert** (requires `DEVICE_SMOKE_SIGNOFF.json` at current `git HEAD`). Emergency skip: `DEVICE_SMOKE_SIGNOFF_SKIP=1` (log in `daily-log.md`).
 
 ## Pre-release gates (must pass)
 

@@ -5,6 +5,9 @@ import type { PlotPhoto } from '@/features/state/persistence.native';
 export const GROUND_TRUTH_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 export type GroundTruthPhotoDirection = (typeof GROUND_TRUTH_DIRECTIONS)[number];
 
+/** Farmer-facing photo slots (stored with legacy direction keys for upsert). */
+export const GROUND_TRUTH_PHOTO_SLOT_COUNT = GROUND_TRUTH_DIRECTIONS.length;
+
 /** Compass heading (degrees) the camera should face for each slot. */
 export const TARGET_HEADING_BY_DIRECTION: Record<GroundTruthPhotoDirection, number> = {
   north: 0,
@@ -14,6 +17,12 @@ export const TARGET_HEADING_BY_DIRECTION: Record<GroundTruthPhotoDirection, numb
 };
 
 export const DEFAULT_POINT_PLOT_PHOTO_RADIUS_M = 25;
+/** EUDR: walked polygon required at or above this area; inward photo standoff applies here. */
+export const POLYGON_CAPTURE_MIN_HECTARES = 4;
+/** Target minimum distance from plot border for photo standpoint (plots ≥ 4 ha). */
+export const DEFAULT_MIN_INWARD_FROM_BORDER_M = 20;
+/** Smallest inward requirement on very small plots (metres). */
+export const MIN_INWARD_FROM_BORDER_FLOOR_M = 5;
 /** EUDR deforestation cutoff — photos must be taken after this date. */
 export const EUDR_PHOTO_CUTOFF_MS = Date.parse('2020-12-31T23:59:59.999Z');
 const EARTH_RADIUS_M = 6_371_000;
@@ -74,7 +83,109 @@ export function computePlotPhotoStandpoint(plot: Plot): MapCoordinate | null {
   };
 }
 
-/** True when the device may open the camera shutter for this plot. */
+function distancePointToSegmentM(
+  latitude: number,
+  longitude: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const cosLat = Math.cos((latitude * Math.PI) / 180);
+  const x = longitude * cosLat;
+  const y = latitude;
+  const x1 = lon1 * cosLat;
+  const y1 = lat1;
+  const x2 = lon2 * cosLat;
+  const y2 = lat2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-20) {
+    return haversineMeters(latitude, longitude, lat1, lon1);
+  }
+  let t = ((x - x1) * dx + (y - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projLat = y1 + t * dy;
+  const projLon = (x1 + t * dx) / cosLat;
+  return haversineMeters(latitude, longitude, projLat, projLon);
+}
+
+/** Metres from the point to the nearest polygon edge (inside or outside the ring). */
+export function distanceToPolygonBorderM(
+  latitude: number,
+  longitude: number,
+  ring: Array<{ latitude: number; longitude: number }>,
+): number | null {
+  if (ring.length < 2) return null;
+  let min = Infinity;
+  for (let i = 0; i < ring.length; i++) {
+    const j = (i + 1) % ring.length;
+    const d = distancePointToSegmentM(
+      latitude,
+      longitude,
+      ring[i].latitude,
+      ring[i].longitude,
+      ring[j].latitude,
+      ring[j].longitude,
+    );
+    if (d < min) min = d;
+  }
+  return Number.isFinite(min) ? min : null;
+}
+
+/** Metres from the point to the plot border (inside the plot = positive clearance). */
+export function distanceToPlotBorderM(
+  latitude: number,
+  longitude: number,
+  plot: Plot,
+): number | null {
+  if (!plot.points.length) return null;
+  if (plot.kind === 'point') {
+    const anchor = plot.points[plot.points.length - 1];
+    const radiusM = plot.precisionMetersAtSave ?? DEFAULT_POINT_PLOT_PHOTO_RADIUS_M;
+    const distCenter = haversineMeters(latitude, longitude, anchor.latitude, anchor.longitude);
+    return Math.max(0, radiusM - distCenter);
+  }
+  if (!isPointInPolygonRing(latitude, longitude, plot.points)) {
+    return 0;
+  }
+  return distanceToPolygonBorderM(latitude, longitude, plot.points);
+}
+
+/** Best inward clearance available near plot centre (for scaling small-plot rules). */
+export function estimatePlotMaxInwardM(plot: Plot): number {
+  if (!plot.points.length) return 0;
+  if (plot.kind === 'point') {
+    const radiusM = plot.precisionMetersAtSave ?? DEFAULT_POINT_PLOT_PHOTO_RADIUS_M;
+    return Math.max(0, radiusM - MIN_INWARD_FROM_BORDER_FLOOR_M);
+  }
+  const centroid = computePlotPhotoStandpoint(plot);
+  if (!centroid) return 0;
+  if (!isPointInPolygonRing(centroid.latitude, centroid.longitude, plot.points)) {
+    return MIN_INWARD_FROM_BORDER_FLOOR_M;
+  }
+  return distanceToPolygonBorderM(centroid.latitude, centroid.longitude, plot.points) ?? 0;
+}
+
+/** Plots ≥ 4 ha must walk the boundary; photos also require standoff from the edge. */
+export function plotRequiresInwardPhotoStandoff(plot: Plot): boolean {
+  return plot.areaHectares >= POLYGON_CAPTURE_MIN_HECTARES;
+}
+
+/** Required metres inside the border before the camera may open. */
+export function resolveRequiredInwardFromBorderM(plot: Plot): number {
+  if (!plotRequiresInwardPhotoStandoff(plot)) {
+    return 0;
+  }
+  const maxInward = estimatePlotMaxInwardM(plot);
+  if (maxInward >= DEFAULT_MIN_INWARD_FROM_BORDER_M) {
+    return DEFAULT_MIN_INWARD_FROM_BORDER_M;
+  }
+  return Math.max(MIN_INWARD_FROM_BORDER_FLOOR_M, maxInward * 0.5);
+}
+
+/** True when coordinates lie inside the plot geography. */
 export function isAtPhotoCaptureLocation(
   latitude: number,
   longitude: number,
@@ -89,6 +200,23 @@ export function isAtPhotoCaptureLocation(
     return haversineMeters(latitude, longitude, anchor.latitude, anchor.longitude) <= radiusM;
   }
   return isPointInPolygonRing(latitude, longitude, plot.points);
+}
+
+/** True when the farmer is inside the plot and far enough from the edge to take photos. */
+export function isPhotoStandpointReady(
+  latitude: number,
+  longitude: number,
+  plot: Plot,
+): boolean {
+  if (!isAtPhotoCaptureLocation(latitude, longitude, plot)) {
+    return false;
+  }
+  if (!plotRequiresInwardPhotoStandoff(plot)) {
+    return true;
+  }
+  const clearance = distanceToPlotBorderM(latitude, longitude, plot);
+  if (clearance == null) return false;
+  return clearance >= resolveRequiredInwardFromBorderM(plot);
 }
 
 export function distanceToPhotoStandpointM(
@@ -159,7 +287,25 @@ export function isGroundTruthPhotoSetComplete(
   plot: Plot | null,
 ): boolean {
   if (!plot) return false;
-  return countGeoVerifiedGroundTruthDirections(photos, plot) >= GROUND_TRUTH_DIRECTIONS.length;
+  return countClearanceVerifiedGroundTruthPhotos(photos, plot) >= GROUND_TRUTH_PHOTO_SLOT_COUNT;
+}
+
+/** Next slot index (0–3) without a clearance-verified photo, or null when complete. */
+export function nextGroundTruthPhotoSlotIndex(
+  photos: PlotPhoto[],
+  plot: Plot,
+): number | null {
+  for (let i = 0; i < GROUND_TRUTH_DIRECTIONS.length; i++) {
+    const dir = GROUND_TRUTH_DIRECTIONS[i];
+    if (!isDirectionPhotoGeoVerified(photoForDirection(photos, dir), plot)) {
+      return i;
+    }
+  }
+  return null;
+}
+
+export function directionForSlotIndex(index: number): GroundTruthPhotoDirection {
+  return GROUND_TRUTH_DIRECTIONS[index] ?? GROUND_TRUTH_DIRECTIONS[0];
 }
 
 export function countGeoVerifiedGroundTruthPhotos(photos: PlotPhoto[], plot: Plot | null): number {

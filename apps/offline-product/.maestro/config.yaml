@@ -1,0 +1,3 @@
+# App id for Tracebud offline (see flows/*.yaml appId: com.tracebud.app)
+env:
+  APP_ID: com.tracebud.app

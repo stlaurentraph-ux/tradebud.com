@@ -1,10 +1,11 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
-import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
+import { resolveFarmerIdsForTenant, isFarmerInTenant } from '../common/tenant-farmer-scope';
 import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
+import { normalizePlotGeometryCaptureInput } from './plot-geometry-capture';
 import { SyncPlotLegalDto } from './dto/sync-plot-legal.dto';
 import { SyncPlotEvidenceDto } from './dto/sync-plot-evidence.dto';
 import { SyncPlotPhotosDto } from './dto/sync-plot-photos.dto';
@@ -119,6 +120,8 @@ export interface PlotAssignmentExportAuditEvent {
 
 @Injectable()
 export class PlotsService {
+  private geometryCaptureColumnAvailable: boolean | null = null;
+
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly gfw: GfwService,
@@ -130,6 +133,24 @@ export class PlotsService {
     private readonly pushNotifications: PushNotificationService,
     private readonly onboardingEmail: OnboardingEmailService,
   ) {}
+
+  private async plotHasGeometryCaptureColumn(): Promise<boolean> {
+    if (this.geometryCaptureColumnAvailable !== null) {
+      return this.geometryCaptureColumnAvailable;
+    }
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'plot'
+          AND column_name = 'geometry_capture'
+        LIMIT 1
+      `,
+    );
+    this.geometryCaptureColumnAvailable = (res.rowCount ?? 0) > 0;
+    return this.geometryCaptureColumnAvailable;
+  }
 
   private static parseNumeric(value: unknown): number | null {
     if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -303,11 +324,10 @@ export class PlotsService {
     countryCode?: string;
     fullName?: string | null;
   }): Promise<{ created: boolean }> {
-    const created = await this.ensureFarmerProfileForPlot(
-      params.farmerId,
-      params.userId,
-      params.countryCode,
-    );
+    const created = await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, {
+      countryCode: params.countryCode,
+      producerDisplayName: params.fullName ?? null,
+    });
     if (params.fullName) {
       await this.pool.query(
         `
@@ -344,16 +364,39 @@ export class PlotsService {
   private async ensureFarmerProfileForPlot(
     farmerId: string,
     authUserId: string | undefined,
-    countryCode = 'HN',
+    options?: {
+      countryCode?: string;
+      tenantId?: string | null;
+      producerContactId?: string | null;
+      producerDisplayName?: string | null;
+    },
   ): Promise<boolean> {
     if (!authUserId) {
       throw new BadRequestException('Missing authenticated user for plot creation');
     }
 
+    const countryCode = options?.countryCode ?? 'HN';
+    const tenantId = options?.tenantId ?? null;
+    const producerContactId = options?.producerContactId?.trim() || null;
+    const producerDisplayName = options?.producerDisplayName?.trim() || null;
+    const delegatedRegistration = farmerId !== authUserId;
+
     const existing = await this.pool.query(`SELECT user_id FROM farmer_profile WHERE id = $1::uuid`, [
       farmerId,
     ]);
     if (existing.rows.length > 0) {
+      if (delegatedRegistration) {
+        await this.linkProducerToTenantDirectory({
+          tenantId,
+          farmerId,
+          producerContactId,
+          producerDisplayName,
+        });
+        if (tenantId && !(await isFarmerInTenant(this.pool, farmerId, tenantId))) {
+          throw new ForbiddenException('This producer is not in your workspace directory.');
+        }
+        return false;
+      }
       const owner = String(existing.rows[0].user_id);
       if (owner !== authUserId) {
         throw new ForbiddenException(
@@ -363,13 +406,16 @@ export class PlotsService {
       return false;
     }
 
+    const profileUserId = delegatedRegistration ? farmerId : authUserId;
+
     await this.pool.query(
       `
       INSERT INTO user_account (id, role, name)
-      VALUES ($1::uuid, 'farmer', NULL)
-      ON CONFLICT (id) DO NOTHING
+      VALUES ($1::uuid, 'farmer', $2)
+      ON CONFLICT (id) DO UPDATE
+      SET name = COALESCE(user_account.name, EXCLUDED.name)
     `,
-      [authUserId],
+      [profileUserId, producerDisplayName],
     );
 
     await this.pool.query(
@@ -377,9 +423,57 @@ export class PlotsService {
       INSERT INTO farmer_profile (id, user_id, country_code, self_declared, status)
       VALUES ($1::uuid, $2::uuid, $3, true, 'active')
     `,
-      [farmerId, authUserId, countryCode],
+      [farmerId, profileUserId, countryCode],
     );
+
+    await this.linkProducerToTenantDirectory({
+      tenantId,
+      farmerId,
+      producerContactId,
+      producerDisplayName,
+    });
     return true;
+  }
+
+  private async linkProducerToTenantDirectory(input: {
+    tenantId: string | null;
+    farmerId: string;
+    producerContactId: string | null;
+    producerDisplayName: string | null;
+  }): Promise<void> {
+    if (!input.tenantId) {
+      return;
+    }
+
+    if (input.producerContactId) {
+      try {
+        await this.pool.query(
+          `
+            UPDATE crm_contacts
+            SET farmer_profile_id = $1, updated_at = NOW()
+            WHERE tenant_id = $2
+              AND id = $3
+          `,
+          [input.farmerId, input.tenantId, input.producerContactId],
+        );
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01' && code !== '42703') {
+          throw error;
+        }
+      }
+    }
+
+    if (input.producerDisplayName) {
+      await this.pool.query(
+        `
+          UPDATE user_account
+          SET name = COALESCE(name, $2)
+          WHERE id = $1::uuid
+        `,
+        [input.farmerId, input.producerDisplayName],
+      );
+    }
   }
 
   async create(
@@ -398,9 +492,33 @@ export class PlotsService {
       cadastralKey,
       landTitlePhotos,
       productionSystem,
+      producerContactId,
+      geometryCapture,
     } = createDto;
+    const plotName = createDto.name?.trim() || clientPlotId;
+    const geometryCapturePayload = normalizePlotGeometryCaptureInput(geometryCapture);
 
-    const profileCreated = await this.ensureFarmerProfileForPlot(farmerId, userId);
+    let producerDisplayName: string | null = null;
+    if (producerContactId?.trim() && tenantId) {
+      try {
+        const contactRes = await this.pool.query<{ full_name: string | null }>(
+          `SELECT full_name FROM crm_contacts WHERE tenant_id = $1 AND id = $2 LIMIT 1`,
+          [tenantId, producerContactId.trim()],
+        );
+        producerDisplayName = contactRes.rows[0]?.full_name?.trim() || null;
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+    }
+
+    const profileCreated = await this.ensureFarmerProfileForPlot(farmerId, userId, {
+      tenantId,
+      producerContactId: producerContactId?.trim() || null,
+      producerDisplayName,
+    });
     if (userId) {
       this.maybeSendFarmerWelcome({
         created: profileCreated,
@@ -501,7 +619,8 @@ export class PlotsService {
           declared_area_ha,
           precision_m_at_capture,
           hdop_at_capture,
-          production_system
+          production_system,
+          geometry_capture
         )
         SELECT
           $1,
@@ -514,7 +633,8 @@ export class PlotsService {
           $4,
           $5,
           $6,
-          $8
+          $8,
+          $9::jsonb
         FROM validated v
         WHERE (
           $7::text <> 'polygon'
@@ -537,13 +657,14 @@ export class PlotsService {
 
     const result = await this.pool.query(text, [
       farmerId,
-      clientPlotId,
+      plotName,
       kind,
       declaredAreaHa ?? null,
       precisionMeters ?? null,
       hdop ?? null,
       kind,
       productionSystem ?? null,
+      geometryCapturePayload ? JSON.stringify(geometryCapturePayload) : null,
     ]);
 
     if (result.rowCount === 0 && kind === 'polygon') {
@@ -579,8 +700,8 @@ export class PlotsService {
 
     const row = result.rows[0];
 
-    // Enforce 5% area tolerance if declaredAreaHa was provided
-    if (declaredAreaHa != null && row?.area_ha != null) {
+    // Point geometry has ~0 computed area; declared hectares are stored separately (GEO-103 uses declared only).
+    if (kind !== 'point' && declaredAreaHa != null && row?.area_ha != null) {
       const areaHa = Number(row.area_ha);
       const diffPct = Math.abs(areaHa - declaredAreaHa) / declaredAreaHa * 100;
       if (diffPct > 5) {
@@ -1775,20 +1896,30 @@ export class PlotsService {
     const result = await this.pool.query(
       `
         SELECT
-          id,
-          farmer_id,
-          name,
-          kind,
-          area_ha,
-          declared_area_ha,
-          precision_m_at_capture,
-          sinaph_overlap,
-          indigenous_overlap,
-          status,
-          created_at
-        FROM plot
-        WHERE farmer_id = ANY($1::uuid[])
-        ORDER BY created_at DESC
+          p.id,
+          p.farmer_id,
+          p.name,
+          p.kind,
+          p.area_ha,
+          p.declared_area_ha,
+          p.precision_m_at_capture,
+          p.sinaph_overlap,
+          p.indigenous_overlap,
+          p.status,
+          p.created_at,
+          COALESCE(cc.full_name, ua.name, LEFT(fp.id::text, 8)) AS farmer_name
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        LEFT JOIN user_account ua ON ua.id = fp.user_id
+        LEFT JOIN LATERAL (
+          SELECT full_name
+          FROM crm_contacts
+          WHERE farmer_profile_id = fp.id
+          ORDER BY updated_at DESC
+          LIMIT 1
+        ) cc ON TRUE
+        WHERE p.farmer_id = ANY($1::uuid[])
+        ORDER BY p.created_at DESC
       `,
       [farmerIds],
     );
@@ -1819,6 +1950,83 @@ export class PlotsService {
       throw new BadRequestException('Plot not found');
     }
     return { farmerId: res.rows[0].farmer_id as string };
+  }
+
+  async getPlotMapPreview(plotId: string) {
+    const hasGeometryCapture = await this.plotHasGeometryCaptureColumn();
+    const geometryCaptureSelect = hasGeometryCapture
+      ? 'p.geometry_capture'
+      : 'NULL::jsonb AS geometry_capture';
+
+    const res = await this.pool.query(
+      `
+        SELECT
+          p.id,
+          p.farmer_id,
+          p.name,
+          p.kind,
+          p.area_ha,
+          p.declared_area_ha,
+          p.status,
+          ${geometryCaptureSelect},
+          ST_AsGeoJSON(p.geometry) AS geometry_geojson,
+          COALESCE(cc.full_name, ua.name, LEFT(fp.id::text, 8)) AS farmer_name
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        LEFT JOIN user_account ua ON ua.id = fp.user_id
+        LEFT JOIN LATERAL (
+          SELECT full_name
+          FROM crm_contacts
+          WHERE farmer_profile_id = fp.id
+          ORDER BY updated_at DESC
+          LIMIT 1
+        ) cc ON TRUE
+        WHERE p.id = $1
+      `,
+      [plotId],
+    );
+
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    const row = res.rows[0];
+    let geometry: Record<string, unknown> | null = null;
+    if (row.geometry_geojson) {
+      try {
+        geometry = JSON.parse(row.geometry_geojson as string);
+      } catch {
+        geometry = null;
+      }
+    }
+
+    const areaRaw = row.area_ha ?? row.declared_area_ha;
+    const areaHa =
+      typeof areaRaw === 'number'
+        ? areaRaw
+        : typeof areaRaw === 'string'
+          ? Number(areaRaw)
+          : null;
+
+    const groundTruthPhotos = await this.getGroundTruthPhotoVerification(plotId);
+
+    return {
+      id: row.id as string,
+      farmer_id: row.farmer_id as string,
+      farmer_name: typeof row.farmer_name === 'string' ? row.farmer_name : null,
+      name: typeof row.name === 'string' ? row.name : `Plot ${String(row.id).slice(0, 8)}`,
+      kind: row.kind as string,
+      area_ha: Number.isFinite(areaHa) ? areaHa : null,
+      status: row.status as string,
+      geometry,
+      geometry_capture: row.geometry_capture ?? null,
+      ground_truth_photos: {
+        clearance_verified_count: groundTruthPhotos.clearanceVerifiedCount,
+        min_required: groundTruthPhotos.minRequired,
+        clearance_eligible: groundTruthPhotos.clearanceEligible,
+        total_count: groundTruthPhotos.totalCount,
+      },
+    };
   }
 
   async listReviewQueue(
@@ -2187,7 +2395,15 @@ export class PlotsService {
       };
     } catch (error: any) {
       if (error?.code === '42P01') {
-        throw new BadRequestException('ASN-004: Assignment relation not provisioned.');
+        return {
+          items: [],
+          total: 0,
+          limit,
+          offset,
+          status,
+          fromDays,
+          agentUserId,
+        };
       }
       throw error;
     }
@@ -2696,6 +2912,7 @@ export class PlotsService {
         JSON.stringify({
           plotId,
           reason: dto.reason,
+          reviewerAssist: dto.reviewerAssist === true,
           previous: {
             kind: existingRes.rows[0].kind ?? null,
             geometry: existingRes.rows[0].geometry_geojson ?? null,

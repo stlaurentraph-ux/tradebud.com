@@ -12,6 +12,7 @@ import { AddContactWizard } from '@/components/contacts/add-contact-wizard';
 import { AddOrganizationWizard } from '@/components/contacts/add-organization-wizard';
 import { CsvImportWizard } from '@/components/contacts/csv-import-wizard';
 import { createContact, type ContactType } from '@/lib/contact-service';
+import { listContactActivityTypesForRole, normalizeContactActivityType } from '@/lib/contact-activity-types';
 import {
   getContactsAddBreadcrumbLabel,
   getContactsAddCardCopy,
@@ -98,7 +99,9 @@ export default function AddContactPage() {
   const t = localeContext?.t;
   const { user } = useAuth();
   const isCooperative = user?.active_role === 'cooperative';
+  const isExporter = user?.active_role === 'exporter';
   const isImporter = user?.active_role === 'importer';
+  const role = user?.active_role;
   const [mode, setMode] = useState<AddMode>('select');
 
   useEffect(() => {
@@ -114,6 +117,7 @@ export default function AddContactPage() {
         defaultContactType: 'farmer' as ContactType,
         lockContactType: true,
         lockedTypeLabel: 'Member',
+        activityTypes: listContactActivityTypesForRole('cooperative'),
       };
     }
     if (isImporter) {
@@ -121,14 +125,24 @@ export default function AddContactPage() {
         defaultContactType: 'exporter' as ContactType,
         lockContactType: false,
         lockedTypeLabel: 'Contact',
+        activityTypes: listContactActivityTypesForRole('importer'),
+      };
+    }
+    if (isExporter) {
+      return {
+        defaultContactType: 'cooperative' as ContactType,
+        lockContactType: false,
+        lockedTypeLabel: 'Supplier',
+        activityTypes: listContactActivityTypesForRole('exporter'),
       };
     }
     return {
       defaultContactType: 'farmer' as ContactType,
       lockContactType: false,
       lockedTypeLabel: 'Producer',
+      activityTypes: listContactActivityTypesForRole('other'),
     };
-  }, [isCooperative, isImporter]);
+  }, [isCooperative, isImporter, isExporter]);
 
   const pageMode = resolveAddPageMode(mode);
 
@@ -179,7 +193,7 @@ export default function AddContactPage() {
           email: row.email || row.primary_email || '',
           phone: row.phone || row.primary_phone || null,
           organization: row.organization || row.name || null,
-          contact_type: (row.contact_type as ContactType) || 'other',
+          contact_type: normalizeContactActivityType(row.contact_type || row.activity_type),
           country: row.country || null,
           tags: row.tags ? row.tags.split(',').map((tag) => tag.trim()) : [],
           consent_status: (row.consent_status as 'unknown' | 'granted' | 'revoked') || 'unknown',
@@ -212,7 +226,7 @@ export default function AddContactPage() {
   };
 
   const breadcrumbs = [
-    { label: getContactsPageTitle(isCooperative, t), href: '/contacts' },
+    { label: getContactsPageTitle(role ?? isCooperative, t), href: '/contacts' },
     {
       label:
         pageMode === 'select'
@@ -363,6 +377,7 @@ export default function AddContactPage() {
               lockContactType={contactWizardDefaults.lockContactType}
               lockedTypeLabel={contactWizardDefaults.lockedTypeLabel}
               isCooperative={isCooperative}
+              activityTypes={contactWizardDefaults.activityTypes}
             />
           )}
 

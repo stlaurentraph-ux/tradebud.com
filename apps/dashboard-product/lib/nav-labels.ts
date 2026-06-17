@@ -20,6 +20,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
   Plots: 'nav.plots',
   Farmers: 'nav.farmers',
   Producers: 'nav.producers',
+  Suppliers: 'nav.suppliers',
   FPIC: 'nav.fpic',
   Contacts: 'nav.contacts',
   Members: 'nav.members',

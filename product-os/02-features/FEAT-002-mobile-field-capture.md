@@ -1148,6 +1148,39 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
 
 - [x] Provider/protocol choices finalized where needed for FEAT-002 S1 scope (no additional provider/protocol dependency introduced beyond existing platform stack).
 
+## Post-walk inline ground-truth photos (2026-06-16)
+
+After boundary walk save, a step-by-step photo wizard runs on the completion screen (one action per step).
+
+### Permission and gate
+
+- **Stand step:** plots **≥ 4 ha** require GPS inside plot **and** ≥ **20 m from border** (scaled on tight geometry). Plots **&lt; 4 ha** only require inside the plot (any stand, not centre-only).
+- **Aim step:** Standpoint valid **and** heading faces target cardinal (N/E/S/W) within ±25°.
+- Farmer role only; plot must belong to active capture session.
+
+### State transitions
+
+- `walk_saved -> photo_stand` → `photo_aim_{dir}` → `photo_preview_{dir}` → next direction or `photos_complete`.
+- Preview: **Use photo** persists; **Retake** returns to aim.
+- Legacy direction keys (`north`…`west`) for upsert/idempotency; UI shows N/E/S/W.
+
+### Exception handling
+
+- Location denied: alert; stand step blocked.
+- Inside but too close to edge: status shows metres remaining inward.
+- Capture outside standpoint at shutter: blocked.
+- Offline: photos persist locally via `upsertPlotGroundPhoto`.
+
+### Analytics
+
+- `photo_vault_capture_started` / `_success` with `plotId`, `direction`, `plotKind`.
+
+### Acceptance criteria
+
+- One screen per action: stand → N → preview → E → … → summary.
+- N/E/S/W with compass cue; minimal copy.
+- Checklist complete at four clearance-verified on-plot photos.
+
 ## Status
 
 Done (TB-V16-001 / FEAT-002)

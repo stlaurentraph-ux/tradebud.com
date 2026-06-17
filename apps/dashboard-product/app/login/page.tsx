@@ -44,24 +44,9 @@ export default function LoginPage() {
       await login(email, password);
       const nextPath = searchParams.get('next');
       const safeNext = nextPath && nextPath.startsWith('/') ? nextPath : '/';
-      const profileRes = await fetch('/api/launch/commercial-profile', {
-        cache: 'no-store',
-        headers: { Authorization: `Bearer ${sessionStorage.getItem('tracebud_token') ?? ''}` },
-      });
-      const profilePayload = (await profileRes.json().catch(() => ({}))) as {
-        profile?: { organization_name?: string | null; country?: string | null; primary_role?: string | null };
-      };
-      const profile = profilePayload.profile;
-      const workspaceComplete =
-        Boolean(profile?.organization_name?.trim()) &&
-        Boolean(profile?.country?.trim()) &&
-        Boolean(profile?.primary_role?.trim());
-      if (!workspaceComplete) {
-        router.push('/create-account?resume=workspace');
-        return;
-      }
       router.push(safeNext);
     } catch (err: unknown) {
+      setIsLoading(false);
       const message = err instanceof Error ? err.message : 'Login failed';
       if (message.toLowerCase().includes('invalid login credentials')) {
         setError(getAuthCopy('error_invalid_credentials', t));
@@ -70,8 +55,6 @@ export default function LoginPage() {
       } else {
         setError(message);
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 

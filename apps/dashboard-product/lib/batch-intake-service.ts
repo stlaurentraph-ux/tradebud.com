@@ -48,6 +48,20 @@ export async function listBatchIntakes(tenantId: string): Promise<ExporterBatchR
   }
 }
 
+export async function getBatchIntakeById(
+  tenantId: string,
+  lookupId: string,
+): Promise<ExporterBatchRecord | null> {
+  const normalized = lookupId.trim();
+  if (!normalized) return null;
+  const batches = await listBatchIntakes(tenantId);
+  return (
+    batches.find((batch) => batch.id === normalized) ??
+    batches.find((batch) => batch.batch_id === normalized) ??
+    null
+  );
+}
+
 export async function recordBatchIntake(
   tenantId: string,
   batch: ExporterBatchRecord,

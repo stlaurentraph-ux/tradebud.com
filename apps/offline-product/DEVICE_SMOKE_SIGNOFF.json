@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "commit": "8acde319e31e7a2ff49f4f804b5279d9811ee3ff",
+  "signedAt": "2026-06-17",
+  "tester": "Maestro simulator",
+  "device": "iPhone 17 Pro Max",
+  "os": "iOS 26.5",
+  "build": "preview",
+  "pass": true,
+  "sectionsVerified": [
+    "2",
+    "7"
+  ],
+  "checklist": "DEVICE_SMOKE_CHECKLIST.md"
+}

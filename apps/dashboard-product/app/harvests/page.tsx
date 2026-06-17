@@ -2,11 +2,10 @@
 
 import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, TrendingUp, AlertCircle, CheckCircle, Truck, MapPin, MessageSquare } from 'lucide-react';
+import { Plus, TrendingUp, AlertCircle, Truck, MapPin, MessageSquare } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -18,10 +17,19 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { PermissionGate } from '@/components/common/permission-gate';
+import { HarvestBatchCreateGate } from '@/components/common/harvest-batch-create-gate';
+import { HarvestReceiveDeliveryPanel } from '@/components/harvests/harvest-receive-delivery-panel';
+import {
+  calculateHarvestYieldCap,
+  HarvestBatchStatusBadge,
+} from '@/components/harvests/harvest-batch-status-badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { usesVoucherFirstHarvestIntake } from '@/lib/harvest-capture-policy';
 import { listBatchIntakes } from '@/lib/batch-intake-service';
+import { useDemoData } from '@/lib/demo-data-context';
+import type { ExporterBatchRecord } from '@/lib/exporter-batch-store';
+import { mockBatches } from '@/lib/mocks/batches';
 import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
@@ -37,109 +45,42 @@ import {
   getHarvestTotalBatchesMetricLabel,
   getHarvestYieldCapInfoBody,
   getHarvestYieldCapInfoTitle,
+  getRegisterDeliveryHeaderCtaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-interface Harvest {
-  id: string;
-  batch_id: string;
-  plot_id: string;
-  plot_name: string;
-  plot_area_hectares: number;
-  farmer_name: string;
-  weight_kg: number;
-  expected_yield_kg_per_ha: number;
-  date: string;
-  status: 'pass' | 'warning' | 'blocked';
-  exception_status?: 'none' | 'pending' | 'approved' | 'rejected';
-}
+interface Harvest extends ExporterBatchRecord {}
 
-const mockHarvests: Harvest[] = process.env.NODE_ENV !== 'production' ? [
-  {
-    id: 'harv_001',
-    batch_id: 'BATCH-2026-041',
-    plot_id: 'plot_117',
-    plot_name: 'Nyota Block A',
-    plot_area_hectares: 1.8,
-    farmer_name: 'Amina N.',
-    weight_kg: 1280,
-    expected_yield_kg_per_ha: 700,
-    date: '2026-04-18T09:30:00.000Z',
-    status: 'warning',
-    exception_status: 'pending',
-  },
-  {
-    id: 'harv_002',
-    batch_id: 'BATCH-2026-042',
-    plot_id: 'plot_241',
-    plot_name: 'Kijani Ridge',
-    plot_area_hectares: 2.3,
-    farmer_name: 'Daniel K.',
-    weight_kg: 1410,
-    expected_yield_kg_per_ha: 700,
-    date: '2026-04-19T10:15:00.000Z',
-    status: 'pass',
-    exception_status: 'none',
-  },
-  {
-    id: 'harv_003',
-    batch_id: 'BATCH-2026-043',
-    plot_id: 'plot_322',
-    plot_name: 'Valley Group Lot 7',
-    plot_area_hectares: 1.2,
-    farmer_name: 'Coop Cluster 7',
-    weight_kg: 980,
-    expected_yield_kg_per_ha: 700,
-    date: '2026-04-20T08:05:00.000Z',
-    status: 'blocked',
-    exception_status: 'none',
-  },
-] : [];
-
-function getStatusBadge(status: 'pass' | 'warning' | 'blocked') {
-  const config = {
-    pass: {
-      icon: CheckCircle,
-      color: 'bg-emerald-500/20 text-emerald-600',
-      label: 'Pass',
-    },
-    warning: {
-      icon: AlertCircle,
-      color: 'bg-amber-500/20 text-amber-600',
-      label: 'Warning: Above Capacity',
-    },
-    blocked: {
-      icon: AlertCircle,
-      color: 'bg-destructive/20 text-destructive',
-      label: 'Blocked: Excess Weight',
-    },
-  };
-  const { icon: Icon, color, label } = config[status];
-  return (
-    <Badge className={cn('gap-1', color)}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </Badge>
-  );
-}
-
-function calculateYieldCap(area: number, expectedYield: number): number {
-  return area * expectedYield;
-}
+const devMockHarvests: Harvest[] =
+  process.env.NODE_ENV !== 'production' ? mockBatches : [];
 
 export default function HarvestsPage() {
   const { user } = useAuth();
+  const { demoDataEnabled } = useDemoData();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const role = user?.active_role;
   const batchPageTitle = useMemo(() => getBatchPageTitle(role, t), [role, t]);
+  const voucherFirstIntake = usesVoucherFirstHarvestIntake(role);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
-  const [harvests, setHarvests] = useState<Harvest[]>(mockHarvests);
+  const [harvests, setHarvests] = useState<Harvest[]>(devMockHarvests);
 
   useEffect(() => {
-    if (!user?.tenant_id) return;
+    if (demoDataEnabled) {
+      setHarvests(mockBatches);
+      return;
+    }
+
+    if (!user?.tenant_id) {
+      setHarvests(devMockHarvests);
+      return;
+    }
+
     void listBatchIntakes(user.tenant_id).then((storedBatches) => {
-      if (storedBatches.length === 0) return;
+      if (storedBatches.length === 0) {
+        setHarvests(devMockHarvests);
+        return;
+      }
       setHarvests((previous) => {
         const merged = [...storedBatches, ...previous];
         const seen = new Set<string>();
@@ -150,7 +91,7 @@ export default function HarvestsPage() {
         });
       });
     });
-  }, [user?.tenant_id]);
+  }, [user?.tenant_id, demoDataEnabled]);
   const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');
@@ -194,18 +135,26 @@ export default function HarvestsPage() {
           { label: batchPageTitle },
         ]}
         actions={
-          <PermissionGate permission="harvests:create">
-            <Button asChild>
-              <Link href="/harvests/new">
-                <Plus className="mr-2 h-4 w-4" />
-                {getAddBatchInputCtaLabel(role, t)}
-              </Link>
-            </Button>
-          </PermissionGate>
+          <div className="flex flex-wrap items-center gap-2">
+            {voucherFirstIntake ? (
+              <Button asChild variant="default">
+                <Link href="#register-delivery">{getRegisterDeliveryHeaderCtaLabel(t)}</Link>
+              </Button>
+            ) : null}
+            <HarvestBatchCreateGate>
+              <Button asChild variant={voucherFirstIntake ? 'outline' : 'default'}>
+                <Link href="/harvests/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {getAddBatchInputCtaLabel(role, t)}
+                </Link>
+              </Button>
+            </HarvestBatchCreateGate>
+          </div>
         }
       />
 
       <div className="flex-1 space-y-6 p-6">
+        {voucherFirstIntake ? <HarvestReceiveDeliveryPanel /> : null}
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -328,7 +277,10 @@ export default function HarvestsPage() {
                   </thead>
                   <tbody>
                     {filteredHarvests.map((harvest) => {
-                      const capacity = calculateYieldCap(harvest.plot_area_hectares, harvest.expected_yield_kg_per_ha);
+                      const capacity = calculateHarvestYieldCap(
+                        harvest.plot_area_hectares,
+                        harvest.expected_yield_kg_per_ha,
+                      );
                       return (
                         <tr
                           key={harvest.id}
@@ -356,7 +308,7 @@ export default function HarvestsPage() {
                             <span className="text-sm text-muted-foreground">{capacity.toLocaleString()}</span>
                           </td>
                           <td className="py-3 pr-4">
-                            {getStatusBadge(harvest.status)}
+                            <HarvestBatchStatusBadge status={harvest.status} />
                           </td>
                           <td className="py-3">
                             <span className="text-sm text-muted-foreground">

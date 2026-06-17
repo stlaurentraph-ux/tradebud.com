@@ -1,0 +1,28 @@
+appId: com.tracebud.app
+---
+# Mapping smoke: home → register plot → walk capture screen (mark-corners path when available).
+- launchApp
+- tapOn:
+    text: ".*Walk my plot.*"
+- tapOn:
+    id: "walk-size-lt4"
+    optional: true
+- tapOn:
+    text: ".*< 4.*"
+    optional: true
+- tapOn:
+    id: "walk-start-mapping"
+    optional: true
+- tapOn:
+    text: ".*Start mapping.*"
+- tapOn:
+    text: ".*Reset.*"
+    optional: true
+- tapOn:
+    text: ".*Other ways to map.*"
+    optional: true
+- tapOn:
+    text: ".*Mark corners.*"
+    optional: true
+- assertVisible:
+    text: ".*Stop and save.*|.*Walk around.*|.*Mark corners.*|.*Save corner.*|.*Start at first corner.*|.*Recording.*"

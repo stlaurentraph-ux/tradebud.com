@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +18,7 @@ import {
   getProducerNewBreadcrumbLabel,
   getProducerNewPageSubtitle,
   getProducerNewPageTitle,
+  getProducersNavHref,
   getProducersNavLabel,
 } from '@/lib/workflow-terminology-labels';
 
@@ -27,6 +28,19 @@ export default function NewProducerPage() {
   const t = localeContext?.t;
   const { user } = useAuth();
   const role = user?.active_role;
+  const isExporter = role === 'exporter';
+
+  useEffect(() => {
+    if (isExporter) {
+      router.replace('/contacts/add?mode=csv');
+    }
+  }, [isExporter, router]);
+
+  if (isExporter) {
+    return null;
+  }
+
+  const producersHref = getProducersNavHref(role);
 
   return (
     <div className="flex flex-col">
@@ -35,12 +49,12 @@ export default function NewProducerPage() {
         subtitle={getProducerNewPageSubtitle(role, t)}
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
-          { label: getProducersNavLabel(role, t), href: '/farmers' },
+          { label: getProducersNavLabel(role, t), href: producersHref },
           { label: getProducerNewBreadcrumbLabel(t) },
         ]}
         actions={
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/farmers">
+            <Link href={producersHref}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {getBackToProducersLabel(role, t)}
             </Link>
@@ -66,9 +80,9 @@ export default function NewProducerPage() {
               });
               markOnboardingAction('contacts_uploaded');
               toast.success('Producer added to your directory');
-              router.push('/farmers');
+              router.push(producersHref);
             }}
-            onCancel={() => router.push('/farmers')}
+            onCancel={() => router.push(producersHref)}
           />
         </div>
       </div>

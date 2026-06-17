@@ -179,6 +179,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       declaredAreaHa: plot.declaredAreaHectares ?? plot.areaHectares ?? null,
       precisionMeters: plot.precisionMetersAtSave ?? null,
       cadastralKey: ck,
+      geometryCapture: plot.geometryCapture ?? null,
     });
 
     if (r.ok) {

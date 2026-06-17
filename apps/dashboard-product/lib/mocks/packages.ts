@@ -17,6 +17,7 @@ export const mockPackages: DDSPackage[] = [
     created_by: 'usr_exporter_001',
     created_at: '2024-03-01T00:00:00Z',
     updated_at: '2024-06-15T00:00:00Z',
+    total_weight_kg: 12_400,
   },
   {
     id: 'pkg_002',
@@ -32,6 +33,7 @@ export const mockPackages: DDSPackage[] = [
     created_by: 'usr_exporter_001',
     created_at: '2024-04-15T00:00:00Z',
     updated_at: '2024-06-20T00:00:00Z',
+    total_weight_kg: 9_800,
   },
   {
     id: 'pkg_003',
@@ -49,6 +51,7 @@ export const mockPackages: DDSPackage[] = [
     submitted_at: '2024-06-10T00:00:00Z',
     created_at: '2024-05-20T00:00:00Z',
     updated_at: '2024-06-10T00:00:00Z',
+    total_weight_kg: 18_600,
   },
   {
     id: 'pkg_004',
@@ -79,6 +82,7 @@ export const mockPackages: DDSPackage[] = [
     created_by: 'usr_exporter_001',
     created_at: '2024-06-05T00:00:00Z',
     updated_at: '2024-06-22T00:00:00Z',
+    total_weight_kg: 9_200,
   },
 ];
 

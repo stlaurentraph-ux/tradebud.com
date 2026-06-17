@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,16 +61,20 @@ export default function DocumentsScreen() {
     });
     if (picked.canceled || !picked.assets?.[0]?.uri) return;
     const asset = picked.assets[0];
-    persistPlotEvidenceItem({
-      plotId: `profile:${farmer.id}`,
-      kind,
-      uri: asset.uri,
-      mimeType: asset.mimeType ?? null,
-      label: asset.name ?? label,
-      takenAt: Date.now(),
-    });
-    const updated = await loadEvidenceForPlot(`profile:${farmer.id}`);
-    setProfileDocs(updated);
+    try {
+      await persistPlotEvidenceItem({
+        plotId: `profile:${farmer.id}`,
+        kind,
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? null,
+        label: asset.name ?? label,
+        takenAt: Date.now(),
+      });
+      const updated = await loadEvidenceForPlot(`profile:${farmer.id}`);
+      setProfileDocs(updated);
+    } catch {
+      Alert.alert('Could not save document', 'Try again or restart the app.');
+    }
   };
 
   return (

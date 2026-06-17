@@ -8,8 +8,11 @@ import {
 } from '@/lib/shipment-headers-client';
 import { mapShipmentHeadersToListRows, type ShipmentListRow } from '@/lib/shipment-header-mapper';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
+import { useDemoData } from '@/lib/demo-data-context';
+import { listMockShipmentHeaders } from '@/lib/mocks/shipment-headers';
 
 export function useShipmentHeaders(tenantId: string | null, ownerLabel = 'Your organisation') {
+  const { demoDataEnabled } = useDemoData();
   const { packages } = useHarvestPackages(tenantId, { scope: 'tenant' });
   const [headers, setHeaders] = useState<CanonicalShipmentHeader[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +21,13 @@ export function useShipmentHeaders(tenantId: string | null, ownerLabel = 'Your o
   const reload = useCallback(() => {
     if (!tenantId) {
       setHeaders([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (demoDataEnabled) {
+      setHeaders(listMockShipmentHeaders());
       setIsLoading(false);
       setError(null);
       return;
@@ -32,7 +42,7 @@ export function useShipmentHeaders(tenantId: string | null, ownerLabel = 'Your o
         setError(loadError instanceof Error ? loadError.message : 'Failed to load shipments.');
       })
       .finally(() => setIsLoading(false));
-  }, [tenantId]);
+  }, [tenantId, demoDataEnabled]);
 
   useEffect(() => {
     reload();

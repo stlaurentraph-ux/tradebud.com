@@ -22,6 +22,7 @@ export type ActionButtonProps = {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconRight?: React.ReactNode;
+  testID?: string;
 };
 
 export function ActionButton({
@@ -37,6 +38,7 @@ export function ActionButton({
   fullWidth = true,
   icon,
   iconRight,
+  testID,
 }: ActionButtonProps) {
   const label = children ?? title ?? '';
   return (
@@ -51,6 +53,7 @@ export function ActionButton({
       iconRight={iconRight}
       style={style}
       textStyle={textStyle}
+      testID={testID}
     >
       {label}
     </Button>

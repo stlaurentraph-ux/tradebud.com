@@ -4,6 +4,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { WelcomeCard } from '@/components/onboarding/welcome-card';
+import { OnboardingChecklistCard } from '@/components/onboarding/onboarding-checklist-card';
 import { ExporterDashboard } from '@/components/dashboards/exporter-dashboard';
 import { ImporterDashboard } from '@/components/dashboards/importer-dashboard';
 import { CooperativeDashboard } from '@/components/dashboards/cooperative-dashboard';
@@ -11,23 +12,20 @@ import { ReviewerDashboard } from '@/components/dashboards/reviewer-dashboard';
 import { SponsorDashboard } from '@/components/dashboards/sponsor-dashboard';
 import { DashboardAttentionStrip } from '@/components/dashboards/dashboard-attention-strip';
 import { DashboardSkeleton } from '@/components/dashboards/dashboard-skeleton';
-import { OnboardingChecklistCard } from '@/components/onboarding/onboarding-checklist-card';
 import { getGatedEntryContext, getGatedEntrySessionKey } from '@/lib/gated-entry-analytics';
 import { useAuth } from '@/lib/auth-context';
 import {
   acknowledgeWelcome,
   isWelcomeAcknowledged,
 } from '@/lib/onboarding-persistence';
-import { useOnboarding } from '@/lib/onboarding-context';
 import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useDashboardSummary } from '@/lib/use-dashboard-summary';
 import { useDemoData } from '@/lib/demo-data-context';
-import { buildDashboardAttentionItems, hasBlockingAttention } from '@/lib/dashboard-attention';
+import { buildDashboardAttentionItems } from '@/lib/dashboard-attention';
 import type { DashboardHomeResources } from '@/lib/dashboard-home-data';
 import type { DashboardSummaryPayload } from '@/lib/load-dashboard-summary';
 import type { LaunchState } from '@/lib/load-launch-state';
-import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
 import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardSubtitle } from '@/lib/workflow-terminology-labels';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
@@ -83,7 +81,6 @@ export function DashboardHomeClient({
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { demoDataEnabled } = useDemoData();
-  useOnboarding();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trialState, setTrialState] = useState<LaunchState | null>(initialLaunchState);
@@ -236,11 +233,6 @@ export function DashboardHomeClient({
 
   const showDashboardSkeleton = summaryEnabled && summaryLoading && !summaryMetrics;
 
-  const isVirginWorkspace = useMemo(
-    () => isVirginTenantForRole(userRole, dashboardMetrics ?? {}),
-    [userRole, dashboardMetrics],
-  );
-
   useEffect(() => {
     const context = getGatedEntryContext(
       searchParams.get('feature'),
@@ -291,6 +283,7 @@ export function DashboardHomeClient({
   const attentionItems = useMemo(
     () =>
       buildDashboardAttentionItems({
+        t,
         role: userRole,
         ownedBlockingIssuesCount: dashboardMetrics?.owned_blocking_issues_count ?? dashboardMetrics?.blocking_issues_count,
         upstreamBlockersCount: dashboardMetrics?.upstream_blockers_count,
@@ -301,6 +294,7 @@ export function DashboardHomeClient({
         onboardingStep: null,
       }),
     [
+      t,
       userRole,
       dashboardMetrics?.owned_blocking_issues_count,
       dashboardMetrics?.blocking_issues_count,
@@ -312,8 +306,6 @@ export function DashboardHomeClient({
       demoDataEnabled,
     ],
   );
-
-  const suppressOnboardingChecklist = hasBlockingAttention(attentionItems) || isVirginWorkspace;
 
   const renderDashboard = () => {
     if (!user) return null;
@@ -377,14 +369,14 @@ export function DashboardHomeClient({
             />
           </div>
         ) : null}
-        <div className="mb-6">
-          <OnboardingChecklistCard suppressWhenBlockers={suppressOnboardingChecklist} />
-        </div>
         {showDashboardSkeleton ? (
           <DashboardSkeleton />
         ) : (
           <>
-            <DashboardAttentionStrip items={attentionItems} role={user?.active_role} />
+            <DashboardAttentionStrip items={attentionItems} role={user?.active_role} t={t} />
+            <div className="mb-6">
+              <OnboardingChecklistCard />
+            </div>
             {renderDashboard()}
           </>
         )}

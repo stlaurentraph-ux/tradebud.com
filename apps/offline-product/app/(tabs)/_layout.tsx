@@ -50,6 +50,7 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: t('tab_my_plots'),
+          tabBarButton: (props) => <HapticTab {...props} testID="tab-my-plots" />,
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'map' : 'map-outline'} size={26} color={color} />

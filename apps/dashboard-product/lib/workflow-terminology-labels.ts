@@ -160,7 +160,7 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.plots.title': 'Plots',
   'workflow.plots.subtitle.cooperative':
     'Track member plot coverage, geometry quality, and compliance risk with field-capture overlays',
-  'workflow.plots.subtitle.default': 'Manage plot inventory and deforestation risk assessments',
+  'workflow.plots.subtitle.default': 'Review plot inventory synced from the field — request missing data from contacts when plots are not here yet',
   'workflow.plots.cta.add': 'Add Plot',
   'workflow.plots.cta.filters': 'Filters',
   'workflow.plots.stat.total': 'Total Plots',
@@ -177,12 +177,17 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.plots.stat.high.default': 'High Risk',
   'workflow.plots.stat.high_hint.cooperative': 'Escalate to issues and appeals',
   'workflow.plots.stat.high_hint.default': 'Action needed',
+  'workflow.plots.stat.needs_action': 'Needs action',
+  'workflow.plots.stat.needs_action_hint': 'Pin-only, review, or screening still outstanding',
+  'workflow.plots.stat.mapped': 'Mapped',
+  'workflow.plots.stat.mapped_hint': 'Geometry complete (pin under 4 ha, or mapped boundary)',
   'workflow.plots.search.cooperative': 'Search by plot name, ID, or member-linked records...',
   'workflow.plots.search.default': 'Search by plot name or ID...',
   'workflow.plots.table.title.cooperative': 'Plot Registry and Capture Quality',
   'workflow.plots.table.title.default': 'Plot Inventory',
   'workflow.plots.table.origin.cooperative': 'Member',
   'workflow.plots.table.origin.default': 'Producer',
+  'workflow.plots.table.field_capture': 'Field capture',
   'workflow.plots.empty': 'No plots found',
   'workflow.plots.risk.low': 'Low Risk',
   'workflow.plots.risk.medium': 'Medium Risk',
@@ -190,6 +195,32 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.plots.risk.unknown': 'Unknown Risk',
   'workflow.plots.detail.title': 'Plot Detail',
   'workflow.plots.detail.subtitle': 'Plot identifier: {{id}}',
+  'workflow.plots.detail.map.loading': 'Loading map…',
+  'workflow.plots.detail.map.error': 'Map preview unavailable',
+  'workflow.plots.detail.map.pending': 'No geometry captured yet',
+  'workflow.plots.detail.map.aria_label': 'Plot boundary on satellite imagery',
+  'workflow.plots.detail.map.attribution': 'Esri World Imagery',
+  'workflow.plots.detail.map.area_label': 'Area',
+  'workflow.plots.detail.map.kind_label': 'Capture type',
+  'workflow.plots.detail.map.status_label': 'Compliance status',
+  'workflow.plots.detail.map.screening_label': 'Deforestation screening',
+  'workflow.plots.detail.map.verified_label': 'Field verified',
+  'workflow.plots.detail.map.verified_yes': 'Yes',
+  'workflow.plots.detail.map.verified_no': 'No',
+  'workflow.plots.detail.eudr_readiness.title': 'EUDR readiness',
+  'workflow.plots.detail.eudr_readiness.subtitle':
+    'Shipment-grade checklist beyond deforestation screening. “Compliant” screening alone does not mean dossier-complete.',
+  'workflow.plots.detail.eudr_readiness.badge_ready': 'Dossier complete',
+  'workflow.plots.detail.eudr_readiness.badge_incomplete': 'Gaps remain',
+  'workflow.plots.detail.eudr_readiness.loading': 'Checking readiness…',
+  'workflow.plots.detail.eudr_readiness.all_clear_title': 'Ready for shipment linkage',
+  'workflow.plots.detail.eudr_readiness.all_clear_body':
+    'Field capture, screening, tenure, evidence, and ground-truth photos meet current gates.',
+  'workflow.plots.detail.eudr_readiness.link_evidence': 'Open evidence',
+  'workflow.plots.detail.eudr_readiness.link_tenure': 'Open tenure',
+  'workflow.plots.detail.field_ops.title': 'Advanced — Field operations',
+  'workflow.plots.detail.field_ops.description':
+    'Assign agents to capture or update this plot in the field app. Exporter and cooperative operators only.',
   'workflow.compliance.plot_review.title': 'Plot review queue',
   'workflow.compliance.plot_review.subtitle':
     'Adjudicate satellite flags, overlap risk, and ground-truth evidence before plots clear to compliant',
@@ -668,6 +699,21 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.harvest.detail.card_title': 'Batch Record',
   'workflow.harvest.detail.placeholder':
     'Route enabled and ready for detailed batch lineage and yield data.',
+  'workflow.harvest.detail.loading': 'Loading batch record…',
+  'workflow.harvest.detail.not_found_title': 'Batch not found',
+  'workflow.harvest.detail.not_found_body':
+    'This batch is not in your workspace list. It may have been recorded on another device or removed.',
+  'workflow.harvest.detail.plot_section': 'Plot & origin',
+  'workflow.harvest.detail.weight_section': 'Weight & yield cap',
+  'workflow.harvest.detail.yield_cap': 'Yield cap',
+  'workflow.harvest.detail.utilization': 'Capacity used',
+  'workflow.harvest.detail.expected_yield': 'Expected yield',
+  'workflow.harvest.detail.capacity_formula': 'Capacity formula',
+  'workflow.harvest.detail.plot_area': 'Area',
+  'workflow.harvest.detail.recorded': 'Recorded',
+  'workflow.harvest.detail.exception.pending': 'Exception request pending review',
+  'workflow.harvest.detail.exception.approved': 'Yield exception approved',
+  'workflow.harvest.detail.exception.rejected': 'Yield exception rejected',
   'workflow.dds.subtitle.importer':
     'Prepare and submit Due Diligence Statements to TRACES with canonical lifecycle states',
   'workflow.dds.subtitle.default': 'Review DDS package states — only importers submit to TRACES',
@@ -785,7 +831,7 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.evidence.doc_type.agreement': 'Agreement',
   'workflow.evidence.doc_type.affidavit': 'Affidavit',
   'workflow.evidence.uploaded': 'Uploaded:',
-  'workflow.evidence.expires': 'Expires:',
+  'workflow.evidence.expires': 'Renewal due:',
   'workflow.evidence.uploader': 'Uploader',
   'workflow.evidence.hash_full': 'Full SHA-256 Hash',
   'workflow.evidence.linked_entities': 'Linked entities',
@@ -1123,16 +1169,36 @@ export function getComplianceQueueRiskSuffixLabel(t?: TranslateFn): string {
 }
 
 export function getProducersNavLabel(role?: SupplyChainRole, t?: TranslateFn): string {
-  const name = role === 'cooperative' ? 'Members' : 'Producers';
-  return translateNavItemName(name, t ?? ((key) => key));
+  if (role === 'cooperative') {
+    return translateNavItemName('Members', t ?? ((key) => key));
+  }
+  if (role === 'exporter') {
+    return translateNavItemName('Suppliers', t ?? ((key) => key));
+  }
+  return translateNavItemName('Producers', t ?? ((key) => key));
+}
+
+/** Canonical list href for producer/member/supplier directory navigation. */
+export function getProducersNavHref(role?: SupplyChainRole): string {
+  return role === 'exporter' ? '/contacts' : '/farmers';
 }
 
 export function getProducersPageTitle(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'exporter') {
+    return wf('workflow.producers.title.exporter', 'Suppliers', t);
+  }
   const key = role === 'cooperative' ? 'workflow.producers.title.cooperative' : 'workflow.producers.title.default';
   return wf(key, role === 'cooperative' ? 'Members' : 'Producers', t);
 }
 
 export function getProducersPageSubtitle(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'exporter') {
+    return wf(
+      'workflow.producers.subtitle.exporter',
+      'Producer farmers are one supplier type — manage your full upstream network (cooperatives, washing stations, processing plants) in Suppliers.',
+      t,
+    );
+  }
   const key =
     role === 'cooperative' ? 'workflow.producers.subtitle.cooperative' : 'workflow.producers.subtitle.default';
   return wf(
@@ -1188,6 +1254,9 @@ export function getProducerNewBreadcrumbLabel(t?: TranslateFn): string {
 }
 
 export function getBackToProducersLabel(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'exporter') {
+    return wf('workflow.producers.back.exporter', 'Back to suppliers', t);
+  }
   const key = role === 'cooperative' ? 'workflow.producers.back.cooperative' : 'workflow.producers.back.default';
   return wf(key, role === 'cooperative' ? 'Back to members' : 'Back to producers', t);
 }
@@ -1426,6 +1495,15 @@ const APP_CHROME_COPY: Record<string, { key: string; fallback: string }> = {
   guest: { key: 'workflow.shell.sidebar.guest', fallback: 'Guest' },
   not_logged_in: { key: 'workflow.shell.sidebar.not_logged_in', fallback: 'Not logged in' },
   account_settings: { key: 'workflow.shell.sidebar.account_settings', fallback: 'Account settings' },
+  free_trial_label: { key: 'workflow.shell.sidebar.free_trial_label', fallback: 'Free trial' },
+  free_trial_hint: {
+    key: 'workflow.shell.sidebar.free_trial_hint',
+    fallback: 'Trial access is active. Open license settings to upgrade.',
+  },
+  free_trial_ends: {
+    key: 'workflow.shell.sidebar.free_trial_ends',
+    fallback: 'Ends {{date}}',
+  },
   log_out: { key: 'workflow.shell.sidebar.log_out', fallback: 'Log out' },
   user_menu_aria: { key: 'workflow.shell.sidebar.user_menu_aria', fallback: 'User menu for {{name}}' },
   notifications: { key: 'workflow.shell.header.notifications', fallback: 'Notifications' },
@@ -2023,10 +2101,10 @@ export function getOnboardingChecklistTaskCopy(
       key = `workflow.onboarding.checklist.task.add_producers.${field}.exporter`;
       fallback =
         field === 'label'
-          ? 'Add producers'
+          ? 'Register suppliers'
           : field === 'description'
-            ? 'Build your producer directory so traceability links and requests route correctly.'
-            : 'Add producer';
+            ? 'Import or add suppliers so traceability links, campaigns, and voucher intake route correctly.'
+            : 'Import supplier list';
     } else if (role === 'cooperative') {
       key = `workflow.onboarding.checklist.task.add_producers.${field}.cooperative`;
       fallback =
@@ -2676,6 +2754,34 @@ const SETTINGS_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
     key: 'workflow.settings.org_roles.error_save',
     fallback: 'Failed to save supply chain roles.',
   },
+  org_roles_integrated_capture_title: {
+    key: 'workflow.settings.org_roles.integrated_capture.title',
+    fallback: 'Enable integrated harvest capture',
+  },
+  org_roles_integrated_capture_description: {
+    key: 'workflow.settings.org_roles.integrated_capture.description',
+    fallback:
+      'Allow desk operators to type harvest batch weights in the dashboard. Leave off when members capture vouchers in the field app and you only receive deliveries.',
+  },
+  org_roles_high_res_map_title: {
+    key: 'workflow.settings.org_roles.high_res_map.title',
+    fallback: 'Use high-resolution satellite tiles',
+  },
+  org_roles_high_res_map_description: {
+    key: 'workflow.settings.org_roles.high_res_map.description',
+    fallback:
+      'Enable MapTiler satellite imagery for plot maps when your workspace API key is configured. Falls back to Esri when unavailable.',
+  },
+};
+
+const SETTINGS_LICENSE_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.settings.license.title', fallback: 'License & subscription' },
+  description: {
+    key: 'workflow.settings.license.description',
+    fallback: 'Manage your trial, plan band, and usage for this workspace.',
+  },
+  breadcrumb: { key: 'workflow.settings.license.breadcrumb', fallback: 'License & subscription' },
+  nav_link: { key: 'workflow.settings.license.nav_link', fallback: 'License & subscription' },
 };
 
 const NOTIFICATION_CAPABILITY_COPY: Record<
@@ -2857,6 +2963,14 @@ export function getOnboardingTourContextualAction(stepKey: string, t?: Translate
   const copyKey = map[stepKey];
   if (!copyKey) return null;
   return getOnboardingTourCopy(copyKey, t);
+}
+
+export function getSettingsLicensePageCopy(
+  key: keyof typeof SETTINGS_LICENSE_PAGE_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = SETTINGS_LICENSE_PAGE_COPY[key];
+  return wf(entry.key, entry.fallback, t);
 }
 
 export function getSettingsPageCopy(
@@ -3056,6 +3170,10 @@ export function getPlotsOriginColumnLabel(role?: SupplyChainRole, t?: TranslateF
   );
 }
 
+export function getPlotsFieldCaptureColumnLabel(t?: TranslateFn): string {
+  return wf('workflow.plots.table.field_capture', 'Field capture', t);
+}
+
 export function getPlotsEmptyMessage(t?: TranslateFn): string {
   return wf('workflow.plots.empty', 'No plots found', t);
 }
@@ -3069,27 +3187,27 @@ export function getPlotsFiltersLabel(t?: TranslateFn): string {
 }
 
 export function getPlotsStatLabel(
-  stat: 'total' | 'low' | 'medium' | 'high',
+  stat: 'total' | 'needs_action' | 'mapped' | 'high',
   role?: SupplyChainRole,
   t?: TranslateFn,
 ): string {
   const keyMap = {
     total: 'workflow.plots.stat.total',
-    low: plotRoleKey(role, 'workflow.plots.stat.low.cooperative', 'workflow.plots.stat.low.default'),
-    medium: plotRoleKey(role, 'workflow.plots.stat.medium.cooperative', 'workflow.plots.stat.medium.default'),
+    needs_action: 'workflow.plots.stat.needs_action',
+    mapped: 'workflow.plots.stat.mapped',
     high: plotRoleKey(role, 'workflow.plots.stat.high.cooperative', 'workflow.plots.stat.high.default'),
   } as const;
   const fallbackMap = {
     total: 'Total Plots',
-    low: role === 'cooperative' ? 'Mapped & Low Risk' : 'Low Risk',
-    medium: role === 'cooperative' ? 'Needs Field Review' : 'Medium Risk',
+    needs_action: 'Needs action',
+    mapped: 'Mapped',
     high: role === 'cooperative' ? 'Blocked / High Risk' : 'High Risk',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t);
 }
 
 export function getPlotsStatHint(
-  stat: 'total' | 'low' | 'medium' | 'high',
+  stat: 'total' | 'needs_action' | 'mapped' | 'high',
   role?: SupplyChainRole,
   t?: TranslateFn,
   values?: Record<string, string | number>,
@@ -3098,17 +3216,13 @@ export function getPlotsStatHint(
     return wf('workflow.plots.stat.total_ha', '{{ha}} hectares total', t, values);
   }
   const keyMap = {
-    low: plotRoleKey(role, 'workflow.plots.stat.low_hint.cooperative', 'workflow.plots.stat.low_hint.default'),
-    medium: plotRoleKey(
-      role,
-      'workflow.plots.stat.medium_hint.cooperative',
-      'workflow.plots.stat.medium_hint.default',
-    ),
+    needs_action: 'workflow.plots.stat.needs_action_hint',
+    mapped: 'workflow.plots.stat.mapped_hint',
     high: plotRoleKey(role, 'workflow.plots.stat.high_hint.cooperative', 'workflow.plots.stat.high_hint.default'),
   } as const;
   const fallbackMap = {
-    low: role === 'cooperative' ? 'Ready for batch lineage inclusion' : 'Ready for compliance',
-    medium: role === 'cooperative' ? 'Geometry/legal checks pending' : 'Requires review',
+    needs_action: 'Pin-only, review, or screening still outstanding',
+    mapped: 'Geometry complete (pin under 4 ha, or mapped boundary)',
     high: role === 'cooperative' ? 'Escalate to issues and appeals' : 'Action needed',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t, values);
@@ -3139,6 +3253,286 @@ export function getPlotDetailPageTitle(t?: TranslateFn): string {
 
 export function getPlotDetailPageSubtitle(id: string, t?: TranslateFn): string {
   return wf('workflow.plots.detail.subtitle', `Plot identifier: ${id}`, t, { id });
+}
+
+const PLOT_DETAIL_MAP_COPY: Record<string, { key: string; fallback: string }> = {
+  loading: { key: 'workflow.plots.detail.map.loading', fallback: 'Loading map…' },
+  error: { key: 'workflow.plots.detail.map.error', fallback: 'Map preview unavailable' },
+  pending: { key: 'workflow.plots.detail.map.pending', fallback: 'No geometry captured yet' },
+  aria_label: { key: 'workflow.plots.detail.map.aria_label', fallback: 'Plot boundary on satellite imagery' },
+  attribution: { key: 'workflow.plots.detail.map.attribution', fallback: 'Esri World Imagery' },
+  area_label: { key: 'workflow.plots.detail.map.area_label', fallback: 'Area' },
+  kind_label: { key: 'workflow.plots.detail.map.kind_label', fallback: 'Capture type' },
+  status_label: { key: 'workflow.plots.detail.map.status_label', fallback: 'Compliance status' },
+  screening_label: { key: 'workflow.plots.detail.map.screening_label', fallback: 'Deforestation screening' },
+  verified_label: { key: 'workflow.plots.detail.map.verified_label', fallback: 'Field verified' },
+  verified_yes: { key: 'workflow.plots.detail.map.verified_yes', fallback: 'Yes' },
+  verified_no: { key: 'workflow.plots.detail.map.verified_no', fallback: 'No' },
+  facts_toggle: { key: 'workflow.plots.detail.map.facts_toggle', fallback: 'Plot facts' },
+  plot_id_label: { key: 'workflow.plots.detail.map.plot_id_label', fallback: 'Plot ID' },
+  geometry_confidence_low: {
+    key: 'workflow.plots.detail.map.geometry_confidence_low',
+    fallback: 'Low GPS confidence — verify before seal',
+  },
+  geometry_confidence_moderate: {
+    key: 'workflow.plots.detail.map.geometry_confidence_moderate',
+    fallback: 'Fair boundary accuracy — review on map',
+  },
+  zoom_in: { key: 'workflow.plots.detail.map.zoom_in', fallback: 'Zoom in' },
+  zoom_out: { key: 'workflow.plots.detail.map.zoom_out', fallback: 'Zoom out' },
+  reset_view: { key: 'workflow.plots.detail.map.reset_view', fallback: 'Reset map view' },
+};
+
+const PLOT_GEOMETRY_REVIEWER_COPY: Record<string, { key: string; fallback: string }> = {
+  title: {
+    key: 'workflow.plots.detail.geometry_reviewer.title',
+    fallback: 'Boundary review assist',
+  },
+  description: {
+    key: 'workflow.plots.detail.geometry_reviewer.description',
+    fallback:
+      'Preview a simplified boundary on satellite imagery. Apply only after human review — revisions are audited and never auto-applied in the field.',
+  },
+  needs_review_badge: {
+    key: 'workflow.plots.detail.geometry_reviewer.needs_review_badge',
+    fallback: 'Low confidence capture',
+  },
+  loading: {
+    key: 'workflow.plots.detail.geometry_reviewer.loading',
+    fallback: 'Loading map preview…',
+  },
+  map_aria: {
+    key: 'workflow.plots.detail.geometry_reviewer.map_aria',
+    fallback: 'Plot boundary review map',
+  },
+  attribution: {
+    key: 'workflow.plots.detail.geometry_reviewer.attribution',
+    fallback: 'Esri World Imagery',
+  },
+  tolerance_label: {
+    key: 'workflow.plots.detail.geometry_reviewer.tolerance_label',
+    fallback: 'Simplification tolerance',
+  },
+  tolerance_value: {
+    key: 'workflow.plots.detail.geometry_reviewer.tolerance_value',
+    fallback: '{meters} m Douglas–Peucker',
+  },
+  vertices_label: {
+    key: 'workflow.plots.detail.geometry_reviewer.vertices_label',
+    fallback: 'Vertices',
+  },
+  area_label: {
+    key: 'workflow.plots.detail.geometry_reviewer.area_label',
+    fallback: 'Area',
+  },
+  variance_label: {
+    key: 'workflow.plots.detail.geometry_reviewer.variance_label',
+    fallback: 'Area variance',
+  },
+  variance_blocked: {
+    key: 'workflow.plots.detail.geometry_reviewer.variance_blocked',
+    fallback: 'Exceeds 5% guard — reduce tolerance',
+  },
+  reason_label: {
+    key: 'workflow.plots.detail.geometry_reviewer.reason_label',
+    fallback: 'Audit reason (required)',
+  },
+  reason_placeholder: {
+    key: 'workflow.plots.detail.geometry_reviewer.reason_placeholder',
+    fallback: 'e.g. Removed GPS jitter along north edge after field review',
+  },
+  no_simplification: {
+    key: 'workflow.plots.detail.geometry_reviewer.no_simplification',
+    fallback: 'Increase tolerance to preview a simpler boundary.',
+  },
+  apply: {
+    key: 'workflow.plots.detail.geometry_reviewer.apply',
+    fallback: 'Apply reviewed revision',
+  },
+  applying: {
+    key: 'workflow.plots.detail.geometry_reviewer.applying',
+    fallback: 'Applying…',
+  },
+  apply_success: {
+    key: 'workflow.plots.detail.geometry_reviewer.apply_success',
+    fallback: 'Geometry revision saved with audit trail.',
+  },
+};
+
+export function getPlotGeometryReviewerCopy(
+  key: keyof typeof PLOT_GEOMETRY_REVIEWER_COPY,
+  t?: TranslateFn,
+  vars?: Record<string, string | number>,
+): string {
+  const entry = PLOT_GEOMETRY_REVIEWER_COPY[key];
+  let text = wf(entry.key, entry.fallback, t);
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.replace(`{${name}}`, String(value));
+    }
+  }
+  return text;
+}
+
+export function getPlotDetailMapCopy(
+  key: keyof typeof PLOT_DETAIL_MAP_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = PLOT_DETAIL_MAP_COPY[key];
+  return wf(entry.key, entry.fallback, t);
+}
+
+const PLOT_EUDR_READINESS_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.plots.detail.eudr_readiness.title', fallback: 'EUDR readiness' },
+  subtitle: {
+    key: 'workflow.plots.detail.eudr_readiness.subtitle',
+    fallback:
+      'Shipment-grade checklist beyond deforestation screening. “Compliant” screening alone does not mean dossier-complete.',
+  },
+  badge_ready: { key: 'workflow.plots.detail.eudr_readiness.badge_ready', fallback: 'Dossier complete' },
+  badge_incomplete: {
+    key: 'workflow.plots.detail.eudr_readiness.badge_incomplete',
+    fallback: 'Gaps remain',
+  },
+  loading: { key: 'workflow.plots.detail.eudr_readiness.loading', fallback: 'Checking readiness…' },
+  all_clear_title: {
+    key: 'workflow.plots.detail.eudr_readiness.all_clear_title',
+    fallback: 'Ready for shipment linkage',
+  },
+  all_clear_body: {
+    key: 'workflow.plots.detail.eudr_readiness.all_clear_body',
+    fallback: 'Field capture, screening, tenure, evidence, and ground-truth photos meet current gates.',
+  },
+  link_evidence: { key: 'workflow.plots.detail.eudr_readiness.link_evidence', fallback: 'Open evidence' },
+  link_tenure: { key: 'workflow.plots.detail.eudr_readiness.link_tenure', fallback: 'Open tenure' },
+  gaps_summary_single_warning: {
+    key: 'workflow.plots.detail.eudr_readiness.gaps_summary_single_warning',
+    fallback: '1 item to close before dossier-complete',
+  },
+  gaps_summary_warnings_only: {
+    key: 'workflow.plots.detail.eudr_readiness.gaps_summary_warnings_only',
+    fallback: '{{total}} items to close before dossier-complete',
+  },
+  gaps_summary_single_blocking: {
+    key: 'workflow.plots.detail.eudr_readiness.gaps_summary_single_blocking',
+    fallback: '1 item open (1 blocks shipment)',
+  },
+  gaps_summary_with_blockers: {
+    key: 'workflow.plots.detail.eudr_readiness.gaps_summary_with_blockers',
+    fallback: '{{total}} items open ({{blocking}} block shipment)',
+  },
+};
+
+const PLOT_DETAIL_FIELD_OPS_COPY: Record<string, { key: string; fallback: string }> = {
+  title: {
+    key: 'workflow.plots.detail.field_ops.title',
+    fallback: 'Advanced — Field operations',
+  },
+  description: {
+    key: 'workflow.plots.detail.field_ops.description',
+    fallback: 'Assign agents to capture or update this plot in the field app. Exporter and cooperative operators only.',
+  },
+};
+
+export function getPlotDetailFieldOpsCopy(
+  key: keyof typeof PLOT_DETAIL_FIELD_OPS_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = PLOT_DETAIL_FIELD_OPS_COPY[key];
+  return wf(entry.key, entry.fallback, t);
+}
+
+const PLOT_DETAIL_SECTIONS_COPY: Record<string, { key: string; fallback: string }> = {
+  documents_title: {
+    key: 'workflow.plots.detail.sections.documents.title',
+    fallback: 'Tenure & documents',
+  },
+  documents_description: {
+    key: 'workflow.plots.detail.sections.documents.description',
+    fallback: 'Cadastral path, tenure AI review, and uploaded evidence for this plot.',
+  },
+  screening_title: {
+    key: 'workflow.plots.detail.sections.screening.title',
+    fallback: 'Deforestation screening',
+  },
+  screening_description: {
+    key: 'workflow.plots.detail.sections.screening.description',
+    fallback: 'Satellite screening verdict and decision history for this plot.',
+  },
+  history_title: {
+    key: 'workflow.plots.detail.sections.history.title',
+    fallback: 'Geometry & audit history',
+  },
+  history_description: {
+    key: 'workflow.plots.detail.sections.history.description',
+    fallback: 'Boundary versions and geometry events for compliance review.',
+  },
+  field_ops_title: {
+    key: 'workflow.plots.detail.sections.field_ops.title',
+    fallback: 'Field operations',
+  },
+  field_ops_description: {
+    key: 'workflow.plots.detail.sections.field_ops.description',
+    fallback: 'Assignment lifecycle and operator tools for exporter and cooperative desks.',
+  },
+};
+
+const PLOT_DETAIL_HISTORY_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.plots.detail.history.title', fallback: 'Geometry & audit history' },
+  breadcrumb: { key: 'workflow.plots.detail.history.breadcrumb', fallback: 'History' },
+  description: {
+    key: 'workflow.plots.detail.history.description',
+    fallback:
+      'Immutable boundary timeline with anomaly filters and pagination. Use this workspace for compliance review — the plot summary stays on the main plot page.',
+  },
+  back_to_plot: { key: 'workflow.plots.detail.history.back_to_plot', fallback: 'Back to plot summary' },
+  link_cta: { key: 'workflow.plots.detail.history.link_cta', fallback: 'Open full audit timeline' },
+};
+
+export function getPlotDetailHistoryPageCopy(
+  field: keyof typeof PLOT_DETAIL_HISTORY_PAGE_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = PLOT_DETAIL_HISTORY_PAGE_COPY[field];
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getPlotDetailSectionsCopy(
+  field: keyof typeof PLOT_DETAIL_SECTIONS_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = PLOT_DETAIL_SECTIONS_COPY[field];
+  return wf(entry.key, entry.fallback, t);
+}
+
+export function getPlotEudrReadinessCopy(
+  key: keyof typeof PLOT_EUDR_READINESS_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+): string {
+  const entry = PLOT_EUDR_READINESS_COPY[key];
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getPlotEudrReadinessGapsSummary(
+  gaps: Array<{ severity: 'blocking' | 'warning' }>,
+  t?: TranslateFn,
+): string {
+  const total = gaps.length;
+  const blocking = gaps.filter((gap) => gap.severity === 'blocking').length;
+  if (total === 0) return '';
+
+  if (blocking === 0) {
+    return total === 1
+      ? getPlotEudrReadinessCopy('gaps_summary_single_warning', t)
+      : getPlotEudrReadinessCopy('gaps_summary_warnings_only', t, { total });
+  }
+
+  if (total === 1 && blocking === 1) {
+    return getPlotEudrReadinessCopy('gaps_summary_single_blocking', t);
+  }
+
+  return getPlotEudrReadinessCopy('gaps_summary_with_blockers', t, { total, blocking });
 }
 
 export type WorkflowAsyncCopyScope =
@@ -4751,6 +5145,115 @@ export function getAddBatchInputCtaLabel(role?: SupplyChainRole, t?: TranslateFn
   return wf('workflow.harvest.cta.add_batch', en.getAddBatchInputCtaLabel(role), t);
 }
 
+const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: string }> = {
+  title: { key: 'workflow.harvest.receive.title', fallback: 'Register delivery' },
+  description: {
+    key: 'workflow.harvest.receive.description',
+    fallback:
+      'Paste or scan voucher codes from field deliveries. Vouchers only appear here when the producer directed delivery to you, or after you register the code.',
+  },
+  qr_placeholder: { key: 'workflow.harvest.receive.qr_placeholder', fallback: 'Voucher code (e.g. V-ABC12345)' },
+  qr_aria: { key: 'workflow.harvest.receive.qr_aria', fallback: 'Voucher code' },
+  qr_cta: { key: 'workflow.harvest.receive.qr_cta', fallback: 'Add code' },
+  search_placeholder: {
+    key: 'workflow.harvest.receive.search_placeholder',
+    fallback: 'Search plot or voucher code…',
+  },
+  loading: { key: 'workflow.harvest.receive.loading', fallback: 'Loading vouchers…' },
+  staged_title: { key: 'workflow.harvest.receive.staged_title', fallback: '{{count}} voucher(s) staged' },
+  staged_total: { key: 'workflow.harvest.receive.staged_total', fallback: '{{kg}} kg' },
+  staged_empty: {
+    key: 'workflow.harvest.receive.staged_empty',
+    fallback: 'Scan a voucher code, or browse pending vouchers below.',
+  },
+  available_title: { key: 'workflow.harvest.receive.available_title', fallback: 'Pending vouchers' },
+  available_empty: {
+    key: 'workflow.harvest.receive.available_empty',
+    fallback:
+      'No pending vouchers directed to you. Ask the producer to select your organisation when recording delivery, or paste the code from the package label.',
+  },
+  browse_toggle: { key: 'workflow.harvest.receive.browse_toggle', fallback: 'Browse pending vouchers' },
+  add_voucher: { key: 'workflow.harvest.receive.add_voucher', fallback: 'Add' },
+  remove_voucher: { key: 'workflow.harvest.receive.remove_voucher', fallback: 'Remove staged voucher' },
+  assemble_cta: { key: 'workflow.harvest.receive.assemble_cta', fallback: 'Assemble batch' },
+  ineligible_toast: {
+    key: 'workflow.harvest.receive.ineligible_toast',
+    fallback: 'This voucher is already used in a package or not eligible for intake.',
+  },
+  qr_not_found: {
+    key: 'workflow.harvest.receive.qr_not_found',
+    fallback: 'Voucher not found. Ask the producer to sync from the field app and confirm network consent.',
+  },
+  qr_added: { key: 'workflow.harvest.receive.qr_added', fallback: 'Voucher added' },
+  footnote: {
+    key: 'workflow.harvest.receive.footnote',
+    fallback:
+      'Vouchers are not broadcast to every linked buyer. They appear when the producer selects your organisation as the recipient, or when you register the voucher code here. Desk batch entry requires',
+  },
+  footnote_link: { key: 'workflow.harvest.receive.footnote_link', fallback: 'integrated harvest capture' },
+  header_cta: { key: 'workflow.harvest.receive.header_cta', fallback: 'Register delivery' },
+};
+
+export function getHarvestReceiveDeliveryCopy(
+  field: keyof typeof HARVEST_RECEIVE_DELIVERY_COPY,
+  t?: TranslateFn,
+  values?: Record<string, string | number>,
+  role?: SupplyChainRole,
+): string {
+  const entry = HARVEST_RECEIVE_DELIVERY_COPY[field];
+  const roleSuffix =
+    role === 'cooperative' ? '.cooperative' : role === 'exporter' ? '.exporter' : '';
+  const roleKey = `${entry.key}${roleSuffix}`;
+  const roleFallback =
+    field === 'description'
+      ? role === 'exporter'
+        ? 'Paste or scan supplier voucher codes. Vouchers appear when the producer directed delivery to you, or after you register the code from the package.'
+        : role === 'cooperative'
+          ? 'Paste or scan member voucher codes when they deliver harvest weight. Vouchers appear when directed to your cooperative or after you register the code.'
+          : entry.fallback
+      : field === 'staged_empty'
+        ? role === 'exporter'
+          ? 'Scan a supplier voucher code, or browse vouchers directed to you below.'
+          : 'Scan a member voucher code, or browse vouchers directed to you below.'
+        : field === 'available_empty'
+          ? role === 'exporter'
+            ? 'No supplier vouchers directed to you yet. Ask the producer to choose your organisation in the field app, or paste the code from the package.'
+            : 'No member vouchers directed to your cooperative yet. Ask the member to choose you as recipient, or paste the code they shared.'
+          : field === 'available_title'
+            ? role === 'exporter'
+              ? 'Pending supplier vouchers'
+              : 'Pending member vouchers'
+            : field === 'loading'
+              ? role === 'exporter'
+                ? 'Loading supplier vouchers…'
+                : 'Loading member vouchers…'
+              : field === 'qr_not_found'
+                ? role === 'exporter'
+                  ? 'Voucher not found or not available for your organisation. Confirm the supplier chose you as recipient, is linked with consent, and synced from the field app.'
+                  : entry.fallback
+                : field === 'browse_toggle'
+                  ? 'Browse pending vouchers'
+                  : entry.fallback;
+  if (
+    roleSuffix &&
+    ['description', 'staged_empty', 'available_empty', 'available_title', 'loading', 'qr_not_found'].includes(
+      field,
+    )
+  ) {
+    return wf(roleKey, roleFallback, t, values);
+  }
+  return wf(entry.key, entry.fallback, t, values);
+}
+
+export function getRegisterDeliveryHeaderCtaLabel(t?: TranslateFn): string {
+  return getHarvestReceiveDeliveryCopy('header_cta', t);
+}
+
+/** @deprecated Use getRegisterDeliveryHeaderCtaLabel */
+export function getReceiveDeliveryHeaderCtaLabel(t?: TranslateFn): string {
+  return getRegisterDeliveryHeaderCtaLabel(t);
+}
+
 export function getHarvestTotalBatchesMetricLabel(role?: SupplyChainRole, t?: TranslateFn): string {
   const key =
     role === 'cooperative' ? 'workflow.harvest.metric.tracked_lots' : 'workflow.harvest.metric.total_batches';
@@ -6001,6 +6504,58 @@ export function getHarvestDetailPlaceholder(_role?: SupplyChainRole, t?: Transla
   return wf('workflow.harvest.detail.placeholder', en.getHarvestDetailPlaceholder(), t);
 }
 
+export function getHarvestDetailLoadingMessage(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.loading', en.getHarvestDetailLoadingMessage(), t);
+}
+
+export function getHarvestDetailNotFoundTitle(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.not_found_title', en.getHarvestDetailNotFoundTitle(), t);
+}
+
+export function getHarvestDetailNotFoundBody(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.not_found_body', en.getHarvestDetailNotFoundBody(), t);
+}
+
+export function getHarvestDetailPlotLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.plot_section', en.getHarvestDetailPlotLabel(), t);
+}
+
+export function getHarvestDetailWeightLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.weight_section', en.getHarvestDetailWeightLabel(), t);
+}
+
+export function getHarvestDetailYieldCapLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.yield_cap', en.getHarvestDetailYieldCapLabel(), t);
+}
+
+export function getHarvestDetailUtilizationLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.utilization', en.getHarvestDetailUtilizationLabel(), t);
+}
+
+export function getHarvestDetailExpectedYieldLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.expected_yield', en.getHarvestDetailExpectedYieldLabel(), t);
+}
+
+export function getHarvestDetailCapacityLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.capacity_formula', en.getHarvestDetailCapacityLabel(), t);
+}
+
+export function getHarvestDetailPlotAreaLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.plot_area', en.getHarvestDetailPlotAreaLabel(), t);
+}
+
+export function getHarvestDetailRecordedLabel(t?: TranslateFn): string {
+  return wf('workflow.harvest.detail.recorded', en.getHarvestDetailRecordedLabel(), t);
+}
+
+export function getHarvestDetailExceptionLabel(
+  status: 'pending' | 'approved' | 'rejected',
+  t?: TranslateFn,
+): string {
+  const key = `workflow.harvest.detail.exception.${status}`;
+  return wf(key, en.getHarvestDetailExceptionLabel(status), t);
+}
+
 export function getDdsWorkspaceSubtitle(role?: SupplyChainRole, t?: TranslateFn): string {
   const key =
     role === 'importer' ? 'workflow.dds.subtitle.importer' : 'workflow.dds.subtitle.default';
@@ -6019,11 +6574,7 @@ export function getDdsReadyForTracesMessage(role?: SupplyChainRole, t?: Translat
 }
 
 export function getEvidencePageTitle(role?: SupplyChainRole, t?: TranslateFn): string {
-  const key =
-    role === 'importer' || role === 'cooperative'
-      ? 'workflow.evidence.title.short'
-      : 'workflow.evidence.title.fpic';
-  return wf(key, en.getEvidencePageTitle(role), t);
+  return wf('workflow.evidence.title.short', en.getEvidencePageTitle(role), t);
 }
 
 export function getEvidencePageSubtitle(role?: SupplyChainRole, t?: TranslateFn): string {
@@ -6132,7 +6683,41 @@ export function getEvidenceUploadedLabel(t?: TranslateFn): string {
 }
 
 export function getEvidenceExpiresLabel(t?: TranslateFn): string {
-  return wf('workflow.evidence.expires', 'Expires:', t);
+  return wf('workflow.evidence.expires', 'Renewal due:', t);
+}
+
+export function getEvidenceProvenanceTitle(role?: SupplyChainRole, t?: TranslateFn): string {
+  const key =
+    role === 'importer'
+      ? 'workflow.evidence.provenance.title.importer'
+      : 'workflow.evidence.provenance.title.default';
+  return wf(
+    key,
+    role === 'importer' ? 'Evidence provenance and audit trail' : 'Provenance chain and audit trail',
+    t,
+  );
+}
+
+export function getEvidenceProvenanceBody(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'importer') {
+    return wf(
+      'workflow.evidence.provenance.body.importer',
+      'Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp, and linked entities form an immutable provenance chain. Click any document to expand its full audit history. Due diligence records filed to TRACES are retained for 5 years per EUDR Article 12.',
+      t,
+    );
+  }
+  if (role === 'cooperative') {
+    return wf(
+      'workflow.evidence.provenance.body.cooperative',
+      'Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp, and linked entities form an immutable provenance chain. Click any document to expand its full audit history. Consent and portability artifacts are retained and traceable across member transfers. Statutory 5-year DDS retention applies when your importer files to TRACES—not at origin export.',
+      t,
+    );
+  }
+  return wf(
+    'workflow.evidence.provenance.body.exporter',
+    'Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp, and linked entities form an immutable provenance chain. Click any document to expand its full audit history. Renewal dates on consent forms are compliance reminders only—they do not revoke producer data access. EU 5-year DDS retention applies to your importer when they submit to TRACES.',
+    t,
+  );
 }
 
 export function getEvidenceUploaderLabel(t?: TranslateFn): string {
@@ -8412,50 +8997,91 @@ export function getOrganisationsAddLabel(
   return wf(keyMap[field], fallbackMap[field], t);
 }
 
-export function getContactsPageTitle(isCooperative: boolean, t?: TranslateFn): string {
-  return wf(
-    isCooperative ? 'workflow.contacts.title_cooperative' : 'workflow.contacts.title',
-    isCooperative ? 'Members' : 'Contacts',
-    t,
-  );
-}
-
-export function getContactsPageSubtitle(isCooperative: boolean, t?: TranslateFn): string {
-  return wf(
-    isCooperative ? 'workflow.contacts.subtitle_cooperative' : 'workflow.contacts.subtitle',
-    isCooperative
-      ? 'Manage member identity, consent status, and portability readiness'
-      : 'Tenant CRM',
-    t,
-  );
+function resolveContactsAudience(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+): 'cooperative' | 'exporter' | 'default' {
+  if (roleOrCooperative === true || roleOrCooperative === 'cooperative') {
+    return 'cooperative';
+  }
+  if (roleOrCooperative === 'exporter') {
+    return 'exporter';
+  }
+  return 'default';
 }
 
 export function getContactsStatLabel(
   stat: 'total' | 'active' | 'blocked',
-  isCooperative: boolean,
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
+  const audience = resolveContactsAudience(roleOrCooperative);
   const keyMap = {
-    total: isCooperative ? 'workflow.contacts.stat.total_cooperative' : 'workflow.contacts.stat.total',
-    active: isCooperative ? 'workflow.contacts.stat.active_cooperative' : 'workflow.contacts.stat.active',
-    blocked: isCooperative ? 'workflow.contacts.stat.blocked_cooperative' : 'workflow.contacts.stat.blocked',
+    total:
+      audience === 'cooperative'
+        ? 'workflow.contacts.stat.total_cooperative'
+        : audience === 'exporter'
+          ? 'workflow.contacts.stat.total_exporter'
+          : 'workflow.contacts.stat.total',
+    active:
+      audience === 'cooperative'
+        ? 'workflow.contacts.stat.active_cooperative'
+        : audience === 'exporter'
+          ? 'workflow.contacts.stat.active_exporter'
+          : 'workflow.contacts.stat.active',
+    blocked:
+      audience === 'cooperative'
+        ? 'workflow.contacts.stat.blocked_cooperative'
+        : audience === 'exporter'
+          ? 'workflow.contacts.stat.blocked_exporter'
+          : 'workflow.contacts.stat.blocked',
   } as const;
   const fallbackMap = {
-    total: isCooperative ? 'Total Members' : 'Total Contacts',
-    active: isCooperative ? 'Active Membership' : 'Active Pipeline',
-    blocked: isCooperative ? 'Membership Blockers' : 'Blocked',
+    total:
+      audience === 'cooperative'
+        ? 'Total Members'
+        : audience === 'exporter'
+          ? 'Total Suppliers'
+          : 'Total Contacts',
+    active:
+      audience === 'cooperative'
+        ? 'Active Membership'
+        : audience === 'exporter'
+          ? 'Active Supplier Pipeline'
+          : 'Active Pipeline',
+    blocked:
+      audience === 'cooperative'
+        ? 'Membership Blockers'
+        : audience === 'exporter'
+          ? 'Supplier Blockers'
+          : 'Blocked',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t);
 }
 
-export function getContactsSearchPlaceholder(isCooperative: boolean, t?: TranslateFn): string {
-  return wf(
-    isCooperative ? 'workflow.contacts.search_cooperative' : 'workflow.contacts.search',
-    isCooperative
-      ? 'Search member by name, email, cooperative, or status'
-      : 'Search by name, email, org',
-    t,
-  );
+export function getContactsSearchPlaceholder(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+  t?: TranslateFn,
+): string {
+  const audience = resolveContactsAudience(roleOrCooperative);
+  if (audience === 'cooperative') {
+    return wf(
+      'workflow.contacts.search_cooperative',
+      'Search member by name, email, cooperative, or status',
+      t,
+    );
+  }
+  if (audience === 'exporter') {
+    return wf(
+      'workflow.contacts.search_exporter',
+      'Search supplier by name, email, organisation, or activity type',
+      t,
+    );
+  }
+  return wf('workflow.contacts.search', 'Search by name, email, org', t);
+}
+
+export function getContactsFilterAllActivitiesLabel(t?: TranslateFn): string {
+  return wf('workflow.contacts.filter.all_activities', 'All activity types', t);
 }
 
 export function getContactsFilterAllStatusesLabel(t?: TranslateFn): string {
@@ -8464,63 +9090,112 @@ export function getContactsFilterAllStatusesLabel(t?: TranslateFn): string {
 
 export function getContactsCtaLabel(
   action: 'import_csv' | 'add',
-  isCooperative: boolean,
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
+  const audience = resolveContactsAudience(roleOrCooperative);
   if (action === 'import_csv') {
+    if (audience === 'exporter') {
+      return wf('workflow.contacts.cta.import_csv_exporter', 'Import supplier list', t);
+    }
     return wf('workflow.contacts.cta.import_csv', 'Import CSV', t);
   }
-  return wf(
-    isCooperative ? 'workflow.contacts.cta.add_cooperative' : 'workflow.contacts.cta.add',
-    isCooperative ? 'Add Member' : 'Add Contact',
-    t,
-  );
+  if (audience === 'cooperative') {
+    return wf('workflow.contacts.cta.add_cooperative', 'Add Member', t);
+  }
+  if (audience === 'exporter') {
+    return wf('workflow.contacts.cta.add_exporter', 'Add supplier', t);
+  }
+  return wf('workflow.contacts.cta.add', 'Add Contact', t);
 }
 
-export function getContactsListTitle(isCooperative: boolean, t?: TranslateFn): string {
-  return wf(
-    isCooperative ? 'workflow.contacts.list_title_cooperative' : 'workflow.contacts.list_title',
-    isCooperative ? 'Member directory' : 'Contact list',
-    t,
-  );
+export function getContactsListTitle(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+  t?: TranslateFn,
+): string {
+  const isCooperative = roleOrCooperative === true || roleOrCooperative === 'cooperative';
+  const isExporter = roleOrCooperative === 'exporter';
+  if (isCooperative) {
+    return wf('workflow.contacts.list_title_cooperative', 'Member directory', t);
+  }
+  if (isExporter) {
+    return wf('workflow.contacts.list_title_exporter', 'Supplier directory', t);
+  }
+  return wf('workflow.contacts.list_title', 'Contact list', t);
 }
 
 export function getContactsEmptyCopy(
   field: 'title' | 'description' | 'cta',
-  isCooperative: boolean,
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
+  const audience = resolveContactsAudience(roleOrCooperative);
   const fieldKey = field === 'description' ? 'desc' : field;
-  const suffix = isCooperative ? '_cooperative' : '';
+  const suffix =
+    audience === 'cooperative' ? '_cooperative' : audience === 'exporter' ? '_exporter' : '';
   const key = `workflow.contacts.empty_${fieldKey}${suffix}`;
   const fallbacks = {
-    title: isCooperative ? 'No members yet' : 'No contacts yet',
-    description: isCooperative
-      ? 'Add your first cooperative member to anchor consent, portability, and aggregation workflows.'
-      : 'Add counterpart contacts so campaigns and request workflows route correctly.',
-    cta: isCooperative ? 'Add first member' : 'Add first contact',
+    title:
+      audience === 'cooperative'
+        ? 'No members yet'
+        : audience === 'exporter'
+          ? 'No suppliers yet'
+          : 'No contacts yet',
+    description:
+      audience === 'cooperative'
+        ? 'Add your first cooperative member to anchor consent, portability, and aggregation workflows.'
+        : audience === 'exporter'
+          ? 'Register cooperatives, producers, washing stations, and processing plants. Bulk import from CSV or add suppliers one at a time.'
+          : 'Add counterpart contacts so campaigns and request workflows route correctly.',
+    cta:
+      audience === 'cooperative'
+        ? 'Add first member'
+        : audience === 'exporter'
+          ? 'Add supplier'
+          : 'Add first contact',
   };
   return wf(key, fallbacks[field], t);
 }
 
-export function getContactsNoMatchesLabel(isCooperative: boolean, t?: TranslateFn): string {
-  return wf(
-    isCooperative ? 'workflow.contacts.no_matches_cooperative' : 'workflow.contacts.no_matches',
-    isCooperative
-      ? 'No members match your search or filters yet.'
-      : 'No contacts match your search or filters yet.',
-    t,
-  );
+export function getContactsNoMatchesLabel(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+  t?: TranslateFn,
+): string {
+  const audience = resolveContactsAudience(roleOrCooperative);
+  if (audience === 'cooperative') {
+    return wf(
+      'workflow.contacts.no_matches_cooperative',
+      'No members match your search or filters yet.',
+      t,
+    );
+  }
+  if (audience === 'exporter') {
+    return wf(
+      'workflow.contacts.no_matches_exporter',
+      'No suppliers match your search or filters yet.',
+      t,
+    );
+  }
+  return wf('workflow.contacts.no_matches', 'No contacts match your search or filters yet.', t);
 }
 
 export function getContactsTableColumnLabel(
-  column: 'name' | 'email' | 'organization' | 'status' | 'consent' | 'last_activity' | 'update_status',
+  column:
+    | 'name'
+    | 'email'
+    | 'organization'
+    | 'activity'
+    | 'status'
+    | 'consent'
+    | 'last_activity'
+    | 'update_status',
   t?: TranslateFn,
 ): string {
   const keyMap = {
     name: 'workflow.contacts.table.name',
     email: 'workflow.contacts.table.email',
     organization: 'workflow.contacts.table.organization',
+    activity: 'workflow.contacts.table.activity',
     status: 'workflow.contacts.table.status',
     consent: 'workflow.contacts.table.consent',
     last_activity: 'workflow.contacts.table.last_activity',
@@ -8530,6 +9205,7 @@ export function getContactsTableColumnLabel(
     name: 'Name',
     email: 'Email',
     organization: 'Organization',
+    activity: 'Activity type',
     status: 'Status',
     consent: 'Consent',
     last_activity: 'Last activity',
@@ -8582,22 +9258,66 @@ export function getContactConsentLabel(
 }
 
 export function getContactTypeLabel(
-  type: 'farmer' | 'cooperative' | 'exporter' | 'other',
+  type: import('@/lib/contact-activity-types').ContactActivityType,
   t?: TranslateFn,
 ): string {
   const keyMap = {
     farmer: 'workflow.contacts.type.farmer',
     cooperative: 'workflow.contacts.type.cooperative',
+    washing_station: 'workflow.contacts.type.washing_station',
+    processing_facility: 'workflow.contacts.type.processing_facility',
+    trader: 'workflow.contacts.type.trader',
     exporter: 'workflow.contacts.type.exporter',
     other: 'workflow.contacts.type.other',
   } as const;
   const fallbackMap = {
-    farmer: 'Farmer',
+    farmer: 'Producer / farmer',
     cooperative: 'Cooperative',
+    washing_station: 'Washing station',
+    processing_facility: 'Processing / transformation plant',
+    trader: 'Trader / intermediary',
     exporter: 'Exporter',
-    other: 'Other',
+    other: 'Other supplier',
   } as const;
   return wf(keyMap[type], fallbackMap[type], t);
+}
+
+export function getContactsPageTitle(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+  t?: TranslateFn,
+): string {
+  const isCooperative = roleOrCooperative === true || roleOrCooperative === 'cooperative';
+  const isExporter = roleOrCooperative === 'exporter';
+  if (isCooperative) {
+    return wf('workflow.contacts.title_cooperative', 'Members', t);
+  }
+  if (isExporter) {
+    return wf('workflow.contacts.title_exporter', 'Suppliers', t);
+  }
+  return wf('workflow.contacts.title', 'Contacts', t);
+}
+
+export function getContactsPageSubtitle(
+  roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
+  t?: TranslateFn,
+): string {
+  const isCooperative = roleOrCooperative === true || roleOrCooperative === 'cooperative';
+  const isExporter = roleOrCooperative === 'exporter';
+  if (isCooperative) {
+    return wf(
+      'workflow.contacts.subtitle_cooperative',
+      'Manage member identity, consent status, and portability readiness',
+      t,
+    );
+  }
+  if (isExporter) {
+    return wf(
+      'workflow.contacts.subtitle_exporter',
+      'Register upstream suppliers by activity — cooperatives, producers, washing stations, and processing plants. Bulk import from CSV.',
+      t,
+    );
+  }
+  return wf('workflow.contacts.subtitle', 'Tenant CRM', t);
 }
 
 type ContactsAddMode = 'select' | 'contact' | 'organization' | 'csv';
@@ -10410,6 +11130,7 @@ export function collectWorkflowTerminologyCopyManifest(): Record<string, string>
     ...WELCOME_CARD_HIGHLIGHT_FALLBACKS,
     ...flattenCopyRegistry(ONBOARDING_TOUR_COPY),
     ...flattenCopyRegistry(SETTINGS_PAGE_COPY),
+    ...flattenCopyRegistry(SETTINGS_LICENSE_PAGE_COPY),
     ...flattenNotificationCapabilityCopy(),
     ...flattenCopyRegistry(ASYNC_STATE_SHELL_COPY),
     ...flattenCopyRegistry(ADMIN_DIAGNOSTICS_COPY),

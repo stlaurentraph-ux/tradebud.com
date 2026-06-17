@@ -10,9 +10,10 @@ import { usePlotGeometryHistory } from '@/lib/use-plot-geometry-history';
 
 interface PlotGeometryHistoryPanelProps {
   plotId: string;
+  embedded?: boolean;
 }
 
-export function PlotGeometryHistoryPanel({ plotId }: PlotGeometryHistoryPanelProps) {
+export function PlotGeometryHistoryPanel({ plotId, embedded = false }: PlotGeometryHistoryPanelProps) {
   const {
     events,
     total,
@@ -101,12 +102,8 @@ export function PlotGeometryHistoryPanel({ plotId }: PlotGeometryHistoryPanelPro
     return rows;
   }, [filteredEvents, groupByDay]);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Geometry Revision History</CardTitle>
-      </CardHeader>
-      <CardContent>
+  const panelBody = (
+    <>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Button size="sm" variant={filter === 'all' ? 'default' : 'outline'} onClick={() => updateFilter('all')}>
             All
@@ -302,7 +299,19 @@ export function PlotGeometryHistoryPanel({ plotId }: PlotGeometryHistoryPanelPro
             </Button>
           </div>
         ) : null}
-      </CardContent>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-3 text-sm">{panelBody}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Geometry Revision History</CardTitle>
+      </CardHeader>
+      <CardContent>{panelBody}</CardContent>
     </Card>
   );
 }

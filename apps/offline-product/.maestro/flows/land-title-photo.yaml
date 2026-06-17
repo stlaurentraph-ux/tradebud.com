@@ -1,0 +1,35 @@
+appId: com.tracebud.app
+---
+# Prerequisite: at least one plot exists. From plot detail, open Documents.
+- launchApp
+- tapOn:
+    text: ".*My Plots.*"
+- tapOn:
+    id: "plot-card"
+    index: 0
+    optional: true
+- tapOn:
+    text: ".*Finca Norte.*|.*El Roble.*|.*La Colina.*"
+    optional: true
+- tapOn:
+    id: "plot-nav-documents"
+    optional: true
+- tapOn:
+    text: ".*Documents.*"
+    optional: true
+- assertVisible:
+    id: "plot-add-land-title-photo"
+    optional: true
+- tapOn:
+    id: "plot-add-land-title-photo"
+    optional: true
+- tapOn:
+    text: ".*Photo Library.*|.*Choose Photo.*|.*Browse.*"
+    optional: true
+- tapOn:
+    text: ".*Cancel.*"
+    optional: true
+- back
+- assertVisible:
+    text: ".*land title.*|.*Land title.*"
+    optional: true

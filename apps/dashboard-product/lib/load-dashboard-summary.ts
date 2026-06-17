@@ -27,7 +27,7 @@ export async function loadDashboardSummary(input: {
   const { authHeader, packageScope } = input;
   const packageQuery = `?scope=${encodeURIComponent(packageScope)}`;
 
-  const [packagesRaw, campaignsRaw, inboxRaw, cooperativeRaw, issuesRaw, organisationsRaw, contactsRaw] =
+  const [packagesRaw, campaignsRaw, inboxRaw, cooperativeRaw, issuesRaw, organisationsRaw, contactsRaw, plotsRaw] =
     await Promise.allSettled([
       fetchBackendJson(`/v1/harvest/packages${packageQuery}`, authHeader),
       fetchBackendJson('/v1/requests/campaigns', authHeader),
@@ -36,6 +36,7 @@ export async function loadDashboardSummary(input: {
       fetchBackendJson('/v1/requests/issues', authHeader),
       fetchBackendJson('/v1/admin/organizations', authHeader),
       fetchBackendJson('/v1/contacts', authHeader),
+      fetchBackendJson('/v1/plots?scope=tenant', authHeader),
     ]);
 
   const mappedPackages = mapBackendPackagesResponse(
@@ -68,6 +69,9 @@ export async function loadDashboardSummary(input: {
       : [];
   const contacts =
     contactsRaw.status === 'fulfilled' ? normalizeBackendArray<ContactRecord>(contactsRaw.value) : [];
+  const tenantPlots =
+    plotsRaw.status === 'fulfilled' ? normalizeBackendArray<Record<string, unknown>>(plotsRaw.value) : [];
+  const tenantFarmerCount = contacts.filter((contact) => contact.contact_type === 'farmer').length;
 
   const metrics = buildDashboardSummaryMetrics({
     packages,
@@ -77,6 +81,9 @@ export async function loadDashboardSummary(input: {
     cooperativeMetrics,
     organisationCount: organisations.length,
     contactCount: contacts.length,
+    tenantFarmerCount,
+    tenantPlotCount: tenantPlots.length,
+    tenantPlots,
   });
 
   const sponsor = buildSponsorDashboardSummary({

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Image, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -7,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { pickAndSavePlotEvidence } from '@/features/evidence/savePlotEvidence';
-import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
+import {
+  autoUploadPlotEvidenceDocuments,
+  type AutoUploadOutcome,
+} from '@/features/evidence/autoUploadPlotDocuments';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
-  enqueuePendingSync,
   loadEvidenceForPlot,
   logAuditEvent,
   persistPlotEvidenceItem,
@@ -53,6 +55,11 @@ function badgeForKind(kind: PlotEvidenceKind): { labelKey: string; variant: 'inf
   }
 }
 
+function isImageEvidence(uri: string, mimeType: string | null): boolean {
+  if (mimeType?.startsWith('image/')) return true;
+  return /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(uri);
+}
+
 function fallbackLabel(kind: PlotEvidenceKind): string {
   switch (kind) {
     case 'fpic_repository':
@@ -81,13 +88,50 @@ export function PlotEvidencePanel({
   const { t } = useLanguage();
   const [fpicSignerName, setFpicSignerName] = useState('');
   const [evidenceReason, setEvidenceReason] = useState('');
-  const [syncBusy, setSyncBusy] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const notifySync = (message: string, alertTitle?: string) => {
+  const applyEvidenceUploadOutcome = (outcome: AutoUploadOutcome, itemCount: number, showAlert = false) => {
+    let message: string;
+    switch (outcome.status) {
+      case 'uploaded':
+        message =
+          outcome.uploadedCount > 0
+            ? t('plot_documents_auto_upload_ok', { n: outcome.uploadedCount })
+            : t('evidence_sync_ok');
+        break;
+      case 'queued':
+        message = t('plot_documents_auto_upload_queued');
+        break;
+      case 'local_only':
+        message =
+          outcome.reason === 'not_signed_in'
+            ? t('plot_documents_auto_upload_local_only')
+            : t('plot_documents_evidence_saved_local', { n: itemCount });
+        break;
+      default:
+        return;
+    }
     setSyncMessage(message);
     onSyncMessage?.(message);
-    Alert.alert(alertTitle ?? t('evidence_sync_button'), message);
+    if (showAlert) {
+      Alert.alert(t('evidence_sync_title'), message);
+    }
+  };
+
+  const runEvidenceUpload = async (items: PlotEvidenceItem[], showAlert = false) => {
+    if (items.length === 0) return;
+    onSyncMessage?.(null);
+    const outcome = await autoUploadPlotEvidenceDocuments({
+        localPlotId: scopeId,
+        serverPlotId: serverPlotId ?? null,
+        farmerId,
+        items,
+        customReason: evidenceReason,
+    });
+    applyEvidenceUploadOutcome(outcome, items.length, showAlert);
+    if (outcome.status === 'uploaded') {
+      await onSyncComplete?.();
+    }
   };
 
   const counts = useMemo(() => {
@@ -138,6 +182,7 @@ export function PlotEvidencePanel({
           payload: { plotId: scopeId, kind },
         }).catch(() => undefined);
       }
+      await runEvidenceUpload(updated, false);
     }
   };
 
@@ -154,7 +199,7 @@ export function PlotEvidencePanel({
       takenAt,
     });
     setFpicSignerName('');
-    await refresh();
+    const updated = await refresh();
     if (farmerId) {
       logAuditEvent({
         userId: farmerId,
@@ -162,79 +207,7 @@ export function PlotEvidencePanel({
         payload: { plotId: scopeId, signerName: name, takenAt },
       }).catch(() => undefined);
     }
-  };
-
-  const runSync = async () => {
-    if (!farmerId) {
-      notifySync(t('evidence_sync_sign_in_for_files'));
-      return;
-    }
-    if (evidence.length === 0) {
-      notifySync(t('evidence_sync_need_documents'), t('evidence_sync_title'));
-      return;
-    }
-    if (evidenceReason.trim().length === 0) {
-      notifySync(t('evidence_sync_need_reason'), t('evidence_sync_need_reason'));
-      return;
-    }
-    if (!serverPlotId) {
-      enqueuePendingSync({
-        createdAt: Date.now(),
-        actionType: 'evidence_sync',
-        payloadJson: JSON.stringify({
-          plotId: scopeId,
-          farmerId,
-          reason: evidenceReason.trim(),
-        }),
-        lastError: 'Plot not on server — upload from My Plots first.',
-      });
-      notifySync(t('plot_documents_legality_queued_no_server'), t('evidence_sync_title'));
-      return;
-    }
-    setSyncBusy(true);
-    setSyncMessage(null);
-    onSyncMessage?.(null);
-    try {
-      const summary = await syncPlotEvidenceWithFiles({
-        localPlotId: scopeId,
-        serverPlotId,
-        farmerId,
-        items: evidence,
-        reason: evidenceReason.trim(),
-      });
-      const parts = [t('evidence_sync_ok')];
-      if (summary.uploadedCount > 0) {
-        parts.push(t('evidence_sync_files_uploaded', { n: summary.uploadedCount }));
-      }
-      if (summary.metadataOnlyCount > 0) {
-        parts.push(t('evidence_sync_metadata_only', { n: summary.metadataOnlyCount }));
-      }
-      if (summary.notSignedIn) {
-        parts.push(t('evidence_sync_sign_in_for_files'));
-      }
-      const message = parts.join(' ');
-      setSyncMessage(message);
-      onSyncMessage?.(message);
-      Alert.alert(t('evidence_sync_button'), message);
-      await onSyncComplete?.();
-    } catch (e) {
-      enqueuePendingSync({
-        createdAt: Date.now(),
-        actionType: 'evidence_sync',
-        payloadJson: JSON.stringify({
-          plotId: scopeId,
-          farmerId,
-          reason: evidenceReason.trim(),
-        }),
-        lastError: e instanceof Error ? e.message : String(e),
-      });
-      const queued =
-        e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short');
-      setSyncMessage(queued);
-      onSyncMessage?.(queued);
-    } finally {
-      setSyncBusy(false);
-    }
+    await runEvidenceUpload(updated, false);
   };
 
   const renderSection = (
@@ -247,7 +220,7 @@ export function PlotEvidencePanel({
     const badge = badgeForKind(kind);
     const addKey = KIND_BUTTONS.find((b) => b.kind === kind)?.labelKey ?? 'documents_add_tenure';
     return (
-      <Card key={kind} variant="elevated" style={styles.card}>
+      <Card key={kind} variant="elevated" style={styles.card} testID={kind === 'tenure_evidence' ? 'plot-tenure-evidence-section' : undefined}>
         <View style={styles.rowHeader}>
           <ThemedText type="defaultSemiBold">{t(titleKey)}</ThemedText>
           <Badge variant={count > 0 ? 'info' : required ? 'warning' : 'default'} size="sm">
@@ -261,20 +234,32 @@ export function PlotEvidencePanel({
           </ThemedText>
         ) : null}
         <View style={{ gap: 10, marginTop: 10 }}>
-          <Button title={t(addKey)} variant="secondary" onPress={() => void addEvidence(kind, kind)} />
+          <Button
+            title={t(addKey)}
+            variant="secondary"
+            onPress={() => void addEvidence(kind, kind)}
+            testID={kind === 'tenure_evidence' ? 'plot-add-tenure-evidence' : undefined}
+          />
         </View>
         {evidence
           .filter((d) => d.kind === kind)
           .slice(0, 4)
           .map((d) => (
             <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <ThemedText type="defaultSemiBold">{d.label ?? t(fallbackLabel(kind))}</ThemedText>
-                <Badge variant={badge.variant} size="sm">
-                  {t(badge.labelKey)}
-                </Badge>
+              <View style={styles.evidenceRow}>
+                {isImageEvidence(d.uri, d.mimeType) ? (
+                  <Image source={{ uri: d.uri }} style={styles.evidenceThumb} />
+                ) : null}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.rowHeader}>
+                    <ThemedText type="defaultSemiBold">{d.label ?? t(fallbackLabel(kind))}</ThemedText>
+                    <Badge variant={badge.variant} size="sm">
+                      {t(badge.labelKey)}
+                    </Badge>
+                  </View>
+                  <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
+                </View>
               </View>
-              <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
             </Card>
           ))}
       </Card>
@@ -283,6 +268,15 @@ export function PlotEvidencePanel({
 
   return (
     <View style={styles.wrap}>
+      {showSync ? (
+        <Card variant="outlined" style={styles.autoUploadCard}>
+          <ThemedText type="defaultSemiBold">{t('evidence_sync_title')}</ThemedText>
+          <ThemedText type="caption" style={{ marginTop: 4 }}>
+            {t('plot_documents_auto_upload_banner')}
+          </ThemedText>
+        </Card>
+      ) : null}
+
       {(needsFpic && counts.fpic === 0) || (needsPermit && counts.permit === 0) || counts.tenure === 0 ? (
         <Card variant="outlined" style={styles.promptCard}>
           <ThemedText type="defaultSemiBold">{t('evidence_upload_prompt_title')}</ThemedText>
@@ -347,29 +341,13 @@ export function PlotEvidencePanel({
 
       {showSync ? (
         <Card variant="outlined" style={styles.card}>
-          <ThemedText type="defaultSemiBold">{t('evidence_sync_title')}</ThemedText>
-          <ThemedText type="caption" style={{ marginTop: 4 }}>
-            {t('evidence_sync_body')}
-          </ThemedText>
           <Input
-            label={t('evidence_sync_reason_label')}
+            label={t('plot_documents_legality_reason_optional_label')}
             placeholder={t('evidence_sync_reason_ph')}
             value={evidenceReason}
             onChangeText={setEvidenceReason}
-            containerStyle={{ marginTop: 10 }}
+            containerStyle={{ marginTop: 4 }}
           />
-          <View style={{ marginTop: 10 }}>
-            <Button
-              title={syncBusy ? t('evidence_sync_busy') : t('evidence_sync_button')}
-              disabled={syncBusy}
-              onPress={() => void runSync()}
-            />
-          </View>
-          {evidence.length === 0 ? (
-            <ThemedText type="caption" style={{ marginTop: 8, opacity: 0.85 }}>
-              {t('evidence_sync_need_documents_hint')}
-            </ThemedText>
-          ) : null}
           {syncMessage ? (
             <ThemedText type="caption" style={{ marginTop: 8 }}>
               {syncMessage}
@@ -384,12 +362,29 @@ export function PlotEvidencePanel({
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
   card: { marginTop: 2 },
+  autoUploadCard: {
+    marginTop: 2,
+    padding: 12,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
   rowCard: { padding: 12, marginTop: 8 },
   rowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  evidenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  evidenceThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: '#eee',
   },
   promptCard: {
     padding: 12,

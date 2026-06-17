@@ -9,11 +9,7 @@ import {
   computePlotTenureStatus,
   type PlotTenureStatusBadge,
 } from '@/features/compliance/plotTenureStatus';
-import {
-  summarizeCadastralCrossCheck,
-  summarizeTenureAiParseStatus,
-  tenureAiParseLabelKey,
-} from '@/features/compliance/plotTenureAiReview';
+import { PlotTenureDocumentReviewList } from '@/components/compliance/PlotTenureDocumentReviewList';
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 import { useLanguage } from '@/features/state/LanguageContext';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -26,6 +22,7 @@ type PlotTenureStatusCardProps = {
   titlePhotoCount: number;
   tenureEvidenceCount: number;
   tenureVerifications?: PlotTenureVerificationRecord[];
+  isSyncedToServer?: boolean;
   onOpenDocuments?: () => void;
 };
 
@@ -43,6 +40,7 @@ export function PlotTenureStatusCard({
   titlePhotoCount,
   tenureEvidenceCount,
   tenureVerifications = [],
+  isSyncedToServer = false,
   onOpenDocuments,
 }: PlotTenureStatusCardProps) {
   const { t } = useLanguage();
@@ -72,8 +70,7 @@ export function PlotTenureStatusCard({
           : t('plot_tenure_badge_missing');
 
   const docCount = titlePhotoCount + tenureEvidenceCount;
-  const aiParseStatus = summarizeTenureAiParseStatus(tenureVerifications);
-  const cadastralCheck = summarizeCadastralCrossCheck(tenureVerifications);
+  const hasVerificationRows = tenureVerifications.length > 0;
 
   return (
     <Card variant="outlined" style={styles.card}>
@@ -128,32 +125,7 @@ export function PlotTenureStatusCard({
         </View>
       ) : null}
 
-      {cadastralCheck === 'verified' ? (
-        <View style={styles.aiRow}>
-          <Ionicons name="shield-checkmark-outline" size={16} color="#0A7F59" />
-          <ThemedText type="caption">{t('plot_tenure_cadastral_verified')}</ThemedText>
-        </View>
-      ) : cadastralCheck === 'mismatch' ? (
-        <View style={styles.aiRow}>
-          <Ionicons name="alert-circle-outline" size={16} color="#B45309" />
-          <ThemedText type="caption">{t('plot_tenure_cadastral_mismatch')}</ThemedText>
-        </View>
-      ) : null}
-
-      {aiParseStatus ? (
-        <View style={styles.aiRow}>
-          <Ionicons name="sparkles-outline" size={16} color="#0A7F59" />
-          <ThemedText type="caption">{t(tenureAiParseLabelKey(aiParseStatus))}</ThemedText>
-        </View>
-      ) : null}
-
-      {aiParseStatus === 'MANUAL_REQUIRED' ? (
-        <View style={styles.manualBlock}>
-          <ThemedText type="caption">{t('plot_tenure_manual_review_body')}</ThemedText>
-        </View>
-      ) : null}
-
-      {!aiParseStatus && (tenureEvidenceCount > 0 || titlePhotoCount > 0) ? (
+      {!hasVerificationRows && docCount > 0 && isSyncedToServer ? (
         <View style={styles.aiRow}>
           <Ionicons name="time-outline" size={16} color="#8A8A8A" />
           <ThemedText type="caption" style={styles.muted}>
@@ -161,6 +133,13 @@ export function PlotTenureStatusCard({
           </ThemedText>
         </View>
       ) : null}
+
+      <PlotTenureDocumentReviewList
+        tenureVerifications={tenureVerifications}
+        titlePhotoCount={titlePhotoCount}
+        tenureEvidenceCount={tenureEvidenceCount}
+        isSyncedToServer={isSyncedToServer}
+      />
 
       {onOpenDocuments ? (
         <View style={styles.openDocsWrap}>
@@ -221,13 +200,5 @@ const styles = StyleSheet.create({
   },
   openDocsWrap: {
     marginTop: 4,
-  },
-  manualBlock: {
-    marginBottom: 8,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
-    borderColor: '#FCD34D',
   },
 });

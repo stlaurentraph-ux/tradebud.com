@@ -54,6 +54,45 @@ export async function listTenantHarvestVouchers(): Promise<TenantHarvestVoucher[
   return Array.isArray(body.vouchers) ? body.vouchers : [];
 }
 
+export function findTenantVoucherByQrRef(
+  vouchers: TenantHarvestVoucher[],
+  qrRef: string,
+): TenantHarvestVoucher | null {
+  const normalized = qrRef.trim().toUpperCase();
+  if (!normalized) return null;
+  return (
+    vouchers.find((voucher) => voucher.qr_code_ref.trim().toUpperCase() === normalized) ?? null
+  );
+}
+
+export async function claimTenantVoucherByQrRef(qrRef: string): Promise<TenantHarvestVoucher | null> {
+  const response = await fetch('/api/harvest/vouchers/claim', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ qrRef: qrRef.trim() }),
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    return null;
+  }
+  const body = (await response.json()) as { voucher?: TenantHarvestVoucher };
+  return body.voucher ?? null;
+}
+
+export async function lookupTenantVoucherByQrRef(qrRef: string): Promise<TenantHarvestVoucher | null> {
+  const vouchers = await listTenantHarvestVouchers();
+  const direct = findTenantVoucherByQrRef(vouchers, qrRef);
+  if (direct) return direct;
+
+  const claimed = await claimTenantVoucherByQrRef(qrRef);
+  if (claimed) return claimed;
+
+  return null;
+}
+
 export async function createHarvestPackage(input: {
   voucherIds: string[];
   label?: string;

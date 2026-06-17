@@ -21,7 +21,10 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 ## 2. Plot capture
 
 - [ ] Walk my plot → name + size → Start walking → Stop & save → plot appears on My Plots
+- [ ] Walk plot: instructions visible **above** map while recording (not only below scroll)
 - [ ] Location deny on Start → `perm_location_*` alert + inline `walk_location_denied`
+- [ ] **Mark corners:** instructions visible; stand at corner → hold timer → Save corner → count increases; map shows markers
+- [ ] **Draw on map:** pan/zoom works before first corner; Start tracing → taps add corners; undo/clear work; save creates polygon
 - [ ] Draw on map: tap adds vertices; undo/clear work; save creates polygon
 - [ ] Plot card shows Esri satellite thumbnail with boundary
 - [ ] Plot detail shows full-width map hero with polygon (tap opens boundary editor)
@@ -56,8 +59,11 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 
 ## 7. Evidence & documents
 
-- [ ] Plot detail → add ground-truth photo (camera)
+- [ ] Plot detail → add ground-truth photo (camera) — single **Use photo**; no stuck "Opening camera…"
 - [ ] Evidence / documents flow: camera deny → `evidence_perm_*` alert
+- [ ] **Land documents:** add land title photo → **thumbnail appears** and count updates
+- [ ] **Land documents auto-upload:** signed in + online → status shows uploaded (or queued if plot not on server) **without** tapping a separate Upload button
+- [ ] FPIC / tenure / permit sections: add document → thumbnail or row appears; auto-upload status message
 - [ ] Title photo or tenure evidence attaches locally
 
 ## 8. Settings — backup, notifications, advanced
@@ -91,6 +97,14 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 - [ ] Stuck sync: Settings queue shows last error; `INCIDENT_RUNBOOK.md` steps resolve or escalate
 
 ## Sign-off
+
+Complete §2 and §7 on a **physical device**, then record sign-off:
+
+```bash
+npm run qa:device:signoff -- --tester "Your name" --device "iPhone 15" --os "iOS 18.2" --build preview
+```
+
+This writes `DEVICE_SMOKE_SIGNOFF.json` (must match `git HEAD` for `npm run update:preview:safe`).
 
 | Tester | Device | OS | Build (preview/prod) | Date | Pass |
 |--------|--------|-----|----------------------|------|------|

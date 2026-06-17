@@ -4,17 +4,8 @@ import { useCallback, useEffect, useState, startTransition } from 'react';
 import type { DDSPackage } from '@/types';
 import { useDemoData } from '@/lib/demo-data-context';
 import { mockPackages } from '@/lib/mocks';
-import {
-  mapBackendPackageDetailToDdsPackage,
-  type BackendPackageDetail,
-  type BackendPackageDetailVoucher,
-} from '@/lib/harvest-package-mapper';
-
-function getAuthHeaders(): HeadersInit {
-  if (typeof window === 'undefined') return {};
-  const token = window.sessionStorage.getItem('tracebud_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+import type { BackendPackageDetailVoucher } from '@/lib/harvest-package-mapper';
+import { getHarvestPackageById } from '@/lib/harvest-package-service';
 
 export function sumPackageVoucherKg(vouchers: BackendPackageDetailVoucher[]): number {
   return vouchers.reduce((sum, voucher) => {
@@ -65,39 +56,22 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
       };
     }
 
-    fetch(`/api/harvest/packages/${encodeURIComponent(packageId)}`, {
-      method: 'GET',
-      cache: 'no-store',
-      headers: getAuthHeaders(),
-    })
-      .then(async (response) => {
-        const body = (await response.json().catch(() => ({}))) as {
-          error?: string;
-          package?: BackendPackageDetail['package'];
-          vouchers?: BackendPackageDetail['vouchers'];
-        };
-        if (!response.ok) {
-          throw new Error(body.error ?? 'Failed to load package details.');
+    getHarvestPackageById(packageId, fallbackTenantId ?? 'unknown_tenant')
+      .then((result) => {
+        if (cancelled) return;
+        if (!result) {
+          setPkg(null);
+          setVouchers([]);
+          setError('Package not found.');
+          return;
         }
-        if (!body.package?.id) {
-          throw new Error('Package not found.');
-        }
-        const detailVouchers = body.vouchers ?? [];
-        if (!cancelled) {
-          setVouchers(detailVouchers);
-          const mapped = mapBackendPackageDetailToDdsPackage(
-            {
-              package: body.package,
-              vouchers: detailVouchers,
-            },
-            fallbackTenantId ?? 'unknown_tenant',
-          );
-          const voucherKg = sumPackageVoucherKg(detailVouchers);
-          setPkg({
-            ...mapped,
-            total_weight_kg: voucherKg > 0 ? voucherKg : mapped.total_weight_kg,
-          });
-        }
+        const voucherKg = sumPackageVoucherKg(result.vouchers);
+        setVouchers(result.vouchers);
+        setPkg({
+          ...result.pkg,
+          total_weight_kg: voucherKg > 0 ? voucherKg : result.pkg.total_weight_kg,
+        });
+        setError(null);
       })
       .catch((err) => {
         if (!cancelled) {

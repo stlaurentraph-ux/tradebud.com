@@ -2,6 +2,9 @@
 
 Track completed milestones/features/docs updates.
 
+- FEAT-003 S5 Phase D: dashboard geometry reviewer assist — Douglas–Peucker preview on satellite, `PATCH /api/plots/:id/geometry` proxy, exporter/cooperative/admin/reviewer backend roles, `plot_geometry_revision_applied` analytics.
+- FEAT-003 S5 Phase C: geometry capture metadata on plot save/upload + dashboard map-hero confidence badges (`geometry_capture` JSONB).
+- Post-walk inline ground-truth photo capture delivered: `GroundTruthPhotoCapture` on walk completion, on-plot GPS gate, four clearance-verified photos, farmer-friendly Photo 1–4 UI.
 - Field app pre-field A-grade pass 2: `qa:full` green (25 tests), Play asset sync script, strict store preflight, i18n queue smoke v2, auth session unit tests.
 - Field app pre-field A-grade hardening: OAuth-unified API auth, log PII redaction, security preflight, launch grade tracker.
 - Field app store ops slice delivered: `STORE_OPS_CHECKLIST.md`, `npm run store:preflight`, Play/App Store asset docs, push Info.plist string.

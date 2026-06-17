@@ -19,6 +19,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
+import { ClaimVoucherDto } from './dto/claim-voucher.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import { SubmitDdsPackageDto } from './dto/submit-dds-package.dto';
@@ -178,6 +179,26 @@ export class HarvestController {
   @ApiQuery({ name: 'qrRef', required: true, description: 'Voucher qr_code_ref (e.g. V-ABC12345)' })
   async getVoucherByQr(@Query('qrRef') qrRef: string) {
     return this.harvestService.getVoucherByQrRef(qrRef);
+  }
+
+  @Post('vouchers/claim')
+  @ApiOperation({
+    summary: 'Claim a voucher into the buyer tenant queue',
+    description:
+      'Registers a field voucher for intake when the buyer scans or types the code. Required when the producer did not direct delivery to this buyer.',
+  })
+  async claimVoucher(@Body() dto: ClaimVoucherDto, @Req() req: any) {
+    const tenantId = this.getTenantId(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    this.assertDashboardHarvestRole(role);
+    const userId = req.user?.id as string | undefined;
+    const lookup = await this.harvestService.getVoucherByQrRef(dto.qrRef);
+    const allowed = await this.consentService.canTenantAccessVoucher(lookup.voucher.id, tenantId);
+    if (!allowed) {
+      throw new ForbiddenException('CONSENT_REQUIRED');
+    }
+    const voucher = await this.harvestService.claimVoucherForTenant(tenantId, dto.qrRef, userId);
+    return { voucher };
   }
 
   @Post('packages')

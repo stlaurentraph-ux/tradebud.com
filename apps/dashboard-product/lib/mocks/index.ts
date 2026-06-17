@@ -18,4 +18,6 @@ export * from './dashboard-metrics';
 export * from './sponsor';
 export * from './integrations';
 export * from './requests';
+export * from './batches';
+export * from './shipment-headers';
 export * from './contacts';

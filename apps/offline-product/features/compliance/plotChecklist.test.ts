@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computePlotReadinessChecklist, evaluateTenureParseGate } from './plotChecklist';
 
 describe('plotChecklist tenure parse gating', () => {
-  it('does not block land when only title photos exist', () => {
+  it('waits for AI when only title photos exist on a synced plot', () => {
     const checklist = computePlotReadinessChecklist({
       groundTruthPhotoCount: 4,
       titlePhotoCount: 1,
@@ -10,7 +10,7 @@ describe('plotChecklist tenure parse gating', () => {
       isSyncedToServer: true,
     });
     expect(checklist.landOk).toBe(true);
-    expect(checklist.tenureParseGate).toBe('not_applicable');
+    expect(checklist.tenureParseGate).toBe('pending');
   });
 
   it('blocks land when synced tenure parse is MANUAL_REQUIRED', () => {
@@ -41,10 +41,37 @@ describe('plotChecklist tenure parse gating', () => {
     expect(checklist.done).toBe(false);
   });
 
+  it('blocks land when synced land title parse is MANUAL_REQUIRED', () => {
+    const checklist = computePlotReadinessChecklist({
+      groundTruthPhotoCount: 4,
+      titlePhotoCount: 1,
+      evidenceKinds: [],
+      isSyncedToServer: true,
+      tenureVerifications: [
+        {
+          id: 'v1',
+          plot_id: 'p1',
+          storage_path: 'farmer/p1/land_title/title.jpg',
+          mime_type: 'image/jpeg',
+          evidence_label: 'Land title photo',
+          parse_status: 'MANUAL_REQUIRED',
+          parse_result: { parser: 'manual_required_stub' },
+          parse_confidence: 0,
+          parse_reviewed_by: null,
+          parse_reviewed_at: null,
+          created_at: '2026-06-11T00:00:00.000Z',
+          updated_at: '2026-06-11T00:00:00.000Z',
+        },
+      ],
+    });
+    expect(checklist.tenureParseGate).toBe('blocked');
+    expect(checklist.landOk).toBe(false);
+  });
+
   it('clears land when tenure parse is COMPLETED', () => {
     expect(
       evaluateTenureParseGate({
-        hasTenureEvidence: true,
+        hasLandDocuments: true,
         isSyncedToServer: true,
         tenureVerifications: [
           {

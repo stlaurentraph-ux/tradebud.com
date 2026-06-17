@@ -52,11 +52,14 @@ describe('OnboardingChecklistCard producer/contact deep links', () => {
     sessionStorage.clear();
   });
 
-  it('routes exporter add-producers step to the producer wizard', () => {
+  it('routes exporter add-producers step to the supplier CSV import', () => {
     authState.user = { id: 'user-exporter', active_role: 'exporter' };
     render(<OnboardingChecklistCard />);
 
-    expect(screen.getByRole('link', { name: /Add producers/i })).toHaveAttribute('href', '/farmers/new');
+    expect(screen.getByRole('link', { name: /Register suppliers/i })).toHaveAttribute(
+      'href',
+      '/contacts/add?mode=csv',
+    );
   });
 
   it('routes cooperative member step to the member add wizard', () => {

@@ -40,6 +40,8 @@
     "check:tenure-parse:smoke": "node scripts/check-tenure-parse-readiness.mjs --smoke",
     "db:apply:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs",
     "db:verify:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs --verify-only",
+    "db:apply:plot-geometry-capture": "node scripts/apply-plot-geometry-capture-migration.mjs",
+    "db:verify:plot-geometry-capture": "node scripts/apply-plot-geometry-capture-migration.mjs --verify-only",
     "db:apply:evidence-documents-phase2": "node scripts/apply-evidence-documents-phase2-migration.mjs",
     "db:verify:evidence-documents-phase2": "node scripts/apply-evidence-documents-phase2-migration.mjs --verify-only",
     "db:apply:compliance-issue-ownership": "node scripts/run-with-root-test-db.mjs node scripts/apply-compliance-issue-ownership-migration.mjs",

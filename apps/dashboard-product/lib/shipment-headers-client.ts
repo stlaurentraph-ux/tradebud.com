@@ -151,9 +151,22 @@ export async function resolveShipmentHeaderForAssembly(
     return getCanonicalShipmentHeader(canonicalId);
   }
 
+  try {
+    const shipments = await listCanonicalShipmentHeaders();
+    const listMatch =
+      shipments.find((shipment) => shipment.id === id) ??
+      shipments.find((shipment) => shipment.shipment_reference === id) ??
+      shipments.find((shipment) => shipment.external_id === id);
+    if (listMatch) {
+      return listMatch;
+    }
+  } catch {
+    // Continue to legacy audit rows.
+  }
+
   if (tenantId && loadAuditAssembly) {
     const rows = await loadAuditAssembly(tenantId);
-    const match = rows.find((row) => row.id === id);
+    const match = rows.find((row) => row.id === id || row.shipment_reference === id);
     if (match) {
       return {
         id: match.id,

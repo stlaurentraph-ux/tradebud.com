@@ -12,14 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
-  loadEvidenceForPlot,
-  loadPhotosForPlot,
-  loadTitlePhotosForPlot,
   getSetting,
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer, fetchVouchersForFarmer } from '@/features/api/postPlot';
-import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
-import { isGroundTruthPhotoSetComplete } from '@/features/compliance/groundTruthPhotoGeo';
+import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
@@ -89,6 +85,19 @@ export default function PlotsScreen() {
       .catch(() => setBackendPlots([]));
   }, [farmer?.id]);
 
+  const harvestCountForPlot = (plot: Plot) => {
+    const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
+    const backendId = backend?.id != null ? String(backend.id) : null;
+    return countVouchersForPlot({
+      vouchers,
+      backendPlotId: backendId,
+      localPlotId: plot.id,
+    });
+  };
+
+  const plotSectionFocus =
+    params.focus === 'voucher' || params.focus === 'documents' ? params.focus : null;
+
   useEffect(() => {
     const pid = typeof params.plotId === 'string' ? params.plotId : undefined;
     if (!pid) return;
@@ -97,6 +106,14 @@ export default function PlotsScreen() {
       router.replace(`/plot/${encodeURIComponent(pid)}?sub=photos`);
     }
   }, [params.plotId, params.focus]);
+
+  useEffect(() => {
+    if (plotSectionFocus !== 'voucher' || plots.length === 0) return;
+    const withVouchers = plots.filter((plot) => harvestCountForPlot(plot) > 0);
+    if (withVouchers.length === 1) {
+      router.replace(`/plot/${encodeURIComponent(withVouchers[0]!.id)}?sub=voucher`);
+    }
+  }, [plotSectionFocus, plots, vouchers, backendPlots]);
 
   useEffect(() => {
     if (!farmer?.id) {
@@ -126,62 +143,29 @@ export default function PlotsScreen() {
       .catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const entries = await Promise.all(
-        plots.map(async (p) => {
-          const backendMatch = findBackendPlotForLocal(p, backendPlots) as
-            | { sinaph_overlap?: boolean; indigenous_overlap?: boolean; status?: string }
-            | undefined;
-          const [photos, titleRows, evidenceRows] = await Promise.all([
-            loadPhotosForPlot(p.id).catch(() => []),
-            loadTitlePhotosForPlot(p.id).catch(() => []),
-            loadEvidenceForPlot(p.id).catch(() => []),
-          ]);
-          const evidenceKinds = evidenceRows
-            .map((e: { kind?: string }) => e.kind)
-            .filter((k): k is string => typeof k === 'string' && k.length > 0);
-          const { done } = computePlotReadinessChecklist({
-            groundTruthPhotos: photos,
-            plot: p,
-            titlePhotoCount: titleRows.length,
-            evidenceKinds,
-            isSyncedToServer: Boolean(backendMatch),
-            backendFlags: backendMatch,
-          });
-          return {
-            id: p.id,
-            photoCount: photos.length,
-            checklistDone: done,
-          };
-        }),
-      );
-      if (cancelled) return;
-      setPhotoCountByPlotId(Object.fromEntries(entries.map((e) => [e.id, e.photoCount])));
-      setPlotChecklistDoneByPlotId(Object.fromEntries(entries.map((e) => [e.id, e.checklistDone])));
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const refreshPlotChecklists = useCallback(async () => {
+    if (plots.length === 0) {
+      setPhotoCountByPlotId({});
+      setPlotChecklistDoneByPlotId({});
+      return;
+    }
+    const results = await loadAllPlotReadinessStates(plots, backendPlots);
+    setPhotoCountByPlotId(Object.fromEntries(results.map((r) => [r.plotId, r.photoCount])));
+    setPlotChecklistDoneByPlotId(Object.fromEntries(results.map((r) => [r.plotId, r.done])));
   }, [plots, backendPlots]);
 
-  const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' => {
-    const backend = findBackendPlotForLocal(plot, backendPlots) as { status?: string } | null;
-    if (plotChecklistDoneByPlotId[plot.id] === true) return 'Compliant';
-    if (!backend) return 'Action Needed';
-    return backend.status === 'compliant' ? 'Compliant' : 'Action Needed';
-  };
+  useEffect(() => {
+    void refreshPlotChecklists();
+  }, [refreshPlotChecklists]);
 
-  const harvestCountForPlot = (plot: Plot) => {
-    const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
-    const backendId = backend?.id != null ? String(backend.id) : null;
-    return countVouchersForPlot({
-      vouchers,
-      backendPlotId: backendId,
-      localPlotId: plot.id,
-    });
-  };
+  useFocusEffect(
+    useCallback(() => {
+      void refreshPlotChecklists();
+    }, [refreshPlotChecklists]),
+  );
+
+  const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' =>
+    plotChecklistDoneByPlotId[plot.id] === true ? 'Compliant' : 'Action Needed';
 
   const confirmDeletePlot = (plot: Plot) => {
     Alert.alert(t('warning'), t('delete_plot_body'), [
@@ -210,6 +194,16 @@ export default function PlotsScreen() {
       />
 
       <ThemedScrollView contentContainerStyle={styles.containerCompact}>
+        {plotSectionFocus ? (
+          <Card variant="outlined" style={styles.focusHintCard}>
+            <ThemedText type="defaultSemiBold">
+              {plotSectionFocus === 'voucher'
+                ? t('plots_pick_voucher_hint')
+                : t('plots_pick_documents_hint')}
+            </ThemedText>
+          </Card>
+        ) : null}
+
         {plots.length === 0 ? (
           <Card variant="outlined" style={styles.emptyPlotsCard}>
             <View style={styles.emptyPlotsIconWrap}>
@@ -242,8 +236,13 @@ export default function PlotsScreen() {
           return (
             <Pressable
               key={plot.id}
+              testID="plot-card"
               onPress={() => {
                 setSelectedPlotId(plot.id);
+                if (plotSectionFocus) {
+                  router.push(`/plot/${encodeURIComponent(plot.id)}?sub=${plotSectionFocus}`);
+                  return;
+                }
                 router.push(`/plot/${encodeURIComponent(plot.id)}`);
               }}
             >
@@ -321,6 +320,12 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     gap: 12,
+  },
+  focusHintCard: {
+    borderRadius: 14,
+    borderColor: '#D8C4F5',
+    backgroundColor: '#F9F3FF',
+    padding: 14,
   },
   emptyPlotsCard: {
     borderRadius: 18,

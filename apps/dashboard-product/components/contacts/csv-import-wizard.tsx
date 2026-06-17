@@ -67,7 +67,7 @@ const CONTACT_FIELDS = [
   { value: 'email', label: 'Email', required: true },
   { value: 'phone', label: 'Phone' },
   { value: 'organization', label: 'Organization' },
-  { value: 'contact_type', label: 'Contact Type' },
+  { value: 'contact_type', label: 'Activity type' },
   { value: 'country', label: 'Country' },
   { value: 'region', label: 'Region' },
   { value: 'tags', label: 'Tags' },
@@ -156,6 +156,17 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
 
         const autoMappings: FieldMapping[] = headers.map((header) => {
           const normalizedHeader = header.toLowerCase().replace(/[_\s-]/g, '');
+          const activityAliases = new Set([
+            'activitytype',
+            'activity',
+            'suppliertype',
+            'supplierrole',
+            'role',
+            'type',
+          ]);
+          if (importType === 'contacts' && activityAliases.has(normalizedHeader)) {
+            return { csvColumn: header, targetField: 'contact_type' };
+          }
           const matchedField = fields.find((f) => {
             const normalizedField = f.value.toLowerCase().replace(/[_\s-]/g, '');
             const normalizedLabel = f.label.toLowerCase().replace(/[_\s-]/g, '');
@@ -279,7 +290,22 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
 
   const downloadTemplate = () => {
     const headers = fields.filter((f) => f.value !== 'skip').map((f) => f.label);
-    const csv = headers.join(',') + '\n';
+    const sampleRow =
+      importType === 'contacts'
+        ? [
+            'Jane Doe',
+            'jane@coop.example',
+            '+255 700 000 000',
+            'Kilimanjaro Cooperative',
+            'cooperative',
+            'TZ',
+            'Kilimanjaro',
+            'coffee',
+            'unknown',
+            'Primary washing station contact',
+          ]
+        : [];
+    const csv = [headers.join(','), sampleRow.length > 0 ? sampleRow.join(',') : ''].filter(Boolean).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

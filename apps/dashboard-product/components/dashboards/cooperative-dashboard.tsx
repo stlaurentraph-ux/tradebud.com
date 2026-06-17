@@ -285,10 +285,10 @@ export function CooperativeDashboard({ metrics, home }: CooperativeDashboardProp
           </CardHeader>
           <CardContent className="space-y-3">
             <Link
-              href="/harvests/new"
+              href="/harvests#register-delivery"
               className="flex items-center justify-between rounded-lg bg-muted/50 p-3 transition-colors hover:bg-muted"
             >
-              <span className="font-medium">{copy.actionAddBatch}</span>
+              <span className="font-medium">{copy.actionRegisterDelivery}</span>
               <Badge variant="outline">{copy.badgeNew}</Badge>
             </Link>
             <Link

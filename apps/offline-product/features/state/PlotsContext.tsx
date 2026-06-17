@@ -33,6 +33,7 @@ export type Plot = {
   declaredAreaHectares?: number;
   discrepancyPercent?: number;
   precisionMetersAtSave?: number | null;
+  geometryCapture?: import('@/features/compliance/plotGeometryCapture').PlotGeometryCaptureMetadata;
 };
 
 type PlotsContextValue = {

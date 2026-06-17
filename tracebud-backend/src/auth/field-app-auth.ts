@@ -44,6 +44,12 @@ export async function resolveFieldActorRole(
     return jwtRole;
   }
 
+  // Exporter/cooperative operators keep workspace scope even when a delegated
+  // producer profile was linked to their account during manual plot registration.
+  if (jwtRole === 'exporter' || jwtRole === 'cooperative') {
+    return null;
+  }
+
   const userId = user?.id;
   if (!userId) {
     return null;

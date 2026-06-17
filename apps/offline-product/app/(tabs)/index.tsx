@@ -16,16 +16,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
-  loadEvidenceForPlot,
   loadPendingSyncActions,
-  loadPhotosForPlot,
-  loadTitlePhotosForPlot,
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
-import { computePlotReadinessChecklist } from '@/features/compliance/plotChecklist';
-import { isGroundTruthPhotoSetComplete } from '@/features/compliance/groundTruthPhotoGeo';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
 import { scaleText } from '@/features/demo/storeUiScale';
 
@@ -49,6 +44,30 @@ export default function HomeScreen() {
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
 
+  const refreshPlotReadiness = useCallback(async () => {
+    if (plots.length === 0) {
+      setPlotChecklistDoneById({});
+      setActionRequired(null);
+      return;
+    }
+    const results = await loadAllPlotReadinessStates(plots, backendPlots);
+    setPlotChecklistDoneById(Object.fromEntries(results.map((r) => [r.plotId, r.done])));
+    const firstIncomplete = results.find((r) => !r.done);
+    if (!firstIncomplete) {
+      setActionRequired(null);
+      return;
+    }
+    const plot = plots.find((p) => p.id === firstIncomplete.plotId);
+    if (!plot) {
+      setActionRequired(null);
+      return;
+    }
+    const message = !firstIncomplete.checklist.groundOk
+      ? t('home_action_plot_photos', { name: plot.name })
+      : t('home_action_plot_setup', { name: plot.name });
+    setActionRequired({ message, plotId: plot.id });
+  }, [plots, backendPlots, t]);
+
   useFocusEffect(
     useCallback(() => {
       void refreshAuth();
@@ -60,7 +79,8 @@ export default function HomeScreen() {
           .then((rows) => setBackendPlots(rows ?? []))
           .catch(() => setBackendPlots([]));
       }
-    }, [refreshAuth, farmer?.id, isSignedIn]),
+      void refreshPlotReadiness();
+    }, [refreshAuth, farmer?.id, isSignedIn, refreshPlotReadiness]),
   );
 
   const unsyncedPlotCount = useMemo(() => {
@@ -99,81 +119,15 @@ export default function HomeScreen() {
   }, [farmer, isSignedIn, t]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const entries = await Promise.all(
-        plots.map(async (p) => {
-          const backendMatch = findBackendPlotForLocal(p, backendPlots) as
-            | { sinaph_overlap?: boolean; indigenous_overlap?: boolean }
-            | null;
-          const [photos, titleRows, evidenceRows] = await Promise.all([
-            loadPhotosForPlot(p.id).catch(() => []),
-            loadTitlePhotosForPlot(p.id).catch(() => []),
-            loadEvidenceForPlot(p.id).catch(() => []),
-          ]);
-          const evidenceKinds = evidenceRows
-            .map((e: { kind?: string }) => e.kind)
-            .filter((k): k is string => typeof k === 'string' && k.length > 0);
-          const { done } = computePlotReadinessChecklist({
-            groundTruthPhotos: photos,
-            plot: p,
-            titlePhotoCount: titleRows.length,
-            evidenceKinds,
-            isSyncedToServer: Boolean(backendMatch),
-            backendFlags: backendMatch,
-          });
-          return [p.id, done] as const;
-        }),
-      );
-      if (cancelled) return;
-      setPlotChecklistDoneById(Object.fromEntries(entries));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [plots, backendPlots]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (plots.length === 0) {
-        if (!cancelled) setActionRequired(null);
-        return;
-      }
-      for (const p of plots) {
-        const backendMatch = findBackendPlotForLocal(p, backendPlots) as { status?: string } | null;
-        // If backend already marks this plot compliant, do not surface local action-needed nudges.
-        if (String(backendMatch?.status ?? '') === 'compliant') {
-          continue;
-        }
-        const photos = await loadPhotosForPlot(p.id).catch(() => []);
-        if (!isGroundTruthPhotoSetComplete(photos, p)) {
-          if (!cancelled) {
-            setActionRequired({
-              message: t('home_action_plot_photos', { name: p.name }),
-              plotId: p.id,
-            });
-          }
-          return;
-        }
-      }
-      if (!cancelled) setActionRequired(null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [plots, backendPlots, t]);
+    void refreshPlotReadiness();
+  }, [refreshPlotReadiness]);
 
   const counts = useMemo(() => {
     const plotsCount = plots.length;
-    const compliant = plots.filter((p) => {
-      if (plotChecklistDoneById[p.id] === true) return true;
-      const backendMatch = findBackendPlotForLocal(p, backendPlots) as { status?: string } | null;
-      return String(backendMatch?.status ?? '') === 'compliant';
-    }).length;
+    const compliant = plots.filter((p) => plotChecklistDoneById[p.id] === true).length;
     const pending = Math.max(0, plotsCount - compliant);
     return { plotsCount, compliant, pending };
-  }, [plots, backendPlots, plotChecklistDoneById]);
+  }, [plots, plotChecklistDoneById]);
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
@@ -192,7 +146,7 @@ export default function HomeScreen() {
         router.push(`/plot/${encodeURIComponent(plots[0]!.id)}?sub=${sub}`);
         return;
       }
-      router.navigate('/(tabs)/explore');
+      router.navigate(`/(tabs)/explore?focus=${sub}`);
     };
 
     const all = [
@@ -395,6 +349,7 @@ export default function HomeScreen() {
           {homeTiles.map((tile, index) => (
             <HomeTile
               key={tile.key}
+              testID={`home-tile-${tile.key.replace(/_/g, '-')}`}
               width={tileWidth}
               height={uniformTileHeight}
               title={tile.title}
@@ -505,6 +460,7 @@ export default function HomeScreen() {
 }
 
 function HomeTile(props: {
+  testID: string;
   width: number;
   height: number | null;
   title: string;
@@ -522,6 +478,7 @@ function HomeTile(props: {
 
   return (
     <Pressable
+      testID={props.testID}
       onPress={props.onPress}
       style={({ pressed }) => [
         styles.tileWrapper,
@@ -551,10 +508,15 @@ function HomeTile(props: {
         <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
           <Ionicons name={props.icon} size={22} color={props.iconColor} />
         </View>
-        <ThemedText type="defaultSemiBold" style={styles.tileTitle}>
+        <ThemedText type="defaultSemiBold" style={styles.tileTitle} numberOfLines={2} ellipsizeMode="tail">
           {props.title}
         </ThemedText>
-        <ThemedText type="caption" style={[styles.tileSubtitle, { color: colors.textSecondary }]}>
+        <ThemedText
+          type="caption"
+          style={[styles.tileSubtitle, { color: colors.textSecondary }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
           {props.subtitle}
         </ThemedText>
       </Card>

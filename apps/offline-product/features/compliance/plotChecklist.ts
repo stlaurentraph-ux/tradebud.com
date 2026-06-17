@@ -40,11 +40,12 @@ export type PlotReadinessChecklist = {
 };
 
 export function evaluateTenureParseGate(params: {
-  hasTenureEvidence: boolean;
+  /** Land title photos and/or tenure evidence documents uploaded for this plot. */
+  hasLandDocuments: boolean;
   isSyncedToServer: boolean;
   tenureVerifications?: PlotTenureVerificationRecord[];
 }): TenureParseGateStatus {
-  if (!params.hasTenureEvidence) return 'not_applicable';
+  if (!params.hasLandDocuments) return 'not_applicable';
   if (!params.isSyncedToServer) return 'not_synced';
   const status = summarizeTenureAiParseStatus(params.tenureVerifications ?? []);
   if (!status || status === 'PENDING' || status === 'IN_PROGRESS') return 'pending';
@@ -81,13 +82,13 @@ export function computePlotReadinessChecklist(params: {
       ? isGroundTruthPhotoSetComplete(params.groundTruthPhotos, params.plot)
       : (params.groundTruthPhotoCount ?? 0) >= minG;
   const hasTenureEvidence = evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
-  const hasLandEvidence = params.titlePhotoCount > 0 || hasTenureEvidence;
+  const hasLandDocuments = params.titlePhotoCount > 0 || hasTenureEvidence;
   const tenureParseGate = evaluateTenureParseGate({
-    hasTenureEvidence,
+    hasLandDocuments,
     isSyncedToServer: params.isSyncedToServer,
     tenureVerifications: params.tenureVerifications,
   });
-  const landOk = hasLandEvidence && tenureParseGate !== 'blocked';
+  const landOk = hasLandDocuments && tenureParseGate !== 'blocked';
   const needsFpic = flags?.indigenous_overlap === true;
   const needsPermit = flags?.sinaph_overlap === true;
   const fpicOk = evidenceHasKind(params.evidenceKinds, 'fpic_repository');

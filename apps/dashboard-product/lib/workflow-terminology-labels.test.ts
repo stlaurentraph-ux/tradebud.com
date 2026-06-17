@@ -93,6 +93,7 @@ import {
   getPlotReadyMessage,
   getProducerComplianceLabel,
   getProducersPageTitle,
+  getContactsEmptyCopy,
   getSharedPackagesTabLabel,
   getShipmentAssembleCtaLabel,
   getShipmentPageSubtitle,
@@ -193,7 +194,8 @@ describe('workflow-terminology-labels', () => {
     expect(getComplianceQueuePageTitle()).toBe('Compliance Issues Queue');
     expect(buildComplianceQueueBreadcrumbs()[2]?.label).toBe('Issues Queue');
     expect(getProducersPageTitle('cooperative')).toBe('Members');
-    expect(getProducersPageTitle('exporter')).toBe('Producers');
+    expect(getProducersPageTitle('exporter')).toBe('Suppliers');
+    expect(getContactsEmptyCopy('title', 'exporter')).toBe('No suppliers yet');
     expect(getProducerComplianceLabel('partial')).toBe('Partial');
     expect(getPlotDeforestationRiskLabel('high')).toBe('High Risk');
     expect(getPlotDetailPageSubtitle('plot-42')).toBe('Plot identifier: plot-42');
@@ -239,7 +241,8 @@ describe('workflow-terminology-labels', () => {
   it('localizes contacts add flow, status labels, and admin users table', () => {
     expect(getContactStatusLabel('engaged')).toBe('Engaged');
     expect(getContactConsentLabel('granted')).toBe('Granted');
-    expect(getContactTypeLabel('farmer')).toBe('Farmer');
+    expect(getContactTypeLabel('farmer')).toBe('Producer / farmer');
+    expect(getContactsPageTitle('exporter')).toBe('Suppliers');
     expect(getContactsAddPageTitle('select', true)).toBe('Add Member or Organization');
     expect(getContactsWizardStepLabel('review')).toBe('Review');
     expect(getAdminUsersSubtitle()).toBe('Manage user accounts and access');

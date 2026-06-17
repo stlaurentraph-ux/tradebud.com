@@ -1,4 +1,5 @@
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
+import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { getAccessTokenFromSupabase } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 import { ensureFieldProducerBootstrapped } from './fieldAppBootstrap';
@@ -113,6 +114,7 @@ export async function postPlotToBackend(params: {
   declaredAreaHa: number | null;
   precisionMeters: number | null;
   cadastralKey?: string | null;
+  geometryCapture?: PlotGeometryCaptureMetadata | null;
 }): Promise<PostPlotToBackendResult> {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -135,6 +137,7 @@ export async function postPlotToBackend(params: {
         declaredAreaHa: params.declaredAreaHa,
         precisionMeters: params.precisionMeters,
         cadastralKey: params.cadastralKey ?? null,
+        geometryCapture: params.geometryCapture ?? null,
       }),
     });
     if (!res.ok) {
@@ -263,6 +266,8 @@ export async function postHarvestToBackend(params: {
   note?: string;
   hlcTimestamp?: string;
   clientEventId?: string;
+  deliverToTenantId?: string;
+  deliverToEmail?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -283,6 +288,8 @@ export async function postHarvestToBackend(params: {
       note: params.note ?? null,
       hlcTimestamp: params.hlcTimestamp ?? null,
       clientEventId: params.clientEventId ?? null,
+      deliverToTenantId: params.deliverToTenantId ?? null,
+      deliverToEmail: params.deliverToEmail ?? null,
     }),
   });
 

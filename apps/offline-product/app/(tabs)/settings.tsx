@@ -5,15 +5,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Switch,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
-import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { requestForegroundLocationOrAlert } from '@/features/permissions/locationPermission';
@@ -34,7 +31,6 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotsForFarmer,
   getTracebudApiBaseUrl,
-  postAuditEventToBackend,
   testBackendLogin,
 } from '@/features/api/postPlot';
 import {
@@ -43,10 +39,6 @@ import {
   hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
-import {
-  buildDeclarationBundle,
-  declarationBundleToJson,
-} from '@/features/compliance/declarationBundle';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getSetting,
@@ -104,13 +96,14 @@ export default function SettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
-  const [declarationBusy, setDeclarationBusy] = useState(false);
   /** SQLite queue: harvests, photo sync, evidence sync (not plot geometry upload). */
   const [queuePendingCount, setQueuePendingCount] = useState(0);
   const [queueRetryingCount, setQueueRetryingCount] = useState(0);
   const [queueMaxAttempts, setQueueMaxAttempts] = useState(0);
   const [queueLastError, setQueueLastError] = useState<string | null>(null);
-  const [queueLastErrorActionType, setQueueLastErrorActionType] = useState<string | null>(null);
+  const [queueLastErrorActionType, setQueueLastErrorActionType] = useState<
+    PendingSyncAction['actionType'] | null
+  >(null);
   const [queueNextRetrySeconds, setQueueNextRetrySeconds] = useState<number | null>(null);
   const [queueCountByActionType, setQueueCountByActionType] = useState<
     Record<PendingSyncAction['actionType'], number>
@@ -131,8 +124,6 @@ export default function SettingsScreen() {
   const [profileEditing, setProfileEditing] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [helpTipsOpen, setHelpTipsOpen] = useState(false);
-  const [queueDetailsOpen, setQueueDetailsOpen] = useState(false);
-  const [vertexAvgSeconds, setVertexAvgSeconds] = useState<60 | 120>(120);
   const [queueActionFilter, setQueueActionFilter] = useState<
     Record<PendingSyncAction['actionType'], boolean>
   >({
@@ -232,8 +223,6 @@ export default function SettingsScreen() {
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
         await refreshPushPermission();
-        const v = await getSetting('vertexAveragingSeconds').catch(() => null);
-        setVertexAvgSeconds(v === '60' ? 60 : 120);
         const storedAttemptScope = await getSetting('syncQueueAttemptScope').catch(() => null);
         if (
           storedAttemptScope === 'all' ||
@@ -332,6 +321,52 @@ export default function SettingsScreen() {
     if (queueAttemptScope === 'first_attempt_only') return t('sync_queue_attempt_scope_first');
     return t('sync_queue_attempt_scope_all');
   }, [queueAttemptScope, queueSmartSweepEnabled, queueSmartSweepCap, t]);
+
+  const queueActionTypeLabel = useCallback(
+    (actionType: PendingSyncAction['actionType'] | null | undefined) => {
+      if (actionType === 'harvest') return t('sync_queue_filter_harvest');
+      if (actionType === 'photos_sync') return t('sync_queue_filter_photos');
+      if (actionType === 'evidence_sync') return t('sync_queue_filter_evidence');
+      if (
+        actionType === 'consent_approve' ||
+        actionType === 'consent_deny' ||
+        actionType === 'consent_revoke'
+      ) {
+        return t('sync_queue_filter_consent');
+      }
+      return t('sync_queue_filter_evidence');
+    },
+    [t],
+  );
+
+  const showUploadAttention = useMemo(
+    () =>
+      syncSignedIn &&
+      ((queuePendingCount > 0 && Boolean(queueLastError)) ||
+        (unsyncedPlotCount > 0 && plotsFetchState === 'failed')),
+    [plotsFetchState, queueLastError, queuePendingCount, syncSignedIn, unsyncedPlotCount],
+  );
+
+  const queuePendingBreakdown = useMemo(() => {
+    const parts: string[] = [];
+    if (queueCountByActionType.harvest > 0) {
+      parts.push(`${t('sync_queue_filter_harvest')}: ${queueCountByActionType.harvest}`);
+    }
+    if (queueCountByActionType.photos_sync > 0) {
+      parts.push(`${t('sync_queue_filter_photos')}: ${queueCountByActionType.photos_sync}`);
+    }
+    if (queueCountByActionType.evidence_sync > 0) {
+      parts.push(`${t('sync_queue_filter_evidence')}: ${queueCountByActionType.evidence_sync}`);
+    }
+    const consentPending =
+      queueCountByActionType.consent_approve +
+      queueCountByActionType.consent_deny +
+      queueCountByActionType.consent_revoke;
+    if (consentPending > 0) {
+      parts.push(`${t('sync_queue_filter_consent')}: ${consentPending}`);
+    }
+    return parts.join(' · ');
+  }, [queueCountByActionType, t]);
 
   const resetQueueRetryPreferences = () => {
     setQueueAttemptScope('all');
@@ -707,76 +742,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const shareDeclarationBundle = async () => {
-    if (!farmer) {
-      Alert.alert(t('warning'), t('declaration_export_no_farmer'));
-      return;
-    }
-    const bundle = buildDeclarationBundle({
-      farmer,
-      plots,
-      appVersion: Constants.expoConfig?.version ?? null,
-    });
-    const json = declarationBundleToJson(bundle);
-    try {
-      if (Platform.OS === 'web') {
-        await Share.share({ message: json, title: 'Tracebud' });
-        return;
-      }
-      const dir = fsAny.cacheDirectory;
-      if (!dir) {
-        await Share.share({ message: json });
-        return;
-      }
-      const path = `${dir}tracebud-declaration-${Date.now()}.json`;
-      await FileSystem.writeAsStringAsync(path, json);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, { mimeType: 'application/json', UTI: 'public.json' });
-      } else {
-        await Share.share({ message: json });
-      }
-    } catch (e) {
-      Alert.alert(t('warning'), e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const syncDeclarationSnapshotToServer = async () => {
-    if (!farmer) {
-      Alert.alert(t('warning'), t('declaration_export_no_farmer'));
-      return;
-    }
-    const login = await testBackendLogin();
-    if (!login.ok) {
-      Alert.alert(t('warning'), login.message);
-      return;
-    }
-    setDeclarationBusy(true);
-    try {
-      const bundle = buildDeclarationBundle({
-        farmer,
-        plots,
-        appVersion: Constants.expoConfig?.version ?? null,
-      });
-      const res = await postAuditEventToBackend({
-        eventType: 'offline_declaration_bundle',
-        payload: { ...bundle, farmerId: farmer.id },
-        deviceId: Constants.deviceName ?? null,
-      });
-      if (!res.ok) {
-        Alert.alert(
-          t('warning'),
-          res.reason === 'no_access_token'
-            ? t('declaration_sync_need_signin')
-            : res.message ?? t('declaration_sync_failed'),
-        );
-        return;
-      }
-      Alert.alert(t('declaration_sync_ok_title'), t('declaration_sync_ok_body'));
-    } finally {
-      setDeclarationBusy(false);
-    }
-  };
-
   return (
     <ThemedView style={styles.container}>
       <CompactTabHeader
@@ -814,6 +779,29 @@ export default function SettingsScreen() {
                     </ThemedText>
                   </View>
                 </View>
+
+                {syncSignedIn ? (
+                  <View style={styles.profileAccountSection}>
+                    <SetPasswordCard
+                      signedIn={syncSignedIn}
+                      t={t}
+                      onPasswordSaved={() => {
+                        void refreshSavedSyncEmail();
+                      }}
+                    />
+                    <Pressable onPress={() => void onSignOutSync()} hitSlop={8} style={styles.profileSignOutRow}>
+                      <ThemedText type="caption" style={styles.profileSignOutLink}>
+                        {t('sign_out_device')}
+                      </ThemedText>
+                    </Pressable>
+                    {syncAuthHint ? (
+                      <ThemedText type="caption" style={styles.syncAuthHint}>
+                        {syncAuthHint}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                ) : null}
+
                 <Button variant="secondary" size="md" fullWidth onPress={enterProfileEdit}>
                   {t('profile_edit')}
                 </Button>
@@ -903,27 +891,6 @@ export default function SettingsScreen() {
                   </ThemedText>
                 ) : null}
 
-                {syncSignedIn ? (
-                  <View style={styles.backupAccountRow}>
-                    <ThemedText type="caption" style={styles.backupAccountEmail} numberOfLines={1}>
-                      {syncEmail.trim() ? syncEmail : getAuthCredentials().email || '—'}
-                    </ThemedText>
-                    <Pressable onPress={() => void onSignOutSync()} hitSlop={8}>
-                      <ThemedText type="caption" style={styles.backupSignOutLink}>
-                        {t('sign_out_device')}
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                ) : null}
-
-                <SetPasswordCard
-                  signedIn={syncSignedIn}
-                  t={t}
-                  onPasswordSaved={() => {
-                    void refreshSavedSyncEmail();
-                  }}
-                />
-
                 <View style={styles.btnWrap}>
                   {syncSignedIn ? (
                     <Button
@@ -962,15 +929,62 @@ export default function SettingsScreen() {
                     {syncMessage}
                   </ThemedText>
                 ) : null}
-                {syncAuthHint ? (
-                  <ThemedText type="caption" style={styles.syncAuthHint}>
-                    {syncAuthHint}
-                  </ThemedText>
-                ) : null}
-                {queuePendingCount > 0 && queueLastError ? (
-                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    {t('settings_sync_upload_issue')}
-                  </ThemedText>
+                {showUploadAttention ? (
+                  <View style={styles.uploadIssuePanel}>
+                    <View style={styles.uploadIssueHeader}>
+                      <Ionicons name="warning-outline" size={16} color="#B45309" />
+                      <ThemedText type="caption" style={styles.uploadIssueSummary}>
+                        {t('settings_sync_upload_issue_short')}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.uploadIssueBody}>
+                      {queueLastError ? (
+                        <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                          {t('sync_queue_latest_error_label')}
+                          {queueLastErrorActionType
+                            ? ` (${queueActionTypeLabel(queueLastErrorActionType)})`
+                            : ''}
+                          : {queueLastError}
+                        </ThemedText>
+                      ) : null}
+                      {queuePendingCount > 0 ? (
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {t('sync_queue_health_summary', {
+                            pending: queuePendingCount,
+                            retrying: queueRetryingCount,
+                            max: queueMaxAttempts,
+                          })}
+                        </ThemedText>
+                      ) : null}
+                      {queuePendingBreakdown ? (
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {queuePendingBreakdown}
+                        </ThemedText>
+                      ) : null}
+                      {unsyncedPlotCount > 0 ? (
+                        <ThemedText type="caption" style={styles.syncQueueWarningText}>
+                          {t('settings_sync_unsynced_plots', { n: unsyncedPlotCount })}
+                        </ThemedText>
+                      ) : null}
+                      {queueNextRetrySeconds != null ? (
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
+                        </ThemedText>
+                      ) : null}
+                      <View style={styles.btnWrap}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          fullWidth
+                          loading={syncNowBusy}
+                          disabled={syncNowBusy}
+                          onPress={() => void runSyncNow()}
+                        >
+                          {t('sync_now')}
+                        </Button>
+                      </View>
+                    </View>
+                  </View>
                 ) : null}
               </CardContent>
             </Card>
@@ -1126,51 +1140,6 @@ export default function SettingsScreen() {
 
                     <View style={styles.advancedSection}>
                       <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
-                        {t('settings_vertex_avg_title')}
-                      </ThemedText>
-                      <ThemedText type="caption" style={styles.mutedText}>
-                        {t('settings_vertex_avg_body')}
-                      </ThemedText>
-                      <View style={styles.vertexAvgRow}>
-                        <Pressable
-                          onPress={() => {
-                            setVertexAvgSeconds(60);
-                            void setSetting('vertexAveragingSeconds', '60');
-                          }}
-                          style={[
-                            styles.vertexAvgChip,
-                            vertexAvgSeconds === 60 && styles.vertexAvgChipSelected,
-                          ]}
-                        >
-                          <ThemedText
-                            type="defaultSemiBold"
-                            style={vertexAvgSeconds === 60 ? styles.vertexAvgChipTextSelected : undefined}
-                          >
-                            {t('settings_vertex_60')}
-                          </ThemedText>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            setVertexAvgSeconds(120);
-                            void setSetting('vertexAveragingSeconds', '120');
-                          }}
-                          style={[
-                            styles.vertexAvgChip,
-                            vertexAvgSeconds === 120 && styles.vertexAvgChipSelected,
-                          ]}
-                        >
-                          <ThemedText
-                            type="defaultSemiBold"
-                            style={vertexAvgSeconds === 120 ? styles.vertexAvgChipTextSelected : undefined}
-                          >
-                            {t('settings_vertex_120')}
-                          </ThemedText>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    <View style={styles.advancedSection}>
-                      <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
                         {t('local_storage')}
                       </ThemedText>
                       <View style={styles.storageBarTrack}>
@@ -1218,226 +1187,146 @@ export default function SettingsScreen() {
                       )}
                     </View>
 
-                    <View style={styles.advancedSection}>
-                      <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
-                        {t('declaration_audit_section')}
-                      </ThemedText>
-                      <ThemedText type="caption" style={styles.mutedText}>
-                        {t('declaration_audit_body')}
-                      </ThemedText>
-                      <View style={styles.btnWrap}>
-                        <Button variant="outline" size="md" fullWidth onPress={() => void shareDeclarationBundle()}>
-                          {t('declaration_export_json')}
-                        </Button>
-                      </View>
-                      <Button
-                        variant="secondary"
-                        size="md"
-                        fullWidth
-                        loading={declarationBusy}
-                        disabled={declarationBusy}
-                        onPress={() => void syncDeclarationSnapshotToServer()}
-                      >
-                        {t('declaration_sync_server')}
-                      </Button>
-                    </View>
-
-                    {queuePendingCount > 0 ? (
+                    {__DEV__ ? (
                       <View style={styles.advancedSection}>
                         <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
-                          {t('settings_sync_show_details')}
+                          Queue debug
                         </ThemedText>
-                        <Pressable
-                          onPress={() => setQueueDetailsOpen((open) => !open)}
-                          style={styles.queueDetailsToggle}
-                          accessibilityRole="button"
-                        >
-                          <ThemedText type="defaultSemiBold" style={styles.greenText}>
-                            {queueDetailsOpen
-                              ? t('settings_sync_hide_details')
-                              : t('settings_sync_show_details')}
-                          </ThemedText>
-                          <Ionicons
-                            name={queueDetailsOpen ? 'chevron-up' : 'chevron-down'}
-                            size={18}
-                            color={Brand.primary}
-                          />
-                        </Pressable>
-                        {queueDetailsOpen ? (
-                          <View style={styles.syncQueueHealth}>
-                            <ThemedText type="caption">
-                              {t('sync_queue_health_summary', {
-                                pending: queuePendingCount,
-                                retrying: queueRetryingCount,
-                                max: queueMaxAttempts,
-                              })}
+                        <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
+                        <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
+                        <View style={styles.syncQueueFilterRow}>
+                          <Pressable
+                            onPress={() =>
+                              setQueueSmartSweepEnabled((prev) => {
+                                const next = !prev;
+                                void setSetting('syncQueueSmartSweepEnabled', next ? '1' : '0');
+                                return next;
+                              })
+                            }
+                            style={[
+                              styles.syncQueueFilterChip,
+                              queueSmartSweepEnabled && styles.syncQueueFilterChipActive,
+                            ]}
+                            accessibilityRole="button"
+                          >
+                            <ThemedText
+                              type="caption"
+                              style={
+                                queueSmartSweepEnabled ? styles.syncQueueFilterChipTextActive : undefined
+                              }
+                            >
+                              {t('sync_queue_smart_sweep_label')}
                             </ThemedText>
-                            {queueLastError ? (
-                              <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                                {t('sync_queue_latest_error_label')}
-                                {queueLastErrorActionType ? ` (${queueLastErrorActionType})` : ''}:{' '}
-                                {queueLastError}
-                              </ThemedText>
-                            ) : null}
-                            {queueNextRetrySeconds != null ? (
-                              <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                                {t('sync_queue_next_retry_in', { seconds: queueNextRetrySeconds })}
-                              </ThemedText>
-                            ) : null}
-                            {__DEV__ ? (
-                              <>
-                                <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
-                                <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
-                                <View style={styles.syncQueueFilterRow}>
-                                  <Pressable
-                                    onPress={() =>
-                                      setQueueSmartSweepEnabled((prev) => {
-                                        const next = !prev;
-                                        void setSetting('syncQueueSmartSweepEnabled', next ? '1' : '0');
-                                        return next;
-                                      })
-                                    }
-                                    style={[
-                                      styles.syncQueueFilterChip,
-                                      queueSmartSweepEnabled && styles.syncQueueFilterChipActive,
-                                    ]}
-                                    accessibilityRole="button"
+                          </Pressable>
+                          <Pressable
+                            onPress={resetQueueRetryPreferences}
+                            style={styles.syncQueueFilterChip}
+                            accessibilityRole="button"
+                          >
+                            <ThemedText type="caption">{t('sync_queue_reset_preferences_label')}</ThemedText>
+                          </Pressable>
+                        </View>
+                        {queueSmartSweepEnabled ? (
+                          <View style={styles.syncQueueFilterRow}>
+                            {([25, 50, 100, 200] as const).map((cap) => {
+                              const enabled = queueSmartSweepCap === cap;
+                              return (
+                                <Pressable
+                                  key={cap}
+                                  onPress={() => {
+                                    setQueueSmartSweepCap(cap);
+                                    void setSetting('syncQueueSmartSweepCap', String(cap));
+                                  }}
+                                  style={[
+                                    styles.syncQueueFilterChip,
+                                    enabled && styles.syncQueueFilterChipActive,
+                                  ]}
+                                  accessibilityRole="button"
+                                >
+                                  <ThemedText
+                                    type="caption"
+                                    style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
                                   >
-                                    <ThemedText
-                                      type="caption"
-                                      style={
-                                        queueSmartSweepEnabled
-                                          ? styles.syncQueueFilterChipTextActive
-                                          : undefined
-                                      }
-                                    >
-                                      {t('sync_queue_smart_sweep_label')}
-                                    </ThemedText>
-                                  </Pressable>
-                                  <Pressable
-                                    onPress={resetQueueRetryPreferences}
-                                    style={styles.syncQueueFilterChip}
-                                    accessibilityRole="button"
-                                  >
-                                    <ThemedText type="caption">
-                                      {t('sync_queue_reset_preferences_label')}
-                                    </ThemedText>
-                                  </Pressable>
-                                </View>
-                                {queueSmartSweepEnabled ? (
-                                  <View style={styles.syncQueueFilterRow}>
-                                    {([25, 50, 100, 200] as const).map((cap) => {
-                                      const enabled = queueSmartSweepCap === cap;
-                                      return (
-                                        <Pressable
-                                          key={cap}
-                                          onPress={() => {
-                                            setQueueSmartSweepCap(cap);
-                                            void setSetting('syncQueueSmartSweepCap', String(cap));
-                                          }}
-                                          style={[
-                                            styles.syncQueueFilterChip,
-                                            enabled && styles.syncQueueFilterChipActive,
-                                          ]}
-                                          accessibilityRole="button"
-                                        >
-                                          <ThemedText
-                                            type="caption"
-                                            style={
-                                              enabled ? styles.syncQueueFilterChipTextActive : undefined
-                                            }
-                                          >
-                                            Cap {cap}
-                                          </ThemedText>
-                                        </Pressable>
-                                      );
-                                    })}
-                                  </View>
-                                ) : null}
-                                <View style={styles.syncQueueFilterRow}>
-                                  {(
-                                    [
-                                      ['all', t('sync_queue_attempt_chip_all')],
-                                      ['retrying_only', t('sync_queue_attempt_chip_retrying')],
-                                      ['first_attempt_only', t('sync_queue_attempt_chip_first')],
-                                    ] as const
-                                  ).map(([scope, label]) => {
-                                    const enabled = queueAttemptScope === scope;
-                                    return (
-                                      <Pressable
-                                        key={scope}
-                                        onPress={() => {
-                                          setQueueAttemptScope(scope);
-                                          setQueueSmartSweepEnabled(false);
-                                          void setSetting('syncQueueAttemptScope', scope);
-                                          void setSetting('syncQueueSmartSweepEnabled', '0');
-                                        }}
-                                        style={[
-                                          styles.syncQueueFilterChip,
-                                          enabled && styles.syncQueueFilterChipActive,
-                                        ]}
-                                        accessibilityRole="button"
-                                      >
-                                        <ThemedText
-                                          type="caption"
-                                          style={
-                                            enabled ? styles.syncQueueFilterChipTextActive : undefined
-                                          }
-                                        >
-                                          {label}
-                                        </ThemedText>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                                <View style={styles.syncQueueFilterRow}>
-                                  {(
-                                    [
-                                      ['harvest', t('sync_queue_filter_harvest')],
-                                      ['photos_sync', t('sync_queue_filter_photos')],
-                                      ['evidence_sync', t('sync_queue_filter_evidence')],
-                                    ] as const
-                                  ).map(([actionType, label]) => {
-                                    const enabled = queueActionFilter[actionType];
-                                    const count = queueCountByActionType[actionType] ?? 0;
-                                    return (
-                                      <Pressable
-                                        key={actionType}
-                                        onPress={() =>
-                                          setQueueActionFilter((prev) => ({
-                                            ...prev,
-                                            [actionType]: !prev[actionType],
-                                          }))
-                                        }
-                                        style={[
-                                          styles.syncQueueFilterChip,
-                                          enabled && styles.syncQueueFilterChipActive,
-                                        ]}
-                                        accessibilityRole="button"
-                                      >
-                                        <ThemedText
-                                          type="caption"
-                                          style={
-                                            enabled ? styles.syncQueueFilterChipTextActive : undefined
-                                          }
-                                        >
-                                          {label} ({count})
-                                        </ThemedText>
-                                      </Pressable>
-                                    );
-                                  })}
-                                </View>
-                              </>
-                            ) : null}
+                                    Cap {cap}
+                                  </ThemedText>
+                                </Pressable>
+                              );
+                            })}
                           </View>
                         ) : null}
+                        <View style={styles.syncQueueFilterRow}>
+                          {(
+                            [
+                              ['all', t('sync_queue_attempt_chip_all')],
+                              ['retrying_only', t('sync_queue_attempt_chip_retrying')],
+                              ['first_attempt_only', t('sync_queue_attempt_chip_first')],
+                            ] as const
+                          ).map(([scope, label]) => {
+                            const enabled = queueAttemptScope === scope;
+                            return (
+                              <Pressable
+                                key={scope}
+                                onPress={() => {
+                                  setQueueAttemptScope(scope);
+                                  setQueueSmartSweepEnabled(false);
+                                  void setSetting('syncQueueAttemptScope', scope);
+                                  void setSetting('syncQueueSmartSweepEnabled', '0');
+                                }}
+                                style={[
+                                  styles.syncQueueFilterChip,
+                                  enabled && styles.syncQueueFilterChipActive,
+                                ]}
+                                accessibilityRole="button"
+                              >
+                                <ThemedText
+                                  type="caption"
+                                  style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                                >
+                                  {label}
+                                </ThemedText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <View style={styles.syncQueueFilterRow}>
+                          {(
+                            [
+                              ['harvest', t('sync_queue_filter_harvest')],
+                              ['photos_sync', t('sync_queue_filter_photos')],
+                              ['evidence_sync', t('sync_queue_filter_evidence')],
+                            ] as const
+                          ).map(([actionType, label]) => {
+                            const enabled = queueActionFilter[actionType];
+                            const count = queueCountByActionType[actionType] ?? 0;
+                            return (
+                              <Pressable
+                                key={actionType}
+                                onPress={() =>
+                                  setQueueActionFilter((prev) => ({
+                                    ...prev,
+                                    [actionType]: !prev[actionType],
+                                  }))
+                                }
+                                style={[
+                                  styles.syncQueueFilterChip,
+                                  enabled && styles.syncQueueFilterChipActive,
+                                ]}
+                                accessibilityRole="button"
+                              >
+                                <ThemedText
+                                  type="caption"
+                                  style={enabled ? styles.syncQueueFilterChipTextActive : undefined}
+                                >
+                                  {label} ({count})
+                                </ThemedText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <ThemedText type="caption" style={styles.mutedText}>
+                          {t('settings_api_base')}: {getTracebudApiBaseUrl()}
+                        </ThemedText>
                       </View>
-                    ) : null}
-
-                    {__DEV__ ? (
-                      <ThemedText type="caption" style={styles.mutedText}>
-                        {t('settings_api_base')}: {getTracebudApiBaseUrl()}
-                      </ThemedText>
                     ) : null}
                   </View>
                 ) : null}
@@ -1536,15 +1425,32 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#666666',
   },
-  syncQueueHealth: {
-    marginTop: 8,
-    gap: 6,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E5E5',
-  },
   syncQueueWarningText: {
     color: '#8A5A00',
+  },
+  uploadIssuePanel: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
+    overflow: 'hidden',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  uploadIssueHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  uploadIssueSummary: {
+    flex: 1,
+    color: '#92400E',
+    fontWeight: '600',
+  },
+  uploadIssueBody: {
+    gap: 8,
   },
   syncQueueFilterRow: {
     flexDirection: 'row',
@@ -1625,6 +1531,21 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 4,
   },
+  profileAccountSection: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5E5',
+    gap: 4,
+  },
+  profileSignOutRow: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  profileSignOutLink: {
+    color: Brand.primary,
+    fontWeight: '600',
+  },
   avatarWrap: {
     position: 'relative',
   },
@@ -1702,31 +1623,6 @@ const styles = StyleSheet.create({
   },
   backupStatusMuted: {
     color: '#666666',
-  },
-  backupAccountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E5E5',
-  },
-  backupAccountEmail: {
-    flex: 1,
-    color: '#444444',
-  },
-  backupSignOutLink: {
-    color: Brand.primary,
-    fontWeight: '600',
-  },
-  queueDetailsToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingVertical: 4,
   },
   advancedToggle: {
     flexDirection: 'row',
@@ -1809,31 +1705,10 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   syncAuthHint: {
-    marginTop: 12,
+    marginTop: 4,
     fontSize: 14,
     lineHeight: 20,
-    color: '#333333',
-  },
-  vertexAvgRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-  vertexAvgChip: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FAFAFA',
-  },
-  vertexAvgChipSelected: {
-    borderColor: Brand.primary,
-    backgroundColor: '#E8F8F1',
-  },
-  vertexAvgChipTextSelected: {
-    color: Brand.primary,
+    color: '#666666',
   },
 });
 

@@ -13,6 +13,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
+import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import {
   deletePlotLocalData,
   initDatabase,
@@ -66,6 +67,7 @@ export type Plot = {
   declaredAreaHectares?: number;
   discrepancyPercent?: number;
   precisionMetersAtSave?: number | null;
+  geometryCapture?: PlotGeometryCaptureMetadata;
   landTenureDeclared?: boolean;
   landTenureDeclaredAt?: number;
   noDeforestationDeclared?: boolean;

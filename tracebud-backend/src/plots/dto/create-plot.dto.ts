@@ -13,6 +13,22 @@ export class CreatePlotDto {
   clientPlotId!: string;
 
   @ApiProperty({
+    required: false,
+    description: 'Human-readable plot label shown in the workspace inventory.',
+  })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'CRM contact to link when an exporter registers a plot on behalf of a producer.',
+  })
+  @IsOptional()
+  @IsString()
+  producerContactId?: string;
+
+  @ApiProperty({
     description:
       'GeoJSON Point or Polygon in WGS84. Example: { "type": "Point", "coordinates": [-87.123456, 14.123456] }',
   })
@@ -60,5 +76,13 @@ export class CreatePlotDto {
   @IsString()
   @IsIn([...PRODUCTION_SYSTEMS])
   productionSystem?: (typeof PRODUCTION_SYSTEMS)[number];
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Advisory field-capture metadata (confidence tier, capture method, optional offline imagery pack).',
+  })
+  @IsOptional()
+  geometryCapture?: Record<string, unknown>;
 }
 

@@ -52,6 +52,7 @@ import {
 } from '@/lib/rbac';
 import { RoleBadge } from '@/components/common/role-badge';
 import { DemoDataSidebarToggle } from '@/components/demo/demo-data-sidebar-toggle';
+import { FreeTrialNavBadge } from '@/components/layout/free-trial-nav-badge';
 import { translateNavItemName } from '@/lib/nav-labels';
 import { getAppChromeCopy } from '@/lib/workflow-terminology-labels';
 import type { TenantRole } from '@/types';
@@ -98,6 +99,7 @@ const ONBOARDING_NAV_KEY_BY_NAME: Record<string, string> = {
   'Field Operations': 'outreach',
   Farmers: 'farmers',
   Producers: 'farmers',
+  Suppliers: 'contacts',
   Network: 'contacts',
   Evidence: 'fpic',
   Outreach: 'outreach',
@@ -402,6 +404,7 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
 
       {/* User Section */}
       <div className="flex-shrink-0 p-3 border-t border-white/10">
+        <FreeTrialNavBadge />
         <DemoDataSidebarToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

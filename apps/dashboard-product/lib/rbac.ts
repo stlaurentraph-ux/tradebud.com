@@ -284,14 +284,26 @@ const LEGAL_ROLE_PERMISSION_MATRIX: Record<LegalWorkflowRole, LegalWorkflowPermi
   PENDING_MANUAL_CLASSIFICATION: [],
 };
 
+const EXPORTER_PERMISSIONS: CommercialPermission[] = TIER_PERMISSION_MATRIX['tier_2'].filter(
+  (permission) =>
+    permission !== 'harvests:create' &&
+    permission !== 'harvests:edit' &&
+    permission !== 'harvests:request_exception',
+);
+
+const COOPERATIVE_PERMISSIONS: CommercialPermission[] = TIER_PERMISSION_MATRIX['tier_2']
+  .filter((permission) => !permission.startsWith('packages:') || permission === 'packages:view')
+  .filter(
+    (permission) =>
+      permission !== 'harvests:create' &&
+      permission !== 'harvests:edit' &&
+      permission !== 'harvests:request_exception',
+  );
+
 const PERMISSION_MATRIX: Record<TenantRole, CommercialPermission[]> = {
-  exporter: TIER_PERMISSION_MATRIX['tier_2'],
+  exporter: EXPORTER_PERMISSIONS,
   importer: TIER_PERMISSION_MATRIX['tier_3'],
-  cooperative: [
-    ...TIER_PERMISSION_MATRIX['tier_2'].filter(p =>
-      !p.startsWith('packages:') || p === 'packages:view'
-    ),
-  ],
+  cooperative: COOPERATIVE_PERMISSIONS,
   country_reviewer: [
     ...TIER_PERMISSION_MATRIX['tier_3'],
     'roles:manual_classify',
@@ -317,7 +329,7 @@ const ROLE_NAV_CONFIG: Record<TenantRole, string[]> = {
   exporter: [
     'Overview',
     'Campaigns',
-    'Producers',
+    'Suppliers',
     'Plots',
     'Lots & Batches',
     'Shipments',
@@ -389,7 +401,7 @@ const ROLE_NAV_SECTIONS: Record<TenantRole, NavSectionDefinition[]> = {
     {
       id: 'origins',
       labelKey: 'nav.section.origins',
-      itemNames: ['Producers', 'Plots', 'Lots & Batches'],
+      itemNames: ['Suppliers', 'Plots', 'Lots & Batches'],
     },
     { id: 'export', labelKey: 'nav.section.export', itemNames: ['Shipments', 'Evidence'] },
     {
@@ -489,6 +501,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
   { name: 'Plots', href: '/plots', icon: 'MapPin', permission: 'plots:view', mvp: true },
   { name: 'Farmers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
   { name: 'Producers', href: '/farmers', icon: 'Users', permission: 'farmers:view', mvp: true },
+  { name: 'Suppliers', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
   { name: 'FPIC', href: '/fpic', icon: 'FileCheck', permission: 'fpic:view', mvp: true },
   { name: 'Contacts', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },
   { name: 'Members', href: '/contacts', icon: 'Users', permission: 'contacts:view', mvp: true },

@@ -32,6 +32,8 @@ import {
   getEvidenceDocTypeLabel,
   getEvidenceEmptyMessage,
   getEvidenceExpiresLabel,
+  getEvidenceProvenanceBody,
+  getEvidenceProvenanceTitle,
   getEvidenceFilterStatusLabel,
   getEvidenceFilterStatusOption,
   getEvidenceHashFullLabel,
@@ -565,13 +567,10 @@ export default function FPICRepositoryPage() {
               <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900">
-                  {isImporter ? 'Evidence provenance and audit trail' : 'Provenance chain and audit trail'}
+                  {getEvidenceProvenanceTitle(role, t)}
                 </p>
                 <p className="text-blue-800 mt-1">
-                  Each document is hashed with SHA-256 at upload time. The hash, uploader identity, timestamp,
-                  and linked entities form an immutable provenance chain. Click any document to expand its full
-                  audit history. {isCooperative ? 'Consent and portability artifacts are retained and traceable across member transfers. ' : ''}
-                  All records are retained for 5 years per EUDR requirements.
+                  {getEvidenceProvenanceBody(role, t)}
                 </p>
               </div>
             </div>

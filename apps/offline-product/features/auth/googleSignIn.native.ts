@@ -1,0 +1,79 @@
+import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
+import {
+  AuthRequest,
+  ResponseType,
+  exchangeCodeAsync,
+} from 'expo-auth-session';
+import type { Session } from '@supabase/supabase-js';
+
+import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
+
+export async function signInWithGoogleNative(): Promise<Session> {
+  const ids = getGoogleOAuthClientIds();
+  if (!ids) {
+    throw new Error('sign_in_oauth_provider_disabled');
+  }
+
+  const redirectUri = getGoogleOAuthRedirectUri(ids.clientId);
+  const nonce = Crypto.randomUUID();
+
+  const request = new AuthRequest({
+    clientId: ids.clientId,
+    redirectUri,
+    scopes: ['openid', 'profile', 'email'],
+    responseType: ResponseType.Code,
+    usePKCE: true,
+    extraParams: { nonce },
+  });
+
+  const result = await request.promptAsync(GOOGLE_DISCOVERY);
+  if (result.type !== 'success' || !result.params.code) {
+    if (result.type === 'cancel' || result.type === 'dismiss') {
+      throw new Error('sign_in_oauth_cancelled');
+    }
+    throw new Error('sign_in_oauth_failed');
+  }
+
+  const tokenResult = await exchangeCodeAsync(
+    {
+      clientId: ids.clientId,
+      code: result.params.code,
+      redirectUri,
+      extraParams: {
+        code_verifier: request.codeVerifier ?? '',
+      },
+    },
+    GOOGLE_DISCOVERY,
+  );
+
+  const idToken = tokenResult.idToken;
+  if (!idToken) {
+    throw new Error('sign_in_oauth_failed');
+  }
+
+  const supabase = getSupabaseAuthClient();
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'google',
+    token: idToken,
+    nonce,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data.session) {
+    throw new Error('No session returned from OAuth.');
+  }
+
+  return data.session;
+}

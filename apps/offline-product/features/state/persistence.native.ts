@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import Constants from 'expo-constants';
 
 import type { FarmerProfile, Plot } from './AppStateContext';
+import { parsePlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { generateHlcTimestamp } from '@/features/sync/hlc';
 
 export type PlotPhoto = {
@@ -74,6 +75,12 @@ export type LocalAuditEvent = {
 const DB_NAME = 'tracebud_offline.db';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+/** @internal Reset singleton DB between Vitest cases. */
+export function resetPersistenceDatabaseForTests(): void {
+  dbPromise = null;
+}
+
 function getDb() {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync(DB_NAME);
@@ -234,6 +241,9 @@ async function ensurePlotSchemaExtras(db: SQLite.SQLiteDatabase) {
   if (!has('noDeforestationDeclaredAt')) {
     await db.execAsync('ALTER TABLE plots ADD COLUMN noDeforestationDeclaredAt INTEGER;');
   }
+  if (!has('geometryCaptureMetaJson')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN geometryCaptureMetaJson TEXT;');
+  }
 }
 
 export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: Plot[] }> {
@@ -305,6 +315,7 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
       noDeforestationDeclared:
         row.noDeforestationDeclared === 1 ? true : row.noDeforestationDeclared === 0 ? false : undefined,
       noDeforestationDeclaredAt: row.noDeforestationDeclaredAt ?? undefined,
+      geometryCapture: parsePlotGeometryCaptureMetadata(row.geometryCaptureMetaJson) ?? undefined,
     };
   });
 
@@ -351,8 +362,9 @@ export async function persistPlots(plots: Plot[]) {
       `INSERT INTO plots (
         id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
         declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
-        landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
+        geometryCaptureMetaJson
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
         plot.id,
         plot.farmerId,
@@ -369,6 +381,7 @@ export async function persistPlots(plots: Plot[]) {
         plot.landTenureDeclaredAt ?? null,
         plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
         plot.noDeforestationDeclaredAt ?? null,
+        plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
       ],
     );
   }

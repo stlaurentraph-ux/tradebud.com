@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, ArrowLeft, Loader2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout/app-header';
@@ -55,6 +55,7 @@ function formatHarvestDate(value: string | null): string {
 
 export default function NewPackagePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
@@ -89,6 +90,19 @@ export default function NewPackagePage() {
       .then((rows) => {
         if (!cancelled) {
           setVouchers(rows);
+          const preset = searchParams?.get('voucherIds')?.trim();
+          if (preset) {
+            const allowed = new Set(
+              rows.filter((row) => row.eligible_for_package).map((row) => row.id),
+            );
+            const ids = preset
+              .split(',')
+              .map((id) => id.trim())
+              .filter((id) => allowed.has(id));
+            if (ids.length > 0) {
+              setFormData((prev) => ({ ...prev, voucherIds: ids }));
+            }
+          }
         }
       })
       .catch((error) => {
@@ -107,7 +121,7 @@ export default function NewPackagePage() {
     return () => {
       cancelled = true;
     };
-  }, [canCreatePackage]);
+  }, [canCreatePackage, searchParams]);
 
   const eligibleVouchers = useMemo(
     () => vouchers.filter((voucher) => voucher.eligible_for_package),

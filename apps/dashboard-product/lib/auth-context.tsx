@@ -134,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -176,8 +175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         reason: error instanceof Error ? error.message : 'sign_in_failed',
       });
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 

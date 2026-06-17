@@ -918,7 +918,13 @@ export class LaunchService {
   }
 
   private normalizeSupplyChainRoles(roles: string[] | null | undefined): string[] {
-    const allowed = new Set(['cooperative', 'exporter', 'importer']);
+    const allowed = new Set([
+      'cooperative',
+      'exporter',
+      'importer',
+      'integrated_harvest_capture',
+      'high_res_map_tiles',
+    ]);
     const unique = new Set<string>();
     for (const role of roles ?? []) {
       if (typeof role === 'string' && allowed.has(role)) {

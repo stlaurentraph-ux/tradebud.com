@@ -327,19 +327,32 @@ export class PlotsController {
   async updateGeometry(@Param('id') id: string, @Body() dto: UpdatePlotGeometryDto, @Req() req: any) {
     await this.requireTenantClaimOrFieldActor(req);
     const role = deriveRoleFromSupabaseUser(req.user);
-    if (role !== 'farmer' && role !== 'agent') {
-      throw new ForbiddenException('Only farmers or agents can revise plot geometry');
-    }
     const userId = req.user?.id as string | undefined;
-    if (role === 'farmer') {
-      if (!userId) {
-        throw new ForbiddenException('Missing authenticated user');
-      }
-      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
-      if (!owned) {
-        throw new ForbiddenException('Plot scope violation');
-      }
+    const fieldRoles = role === 'farmer' || role === 'agent';
+    const reviewerRoles =
+      role === 'exporter' ||
+      role === 'cooperative' ||
+      role === 'admin' ||
+      role === 'country_reviewer';
+
+    if (!fieldRoles && !reviewerRoles) {
+      throw new ForbiddenException('Not allowed to revise plot geometry');
     }
+
+    if (fieldRoles) {
+      if (role === 'farmer') {
+        if (!userId) {
+          throw new ForbiddenException('Missing authenticated user');
+        }
+        const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+        if (!owned) {
+          throw new ForbiddenException('Plot scope violation');
+        }
+      }
+    } else {
+      await this.enforcePlotTenantAccess(id, req);
+    }
+
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
     return this.plotsService.updateGeometry(id, dto, userId, tenantId);
   }
@@ -622,6 +635,32 @@ export class PlotsController {
   @ApiParam({ name: 'id', description: 'Plot ID' })
   async deforestationDecisionHistory(@Param('id') id: string) {
     return this.plotsService.getDeforestationDecisionHistory(id);
+  }
+
+  @Get(':id/map-preview')
+  @ApiOperation({
+    summary: 'Read-only plot map preview (geometry + metadata)',
+    description:
+      'Returns current plot geometry for dashboard map rendering. Point plots are not buffered.',
+  })
+  @ApiParam({ name: 'id', description: 'Plot ID' })
+  async mapPreview(@Param('id') id: string, @Req() req: any) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    } else if (tenantId) {
+      await this.enforcePlotTenantAccess(id, req);
+    }
+    return this.plotsService.getPlotMapPreview(id);
   }
 
   @Get(':id/geometry-history')

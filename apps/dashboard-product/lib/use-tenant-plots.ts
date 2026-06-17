@@ -1,40 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDemoData } from '@/lib/demo-data-context';
 import { mockPlots } from '@/lib/mocks';
+import { normalizePlotInventoryPayload, type PlotInventoryRow } from '@/lib/plot-inventory';
 
-export interface TenantPlot {
-  id: string;
-  name: string;
-  farmer_id?: string;
-  status?: string | null;
-  area_ha?: number | null;
-}
+export type TenantPlot = PlotInventoryRow;
 
 function getAuthHeaders(): HeadersInit {
   if (typeof window === 'undefined') return {};
   const token = window.sessionStorage.getItem('tracebud_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function normalizePlots(payload: unknown): TenantPlot[] {
-  const rows = Array.isArray(payload) ? payload : [];
-  const plots: TenantPlot[] = [];
-  for (const row of rows) {
-    if (!row || typeof row !== 'object') continue;
-    const plot = row as Record<string, unknown>;
-    const id = typeof plot.id === 'string' ? plot.id : '';
-    if (!id) continue;
-    plots.push({
-      id,
-      name: typeof plot.name === 'string' && plot.name.trim() ? plot.name : `Plot ${id.slice(0, 8)}`,
-      farmer_id: typeof plot.farmer_id === 'string' ? plot.farmer_id : undefined,
-      status: typeof plot.status === 'string' ? plot.status : null,
-      area_ha: typeof plot.area_ha === 'number' ? plot.area_ha : null,
-    });
-  }
-  return plots;
 }
 
 export function useTenantPlots(tenantId: string | null, options?: { enabled?: boolean }) {
@@ -43,6 +19,11 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
   const [plots, setPlots] = useState<TenantPlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const reload = useCallback(() => {
+    setReloadToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     if (!tenantId || !enabled) {
@@ -61,8 +42,11 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
         id: plot.id,
         name: plot.name,
         farmer_id: plot.farmer_id,
-        status: plot.verified ? 'verified' : 'pending',
-        area_ha: plot.area_hectares ?? null,
+        farmer_name: plot.farmer_name,
+        area_hectares: plot.area_hectares ?? 0,
+        deforestation_risk: plot.deforestation_risk,
+        evidence: plot.evidence ?? [],
+        verified: plot.verified,
       }));
       if (!cancelled) {
         setPlots(data);
@@ -81,13 +65,21 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
         const body = (await response.json().catch(() => ({}))) as unknown;
         if (!response.ok) {
           const message =
-            body && typeof body === 'object' && 'error' in body
-              ? String((body as { error?: string }).error ?? 'Failed to load plots.')
-              : 'Failed to load plots.';
-          throw new Error(message);
+            body && typeof body === 'object' && 'message' in body
+              ? String((body as { message?: string }).message ?? '')
+              : body && typeof body === 'object' && 'error' in body
+                ? String((body as { error?: string }).error ?? 'Failed to load plots.')
+                : 'Failed to load plots.';
+          if (response.status === 403) {
+            throw new Error(
+              message.trim() ||
+                'You do not have permission to view the plot inventory. Sign in again or contact support.',
+            );
+          }
+          throw new Error(message || 'Failed to load plots.');
         }
         if (!cancelled) {
-          setPlots(normalizePlots(body));
+          setPlots(normalizePlotInventoryPayload(body));
         }
       })
       .catch((loadError) => {
@@ -105,7 +97,7 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
     return () => {
       cancelled = true;
     };
-  }, [tenantId, enabled, demoDataEnabled]);
+  }, [tenantId, enabled, demoDataEnabled, reloadToken]);
 
-  return { plots, isLoading, error };
+  return { plots, isLoading, error, reload };
 }

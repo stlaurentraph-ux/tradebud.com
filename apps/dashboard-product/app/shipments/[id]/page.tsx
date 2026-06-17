@@ -1,7 +1,8 @@
 'use client';
 
-import { use, useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, Layers, Lock } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
@@ -12,96 +13,103 @@ import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
   getBatchNavLabel,
+  getPackageDetailBackLabel,
+  getPackagesPageTitle,
   getShipmentAssembleCtaLabel,
   getShipmentNavLabel,
   getShipmentStatusTitle,
-  getShipmentsListBackLabel,
   getSupplyChainFlowHint,
 } from '@/lib/workflow-terminology-labels';
 import { sumBatchWeightKg } from '@/lib/shipment-weight-guardrail';
 import {
-  getCanonicalShipmentHeader,
+  resolveShipmentHeaderForAssembly,
   type CanonicalShipmentHeader,
 } from '@/lib/shipment-headers-client';
-import { listShipmentAssemblies, type ShipmentAssemblyRecord } from '@/lib/shipment-assembly-service';
+import { listShipmentAssemblies } from '@/lib/shipment-assembly-service';
+import { useDemoData } from '@/lib/demo-data-context';
+import { getMockShipmentHeaderById } from '@/lib/mocks/shipment-headers';
 
-interface ShipmentDetailPageProps {
-  params: Promise<{ id: string }>;
+export function ShipmentHeaderNotFound({ t }: { t?: (key: string) => string }) {
+  return (
+    <Card>
+      <CardContent className="space-y-4 py-10 text-center">
+        <p className="text-sm font-semibold text-foreground">Shipment not found</p>
+        <p className="text-sm text-muted-foreground">
+          This shipment reference could not be loaded. It may have been removed or you may not have
+          access.
+        </p>
+        <Button variant="outline" asChild>
+          <Link href="/packages">
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+            {getPackageDetailBackLabel(undefined, t)}
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
-function assemblyToHeader(assembly: ShipmentAssemblyRecord): CanonicalShipmentHeader {
-  return {
-    id: assembly.id,
-    tenant_id: '',
-    external_id: assembly.id,
-    shipment_reference: assembly.shipment_reference,
-    label: assembly.label,
-    status: assembly.status,
-    declared_quantity_kg: assembly.declared_quantity_kg,
-    covered_quantity_kg: assembly.covered_quantity_kg,
-    package_ids: assembly.package_ids,
-    sealed_at: assembly.status === 'SEALED' ? assembly.updated_at : null,
-    created_at: assembly.created_at,
-    updated_at: assembly.updated_at,
-  };
-}
-
-export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) {
-  const { id } = use(params);
+export default function ShipmentDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? '';
   const { user } = useAuth();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const role = user?.active_role;
   const tenantId = user?.tenant_id ?? null;
+  const { demoDataEnabled } = useDemoData();
+  const shipmentsPageTitle = useMemo(() => getPackagesPageTitle(role, t), [role, t]);
   const { packages } = useHarvestPackages(tenantId, { scope: 'tenant' });
   const [shipment, setShipment] = useState<CanonicalShipmentHeader | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id) {
+      setShipment(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (demoDataEnabled) {
+      setShipment(getMockShipmentHeaderById(id));
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    setIsLoading(true);
+    setError(null);
 
-    const load = async () => {
-      try {
-        const canonical = await getCanonicalShipmentHeader(id);
+    void resolveShipmentHeaderForAssembly(id, tenantId, listShipmentAssemblies)
+      .then((resolved) => {
         if (!cancelled) {
-          setShipment(canonical);
-          setError(null);
+          setShipment(resolved);
         }
-        return;
-      } catch {
-        // Fall back to audit assembly rows for legacy URLs.
-      }
-
-      if (!tenantId) {
-        if (!cancelled) setError('Shipment not found.');
-        return;
-      }
-
-      try {
-        const rows = await listShipmentAssemblies(tenantId);
-        const match = rows.find((row) => row.id === id) ?? null;
+      })
+      .catch((loadError) => {
         if (!cancelled) {
-          if (match) {
-            setShipment(assemblyToHeader(match));
+          const mockFallback =
+            process.env.NODE_ENV !== 'production' ? getMockShipmentHeaderById(id) : null;
+          if (mockFallback) {
+            setShipment(mockFallback);
             setError(null);
-          } else {
-            setShipment(null);
-            setError('Shipment not found.');
+            return;
           }
-        }
-      } catch (loadError) {
-        if (!cancelled) {
           setShipment(null);
           setError(loadError instanceof Error ? loadError.message : 'Failed to load shipment.');
         }
-      }
-    };
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
 
-    void load();
     return () => {
       cancelled = true;
     };
-  }, [id, tenantId]);
+  }, [id, tenantId, demoDataEnabled]);
 
   const includedBatches = useMemo(
     () => packages.filter((pkg) => shipment?.package_ids.includes(pkg.id)),
@@ -109,12 +117,28 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
   );
   const coveredQuantityKg = sumBatchWeightKg(includedBatches);
 
-  if (error) {
-    return <div className="p-6 text-sm text-destructive">{error}</div>;
+  if (isLoading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading shipment…</div>;
   }
 
   if (!shipment) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading shipment…</div>;
+    return (
+      <div className="flex flex-col">
+        <AppHeader
+          title={id}
+          subtitle={getShipmentNavLabel(role, t)}
+          breadcrumbs={[
+            { label: getDashboardBreadcrumbLabel(t), href: '/' },
+            { label: shipmentsPageTitle, href: '/packages' },
+            { label: id },
+          ]}
+        />
+        <div className="p-6">
+          {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
+          <ShipmentHeaderNotFound t={t} />
+        </div>
+      </div>
+    );
   }
 
   const canAssemble = shipment.status === 'DRAFT' || shipment.status === 'READY';
@@ -126,7 +150,7 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
         subtitle={shipment.label}
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
-          { label: getShipmentNavLabel(role, t), href: '/shipments' },
+          { label: shipmentsPageTitle, href: '/packages' },
           { label: shipment.shipment_reference },
         ]}
         actions={
@@ -143,9 +167,9 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
 
       <div className="flex-1 space-y-6 p-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/shipments">
+          <Link href="/packages">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {getShipmentsListBackLabel(role, t)}
+            {getPackageDetailBackLabel(role, t)}
           </Link>
         </Button>
 
@@ -164,7 +188,10 @@ export default function ShipmentDetailPage({ params }: ShipmentDetailPageProps) 
                 <p className="text-sm text-muted-foreground">No batches linked yet.</p>
               ) : (
                 includedBatches.map((pkg) => (
-                  <div key={pkg.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div
+                    key={pkg.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                  >
                     <div>
                       <p className="font-medium text-sm">{pkg.code}</p>
                       <p className="text-xs text-muted-foreground">

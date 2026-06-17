@@ -2,8 +2,10 @@
 
 import { useContext, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
+  MapPin,
   Package,
   Upload,
   ShieldCheck,
@@ -24,6 +26,7 @@ import type { DDSPackage, ShipmentStatus } from '@/types';
 import { StatusChip } from '@/components/ui/status-chip';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
 import { VirginStatePanel } from '@/components/dashboards/virgin-state-panel';
+import { ExporterLineageProgressCard } from '@/components/dashboards/exporter-lineage-progress-card';
 import { DashboardQuickActions } from '@/components/dashboards/dashboard-quick-actions';
 import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
 import { LocaleContext } from '@/lib/locale-context';
@@ -47,6 +50,7 @@ interface ExporterDashboardProps {
     packages_by_status: Record<ShipmentStatus, number>;
     total_plots: number;
     compliant_plots: number;
+    plots_needing_action?: number;
     total_farmers: number;
     blocking_issues_count?: number;
     yield_failures_count?: number;
@@ -121,6 +125,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
   const blockingIssuesCount = metrics.blocking_issues_count ?? 0;
   const yieldFailuresCount = metrics.yield_failures_count ?? 0;
   const shipmentsReadyToSeal = shipmentStates.READY;
+  const plotsNeedingAction = metrics.plots_needing_action ?? 0;
   const isVirginTenant = isVirginTenantForRole('exporter', metrics);
 
   if (isVirginTenant) {
@@ -148,6 +153,34 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
   return (
     <div className="space-y-6">
       {northStar ? <NorthStarKpi config={northStar} priorityLabel={getNorthStarPriorityLabel(t)} /> : null}
+      {plotsNeedingAction > 0 ? (
+        <Card className="border-amber-200 bg-amber-50/40">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                <MapPin className="h-5 w-5 text-amber-700" aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-950">{copy.plotsNeedAttention}</p>
+                <p className="text-2xl font-bold text-amber-900">{plotsNeedingAction}</p>
+                <p className="text-xs text-amber-800">{copy.plotsNeedAttentionHint}</p>
+              </div>
+            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0 border-amber-300 bg-white/80">
+              <Link href="/plots">{copy.plotsNeedAttentionCta}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+      <ExporterLineageProgressCard
+        signals={{
+          total_farmers: metrics.total_farmers,
+          total_plots: metrics.total_plots,
+          total_packages: metrics.total_packages,
+          packages_by_status: metrics.packages_by_status,
+        }}
+        t={t}
+      />
       <span className="sr-only">
         {formatExporterComplianceRateSrOnly(
           complianceRate,
@@ -290,7 +323,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
         {...homeActivityProps(home)}
       />
 
-      <DashboardQuickActions visible={isVirginTenant} className="grid gap-4 md:grid-cols-3">
+      <DashboardQuickActions visible className="grid gap-4 md:grid-cols-3">
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
           <Link href="/harvests">
             <CardContent className="flex items-center gap-4 p-6">
@@ -322,7 +355,7 @@ export function ExporterDashboard({ metrics, packages = [], home }: ExporterDash
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <Link href="/farmers/new">
+          <Link href="/contacts/add?mode=csv">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
                 <UserPlus className="h-6 w-6 text-blue-600" />

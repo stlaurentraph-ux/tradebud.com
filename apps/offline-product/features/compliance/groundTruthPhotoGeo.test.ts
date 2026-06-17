@@ -4,12 +4,16 @@ import type { Plot } from '@/features/state/AppStateContext';
 import type { PlotPhoto } from '@/features/state/persistence.native';
 import {
   computePlotPhotoStandpoint,
-  countGeoVerifiedGroundTruthDirections,
-  GROUND_TRUTH_DIRECTIONS,
+  distanceToPlotBorderM,
   headingDeltaToDirection,
   isAtPhotoCaptureLocation,
   isGroundTruthPhotoSetComplete,
+  isPhotoStandpointReady,
+  nextGroundTruthPhotoSlotIndex,
   photoForDirection,
+  resolveRequiredInwardFromBorderM,
+  plotRequiresInwardPhotoStandoff,
+  GROUND_TRUTH_DIRECTIONS,
 } from './groundTruthPhotoGeo';
 
 const pointPlot: Plot = {
@@ -73,6 +77,32 @@ describe('groundTruthPhotoGeo', () => {
     expect(isAtPhotoCaptureLocation(14.13, -87.13, polygonPlot)).toBe(false);
   });
 
+  it('requires inward clearance from border before photo standpoint on plots ≥ 4 ha', () => {
+    const largePlot: Plot = {
+      ...polygonPlot,
+      areaHectares: 4,
+      areaSquareMeters: 40_000,
+    };
+    const required = resolveRequiredInwardFromBorderM(largePlot);
+    expect(required).toBeGreaterThanOrEqual(5);
+    const centroid = computePlotPhotoStandpoint(largePlot)!;
+    expect(isPhotoStandpointReady(centroid.latitude, centroid.longitude, largePlot)).toBe(true);
+    expect(
+      isPhotoStandpointReady(
+        largePlot.points[0].latitude,
+        largePlot.points[0].longitude,
+        largePlot,
+      ),
+    ).toBe(false);
+  });
+
+  it('waives inward standoff for plots under 4 ha', () => {
+    expect(plotRequiresInwardPhotoStandoff(polygonPlot)).toBe(false);
+    expect(resolveRequiredInwardFromBorderM(polygonPlot)).toBe(0);
+    expect(isPhotoStandpointReady(14.1235, -87.1235, polygonPlot)).toBe(true);
+    expect(isPhotoStandpointReady(14.123456, -87.123456, pointPlot)).toBe(true);
+  });
+
   it('resolves photos per direction with legacy index fallback', () => {
     const photos = [
       photo({ plotId: 'p2', uri: 'a', takenAt: Date.now(), direction: null }),
@@ -82,7 +112,7 @@ describe('groundTruthPhotoGeo', () => {
     expect(photoForDirection(photos, 'east')?.uri).toBe('b');
   });
 
-  it('requires geo-verified photos in all four directions', () => {
+  it('requires four clearance-verified on-plot photos', () => {
     const now = Date.now();
     const photos = GROUND_TRUTH_DIRECTIONS.map((direction) =>
       photo({
@@ -94,8 +124,22 @@ describe('groundTruthPhotoGeo', () => {
         longitude: -87.1235,
       }),
     );
-    expect(countGeoVerifiedGroundTruthDirections(photos, polygonPlot)).toBe(4);
     expect(isGroundTruthPhotoSetComplete(photos, polygonPlot)).toBe(true);
+  });
+
+  it('resolves next empty slot index', () => {
+    const now = Date.now();
+    const photos = [
+      photo({
+        plotId: polygonPlot.id,
+        uri: 'a',
+        takenAt: now,
+        direction: 'north',
+        latitude: 14.1235,
+        longitude: -87.1235,
+      }),
+    ];
+    expect(nextGroundTruthPhotoSlotIndex(photos, polygonPlot)).toBe(1);
   });
 
   it('computes heading delta toward cardinal targets', () => {

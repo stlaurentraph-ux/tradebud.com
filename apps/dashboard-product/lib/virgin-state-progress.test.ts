@@ -24,4 +24,22 @@ describe('virgin-state-progress', () => {
       }),
     ).toBe(3);
   });
+
+  it('honours exporter onboarding flags when tenant counts are still zero', () => {
+    expect(
+      countCompletedVirginSteps('exporter', {
+        total_farmers: 0,
+        total_plots: 0,
+        contacts_uploaded: true,
+      }),
+    ).toBe(1);
+    expect(
+      countCompletedVirginSteps('exporter', {
+        total_farmers: 0,
+        total_plots: 0,
+        contacts_uploaded: true,
+        first_plot_captured: true,
+      }),
+    ).toBe(2);
+  });
 });

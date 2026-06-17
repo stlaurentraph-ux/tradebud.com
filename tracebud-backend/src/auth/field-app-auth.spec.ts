@@ -30,10 +30,10 @@ describe('resolveFieldActorRole', () => {
     await expect(resolveFieldActorRole(poolWithoutProfile(), agentUser)).resolves.toBe('agent');
   });
 
-  it('returns farmer for dashboard JWT when farmer_profile is linked', async () => {
+  it('returns null for dashboard exporter JWT even when farmer_profile is linked', async () => {
     await expect(
       resolveFieldActorRole(poolWithFarmerProfile('user-3'), exporterUser),
-    ).resolves.toBe('farmer');
+    ).resolves.toBeNull();
   });
 
   it('returns null for dashboard JWT without farmer_profile', async () => {

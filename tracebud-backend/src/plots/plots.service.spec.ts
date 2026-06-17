@@ -151,6 +151,37 @@ describe('PlotsService.create geometry policy', () => {
       ),
     ).rejects.toThrow('GEO-103');
   });
+
+  it('accepts point geometry with declared area below 4 ha without polygon area check', async () => {
+    const pool = makePoolMock([
+      { rows: [] },
+      { rows: [] },
+      { rows: [] },
+      {
+        rows: [
+          {
+            id: '33333333-3333-3333-3333-333333333333',
+            area_ha: 0,
+          },
+        ],
+      },
+      { rows: [] },
+    ]);
+    const service = makePlotsService(pool);
+    const row = await service.create(
+      {
+        farmerId: '11111111-1111-1111-1111-111111111111',
+        clientPlotId: 'small-point',
+        declaredAreaHa: 2.5,
+        geometry: {
+          type: 'Point',
+          coordinates: [-87.8494, 14.6349],
+        },
+      } as CreatePlotDto,
+      'user-1',
+    );
+    expect(row.id).toBe('33333333-3333-3333-3333-333333333333');
+  });
 });
 
 describe('PlotsService.create polygon normalization', () => {
@@ -357,6 +388,21 @@ describe('PlotsService.listAssignmentsByPlot', () => {
         limit: 10,
         offset: 0,
         items: [expect.objectContaining({ assignmentId: 'assign_1' })],
+      }),
+    );
+  });
+
+  it('returns an empty page when assignment relation is not provisioned', async () => {
+    const pool = makePoolMock([]);
+    (pool.query as jest.Mock).mockRejectedValue({ code: '42P01' });
+    const service = makePlotsService(pool);
+
+    await expect(service.listAssignmentsByPlot('plot_1')).resolves.toEqual(
+      expect.objectContaining({
+        items: [],
+        total: 0,
+        status: 'all',
+        fromDays: 30,
       }),
     );
   });

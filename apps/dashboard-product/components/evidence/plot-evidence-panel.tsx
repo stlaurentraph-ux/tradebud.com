@@ -2,7 +2,7 @@
 
 import { useContext, useState } from 'react';
 import Link from 'next/link';
-import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, FileText, Loader2, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import {
   evidenceKindLabel,
   openEvidenceFile,
 } from '@/lib/evidence-files';
+import { useOptionalPlotDetailContext } from '@/lib/plot-detail-context';
 import { useEvidenceFeed, type EvidenceFeedDocument } from '@/lib/use-evidence-feed';
 import { LocaleContext } from '@/lib/locale-context';
 import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
@@ -56,17 +57,11 @@ function EvidenceRow({ doc }: { doc: EvidenceFeedDocument }) {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-sm truncate">{doc.name}</p>
-            <Badge variant="secondary">
-              {evidenceKindLabel(doc.evidence_kind)}
-            </Badge>
+            <Badge variant="secondary">{evidenceKindLabel(doc.evidence_kind)}</Badge>
             {doc.has_file ? (
-              <Badge variant="outline">
-                File
-              </Badge>
+              <Badge variant="outline">File</Badge>
             ) : (
-              <Badge variant="outline">
-                Metadata only
-              </Badge>
+              <Badge variant="outline">Metadata only</Badge>
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -110,33 +105,65 @@ function EvidenceRow({ doc }: { doc: EvidenceFeedDocument }) {
   );
 }
 
-export function PlotEvidencePanel({ plotId }: { plotId: string }) {
-  const { documents, isLoading, error } = useEvidenceFeed({ plotId, enabled: Boolean(plotId) });
+export function PlotEvidencePanel({
+  plotId,
+  embedded = false,
+}: {
+  plotId: string;
+  embedded?: boolean;
+}) {
+  const detail = useOptionalPlotDetailContext();
+  const ownFeed = useEvidenceFeed({ plotId, enabled: !detail && Boolean(plotId) });
+  const documents = detail?.documents ?? ownFeed.documents;
+  const isLoading = detail?.evidenceLoading ?? ownFeed.isLoading;
+  const error = detail?.evidenceError ?? ownFeed.error;
+
+  const content = (
+    <div className="space-y-3">
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading evidence files…</p>
+      ) : error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : documents.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" aria-hidden="true" />
+          <p className="text-sm font-medium text-foreground">No evidence on this plot yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Members upload from the field app; files appear here after sync. You can also add
+            documents from the evidence repository.
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" asChild>
+            <Link href="/fpic">Open evidence repository</Link>
+          </Button>
+        </div>
+      ) : (
+        documents.map((doc) => <EvidenceRow key={doc.id} doc={doc} />)
+      )}
+      {documents.length > 0 ? (
+        <div className="pt-2">
+          <Button variant="link" size="sm" className="px-0" asChild>
+            <Link href="/fpic">Open full evidence repository</Link>
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-3 border-t border-border pt-4">
+        <p className="text-sm font-semibold">Uploaded evidence</p>
+        {content}
+      </div>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Uploaded evidence</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading evidence files…</p>
-        ) : error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : documents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No synced evidence for this plot yet. Farmers upload from the field app; files appear here
-            after backup and evidence sync.
-          </p>
-        ) : (
-          documents.map((doc) => <EvidenceRow key={doc.id} doc={doc} />)
-        )}
-        <div className="pt-2">
-          <Button variant="link" size="sm" className="px-0" asChild>
-            <Link href="/fpic">Open full evidence repository</Link>
-          </Button>
-        </div>
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

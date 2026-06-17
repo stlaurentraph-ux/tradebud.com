@@ -41,8 +41,8 @@ Score each role **0–2** per pillar (`0` missing, `1` partial, `2` done). **A+ 
 | Daily use ★ | 2 | Assemble CTA gated on readiness blockers; seal step blocks when blockers remain; issues linked from north star |
 | States | 2 | AsyncState wired on plot panels; deforestation decision panel localized |
 | Permissions | 2 | Nav/step gates via RBAC |
-| UI | 1 | Table density / mobile pass incomplete |
-| Analytics | 1 | Onboarding events; seal milestone events partial |
+| UI | 2 | Mobile card layout on packages table; lineage checklist responsive |
+| Analytics | 2 | Seal success/failure + lineage step click events on assemble/home |
 
 **Critical path acceptance ★**
 

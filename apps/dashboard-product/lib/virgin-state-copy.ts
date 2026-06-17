@@ -22,7 +22,7 @@ function wf(key: string, fallback: string, t?: TranslateFn, values?: Record<stri
 }
 
 export const VIRGIN_STEP_IDS: Record<TenantRole, string[]> = {
-  exporter: ['register_producers', 'map_plots', 'record_batches', 'create_shipment'],
+  exporter: ['register_producers', 'map_plots', 'link_received_lots', 'create_shipment'],
   importer: ['build_network', 'launch_campaign', 'review_shipments'],
   cooperative: ['add_members', 'register_plots', 'launch_campaign'],
   country_reviewer: ['open_queue', 'inspect_packages', 'resolve_decisions'],
@@ -30,9 +30,9 @@ export const VIRGIN_STEP_IDS: Record<TenantRole, string[]> = {
 };
 
 const VIRGIN_STEP_HREFS: Record<string, string> = {
-  register_producers: '/farmers/new',
-  map_plots: '/plots',
-  record_batches: '/harvests/new',
+  register_producers: '/contacts/add?mode=csv',
+  map_plots: '/outreach?new=1',
+  link_received_lots: '/harvests',
   create_shipment: '/packages/new',
   build_network: '/contacts/add?mode=contact',
   launch_campaign: '/outreach?new=1',
@@ -75,19 +75,22 @@ const VIRGIN_HEADING_FALLBACKS: Record<TenantRole, { title: string; description:
 const VIRGIN_STEP_FALLBACKS: Record<TenantRole, Record<string, Record<StepField, string>>> = {
   exporter: {
     register_producers: {
-      title: 'Register producers',
-      description: 'Add upstream producers so plots, batches, and shipments stay lineage-safe.',
-      ctaLabel: 'Add producer',
+      title: 'Register suppliers',
+      description:
+        'Add upstream suppliers — cooperatives, producers, washing stations, and processing plants. Bulk import from CSV.',
+      ctaLabel: 'Import suppliers',
     },
     map_plots: {
-      title: 'Map plots',
-      description: 'Capture or import plot geometry before you assemble shipment packages.',
-      ctaLabel: 'Open plots',
+      title: 'Import or request plots',
+      description:
+        'Import plot files or request boundaries from producers. You do not need to map plots yourself in the field.',
+      ctaLabel: 'Request plot data',
     },
-    record_batches: {
-      title: 'Record lots & batches',
-      description: 'Log harvest weights so yield plausibility checks can run before sealing.',
-      ctaLabel: 'Add batch',
+    link_received_lots: {
+      title: 'Link received lots',
+      description:
+        'Review lots shared by upstream cooperatives or suppliers and attach them to your export workspace before sealing.',
+      ctaLabel: 'View received lots',
     },
     create_shipment: {
       title: 'Create your first shipment',

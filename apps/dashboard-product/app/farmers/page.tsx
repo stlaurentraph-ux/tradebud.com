@@ -2,6 +2,7 @@
 
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,10 +77,12 @@ function deriveComplianceStatus(contact: ContactRecord): 'compliant' | 'non_comp
 }
 
 export default function FarmersPage() {
+  const router = useRouter();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { user } = useAuth();
   const role = user?.active_role;
+  const isExporter = role === 'exporter';
   const [producers, setProducers] = useState<ContactRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,6 +92,13 @@ export default function FarmersPage() {
   const [statusFilter, setStatusFilter] = useState<ContactStatus | 'all'>('all');
 
   useEffect(() => {
+    if (isExporter) {
+      router.replace('/contacts');
+    }
+  }, [isExporter, router]);
+
+  useEffect(() => {
+    if (isExporter) return;
     void listContacts()
       .then((contacts) => {
         setProducers(contacts.filter((contact) => contact.contact_type === 'farmer'));
@@ -98,7 +108,7 @@ export default function FarmersPage() {
         setLoadError(error instanceof Error ? error.message : 'Failed to load producers.');
         setProducers([]);
       });
-  }, []);
+  }, [isExporter]);
 
   const filteredFarmers = useMemo(() => {
     return producers.filter((producer) => {
@@ -124,6 +134,10 @@ export default function FarmersPage() {
     (complianceFilter !== 'all' ? 1 : 0) +
     (fpicFilter !== 'all' ? 1 : 0) +
     (statusFilter !== 'all' ? 1 : 0);
+
+  if (isExporter) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col">

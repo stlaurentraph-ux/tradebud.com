@@ -78,6 +78,7 @@ import {
   type CanonicalShipmentHeader,
 } from '@/lib/shipment-headers-client';
 import { useShipmentHeaders } from '@/lib/use-shipment-headers';
+import { trackDashboardEvent, DASHBOARD_EVENTS } from '@/lib/observability/analytics';
 
 interface AssemblePageProps {
   params: Promise<{ id: string }>;
@@ -561,9 +562,20 @@ export default function AssembleShipmentPage({ params }: AssemblePageProps) {
                           try {
                             const header = await ensureShipmentHeader();
                             await sealCanonicalShipmentHeader(header.id);
+                            trackDashboardEvent(DASHBOARD_EVENTS.PACKAGE_SEAL_SUCCESS, {
+                              package_id: id,
+                              role: role ?? 'exporter',
+                              shipment_header_id: header.id,
+                              batch_count: selectedPackageIds.length,
+                            });
                             toast.success(getPackageAssembleSealSuccessToast(t));
                             router.push('/compliance');
                           } catch (sealError) {
+                            trackDashboardEvent(DASHBOARD_EVENTS.PACKAGE_SEAL_FAILURE, {
+                              package_id: id,
+                              role: role ?? 'exporter',
+                              message: sealError instanceof Error ? sealError.message : 'unknown',
+                            });
                             toast.error(
                               sealError instanceof Error
                                 ? sealError.message

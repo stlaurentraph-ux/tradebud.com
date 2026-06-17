@@ -1,4 +1,9 @@
 import { countOwnedBlockingIssues, countUpstreamBlockers } from '@/lib/dashboard-issue-counts';
+import {
+  mapTenantPlotToInventoryRow,
+  summarizePlotInventory,
+  type PlotInventoryRow,
+} from '@/lib/plot-inventory';
 import type { ShipmentStatus } from '@/types';
 import type { TimelineEvent } from '@/components/ui/timeline-row';
 
@@ -32,6 +37,7 @@ export type DashboardSummaryMetrics = {
   geometry_remediation_count?: number;
   organisation_count?: number;
   contact_count?: number;
+  plots_needing_action?: number;
 };
 
 type Campaign = { id: string; status?: string };
@@ -67,6 +73,9 @@ export function buildDashboardSummaryMetrics(input: {
   cooperativeMetrics?: Record<string, unknown>;
   organisationCount?: number;
   contactCount?: number;
+  tenantFarmerCount?: number;
+  tenantPlotCount?: number;
+  tenantPlots?: Record<string, unknown>[];
 }): DashboardSummaryMetrics {
   const packageCounts: Record<ShipmentStatus, number> = {
     DRAFT: 0,
@@ -114,12 +123,21 @@ export function buildDashboardSummaryMetrics(input: {
       },
     }));
 
+  const cooperativeMetrics = input.cooperativeMetrics ?? {};
+  const cooperativeFarmers =
+    typeof cooperativeMetrics.total_farmers === 'number' ? cooperativeMetrics.total_farmers : 0;
+  const cooperativePlots =
+    typeof cooperativeMetrics.total_plots === 'number' ? cooperativeMetrics.total_plots : 0;
+  const tenantFarmers = input.tenantFarmerCount ?? 0;
+  const tenantPlots = input.tenantPlotCount ?? 0;
+  const inventoryRows: PlotInventoryRow[] = (input.tenantPlots ?? [])
+    .map((row) => mapTenantPlotToInventoryRow(row))
+    .filter((row): row is PlotInventoryRow => row != null);
+  const inventorySummary = summarizePlotInventory(inventoryRows);
+
   return {
     total_packages: input.packages.length,
     packages_by_status: packageCounts,
-    total_plots: plotIds.size,
-    compliant_plots: compliantPlots,
-    total_farmers: producerIds.size,
     incoming_requests_pending: input.inboxRequests.filter((item) => item.status === 'pending').length,
     outgoing_requests_pending: input.campaigns.filter((campaign) => {
       const status = campaign.status?.toUpperCase();
@@ -130,7 +148,11 @@ export function buildDashboardSummaryMetrics(input: {
     upstream_blockers_count: countUpstreamBlockers(input.operationalIssues),
     owned_blocking_issues_count: countOwnedBlockingIssues(input.operationalIssues),
     recent_activity: recentActivity,
-    ...(input.cooperativeMetrics ?? {}),
+    ...cooperativeMetrics,
+    total_plots: Math.max(plotIds.size, tenantPlots, cooperativePlots, inventorySummary.total),
+    total_farmers: Math.max(producerIds.size, tenantFarmers, cooperativeFarmers),
+    compliant_plots: Math.max(compliantPlots, inventorySummary.mapped),
+    plots_needing_action: inventorySummary.needs_action,
     ...(input.organisationCount !== undefined ? { organisation_count: input.organisationCount } : {}),
     ...(input.contactCount !== undefined ? { contact_count: input.contactCount } : {}),
   };

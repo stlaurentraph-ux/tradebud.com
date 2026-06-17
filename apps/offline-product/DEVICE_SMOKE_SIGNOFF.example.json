@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "commit": "0000000000000000000000000000000000000000",
+  "signedAt": "YYYY-MM-DD",
+  "tester": "Your name",
+  "device": "e.g. iPhone 15 Pro",
+  "os": "e.g. iOS 18.2",
+  "build": "preview",
+  "pass": true,
+  "sectionsVerified": ["2", "7"],
+  "checklist": "DEVICE_SMOKE_CHECKLIST.md"
+}

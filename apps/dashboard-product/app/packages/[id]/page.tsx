@@ -2,7 +2,6 @@
 
 import { use, useContext, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
   Edit,
@@ -27,6 +26,8 @@ import { PackageStatusBadge, ComplianceStatusBadge } from '@/components/packages
 import { PermissionGate } from '@/components/common/permission-gate';
 import { BlockerCard } from '@/components/ui/blocker-card';
 import { ShipmentStateTimeline } from '@/components/packages/shipment-state-timeline';
+import { PackageLineageSummaryCard } from '@/components/packages/package-lineage-summary-card';
+import { PackageNotFound } from '@/components/packages/package-not-found';
 import { Timeline } from '@/components/ui/timeline-row';
 import { packageToTimelineEvents } from '@/lib/package-timeline';
 import { generateHarvestPackage, submitHarvestPackage } from '@/lib/harvest-package-actions';
@@ -110,13 +111,34 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
   const [pendingAction, setPendingAction] = useState<'generate' | 'submit' | null>(null);
   const [showLiabilityModal, setShowLiabilityModal] = useState(false);
 
-  if (!isLoading && !pkg && !error) {
-    notFound();
+  if (isLoading) {
+    return (
+      <div className="flex flex-col p-6 text-sm text-muted-foreground">
+        {getPackageLoadingMessage(role, t)}
+      </div>
+    );
   }
 
-  if (!isLoading && error?.toLowerCase().includes('not found')) {
-    notFound();
+  if (!pkg) {
+    return (
+      <div className="flex flex-col">
+        <AppHeader
+          title={id}
+          subtitle={getPackageLoadingMessage(role, t)}
+          breadcrumbs={buildPackageBreadcrumbs(role, id, id, undefined, t)}
+        />
+        <div className="p-6">
+          {error ? (
+            <p className="mb-4 text-sm text-destructive">
+              {getPackageLoadErrorPrefix(role, t)}: {error}
+            </p>
+          ) : null}
+          <PackageNotFound role={role} t={t} />
+        </div>
+      </div>
+    );
   }
+
 
   const readinessBlockers =
     readiness?.blockers.map((issue) => issue.message) ??
@@ -162,14 +184,6 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
       setPendingAction(null);
     }
   };
-
-  if (isLoading || !pkg) {
-    return (
-      <div className="flex flex-col p-6 text-sm text-muted-foreground">
-        {error ? `${getPackageLoadErrorPrefix(role, t)}: ${error}` : getPackageLoadingMessage(role, t)}
-      </div>
-    );
-  }
 
   const timelineEvents = packageToTimelineEvents(pkg);
 
@@ -274,6 +288,8 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
               packageId={pkg.id}
               blockingCount={readinessBlockers.length}
             />
+
+            {(role === 'exporter' || role === 'agent') && <PackageLineageSummaryCard pkg={pkg} t={t} />}
 
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">

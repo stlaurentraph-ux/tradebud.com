@@ -80,8 +80,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
   }, [isLoading, isAuthenticated, isPublicRoute, router, applyTenantRolesFromProfile]);
 
-  // Show loading state
-  if (isLoading || (isAuthenticated && !isPublicRoute && !workspaceCheckDone)) {
+  // Bootstrap loading for authenticated app routes only — keep login/public forms mounted.
+  if (!isPublicRoute && (isLoading || (isAuthenticated && !workspaceCheckDone))) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

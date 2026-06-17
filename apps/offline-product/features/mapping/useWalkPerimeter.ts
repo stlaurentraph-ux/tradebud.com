@@ -295,26 +295,27 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     }
   };
 
-  const addAveragedVertex = (seconds: number = 60): boolean => {
+  const addAveragedVertex = (seconds: number = 30): Point | null => {
     const now = Date.now();
     const windowStart = now - seconds * 1000;
     const window = samplesRef.current.filter((s) => s.timestamp >= windowStart);
     if (window.length === 0) {
-      return false;
+      return null;
     }
 
     const averaged = weightedAverageSamples(window);
     if (!averaged) {
-      return false;
+      return null;
     }
 
+    const vertex: Point = { ...averaged, timestamp: now };
     setLastError(null);
     setPoints((prev) => {
-      const nextPoints = [...prev, { ...averaged, timestamp: now }];
+      const nextPoints = [...prev, vertex];
       setArea(computeAreaFromPoints(nextPoints));
       return nextPoints;
     });
-    return true;
+    return vertex;
   };
 
   const addManualVertex = (latitude: number, longitude: number) => {

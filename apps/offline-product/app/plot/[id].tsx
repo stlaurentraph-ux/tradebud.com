@@ -48,9 +48,6 @@ import {
   loadTitlePhotosForPlot,
   loadEvidenceForPlot,
   persistPlotTitlePhoto,
-  savePlotCadastralKey,
-  savePlotTenure,
-  enqueuePendingSync,
   getSetting,
   type PlotPhoto,
   type PlotTitlePhoto,
@@ -58,16 +55,25 @@ import {
 } from '@/features/state/persistence';
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
+import { PlotComplianceStatusCards } from '@/components/compliance/PlotComplianceStatusCards';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
 import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
-import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
-import { syncPlotLegalToBackend } from '@/features/api/postPlot';
+import {
+  autoUploadLandTitleDocuments,
+  type AutoUploadOutcome,
+} from '@/features/evidence/autoUploadPlotDocuments';
 import {
   MIN_GROUND_TRUTH_PHOTOS,
   computePlotReadinessChecklist,
 } from '@/features/compliance/plotChecklist';
+import {
+  describeTenureVerificationReview,
+  formatTenureVerificationReviewMessage,
+} from '@/features/compliance/plotTenureVerificationReview';
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { resolveHarvestPlotPickerId } from '@/features/harvest/mergeHarvestPlotOptions';
+import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 
 type Sub = 'photos' | 'documents' | 'harvests' | 'voucher';
@@ -94,12 +100,25 @@ export default function PlotDetailScreen() {
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [, setLoadingBackend] = useState(false);
   const [, setBackendError] = useState<string | null>(null);
-  const [backendPlotId, setBackendPlotId] = useState<string | null>(null);
-  const [tenureVerifications, setTenureVerifications] = useState<PlotTenureVerificationRecord[]>([]);
-  const [overlapFlags, setOverlapFlags] = useState<{ sinaph: boolean; indigenous: boolean }>({
+  const [backendPlotMeta, setBackendPlotMeta] = useState<{
+    id: string | null;
+    status: unknown;
+    deforestationScreening: unknown;
+    sinaph: boolean;
+    indigenous: boolean;
+  }>({
+    id: null,
+    status: 'pending_check',
+    deforestationScreening: null,
     sinaph: false,
     indigenous: false,
   });
+  const [tenureVerifications, setTenureVerifications] = useState<PlotTenureVerificationRecord[]>([]);
+  const backendPlotId = backendPlotMeta.id;
+  const overlapFlags = useMemo(
+    () => ({ sinaph: backendPlotMeta.sinaph, indigenous: backendPlotMeta.indigenous }),
+    [backendPlotMeta.indigenous, backendPlotMeta.sinaph],
+  );
   const voucherShareCaptureRef = useRef<View>(null);
   const [voucherShareBusy, setVoucherShareBusy] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
@@ -111,7 +130,7 @@ export default function PlotDetailScreen() {
   const [legalSyncReason, setLegalSyncReason] = useState('');
   const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
   const [docSyncTone, setDocSyncTone] = useState<'success' | 'error' | 'info'>('info');
-  const [legalitySyncBusy, setLegalitySyncBusy] = useState(false);
+  const [addingTitlePhoto, setAddingTitlePhoto] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
 
@@ -152,8 +171,13 @@ export default function PlotDetailScreen() {
     if (!farmer?.id) {
       setBackendPlots([]);
       setBackendError(null);
-      setBackendPlotId(null);
-      setOverlapFlags({ sinaph: false, indigenous: false });
+      setBackendPlotMeta({
+        id: null,
+        status: 'pending_check',
+        deforestationScreening: null,
+        sinaph: false,
+        indigenous: false,
+      });
       return;
     }
     setLoadingBackend(true);
@@ -169,18 +193,26 @@ export default function PlotDetailScreen() {
 
   useEffect(() => {
     if (!plot) {
-      setBackendPlotId(null);
-      setOverlapFlags({ sinaph: false, indigenous: false });
+      setBackendPlotMeta({
+        id: null,
+        status: 'pending_check',
+        deforestationScreening: null,
+        sinaph: false,
+        indigenous: false,
+      });
       return;
     }
     const match = findBackendPlotForLocal(plot, backendPlots) as {
       id?: unknown;
+      status?: unknown;
+      deforestation_screening?: unknown;
       sinaph_overlap?: boolean;
       indigenous_overlap?: boolean;
     } | null;
-    const id = match?.id != null ? String(match.id) : null;
-    setBackendPlotId(id);
-    setOverlapFlags({
+    setBackendPlotMeta({
+      id: match?.id != null ? String(match.id) : null,
+      status: match?.status ?? 'pending_check',
+      deforestationScreening: match?.deforestation_screening ?? null,
       sinaph: match?.sinaph_overlap === true,
       indigenous: match?.indigenous_overlap === true,
     });
@@ -302,8 +334,6 @@ export default function PlotDetailScreen() {
     setRenameModalOpen(false);
   };
 
-  const isCompliant = !overlapFlags.sinaph && !overlapFlags.indigenous;
-
   const plotStatusRows = useMemo(() => {
     const evidenceKinds = evidence.map((e) => e.kind);
     const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
@@ -325,6 +355,17 @@ export default function PlotDetailScreen() {
     const minG = MIN_GROUND_TRUTH_PHOTOS;
     const verifiedGround = plot ? countGeoVerifiedGroundTruthDirections(photos, plot) : 0;
 
+    const blockedVerification = tenureVerifications.find(
+      (row) => row.parse_status === 'FAILED' || row.parse_status === 'MANUAL_REQUIRED',
+    );
+    const landBlockedHint =
+      blockedVerification != null
+        ? formatTenureVerificationReviewMessage(
+            describeTenureVerificationReview(blockedVerification),
+            t,
+          )
+        : t('plot_status_land_parse_blocked');
+
     const rows: {
       id: string;
       title: string;
@@ -344,7 +385,7 @@ export default function PlotDetailScreen() {
         title: t('plot_status_land'),
         hint:
           tenureParseGate === 'blocked'
-            ? t('plot_status_land_parse_blocked')
+            ? landBlockedHint
             : tenureParseGate === 'pending'
               ? t('plot_status_land_parse_pending')
               : t('plot_status_land_hint'),
@@ -404,6 +445,71 @@ export default function PlotDetailScreen() {
 
   const nextSetupRow = plotStatusRemainingRows[0];
 
+  const harvestPlotId = backendPlotId ?? plot?.id ?? null;
+
+  const harvestPickerPlotId = useMemo(() => {
+    if (!plot) return null;
+    return resolveHarvestPlotPickerId(plot, backendPlots);
+  }, [plot, backendPlots]);
+
+  const plotDeliveryCount = useMemo(() => {
+    if (!harvestPlotId) return 0;
+    return vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId).length;
+  }, [harvestPlotId, vouchers]);
+
+  const plotAreaCaption = useMemo(() => {
+    if (!plot) return null;
+    const { hectares, source } = resolvePlotAreaHa({
+      kind: plot.kind,
+      areaHectares: plot.areaHectares,
+      declaredAreaHectares: plot.declaredAreaHectares,
+    });
+    if (hectares <= 0) return null;
+    if (source === 'declared') {
+      return t('plot_hectares_declared', { n: hectares.toFixed(1) });
+    }
+    return t('plot_hectares_gps', { n: hectares.toFixed(1) });
+  }, [plot, t]);
+
+  const plotHarvestSummary = useMemo(() => {
+    if (!plot) {
+      return {
+        seasonTotalKg: 0,
+        rows: [] as { id: string; kg: number; dateLabel: string }[],
+      };
+    }
+    const scoped = harvestPlotId
+      ? vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId)
+      : [];
+    const sorted = [...scoped].sort((a, b) => {
+      const at = new Date(String(a?.created_at ?? a?.createdAt ?? 0)).getTime();
+      const bt = new Date(String(b?.created_at ?? b?.createdAt ?? 0)).getTime();
+      return bt - at;
+    });
+    const seasonTotalKg = sorted.reduce((sum, v) => {
+      const kg = Number(v?.kg ?? v?.kg_delivered ?? v?.weight_kg ?? 0);
+      return sum + (Number.isFinite(kg) ? Math.max(0, kg) : 0);
+    }, 0);
+    const rows = sorted.slice(0, 3).map((v, idx) => {
+      const kg = Number(v?.kg ?? v?.kg_delivered ?? v?.weight_kg ?? 0);
+      const createdRaw = String(v?.created_at ?? v?.createdAt ?? '');
+      const date = createdRaw ? new Date(createdRaw) : null;
+      return {
+        id: String(v?.id ?? idx),
+        kg: Number.isFinite(kg) ? Math.max(0, Math.round(kg)) : 0,
+        dateLabel: date
+          ? date.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })
+          : '—',
+      };
+    });
+    return { seasonTotalKg, rows };
+  }, [harvestPlotId, plot, vouchers]);
+
+  const openRecordDeliveryForPlot = useCallback(() => {
+    if (!harvestPickerPlotId) return;
+    router.push(`/(tabs)/harvests?plotId=${encodeURIComponent(harvestPickerPlotId)}&record=1`);
+  }, [harvestPickerPlotId]);
+
   const openNextSetupStep = useCallback(() => {
     if (!nextSetupRow) return;
     if (nextSetupRow.target === 'settings') {
@@ -431,126 +537,73 @@ export default function PlotDetailScreen() {
     Alert.alert(alertTitle ?? t('plot_documents_legality_sync_button'), message);
   };
 
-  const queueLandTitleSync = async (reason: string) => {
-    if (!plot) return;
-    await savePlotCadastralKey(plot.id, cadastralKey.trim() || null);
-    await savePlotTenure(plot.id, {
-      informalTenure,
-      informalTenureNote: informalTenureNote.trim() || null,
-    });
-    enqueuePendingSync({
-      createdAt: Date.now(),
-      actionType: 'photos_sync',
-      payloadJson: JSON.stringify({
-        legal: {
-          cadastralKey: cadastralKey.trim() || null,
-          informalTenure: informalTenure ? true : null,
-          informalTenureNote: informalTenureNote.trim() || null,
-          reason,
-        },
-        plotId: plot.id,
-        kind: 'land_title',
-        photos: titlePhotos.map((p) => ({
-          cadastralKey: cadastralKey.trim() || null,
-          informalTenure: informalTenure ? true : null,
-          informalTenureNote: informalTenureNote.trim() || null,
-          uri: p.uri,
-          takenAt: p.takenAt,
-        })),
-        note: 'Land title photos sync from plot detail',
-      }),
-      lastError: 'Plot not on server — upload from My Plots first.',
-    });
-    notifyDocSync(t('plot_documents_legality_queued_no_server'), undefined, 'info');
-  };
-
-  const syncLegalityAndTitlePhotos = async () => {
-    if (!plot) return;
-    if (!farmer?.id) {
-      notifyDocSync(t('evidence_sync_sign_in_for_files'));
-      return;
-    }
-    const reason = legalSyncReason.trim();
-    if (!reason) {
-      notifyDocSync(t('plot_documents_legality_need_reason'), t('evidence_sync_need_reason'));
-      return;
-    }
-    if (!backendPlotId) {
-      setLegalitySyncBusy(true);
-      try {
-        await queueLandTitleSync(reason);
-      } finally {
-        setLegalitySyncBusy(false);
+  const applyLandTitleUploadOutcome = useCallback(
+    (outcome: AutoUploadOutcome, photoCount: number, showAlert = false) => {
+      let message: string;
+      let tone: 'success' | 'error' | 'info' = 'success';
+      switch (outcome.status) {
+        case 'uploaded':
+          message =
+            outcome.uploadedCount > 0
+              ? t('plot_documents_auto_upload_ok', { n: outcome.uploadedCount })
+              : t('plot_documents_legality_sync_ok');
+          break;
+        case 'queued':
+          message = t('plot_documents_auto_upload_queued');
+          tone = 'info';
+          break;
+        case 'local_only':
+          message =
+            outcome.reason === 'not_signed_in'
+              ? t('plot_documents_auto_upload_local_only')
+              : t('plot_documents_land_title_saved_local', { n: photoCount });
+          tone = 'info';
+          break;
+        default:
+          return;
       }
-      return;
-    }
-    setLegalitySyncBusy(true);
-    setDocSyncMessage(null);
-    try {
-      await savePlotCadastralKey(plot.id, cadastralKey.trim() || null);
-      await savePlotTenure(plot.id, {
+      setDocSyncMessage(message);
+      setDocSyncTone(tone);
+      if (showAlert) {
+        Alert.alert(t('evidence_sync_title'), message);
+      }
+    },
+    [t],
+  );
+
+  const runLandTitleUpload = useCallback(
+    async (photos: PlotTitlePhoto[], showAlert = false) => {
+      if (!plot || photos.length === 0) return;
+      const outcome = await autoUploadLandTitleDocuments({
+        localPlotId: plot.id,
+        serverPlotId: backendPlotId,
+        farmerId: farmer?.id,
+        titlePhotos: photos,
+        cadastralKey: cadastralKey.trim() || null,
         informalTenure,
         informalTenureNote: informalTenureNote.trim() || null,
+        customReason: legalSyncReason,
       });
-      await syncPlotLegalToBackend({
-        plotId: backendPlotId,
-        cadastralKey: cadastralKey.trim() || null,
-        informalTenure: informalTenure ? true : null,
-        informalTenureNote: informalTenureNote.trim() || null,
-        reason,
-      });
-      const summary = await syncLandTitlePhotosWithFiles({
-        serverPlotId: backendPlotId,
-        farmerId: farmer.id,
-        photos: titlePhotos,
-        cadastralKey: cadastralKey.trim() || null,
-        informalTenure: informalTenure ? true : null,
-        informalTenureNote: informalTenureNote.trim() || null,
-        note: 'Land title photos sync from plot detail',
-      });
-      const okMessage =
-        summary.uploadedCount > 0
-          ? t('plot_documents_legality_sync_ok_files', { n: summary.uploadedCount })
-          : t('plot_documents_legality_sync_ok');
-      setDocSyncMessage(okMessage);
-      setDocSyncTone('success');
-      Alert.alert(t('plot_documents_legality_sync_button'), okMessage);
-      await refreshTenureVerification();
-    } catch (e) {
-      enqueuePendingSync({
-        createdAt: Date.now(),
-        actionType: 'photos_sync',
-        payloadJson: JSON.stringify({
-          legal: {
-            cadastralKey: cadastralKey.trim() || null,
-            informalTenure: informalTenure ? true : null,
-            informalTenureNote: informalTenureNote.trim() || null,
-            reason,
-          },
-          plotId: plot.id,
-          kind: 'land_title',
-          photos: titlePhotos.map((p) => ({
-            cadastralKey: cadastralKey.trim() || null,
-            informalTenure: informalTenure ? true : null,
-            informalTenureNote: informalTenureNote.trim() || null,
-            uri: p.uri,
-            takenAt: p.takenAt,
-          })),
-          note: 'Land title photos sync from plot detail',
-        }),
-        lastError: e instanceof Error ? e.message : String(e),
-      });
-      setDocSyncMessage(
-        e instanceof Error ? t('evidence_sync_queued', { msg: e.message }) : t('evidence_sync_queued_short'),
-      );
-      setDocSyncTone('info');
-    } finally {
-      setLegalitySyncBusy(false);
-    }
-  };
+      applyLandTitleUploadOutcome(outcome, photos.length, showAlert);
+      if (outcome.status === 'uploaded') {
+        await refreshTenureVerification();
+      }
+    },
+    [
+      applyLandTitleUploadOutcome,
+      backendPlotId,
+      cadastralKey,
+      farmer?.id,
+      informalTenure,
+      informalTenureNote,
+      legalSyncReason,
+      plot,
+      refreshTenureVerification,
+    ],
+  );
 
   const addLandTitlePhoto = async () => {
-    if (!plot) return;
+    if (!plot || addingTitlePhoto) return;
     const file = await pickEvidenceFile({
       pick_source_title: t('evidence_pick_source_title'),
       pick_source_body: t('evidence_pick_source_body'),
@@ -566,13 +619,21 @@ export default function PlotDetailScreen() {
       perm_camera_body: t('evidence_perm_camera_body'),
     });
     if (!file) return;
-    persistPlotTitlePhoto({
-      plotId: plot.id,
-      uri: file.uri,
-      takenAt: Date.now(),
-    });
-    const updated = await loadTitlePhotosForPlot(plot.id);
-    setTitlePhotos(updated);
+    setAddingTitlePhoto(true);
+    try {
+      await persistPlotTitlePhoto({
+        plotId: plot.id,
+        uri: file.uri,
+        takenAt: Date.now(),
+      });
+      const updated = await loadTitlePhotosForPlot(plot.id);
+      setTitlePhotos(updated);
+      await runLandTitleUpload(updated, false);
+    } catch {
+      notifyDocSync(t('plot_documents_land_title_save_failed_body'), t('plot_documents_land_title_save_failed'));
+    } finally {
+      setAddingTitlePhoto(false);
+    }
   };
 
   return (
@@ -815,21 +876,13 @@ export default function PlotDetailScreen() {
           )}
         </Card>
 
-        <Card variant="outlined" style={styles.checkCard}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.checkIcon}>
-              <Ionicons name="checkmark-circle-outline" size={30} color="#0A7F59" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B' }}>
-                {isCompliant ? t('plot_deforestation_passed') : t('plot_deforestation_pending')}
-              </ThemedText>
-              <ThemedText type="default" style={{ color: '#1F6B57' }}>
-                {isCompliant ? t('plot_deforestation_passed_body') : t('plot_deforestation_pending_body')}
-              </ThemedText>
-            </View>
-          </View>
-        </Card>
+        <PlotComplianceStatusCards
+          backendPlotId={backendPlotId}
+          backendStatus={backendPlotMeta.status}
+          deforestationScreening={backendPlotMeta.deforestationScreening}
+          sinaphOverlap={overlapFlags.sinaph}
+          indigenousOverlap={overlapFlags.indigenous}
+        />
 
         <Pressable style={[styles.navCard, active === 'photos' && styles.navCardSelected]} onPress={() => setActive('photos')}>
           <View style={styles.navIconWrapPhoto}>
@@ -842,7 +895,11 @@ export default function PlotDetailScreen() {
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
 
-        <Pressable style={[styles.navCard, active === 'documents' && styles.navCardSelected]} onPress={() => setActive('documents')}>
+        <Pressable
+          testID="plot-nav-documents"
+          style={[styles.navCard, active === 'documents' && styles.navCardSelected]}
+          onPress={() => setActive('documents')}
+        >
           <View style={styles.navIconWrapDocs}>
             <Ionicons name="document-text-outline" size={28} color="#2D5FD4" />
           </View>
@@ -861,7 +918,7 @@ export default function PlotDetailScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText type="subtitle">{t('plot_nav_harvests_title')}</ThemedText>
-            <ThemedText type="default">{t('plot_nav_harvests_sub', { n: vouchers.length })}</ThemedText>
+            <ThemedText type="default">{t('plot_nav_harvests_sub', { n: plotDeliveryCount })}</ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -898,12 +955,16 @@ export default function PlotDetailScreen() {
               titlePhotoCount={titlePhotos.length}
               tenureEvidenceCount={evidence.filter((e) => e.kind === 'tenure_evidence').length}
               tenureVerifications={tenureVerifications}
+              isSyncedToServer={Boolean(backendPlotId)}
             />
 
             <Card variant="elevated" style={styles.docCard}>
               <ThemedText type="defaultSemiBold">{t('plot_documents_land_title_section')}</ThemedText>
               <ThemedText type="caption" style={{ marginTop: 4 }}>
                 {t('plot_documents_land_title_body')}
+              </ThemedText>
+              <ThemedText type="caption" style={styles.autoUploadBanner}>
+                {t('plot_documents_auto_upload_banner')}
               </ThemedText>
               <ThemedText type="caption" style={{ marginTop: 6, opacity: 0.85 }}>
                 {t('plot_documents_clave_order_hint')}
@@ -917,20 +978,33 @@ export default function PlotDetailScreen() {
               />
               <View style={{ marginTop: 10 }}>
                 <Button
-                  title={t('plot_documents_add_land_title')}
+                  title={
+                    addingTitlePhoto
+                      ? t('evidence_sync_busy')
+                      : titlePhotos.length > 0
+                        ? `${t('plot_documents_add_land_title')} (${titlePhotos.length})`
+                        : t('plot_documents_add_land_title')
+                  }
                   variant="secondary"
+                  disabled={addingTitlePhoto}
                   onPress={() => void addLandTitlePhoto()}
+                  testID="plot-add-land-title-photo"
                 />
               </View>
               {titlePhotos.length > 0 ? (
-                <View style={styles.photoRow}>
+                <View style={styles.photoRow} testID="plot-land-title-photo-count">
                   {titlePhotos.slice(0, 4).map((p) => (
                     <Image key={p.id} source={{ uri: p.uri }} style={styles.photoThumb} />
                   ))}
+                  {titlePhotos.length > 4 ? (
+                    <View style={styles.photoThumbMore}>
+                      <ThemedText type="caption">+{titlePhotos.length - 4}</ThemedText>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
               <Input
-                label={t('plot_documents_legality_reason_label')}
+                label={t('plot_documents_legality_reason_optional_label')}
                 placeholder={t('plot_documents_legality_reason_ph')}
                 value={legalSyncReason}
                 onChangeText={setLegalSyncReason}
@@ -941,13 +1015,11 @@ export default function PlotDetailScreen() {
                   {t('plot_documents_plot_not_synced_hint')}
                 </ThemedText>
               ) : null}
-              <View style={{ marginTop: 10 }}>
-                <Button
-                  title={legalitySyncBusy ? t('evidence_sync_busy') : t('plot_documents_legality_sync_button')}
-                  disabled={legalitySyncBusy || titlePhotos.length === 0}
-                  onPress={() => void syncLegalityAndTitlePhotos()}
-                />
-              </View>
+              {titlePhotos.length === 0 ? (
+                <ThemedText type="caption" style={{ marginTop: 8, opacity: 0.85 }}>
+                  {t('plot_documents_land_title_need_photo')}
+                </ThemedText>
+              ) : null}
               {docSyncMessage ? (
                 <ThemedText
                   type="caption"
@@ -984,86 +1056,53 @@ export default function PlotDetailScreen() {
 
         {active === 'harvests' ? (
           <>
-            {(() => {
-              const scoped = vouchers.filter((v) => {
-                const pid = String(v?.plot_id ?? v?.plotId ?? '');
-                if (!pid || !backendPlotId) return false;
-                return pid === backendPlotId;
-              });
-              const list = scoped.length > 0 ? scoped : vouchers;
-              const sorted = [...list].sort((a, b) => {
-                const at = new Date(String(a?.created_at ?? a?.createdAt ?? 0)).getTime();
-                const bt = new Date(String(b?.created_at ?? b?.createdAt ?? 0)).getTime();
-                return bt - at;
-              });
-              const rows = sorted.slice(0, 3).map((v, idx) => {
-                const kg = Number(v?.kg ?? v?.kg_delivered ?? v?.weight_kg ?? 0);
-                const createdRaw = String(v?.created_at ?? v?.createdAt ?? '');
-                const date = createdRaw ? new Date(createdRaw) : null;
-                return {
-                  id: String(v?.id ?? idx),
-                  kg: Number.isFinite(kg) ? Math.max(0, Math.round(kg)) : 0,
-                  dateLabel: date
-                    ? date.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })
-                    : '—',
-                };
-              });
-              const seasonTotalKg = sorted.reduce((sum, v) => {
-                const kg = Number(v?.kg ?? v?.kg_delivered ?? v?.weight_kg ?? 0);
-                return sum + (Number.isFinite(kg) ? Math.max(0, kg) : 0);
-              }, 0);
-              const yieldCapKg = plot ? Math.round(plot.areaHectares * 1500) : 3600;
-              const progress = Math.min(1, yieldCapKg > 0 ? seasonTotalKg / yieldCapKg : 0);
-              return (
-                <>
-                  <Card variant="outlined" style={styles.harvestSummaryCard}>
-                    <View style={styles.rowHeader}>
-                      <ThemedText type="title" style={styles.harvestSummaryTitle}>
-                        {t('plot_harvest_season_total')}
-                      </ThemedText>
-                      <ThemedText type="title" style={styles.harvestSummaryKg}>
-                        {`${Math.round(seasonTotalKg).toLocaleString()} kg`}
-                      </ThemedText>
-                    </View>
-                    <View style={[styles.rowHeader, { marginTop: 4 }]}>
-                      <ThemedText type="default" style={styles.harvestSubText}>
-                        {t('plot_harvest_yield_cap', { ha: plot ? plot.areaHectares.toFixed(1) : '2.4' })}
-                      </ThemedText>
-                      <ThemedText type="defaultSemiBold" style={styles.harvestSubText}>
-                        {t('plot_harvest_yield_max', { kg: yieldCapKg.toLocaleString() })}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.harvestProgressTrack}>
-                      <View style={[styles.harvestProgressFill, { width: `${Math.max(0.04, progress) * 100}%` }]} />
-                    </View>
-                  </Card>
+            {plot ? (
+              <View style={{ marginBottom: 12 }}>
+                <UiButton variant="primary" fullWidth onPress={openRecordDeliveryForPlot}>
+                  {t('plot_harvest_record_delivery')}
+                </UiButton>
+              </View>
+            ) : null}
 
-                  {rows.length > 0 ? (
-                    rows.map((row) => (
-                      <Card key={row.id} variant="outlined" style={styles.harvestRowCard}>
-                        <View style={styles.rowHeader}>
-                          <View>
-                            <ThemedText type="title" style={styles.harvestKgText}>{`${row.kg} kg`}</ThemedText>
-                            <ThemedText type="default" style={styles.harvestDateText}>
-                              {row.dateLabel}
-                            </ThemedText>
-                          </View>
-                          <ThemedText type="subtitle" style={styles.harvestCoopText}>
-                            {t('plot_harvest_no_coop')}
-                          </ThemedText>
-                        </View>
-                      </Card>
-                    ))
-                  ) : (
-                    <Card variant="outlined" style={styles.harvestRowCard}>
+            <Card variant="outlined" style={styles.harvestSummaryCard}>
+              <View style={styles.rowHeader}>
+                <ThemedText type="defaultSemiBold" style={styles.harvestSummaryTitle}>
+                  {t('plot_harvest_season_total')}
+                </ThemedText>
+                <ThemedText type="title" style={styles.harvestSummaryKg}>
+                  {`${Math.round(plotHarvestSummary.seasonTotalKg).toLocaleString()} kg`}
+                </ThemedText>
+              </View>
+              {plotAreaCaption ? (
+                <ThemedText type="caption" style={styles.harvestAreaCaption}>
+                  {plotAreaCaption}
+                </ThemedText>
+              ) : null}
+            </Card>
+
+            {plotHarvestSummary.rows.length > 0 ? (
+              plotHarvestSummary.rows.map((row) => (
+                <Card key={row.id} variant="outlined" style={styles.harvestRowCard}>
+                  <View style={styles.rowHeader}>
+                    <View>
+                      <ThemedText type="title" style={styles.harvestKgText}>{`${row.kg} kg`}</ThemedText>
                       <ThemedText type="default" style={styles.harvestDateText}>
-                        {t('plot_harvest_no_records')}
+                        {row.dateLabel}
                       </ThemedText>
-                    </Card>
-                  )}
-                </>
-              );
-            })()}
+                    </View>
+                    <ThemedText type="subtitle" style={styles.harvestCoopText}>
+                      {t('plot_harvest_no_coop')}
+                    </ThemedText>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <Card variant="outlined" style={styles.harvestRowCard}>
+                <ThemedText type="default" style={styles.harvestDateText}>
+                  {t('plot_harvest_no_records')}
+                </ThemedText>
+              </Card>
+            )}
           </>
         ) : null}
 
@@ -1538,6 +1577,13 @@ const styles = StyleSheet.create({
     borderColor: '#D9D9D9',
     padding: 18,
   },
+  autoUploadBanner: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    color: '#047857',
+  },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1606,20 +1652,9 @@ const styles = StyleSheet.create({
   harvestSummaryKg: {
     color: '#0A7F59',
   },
-  harvestSubText: {
+  harvestAreaCaption: {
+    marginTop: 6,
     color: '#565656',
-  },
-  harvestProgressTrack: {
-    marginTop: 12,
-    height: 10,
-    borderRadius: 9999,
-    backgroundColor: '#E4E4E4',
-    overflow: 'hidden',
-  },
-  harvestProgressFill: {
-    height: '100%',
-    borderRadius: 9999,
-    backgroundColor: '#14B67A',
   },
   harvestRowCard: {
     borderRadius: 18,
@@ -1811,5 +1846,13 @@ const styles = StyleSheet.create({
   },
   photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
   photoThumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: '#eee' },
+  photoThumbMore: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 

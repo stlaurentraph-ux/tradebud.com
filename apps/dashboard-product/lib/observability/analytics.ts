@@ -9,6 +9,9 @@ export const DASHBOARD_EVENTS = {
   SIGN_IN_FAILURE: 'dashboard_sign_in_failure',
   PACKAGE_CREATE_SUCCESS: 'dashboard_package_create_success',
   PACKAGE_CREATE_FAILURE: 'dashboard_package_create_failure',
+  PACKAGE_SEAL_SUCCESS: 'dashboard_package_seal_success',
+  PACKAGE_SEAL_FAILURE: 'dashboard_package_seal_failure',
+  EXPORTER_LINEAGE_STEP_CLICKED: 'dashboard_exporter_lineage_step_clicked',
   ONBOARDING_STARTED: 'onboarding_started',
   ONBOARDING_STEP_VIEWED: 'onboarding_step_viewed',
   ONBOARDING_STEP_COMPLETED: 'onboarding_step_completed',
@@ -17,6 +20,7 @@ export const DASHBOARD_EVENTS = {
   UI_ACTION_FAILED: 'dashboard_ui_action_failed',
   REACT_RENDER_ERROR: 'dashboard_react_render_error',
   UPSTREAM_BLOCKER_ALERT_CLICKED: 'dashboard_upstream_blocker_alert_clicked',
+  PLOT_GEOMETRY_REVISION_APPLIED: 'plot_geometry_revision_applied',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -26,6 +30,7 @@ type DashboardEventProps = Record<string, string | number | boolean | undefined>
 const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.SIGN_IN_FAILURE,
   DASHBOARD_EVENTS.PACKAGE_CREATE_FAILURE,
+  DASHBOARD_EVENTS.PACKAGE_SEAL_FAILURE,
   DASHBOARD_EVENTS.UI_ACTION_FAILED,
   DASHBOARD_EVENTS.REACT_RENDER_ERROR,
 ]);

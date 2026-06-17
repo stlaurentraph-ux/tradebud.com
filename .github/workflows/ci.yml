@@ -774,6 +774,9 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+      - name: Field regression guard
+        run: node ./scripts/field-regression-guard.mjs
+
       - name: Device QA wiring preflight
         run: npm run qa:preflight
 

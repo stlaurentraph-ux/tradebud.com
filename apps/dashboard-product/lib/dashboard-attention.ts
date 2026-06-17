@@ -1,4 +1,13 @@
+import {
+  getDashboardAttentionCopy,
+  getDashboardAttentionOwnedBlockingMessage,
+  getDashboardAttentionUpstreamBlockersMessage,
+  getDashboardAttentionYieldFailuresMessage,
+} from '@/lib/dashboard-attention-copy';
 import type { TenantRole } from '@/types';
+import { SETTINGS_LICENSE_PATH } from '@/lib/settings-paths';
+
+type TranslateFn = (key: string) => string;
 
 export type AttentionSeverity = 'blocking' | 'warning' | 'info';
 
@@ -12,6 +21,7 @@ export interface AttentionItem {
 }
 
 export interface DashboardAttentionInput {
+  t?: TranslateFn;
   role?: TenantRole;
   ownedBlockingIssuesCount?: number;
   upstreamBlockersCount?: number;
@@ -34,6 +44,7 @@ const SEVERITY_ORDER: Record<AttentionSeverity, number> = {
 
 export function buildDashboardAttentionItems(input: DashboardAttentionInput): AttentionItem[] {
   const items: AttentionItem[] = [];
+  const { t } = input;
   const ownedBlocking = input.ownedBlockingIssuesCount ?? 0;
   const upstreamBlockers = input.upstreamBlockersCount ?? 0;
   const yieldFailures = input.yieldFailuresCount ?? 0;
@@ -42,9 +53,9 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
     items.push({
       id: 'owned-blocking-issues',
       severity: 'blocking',
-      title: 'Blocking issues need your action',
-      message: `${ownedBlocking} issue${ownedBlocking === 1 ? '' : 's'} you own must be resolved before shipments can progress.`,
-      ctaLabel: 'Review owned issues',
+      title: getDashboardAttentionCopy('owned_blocking_title', t),
+      message: getDashboardAttentionOwnedBlockingMessage(ownedBlocking, t),
+      ctaLabel: getDashboardAttentionCopy('owned_blocking_cta', t),
       ctaHref: '/compliance/issues?ownership=owned',
     });
   }
@@ -52,14 +63,14 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
   if (upstreamBlockers > 0) {
     const roleHint =
       input.role === 'importer'
-        ? 'These block shared shipments you depend on for EU filing readiness.'
-        : 'These affect shared shipments in your network.';
+        ? getDashboardAttentionCopy('upstream_blockers_role_hint_importer', t)
+        : getDashboardAttentionCopy('upstream_blockers_role_hint_default', t);
     items.push({
       id: 'upstream-blockers',
       severity: 'blocking',
-      title: 'Upstream blockers',
-      message: `${upstreamBlockers} issue${upstreamBlockers === 1 ? '' : 's'} need remediation by an exporter or cooperative before your shipments can clear. ${roleHint}`,
-      ctaLabel: 'View upstream blockers',
+      title: getDashboardAttentionCopy('upstream_blockers_title', t),
+      message: getDashboardAttentionUpstreamBlockersMessage(upstreamBlockers, roleHint, t),
+      ctaLabel: getDashboardAttentionCopy('upstream_blockers_cta', t),
       ctaHref: '/compliance/issues?ownership=upstream_blocker',
     });
   }
@@ -68,9 +79,9 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
     items.push({
       id: 'yield-failures',
       severity: 'warning',
-      title: 'Yield exceptions pending',
-      message: `${yieldFailures} batch${yieldFailures === 1 ? '' : 'es'} failed yield plausibility and need exception handling.`,
-      ctaLabel: 'View lots & batches',
+      title: getDashboardAttentionCopy('yield_failures_title', t),
+      message: getDashboardAttentionYieldFailuresMessage(yieldFailures, t),
+      ctaLabel: getDashboardAttentionCopy('yield_failures_cta', t),
       ctaHref: '/harvests',
     });
   }
@@ -79,24 +90,10 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
     items.push({
       id: 'account-suspended',
       severity: 'blocking',
-      title: 'Account suspended',
-      message: 'Your workspace is suspended. Contact support or review billing to restore access.',
-      ctaLabel: 'Open billing',
-      ctaHref: '/settings/billing',
-    });
-  }
-
-  if (input.trialLifecycleStatus === 'trial_active') {
-    const expiryLabel = input.trialExpiresAt
-      ? `Trial ends ${new Date(input.trialExpiresAt).toLocaleDateString()}.`
-      : 'Trial access is active.';
-    items.push({
-      id: 'trial-active',
-      severity: 'info',
-      title: 'Trial access active',
-      message: `${expiryLabel} Upgrade before expiry to keep premium workflows.`,
-      ctaLabel: 'View billing',
-      ctaHref: '/settings/billing',
+      title: getDashboardAttentionCopy('account_suspended_title', t),
+      message: getDashboardAttentionCopy('account_suspended_message', t),
+      ctaLabel: getDashboardAttentionCopy('account_suspended_cta', t),
+      ctaHref: SETTINGS_LICENSE_PATH,
     });
   }
 
@@ -104,10 +101,10 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
     items.push({
       id: 'trial-expired',
       severity: 'warning',
-      title: 'Trial expired',
-      message: 'Upgrade is required to continue premium workflows.',
-      ctaLabel: 'Open billing',
-      ctaHref: '/settings/billing',
+      title: getDashboardAttentionCopy('trial_expired_title', t),
+      message: getDashboardAttentionCopy('trial_expired_message', t),
+      ctaLabel: getDashboardAttentionCopy('trial_expired_cta', t),
+      ctaHref: SETTINGS_LICENSE_PATH,
     });
   }
 
@@ -115,8 +112,8 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
     items.push({
       id: 'summary-error',
       severity: 'warning',
-      title: 'Metrics temporarily unavailable',
-      message: 'Dashboard metrics could not be loaded. Showing partial data.',
+      title: getDashboardAttentionCopy('summary_error_title', t),
+      message: getDashboardAttentionCopy('summary_error_message', t),
     });
   }
 
@@ -125,7 +122,7 @@ export function buildDashboardAttentionItems(input: DashboardAttentionInput): At
       id: 'onboarding-next-step',
       severity: 'info',
       title: input.onboardingStep.title,
-      message: 'Continue onboarding to unlock your full workspace.',
+      message: getDashboardAttentionCopy('onboarding_next_step_message', t),
       ctaLabel: input.onboardingStep.ctaLabel,
       ctaHref: input.onboardingStep.href,
     });

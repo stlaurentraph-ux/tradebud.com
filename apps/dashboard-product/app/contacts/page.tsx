@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import type { ContactActivityType } from '@/lib/contact-activity-types';
+import { listContactActivityTypesForRole } from '@/lib/contact-activity-types';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs } from '@/lib/nav-labels';
@@ -16,9 +18,11 @@ import {
   getContactsCtaLabel,
   getContactsEmptyCopy,
   getContactsErrorMessage,
+  getContactsFilterAllActivitiesLabel,
   getContactsFilterAllStatusesLabel,
   getContactConsentLabel,
   getContactStatusLabel,
+  getContactTypeLabel,
   getContactsListTitle,
   getContactsNoMatchesLabel,
   getContactsPageSubtitle,
@@ -34,6 +38,7 @@ const CONTACT_TABLE_COLUMN_KEYS = [
   'name',
   'email',
   'organization',
+  'activity',
   'status',
   'consent',
   'last_activity',
@@ -49,6 +54,7 @@ const CONTACT_TABLE_COLUMNS: Array<{
   { key: 'name', minWidth: 140, defaultWidth: 180 },
   { key: 'email', minWidth: 180, defaultWidth: 240 },
   { key: 'organization', minWidth: 140, defaultWidth: 180 },
+  { key: 'activity', minWidth: 140, defaultWidth: 170 },
   { key: 'status', minWidth: 120, defaultWidth: 130 },
   { key: 'consent', minWidth: 120, defaultWidth: 130 },
   { key: 'last_activity', minWidth: 180, defaultWidth: 220 },
@@ -59,11 +65,15 @@ export default function ContactsPage() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { user } = useAuth();
-  const isCooperative = user?.active_role === 'cooperative';
-  const navName = isCooperative ? 'Members' : 'Contacts';
+  const role = user?.active_role;
+  const isCooperative = role === 'cooperative';
+  const isExporter = role === 'exporter';
+  const audience = role ?? isCooperative;
+  const navName = isCooperative ? 'Members' : isExporter ? 'Suppliers' : 'Contacts';
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContactStatus | 'all'>('all');
+  const [activityFilter, setActivityFilter] = useState<ContactActivityType | 'all'>('all');
   const [error, setError] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<ContactTableColumnKey, number>>(
     CONTACT_TABLE_COLUMNS.reduce(
@@ -94,9 +104,16 @@ export default function ContactsPage() {
         contact.email.toLowerCase().includes(search.toLowerCase()) ||
         (contact.organization ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesActivity =
+        activityFilter === 'all' || contact.contact_type === activityFilter;
+      return matchesSearch && matchesStatus && matchesActivity;
     });
-  }, [contacts, search, statusFilter]);
+  }, [contacts, search, statusFilter, activityFilter]);
+
+  const activityFilterOptions = useMemo(
+    () => listContactActivityTypesForRole(isCooperative ? 'cooperative' : isExporter ? 'exporter' : 'other'),
+    [isCooperative, isExporter],
+  );
 
   const stats = useMemo(() => {
     return {
@@ -133,27 +150,27 @@ export default function ContactsPage() {
   return (
     <>
       <AppHeader
-        title={getContactsPageTitle(isCooperative, t)}
-        subtitle={getContactsPageSubtitle(isCooperative, t)}
+        title={getContactsPageTitle(role ?? isCooperative, t)}
+        subtitle={getContactsPageSubtitle(role ?? isCooperative, t)}
         breadcrumbs={buildAppBreadcrumbs(t, { name: navName })}
       />
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">{getContactsStatLabel('total', isCooperative, t)}</CardTitle>
+              <CardTitle className="text-sm">{getContactsStatLabel('total', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.total}</CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">{getContactsStatLabel('active', isCooperative, t)}</CardTitle>
+              <CardTitle className="text-sm">{getContactsStatLabel('active', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.active}</CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">{getContactsStatLabel('blocked', isCooperative, t)}</CardTitle>
+              <CardTitle className="text-sm">{getContactsStatLabel('blocked', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.blocked}</CardContent>
           </Card>
@@ -163,7 +180,7 @@ export default function ContactsPage() {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={getContactsSearchPlaceholder(isCooperative, t)}
+            placeholder={getContactsSearchPlaceholder(audience, t)}
             className="max-w-sm"
           />
           <select
@@ -178,18 +195,30 @@ export default function ContactsPage() {
               </option>
             ))}
           </select>
+          <select
+            value={activityFilter}
+            onChange={(event) => setActivityFilter(event.target.value as ContactActivityType | 'all')}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="all">{getContactsFilterAllActivitiesLabel(t)}</option>
+            {activityFilterOptions.map((activity) => (
+              <option key={activity} value={activity}>
+                {getContactTypeLabel(activity, t)}
+              </option>
+            ))}
+          </select>
           <PermissionGate permission="contacts:create">
             <div className="flex items-center gap-2">
               <Button asChild variant="outline">
                 <Link href="/contacts/add?mode=csv">
                   <Upload className="mr-2 h-4 w-4" />
-                  {getContactsCtaLabel('import_csv', isCooperative, t)}
+                  {getContactsCtaLabel('import_csv', audience, t)}
                 </Link>
               </Button>
               <Button asChild>
                 <Link href="/contacts/add?mode=contact">
                   <Plus className="mr-2 h-4 w-4" />
-                  {getContactsCtaLabel('add', isCooperative, t)}
+                  {getContactsCtaLabel('add', audience, t)}
                 </Link>
               </Button>
             </div>
@@ -204,34 +233,53 @@ export default function ContactsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{getContactsListTitle(isCooperative, t)}</CardTitle>
+            <CardTitle>{getContactsListTitle(role ?? isCooperative, t)}</CardTitle>
           </CardHeader>
           <CardContent>
             {contacts.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
-                <p className="font-medium">{getContactsEmptyCopy('title', isCooperative, t)}</p>
+                <p className="font-medium">{getContactsEmptyCopy('title', audience, t)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {getContactsEmptyCopy('description', isCooperative, t)}
+                  {getContactsEmptyCopy('description', audience, t)}
                 </p>
                 <PermissionGate permission="contacts:create">
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                    <Button asChild>
-                      <Link href="/contacts/add?mode=contact">
-                        <Plus className="mr-2 h-4 w-4" />
-                        {getContactsEmptyCopy('cta', isCooperative, t)}
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <Link href="/contacts/add?mode=csv">
-                        <Upload className="mr-2 h-4 w-4" />
-                        {getContactsCtaLabel('import_csv', isCooperative, t)}
-                      </Link>
-                    </Button>
+                    {isExporter ? (
+                      <>
+                        <Button asChild>
+                          <Link href="/contacts/add?mode=csv">
+                            <Upload className="mr-2 h-4 w-4" />
+                            {getContactsCtaLabel('import_csv', audience, t)}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href="/contacts/add?mode=contact">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {getContactsEmptyCopy('cta', audience, t)}
+                          </Link>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button asChild>
+                          <Link href="/contacts/add?mode=contact">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {getContactsEmptyCopy('cta', audience, t)}
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                          <Link href="/contacts/add?mode=csv">
+                            <Upload className="mr-2 h-4 w-4" />
+                            {getContactsCtaLabel('import_csv', audience, t)}
+                          </Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </PermissionGate>
               </div>
             ) : filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{getContactsNoMatchesLabel(isCooperative, t)}</p>
+              <p className="text-sm text-muted-foreground">{getContactsNoMatchesLabel(audience, t)}</p>
             ) : (
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full table-fixed text-sm">
@@ -264,6 +312,9 @@ export default function ContactsPage() {
                         <td className="px-3 py-2 font-medium">{contact.full_name}</td>
                         <td className="px-3 py-2">{contact.email}</td>
                         <td className="px-3 py-2">{contact.organization ?? '—'}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="outline">{getContactTypeLabel(contact.contact_type, t)}</Badge>
+                        </td>
                         <td className="px-3 py-2">
                           <Badge variant="outline">{getContactStatusLabel(contact.status, t)}</Badge>
                         </td>

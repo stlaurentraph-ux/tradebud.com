@@ -23,6 +23,14 @@ export const SUPPLY_CHAIN_ROLE_OPTIONS = [
 
 export type SupplyChainRoleId = (typeof SUPPLY_CHAIN_ROLE_OPTIONS)[number]['id'];
 
+/** Persisted in `supply_chain_roles` alongside cooperative / exporter / importer. */
+export const INTEGRATED_HARVEST_CAPTURE_FLAG = 'integrated_harvest_capture' as const;
+export const HIGH_RES_MAP_TILES_FLAG = 'high_res_map_tiles' as const;
+
+export type SupplyChainWorkflowFlag =
+  | typeof INTEGRATED_HARVEST_CAPTURE_FLAG
+  | typeof HIGH_RES_MAP_TILES_FLAG;
+
 export const SUPPLY_CHAIN_ROLE_PRESETS = [
   {
     id: 'cooperative_exporter',
@@ -67,6 +75,22 @@ export function normalizeSupplyChainRoles(input: unknown): SupplyChainRoleId[] {
     }
   }
   return Array.from(unique);
+}
+
+export function tenantHasIntegratedHarvestCapture(
+  profile: { supply_chain_roles?: unknown } | null | undefined,
+  activeRole?: import('@/types').TenantRole,
+): boolean {
+  if (!Array.isArray(profile?.supply_chain_roles)) return false;
+  if (profile.supply_chain_roles.includes(INTEGRATED_HARVEST_CAPTURE_FLAG)) {
+    return true;
+  }
+  const roles = normalizeSupplyChainRoles(profile.supply_chain_roles);
+  // Exporter desk may record harvests when the org also runs cooperative upstream capture.
+  if (activeRole === 'exporter' && roles.includes('cooperative')) {
+    return true;
+  }
+  return false;
 }
 
 export function resolveTenantRolesFromProfile(input: {

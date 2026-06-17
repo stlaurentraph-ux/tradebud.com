@@ -11,7 +11,14 @@ import { MANAGED_CONTACT_ACTIVE_STATUSES } from '../billing/billing-subscription
 import { PG_POOL } from '../db/db.module';
 
 export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
-export type ContactType = 'exporter' | 'cooperative' | 'farmer' | 'other';
+export type ContactType =
+  | 'exporter'
+  | 'cooperative'
+  | 'farmer'
+  | 'washing_station'
+  | 'processing_facility'
+  | 'trader'
+  | 'other';
 
 export interface ContactRecord {
   id: string;

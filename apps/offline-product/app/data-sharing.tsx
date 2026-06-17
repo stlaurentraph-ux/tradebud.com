@@ -25,7 +25,8 @@ import {
 } from '@/constants/compactTabHeader';
 import { Brand, Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { fetchMyConsentGrants, requestGdprErasure, type ConsentGrant } from '@/features/api/consentGrants';
+import { fetchMyConsentGrants, postAuditEventToBackend, requestGdprErasure, type ConsentGrant } from '@/features/api/consentGrants';
+import { testBackendLogin } from '@/features/api/postPlot';
 import {
   applyOptimisticConsentStatus,
   performConsentAction,
@@ -238,6 +239,7 @@ export default function DataSharingScreen() {
   const [showGdpr, setShowGdpr] = useState(false);
   const [erasureDetails, setErasureDetails] = useState('');
   const [erasureSubmitting, setErasureSubmitting] = useState(false);
+  const [auditSyncBusy, setAuditSyncBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!isSignedIn) {
@@ -284,6 +286,43 @@ export default function DataSharingScreen() {
       appVersion: Constants.expoConfig?.version ?? null,
     });
     await Share.share({ message: declarationBundleToJson(bundle), title: 'Tracebud' });
+  };
+
+  const syncDeclarationSnapshotToServer = async () => {
+    if (!farmer) {
+      Alert.alert(t('warning'), t('declaration_export_no_farmer'));
+      return;
+    }
+    const login = await testBackendLogin();
+    if (!login.ok) {
+      Alert.alert(t('warning'), login.message);
+      return;
+    }
+    setAuditSyncBusy(true);
+    try {
+      const bundle = buildDeclarationBundle({
+        farmer,
+        plots,
+        appVersion: Constants.expoConfig?.version ?? null,
+      });
+      const res = await postAuditEventToBackend({
+        eventType: 'offline_declaration_bundle',
+        payload: { ...bundle, farmerId: farmer.id },
+        deviceId: Constants.deviceName ?? null,
+      });
+      if (!res.ok) {
+        Alert.alert(
+          t('warning'),
+          res.reason === 'no_access_token'
+            ? t('declaration_sync_need_signin')
+            : res.message ?? t('declaration_sync_failed'),
+        );
+        return;
+      }
+      Alert.alert(t('declaration_sync_ok_title'), t('declaration_sync_ok_body'));
+    } finally {
+      setAuditSyncBusy(false);
+    }
   };
 
   const onApprove = async (grant: ConsentGrant) => {
@@ -517,6 +556,29 @@ export default function DataSharingScreen() {
             />
             {isSignedIn ? (
               <>
+                <View style={styles.rowDivider} />
+                <Pressable
+                  onPress={() => void syncDeclarationSnapshotToServer()}
+                  disabled={auditSyncBusy}
+                  style={styles.settingsRow}
+                >
+                  <View style={styles.settingsIcon}>
+                    <Ionicons name="cloud-upload-outline" size={18} color={Brand.primary} />
+                  </View>
+                  <View style={styles.settingsText}>
+                    <ThemedText type="defaultSemiBold">
+                      {t('declaration_sync_server')}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.settingsSubtitle}>
+                      {t('data_sharing_audit_sync_short')}
+                    </ThemedText>
+                  </View>
+                  {auditSyncBusy ? (
+                    <ActivityIndicator color={Brand.primary} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color="#C4C4C4" />
+                  )}
+                </Pressable>
                 <View style={styles.rowDivider} />
                 <Pressable onPress={() => setShowGdpr((v) => !v)} style={styles.settingsRow}>
                   <View style={[styles.settingsIcon, styles.settingsIconMuted]}>

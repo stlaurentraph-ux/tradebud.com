@@ -296,8 +296,7 @@ export function getSealBillingHint(role?: SupplyChainRole): string {
 }
 
 export function getEvidencePageTitle(role?: SupplyChainRole): string {
-  if (role === 'importer' || role === 'cooperative') return 'Evidence';
-  return 'FPIC Repository';
+  return 'Evidence';
 }
 
 export function getEvidencePageSubtitle(role?: SupplyChainRole): string {
@@ -509,6 +508,58 @@ export function getHarvestDetailCardTitle(_role?: SupplyChainRole): string {
 
 export function getHarvestDetailPlaceholder(_role?: SupplyChainRole): string {
   return 'Route enabled and ready for detailed batch lineage and yield data.';
+}
+
+export function getHarvestDetailLoadingMessage(): string {
+  return 'Loading batch record…';
+}
+
+export function getHarvestDetailNotFoundTitle(): string {
+  return 'Batch not found';
+}
+
+export function getHarvestDetailNotFoundBody(): string {
+  return 'This batch is not in your workspace list. It may have been recorded on another device or removed.';
+}
+
+export function getHarvestDetailPlotLabel(): string {
+  return 'Plot & origin';
+}
+
+export function getHarvestDetailWeightLabel(): string {
+  return 'Weight & yield cap';
+}
+
+export function getHarvestDetailYieldCapLabel(): string {
+  return 'Yield cap';
+}
+
+export function getHarvestDetailUtilizationLabel(): string {
+  return 'Capacity used';
+}
+
+export function getHarvestDetailExpectedYieldLabel(): string {
+  return 'Expected yield';
+}
+
+export function getHarvestDetailCapacityLabel(): string {
+  return 'Capacity formula';
+}
+
+export function getHarvestDetailPlotAreaLabel(): string {
+  return 'Area';
+}
+
+export function getHarvestDetailRecordedLabel(): string {
+  return 'Recorded';
+}
+
+export function getHarvestDetailExceptionLabel(
+  status: 'pending' | 'approved' | 'rejected',
+): string {
+  if (status === 'pending') return 'Exception request pending review';
+  if (status === 'approved') return 'Yield exception approved';
+  return 'Yield exception rejected';
 }
 
 export function getHarvestVoucherSectionDescription(role?: SupplyChainRole): string {

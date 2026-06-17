@@ -71,6 +71,37 @@ describe('shipment-headers-client', () => {
     expect(shipment.id).toBe('shp_legacy');
   });
 
+  it('resolves shipment headers by shipment reference from the list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({ error: 'not found' }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({ error: 'not found' }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            shipments: [
+              {
+                id: 'shp_1',
+                shipment_reference: 'SHP-REF-99',
+                package_ids: [],
+              },
+            ],
+          }),
+        } as Response),
+    );
+
+    const shipment = await resolveShipmentHeaderForAssembly('SHP-REF-99', 'tenant_1');
+    expect(shipment.id).toBe('shp_1');
+  });
+
   it('finds a shipment header by package id', async () => {
     vi.stubGlobal(
       'fetch',

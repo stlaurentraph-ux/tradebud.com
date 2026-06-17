@@ -22,8 +22,8 @@ describe('virgin-state-copy', () => {
   it('builds localized virgin steps with hrefs', () => {
     const steps = getVirginStepsForRole('exporter');
     expect(steps).toHaveLength(4);
-    expect(steps[0].title).toBe('Register producers');
-    expect(steps[0].href).toBe('/farmers/new');
+    expect(steps[0].title).toBe('Register suppliers');
+    expect(steps[0].href).toBe('/contacts/add?mode=csv');
     expect(getVirginStateStepCopy('sponsor', 'invite_contacts', 'ctaLabel')).toBe('Invite contact');
   });
 

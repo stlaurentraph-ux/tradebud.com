@@ -186,7 +186,7 @@ export function OnboardingChecklistCard({ suppressWhenBlockers = false }: { supp
           key: 'add_producers' as const,
           label: getOnboardingChecklistTaskCopy('add_producers', 'label', role, t),
           description: getOnboardingChecklistTaskCopy('add_producers', 'description', role, t),
-          ctaHref: isExporter ? '/farmers/new' : '/contacts/add?mode=contact',
+          ctaHref: isExporter ? '/contacts/add?mode=csv' : '/contacts/add?mode=contact',
           ctaLabel: getOnboardingChecklistTaskCopy('add_producers', 'cta', role, t),
           done: hasAction('contacts_uploaded'),
         },

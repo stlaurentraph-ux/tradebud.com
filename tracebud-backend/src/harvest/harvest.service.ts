@@ -6,6 +6,11 @@ import { isFarmerInTenant, resolveFarmerIdsForTenant } from '../common/tenant-fa
 import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
+import { ClaimVoucherDto } from './dto/claim-voucher.dto';
+import {
+  resolveVoucherDeliveryRecipient,
+  tenantCanBrowseVoucherSql,
+} from './voucher-delivery-routing';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import {
   DdsPackageEvidenceDocumentDto,
@@ -155,7 +160,17 @@ export class HarvestService {
   ) {}
 
   async create(dto: CreateHarvestDto, userId: string | undefined) {
-    const { farmerId, plotId, kg, harvestDate, note, hlcTimestamp, clientEventId } = dto;
+    const {
+      farmerId,
+      plotId,
+      kg,
+      harvestDate,
+      note,
+      hlcTimestamp,
+      clientEventId,
+      deliverToTenantId,
+      deliverToEmail,
+    } = dto;
 
     if (kg <= 0) {
       throw new BadRequestException('Kg must be positive');
@@ -274,18 +289,31 @@ export class HarvestService {
     const tx = insertRes.rows[0];
 
     const qrRef = `V-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+    const deliveryRecipient = await resolveVoucherDeliveryRecipient(this.pool, {
+      farmerId,
+      deliverToTenantId,
+      deliverToEmail,
+    });
 
     const voucherRes = await this.pool.query(
       `
         INSERT INTO voucher (
           farmer_id,
           transaction_id,
-          qr_code_ref
+          qr_code_ref,
+          intended_recipient_tenant_id,
+          intended_recipient_email
         )
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
-      [farmerId, tx.id, qrRef],
+      [
+        farmerId,
+        tx.id,
+        qrRef,
+        deliveryRecipient.intendedRecipientTenantId,
+        deliveryRecipient.intendedRecipientEmail,
+      ],
     );
 
     const result = {
@@ -311,6 +339,8 @@ export class HarvestService {
           note: note ?? null,
           hlcTimestamp: hlcTimestamp ?? null,
           clientEventId: clientEventId ?? null,
+          intendedRecipientTenantId: deliveryRecipient.intendedRecipientTenantId,
+          intendedRecipientEmail: deliveryRecipient.intendedRecipientEmail,
         }),
       ],
     );
@@ -347,6 +377,7 @@ export class HarvestService {
       return [];
     }
 
+    const browseFilter = tenantCanBrowseVoucherSql('v');
     const res = await this.pool.query<TenantHarvestVoucherRow>(
       `
         SELECT
@@ -374,12 +405,113 @@ export class HarvestService {
         LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
         LEFT JOIN dds_package dp ON dp.id = dpv.dds_package_id
         WHERE v.farmer_id = ANY($1::uuid[])
+          AND ${browseFilter}
         ORDER BY v.created_at DESC
       `,
-      [farmerIds],
+      [farmerIds, tenantId],
     );
 
     return res.rows;
+  }
+
+  async claimVoucherForTenant(
+    tenantId: string,
+    qrRef: string,
+    claimedByUserId?: string | null,
+  ): Promise<TenantHarvestVoucherRow> {
+    const trimmed = (qrRef ?? '').trim();
+    if (!trimmed) {
+      throw new BadRequestException('qrRef is required');
+    }
+
+    const lookup = await this.pool.query<{
+      id: string;
+      farmer_id: string;
+      intended_recipient_tenant_id: string | null;
+    }>(
+      `
+        SELECT id, farmer_id, intended_recipient_tenant_id
+        FROM voucher
+        WHERE qr_code_ref = $1
+        LIMIT 1
+      `,
+      [trimmed],
+    );
+    const voucher = lookup.rows[0];
+    if (!voucher) {
+      throw new BadRequestException('Voucher not found for given qrRef');
+    }
+
+    const farmerInTenant = await isFarmerInTenant(this.pool, voucher.farmer_id, tenantId);
+    if (!farmerInTenant) {
+      throw new ForbiddenException(
+        'This producer is not in your supplier network. Link them and obtain consent before registering delivery.',
+      );
+    }
+
+    if (
+      voucher.intended_recipient_tenant_id &&
+      voucher.intended_recipient_tenant_id !== tenantId
+    ) {
+      throw new ForbiddenException(
+        'This voucher was directed to a different buyer. Ask the producer to re-issue or share the code with the intended recipient.',
+      );
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO voucher_buyer_claims (voucher_id, tenant_id, claimed_by_user_id, claim_source)
+        VALUES ($1, $2, $3, 'qr_lookup')
+        ON CONFLICT (voucher_id, tenant_id) DO NOTHING
+      `,
+      [voucher.id, tenantId, claimedByUserId ?? null],
+    );
+
+    const row = await this.getTenantVoucherRowForId(voucher.id, tenantId);
+    if (!row) {
+      throw new BadRequestException('Voucher is not available for this organisation.');
+    }
+    return row;
+  }
+
+  private async getTenantVoucherRowForId(
+    voucherId: string,
+    tenantId: string,
+  ): Promise<TenantHarvestVoucherRow | null> {
+    const browseFilter = tenantCanBrowseVoucherSql('v');
+    const res = await this.pool.query<TenantHarvestVoucherRow>(
+      `
+        SELECT
+          v.id,
+          v.farmer_id,
+          v.transaction_id,
+          v.qr_code_ref,
+          v.status,
+          v.created_at,
+          tx.plot_id,
+          p.name AS plot_name,
+          p.status AS plot_status,
+          tx.kg,
+          tx.harvest_date,
+          dpv.dds_package_id,
+          dp.status AS dds_package_status,
+          (
+            dpv.dds_package_id IS NULL
+            AND tx.plot_id IS NOT NULL
+            AND COALESCE(p.status, '') IN ('verified', 'compliant')
+          ) AS eligible_for_package
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        LEFT JOIN dds_package dp ON dp.id = dpv.dds_package_id
+        WHERE v.id = $1
+          AND ${browseFilter}
+        LIMIT 1
+      `,
+      [voucherId, tenantId],
+    );
+    return res.rows[0] ?? null;
   }
 
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {

@@ -24,7 +24,7 @@ Manual acceptance for exporter **A+** critical path on a **real tenant** (not de
 | 1.2 | Register plot linked to producer | Plot visible on plot detail; geometry/tenure panels load |
 | 1.3 | Record harvest batch (`/harvests`) | Batch ties to plot; weight and commodity captured |
 | 1.4 | Create shipment/package (`/packages`) | Package in `DRAFT`; associated plots/producers visible on detail |
-| 1.5 | Open package detail lineage section | Plot and producer associations match field data |
+| 1.5 | Open package detail lineage section | Plot and producer associations match field data; **Lineage summary** card shows intact/missing state |
 
 ### 2. Readiness blockers before seal ★
 

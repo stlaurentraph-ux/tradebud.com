@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -12,7 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useCanCreateHarvestBatch } from '@/components/common/harvest-batch-create-gate';
 import { useAuth } from '@/lib/auth-context';
+import { useCommercialProfile } from '@/lib/use-commercial-profile';
 import { LocaleContext } from '@/lib/locale-context';
 import { deriveBatchStatus } from '@/lib/exporter-batch-store';
 import { recordBatchIntake } from '@/lib/batch-intake-service';
@@ -35,6 +37,8 @@ const DEFAULT_EXPECTED_YIELD = 700;
 export default function NewHarvestPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isLoading: isProfileLoading } = useCommercialProfile();
+  const canCreateHarvestBatch = useCanCreateHarvestBatch();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const role = user?.active_role;
@@ -62,6 +66,17 @@ export default function NewHarvestPage() {
     }
     return deriveBatchStatus(weight, area, expectedYield);
   }, [form.plotAreaHa, form.weightKg, form.expectedYieldKgPerHa]);
+
+  useEffect(() => {
+    if (isProfileLoading) return;
+    if (!canCreateHarvestBatch) {
+      router.replace('/harvests');
+    }
+  }, [canCreateHarvestBatch, isProfileLoading, router]);
+
+  if (isProfileLoading || !canCreateHarvestBatch) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     setError(null);

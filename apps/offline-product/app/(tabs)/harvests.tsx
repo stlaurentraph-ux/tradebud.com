@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,6 +22,14 @@ import {
   fetchVouchersForFarmer,
 } from '@/features/api/postPlot';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
+import {
+  DeliveryRecipientFields,
+  isDeliveryRecipientComplete,
+  type DeliveryRecipientSelection,
+} from '@/features/harvest/DeliveryRecipientFields';
+import { MultiPlotDeliveryWizard } from '@/features/harvest/MultiPlotDeliveryWizard';
+import { sumDeliveredKgByPlot } from '@/features/harvest/plotYieldCapacity';
+import { buildMergedHarvestPlots, findHarvestPlotOption } from '@/features/harvest/mergeHarvestPlotOptions';
 import { validateHarvestKg } from '@/features/validation/validators';
 
 type HarvestLoggedMode = 'synced' | 'queued';
@@ -38,7 +46,7 @@ export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const params = useLocalSearchParams<{ plotId?: string }>();
+  const params = useLocalSearchParams<{ plotId?: string; record?: string }>();
   const { farmer, plots: localPlots } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
@@ -54,6 +62,11 @@ export default function HarvestsScreen() {
   const [lastQrRef, setLastQrRef] = useState<string | null>(null);
   const [queuedMessageKey, setQueuedMessageKey] = useState<string | null>(null);
   const [weightInput, setWeightInput] = useState('');
+  const [deliveryRecipient, setDeliveryRecipient] = useState<DeliveryRecipientSelection | null>(null);
+  const [showMultiPlotDelivery, setShowMultiPlotDelivery] = useState(false);
+  const [multiPlotHeaderTitle, setMultiPlotHeaderTitle] = useState('');
+  const multiPlotBackRef = useRef<(() => void) | null>(null);
+  const deliveryDeepLinkHandled = useRef(false);
 
   useEffect(() => {
     if (!farmer || !isSignedIn) {
@@ -73,32 +86,15 @@ export default function HarvestsScreen() {
   }, [farmer, isSignedIn, params.plotId]);
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
-  const mergedHarvestPlots = useMemo(() => {
-    const byId = new Map<
-      string,
-      { id: string; name: string; area_ha: number; localOnly?: boolean }
-    >();
-    for (const p of backendPlots) {
-      const id = String(p?.id ?? '');
-      if (!id) continue;
-      byId.set(id, {
-        id,
-        name: String(p?.name ?? 'Plot'),
-        area_ha: Number(p?.area_ha ?? p?.areaHa ?? 0) || 0,
-        localOnly: false,
-      });
-    }
-    if (farmer) {
-      for (const lp of localPlots) {
-        if (lp.farmerId !== farmer.id) continue;
-        const id = String(lp.id);
-        if (byId.has(id)) continue;
-        const ha = Number(lp.declaredAreaHectares ?? lp.areaHectares ?? 0) || 0;
-        byId.set(id, { id, name: lp.name, area_ha: ha, localOnly: true });
-      }
-    }
-    return Array.from(byId.values());
-  }, [backendPlots, localPlots, farmer]);
+  const mergedHarvestPlots = useMemo(
+    () =>
+      buildMergedHarvestPlots({
+        backendPlots,
+        localPlots,
+        farmerId: farmer?.id,
+      }),
+    [backendPlots, localPlots, farmer?.id],
+  );
 
   useEffect(() => {
     if (!farmer) {
@@ -117,22 +113,45 @@ export default function HarvestsScreen() {
       return first ? String(first.id) : null;
     });
   }, [farmer, params.plotId, mergedHarvestPlots]);
+
+  useEffect(() => {
+    deliveryDeepLinkHandled.current = false;
+  }, [params.plotId, params.record]);
+
+  useEffect(() => {
+    if (params.record !== '1' || typeof params.plotId !== 'string' || deliveryDeepLinkHandled.current) {
+      return;
+    }
+    const target = findHarvestPlotOption({
+      plotId: params.plotId,
+      mergedPlots: mergedHarvestPlots,
+      localPlots,
+      backendPlots,
+    });
+    if (!target) return;
+    deliveryDeepLinkHandled.current = true;
+    setSelectedPlotId(target.id);
+    if (!isSignedIn) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+    if (target.localOnly) {
+      Alert.alert(t('harvest_backup_first_title'), t('harvest_backup_first'));
+      return;
+    }
+    setMessage(null);
+    setShowNewHarvestLog(true);
+    setShowRecordWeight(true);
+    setDeliveryRecipient(null);
+    setWeightInput('');
+  }, [params.record, params.plotId, mergedHarvestPlots, localPlots, backendPlots, isSignedIn, openSignIn, t]);
+
   const selectedPlot = useMemo(
     () =>
       mergedHarvestPlots.find((p) => String(p.id) === String(selectedPlotId ?? '')) ?? null,
     [mergedHarvestPlots, selectedPlotId],
   );
-  const deliveredByPlot = useMemo(() => {
-    const acc: Record<string, number> = {};
-    vouchers.forEach((v) => {
-      const pid = String(v?.plot_id ?? v?.plotId ?? '');
-      if (!pid) return;
-      const kg = Number(v?.kg ?? v?.kg_delivered ?? v?.weight_kg ?? 0);
-      if (!Number.isFinite(kg)) return;
-      acc[pid] = (acc[pid] ?? 0) + kg;
-    });
-    return acc;
-  }, [vouchers]);
+  const deliveredByPlot = useMemo(() => sumDeliveredKgByPlot(vouchers), [vouchers]);
   const recentDeliveries = useMemo(() => {
     return vouchers
       .slice()
@@ -143,10 +162,6 @@ export default function HarvestsScreen() {
       })
       .slice(0, 6);
   }, [vouchers]);
-  const selectedArea = Number(selectedPlot?.area_ha ?? 0);
-  const selectedCap = Number.isFinite(selectedArea) && selectedArea > 0 ? Math.round(selectedArea * 1500) : 0;
-  const selectedUsed = Math.round(deliveredByPlot[String(selectedPlotId ?? '')] ?? 0);
-  const selectedAvailable = Math.max(0, selectedCap - selectedUsed);
   const numericWeight = Number(weightInput.trim().replace(',', '.'));
   const canRecord = Boolean(
     isSignedIn &&
@@ -156,7 +171,7 @@ export default function HarvestsScreen() {
       !selectedPlot.localOnly &&
       Number.isFinite(numericWeight) &&
       numericWeight > 0 &&
-      numericWeight <= selectedAvailable,
+      isDeliveryRecipientComplete(deliveryRecipient),
   );
 
   const resetLoggedState = () => {
@@ -173,6 +188,22 @@ export default function HarvestsScreen() {
     }
     setMessage(null);
     setShowNewHarvestLog(true);
+    setDeliveryRecipient(null);
+  };
+
+  const startMultiPlotFlow = () => {
+    if (!isSignedIn) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+    setMessage(null);
+    setShowMultiPlotDelivery(true);
+  };
+
+  const refreshVouchers = async () => {
+    if (!farmer) return;
+    const voucherPayload = await fetchVouchersForFarmer(farmer.id);
+    setVouchers(normalizeVoucherRows(voucherPayload));
   };
 
   return (
@@ -185,9 +216,13 @@ export default function HarvestsScreen() {
       >
         <View style={styles.headerRowCompact}>
             <View style={[styles.headerSideSlot, styles.headerSideLeft]}>
-            {showHarvestLogged || showRecordWeight || showNewHarvestLog ? (
+            {showHarvestLogged || showRecordWeight || showNewHarvestLog || showMultiPlotDelivery ? (
             <Pressable
               onPress={() => {
+                if (showMultiPlotDelivery) {
+                  multiPlotBackRef.current?.();
+                  return;
+                }
                 if (showHarvestLogged) {
                   resetLoggedState();
                   return;
@@ -226,7 +261,9 @@ export default function HarvestsScreen() {
           </View>
           <View style={styles.headerTitleWrap} pointerEvents="none">
             <ThemedText numberOfLines={1} type="defaultSemiBold" style={styles.headerTitleCompact}>
-              {showHarvestLogged
+              {showMultiPlotDelivery
+                ? multiPlotHeaderTitle || t('multi_plot_delivery_title')
+                : showHarvestLogged
                 ? loggedMode === 'queued'
                   ? t('harvest_queued_success_title')
                   : t('harvest_header_logged')
@@ -241,7 +278,31 @@ export default function HarvestsScreen() {
       </LinearGradient>
 
       <ThemedScrollView contentContainerStyle={styles.container}>
-        {showHarvestLogged ? (
+        {showMultiPlotDelivery ? (
+          farmer || localPlots.length > 0 ? (
+          <MultiPlotDeliveryWizard
+            t={t}
+            farmerId={farmer?.id ?? localPlots[0]?.farmerId ?? ''}
+            mergedHarvestPlots={mergedHarvestPlots}
+            deliveredByPlot={deliveredByPlot}
+            localPlots={localPlots}
+            backendPlots={backendPlots}
+            onExit={() => {
+              setShowMultiPlotDelivery(false);
+              setMultiPlotHeaderTitle('');
+            }}
+            onComplete={refreshVouchers}
+            onRegisterBackHandler={(handler) => {
+              multiPlotBackRef.current = handler;
+            }}
+            onHeaderTitleChange={setMultiPlotHeaderTitle}
+          />
+          ) : (
+            <Card variant="outlined" style={styles.deliveryCard}>
+              <ThemedText type="caption">{t('harvest_setup_farmer_first')}</ThemedText>
+            </Card>
+          )
+        ) : showHarvestLogged ? (
           <>
             <View style={styles.harvestLoggedHeroWrap}>
               <View
@@ -339,61 +400,76 @@ export default function HarvestsScreen() {
           </>
         ) : showRecordWeight ? (
           <>
+            {selectedPlot ? (
+              <View style={styles.weightPlotChip}>
+                <Ionicons name="leaf-outline" size={16} color="#0B8B63" />
+                <ThemedText type="defaultSemiBold" style={styles.weightPlotChipText}>
+                  {String(selectedPlot.name ?? t('plot_fallback'))}
+                </ThemedText>
+              </View>
+            ) : null}
+
             <Card variant="outlined" style={styles.weightCard}>
-              <ThemedText type="title" style={styles.weightTitle}>
-                {t('weight_kg_title')}
+              <ThemedText type="caption" style={styles.weightLabel}>
+                {t('record_weight_label')}
               </ThemedText>
-              <View style={styles.weightInputWrap}>
+              <ThemedText type="caption" style={styles.weightHint}>
+                {t('record_weight_hint')}
+              </ThemedText>
+              <View style={styles.weightInputRow}>
                 <TextInput
                   placeholder={t('enter_weight_ph')}
-                  placeholderTextColor="#98A2A0"
+                  placeholderTextColor="#B0B8B5"
                   value={weightInput}
                   onChangeText={setWeightInput}
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={styles.weightInput}
+                  accessibilityLabel={t('record_weight_label')}
                 />
+                <ThemedText type="defaultSemiBold" style={styles.weightUnit}>
+                  kg
+                </ThemedText>
               </View>
               <View style={styles.stepperRow}>
                 <Pressable
                   style={styles.stepperBtn}
+                  accessibilityLabel={t('record_weight_decrease')}
                   onPress={() => {
                     const next = Math.max(0, (Number.isFinite(numericWeight) ? numericWeight : 0) - 1);
-                    setWeightInput(String(next));
+                    setWeightInput(next > 0 ? String(next) : '');
                   }}
                 >
-                  <Ionicons name="remove" size={18} color="#4E4E4E" />
+                  <Ionicons name="remove" size={16} color="#4E4E4E" />
                 </Pressable>
                 <Pressable
                   style={styles.stepperBtn}
+                  accessibilityLabel={t('record_weight_increase')}
                   onPress={() => {
                     const base = Number.isFinite(numericWeight) ? numericWeight : 0;
-                    const next = Math.min(selectedAvailable, base + 1);
-                    setWeightInput(String(next));
+                    setWeightInput(String(base + 1));
                   }}
                 >
-                  <Ionicons name="add" size={18} color="#4E4E4E" />
+                  <Ionicons name="add" size={16} color="#4E4E4E" />
+                </Pressable>
+                <Pressable
+                  style={styles.stepperBtnWide}
+                  onPress={() => {
+                    const base = Number.isFinite(numericWeight) ? numericWeight : 0;
+                    setWeightInput(String(base + 10));
+                  }}
+                >
+                  <ThemedText type="caption" style={styles.stepperBtnText}>
+                    +10
+                  </ThemedText>
                 </Pressable>
               </View>
             </Card>
 
-            <View style={styles.weightMetaWrap}>
-              <View style={styles.weightMetaRow}>
-                <ThemedText type="subtitle" style={styles.weightMetaLabel}>
-                  {t('plot_capacity', { name: String(selectedPlot?.name ?? t('plot_fallback')) })}
-                </ThemedText>
-                <ThemedText type="subtitle" style={styles.weightMetaValue}>
-                  {t('kg_remaining', { n: selectedAvailable.toLocaleString() })}
-                </ThemedText>
-              </View>
-              <View style={styles.weightMetaRow}>
-                <ThemedText type="subtitle" style={styles.weightMetaLabel}>
-                  {t('max_yield_line')}
-                </ThemedText>
-                <ThemedText type="subtitle" style={styles.weightMetaValue}>
-                  {t('kg_total', { n: selectedCap.toLocaleString() })}
-                </ThemedText>
-              </View>
-            </View>
+            <DeliveryRecipientFields
+              t={t}
+              value={deliveryRecipient}
+              onChange={setDeliveryRecipient}
+            />
 
             <Button
               variant="secondary"
@@ -418,6 +494,7 @@ export default function HarvestsScreen() {
                     kg: validation.value,
                     localPlots,
                     backendPlots,
+                    deliveryRecipient,
                   });
                   if (result.status === 'error') {
                     setMessage(result.message);
@@ -461,14 +538,11 @@ export default function HarvestsScreen() {
             <View style={{ gap: 12 }}>
               {mergedHarvestPlots.length === 0 ? (
                 <Card variant="outlined" style={styles.deliveryCard}>
-                  <ThemedText type="caption">{t('no_synced_plots')}</ThemedText>
+                  <ThemedText type="caption">{t('harvest_no_plots_on_device')}</ThemedText>
                 </Card>
               ) : (
                 mergedHarvestPlots.slice(0, 24).map((p) => {
-                  const area = Number(p.area_ha ?? 0);
-                  const cap = Number.isFinite(area) && area > 0 ? Math.round(area * 1500) : 0;
-                  const used = Math.round(deliveredByPlot[String(p.id)] ?? 0);
-                  const available = Math.max(0, cap - used);
+                  const seasonKg = Math.round(deliveredByPlot[String(p.id)] ?? 0);
                   const selected = String(selectedPlotId) === String(p.id);
                   return (
                     <Pressable
@@ -501,8 +575,8 @@ export default function HarvestsScreen() {
                               {t('harvest_plot_local_badge')}
                             </ThemedText>
                           ) : null}
-                          <ThemedText type="default" style={styles.plotCapacityText}>
-                            {t('available_capacity', { n: available.toLocaleString() })}
+                          <ThemedText type="caption" style={styles.plotSeasonText}>
+                            {t('plot_season_delivered_kg', { n: seasonKg.toLocaleString() })}
                           </ThemedText>
                         </View>
                         <Ionicons name="chevron-forward" size={22} color="#B1B1B1" />
@@ -551,6 +625,7 @@ export default function HarvestsScreen() {
             </Button>
           </Card>
         ) : (
+          <>
           <Button
             variant="secondary"
             style={{ backgroundColor: '#0A7F59' }}
@@ -560,6 +635,10 @@ export default function HarvestsScreen() {
           >
             {t('start_new_harvest')}
           </Button>
+          <Button variant="outline" fullWidth onPress={startMultiPlotFlow}>
+            {t('multi_plot_delivery_start')}
+          </Button>
+          </>
         )}
 
         <SectionHeader title={t('recent_deliveries')} />
@@ -706,70 +785,94 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plotCapacityText: {
-    color: '#666666',
+  plotSeasonText: {
+    color: '#6B7280',
     marginTop: 2,
   },
-  weightCard: {
-    borderRadius: 22,
-    borderColor: '#D5D5D5',
-    backgroundColor: '#F8F8F8',
-    padding: 16,
-  },
-  weightTitle: {
-    color: '#333333',
-    marginBottom: 10,
-  },
-  weightInputWrap: {
-    borderWidth: 1,
-    borderColor: '#D8D8D8',
-    borderRadius: 16,
-    backgroundColor: '#F3F3F3',
-    minHeight: 96,
+  weightPlotChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#E8F7F0',
+    marginBottom: 4,
+  },
+  weightPlotChipText: {
+    color: '#0B4F3B',
+    fontSize: 14,
+  },
+  weightCard: {
+    borderRadius: 18,
+    borderColor: '#DDE5E2',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    gap: 6,
+  },
+  weightLabel: {
+    color: '#374151',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    fontSize: 11,
+  },
+  weightHint: {
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  weightInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D8E0DD',
+    borderRadius: 14,
+    backgroundColor: '#F9FAFA',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
   },
   weightInput: {
-    width: '100%',
-    textAlign: 'center',
-    fontSize: 46,
-    lineHeight: 52,
-    fontWeight: '800',
-    color: '#5F6A67',
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+    color: '#1F2937',
+    paddingVertical: 0,
+  },
+  weightUnit: {
+    color: '#6B7280',
+    fontSize: 16,
+    minWidth: 24,
   },
   stepperRow: {
-    marginTop: 10,
+    marginTop: 8,
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   stepperBtn: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 999,
-    backgroundColor: '#ECECEC',
+    backgroundColor: '#EEF2F1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  weightMetaWrap: {
-    marginTop: 8,
-    gap: 8,
-    paddingHorizontal: 2,
-  },
-  weightMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  stepperBtnWide: {
+    minWidth: 44,
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: '#EEF2F1',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
   },
-  weightMetaLabel: {
-    color: '#5B5B5B',
-    flex: 1,
-  },
-  weightMetaValue: {
-    color: '#363636',
-    textAlign: 'right',
+  stepperBtnText: {
+    color: '#4B5563',
+    fontWeight: '600',
   },
   disabledRecordBtn: {
     backgroundColor: '#D9D9D9',

@@ -136,6 +136,34 @@ describe('rbac navigation visibility', () => {
     expect([...flatNames].sort()).toEqual([...visibleNames].sort());
   });
 
+  it('groups exporter navigation with suppliers in origins section', () => {
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'true');
+    const exporter = makeUser('exporter');
+    const layout = getVisibleNavSections(exporter);
+
+    expect(layout.overview?.name).toBe('Overview');
+    expect(layout.sections.map((section) => section.id)).toEqual([
+      'engagement',
+      'origins',
+      'export',
+      'operations',
+    ]);
+    expect(layout.sections.find((section) => section.id === 'origins')?.items.map((item) => item.name)).toEqual([
+      'Suppliers',
+      'Plots',
+      'Lots & Batches',
+    ]);
+
+    const flatNames = [
+      ...(layout.overview ? [layout.overview.name] : []),
+      ...layout.sections.flatMap((section) => section.items.map((item) => item.name)),
+    ];
+    const visibleNames = getVisibleNavItems(exporter).map((item) => item.name);
+    expect(flatNames).toHaveLength(visibleNames.length);
+    expect([...flatNames].sort()).toEqual([...visibleNames].sort());
+  });
+
   it('groups sponsor navigation without shipment-first labels', () => {
     vi.stubEnv('NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_ANNUAL_REPORTING', 'true');

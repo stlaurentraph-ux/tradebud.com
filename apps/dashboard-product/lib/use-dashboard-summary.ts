@@ -68,42 +68,61 @@ export function useDashboardSummary(
 
     const token = getAccessToken();
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    if (!hasDataRef.current) {
-      setIsLoading(true);
-    }
-    setError(null);
+    let cancelled = false;
 
-    void fetch(`/api/dashboard/summary?package_scope=${encodeURIComponent(packageScope)}`, {
-      headers,
-      cache: 'no-store',
-    })
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          metrics?: DashboardSummaryMetrics;
-          packages?: DDSPackage[];
-          campaigns?: unknown;
-          sponsor?: SponsorDashboardSummaryPayload;
-          error?: string;
-        };
-        if (!response.ok || !payload.metrics) {
-          throw new Error(payload.error ?? 'Failed to load dashboard summary.');
-        }
-        setMetrics(payload.metrics);
-        setPackages(Array.isArray(payload.packages) ? payload.packages : []);
-        setCampaigns(normalizeSummaryCampaigns(payload.campaigns));
-        setSponsor(payload.sponsor ?? null);
-        hasDataRef.current = true;
+    const loadSummary = () => {
+      if (!hasDataRef.current) {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      void fetch(`/api/dashboard/summary?package_scope=${encodeURIComponent(packageScope)}`, {
+        headers,
+        cache: 'no-store',
       })
-      .catch((fetchError: unknown) => {
-        if (!hasDataRef.current) {
-          setMetrics(null);
-          setPackages([]);
-          setCampaigns([]);
-          setSponsor(null);
-        }
-        setError(fetchError instanceof Error ? fetchError.message : 'Failed to load dashboard summary.');
-      })
-      .finally(() => setIsLoading(false));
+        .then(async (response) => {
+          const payload = (await response.json().catch(() => ({}))) as {
+            metrics?: DashboardSummaryMetrics;
+            packages?: DDSPackage[];
+            campaigns?: unknown;
+            sponsor?: SponsorDashboardSummaryPayload;
+            error?: string;
+          };
+          if (!response.ok || !payload.metrics) {
+            throw new Error(payload.error ?? 'Failed to load dashboard summary.');
+          }
+          if (cancelled) return;
+          setMetrics(payload.metrics);
+          setPackages(Array.isArray(payload.packages) ? payload.packages : []);
+          setCampaigns(normalizeSummaryCampaigns(payload.campaigns));
+          setSponsor(payload.sponsor ?? null);
+          hasDataRef.current = true;
+        })
+        .catch((fetchError: unknown) => {
+          if (cancelled) return;
+          if (!hasDataRef.current) {
+            setMetrics(null);
+            setPackages([]);
+            setCampaigns([]);
+            setSponsor(null);
+          }
+          setError(fetchError instanceof Error ? fetchError.message : 'Failed to load dashboard summary.');
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsLoading(false);
+          }
+        });
+    };
+
+    loadSummary();
+    const onOnboardingAction = () => loadSummary();
+    window.addEventListener('tracebud:onboarding-action', onOnboardingAction);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('tracebud:onboarding-action', onOnboardingAction);
+    };
   }, [enabled, packageScope]);
 
   return { metrics, packages, campaigns, sponsor, isLoading, error };

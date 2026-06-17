@@ -4,6 +4,10 @@ import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import type { Plot } from '@/features/state/AppStateContext';
 import { enqueuePendingSync } from '@/features/state/persistence';
+import {
+  deliveryRecipientToApiPayload,
+  type DeliveryRecipientSelection,
+} from '@/features/harvest/DeliveryRecipientFields';
 
 export type SubmitHarvestResult =
   | { status: 'synced'; qrCodeRef: string | null }
@@ -61,6 +65,7 @@ export async function submitHarvestRecord(params: {
   kg: number;
   localPlots: Plot[];
   backendPlots: unknown[];
+  deliveryRecipient?: DeliveryRecipientSelection | null;
 }): Promise<SubmitHarvestResult> {
   const localPlot = resolveLocalPlotForSelection(
     params.selectedPlotId,
@@ -75,6 +80,8 @@ export async function submitHarvestRecord(params: {
   const createdAt = Date.now();
   const clientEventId = `harvest-${localPlot.id}-${createdAt}`;
 
+  const deliveryPayload = deliveryRecipientToApiPayload(params.deliveryRecipient ?? null);
+
   if (serverPlotId) {
     try {
       const response = await postHarvestToBackend({
@@ -82,11 +89,13 @@ export async function submitHarvestRecord(params: {
         plotId: serverPlotId,
         kg: params.kg,
         clientEventId,
+        ...deliveryPayload,
       });
       trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
         plotId: localPlot.id,
         serverPlotId,
         kg: params.kg,
+        deliveryMode: params.deliveryRecipient?.mode ?? 'unspecified',
       });
       return { status: 'synced', qrCodeRef: readQrCodeRef(response) };
     } catch (e) {
@@ -113,6 +122,7 @@ export async function submitHarvestRecord(params: {
       plotId: localPlot.id,
       kg: params.kg,
       clientEventId,
+      ...deliveryPayload,
     }),
     lastError: null,
   });

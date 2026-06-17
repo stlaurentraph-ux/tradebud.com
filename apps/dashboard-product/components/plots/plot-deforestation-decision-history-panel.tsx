@@ -17,6 +17,8 @@ import { resolveWorkflowErrorMessage } from '@/lib/workflow-error-copy';
 
 interface PlotDeforestationDecisionHistoryPanelProps {
   plotId: string;
+  embedded?: boolean;
+  readOnly?: boolean;
 }
 
 function verdictVariant(verdict: 'no_deforestation_detected' | 'possible_deforestation_detected' | 'unknown') {
@@ -25,7 +27,11 @@ function verdictVariant(verdict: 'no_deforestation_detected' | 'possible_defores
   return 'secondary';
 }
 
-export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestationDecisionHistoryPanelProps) {
+export function PlotDeforestationDecisionHistoryPanel({
+  plotId,
+  embedded = false,
+  readOnly = false,
+}: PlotDeforestationDecisionHistoryPanelProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { events, isLoading, error, runDecision } = usePlotDeforestationDecisionHistory(plotId);
@@ -60,12 +66,9 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
     }
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{getPlotDeforestationDecisionCopy('panel_title', t)}</CardTitle>
-      </CardHeader>
-      <CardContent>
+  const panelBody = (
+    <>
+        {!readOnly ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Input
             type="date"
@@ -87,6 +90,7 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
           {runSuccess ? <span className="text-xs text-emerald-700">{runSuccess}</span> : null}
           {runError ? <span className="text-xs text-red-700">{runError}</span> : null}
         </div>
+        ) : null}
         {lastRun ? (
           <div className="mb-4 rounded-md border border-border p-2 text-xs text-muted-foreground">
             {getPlotDeforestationDecisionCopy('last_run_summary', t, {
@@ -146,7 +150,19 @@ export function PlotDeforestationDecisionHistoryPanel({ plotId }: PlotDeforestat
             </TableBody>
           </Table>
         )}
-      </CardContent>
+      </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-3 text-sm">{panelBody}</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{getPlotDeforestationDecisionCopy('panel_title', t)}</CardTitle>
+      </CardHeader>
+      <CardContent>{panelBody}</CardContent>
     </Card>
   );
 }

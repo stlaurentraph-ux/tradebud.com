@@ -5,11 +5,16 @@ import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AttentionItem, AttentionSeverity } from '@/lib/dashboard-attention';
+import {
+  getDashboardAttentionCopy,
+  getDashboardAttentionSeverityLabel,
+} from '@/lib/dashboard-attention-copy';
 import { trackDashboardEvent, DASHBOARD_EVENTS } from '@/lib/observability/analytics';
 
 interface DashboardAttentionStripProps {
   items: AttentionItem[];
   role?: string;
+  t?: (key: string) => string;
 }
 
 const SEVERITY_STYLES: Record<
@@ -44,15 +49,17 @@ function SeverityIcon({ severity }: { severity: AttentionSeverity }) {
   return <Info className={cn('h-4 w-4 shrink-0', className)} aria-hidden="true" />;
 }
 
-export function DashboardAttentionStrip({ items, role }: DashboardAttentionStripProps) {
+export function DashboardAttentionStrip({ items, role, t }: DashboardAttentionStripProps) {
   if (items.length === 0) {
     return null;
   }
 
   const [primary, ...secondary] = items;
+  const regionLabel = getDashboardAttentionCopy('region_aria', t);
+  const openFallback = getDashboardAttentionCopy('open_fallback', t);
 
   return (
-    <div className="mb-4 space-y-2" role="region" aria-label="Attention required">
+    <div className="mb-4 space-y-2" role="region" aria-label={regionLabel}>
       <div
         className={cn(
           'flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between',
@@ -69,7 +76,7 @@ export function DashboardAttentionStrip({ items, role }: DashboardAttentionStrip
                   SEVERITY_STYLES[primary.severity].badge,
                 )}
               >
-                {primary.severity}
+                {getDashboardAttentionSeverityLabel(primary.severity, t)}
               </span>
               <p className="font-semibold">{primary.title}</p>
             </div>
@@ -109,7 +116,7 @@ export function DashboardAttentionStrip({ items, role }: DashboardAttentionStrip
               <span className="font-medium">{item.title}</span>
               {item.ctaHref ? (
                 <Link href={item.ctaHref} className="underline underline-offset-2">
-                  {item.ctaLabel ?? 'Open'}
+                  {item.ctaLabel ?? openFallback}
                 </Link>
               ) : null}
             </div>

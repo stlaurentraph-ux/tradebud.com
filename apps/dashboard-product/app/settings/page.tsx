@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { AppHeader } from '@/components/layout/app-header';
 import { TwoFactorSetupDialog } from '@/components/settings/two-factor-setup-dialog';
@@ -17,6 +18,7 @@ import {
   Key,
   Save,
   Upload,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { hasSupabaseSessionTokens, setAuthTokens } from '@/lib/auth-session';
@@ -34,8 +36,10 @@ import {
 } from '@/lib/locale-policy';
 import {
   getNotificationCapabilityCopy,
+  getSettingsLicensePageCopy,
   getSettingsPageCopy,
 } from '@/lib/workflow-terminology-labels';
+import { SETTINGS_LICENSE_PATH } from '@/lib/settings-paths';
 import {
   isDashboardTimezone,
   TIMEZONE_OPTIONS,
@@ -286,6 +290,13 @@ export default function SettingsPage() {
                   {item.label}
                 </button>
               ))}
+              <Link
+                href={SETTINGS_LICENSE_PATH}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-secondary"
+              >
+                <CreditCard className="w-4 h-4" />
+                {getSettingsLicensePageCopy('nav_link', t)}
+              </Link>
             </nav>
           </div>
 

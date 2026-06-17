@@ -80,6 +80,22 @@ describe('ExporterDashboard', () => {
     expect(screen.getByText('Shipments ready to seal')).toBeInTheDocument();
   });
 
+  it('shows lineage checklist until seal milestone is reached', () => {
+    render(
+      <ExporterDashboard
+        metrics={{
+          ...matureMetrics,
+          packages_by_status: {
+            ...matureMetrics.packages_by_status,
+            READY: 0,
+            SEALED: 0,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('Export lineage checklist')).toBeInTheDocument();
+  });
+
   it('prioritizes blocking issues in north-star KPI', () => {
     render(
       <ExporterDashboard
@@ -104,7 +120,7 @@ describe('ExporterDashboard', () => {
   it('shows virgin onboarding panel for empty tenants', () => {
     render(<ExporterDashboard metrics={virginMetrics} />);
     expect(screen.getByText('Set up your export workspace')).toBeInTheDocument();
-    expect(screen.getByText('Register producers')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Add producer/i })).toBeInTheDocument();
+    expect(screen.getByText('Register suppliers')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Import suppliers/i })).toBeInTheDocument();
   });
 });

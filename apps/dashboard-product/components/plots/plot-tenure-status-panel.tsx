@@ -21,6 +21,7 @@ import {
   tenureBadgeLabel,
   tenurePathLabel,
 } from '@/lib/plot-tenure-status';
+import { useOptionalPlotDetailContext } from '@/lib/plot-detail-context';
 import { useEvidenceFeed } from '@/lib/use-evidence-feed';
 import { usePlotLegalSync } from '@/lib/use-plot-legal-sync';
 import {
@@ -71,17 +72,31 @@ function formatTenureType(value: unknown): string | null {
   return value.replace(/_/g, ' ').toLowerCase();
 }
 
-export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
+export function PlotTenureStatusPanel({
+  plotId,
+  embedded = false,
+}: {
+  plotId: string;
+  embedded?: boolean;
+}) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
-  const { documents, isLoading: evidenceLoading } = useEvidenceFeed({ plotId, enabled: Boolean(plotId) });
-  const { legalSync, isLoading: legalLoading, error: legalError } = usePlotLegalSync(plotId);
-  const {
-    records: verificationRecords,
-    isLoading: verificationLoading,
-    error: verificationError,
-    reload,
-  } = usePlotTenureVerification(plotId, { pollWhilePending: true });
+  const detail = useOptionalPlotDetailContext();
+  const ownEvidence = useEvidenceFeed({ plotId, enabled: !detail && Boolean(plotId) });
+  const ownLegal = usePlotLegalSync(detail ? '' : plotId);
+  const ownVerification = usePlotTenureVerification(detail ? '' : plotId, {
+    pollWhilePending: !detail,
+  });
+
+  const documents = detail?.documents ?? ownEvidence.documents;
+  const evidenceLoading = detail?.evidenceLoading ?? ownEvidence.isLoading;
+  const legalSync = detail?.legalSync ?? ownLegal.legalSync;
+  const legalLoading = detail?.legalLoading ?? ownLegal.isLoading;
+  const legalError = detail?.legalError ?? ownLegal.error;
+  const verificationRecords = detail?.verificationRecords ?? ownVerification.records;
+  const verificationLoading = detail?.verificationLoading ?? ownVerification.isLoading;
+  const verificationError = detail?.verificationError ?? ownVerification.error;
+  const reload = detail?.reloadVerification ?? ownVerification.reload;
 
   const [confirmTarget, setConfirmTarget] = useState<PlotTenureVerificationRecord | null>(null);
   const [confirmReason, setConfirmReason] = useState('');
@@ -89,13 +104,15 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
-  const tenureEvidence = documents.filter((doc) => doc.evidence_kind === 'tenure_evidence');
-  const status = computePlotTenureStatus({
-    informalTenure: legalSync?.informalTenure ?? null,
-    cadastralKey: legalSync?.cadastralKey ?? null,
-    tenureEvidenceCount: tenureEvidence.length,
-    landTenureDeclared: null,
-  });
+  const tenureEvidence = detail?.tenureEvidence ?? documents.filter((doc) => doc.evidence_kind === 'tenure_evidence');
+  const status =
+    detail?.tenureStatus ??
+    computePlotTenureStatus({
+      informalTenure: legalSync?.informalTenure ?? null,
+      cadastralKey: legalSync?.cadastralKey ?? null,
+      tenureEvidenceCount: tenureEvidence.length,
+      landTenureDeclared: null,
+    });
 
   const aggregateParseStatus = summarizePlotTenureParse(verificationRecords);
   const isLoading = evidenceLoading || legalLoading || verificationLoading;
@@ -138,44 +155,19 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
     }
   };
 
-  return (
+  const body = (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">{getPlotTenurePanelCopy('title', t)}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={badgeVariant(status.badge)}>{tenureBadgeLabel(status.badge)}</Badge>
-              {aggregateParseStatus ? (
-                <Badge variant={aiBadgeVariant(aggregateParseStatus)}>
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  {tenureParseStatusLabel(aggregateParseStatus)}
-                </Badge>
-              ) : null}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                disabled={verificationLoading}
-                onClick={() => void reload()}
-              >
-                <RefreshCw className={`h-4 w-4 ${verificationLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+      {isLoading ? (
+        <p className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {getPlotTenurePanelCopy('loading', t)}
+        </p>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 font-medium text-sm">
+            <PathIcon className="h-4 w-4 text-primary" />
+            {tenurePathLabel(status.path)}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {isLoading ? (
-            <p className="text-muted-foreground flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {getPlotTenurePanelCopy('loading', t)}
-            </p>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 font-medium">
-                <PathIcon className="h-4 w-4 text-primary" />
-                {tenurePathLabel(status.path)}
-              </div>
 
               {legalSync?.cadastralKey ? (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
@@ -298,16 +290,69 @@ export function PlotTenureStatusPanel({ plotId }: { plotId: string }) {
 
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button variant="link" size="sm" className="px-0" asChild>
-                  <Link href="#plot-evidence">{getPlotTenurePanelCopy('view_evidence_link', t)}</Link>
-                </Button>
-                <Button variant="link" size="sm" className="px-0" asChild>
                   <Link href="/compliance/tenure-review">{getPlotTenurePanelCopy('open_queue_link', t)}</Link>
                 </Button>
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+    </>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold">{getPlotTenurePanelCopy('title', t)}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={badgeVariant(status.badge)}>{tenureBadgeLabel(status.badge)}</Badge>
+              {aggregateParseStatus ? (
+                <Badge variant={aiBadgeVariant(aggregateParseStatus)}>
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  {tenureParseStatusLabel(aggregateParseStatus)}
+                </Badge>
+              ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                disabled={verificationLoading}
+                onClick={() => void reload()}
+              >
+                <RefreshCw className={`h-4 w-4 ${verificationLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </div>
+          {body}
+        </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-base">{getPlotTenurePanelCopy('title', t)}</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={badgeVariant(status.badge)}>{tenureBadgeLabel(status.badge)}</Badge>
+                {aggregateParseStatus ? (
+                  <Badge variant={aiBadgeVariant(aggregateParseStatus)}>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {tenureParseStatusLabel(aggregateParseStatus)}
+                  </Badge>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  disabled={verificationLoading}
+                  onClick={() => void reload()}
+                >
+                  <RefreshCw className={`h-4 w-4 ${verificationLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">{body}</CardContent>
+        </Card>
+      )}
 
       <Dialog open={confirmTarget != null} onOpenChange={(open) => !open && setConfirmTarget(null)}>
         <DialogContent>

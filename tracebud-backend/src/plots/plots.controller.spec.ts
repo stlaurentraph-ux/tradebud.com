@@ -149,6 +149,45 @@ describe('PlotsController scope boundaries', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('allows exporter geometry revision with tenant plot access', async () => {
+    const service = makeServiceMock();
+    service.updateGeometry.mockResolvedValue({ id: 'plot_1', kind: 'polygon' } as any);
+    const consent = makeConsentMock();
+    const controller = makePlotsController(service, consent);
+
+    await expect(
+      controller.updateGeometry(
+        'plot_1',
+        { reason: 'Removed GPS jitter', geometry: { type: 'Polygon', coordinates: [] }, reviewerAssist: true } as any,
+        {
+          user: {
+            id: 'user_exp',
+            email: 'exporter@example.com',
+            app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
+          },
+        },
+      ),
+    ).resolves.toEqual({ id: 'plot_1', kind: 'polygon' });
+
+    expect(consent.canTenantAccessPlot).toHaveBeenCalledWith('plot_1', 'tenant_1');
+    expect(service.updateGeometry).toHaveBeenCalled();
+  });
+
+  it('rejects geometry revision for unsupported roles', async () => {
+    const service = makeServiceMock();
+    const controller = makePlotsController(service);
+
+    await expect(
+      controller.updateGeometry('plot_1', { reason: 'boundary fix', geometry: {} } as any, {
+        user: {
+          id: 'user_1',
+          email: 'importer@example.com',
+          app_metadata: { tenant_id: 'tenant_1', role: 'importer' },
+        },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
   it('rejects photos/legal/evidence sync when tenant claim is missing', async () => {
     const service = makeServiceMock();
     const controller = makePlotsController(service);

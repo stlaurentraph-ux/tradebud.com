@@ -36,6 +36,7 @@ import {
   getPackagesTableEmptyMessage,
   getPackagesTableSearchPlaceholder,
   getPackagesTableTitle,
+  getPackageQuickStatsPlotsLabel,
   getRunComplianceCheckActionLabel,
 } from '@/lib/workflow-terminology-labels';
 
@@ -95,7 +96,7 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
                 placeholder={getPackagesTableSearchPlaceholder(role, t)}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 bg-secondary pl-9"
+                className="w-full bg-secondary pl-9 sm:w-64"
               />
             </div>
             <Button variant="outline" size="icon">
@@ -105,7 +106,54 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {filteredPackages.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              {getPackagesTableEmptyMessage(role, t)}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {filteredPackages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="space-y-3 rounded-lg border border-border bg-card p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link
+                        href={`/packages/${pkg.id}`}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        {pkg.code}
+                      </Link>
+                      <p className="mt-1 text-sm text-muted-foreground">{pkg.supplier_name}</p>
+                    </div>
+                    <PackageStatusBadge status={pkg.status} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {pkg.season} {pkg.year}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <ComplianceStatusBadge status={pkg.compliance_status} />
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {pkg.plots.length} {getPackageQuickStatsPlotsLabel(t).toLowerCase()}
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link href={`/packages/${pkg.id}`}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border text-left">
@@ -250,15 +298,9 @@ export function PackagesTable({ packages, readOnly = false }: PackagesTableProps
               ))}
             </tbody>
           </table>
-
-          {filteredPackages.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">
-                {getPackagesTableEmptyMessage(role, t)}
-              </p>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

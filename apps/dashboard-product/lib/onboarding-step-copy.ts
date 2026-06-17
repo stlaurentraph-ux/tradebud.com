@@ -82,11 +82,11 @@ const ONBOARDING_STEP_FALLBACKS: Record<string, Record<StepField, string>> = {
     ctaLabel: 'Open governance',
   },
   exp_producers: {
-    label: 'Add producers',
-    title: 'Create your producer directory',
+    label: 'Add suppliers',
+    title: 'Register your supplier network',
     description:
-      'Add producers early so traceability links, requests, and coverage checks stay grounded in real upstream entities.',
-    ctaLabel: 'Add producer',
+      'Import or add suppliers early so traceability links, campaigns, and coverage checks stay grounded in real upstream entities.',
+    ctaLabel: 'Import supplier list',
   },
   exp_evidence: {
     label: 'Evidence',
@@ -103,11 +103,11 @@ const ONBOARDING_STEP_FALLBACKS: Record<string, Record<StepField, string>> = {
     ctaLabel: 'Launch campaign',
   },
   exp_lots_batches: {
-    label: 'Lots & Batches',
-    title: 'Build your first aggregation batch',
+    label: 'Received lots',
+    title: 'Review received lots',
     description:
-      'Use lots and batches to aggregate upstream inputs, run yield plausibility checks, and lock lineage.',
-    ctaLabel: 'Add batch input',
+      'Open upstream lots shared by cooperatives or suppliers, then assemble them into seal-ready shipments.',
+    ctaLabel: 'View received lots',
   },
   exp_issues: {
     label: 'Resolve issues',

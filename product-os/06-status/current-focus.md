@@ -2,14 +2,19 @@
 
 ## Work now
 
-- Dashboard A+ slice 7 shipped (package assemble gate tests, importer inbox north star, handoff terminology tests, importer QA doc). **Committed + pushed to main for tomorrow QA.**
+- Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md` (automated pre-gates green).
+- Dashboard plot detail phase C shipped: geometry & audit history on `/plots/[id]/history`; summary page links out without loading history API.
+- Dashboard cooperative voucher-first harvest intake shipped: `/harvests#receive-delivery` primary path, desk batch gated unless integrated capture; package assembly from `?voucherIds=`.
+- **FEAT-003 S5 Phase D** — dashboard reviewer assist (satellite preview, Douglas–Peucker simplification, audited `PATCH /geometry`); Phases A–D complete.
+- Dashboard exporter A+ slice 9 shipped: lineage checklist on home, package lineage summary card, seal milestone analytics, mobile packages table. **444** tests green.
+- Dashboard plot detail map hero shipped: read-only satellite preview + capture/screening summary on `/plots/[id]` via `map-preview` API.
 
 ## Tomorrow (2026-06-17)
 
-1. **Dashboard manual QA (priority)** — Run `product-os/04-quality/exporter-critical-path-qa.md` and `importer-critical-path-qa.md` on staging/prod exporter + importer tenants; update scorecard checkboxes.
-2. **Exporter lineage ★** — Only open critical-path item: producer → plot → batch → shipment end-to-end on real data.
-3. **Dashboard attention strip i18n** — `lib/dashboard-attention.ts` still hardcoded; localize + manifest if QA surfaces copy gaps.
-4. **Field app soak** — `DEVICE_SMOKE_CHECKLIST.md` on physical devices if dashboard QA passes; verify OAuth callback changes from today.
+1. **Exporter manual QA (priority)** — Run `product-os/04-quality/exporter-critical-path-qa.md` §1 lineage on staging exporter tenant; verify lineage summary + checklist CTAs.
+2. **Importer manual QA** — `importer-critical-path-qa.md` after exporter pass.
+3. ~~**Dashboard attention strip i18n**~~ — Done in slice 8.
+4. **Field app soak** — `DEVICE_SMOKE_CHECKLIST.md` on physical devices if dashboard QA passes.
 5. **CI stability** — Triage any flaky page tests if CI fails on main after push.
 
 - FDP coffee screening (NG/RW/TZ) is scaffolded behind `FDP_ENABLED`; next: deploy EE worker, run `npm run check:fdp`, calibrate thresholds on real tenant plots.

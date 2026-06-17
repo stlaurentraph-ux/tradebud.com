@@ -29,6 +29,8 @@ export async function postHarvestToBackend(params: {
   note?: string;
   hlcTimestamp?: string;
   clientEventId?: string;
+  deliverToTenantId?: string;
+  deliverToEmail?: string;
 }) {
   // Validate harvest weight
   const kgValidation = validateHarvestKg(params.kg);
@@ -57,6 +59,8 @@ export async function postHarvestToBackend(params: {
       note: params.note ?? null,
       hlcTimestamp: params.hlcTimestamp ?? null,
       clientEventId: params.clientEventId ?? null,
+      deliverToTenantId: params.deliverToTenantId ?? null,
+      deliverToEmail: params.deliverToEmail ?? null,
     }),
   });
 

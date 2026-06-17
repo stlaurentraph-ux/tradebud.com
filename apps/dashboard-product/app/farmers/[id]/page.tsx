@@ -19,6 +19,7 @@ import {
   getProducerDetailFallbackTitle,
   getProducerLoadingMessage,
   getProducerNotFoundMessage,
+  getProducersNavHref,
   getProducersNavLabel,
   getContactStatusLabel,
   getProducerDetailCopy,
@@ -92,6 +93,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
 
   const fpicSigned = useMemo(() => (contact ? deriveFpicSigned(contact) : false), [contact]);
   const verified = contact?.status === 'submitted' || contact?.status === 'engaged';
+  const producersHref = getProducersNavHref(role);
 
   return (
     <div className="flex flex-col">
@@ -100,14 +102,14 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         subtitle={contact ? contact.email : `ID: ${id}`}
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
-          { label: getProducersNavLabel(role, t), href: '/farmers' },
+          { label: getProducersNavLabel(role, t), href: producersHref },
           { label: contact?.full_name ?? getProducerDetailFallbackTitle(role, t) },
         ]}
       />
 
       <div className="flex-1 p-6">
         <Button variant="ghost" size="sm" className="mb-6" asChild>
-          <Link href="/farmers">
+          <Link href={producersHref}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             {getBackToProducersLabel(role, t)}
           </Link>

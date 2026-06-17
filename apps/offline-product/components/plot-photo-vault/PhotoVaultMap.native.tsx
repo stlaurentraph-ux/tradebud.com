@@ -16,16 +16,17 @@ import type { Plot } from '@/features/state/AppStateContext';
 export function PhotoVaultMap(props: {
   plot: Plot;
   region: Region;
-  standpoint: MapCoordinate | null;
   userPosition: MapCoordinate | null;
   lowDataMap: boolean;
   offlineTilesEnabled: boolean;
   offlineTilesPackId: string | null;
+  mapHeight?: number;
 }) {
+  const mapHeight = props.mapHeight ?? 200;
   const tileMode = resolveFieldMapTileMode(props);
 
   return (
-    <View style={{ height: 200, borderRadius: 14, overflow: 'hidden' }}>
+    <View style={{ height: mapHeight, borderRadius: 14, overflow: 'hidden' }}>
       <MapView
         style={{ flex: 1 }}
         initialRegion={props.region}
@@ -44,17 +45,14 @@ export function PhotoVaultMap(props: {
             showStartMarker={false}
           />
         ) : null}
-        {props.plot.kind === 'point' && props.standpoint ? (
+        {props.plot.kind === 'point' && props.plot.points[0] ? (
           <Circle
-            center={props.standpoint}
+            center={props.plot.points[0]}
             radius={props.plot.precisionMetersAtSave ?? 25}
             fillColor="rgba(10, 127, 89, 0.22)"
             strokeColor="#0A7F59"
             strokeWidth={2}
           />
-        ) : null}
-        {props.standpoint ? (
-          <FieldPositionMarker coordinate={props.standpoint} variant="standpoint" />
         ) : null}
         {props.userPosition ? (
           <FieldPositionMarker coordinate={props.userPosition} variant="you" />

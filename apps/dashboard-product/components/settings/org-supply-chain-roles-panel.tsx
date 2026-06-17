@@ -6,12 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import {
+  mergeSupplyChainRolesForSave,
+  extractIntegratedHarvestCaptureFlag,
+} from '@/lib/harvest-capture-policy';
+import {
   normalizeSupplyChainRoles,
   primaryTenantRoleFromSupplyChainRoles,
   type SupplyChainRoleId,
 } from '@/lib/org-supply-chain-roles';
 import { fetchCommercialProfile, type CommercialProfile } from '@/lib/commercial-profile';
 import { SupplyChainRolePicker } from '@/components/settings/supply-chain-role-picker';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LocaleContext } from '@/lib/locale-context';
 import { getSettingsPageCopy } from '@/lib/workflow-terminology-labels';
 
@@ -21,6 +26,7 @@ export function OrgSupplyChainRolesPanel() {
   const { user, applyTenantRolesFromProfile } = useAuth();
   const [profile, setProfile] = useState<CommercialProfile | null>(null);
   const [selected, setSelected] = useState<SupplyChainRoleId[]>(['exporter']);
+  const [integratedHarvestCapture, setIntegratedHarvestCapture] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -31,6 +37,7 @@ export function OrgSupplyChainRolesPanel() {
       if (roles.length > 0) {
         setSelected(roles);
       }
+      setIntegratedHarvestCapture(extractIntegratedHarvestCaptureFlag(loaded?.supply_chain_roles));
       setIsLoading(false);
     });
   }, []);
@@ -45,7 +52,9 @@ export function OrgSupplyChainRolesPanel() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ supplyChainRoles: selected }),
+        body: JSON.stringify({
+          supplyChainRoles: mergeSupplyChainRolesForSave(selected, integratedHarvestCapture),
+        }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
         profile?: CommercialProfile;
@@ -55,6 +64,9 @@ export function OrgSupplyChainRolesPanel() {
         throw new Error(payload.error ?? getSettingsPageCopy('org_roles_error_save', t));
       }
       setProfile(payload.profile);
+      setIntegratedHarvestCapture(
+        extractIntegratedHarvestCaptureFlag(payload.profile?.supply_chain_roles),
+      );
       applyTenantRolesFromProfile(payload.profile);
       toast.success(getSettingsPageCopy('org_roles_toast_success', t));
     } catch (error) {
@@ -75,6 +87,23 @@ export function OrgSupplyChainRolesPanel() {
           <p className="text-sm text-muted-foreground">{getSettingsPageCopy('org_roles_loading', t)}</p>
         ) : null}
         <SupplyChainRolePicker selected={selected} onChange={setSelected} disabled={isSaving || isLoading} />
+        {selected.includes('exporter') || selected.includes('cooperative') ? (
+          <label className="flex items-start gap-3 rounded-lg border p-4">
+            <Checkbox
+              checked={integratedHarvestCapture}
+              onCheckedChange={(checked) => setIntegratedHarvestCapture(checked === true)}
+              disabled={isSaving || isLoading}
+            />
+            <span className="space-y-1">
+              <span className="block text-sm font-medium">
+                {getSettingsPageCopy('org_roles_integrated_capture_title', t)}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {getSettingsPageCopy('org_roles_integrated_capture_description', t)}
+              </span>
+            </span>
+          </label>
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {getSettingsPageCopy('org_roles_active_session', t, { role: user?.active_role ?? '' })}

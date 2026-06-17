@@ -29,8 +29,9 @@ import {
 } from '@/lib/workflow-terminology-labels';
 import { Check, ArrowLeft, ArrowRight, User, Building2, MapPin, FileText } from 'lucide-react';
 import type { ContactType } from '@/lib/contact-service';
+import type { ContactActivityType } from '@/lib/contact-activity-types';
 
-const CONTACT_TYPE_VALUES: ContactType[] = ['farmer', 'cooperative', 'exporter', 'other'];
+const DEFAULT_CONTACT_TYPE_VALUES: ContactActivityType[] = ['farmer', 'cooperative', 'exporter', 'other'];
 const CONSENT_VALUES = ['unknown', 'granted', 'revoked'] as const;
 
 interface ContactDraft {
@@ -55,6 +56,7 @@ interface AddContactWizardProps {
   lockContactType?: boolean;
   lockedTypeLabel?: string;
   isCooperative?: boolean;
+  activityTypes?: ContactActivityType[];
 }
 
 export function AddContactWizard({
@@ -64,9 +66,11 @@ export function AddContactWizard({
   lockContactType = false,
   lockedTypeLabel = 'Producer',
   isCooperative = false,
+  activityTypes,
 }: AddContactWizardProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
+  const contactTypeOptions = activityTypes ?? DEFAULT_CONTACT_TYPE_VALUES;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,7 +213,7 @@ export function AddContactWizard({
                       <SelectValue placeholder={getContactsWizardPlaceholder('select_type', t)} />
                     </SelectTrigger>
                     <SelectContent>
-                      {CONTACT_TYPE_VALUES.map((type) => (
+                      {contactTypeOptions.map((type) => (
                         <SelectItem key={type} value={type}>
                           {getContactTypeLabel(type, t)}
                         </SelectItem>

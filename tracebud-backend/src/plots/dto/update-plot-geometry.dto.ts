@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePlotGeometryDto {
   @ApiProperty({
@@ -36,4 +36,12 @@ export class UpdatePlotGeometryDto {
   @IsOptional()
   @IsString()
   deviceId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'True when geometry revision was applied from dashboard reviewer assist (human-in-the-loop).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  reviewerAssist?: boolean;
 }

@@ -127,6 +127,7 @@ Reference canonical catalog in `product-os/04-quality/exception-catalog.md`.
 - Geometry history controller tests now assert stable camelCase response envelope fields on the allow path (`eventType`, `userId`, `deviceId`, payload shape), preventing accidental snake_case regressions.
 - Dashboard now has a dedicated geometry-history proxy route (`/api/plots/[id]/geometry-history`) with fail-closed backend URL enforcement, auth-header pass-through, and contract-preserving response-shape tests.
 - Dashboard FEAT-003 read-path usability slice is now active: `usePlotGeometryHistory` hook plus `PlotGeometryHistoryPanel` UI component render loading/error/empty/data states on the plot detail route with component-level test coverage.
+- Dashboard plot detail now includes read-only map hero (`PlotMapHero`) backed by `GET /v1/plots/:id/map-preview` for geometry + metadata preview (satellite tiles, polygon/pin overlay, inventory badges).
 - Geometry history panel now supports event-type filtering (`all`/`created`/`revised`) and displays result-cap visibility (`max 100 from API`) so long histories remain scannable.
 - Geometry history now supports true server-side pagination (`limit`/`offset`) across backend API, dashboard proxy, and hook/UI state (`items`, `total`, `page`), with updated tests and OpenAPI contract examples.
 - Geometry history now supports timeline sort direction (`sort=desc|asc`) end-to-end (backend/proxy/hook/panel), allowing operators to switch between newest-first and oldest-first investigation flows.
@@ -287,9 +288,50 @@ Reference canonical event plan in `product-os/04-quality/event-tracking.md`.
 
 - [x] Provider/protocol choices finalized where needed for FEAT-003 scope (no unresolved provider/protocol blockers remain in this feature slice).
 
+## Fifth execution slice (S5) — geometry confidence + manual satellite trace
+
+Scope: honest boundary capture when GPS is weak — **detect and guide**, never silent affine correction.
+
+→ Full execution plan: `product-os/01-roadmap/feat-003-s5-geometry-confidence-manual-trace.md`
+
+### Permission and tenant boundary matrix
+
+- **Farmer / agent:** view confidence tier and CTAs during own-tenant plot capture.
+- **Exporter / reviewer:** read persisted confidence metadata on tenant plots (Phase C); apply geometry revisions only via supersession flow with explicit actor.
+- **Cross-tenant:** confidence payloads fail closed under `TEN-001`.
+
+### State transition matrix
+
+- `capturing` → `confidence_assessed` when walk stops, pin completes, or draw has ≥3 vertices.
+- `confidence_assessed` → `capturing` (draw) when user taps “Trace on map instead”.
+- `confidence_assessed` → `draft_saved` on save (confidence snapshot stored as metadata).
+- `draft_saved` → `validated` on server acceptance (existing `GEO-101`/`GEO-102` guards unchanged).
+
+### Exception handling and recovery
+
+- `GEO-107`: low-confidence advisory on upload — warning only, not a save blocker.
+- `GEO-108`: offline manual trace without tile pack — block draw entry, link to offline maps download.
+- Existing overlap (`GEO-104`–`GEO-106`) and self-intersection blocks unchanged.
+
+### Analytics/event coverage
+
+- `geometry_confidence_assessed`, `geometry_confidence_cta_clicked`, `manual_trace_started`, `manual_trace_saved`, `geometry_low_confidence_saved`, `plot_geometry_revision_applied`.
+
+### Acceptance mapping
+
+- Phase A: mobile confidence banner + `plotGeometryConfidence` unit tests.
+- Phase B: offline tile gate for draw.
+- Phase C: dashboard map-hero confidence badge.
+- Phase D: dashboard reviewer assist — satellite preview, simplification preview, audited geometry revision.
+
+### v1.6 architecture constraints
+
+- No silent geometry warp; `ST_MakeValid` + 5% area variance guard preserved.
+- Confidence is metadata on capture, not a new plot lifecycle state.
+
 ## Status
 
-Done (TB-V16-002 / FEAT-003)
+Done (TB-V16-002 / FEAT-003); **S5 Phases A–D shipped** (geometry confidence, offline trace gate, dashboard metadata, reviewer assist)
 
 ## Definition of done
 

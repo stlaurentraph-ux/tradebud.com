@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { formatApiErrorBody } from '@/lib/api-error-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 interface PlotAssignmentLifecyclePanelProps {
   plotId: string;
+  /** When nested inside plot detail field-ops accordion, skip outer card chrome. */
+  embedded?: boolean;
 }
 
 interface AssignmentListItem {
@@ -47,12 +50,13 @@ function mapAssignmentError(raw: string): string {
   return raw;
 }
 
-export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecyclePanelProps) {
+export function PlotAssignmentLifecyclePanel({ plotId, embedded = false }: PlotAssignmentLifecyclePanelProps) {
   const [assignmentId, setAssignmentId] = useState('');
   const [agentUserId, setAgentUserId] = useState('');
   const [reason, setReason] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [listErrorMessage, setListErrorMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<AssignmentListItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'cancelled'>('all');
   const [fromDays, setFromDays] = useState(30);
@@ -77,6 +81,7 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
   const loadAssignments = useCallback(async () => {
     if (!plotId) return;
     setIsLoadingList(true);
+    setListErrorMessage(null);
     try {
       // Agent/status/day filters keep large history readable.
       // Querystring is server-driven for performance and consistent totals.
@@ -84,15 +89,19 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
         headers: getAuthHeaders(),
         cache: 'no-store',
       });
-      const payload = (await pagedResponse.json().catch(() => ({}))) as AssignmentListResponse | { error?: string };
+      const payload = (await pagedResponse.json().catch(() => ({}))) as AssignmentListResponse | { error?: string; message?: string };
       if (!pagedResponse.ok) {
-        throw new Error(mapAssignmentError((payload as { error?: string }).error ?? 'Assignment list unavailable.'));
+        throw new Error(
+          mapAssignmentError(
+            formatApiErrorBody(payload, 'Assignment history is unavailable.', pagedResponse.status),
+          ),
+        );
       }
       const pagePayload = payload as AssignmentListResponse;
       setAssignments(Array.isArray(pagePayload.items) ? pagePayload.items : []);
       setTotal(typeof pagePayload.total === 'number' ? pagePayload.total : 0);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load assignments.');
+      setListErrorMessage(error instanceof Error ? error.message : 'Failed to load assignments.');
     } finally {
       setIsLoadingList(false);
     }
@@ -101,7 +110,7 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
   const exportAssignmentsCsv = async () => {
     if (!plotId) return;
     setIsExporting(true);
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     setStatusMessage(null);
     try {
       const exportUrl = buildAssignmentsUrl({ limit: 5000, offset: 0 });
@@ -127,7 +136,7 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
       URL.revokeObjectURL(url);
       setStatusMessage(`Exported ${rowCount} assignment rows to CSV.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Assignment export failed.');
+      setActionErrorMessage(error instanceof Error ? error.message : 'Assignment export failed.');
     } finally {
       setIsExporting(false);
     }
@@ -141,7 +150,7 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
     if (!plotId) return;
     setIsWorking(true);
     setStatusMessage(null);
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     try {
       if (!assignmentId.trim()) {
         throw new Error('Assignment ID is required.');
@@ -167,26 +176,34 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
         headers,
         body: JSON.stringify(body),
       });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string; status?: string };
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string; status?: string };
       if (!response.ok) {
-        throw new Error(mapAssignmentError(payload.error ?? 'Assignment lifecycle request failed.'));
+        throw new Error(
+          mapAssignmentError(
+            formatApiErrorBody(payload, 'Assignment lifecycle request failed.', response.status),
+          ),
+        );
       }
       const targetState = mode === 'create' ? payload.status ?? 'active' : mode;
       setStatusMessage(`Assignment ${assignmentId.trim()} is now ${targetState}.`);
       await loadAssignments();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unexpected assignment lifecycle error.');
+      setActionErrorMessage(error instanceof Error ? error.message : 'Unexpected assignment lifecycle error.');
     } finally {
       setIsWorking(false);
     }
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Assignment Lifecycle</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+  const body = (
+    <>
+      {!embedded ? (
+        <CardHeader>
+          <CardTitle>Assignment Lifecycle</CardTitle>
+        </CardHeader>
+      ) : (
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Assignment lifecycle</h3>
+      )}
+      <CardContent className={embedded ? 'space-y-3 p-0' : 'space-y-3'}>
         <div className="grid gap-2 md:grid-cols-2">
           <Input
             placeholder="Assignment ID"
@@ -254,10 +271,16 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
             <AlertDescription>{statusMessage}</AlertDescription>
           </Alert>
         ) : null}
-        {errorMessage ? (
+        {listErrorMessage ? (
+          <Alert>
+            <AlertTitle>Assignment history unavailable</AlertTitle>
+            <AlertDescription>{listErrorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        {actionErrorMessage ? (
           <Alert variant="destructive">
             <AlertTitle>Assignment action failed</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{actionErrorMessage}</AlertDescription>
           </Alert>
         ) : null}
         <div className="space-y-2">
@@ -352,6 +375,12 @@ export function PlotAssignmentLifecyclePanel({ plotId }: PlotAssignmentLifecycle
           ) : null}
         </div>
       </CardContent>
-    </Card>
+    </>
   );
+
+  if (embedded) {
+    return <div className="pt-1">{body}</div>;
+  }
+
+  return <Card>{body}</Card>;
 }

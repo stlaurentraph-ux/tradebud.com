@@ -43,12 +43,17 @@ describe('buildDashboardAttentionItems', () => {
     expect(items.some((item) => item.id === 'onboarding-next-step')).toBe(true);
   });
 
-  it('surfaces trial and suspension lifecycle in the attention strip', () => {
+  it('surfaces expired trial and suspension lifecycle in the attention strip', () => {
     const trialItems = buildDashboardAttentionItems({
       trialLifecycleStatus: 'trial_active',
       trialExpiresAt: '2026-12-31T00:00:00.000Z',
     });
-    expect(trialItems.some((item) => item.id === 'trial-active')).toBe(true);
+    expect(trialItems.some((item) => item.id === 'trial-active')).toBe(false);
+
+    const expiredItems = buildDashboardAttentionItems({
+      trialLifecycleStatus: 'trial_expired',
+    });
+    expect(expiredItems.some((item) => item.id === 'trial-expired')).toBe(true);
 
     const suspendedItems = buildDashboardAttentionItems({
       trialLifecycleStatus: 'suspended',

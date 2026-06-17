@@ -3,6 +3,9 @@ import * as Location from 'expo-location';
 
 import {
   isAtPhotoCaptureLocation,
+  isPhotoStandpointReady,
+  resolveRequiredInwardFromBorderM,
+  distanceToPlotBorderM,
   type MapCoordinate,
 } from '@/features/compliance/groundTruthPhotoGeo';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -12,7 +15,12 @@ export type PhotoVaultGpsState = {
   accuracyM: number | null;
   headingDeg: number | null;
   permissionDenied: boolean;
+  /** Inside plot boundary (may still be too close to edge). */
+  insidePlot: boolean;
+  /** Inside plot and far enough from border to open the camera. */
   captureReady: boolean;
+  inwardClearanceM: number | null;
+  requiredInwardM: number;
 };
 
 export function usePhotoVaultGps(plot: Plot | null): PhotoVaultGpsState {
@@ -88,17 +96,29 @@ export function usePhotoVaultGps(plot: Plot | null): PhotoVaultGpsState {
     };
   }, [plot?.id]);
 
-  const captureReady =
+  const requiredInwardM = plot != null ? resolveRequiredInwardFromBorderM(plot) : 0;
+  const insidePlot =
     plot != null &&
     position != null &&
     isAtPhotoCaptureLocation(position.latitude, position.longitude, plot);
+  const inwardClearanceM =
+    plot != null && position != null
+      ? distanceToPlotBorderM(position.latitude, position.longitude, plot)
+      : null;
+  const captureReady =
+    plot != null &&
+    position != null &&
+    isPhotoStandpointReady(position.latitude, position.longitude, plot);
 
   return {
     position,
     accuracyM,
     headingDeg,
     permissionDenied,
+    insidePlot,
     captureReady,
+    inwardClearanceM,
+    requiredInwardM,
   };
 }
 
