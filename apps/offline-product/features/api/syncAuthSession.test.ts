@@ -84,6 +84,17 @@ describe('syncAuthSession', () => {
     expect(hasSyncAuthSession()).toBe(false);
   });
 
+  it('can sign in again after device sign-out cleared the dismissed latch', async () => {
+    const storage = await import('@/features/security/syncAuthStorage');
+    await saveAndApplyOAuthSyncAuth('farmer@example.com', 'refresh-token-abc');
+    await clearPersistedSyncAuth();
+    dismissedOnDevice = true;
+    await saveAndApplyOAuthSyncAuth('farmer@example.com', 'refresh-token-next');
+    expect(hasSyncAuthSession()).toBe(true);
+    expect(getSyncAuthMethod()).toBe('oauth');
+    expect(storage.activateSyncAuthOnSignIn).toHaveBeenCalled();
+  });
+
   it('bumps auth UI generation on sign-out so stale refresh work can abort', async () => {
     const { getAuthUiGeneration } = await import('./syncAuthSession');
     const before = getAuthUiGeneration();

@@ -292,7 +292,6 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
 export async function saveAndApplySyncAuth(email: string, password: string): Promise<void> {
   return runAuthStateMutation(async () => {
     syncAuthDismissedByUser = false;
-    authUiGeneration += 1;
     await activateSyncAuthOnSignIn();
     const e = email.trim();
     await saveSyncAuthCredentials(e, password);
@@ -316,18 +315,10 @@ export async function saveAndApplyOAuthSyncAuth(
   expiresAt?: number | null,
 ): Promise<void> {
   return runAuthStateMutation(async () => {
-    if (await isSyncAuthDismissedOnDevice()) {
-      return;
-    }
     syncAuthDismissedByUser = false;
-    authUiGeneration += 1;
     await activateSyncAuthOnSignIn();
     const e = email.trim();
     await saveOAuthSyncAuthCredentials(e, refreshToken);
-    if (await isSyncAuthDismissedOnDevice()) {
-      clearInMemorySyncAuth();
-      return;
-    }
     applyOAuthAuth(e, refreshToken, accessToken, expiresAt);
   });
 }

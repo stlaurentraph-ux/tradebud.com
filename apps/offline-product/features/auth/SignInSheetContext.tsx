@@ -216,8 +216,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     const generationAtStart = getAuthUiGeneration();
     await hydrateSyncAuthFromSettings();
     if (generationAtStart !== getAuthUiGeneration()) {
-      setIsSignedIn(false);
-      setEmail('');
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+      }
       return;
     }
     if (!hasSyncAuthSession()) {
@@ -229,7 +231,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     if (savedEmail) setEmail(savedEmail);
     setIsSignedIn(true);
     const res = await testBackendLogin();
-    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+    if (generationAtStart !== getAuthUiGeneration()) {
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+      }
+      return;
+    }
+    if (!hasSyncAuthSession()) {
       setIsSignedIn(false);
       setEmail('');
       return;
@@ -242,7 +251,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     } catch {
       // Auth session is valid; local farmer alignment is best-effort on refresh.
     }
-    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+    if (!hasSyncAuthSession()) {
       setIsSignedIn(false);
       setEmail('');
     }
@@ -420,6 +429,16 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider, source: 'in_app' });
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setHint(t('sign_in_oauth_failed'));
+        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+          method: provider,
+          source: 'in_app',
+          reason: 'session_not_persisted',
+        });
+        return;
+      }
       const { email: signedInEmail } = getAuthCredentials();
       if (signedInEmail) setEmail(signedInEmail);
       setOauthLoading(null);
