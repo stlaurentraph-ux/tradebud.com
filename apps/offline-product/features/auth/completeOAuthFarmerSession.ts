@@ -2,7 +2,6 @@ import type { Session } from '@supabase/supabase-js';
 
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import {
-  clearPersistedSyncAuth,
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
@@ -33,35 +32,38 @@ async function runPostOAuthConnectTasks(params: {
   farmerId?: string;
   localPlots?: Plot[];
 }): Promise<void> {
-  void ensureFarmerOAuthProfile(params.fullName, params.session).catch(() => undefined);
+  try {
+    void ensureFarmerOAuthProfile(params.fullName, params.session).catch(() => undefined);
 
-  if (params.farmerId) {
-    const bootstrap = await bootstrapFieldAppProducer(
-      {
-        farmerId: params.farmerId,
-        fullName: params.fullName || undefined,
-      },
-      { timeoutMs: OAUTH_CONNECT_TIMEOUT_MS },
-    );
-    if (!bootstrap.ok && bootstrap.message === 'sign_in_field_bootstrap_failed') {
-      await clearPersistedSyncAuth();
+    if (params.farmerId) {
+      const bootstrap = await bootstrapFieldAppProducer(
+        {
+          farmerId: params.farmerId,
+          fullName: params.fullName || undefined,
+        },
+        { timeoutMs: OAUTH_CONNECT_TIMEOUT_MS },
+      );
+      if (!bootstrap.ok && bootstrap.message === 'sign_in_field_bootstrap_failed') {
+        // Keep the OAuth session; server link can be retried on sync.
+        return;
+      }
+    }
+
+    const res = await testBackendLogin({ timeoutMs: OAUTH_CONNECT_TIMEOUT_MS });
+    if (!res.ok && !isApiUnreachableMessage(res.message)) {
       return;
     }
-  }
 
-  const res = await testBackendLogin({ timeoutMs: OAUTH_CONNECT_TIMEOUT_MS });
-  if (!res.ok && !isApiUnreachableMessage(res.message)) {
-    // Keep the OAuth session when the API is temporarily unavailable.
-    return;
-  }
+    void registerFarmerPushToken();
 
-  void registerFarmerPushToken();
-
-  if (params.farmerId && params.localPlots) {
-    void runAutoBackup({
-      farmerId: params.farmerId,
-      localPlots: params.localPlots,
-    });
+    if (params.farmerId && params.localPlots) {
+      void runAutoBackup({
+        farmerId: params.farmerId,
+        localPlots: params.localPlots,
+      });
+    }
+  } catch {
+    // Post-connect work is best-effort and must never undo a successful OAuth sign-in.
   }
 }
 

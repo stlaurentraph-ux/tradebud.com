@@ -292,6 +292,7 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
 export async function saveAndApplySyncAuth(email: string, password: string): Promise<void> {
   return runAuthStateMutation(async () => {
     syncAuthDismissedByUser = false;
+    authUiGeneration += 1;
     await activateSyncAuthOnSignIn();
     const e = email.trim();
     await saveSyncAuthCredentials(e, password);
@@ -319,6 +320,7 @@ export async function saveAndApplyOAuthSyncAuth(
       return;
     }
     syncAuthDismissedByUser = false;
+    authUiGeneration += 1;
     await activateSyncAuthOnSignIn();
     const e = email.trim();
     await saveOAuthSyncAuthCredentials(e, refreshToken);
@@ -354,7 +356,7 @@ export async function isSyncAuthSignedOutOnDevice(): Promise<boolean> {
   return isSyncAuthDismissedOnDevice();
 }
 
-/** Generation counter bumped on sign-out; UI refresh work should abort when it changes. */
+/** Generation counter bumped on sign-in/out; UI refresh work should abort when it changes. */
 export function getAuthUiGeneration(): number {
   return authUiGeneration;
 }
