@@ -22,7 +22,8 @@ describe('oauthRedirect', () => {
 });
 
 describe('oauthRedirect native build', () => {
-  it('uses universal link callback when not Expo Go', async () => {
+  it('uses universal link callback in release builds', async () => {
+    vi.stubGlobal('__DEV__', false);
     vi.resetModules();
     vi.doMock('expo-constants', () => ({
       default: {
@@ -36,5 +37,25 @@ describe('oauthRedirect native build', () => {
     }));
     const { getOAuthRedirectUri } = await import('./oauthRedirect');
     expect(getOAuthRedirectUri()).toBe('https://app.tracebud.com/auth/callback');
+    vi.unstubAllGlobals();
+  });
+
+  it('uses custom scheme in local debug builds', async () => {
+    vi.stubGlobal('__DEV__', true);
+    vi.resetModules();
+    vi.doMock('expo-constants', () => ({
+      default: {
+        appOwnership: 'user',
+        expoConfig: { scheme: 'tracebudoffline' },
+      },
+    }));
+    vi.doMock('expo-auth-session', () => ({
+      makeRedirectUri: ({ scheme, path }: { scheme?: string; path?: string }) =>
+        `${scheme}://${path ?? ''}`,
+    }));
+    const { getOAuthRedirectUri, getOAuthRedirectMatchPrefix } = await import('./oauthRedirect');
+    expect(getOAuthRedirectUri()).toBe('tracebudoffline://auth/callback');
+    expect(getOAuthRedirectMatchPrefix()).toBe('tracebudoffline://auth/callback');
+    vi.unstubAllGlobals();
   });
 });

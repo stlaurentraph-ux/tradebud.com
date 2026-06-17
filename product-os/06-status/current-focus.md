@@ -2,20 +2,19 @@
 
 ## Work now
 
-- Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md` (automated pre-gates green).
-- Dashboard plot detail phase C shipped: geometry & audit history on `/plots/[id]/history`; summary page links out without loading history API.
-- Dashboard cooperative voucher-first harvest intake shipped: `/harvests#receive-delivery` primary path, desk batch gated unless integrated capture; package assembly from `?voucherIds=`.
-- **FEAT-003 S5 Phase D** — dashboard reviewer assist (satellite preview, Douglas–Peucker simplification, audited `PATCH /geometry`); Phases A–D complete.
-- Dashboard exporter A+ slice 9 shipped: lineage checklist on home, package lineage summary card, seal milestone analytics, mobile packages table. **444** tests green.
-- Dashboard plot detail map hero shipped: read-only satellite preview + capture/screening summary on `/plots/[id]` via `map-preview` API.
+- **Field app (2026-06-16)** — Google sign-in + sign-out hardened; producer/plot documents split shipped; Documents navigation + declaration UI aligned. Device re-verify sign-out after Metro reload.
+- Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md`.
+- Dashboard exporter supplier directory + processing facility subtypes (contacts org list, CSV import labels).
 
 ## Tomorrow (2026-06-17)
 
-1. **Exporter manual QA (priority)** — Run `product-os/04-quality/exporter-critical-path-qa.md` §1 lineage on staging exporter tenant; verify lineage summary + checklist CTAs.
-2. **Importer manual QA** — `importer-critical-path-qa.md` after exporter pass.
-3. ~~**Dashboard attention strip i18n**~~ — Done in slice 8.
-4. **Field app soak** — `DEVICE_SMOKE_CHECKLIST.md` on physical devices if dashboard QA passes.
-5. **CI stability** — Triage any flaky page tests if CI fails on main after push.
+1. **Field app device QA (priority)** — On physical iPhone: Google sign-in → Documents → plot documents → back to `/documents`; sign out → confirm UI stays signed out after tab switch (Settings + Home focus).
+2. **Sign-out soak** — Repeat sign-out 3× with sync queue pending; confirm no session restore from OAuth token rotation or `refreshAuth` on focus.
+3. **Producer documents completeness** — Upload FPIC + labor once on Documents; open indigenous-overlap plot and confirm checklist + plot Documents hint link back correctly.
+4. **Exporter manual QA** — `product-os/04-quality/exporter-critical-path-qa.md` §1 lineage on staging if field app QA passes.
+5. **Push branch** — `cursor/v0-design-review-a74f` is ahead of origin; push + preview OTA when device sign-off is green.
+
+## Previous focus (archive)
 
 - FDP coffee screening (NG/RW/TZ) is scaffolded behind `FDP_ENABLED`; next: deploy EE worker, run `npm run check:fdp`, calibrate thresholds on real tenant plots.
 - Field app pre-field automation is green (`npm run qa:full`, `store:preflight --strict`). Next before field soak: set prod `EXPO_PUBLIC_API_URL` + `EXPO_PUBLIC_SENTRY_DSN`, run `release:preflight:production:online`, execute `DEVICE_SMOKE_CHECKLIST.md` on physical devices.

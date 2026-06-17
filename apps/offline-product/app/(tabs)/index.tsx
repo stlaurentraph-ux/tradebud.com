@@ -50,7 +50,7 @@ export default function HomeScreen() {
       setActionRequired(null);
       return;
     }
-    const results = await loadAllPlotReadinessStates(plots, backendPlots);
+    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
     setPlotChecklistDoneById(Object.fromEntries(results.map((r) => [r.plotId, r.done])));
     const firstIncomplete = results.find((r) => !r.done);
     if (!firstIncomplete) {
@@ -137,9 +137,12 @@ export default function HomeScreen() {
   }, [plots.length, farmer]);
   const homeTiles = useMemo(() => {
     const openPlotSection = (sub: 'documents' | 'voucher') => {
+      if (sub === 'documents') {
+        router.push('/documents');
+        return;
+      }
       if (plots.length === 0) {
-        if (sub === 'documents') router.push('/documents');
-        else router.navigate('/(tabs)/harvests');
+        router.navigate('/(tabs)/harvests');
         return;
       }
       if (plots.length === 1) {
@@ -178,7 +181,7 @@ export default function HomeScreen() {
         tint: '#DCE9FF',
         iconColor: '#2454D7',
         onPress: () => openPlotSection('documents'),
-        showWhenEmpty: false,
+        showWhenEmpty: true,
       },
       {
         key: 'vouchers',

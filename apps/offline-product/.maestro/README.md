@@ -44,9 +44,9 @@ sudo ln -sfn /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/Java
 
 1. Open Xcode → **Xcode → Open Developer Tool → Simulator**
 2. Boot a device (e.g. iPhone 17 Pro Max)
-3. Install a **preview build** of Tracebud (`com.tracebud.app`):
-   - EAS preview build on the simulator, or
-   - `cd apps/offline-product && npm run ios` (local dev build)
+3. Install a **debug** or **preview** build of Tracebud (`com.tracebud.app`):
+   - **Local dev (hot reload):** `cd apps/offline-product && npm run dev:ios`
+   - EAS preview on simulator: `npm run run:simulator`
 
 **Android:** start an emulator from Android Studio, install the same app id, connect with `adb devices`.
 

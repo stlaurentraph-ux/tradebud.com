@@ -34,10 +34,9 @@ import {
   testBackendLogin,
 } from '@/features/api/postPlot';
 import {
-  clearPersistedSyncAuth,
   getAuthCredentials,
   hasSyncAuthSession,
-  hydrateSyncAuthFromSettings,
+  isSyncAuthSignedOutOnDevice,
 } from '@/features/api/syncAuthSession';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -89,7 +88,7 @@ export default function SettingsScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const syncSectionY = useRef(0);
   const { farmer, plots, setFarmer, updateFarmerProfilePhoto } = useAppState();
-  const { refreshAuth, openSignIn } = useSignInSheet();
+  const { refreshAuth, openSignIn, isSignedIn, signOutOnDevice } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -119,8 +118,6 @@ export default function SettingsScreen() {
   const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
   const [plotsFetchState, setPlotsFetchState] = useState<'idle' | 'loading' | 'ok' | 'failed'>('idle');
   const [syncEmail, setSyncEmail] = useState('');
-  const [syncAuthHint, setSyncAuthHint] = useState<string | null>(null);
-  const [syncSignedIn, setSyncSignedIn] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [helpTipsOpen, setHelpTipsOpen] = useState(false);
@@ -157,11 +154,18 @@ export default function SettingsScreen() {
   }, []);
 
   const refreshSavedSyncEmail = useCallback(async () => {
-    await hydrateSyncAuthFromSettings();
+    if (await isSyncAuthSignedOutOnDevice()) {
+      setSyncEmail('');
+      return;
+    }
+    await refreshAuth();
+    if (await isSyncAuthSignedOutOnDevice()) {
+      setSyncEmail('');
+      return;
+    }
     const { email } = getAuthCredentials();
-    if (email) setSyncEmail(email);
-    setSyncSignedIn(hasSyncAuthSession());
-  }, []);
+    setSyncEmail(email?.trim() ?? '');
+  }, [refreshAuth]);
 
   const refreshSyncMetrics = useCallback(async () => {
     const rows = await loadPendingSyncActions().catch(() => []);
@@ -261,14 +265,14 @@ export default function SettingsScreen() {
   }, [farmer?.id, farmer?.name]);
 
   const unsyncedPlotCount = useMemo(() => {
-    if (!syncSignedIn || plots.length === 0) return 0;
+    if (!isSignedIn || plots.length === 0) return 0;
     return listUnsyncedLocalPlots(plots, backendPlots).length;
-  }, [plots, backendPlots, syncSignedIn]);
+  }, [plots, backendPlots, isSignedIn]);
 
   const totalSyncPending = queuePendingCount + unsyncedPlotCount;
 
   const backupStatusLabel = useMemo(() => {
-    if (!syncSignedIn) {
+    if (!isSignedIn) {
       return totalSyncPending > 0
         ? t('settings_backup_status_pending', { n: totalSyncPending })
         : t('up_to_date');
@@ -285,13 +289,13 @@ export default function SettingsScreen() {
       return t('backup_waiting', { n: totalSyncPending });
     }
     return t('backup_up_to_date');
-  }, [syncSignedIn, plotsFetchState, plots.length, totalSyncPending, t]);
+  }, [isSignedIn, plotsFetchState, plots.length, totalSyncPending, t]);
 
   const backupStatusNeedsAttention = useMemo(
     () =>
-      syncSignedIn &&
+      isSignedIn &&
       (plotsFetchState === 'failed' || plotsFetchState === 'loading' || totalSyncPending > 0),
-    [syncSignedIn, plotsFetchState, totalSyncPending],
+    [isSignedIn, plotsFetchState, totalSyncPending],
   );
   const selectedQueueActionTypes = useMemo(
     () =>
@@ -341,10 +345,10 @@ export default function SettingsScreen() {
 
   const showUploadAttention = useMemo(
     () =>
-      syncSignedIn &&
+      isSignedIn &&
       ((queuePendingCount > 0 && Boolean(queueLastError)) ||
         (unsyncedPlotCount > 0 && plotsFetchState === 'failed')),
-    [plotsFetchState, queueLastError, queuePendingCount, syncSignedIn, unsyncedPlotCount],
+    [plotsFetchState, queueLastError, queuePendingCount, isSignedIn, unsyncedPlotCount],
   );
 
   const queuePendingBreakdown = useMemo(() => {
@@ -515,7 +519,7 @@ export default function SettingsScreen() {
       setPushMessage(t('settings_notifications_unavailable'));
       return;
     }
-    if (!syncSignedIn) {
+    if (!isSignedIn) {
       setPushMessage(t('settings_notifications_sign_in_hint'));
       return;
     }
@@ -577,7 +581,7 @@ export default function SettingsScreen() {
     void disablePushNotifications();
   };
 
-  const displayProfileEmail = syncSignedIn
+  const displayProfileEmail = isSignedIn
     ? syncEmail.trim() || getAuthCredentials().email || '—'
     : t('profile_email_none');
 
@@ -616,15 +620,28 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const onSignOutSync = async () => {
-    await unregisterFarmerPushToken().catch(() => undefined);
-    await clearPersistedSyncAuth();
-    setSyncSignedIn(false);
-    setSyncEmail('');
-    setSyncAuthHint(t('signed_out_device'));
-    setSyncMessage(null);
-    await refreshAuth();
-    void refreshSyncMetrics();
+  const onSignOutSync = () => {
+    Alert.alert(t('sign_out_device'), t('sign_out_device_confirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('sign_out_device'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            try {
+              await signOutOnDevice();
+              setSyncEmail('');
+              setSyncMessage(null);
+              void refreshSyncMetrics();
+              Alert.alert(t('sign_out_device'), t('signed_out_device'));
+            } catch (e) {
+              const message = e instanceof Error ? e.message : String(e);
+              Alert.alert(t('sign_out_device'), message);
+            }
+          })();
+        },
+      },
+    ]);
   };
 
   const runSyncNow = async () => {
@@ -780,25 +797,25 @@ export default function SettingsScreen() {
                   </View>
                 </View>
 
-                {syncSignedIn ? (
+                {isSignedIn ? (
                   <View style={styles.profileAccountSection}>
                     <SetPasswordCard
-                      signedIn={syncSignedIn}
+                      signedIn={isSignedIn}
                       t={t}
                       onPasswordSaved={() => {
                         void refreshSavedSyncEmail();
                       }}
                     />
-                    <Pressable onPress={() => void onSignOutSync()} hitSlop={8} style={styles.profileSignOutRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={onSignOutSync}
+                      hitSlop={8}
+                      style={styles.profileSignOutRow}
+                    >
                       <ThemedText type="caption" style={styles.profileSignOutLink}>
                         {t('sign_out_device')}
                       </ThemedText>
                     </Pressable>
-                    {syncAuthHint ? (
-                      <ThemedText type="caption" style={styles.syncAuthHint}>
-                        {syncAuthHint}
-                      </ThemedText>
-                    ) : null}
                   </View>
                 ) : null}
 
@@ -885,14 +902,14 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {syncSignedIn && plotsFetchState === 'failed' && totalSyncPending > 0 ? (
+                {isSignedIn && plotsFetchState === 'failed' && totalSyncPending > 0 ? (
                   <ThemedText type="caption" style={styles.syncQueueWarningText}>
                     {t('sync_plots_fetch_failed')}
                   </ThemedText>
                 ) : null}
 
                 <View style={styles.btnWrap}>
-                  {syncSignedIn ? (
+                  {isSignedIn ? (
                     <Button
                       variant={totalSyncPending > 0 ? 'primary' : 'secondary'}
                       size="md"
@@ -1002,7 +1019,7 @@ export default function SettingsScreen() {
                     <Switch
                       value={notificationsEnabled}
                       onValueChange={onNotificationsToggle}
-                      disabled={pushRegisterBusy || !syncSignedIn}
+                      disabled={pushRegisterBusy || !isSignedIn}
                       trackColor={{ false: '#D1D5DB', true: Brand.primary }}
                       thumbColor="#FFFFFF"
                       accessibilityLabel={t('settings_notifications_title')}
@@ -1026,7 +1043,7 @@ export default function SettingsScreen() {
                   <ThemedText type="caption" style={styles.mutedText}>
                     {t('settings_notifications_body')}
                   </ThemedText>
-                  {!syncSignedIn ? (
+                  {!isSignedIn ? (
                     <ThemedText type="caption" style={styles.mutedText}>
                       {t('settings_notifications_sign_in_hint')}
                     </ThemedText>
@@ -1703,12 +1720,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     lineHeight: 19,
-  },
-  syncAuthHint: {
-    marginTop: 4,
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#666666',
   },
 });
 

@@ -4,7 +4,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  activateSyncAuthOnSignIn,
   clearSyncAuthCredentials,
+  isSyncAuthDismissedOnDevice,
   loadSyncAuthCredentials,
   saveOAuthSyncAuthCredentials,
   saveSyncAuthCredentials,
@@ -30,6 +32,35 @@ let currentAuthMethod: SyncAuthCredentials['method'] | null = ALLOW_TEST_AUTH ? 
 let currentEmail = ALLOW_TEST_AUTH ? DEFAULT_EMAIL : '';
 let currentPassword = ALLOW_TEST_AUTH ? DEFAULT_PASSWORD : '';
 let currentRefreshToken = '';
+
+/** In-memory guard: blocks token refresh from re-persisting OAuth creds after sign-out. */
+let syncAuthDismissedByUser = false;
+let signOutRevision = 0;
+/** Bumped on sign-out so in-flight UI refresh work cannot re-promote signed-in state. */
+let authUiGeneration = 0;
+
+let authStateChain: Promise<void> = Promise.resolve();
+
+function syncAuthStillActive(revisionAtStart: number): boolean {
+  return revisionAtStart === signOutRevision && !syncAuthDismissedByUser;
+}
+
+function runAuthStateMutation<T>(fn: () => Promise<T>): Promise<T> {
+  const result = authStateChain.then(fn);
+  authStateChain = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+function clearInMemorySyncAuth(): void {
+  currentAuthMethod = null;
+  currentEmail = '';
+  currentPassword = '';
+  currentRefreshToken = '';
+  clearSessionCache();
+}
 
 function isLocalhostApi(url: string): boolean {
   return /:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(url);
@@ -83,6 +114,9 @@ function applyOAuthAuth(email: string, refreshToken: string, accessToken?: strin
 }
 
 export function hasSyncAuthSession(): boolean {
+  if (syncAuthDismissedByUser) {
+    return false;
+  }
   if (currentAuthMethod === 'oauth') {
     return Boolean(currentEmail.trim() && currentRefreshToken);
   }
@@ -97,60 +131,80 @@ export function getSyncAuthMethod(): SyncAuthCredentials['method'] | null {
 }
 
 export async function getAccessTokenFromSupabase(): Promise<string | null> {
-  if (!hasSyncAuthSession()) {
+  return runAuthStateMutation(async () => {
+    const revisionAtStart = signOutRevision;
+    if (syncAuthDismissedByUser || !hasSyncAuthSession()) {
+      return null;
+    }
+
+    const now = Date.now() / 1000;
+    if (cachedAccessToken && cachedExpiresAt && cachedExpiresAt - now > 60) {
+      return cachedAccessToken;
+    }
+
+    const supabase = getSupabaseAuthClient();
+
+    if (currentAuthMethod === 'oauth' && currentRefreshToken) {
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: currentRefreshToken,
+      });
+      if (!syncAuthStillActive(revisionAtStart)) {
+        return null;
+      }
+      if (error) {
+        throw new Error('sign_in_session_expired');
+      }
+      if (!data.session) {
+        throw new Error('sign_in_session_expired');
+      }
+      if (data.session.refresh_token && data.session.refresh_token !== currentRefreshToken) {
+        await saveOAuthSyncAuthCredentials(
+          data.session.user.email ?? currentEmail,
+          data.session.refresh_token,
+        );
+        if (!syncAuthStillActive(revisionAtStart)) {
+          return null;
+        }
+        if (!(await isSyncAuthDismissedOnDevice())) {
+          currentRefreshToken = data.session.refresh_token;
+        }
+      }
+      if (!syncAuthStillActive(revisionAtStart)) {
+        return null;
+      }
+      if (data.session.user.email) {
+        currentEmail = data.session.user.email;
+      }
+      applySessionToCache(data.session);
+      return data.session.access_token;
+    }
+
+    if (currentAuthMethod === 'password' && currentEmail && currentPassword) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: currentEmail,
+        password: currentPassword,
+      });
+      if (!syncAuthStillActive(revisionAtStart)) {
+        return null;
+      }
+      if (error) {
+        throw new Error(mapPasswordSignInError(error));
+      }
+      if (!data.session) {
+        throw new Error('sign_in_failed');
+      }
+      applySessionToCache(data.session);
+      return data.session.access_token;
+    }
+
     return null;
-  }
-
-  const now = Date.now() / 1000;
-  if (cachedAccessToken && cachedExpiresAt && cachedExpiresAt - now > 60) {
-    return cachedAccessToken;
-  }
-
-  const supabase = getSupabaseAuthClient();
-
-  if (currentAuthMethod === 'oauth' && currentRefreshToken) {
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: currentRefreshToken,
-    });
-    if (error) {
-      throw new Error('sign_in_session_expired');
-    }
-    if (!data.session) {
-      throw new Error('sign_in_session_expired');
-    }
-    if (data.session.refresh_token && data.session.refresh_token !== currentRefreshToken) {
-      currentRefreshToken = data.session.refresh_token;
-      await saveOAuthSyncAuthCredentials(
-        data.session.user.email ?? currentEmail,
-        data.session.refresh_token,
-      );
-    }
-    if (data.session.user.email) {
-      currentEmail = data.session.user.email;
-    }
-    applySessionToCache(data.session);
-    return data.session.access_token;
-  }
-
-  if (currentAuthMethod === 'password' && currentEmail && currentPassword) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: currentEmail,
-      password: currentPassword,
-    });
-    if (error) {
-      throw new Error(mapPasswordSignInError(error));
-    }
-    if (!data.session) {
-      throw new Error('sign_in_failed');
-    }
-    applySessionToCache(data.session);
-    return data.session.access_token;
-  }
-
-  return null;
+  });
 }
 
-export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function testBackendLogin(options?: {
+  timeoutMs?: number;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const timeoutMs = options?.timeoutMs ?? 30_000;
   try {
     const apiBase = getRuntimeGuardedApiBaseUrl();
     if (isLocalhostApi(apiBase) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
@@ -168,7 +222,14 @@ export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; me
       };
     }
     const healthUrl = `${apiBase}/health`;
-    const healthRes = await fetch(healthUrl, { method: 'GET' });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let healthRes: Response;
+    try {
+      healthRes = await fetch(healthUrl, { method: 'GET', signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!healthRes.ok) {
       return {
         ok: false,
@@ -182,9 +243,14 @@ export async function testBackendLogin(): Promise<{ ok: true } | { ok: false; me
       base.includes('localhost') || base.includes('127.0.0.1')
         ? ' On a physical phone/tablet, localhost points to the device — set EXPO_PUBLIC_API_URL to http://YOUR_COMPUTER_LAN_IP:4000/api (same Wi‑Fi as the computer running the API).'
         : '';
+    const raw = e instanceof Error ? e.message : String(e);
+    const message =
+      e instanceof Error && e.name === 'AbortError'
+        ? 'Network request failed'
+        : raw;
     return {
       ok: false,
-      message: `${e instanceof Error ? e.message : String(e)}.${hint}`,
+      message: `${message}.${hint}`,
     };
   }
 }
@@ -198,23 +264,39 @@ export function getAuthCredentials() {
 }
 
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
-  try {
-    const credentials = await loadSyncAuthCredentials();
-    if (!credentials) return;
-    if (credentials.method === 'oauth') {
-      applyOAuthAuth(credentials.email, credentials.refreshToken);
-      return;
+  return runAuthStateMutation(async () => {
+    try {
+      syncAuthDismissedByUser = await isSyncAuthDismissedOnDevice();
+      if (syncAuthDismissedByUser) {
+        clearInMemorySyncAuth();
+        return;
+      }
+
+      const credentials = await loadSyncAuthCredentials();
+      if (!credentials) {
+        clearInMemorySyncAuth();
+        return;
+      }
+      syncAuthDismissedByUser = false;
+      if (credentials.method === 'oauth') {
+        applyOAuthAuth(credentials.email, credentials.refreshToken);
+        return;
+      }
+      applyPasswordAuth(credentials.email, credentials.password);
+    } catch {
+      // ignore
     }
-    applyPasswordAuth(credentials.email, credentials.password);
-  } catch {
-    // ignore
-  }
+  });
 }
 
 export async function saveAndApplySyncAuth(email: string, password: string): Promise<void> {
-  const e = email.trim();
-  await saveSyncAuthCredentials(e, password);
-  applyPasswordAuth(e, password);
+  return runAuthStateMutation(async () => {
+    syncAuthDismissedByUser = false;
+    await activateSyncAuthOnSignIn();
+    const e = email.trim();
+    await saveSyncAuthCredentials(e, password);
+    applyPasswordAuth(e, password);
+  });
 }
 
 export async function saveAndApplyPasswordSession(
@@ -232,18 +314,49 @@ export async function saveAndApplyOAuthSyncAuth(
   accessToken?: string,
   expiresAt?: number | null,
 ): Promise<void> {
-  const e = email.trim();
-  await saveOAuthSyncAuthCredentials(e, refreshToken);
-  applyOAuthAuth(e, refreshToken, accessToken, expiresAt);
+  return runAuthStateMutation(async () => {
+    if (await isSyncAuthDismissedOnDevice()) {
+      return;
+    }
+    syncAuthDismissedByUser = false;
+    await activateSyncAuthOnSignIn();
+    const e = email.trim();
+    await saveOAuthSyncAuthCredentials(e, refreshToken);
+    if (await isSyncAuthDismissedOnDevice()) {
+      clearInMemorySyncAuth();
+      return;
+    }
+    applyOAuthAuth(e, refreshToken, accessToken, expiresAt);
+  });
 }
 
 export async function clearPersistedSyncAuth(): Promise<void> {
-  await clearSyncAuthCredentials();
-  currentAuthMethod = null;
-  currentEmail = '';
-  currentPassword = '';
-  currentRefreshToken = '';
-  clearSessionCache();
+  return runAuthStateMutation(async () => {
+    signOutRevision += 1;
+    authUiGeneration += 1;
+    syncAuthDismissedByUser = true;
+    await clearSyncAuthCredentials();
+    clearInMemorySyncAuth();
+    try {
+      await getSupabaseAuthClient().auth.signOut();
+    } catch {
+      // Best-effort: in-memory Tracebud sync auth is already cleared.
+    } finally {
+      supabaseClient = null;
+    }
+  });
+}
+
+export async function isSyncAuthSignedOutOnDevice(): Promise<boolean> {
+  if (syncAuthDismissedByUser) {
+    return true;
+  }
+  return isSyncAuthDismissedOnDevice();
+}
+
+/** Generation counter bumped on sign-out; UI refresh work should abort when it changes. */
+export function getAuthUiGeneration(): number {
+  return authUiGeneration;
 }
 
 /** Resolved API root (includes `/api`). */

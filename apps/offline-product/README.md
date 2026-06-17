@@ -13,7 +13,7 @@
 
 ### 2. Environment variables
 
-Create an `.env` or `.env.local` in `tracebud-offline-app` (depending on how you prefer to run Expo) with:
+Create `.env.local` in `apps/offline-product` with at least:
 
 ```bash
 EXPO_PUBLIC_API_URL=http://localhost:4001/api
@@ -40,22 +40,66 @@ Production safety defaults:
 - Sync account credentials are stored in secure platform storage (Keychain/Keystore). Legacy
   plaintext settings are migrated automatically on first load.
 
-### 3. Install & run
+### 3. Local development (no OTA)
 
-From the `tracebud-offline-app` directory:
+**Preview/TestFlight builds load JavaScript from EAS Update.** Reloading that app does **not** pick up edits on your Mac. Use a **debug build + Metro** for day-to-day UI work.
+
+From `apps/offline-product`:
 
 ```bash
 npm install
-npx expo start
+
+# iOS Simulator — best for UI iteration (first run compiles native code; then hot reload)
+npm run dev:ios
+
+# Physical iPhone (USB) — GPS, camera, walk perimeter on a real device
+npm run dev:metro          # terminal 1 — keep running
+npm run dev:device         # terminal 2 — build/install (only when native code changes)
 ```
 
-Open the app in:
+After install, open the app on your phone. If you see **“No script URL provided”**, Metro is not reachable — ensure `dev:metro` is running and tap **Reload JS**.
 
-- iOS simulator
-- Android emulator
-- A physical device using the Expo Go app
+Keep the Metro terminal open. Save a file to refresh, or press **⌘R** in the simulator. If the bundle looks stale: **Shift+⌘R** (reload + clear cache).
 
-Make sure the **backend** is already running and reachable from your device at `EXPO_PUBLIC_API_URL`.
+**Build warnings (safe to ignore locally)**
+
+| Warning | Meaning |
+|---------|---------|
+| `Skipping dev server` | Metro already running on port 8081 — normal if `dev:metro` is up |
+| `devicectl JSON version` | Xcode ↔ device tooling noise; USB install still works |
+| `deployment version mismatch` (Pods) | Fixed on next `pod install` after Podfile update |
+| `Upload Debug Symbols to Sentry` | Disabled for local debug via `SENTRY_DISABLE_AUTO_UPLOAD` |
+| `ignoring duplicate libraries: -lc++` | Harmless linker noise from React Native pods |
+
+**Environment tips**
+
+- Simulator: `EXPO_PUBLIC_API_URL=http://localhost:4000/api` is fine if the backend runs on your Mac.
+- Physical device on Wi‑Fi: use your Mac’s LAN IP (see comment in `.env.local`), not `localhost`.
+- The debug install is separate from the preview app — use the one Metro launched.
+
+**When to use OTA instead**
+
+| Goal | Command |
+|------|---------|
+| Local UI / logic changes | `npm run dev:ios` or `npm run dev:device` |
+| Share with pilot testers on preview builds | `npm run update:preview:ios` |
+| Store / production users | `npm run update:production` |
+
+Expo Go is **not** supported (custom native modules, OAuth URL schemes). Use `dev:ios` / `dev:device`.
+
+**Google / Apple sign-in locally**
+
+```bash
+npm run dev:oauth:verify    # env + Supabase redirect checks
+npm run dev:oauth:ios       # simulator, production API (no local backend needed)
+npm run dev:oauth:device    # USB iPhone, production API
+```
+
+Local debug builds use `tracebudoffline://auth/callback` automatically (`__DEV__`). Use `dev:oauth:*` when your LAN backend is off but you still want a full sign-in + sync test against `https://api.tracebud.com`.
+
+**Simulator note:** Google uses the **browser** sign-in sheet on the simulator (native account picker only works on a physical iPhone). You should see Safari / ASWebAuthenticationSession open with Google.
+
+Make sure the **backend** is running and reachable at `EXPO_PUBLIC_API_URL` when testing sync against a local API.
 
 ### 4. Features & flows
 
@@ -76,7 +120,7 @@ Make sure the **backend** is already running and reachable from your device at `
 ### 5. Quick demo script
 
 1. Start the backend (`npm run build && npm start` in `tracebud-backend`).
-2. Start the app (`npx expo start` in `tracebud-offline-app`).
+2. Start the app (`npm run dev:ios` in `apps/offline-product`).
 3. In the app:
    - Go to **Home**, walk a perimeter and save a plot.
    - Switch to **Plots**:
@@ -97,8 +141,8 @@ Use one codebase with separate release tracks:
 Commands:
 
 ```bash
-# Build for testers
-npm run release:preview
+# Build for testers (use npx eas-cli if eas is not global)
+npx eas-cli build --platform ios --profile preview
 
 # Build for official users
 npm run release:production

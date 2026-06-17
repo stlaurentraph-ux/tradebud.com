@@ -10,6 +10,7 @@ const SECURE_SYNC_AUTH_EMAIL_KEY = 'tracebud.syncAuth.email';
 const SECURE_SYNC_AUTH_PASSWORD_KEY = 'tracebud.syncAuth.password';
 const SECURE_SYNC_AUTH_REFRESH_KEY = 'tracebud.syncAuth.refreshToken';
 const SECURE_SYNC_AUTH_METHOD_KEY = 'tracebud.syncAuth.method';
+const SYNC_AUTH_SIGNED_OUT_KEY = 'tracebud.syncAuth.signedOut';
 
 export type PasswordSyncAuthCredentials = {
   method: 'password';
@@ -51,7 +52,40 @@ async function saveLegacyCredentials(email: string, password: string): Promise<v
   await setSetting(LEGACY_SYNC_AUTH_PASSWORD_KEY, password);
 }
 
+async function markSyncAuthDismissedOnDevice(): Promise<void> {
+  if (await supportsSecureStore()) {
+    await SecureStore.setItemAsync(SYNC_AUTH_SIGNED_OUT_KEY, '1');
+    return;
+  }
+  await setSetting(SYNC_AUTH_SIGNED_OUT_KEY, '1');
+}
+
+async function clearSyncAuthDismissedOnDevice(): Promise<void> {
+  if (await supportsSecureStore()) {
+    await SecureStore.deleteItemAsync(SYNC_AUTH_SIGNED_OUT_KEY).catch(() => undefined);
+    return;
+  }
+  await deleteSetting(SYNC_AUTH_SIGNED_OUT_KEY).catch(() => undefined);
+}
+
+/** Clears the device sign-out latch so the next sign-in can persist credentials again. */
+export async function activateSyncAuthOnSignIn(): Promise<void> {
+  await clearSyncAuthDismissedOnDevice();
+}
+
+/** True when the farmer explicitly signed out on this device. Blocks silent re-hydrate. */
+export async function isSyncAuthDismissedOnDevice(): Promise<boolean> {
+  if (await supportsSecureStore()) {
+    return (await SecureStore.getItemAsync(SYNC_AUTH_SIGNED_OUT_KEY)) === '1';
+  }
+  return (await getSetting(SYNC_AUTH_SIGNED_OUT_KEY)) === '1';
+}
+
 export async function loadSyncAuthCredentials(): Promise<SyncAuthCredentials | null> {
+  if (await isSyncAuthDismissedOnDevice()) {
+    return null;
+  }
+
   const canUseSecureStore = await supportsSecureStore();
 
   if (canUseSecureStore) {
@@ -88,6 +122,9 @@ export async function saveSyncAuthCredentials(email: string, password: string): 
   if (!normalizedEmail || !password) {
     throw new Error('Email and password are required.');
   }
+  if (await isSyncAuthDismissedOnDevice()) {
+    return;
+  }
 
   if (await supportsSecureStore()) {
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'password');
@@ -106,6 +143,9 @@ export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: 
   if (!normalizedEmail || !refreshToken) {
     throw new Error('Email and refresh token are required.');
   }
+  if (await isSyncAuthDismissedOnDevice()) {
+    return;
+  }
 
   if (await supportsSecureStore()) {
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'oauth');
@@ -113,6 +153,11 @@ export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: 
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY, refreshToken);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
     await clearLegacyCredentials();
+    if (await isSyncAuthDismissedOnDevice()) {
+      await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_METHOD_KEY).catch(() => undefined);
+      await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
+      await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY).catch(() => undefined);
+    }
     return;
   }
 
@@ -120,6 +165,7 @@ export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: 
 }
 
 export async function clearSyncAuthCredentials(): Promise<void> {
+  await markSyncAuthDismissedOnDevice();
   if (await supportsSecureStore()) {
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_METHOD_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);

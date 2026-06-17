@@ -100,9 +100,9 @@ async function main() {
     patch.external_google_skip_nonce_check = false;
     const googleIosId = process.env.GOOGLE_OAUTH_IOS_CLIENT_ID?.trim();
     const googleAndroidId = process.env.GOOGLE_OAUTH_ANDROID_CLIENT_ID?.trim();
-    const authorizedClientIds = [googleIosId, googleAndroidId].filter(Boolean);
-    if (authorizedClientIds.length > 0) {
-      patch.external_google_authorized_client_ids = authorizedClientIds.join(',');
+    const nativeClientIds = [googleIosId, googleAndroidId].filter(Boolean);
+    if (nativeClientIds.length > 0) {
+      patch.external_google_client_id = [...new Set([googleId, ...nativeClientIds])].join(',');
     }
   } else {
     console.warn('Skipping Google: set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to enable.');

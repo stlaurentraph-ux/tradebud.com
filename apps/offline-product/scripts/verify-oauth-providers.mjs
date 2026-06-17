@@ -72,7 +72,7 @@ async function fetchAuthSettings(supabaseUrl, anonKey) {
   return res.json();
 }
 
-async function fetchRedirectAllowList(projectRef, accessToken) {
+async function fetchAuthManagementConfig(projectRef, accessToken) {
   const res = await fetch(`https://api.supabase.com/v1/projects/${projectRef}/config/auth`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -83,7 +83,11 @@ async function fetchRedirectAllowList(projectRef, accessToken) {
     const body = await res.text();
     throw new Error(`Management API auth config failed (${res.status}): ${body}`);
   }
-  const config = await res.json();
+  return res.json();
+}
+
+async function fetchRedirectAllowList(projectRef, accessToken) {
+  const config = await fetchAuthManagementConfig(projectRef, accessToken);
   const raw = config.uri_allow_list ?? '';
   return raw
     .split(',')
@@ -169,6 +173,23 @@ async function main() {
         console.warn(
           `[warn] optional redirect patterns missing: ${missingRecommended.join(', ')} — run: node scripts/merge-supabase-redirect-urls.mjs`,
         );
+      }
+
+      const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
+      if (iosClientId) {
+        const authConfig = await fetchAuthManagementConfig(projectRef, accessToken);
+        const googleClientIds = (authConfig.external_google_client_id ?? '')
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+        if (googleClientIds.includes(iosClientId)) {
+          console.log('[ok] Google native: iOS client ID registered in Supabase');
+        } else {
+          issues.push(
+            `Supabase Google client IDs missing iOS client (${iosClientId}). Run: npm run oauth:sync-google-ids`,
+          );
+          console.error('[fail] Google native: iOS client ID missing from Supabase Google provider');
+        }
       }
     } catch (error) {
       warnings.push(`Could not verify redirect allow-list: ${error.message}`);

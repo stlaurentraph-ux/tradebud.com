@@ -1,4 +1,6 @@
 import { fetchPlotTenureVerification } from '@/features/api/postPlot';
+import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
+import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { computePlotReadinessChecklist, type PlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -26,14 +28,18 @@ export type PlotReadinessLoadResult = {
 export async function loadPlotReadinessForLocalPlot(
   plot: Plot,
   backendPlots: unknown[],
+  farmer?: { id: string; fpicConsent?: boolean; laborNoChildLabor?: boolean; laborNoForcedLabor?: boolean; selfDeclared?: boolean } | null,
 ): Promise<PlotReadinessLoadResult> {
   const backendMatch = findBackendPlotForLocal(plot, backendPlots) as BackendPlotMatchMeta | null;
   const backendPlotId = backendMatch?.id != null ? String(backendMatch.id) : null;
 
-  const [photos, titleRows, evidenceRows, tenureVerifications] = await Promise.all([
+  const [photos, titleRows, evidenceRows, producerEvidenceRows, tenureVerifications] = await Promise.all([
     loadPhotosForPlot(plot.id).catch(() => []),
     loadTitlePhotosForPlot(plot.id).catch(() => []),
     loadEvidenceForPlot(plot.id).catch(() => []),
+    farmer?.id
+      ? loadEvidenceForPlot(producerEvidenceScopeId(farmer.id)).catch(() => [])
+      : Promise.resolve([]),
     backendPlotId
       ? fetchPlotTenureVerification(backendPlotId).catch(() => [])
       : Promise.resolve([]),
@@ -42,12 +48,17 @@ export async function loadPlotReadinessForLocalPlot(
   const evidenceKinds = evidenceRows
     .map((e: { kind?: string }) => e.kind)
     .filter((k): k is string => typeof k === 'string' && k.length > 0);
+  const producerEvidenceKinds = producerEvidenceRows
+    .map((e: { kind?: string }) => e.kind)
+    .filter((k): k is string => typeof k === 'string' && k.length > 0);
 
   const checklist = computePlotReadinessChecklist({
     groundTruthPhotos: photos,
     plot,
     titlePhotoCount: titleRows.length,
     evidenceKinds,
+    producerEvidenceKinds,
+    producerAttestationsComplete: hasProducerAttestationsComplete(farmer ?? undefined),
     isSyncedToServer: Boolean(backendMatch),
     backendFlags: backendMatch,
     tenureVerifications,
@@ -64,6 +75,7 @@ export async function loadPlotReadinessForLocalPlot(
 export async function loadAllPlotReadinessStates(
   plots: Plot[],
   backendPlots: unknown[],
+  farmer?: { id: string; fpicConsent?: boolean; laborNoChildLabor?: boolean; laborNoForcedLabor?: boolean; selfDeclared?: boolean } | null,
 ): Promise<PlotReadinessLoadResult[]> {
-  return Promise.all(plots.map((p) => loadPlotReadinessForLocalPlot(p, backendPlots)));
+  return Promise.all(plots.map((p) => loadPlotReadinessForLocalPlot(p, backendPlots, farmer)));
 }

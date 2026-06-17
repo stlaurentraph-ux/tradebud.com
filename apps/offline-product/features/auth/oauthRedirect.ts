@@ -3,6 +3,8 @@ import { makeRedirectUri } from 'expo-auth-session';
 
 import { getFieldAuthCallbackBaseUrl } from '@/features/auth/fieldAppAuthUrls';
 
+const IS_DEV_RUNTIME = typeof __DEV__ !== 'undefined' && __DEV__;
+
 /** Deep link the native app handles after OAuth (Expo Go / dev client fallback). */
 export function getNativeOAuthCallbackUri(): string {
   const scheme = Constants.expoConfig?.scheme ?? 'tracebudoffline';
@@ -14,10 +16,20 @@ export function getNativeOAuthCallbackUri(): string {
 }
 
 /**
+ * Local debug builds (`expo run:ios`) lack production associated domains — use the app scheme.
+ * Preview builds set EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1 explicitly.
+ */
+export function useCustomSchemeOAuthRedirect(): boolean {
+  if (Constants.appOwnership === 'expo') return false;
+  if (process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME === '1') return true;
+  return IS_DEV_RUNTIME;
+}
+
+/**
  * Redirect URL sent to Supabase OAuth.
  * - Expo Go: HTTPS bridge on app.tracebud.com with encoded exp:// target.
- * - Store / preview builds: https://app.tracebud.com/auth/callback (universal links).
- * - Dev override: EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1 → tracebudoffline:// only.
+ * - Local debug / preview: tracebudoffline://auth/callback (custom scheme).
+ * - Store production: https://app.tracebud.com/auth/callback (universal links).
  */
 export function getOAuthRedirectUri(): string {
   const nativeCallback = getNativeOAuthCallbackUri();
@@ -32,14 +44,14 @@ export function getOAuthRedirectUri(): string {
     return bridge;
   }
 
-  if (process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME === '1') {
-    if (__DEV__) {
+  if (useCustomSchemeOAuthRedirect()) {
+    if (IS_DEV_RUNTIME) {
       console.log('[oauth] Custom scheme redirect:', nativeCallback);
     }
     return nativeCallback;
   }
 
-  if (__DEV__) {
+  if (IS_DEV_RUNTIME) {
     console.log('[oauth] Universal link redirect:', fieldAuthCallback);
   }
   return fieldAuthCallback;
@@ -47,10 +59,7 @@ export function getOAuthRedirectUri(): string {
 
 /** Prefix match for WebBrowser.openAuthSessionAsync success detection. */
 export function getOAuthRedirectMatchPrefix(): string {
-  if (
-    Constants.appOwnership !== 'expo' &&
-    process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME === '1'
-  ) {
+  if (Constants.appOwnership !== 'expo' && useCustomSchemeOAuthRedirect()) {
     return getNativeOAuthCallbackUri().split('?')[0];
   }
   return getFieldAuthCallbackBaseUrl();

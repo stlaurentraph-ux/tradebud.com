@@ -149,10 +149,10 @@ export default function PlotsScreen() {
       setPlotChecklistDoneByPlotId({});
       return;
     }
-    const results = await loadAllPlotReadinessStates(plots, backendPlots);
+    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
     setPhotoCountByPlotId(Object.fromEntries(results.map((r) => [r.plotId, r.photoCount])));
     setPlotChecklistDoneByPlotId(Object.fromEntries(results.map((r) => [r.plotId, r.done])));
-  }, [plots, backendPlots]);
+  }, [plots, backendPlots, farmer]);
 
   useEffect(() => {
     void refreshPlotChecklists();

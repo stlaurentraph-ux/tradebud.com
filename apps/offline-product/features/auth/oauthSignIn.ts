@@ -6,8 +6,14 @@ import type { Session } from '@supabase/supabase-js';
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import { signInWithAppleNative } from '@/features/auth/appleSignIn.native';
 import {
-  getGoogleOAuthClientIds,
-  isGoogleNativeSignInConfigured,
+  beginOAuthCallbackWait,
+  cancelOAuthCallbackWait,
+  deliverOAuthCallbackUrl,
+  endOAuthCallbackWait,
+  resolveOAuthCallbackAfterDismiss,
+} from '@/features/auth/oauthCallbackBridge';
+import {
+  shouldUseGoogleNativeSignIn,
 } from '@/features/auth/googleOAuthConfig';
 import { signInWithGoogleNative } from '@/features/auth/googleSignIn.native';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
@@ -19,25 +25,15 @@ export type OAuthProvider = 'google' | 'apple';
 
 async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<string> {
   let linkingSubscription: { remove: () => void } | null = null;
-  let linkingTimer: ReturnType<typeof setTimeout> | null = null;
 
   const stopLinkingWait = () => {
     linkingSubscription?.remove();
     linkingSubscription = null;
-    if (linkingTimer) clearTimeout(linkingTimer);
-    linkingTimer = null;
   };
 
-  const linkingWait = new Promise<string>((resolve, reject) => {
-    linkingSubscription = Linking.addEventListener('url', (event) => {
-      if (!isOAuthCallbackUrl(event.url)) return;
-      stopLinkingWait();
-      resolve(event.url);
-    });
-    linkingTimer = setTimeout(() => {
-      stopLinkingWait();
-      reject(new Error('sign_in_oauth_timeout'));
-    }, 120_000);
+  const callbackWait = beginOAuthCallbackWait();
+  linkingSubscription = Linking.addEventListener('url', (event) => {
+    deliverOAuthCallbackUrl(event.url);
   });
 
   try {
@@ -47,23 +43,24 @@ async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<st
 
     if (browserResult.type === 'success' && browserResult.url) {
       stopLinkingWait();
+      endOAuthCallbackWait();
       return browserResult.url;
     }
 
     if (browserResult.type === 'dismiss' || browserResult.type === 'cancel') {
-      const linkedUrl = await Promise.race([
-        linkingWait,
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_000)),
-      ]);
+      const linkedUrl = await resolveOAuthCallbackAfterDismiss(callbackWait);
       stopLinkingWait();
+      endOAuthCallbackWait();
       if (linkedUrl) return linkedUrl;
       throw new Error('sign_in_oauth_cancelled');
     }
 
     stopLinkingWait();
+    cancelOAuthCallbackWait();
     throw new Error('sign_in_oauth_failed');
   } catch (error) {
     stopLinkingWait();
+    cancelOAuthCallbackWait();
     throw error;
   }
 }
@@ -100,8 +97,23 @@ export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<
   }
 
   if (provider === 'google' && Platform.OS !== 'web') {
-    if (isGoogleNativeSignInConfigured()) {
-      return signInWithGoogleNative();
+    if (shouldUseGoogleNativeSignIn()) {
+      try {
+        return await signInWithGoogleNative();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message === 'sign_in_oauth_cancelled') {
+          throw error;
+        }
+        if (__DEV__) {
+          console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
+          return signInWithOAuthBrowser(provider);
+        }
+        throw error;
+      }
+    }
+    if (__DEV__) {
+      console.log('[oauth] Using browser Google sign-in (simulator or native not available)');
     }
   }
 

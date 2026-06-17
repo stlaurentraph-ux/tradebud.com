@@ -75,10 +75,14 @@ export function PlotTenureStatusCard({
   return (
     <Card variant="outlined" style={styles.card}>
       <View style={styles.headerRow}>
-        <ThemedText type="defaultSemiBold">{t('plot_tenure_status_title')}</ThemedText>
-        <Badge variant={badgeVariant(status.badge)} size="sm">
-          {badgeLabel}
-        </Badge>
+        <ThemedText type="defaultSemiBold" style={styles.headerTitle} numberOfLines={2}>
+          {t('plot_tenure_status_title')}
+        </ThemedText>
+        <View style={styles.headerBadgeWrap}>
+          <Badge variant={badgeVariant(status.badge)} size="sm">
+            {badgeLabel}
+          </Badge>
+        </View>
       </View>
 
       <View style={styles.pathRow}>
@@ -156,10 +160,20 @@ const styles = StyleSheet.create({
   card: { marginBottom: 12 },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     marginBottom: 8,
-    gap: 8,
+    gap: 10,
+  },
+  headerTitle: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  headerBadgeWrap: {
+    flexShrink: 0,
+    marginTop: 2,
+    maxWidth: '48%',
   },
   pathRow: {
     flexDirection: 'row',

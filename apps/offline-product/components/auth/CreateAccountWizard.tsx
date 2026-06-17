@@ -128,9 +128,11 @@ export function CreateAccountWizard({
         return;
       }
       if (result.missingName) {
+        setOauthBusy(null);
         setStep('name');
         return;
       }
+      setOauthBusy(null);
       finishSuccess(null);
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));

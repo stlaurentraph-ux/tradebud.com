@@ -34,6 +34,8 @@ import {
   getProducerDetailHref,
 } from '@/lib/workflow-terminology-labels';
 import { Plus, Upload } from 'lucide-react';
+import { SupplierOrganizationList } from '@/components/contacts/supplier-organization-list';
+import { groupContactsByOrganization } from '@/lib/contact-directory';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
 const CONTACT_TABLE_COLUMN_KEYS = [
@@ -70,6 +72,8 @@ export default function ContactsPage() {
   const role = user?.active_role;
   const isCooperative = role === 'cooperative';
   const isExporter = role === 'exporter';
+  const isImporter = role === 'importer';
+  const useOrganizationGrouping = isExporter || isImporter;
   const audience = role ?? isCooperative;
   const navName = isCooperative ? 'Members' : isExporter ? 'Suppliers' : 'Contacts';
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
@@ -118,12 +122,28 @@ export default function ContactsPage() {
   );
 
   const stats = useMemo(() => {
+    const active = contacts.filter((contact) =>
+      ['invited', 'engaged', 'submitted'].includes(contact.status),
+    ).length;
+    const blocked = contacts.filter((contact) => contact.status === 'blocked').length;
+    if (useOrganizationGrouping) {
+      const { organizations } = groupContactsByOrganization(contacts);
+      return {
+        organizations: organizations.length,
+        people: contacts.length,
+        active,
+        blocked,
+        total: organizations.length,
+      };
+    }
     return {
       total: contacts.length,
-      active: contacts.filter((contact) => ['invited', 'engaged', 'submitted'].includes(contact.status)).length,
-      blocked: contacts.filter((contact) => contact.status === 'blocked').length,
+      active,
+      blocked,
+      organizations: 0,
+      people: contacts.length,
     };
-  }, [contacts]);
+  }, [contacts, useOrganizationGrouping]);
 
   const handleStatusChange = async (id: string, status: ContactStatus) => {
     try {
@@ -157,25 +177,44 @@ export default function ContactsPage() {
         breadcrumbs={buildAppBreadcrumbs(t, { name: navName })}
       />
       <div className="flex-1 space-y-6 p-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{getContactsStatLabel('total', audience, t)}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">{stats.total}</CardContent>
-          </Card>
+        <div className={`grid gap-4 ${useOrganizationGrouping ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
+          {useOrganizationGrouping ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">{getContactsStatLabel('organizations', audience, t)}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">{stats.organizations}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">{getContactsStatLabel('people', audience, t)}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-2xl font-bold">{stats.people}</CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">{getContactsStatLabel('total', audience, t)}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-2xl font-bold">{stats.total}</CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm">{getContactsStatLabel('active', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.active}</CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">{getContactsStatLabel('blocked', audience, t)}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-bold">{stats.blocked}</CardContent>
-          </Card>
+          {!useOrganizationGrouping ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">{getContactsStatLabel('blocked', audience, t)}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-2xl font-bold">{stats.blocked}</CardContent>
+            </Card>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -282,6 +321,8 @@ export default function ContactsPage() {
               </div>
             ) : filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground">{getContactsNoMatchesLabel(audience, t)}</p>
+            ) : useOrganizationGrouping ? (
+              <SupplierOrganizationList contacts={filtered} role={role} />
             ) : (
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full table-fixed text-sm">

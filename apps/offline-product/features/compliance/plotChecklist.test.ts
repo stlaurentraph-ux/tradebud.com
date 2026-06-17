@@ -92,4 +92,17 @@ describe('plotChecklist tenure parse gating', () => {
       }),
     ).toBe('cleared');
   });
+
+  it('counts producer FPIC repository toward indigenous overlap checklist', () => {
+    const checklist = computePlotReadinessChecklist({
+      groundTruthPhotoCount: 4,
+      titlePhotoCount: 1,
+      evidenceKinds: [],
+      producerEvidenceKinds: ['fpic_repository'],
+      isSyncedToServer: true,
+      backendFlags: { indigenous_overlap: true },
+    });
+    expect(checklist.fpicOk).toBe(true);
+    expect(checklist.done).toBe(true);
+  });
 });

@@ -12,6 +12,59 @@ import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
+const OAUTH_CONNECT_TIMEOUT_MS = 5_000;
+
+function isApiUnreachableMessage(message: string): boolean {
+  const msg = message.toLowerCase();
+  return (
+    msg.includes('network') ||
+    msg.includes('localhost') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('network request failed') ||
+    msg.includes('request timeout') ||
+    msg.includes('request took too long') ||
+    msg.includes('tracebud api returned')
+  );
+}
+
+async function runPostOAuthConnectTasks(params: {
+  fullName: string;
+  session: Session;
+  farmerId?: string;
+  localPlots?: Plot[];
+}): Promise<void> {
+  void ensureFarmerOAuthProfile(params.fullName, params.session).catch(() => undefined);
+
+  if (params.farmerId) {
+    const bootstrap = await bootstrapFieldAppProducer(
+      {
+        farmerId: params.farmerId,
+        fullName: params.fullName || undefined,
+      },
+      { timeoutMs: OAUTH_CONNECT_TIMEOUT_MS },
+    );
+    if (!bootstrap.ok && bootstrap.message === 'sign_in_field_bootstrap_failed') {
+      await clearPersistedSyncAuth();
+      return;
+    }
+  }
+
+  const res = await testBackendLogin({ timeoutMs: OAUTH_CONNECT_TIMEOUT_MS });
+  if (!res.ok && !isApiUnreachableMessage(res.message)) {
+    // Keep the OAuth session when the API is temporarily unavailable.
+    return;
+  }
+
+  void registerFarmerPushToken();
+
+  if (params.farmerId && params.localPlots) {
+    void runAutoBackup({
+      farmerId: params.farmerId,
+      localPlots: params.localPlots,
+    });
+  }
+}
+
 export async function completeOAuthFarmerSession(params: {
   session: Session;
   fullName?: string;
@@ -37,37 +90,13 @@ export async function completeOAuthFarmerSession(params: {
     params.session.access_token,
     params.session.expires_at,
   );
-  await ensureFarmerOAuthProfile(nameFromSession, params.session);
 
-  if (params.farmerId) {
-    const bootstrap = await bootstrapFieldAppProducer({
-      farmerId: params.farmerId,
-      fullName: nameFromSession || undefined,
-    });
-    if (!bootstrap.ok) {
-      await clearPersistedSyncAuth();
-      return { ok: false, message: bootstrap.message };
-    }
-  }
-
-  const res = await testBackendLogin();
-  if (!res.ok) {
-    await clearPersistedSyncAuth();
-    const msg = res.message.toLowerCase();
-    if (msg.includes('api') || msg.includes('localhost') || msg.includes('network')) {
-      return { ok: false, message: 'sign_in_api_unreachable' };
-    }
-    return { ok: false, message: res.message };
-  }
-
-  void registerFarmerPushToken();
-
-  if (params.farmerId && params.localPlots) {
-    await runAutoBackup({
-      farmerId: params.farmerId,
-      localPlots: params.localPlots,
-    });
-  }
+  void runPostOAuthConnectTasks({
+    fullName: nameFromSession,
+    session: params.session,
+    farmerId: params.farmerId,
+    localPlots: params.localPlots,
+  });
 
   return { ok: true, missingName: !nameFromSession };
 }

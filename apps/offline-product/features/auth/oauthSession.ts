@@ -1,7 +1,12 @@
 import type { Session } from '@supabase/supabase-js';
 
-import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import {
+  getAuthenticatedSupabaseClient,
+  getSupabaseAuthClient,
+} from '@/features/api/syncAuthSession';
 import { getAppRoleFromSession, isDashboardWorkspaceRole } from '@/features/auth/fieldAppEligibility';
+
+const PROFILE_UPDATE_TIMEOUT_MS = 5_000;
 
 export function getNameFromSession(session: Session): string {
   const meta = session.user.user_metadata?.full_name;
@@ -43,16 +48,25 @@ export function getEmailFromSession(session: Session): string {
 
 export async function ensureFarmerOAuthProfile(fullName?: string, session?: Session): Promise<void> {
   const name = fullName?.trim() ?? '';
-  const supabase = getSupabaseAuthClient();
   const dashboardRole = session ? getAppRoleFromSession(session) : null;
   const linkOnly = isDashboardWorkspaceRole(dashboardRole);
-  await supabase.auth.updateUser({
+  const payload = {
     data: {
       ...(name ? { full_name: name } : {}),
       signup_source: 'field-app',
       ...(linkOnly ? { field_app_linked: true } : { role: 'farmer' }),
     },
-  });
+  };
+
+  const client = (await getAuthenticatedSupabaseClient()) ?? getSupabaseAuthClient();
+  await Promise.race([
+    client.auth.updateUser(payload).then(({ error }) => {
+      if (error) throw error;
+    }),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('sign_in_oauth_timeout')), PROFILE_UPDATE_TIMEOUT_MS);
+    }),
+  ]);
 }
 
 export function mapOAuthErrorToCode(error: unknown): string {

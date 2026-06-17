@@ -54,10 +54,13 @@ import {
   type PlotEvidenceItem,
 } from '@/features/state/persistence';
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
+import { PlotAttestationsCard } from '@/components/compliance/PlotAttestationsCard';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
 import { PlotComplianceStatusCards } from '@/components/compliance/PlotComplianceStatusCards';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
-import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
+import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
+import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
+import { DocumentUploadHint } from '@/components/evidence/DocumentUploadHint';
 import {
   autoUploadLandTitleDocuments,
   type AutoUploadOutcome,
@@ -84,7 +87,7 @@ export default function PlotDetailScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { id, sub } = useLocalSearchParams<{ id: string; sub?: Sub }>();
+  const { id, sub, from } = useLocalSearchParams<{ id: string; sub?: Sub; from?: string }>();
   const { plots, farmer, updatePlot } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
 
@@ -95,6 +98,7 @@ export default function PlotDetailScreen() {
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
   const [titlePhotos, setTitlePhotos] = useState<PlotTitlePhoto[]>([]);
   const [evidence, setEvidence] = useState<PlotEvidenceItem[]>([]);
+  const [producerEvidenceKinds, setProducerEvidenceKinds] = useState<string[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
@@ -166,6 +170,20 @@ export default function PlotDetailScreen() {
         setInformalTenureNote('');
       });
   }, [plotId]);
+
+  useEffect(() => {
+    if (!farmer?.id) {
+      setProducerEvidenceKinds([]);
+      return;
+    }
+    loadEvidenceForPlot(producerEvidenceScopeId(farmer.id))
+      .then((rows) =>
+        setProducerEvidenceKinds(
+          rows.map((row) => row.kind).filter((kind): kind is string => Boolean(kind)),
+        ),
+      )
+      .catch(() => setProducerEvidenceKinds([]));
+  }, [farmer?.id]);
 
   useEffect(() => {
     if (!farmer?.id) {
@@ -334,6 +352,15 @@ export default function PlotDetailScreen() {
     setRenameModalOpen(false);
   };
 
+  const producerFpicCount = useMemo(
+    () => producerEvidenceKinds.filter((kind) => kind === 'fpic_repository').length,
+    [producerEvidenceKinds],
+  );
+  const producerAttestationsComplete = useMemo(
+    () => hasProducerAttestationsComplete(farmer),
+    [farmer],
+  );
+
   const plotStatusRows = useMemo(() => {
     const evidenceKinds = evidence.map((e) => e.kind);
     const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
@@ -342,6 +369,8 @@ export default function PlotDetailScreen() {
         plot,
         titlePhotoCount: titlePhotos.length,
         evidenceKinds,
+        producerEvidenceKinds,
+        producerAttestationsComplete,
         isSyncedToServer: Boolean(backendPlotId),
         tenureVerifications,
         backendFlags:
@@ -424,6 +453,8 @@ export default function PlotDetailScreen() {
     plot,
     titlePhotos.length,
     evidence,
+    producerEvidenceKinds,
+    producerAttestationsComplete,
     overlapFlags.indigenous,
     overlapFlags.sinaph,
     backendPlotId,
@@ -636,6 +667,22 @@ export default function PlotDetailScreen() {
     }
   };
 
+  const handleHeaderBack = useCallback(() => {
+    if (from === 'documents' && active === 'documents') {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/documents');
+      }
+      return;
+    }
+    if (active) {
+      setActive(null);
+      return;
+    }
+    router.back();
+  }, [active, from]);
+
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
@@ -645,7 +692,7 @@ export default function PlotDetailScreen() {
         style={[styles.header, { paddingTop: insets.top }]}
       >
         <View style={styles.headerRowCompact}>
-          <Pressable onPress={() => (active ? setActive(null) : router.back())} style={styles.backPill}>
+          <Pressable onPress={handleHeaderBack} style={styles.backPill}>
             <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {t('back')}
@@ -958,24 +1005,12 @@ export default function PlotDetailScreen() {
               isSyncedToServer={Boolean(backendPlotId)}
             />
 
-            <Card variant="elevated" style={styles.docCard}>
+            <PlotAttestationsCard plot={plot} />
+
+            <DocumentUploadHint />
+
+            <Card variant="outlined" style={styles.docCard}>
               <ThemedText type="defaultSemiBold">{t('plot_documents_land_title_section')}</ThemedText>
-              <ThemedText type="caption" style={{ marginTop: 4 }}>
-                {t('plot_documents_land_title_body')}
-              </ThemedText>
-              <ThemedText type="caption" style={styles.autoUploadBanner}>
-                {t('plot_documents_auto_upload_banner')}
-              </ThemedText>
-              <ThemedText type="caption" style={{ marginTop: 6, opacity: 0.85 }}>
-                {t('plot_documents_clave_order_hint')}
-              </ThemedText>
-              <Input
-                label={t('plot_documents_cadastral_label')}
-                placeholder={t('plot_documents_cadastral_ph')}
-                value={cadastralKey}
-                onChangeText={setCadastralKey}
-                containerStyle={{ marginTop: 10 }}
-              />
               <View style={{ marginTop: 10 }}>
                 <Button
                   title={
@@ -1004,38 +1039,26 @@ export default function PlotDetailScreen() {
                 </View>
               ) : null}
               <Input
+                label={t('plot_documents_cadastral_label')}
+                placeholder={t('plot_documents_cadastral_ph')}
+                value={cadastralKey}
+                onChangeText={setCadastralKey}
+                containerStyle={{ marginTop: 10 }}
+              />
+              {!backendPlotId && farmer?.id && titlePhotos.length > 0 ? (
+                <ThemedText type="caption" style={{ marginTop: 8, color: colors.error }}>
+                  {t('plot_documents_plot_not_synced_hint')}
+                </ThemedText>
+              ) : null}
+            </Card>
+
+            <Card variant="outlined" style={styles.docNoteCard}>
+              <Input
                 label={t('plot_documents_legality_reason_optional_label')}
                 placeholder={t('plot_documents_legality_reason_ph')}
                 value={legalSyncReason}
                 onChangeText={setLegalSyncReason}
-                containerStyle={{ marginTop: 10 }}
               />
-              {!backendPlotId && farmer?.id ? (
-                <ThemedText type="caption" style={{ marginTop: 10, color: colors.error }}>
-                  {t('plot_documents_plot_not_synced_hint')}
-                </ThemedText>
-              ) : null}
-              {titlePhotos.length === 0 ? (
-                <ThemedText type="caption" style={{ marginTop: 8, opacity: 0.85 }}>
-                  {t('plot_documents_land_title_need_photo')}
-                </ThemedText>
-              ) : null}
-              {docSyncMessage ? (
-                <ThemedText
-                  type="caption"
-                  style={{
-                    marginTop: 8,
-                    color:
-                      docSyncTone === 'success'
-                        ? colors.tint
-                        : docSyncTone === 'info'
-                          ? undefined
-                          : colors.error,
-                  }}
-                >
-                  {docSyncMessage}
-                </ThemedText>
-              ) : null}
             </Card>
 
             <PlotEvidencePanel
@@ -1046,10 +1069,33 @@ export default function PlotDetailScreen() {
               overlapFlags={overlapFlags}
               serverPlotId={backendPlotId}
               showFpicStructured={overlapFlags.indigenous}
-              showSync
-              onSyncMessage={setDocSyncMessage}
+              producerFpicCount={producerFpicCount}
+              producerAttestationsComplete={producerAttestationsComplete}
+              auditNote={legalSyncReason}
+              onSyncMessage={(message, tone = 'info') => {
+                setDocSyncMessage(message);
+                if (message) setDocSyncTone(tone);
+              }}
               onSyncComplete={refreshTenureVerification}
             />
+
+            {docSyncMessage ? (
+              <Card variant="outlined" style={styles.docStatusCard}>
+                <ThemedText
+                  type="caption"
+                  style={{
+                    color:
+                      docSyncTone === 'success'
+                        ? colors.tint
+                        : docSyncTone === 'error'
+                          ? colors.error
+                          : undefined,
+                  }}
+                >
+                  {docSyncMessage}
+                </ThemedText>
+              </Card>
+            ) : null}
 
           </>
         ) : null}
@@ -1572,17 +1618,13 @@ const styles = StyleSheet.create({
     color: '#8E8E8E',
   },
   docCard: {
-    borderRadius: 20,
-    backgroundColor: '#F6F6F6',
-    borderColor: '#D9D9D9',
-    padding: 18,
+    gap: 0,
   },
-  autoUploadBanner: {
-    marginTop: 8,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: '#ECFDF5',
-    color: '#047857',
+  docNoteCard: {
+    paddingVertical: 4,
+  },
+  docStatusCard: {
+    padding: 12,
   },
   docRow: {
     flexDirection: 'row',

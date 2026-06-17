@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProducerConsentPanel } from '@/components/farmers/producer-consent-panel';
 import { EditContactForm, type ContactEditDraft } from '@/components/contacts/edit-contact-form';
 import { listContactActivityTypesForRole } from '@/lib/contact-activity-types';
-import { buildAddColleagueHref, listOrganizationColleagues } from '@/lib/contact-directory';
+import { buildAddColleagueHref, buildOrganizationHref, listOrganizationColleagues } from '@/lib/contact-directory';
 import {
   deleteContact,
   listContacts,
@@ -286,7 +286,22 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
                           <div className="text-xs text-muted-foreground">
                             {getProducerDetailCopy('field_organisation', role, t)}
                           </div>
-                          <div className="mt-1 font-medium">{contact.organization?.trim() || '—'}</div>
+                          <div className="mt-1 font-medium">
+                            {contact.organization?.trim() ? (
+                              isExporter || role === 'importer' ? (
+                                <Link
+                                  href={buildOrganizationHref(contact.organization.trim())}
+                                  className="text-foreground hover:text-primary hover:underline"
+                                >
+                                  {contact.organization.trim()}
+                                </Link>
+                              ) : (
+                                contact.organization.trim()
+                              )
+                            ) : (
+                              '—'
+                            )}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">

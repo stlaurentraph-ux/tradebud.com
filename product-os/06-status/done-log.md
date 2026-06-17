@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app documents + auth slice (2026-06-16): producer/plot document scope, producer declarations on `/documents`, Google OAuth fast completion, sign-out race fixes, Documents navigation + back stack, declaration card layout.
 - FEAT-003 S5 Phase D: dashboard geometry reviewer assist — Douglas–Peucker preview on satellite, `PATCH /api/plots/:id/geometry` proxy, exporter/cooperative/admin/reviewer backend roles, `plot_geometry_revision_applied` analytics.
 - FEAT-003 S5 Phase C: geometry capture metadata on plot save/upload + dashboard map-hero confidence badges (`geometry_capture` JSONB).
 - Post-walk inline ground-truth photo capture delivered: `GroundTruthPhotoCapture` on walk completion, on-plot GPS gate, four clearance-verified photos, farmer-friendly Photo 1–4 UI.

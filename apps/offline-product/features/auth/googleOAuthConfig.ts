@@ -75,3 +75,14 @@ export function getGoogleOAuthClientIds(): GoogleOAuthClientIds | null {
 export function isGoogleNativeSignInConfigured(): boolean {
   return getGoogleOAuthClientIds() != null;
 }
+
+/**
+ * Native Google (account picker) only works on physical iOS/Android devices.
+ * Simulator/emulator must use Supabase browser OAuth — native promptAsync returns dismiss with no UI.
+ */
+export function shouldUseGoogleNativeSignIn(): boolean {
+  if (!isGoogleNativeSignInConfigured()) return false;
+  if (Platform.OS === 'ios' && Constants.isDevice === false) return false;
+  if (Platform.OS === 'android' && Constants.isDevice === false) return false;
+  return true;
+}

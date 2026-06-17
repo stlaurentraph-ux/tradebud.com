@@ -43,7 +43,6 @@ import {
 } from '@/features/offlineTiles/manualTraceImagery';
 import { listOfflineTilePacks } from '@/features/offlineTiles/offlineTiles';
 import { pingFieldMapImagery } from '@/features/network/pingFieldMapImagery';
-import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
 import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
@@ -2001,12 +2000,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       youMarkerFollowsPosition={isRecording}
                     />
                   </MapView>
-                  <View style={styles.mapGpsPill} pointerEvents="none">
-                    <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
-                    <ThemedText type="caption" style={styles.mapGpsPillText}>
-                      {gpsStrengthLabel}
-                    </ThemedText>
-                  </View>
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View
@@ -2018,7 +2011,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       </ThemedText>
                     </View>
                   ) : null}
-                  <FieldMapAttribution lowDataMap={lowDataMap} offlineTilesEnabled={offlineTilesEnabled} />
                   <View style={styles.coordChip}>
                     <ThemedText type="caption">
                       {formatLatLon(mapCoordDisplay.latitude, mapCoordDisplay.longitude)}
@@ -2112,7 +2104,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       </ThemedText>
                     </View>
                   ) : null}
-                  <FieldMapAttribution lowDataMap={lowDataMap} offlineTilesEnabled={offlineTilesEnabled} />
                 </View>
 
                 {points.length >= 3 ? renderGeometryConfidenceBanner() : null}
@@ -2161,7 +2152,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showStartMarker={points.length > 0}
                     />
                   </MapView>
-                  <FieldMapAttribution lowDataMap={lowDataMap} offlineTilesEnabled={offlineTilesEnabled} />
                 </View>
 
                 <View style={styles.gpsStrip}>
@@ -2252,7 +2242,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       </ThemedText>
                     </View>
                   ) : null}
-                  <FieldMapAttribution lowDataMap={lowDataMap} offlineTilesEnabled={offlineTilesEnabled} />
                 </View>
 
                 {points.length >= 3 ? renderGeometryConfidenceBanner() : null}

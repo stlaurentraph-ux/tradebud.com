@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 
+import { ProducerAttestationsCard } from '@/components/compliance/ProducerAttestationsCard';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
@@ -27,17 +29,18 @@ export default function DocumentsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { farmer, plots } = useAppState();
-  const { lang } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [profileDocs, setProfileDocs] = useState<PlotEvidenceItem[]>([]);
 
   useEffect(() => {
-    const pid = farmer?.id ? `profile:${farmer.id}` : null;
-    if (!pid) {
+    if (!farmer?.id) {
       setProfileDocs([]);
       return;
     }
-    loadEvidenceForPlot(pid).then(setProfileDocs).catch(() => setProfileDocs([]));
+    loadEvidenceForPlot(producerEvidenceScopeId(farmer.id))
+      .then(setProfileDocs)
+      .catch(() => setProfileDocs([]));
   }, [farmer?.id]);
 
   const counts = useMemo(() => {
@@ -47,8 +50,6 @@ export default function DocumentsScreen() {
       total: profileDocs.length,
       fpic: byKind(profileDocs, 'fpic_repository'),
       labor: byKind(profileDocs, 'labor_evidence'),
-      tenure: byKind(profileDocs, 'tenure_evidence'),
-      permits: byKind(profileDocs, 'protected_area_permit'),
     };
   }, [profileDocs]);
 
@@ -63,17 +64,17 @@ export default function DocumentsScreen() {
     const asset = picked.assets[0];
     try {
       await persistPlotEvidenceItem({
-        plotId: `profile:${farmer.id}`,
+        plotId: producerEvidenceScopeId(farmer.id),
         kind,
         uri: asset.uri,
         mimeType: asset.mimeType ?? null,
         label: asset.name ?? label,
         takenAt: Date.now(),
       });
-      const updated = await loadEvidenceForPlot(`profile:${farmer.id}`);
+      const updated = await loadEvidenceForPlot(producerEvidenceScopeId(farmer.id));
       setProfileDocs(updated);
     } catch {
-      Alert.alert('Could not save document', 'Try again or restart the app.');
+      Alert.alert(t('documents_save_failed_title'), t('documents_save_failed_body'));
     }
   };
 
@@ -89,15 +90,15 @@ export default function DocumentsScreen() {
           <Pressable onPress={() => router.back()} style={styles.backPill}>
             <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              Back
+              {t('back')}
             </ThemedText>
           </Pressable>
           <View style={{ flex: 1 }}>
             <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
-              Documents
+              {t('documents_my_docs')}
             </ThemedText>
             <ThemedText type="caption" style={{ color: colors.textInverse, opacity: 0.9 }}>
-              Identity + land + permits
+              {t('documents_producer_scope_subtitle')}
             </ThemedText>
           </View>
           <View style={styles.langPill}>
@@ -112,126 +113,99 @@ export default function DocumentsScreen() {
       <ThemedScrollView contentContainerStyle={styles.container}>
         <Card variant="elevated" style={styles.card}>
           <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">My documents</ThemedText>
+            <ThemedText type="defaultSemiBold">{t('documents_producer_scope_title')}</ThemedText>
             <Badge variant="default" size="sm">
               {counts.total}
             </Badge>
           </View>
-          <ThemedText type="caption">
-            Upload and organize documents for FPIC, land tenure, permits, and labor compliance.
-          </ThemedText>
+          <ThemedText type="caption">{t('documents_producer_scope_body')}</ThemedText>
         </Card>
+
+        <ProducerAttestationsCard />
 
         <Card variant="elevated" style={styles.card}>
           <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">FPIC repository</ThemedText>
+            <ThemedText type="defaultSemiBold">{t('documents_fpic_section')}</ThemedText>
             <Badge variant={counts.fpic > 0 ? 'info' : 'default'} size="sm">
               {counts.fpic}
             </Badge>
           </View>
-          <ThemedText type="caption">Minutes, mapping, social agreements, and consent evidence.</ThemedText>
+          <ThemedText type="caption">{t('documents_fpic_body')}</ThemedText>
           <View style={{ gap: 10, marginTop: 10 }}>
-            <Button title="Add FPIC doc/photo" variant="secondary" onPress={() => addProfileDoc('fpic_repository', 'fpic_doc')} />
+            <Button
+              title={t('documents_add_fpic')}
+              variant="secondary"
+              onPress={() => void addProfileDoc('fpic_repository', 'fpic_doc')}
+            />
           </View>
-          {profileDocs.filter((d) => d.kind === 'fpic_repository').slice(0, 3).map((d) => (
-            <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <ThemedText type="defaultSemiBold">{d.label ?? 'FPIC document'}</ThemedText>
-                <Badge variant="info" size="sm">
-                  FPIC
-                </Badge>
-              </View>
-              <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
-            </Card>
-          ))}
+          {profileDocs
+            .filter((d) => d.kind === 'fpic_repository')
+            .slice(0, 6)
+            .map((d) => (
+              <Card key={d.id} variant="outlined" style={styles.rowCard}>
+                <View style={styles.rowHeader}>
+                  <ThemedText type="defaultSemiBold">{d.label ?? t('documents_fpic_fallback')}</ThemedText>
+                  <Badge variant="info" size="sm">
+                    {t('documents_badge_fpic')}
+                  </Badge>
+                </View>
+                <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
+              </Card>
+            ))}
         </Card>
 
         <Card variant="elevated" style={styles.card}>
           <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">Land tenure</ThemedText>
-            <Badge variant={counts.tenure > 0 ? 'info' : 'default'} size="sm">
-              {counts.tenure}
-            </Badge>
-          </View>
-          <ThemedText type="caption">Land titles, customary agreements, municipal letters, witness attestations.</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
-            <Button title="Add tenure evidence" variant="secondary" onPress={() => addProfileDoc('tenure_evidence', 'tenure_doc')} />
-          </View>
-          {profileDocs.filter((d) => d.kind === 'tenure_evidence').slice(0, 3).map((d) => (
-            <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <ThemedText type="defaultSemiBold">{d.label ?? 'Tenure document'}</ThemedText>
-                <Badge variant="default" size="sm">
-                  Tenure
-                </Badge>
-              </View>
-              <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
-            </Card>
-          ))}
-        </Card>
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">Permits & management plans</ThemedText>
-            <Badge variant={counts.permits > 0 ? 'info' : 'default'} size="sm">
-              {counts.permits}
-            </Badge>
-          </View>
-          <ThemedText type="caption">SINAPH buffer-zone permits, management plans, government approvals.</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
-            <Button title="Add permit / plan" variant="secondary" onPress={() => addProfileDoc('protected_area_permit', 'permit_doc')} />
-          </View>
-          {profileDocs.filter((d) => d.kind === 'protected_area_permit').slice(0, 3).map((d) => (
-            <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <ThemedText type="defaultSemiBold">{d.label ?? 'Permit document'}</ThemedText>
-                <Badge variant="warning" size="sm">
-                  Permit
-                </Badge>
-              </View>
-              <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
-            </Card>
-          ))}
-        </Card>
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">Labor compliance</ThemedText>
+            <ThemedText type="defaultSemiBold">{t('documents_labor_section')}</ThemedText>
             <Badge variant={counts.labor > 0 ? 'info' : 'default'} size="sm">
               {counts.labor}
             </Badge>
           </View>
-          <ThemedText type="caption">Photos/docs of working conditions and ILO compliance evidence.</ThemedText>
+          <ThemedText type="caption">{t('documents_labor_body')}</ThemedText>
           <View style={{ gap: 10, marginTop: 10 }}>
-            <Button title="Add labor evidence" variant="secondary" onPress={() => addProfileDoc('labor_evidence', 'labor_doc')} />
+            <Button
+              title={t('documents_add_labor')}
+              variant="secondary"
+              onPress={() => void addProfileDoc('labor_evidence', 'labor_doc')}
+            />
           </View>
-          {profileDocs.filter((d) => d.kind === 'labor_evidence').slice(0, 3).map((d) => (
-            <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <ThemedText type="defaultSemiBold">{d.label ?? 'Labor document'}</ThemedText>
-                <Badge variant="default" size="sm">
-                  Labor
-                </Badge>
-              </View>
-              <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
-            </Card>
-          ))}
+          {profileDocs
+            .filter((d) => d.kind === 'labor_evidence')
+            .slice(0, 6)
+            .map((d) => (
+              <Card key={d.id} variant="outlined" style={styles.rowCard}>
+                <View style={styles.rowHeader}>
+                  <ThemedText type="defaultSemiBold">{d.label ?? t('documents_labor_fallback')}</ThemedText>
+                  <Badge variant="default" size="sm">
+                    {t('documents_badge_labor')}
+                  </Badge>
+                </View>
+                <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
+              </Card>
+            ))}
         </Card>
 
         <Card variant="elevated" style={styles.card}>
           <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">Plot documents</ThemedText>
+            <ThemedText type="defaultSemiBold">{t('documents_plot_scope_title')}</ThemedText>
             <Badge variant="info" size="sm">
               {plots.length}
             </Badge>
           </View>
-          <ThemedText type="caption">Open a plot to manage land title, permits, FPIC repository, and photo vault.</ThemedText>
+          <ThemedText type="caption">{t('documents_plot_scope_body')}</ThemedText>
           <View style={{ gap: 10, marginTop: 10 }}>
             {plots.length === 0 ? (
-              <ThemedText type="caption">No local plots yet. Register a plot first.</ThemedText>
+              <ThemedText type="caption">{t('documents_no_plots')}</ThemedText>
             ) : (
               plots.slice(0, 10).map((p) => (
-                <Pressable key={p.id} onPress={() => router.push(`/plot/${encodeURIComponent(p.id)}?sub=documents`)}>
+                <Pressable
+                  key={p.id}
+                  onPress={() =>
+                    router.push(
+                      `/plot/${encodeURIComponent(p.id)}?sub=documents&from=documents`,
+                    )
+                  }
+                >
                   <Card variant="outlined" style={styles.rowCard}>
                     <View style={styles.rowHeader}>
                       <ThemedText type="defaultSemiBold">{p.name}</ThemedText>
@@ -283,4 +257,3 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 });
-

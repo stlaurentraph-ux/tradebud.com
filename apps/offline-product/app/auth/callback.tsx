@@ -30,6 +30,9 @@ export default function AuthCallbackScreen() {
     trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_SUCCESS, { source: 'cold_start' });
     trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'cold_start' });
     router.replace('/(tabs)/settings');
+    setTimeout(() => {
+      router.replace('/(tabs)/settings');
+    }, 400);
   }, []);
 
   const runCallback = useCallback(async () => {

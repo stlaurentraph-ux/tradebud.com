@@ -1,10 +1,16 @@
 import { getAccessTokenFromSupabase, getTracebudApiBaseUrl, hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { safeAuthenticatedFetch } from '@/features/errors/safeFetch';
 
-export async function bootstrapFieldAppProducer(params: {
-  farmerId: string;
-  fullName?: string;
-  countryCode?: string;
-}): Promise<{ ok: true } | { ok: false; message: string }> {
+const BOOTSTRAP_TIMEOUT_MS = 12_000;
+
+export async function bootstrapFieldAppProducer(
+  params: {
+    farmerId: string;
+    fullName?: string;
+    countryCode?: string;
+  },
+  options?: { timeoutMs?: number },
+): Promise<{ ok: true } | { ok: false; message: string }> {
   const farmerId = params.farmerId.trim();
   if (!farmerId) {
     return { ok: false, message: 'sign_in_oauth_failed' };
@@ -16,12 +22,9 @@ export async function bootstrapFieldAppProducer(params: {
   }
 
   const apiBase = getTracebudApiBaseUrl();
-  const res = await fetch(`${apiBase}/v1/me/field-app-bootstrap`, {
+  const res = await safeAuthenticatedFetch(`${apiBase}/v1/me/field-app-bootstrap`, accessToken, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
+    timeout: options?.timeoutMs ?? BOOTSTRAP_TIMEOUT_MS,
     body: JSON.stringify({
       farmerId,
       fullName: params.fullName?.trim() || undefined,
@@ -30,13 +33,15 @@ export async function bootstrapFieldAppProducer(params: {
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    if (res.status === 403 || res.status === 409) {
+    if (res.statusCode === 403 || res.statusCode === 409) {
       return { ok: false, message: 'sign_in_field_bootstrap_failed' };
+    }
+    if (res.message === 'Request timeout' || res.message === 'Network error') {
+      return { ok: false, message: res.message };
     }
     return {
       ok: false,
-      message: body || `Field app bootstrap failed (${res.status})`,
+      message: res.message || `Field app bootstrap failed (${res.statusCode ?? 'unknown'})`,
     };
   }
 

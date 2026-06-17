@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, Image, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -30,28 +31,29 @@ type PlotEvidencePanelProps = {
   overlapFlags?: OverlapFlags;
   serverPlotId?: string | null;
   showFpicStructured?: boolean;
-  showSync?: boolean;
-  onSyncMessage?: (message: string | null) => void;
+  producerFpicCount?: number;
+  producerAttestationsComplete?: boolean;
+  /** Shared optional audit note (land title + evidence uploads). */
+  auditNote?: string;
+  onSyncMessage?: (message: string | null, tone?: 'success' | 'info' | 'error') => void;
   onSyncComplete?: () => void | Promise<void>;
 };
 
-const KIND_BUTTONS: { kind: PlotEvidenceKind; labelKey: string }[] = [
+const PLOT_KIND_BUTTONS: { kind: PlotEvidenceKind; labelKey: string }[] = [
   { kind: 'tenure_evidence', labelKey: 'documents_add_tenure' },
-  { kind: 'fpic_repository', labelKey: 'documents_add_fpic' },
   { kind: 'protected_area_permit', labelKey: 'documents_add_permit' },
-  { kind: 'labor_evidence', labelKey: 'documents_add_labor' },
 ];
 
-function badgeForKind(kind: PlotEvidenceKind): { labelKey: string; variant: 'info' | 'default' | 'warning' } {
+function badgeForKind(kind: PlotEvidenceKind): { labelKey: string } {
   switch (kind) {
     case 'fpic_repository':
-      return { labelKey: 'documents_badge_fpic', variant: 'info' };
+      return { labelKey: 'documents_badge_fpic' };
     case 'tenure_evidence':
-      return { labelKey: 'documents_badge_tenure', variant: 'default' };
+      return { labelKey: 'documents_badge_tenure' };
     case 'protected_area_permit':
-      return { labelKey: 'documents_badge_permit', variant: 'warning' };
+      return { labelKey: 'documents_badge_permit' };
     default:
-      return { labelKey: 'documents_badge_labor', variant: 'default' };
+      return { labelKey: 'documents_badge_labor' };
   }
 }
 
@@ -81,19 +83,21 @@ export function PlotEvidencePanel({
   overlapFlags,
   serverPlotId,
   showFpicStructured = false,
-  showSync = false,
+  producerFpicCount = 0,
+  producerAttestationsComplete = false,
+  auditNote = '',
   onSyncMessage,
   onSyncComplete,
 }: PlotEvidencePanelProps) {
   const { t } = useLanguage();
   const [fpicSignerName, setFpicSignerName] = useState('');
-  const [evidenceReason, setEvidenceReason] = useState('');
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const applyEvidenceUploadOutcome = (outcome: AutoUploadOutcome, itemCount: number, showAlert = false) => {
     let message: string;
+    let tone: 'success' | 'info' | 'error' = 'info';
     switch (outcome.status) {
       case 'uploaded':
+        tone = 'success';
         message =
           outcome.uploadedCount > 0
             ? t('plot_documents_auto_upload_ok', { n: outcome.uploadedCount })
@@ -111,8 +115,7 @@ export function PlotEvidencePanel({
       default:
         return;
     }
-    setSyncMessage(message);
-    onSyncMessage?.(message);
+    onSyncMessage?.(message, tone);
     if (showAlert) {
       Alert.alert(t('evidence_sync_title'), message);
     }
@@ -126,7 +129,7 @@ export function PlotEvidencePanel({
         serverPlotId: serverPlotId ?? null,
         farmerId,
         items,
-        customReason: evidenceReason,
+        customReason: auditNote,
     });
     applyEvidenceUploadOutcome(outcome, items.length, showAlert);
     if (outcome.status === 'uploaded') {
@@ -140,12 +143,13 @@ export function PlotEvidencePanel({
       tenure: byKind('tenure_evidence'),
       fpic: byKind('fpic_repository'),
       permit: byKind('protected_area_permit'),
-      labor: byKind('labor_evidence'),
     };
   }, [evidence]);
 
   const needsFpic = overlapFlags?.indigenous === true;
   const needsPermit = overlapFlags?.sinaph === true;
+  const fpicSatisfied =
+    producerFpicCount > 0 || counts.fpic > 0 || producerAttestationsComplete;
 
   const refresh = async () => {
     const updated = await loadEvidenceForPlot(scopeId);
@@ -218,22 +222,28 @@ export function PlotEvidencePanel({
   ) => {
     const count = evidence.filter((i) => i.kind === kind).length;
     const badge = badgeForKind(kind);
-    const addKey = KIND_BUTTONS.find((b) => b.kind === kind)?.labelKey ?? 'documents_add_tenure';
+    const addKey = PLOT_KIND_BUTTONS.find((b) => b.kind === kind)?.labelKey ?? 'documents_add_tenure';
     return (
-      <Card key={kind} variant="elevated" style={styles.card} testID={kind === 'tenure_evidence' ? 'plot-tenure-evidence-section' : undefined}>
-        <View style={styles.rowHeader}>
-          <ThemedText type="defaultSemiBold">{t(titleKey)}</ThemedText>
-          <Badge variant={count > 0 ? 'info' : required ? 'warning' : 'default'} size="sm">
-            {count}
-          </Badge>
+      <Card key={kind} variant="outlined" style={styles.sectionCard} testID={kind === 'tenure_evidence' ? 'plot-tenure-evidence-section' : undefined}>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="defaultSemiBold" style={styles.sectionTitle} numberOfLines={2}>
+            {t(titleKey)}
+          </ThemedText>
+          <View style={styles.countBadgeWrap}>
+            <Badge variant="default" size="sm">
+              {count}
+            </Badge>
+          </View>
         </View>
-        <ThemedText type="caption">{t(bodyKey)}</ThemedText>
+        <ThemedText type="caption" style={styles.sectionBody}>
+          {t(bodyKey)}
+        </ThemedText>
         {required && count === 0 ? (
           <ThemedText type="caption" style={styles.requiredHint}>
             {t('evidence_required_for_plot')}
           </ThemedText>
         ) : null}
-        <View style={{ gap: 10, marginTop: 10 }}>
+        <View style={styles.sectionActions}>
           <Button
             title={t(addKey)}
             variant="secondary"
@@ -250,12 +260,16 @@ export function PlotEvidencePanel({
                 {isImageEvidence(d.uri, d.mimeType) ? (
                   <Image source={{ uri: d.uri }} style={styles.evidenceThumb} />
                 ) : null}
-                <View style={{ flex: 1 }}>
-                  <View style={styles.rowHeader}>
-                    <ThemedText type="defaultSemiBold">{d.label ?? t(fallbackLabel(kind))}</ThemedText>
-                    <Badge variant={badge.variant} size="sm">
-                      {t(badge.labelKey)}
-                    </Badge>
+                <View style={styles.evidenceTextCol}>
+                  <View style={styles.itemHeader}>
+                    <ThemedText type="defaultSemiBold" style={styles.itemTitle} numberOfLines={2}>
+                      {d.label ?? t(fallbackLabel(kind))}
+                    </ThemedText>
+                    <View style={styles.itemBadgeWrap}>
+                      <Badge variant="default" size="sm">
+                        {t(badge.labelKey)}
+                      </Badge>
+                    </View>
                   </View>
                   <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
                 </View>
@@ -268,44 +282,46 @@ export function PlotEvidencePanel({
 
   return (
     <View style={styles.wrap}>
-      {showSync ? (
-        <Card variant="outlined" style={styles.autoUploadCard}>
-          <ThemedText type="defaultSemiBold">{t('evidence_sync_title')}</ThemedText>
-          <ThemedText type="caption" style={{ marginTop: 4 }}>
-            {t('plot_documents_auto_upload_banner')}
-          </ThemedText>
-        </Card>
-      ) : null}
-
-      {(needsFpic && counts.fpic === 0) || (needsPermit && counts.permit === 0) || counts.tenure === 0 ? (
+      {(needsFpic && !fpicSatisfied) || (needsPermit && counts.permit === 0) || counts.tenure === 0 ? (
         <Card variant="outlined" style={styles.promptCard}>
           <ThemedText type="defaultSemiBold">{t('evidence_upload_prompt_title')}</ThemedText>
-          <ThemedText type="caption" style={{ marginTop: 6 }}>
+          <ThemedText type="caption" style={styles.promptBody}>
             {t('evidence_upload_prompt_body')}
           </ThemedText>
         </Card>
       ) : null}
 
+      {needsFpic && producerFpicCount === 0 && !producerAttestationsComplete ? (
+        <Card variant="outlined" style={styles.sectionCard}>
+          <ThemedText type="defaultSemiBold">{t('documents_fpic_section')}</ThemedText>
+          <ThemedText type="caption" style={styles.sectionBody}>
+            {t('plot_documents_producer_fpic_hint')}
+          </ThemedText>
+          <View style={{ marginTop: 10 }}>
+            <Button
+              title={t('plot_documents_open_documents')}
+              variant="secondary"
+              onPress={() => router.push('/documents')}
+            />
+          </View>
+        </Card>
+      ) : null}
+
       {renderSection('tenure_evidence', 'documents_tenure_section', 'documents_tenure_body', true)}
-      {renderSection(
-        'fpic_repository',
-        'documents_fpic_section',
-        'documents_fpic_body',
-        needsFpic,
-      )}
       {renderSection(
         'protected_area_permit',
         'documents_permits_section',
         'documents_permits_body',
         needsPermit,
       )}
-      {renderSection('labor_evidence', 'documents_labor_section', 'documents_labor_body')}
 
       {showFpicStructured ? (
-        <Card variant="elevated" style={styles.card}>
+        <Card variant="outlined" style={styles.sectionCard}>
           <ThemedText type="defaultSemiBold">{t('evidence_fpic_structured_title')}</ThemedText>
-          <ThemedText type="caption">{t('evidence_fpic_structured_body')}</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
+          <ThemedText type="caption" style={styles.sectionBody}>
+            {t('evidence_fpic_structured_body')}
+          </ThemedText>
+          <View style={styles.sectionActions}>
             <Button
               title={t('evidence_fpic_add_minutes')}
               variant="secondary"
@@ -338,58 +354,78 @@ export function PlotEvidencePanel({
           </View>
         </Card>
       ) : null}
-
-      {showSync ? (
-        <Card variant="outlined" style={styles.card}>
-          <Input
-            label={t('plot_documents_legality_reason_optional_label')}
-            placeholder={t('evidence_sync_reason_ph')}
-            value={evidenceReason}
-            onChangeText={setEvidenceReason}
-            containerStyle={{ marginTop: 4 }}
-          />
-          {syncMessage ? (
-            <ThemedText type="caption" style={{ marginTop: 8 }}>
-              {syncMessage}
-            </ThemedText>
-          ) : null}
-        </Card>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
-  card: { marginTop: 2 },
-  autoUploadCard: {
-    marginTop: 2,
-    padding: 12,
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+  sectionCard: {
+    gap: 0,
   },
-  rowCard: { padding: 12, marginTop: 8 },
-  rowHeader: {
+  sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 10,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  countBadgeWrap: {
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  sectionBody: {
+    marginBottom: 4,
+  },
+  sectionActions: {
+    gap: 10,
+    marginTop: 10,
+  },
+  rowCard: { padding: 12, marginTop: 8 },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
+  itemTitle: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  itemBadgeWrap: {
+    flexShrink: 0,
+    maxWidth: '42%',
   },
   evidenceRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
+  },
+  evidenceTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   evidenceThumb: {
     width: 56,
     height: 56,
     borderRadius: 10,
     backgroundColor: '#eee',
+    flexShrink: 0,
   },
   promptCard: {
     padding: 12,
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
+    borderLeftWidth: 3,
+    borderLeftColor: '#D97706',
+  },
+  promptBody: {
+    marginTop: 6,
   },
   requiredHint: { marginTop: 6, color: '#B45309' },
 });

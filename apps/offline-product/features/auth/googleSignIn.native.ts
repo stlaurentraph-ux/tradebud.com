@@ -61,6 +61,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
   );
 
   const idToken = tokenResult.idToken;
+  const accessToken = tokenResult.accessToken;
   if (!idToken) {
     throw new Error('sign_in_oauth_failed');
   }
@@ -69,6 +70,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: idToken,
+    ...(accessToken ? { access_token: accessToken } : {}),
     nonce: rawNonce,
   });
 

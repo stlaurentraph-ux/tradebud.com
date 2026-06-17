@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -25,8 +26,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import {
   clearPersistedSyncAuth,
+  getAuthUiGeneration,
   hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
+  isSyncAuthSignedOutOnDevice,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
 import { getAuthCredentials } from '@/features/api/postPlot';
@@ -37,6 +40,9 @@ import { authSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
+import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
+import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
+import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { alignFarmerWithAuthUser } from '@/features/auth/alignFarmerWithAuthUser';
 import {
   bootstrapFarmerProfile,
@@ -57,6 +63,7 @@ import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { getSetting, loadPendingSyncActions, setSetting } from '@/features/state/persistence';
+import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
 
@@ -73,6 +80,8 @@ type SignInSheetContextValue = {
   closeSignIn: () => void;
   isSignedIn: boolean;
   refreshAuth: () => Promise<void>;
+  /** Clear sync credentials on this device and update global auth state. */
+  signOutOnDevice: () => Promise<void>;
   /** Ask farmer to consent before cloud backup; runs callback after confirm or if already consented. */
   promptBackupConsent: (onConfirmed?: () => void | Promise<void>) => Promise<void>;
 };
@@ -204,27 +213,73 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshAuth = useCallback(async () => {
+    const generationAtStart = getAuthUiGeneration();
     await hydrateSyncAuthFromSettings();
-    const { email: savedEmail } = getAuthCredentials();
-    if (savedEmail) setEmail(savedEmail);
-    if (!hasSyncAuthSession()) {
-      setIsSignedIn(false);
-      return;
-    }
-    const res = await testBackendLogin();
-    if (!res.ok) {
-      await clearPersistedSyncAuth();
+    if (generationAtStart !== getAuthUiGeneration()) {
       setIsSignedIn(false);
       setEmail('');
       return;
     }
+    if (!hasSyncAuthSession()) {
+      setIsSignedIn(false);
+      setEmail('');
+      return;
+    }
+    const { email: savedEmail } = getAuthCredentials();
+    if (savedEmail) setEmail(savedEmail);
     setIsSignedIn(true);
+    const res = await testBackendLogin();
+    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+      setIsSignedIn(false);
+      setEmail('');
+      return;
+    }
+    if (!res.ok) {
+      return;
+    }
     try {
       await syncLocalFarmerFromAuth();
     } catch {
       // Auth session is valid; local farmer alignment is best-effort on refresh.
     }
+    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+      setIsSignedIn(false);
+      setEmail('');
+    }
   }, [syncLocalFarmerFromAuth]);
+
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', (event) => {
+      if (!isOAuthCallbackUrl(event.url)) return;
+      if (deliverOAuthCallbackUrl(event.url)) return;
+
+      void (async () => {
+        try {
+          if (await isSyncAuthSignedOutOnDevice()) {
+            return;
+          }
+          const session = await sessionFromOAuthCallbackUrl(event.url);
+          const result = await completeOAuthFarmerSession({
+            session,
+            farmerId: farmer?.id,
+            localPlots: plots,
+          });
+          if (!result.ok || !hasSyncAuthSession()) return;
+          trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
+          const { email: signedInEmail } = getAuthCredentials();
+          if (signedInEmail) setEmail(signedInEmail);
+          setIsSignedIn(true);
+          void syncLocalFarmerFromAuth();
+          if (result.apiUnreachable) {
+            Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
+          }
+        } catch {
+          // Deep-link handler is best-effort when no in-app OAuth waiter is active.
+        }
+      })();
+    });
+    return () => sub.remove();
+  }, [farmer?.id, plots, syncLocalFarmerFromAuth, t]);
 
   useEffect(() => {
     void refreshAuth().finally(() => setAuthReady(true));
@@ -264,6 +319,18 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     onSuccessRef.current = undefined;
   }, []);
 
+  const signOutOnDevice = useCallback(async () => {
+    setIsSignedIn(false);
+    setEmail('');
+    setPassword('');
+    setHint(null);
+    setVisible(false);
+    setEmailMode(false);
+    onSuccessRef.current = undefined;
+    await unregisterFarmerPushToken().catch(() => undefined);
+    await clearPersistedSyncAuth();
+  }, []);
+
   const openSignIn = useCallback(
     (options?: OpenSignInOptions) => {
       setVariant(options?.variant ?? 'general');
@@ -292,12 +359,18 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         : 'sign_in_oauth_sub';
 
   const finishSuccessfulSignIn = async () => {
+    if (!hasSyncAuthSession()) {
+      setIsSignedIn(false);
+      return;
+    }
     setIsSignedIn(true);
     setPassword('');
-    await syncLocalFarmerFromAuth();
-    const onSuccess = onSuccessRef.current;
     closeSignIn();
-    if (onSuccess) await onSuccess();
+    void syncLocalFarmerFromAuth();
+    const onSuccess = onSuccessRef.current;
+    if (onSuccess) {
+      void Promise.resolve(onSuccess());
+    }
     void offerBackupAfterAuth();
   };
 
@@ -313,6 +386,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       });
       if (!result.ok) {
         setIsSignedIn(false);
+        if (__DEV__ && result.message && !result.message.startsWith('sign_in_')) {
+          Alert.alert(t('sign_in'), result.message);
+        }
         if (
           result.message === 'sign_in_oauth_needs_signup' ||
           result.message === 'sign_in_oauth_failed' ||
@@ -346,7 +422,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider, source: 'in_app' });
       const { email: signedInEmail } = getAuthCredentials();
       if (signedInEmail) setEmail(signedInEmail);
+      setOauthLoading(null);
       await finishSuccessfulSignIn();
+      if (result.apiUnreachable) {
+        Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
+      }
     } catch (e) {
       const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
       setHint(message);
@@ -409,6 +489,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         closeSignIn,
         isSignedIn,
         refreshAuth,
+        signOutOnDevice,
         promptBackupConsent,
       }}
     >
@@ -433,10 +514,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots={plots}
         onClose={() => setCreateWizardVisible(false)}
         onSuccess={() => {
-          void refreshAuth().then(async () => {
-            await syncLocalFarmerFromAuth();
-            showSignUpSuccess();
-          });
+          setCreateWizardVisible(false);
+          showSignUpSuccess();
+          void refreshAuth()
+            .then(() => syncLocalFarmerFromAuth())
+            .catch(() => undefined);
         }}
         onSignInInstead={() => openSignIn({ variant: 'general' })}
       />

@@ -69,6 +69,10 @@ export function computePlotReadinessChecklist(params: {
   groundTruthPhotoCount?: number;
   titlePhotoCount: number;
   evidenceKinds: readonly string[];
+  /** Farmer-level FPIC / labor uploads (Documents from Home). */
+  producerEvidenceKinds?: readonly string[];
+  /** True when farmer completed FPIC + labor attestations on Documents. */
+  producerAttestationsComplete?: boolean;
   /** True when a local plot is linked to a server row (name/area match or known plot id). */
   isSyncedToServer: boolean;
   backendFlags?: BackendOverlapFlags | null;
@@ -91,7 +95,11 @@ export function computePlotReadinessChecklist(params: {
   const landOk = hasLandDocuments && tenureParseGate !== 'blocked';
   const needsFpic = flags?.indigenous_overlap === true;
   const needsPermit = flags?.sinaph_overlap === true;
-  const fpicOk = evidenceHasKind(params.evidenceKinds, 'fpic_repository');
+  const producerKinds = params.producerEvidenceKinds ?? [];
+  const fpicOk =
+    evidenceHasKind(params.evidenceKinds, 'fpic_repository') ||
+    evidenceHasKind(producerKinds, 'fpic_repository') ||
+    params.producerAttestationsComplete === true;
   const permitOk = evidenceHasKind(params.evidenceKinds, 'protected_area_permit');
   const syncOk = params.isSyncedToServer;
   const done =

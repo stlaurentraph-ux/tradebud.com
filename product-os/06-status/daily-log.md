@@ -1,3 +1,13 @@
+### 2026-06-16 (offline: documents scope, OAuth, sign-out, navigation)
+- **Producer vs plot documents** — FPIC/labor/declarations on Home → `/documents` once per farmer; tenure/permits on plot Documents tab; `evidenceScope.ts` + checklist counts producer evidence.
+- **Google OAuth UX** — `completeOAuthFarmerSession` returns after credential save; post-connect tasks backgrounded; OAuth spinner cleared earlier.
+- **Sign-out hardening** — persisted `signedOut` latch, `authUiGeneration` aborts stale `refreshAuth`, OAuth token rotation cannot re-persist after sign-out, UI clears before async wipe.
+- **Navigation** — Home Documents always routes `/documents`; plot link passes `from=documents` so back returns to producer Documents hub.
+- **UI** — `ProducerAttestationsCard` elevated-card style + header flex fix for Incomplete badge; LAN Metro/OAuth dev scripts.
+- **Dashboard** — supplier organization directory list + processing facility subtype labels on contacts.
+- Verification: `syncAuthSession` + `plotChecklist` unit tests green.
+- Next: device QA sign-out soak + documents round-trip on physical iPhone.
+
 ### 2026-06-17 (exporter: align /farmers with supplier directory)
 - Exporters hitting `/farmers` or `/farmers/new` redirect to `/contacts` and `/contacts/add?mode=csv`.
 - Suppliers empty state: "No suppliers yet" + primary **Import supplier list** CTA; producer detail breadcrumbs link back to `/contacts`.

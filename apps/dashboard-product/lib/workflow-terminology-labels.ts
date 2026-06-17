@@ -1393,6 +1393,62 @@ export function getContactColleaguesCopy(
   return wf(keyMap[field], fallbackMap[field], t);
 }
 
+export function getContactsOrgCopy(
+  field:
+    | 'column_person'
+    | 'column_email'
+    | 'column_status'
+    | 'column_consent'
+    | 'column_update_status'
+    | 'people_count'
+    | 'unassigned_title'
+    | 'unassigned_description'
+    | 'empty'
+    | 'page_title'
+    | 'page_subtitle'
+    | 'not_found'
+    | 'back_to_directory',
+  t?: TranslateFn,
+  values?: { count?: number },
+): string {
+  const keyMap = {
+    column_person: 'workflow.contacts.org.column.person',
+    column_email: 'workflow.contacts.org.column.email',
+    column_status: 'workflow.contacts.org.column.status',
+    column_consent: 'workflow.contacts.org.column.consent',
+    column_update_status: 'workflow.contacts.org.column.update_status',
+    people_count: 'workflow.contacts.org.people_count',
+    unassigned_title: 'workflow.contacts.org.unassigned_title',
+    unassigned_description: 'workflow.contacts.org.unassigned_description',
+    empty: 'workflow.contacts.org.empty',
+    page_title: 'workflow.contacts.org.page_title',
+    page_subtitle: 'workflow.contacts.org.page_subtitle',
+    not_found: 'workflow.contacts.org.not_found',
+    back_to_directory: 'workflow.contacts.org.back_to_directory',
+  } as const;
+  const fallbackMap = {
+    column_person: 'Contact person',
+    column_email: 'Email',
+    column_status: 'Status',
+    column_consent: 'Consent',
+    column_update_status: 'Update status',
+    people_count: '{count} contact people',
+    unassigned_title: 'Contacts without an organization',
+    unassigned_description:
+      'These supplier contacts are not linked to an organization yet. Edit a contact to assign one.',
+    empty: 'No supplier organizations match your filters.',
+    page_title: 'Supplier organization',
+    page_subtitle: 'Manage contact people and activity details for this supplier.',
+    not_found: 'Supplier organization not found in your directory.',
+    back_to_directory: 'Back to supplier directory',
+  } as const;
+  const template = wf(keyMap[field], fallbackMap[field], t);
+  if (field === 'people_count' && values?.count !== undefined) {
+    return template.replace('{count}', String(values.count));
+  }
+  return template;
+}
+
 const PRODUCER_DETAIL_COPY: Record<string, { key: string; fallback: string; cooperativeFallback?: string }> = {
   section_info: {
     key: 'workflow.producers.detail.section.info',
@@ -9165,7 +9221,7 @@ function resolveContactsAudience(
 }
 
 export function getContactsStatLabel(
-  stat: 'total' | 'active' | 'blocked',
+  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people',
   roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
@@ -9177,6 +9233,8 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'workflow.contacts.stat.total_exporter'
           : 'workflow.contacts.stat.total',
+    organizations: 'workflow.contacts.stat.organizations_exporter',
+    people: 'workflow.contacts.stat.people_exporter',
     active:
       audience === 'cooperative'
         ? 'workflow.contacts.stat.active_cooperative'
@@ -9197,6 +9255,8 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'Total Suppliers'
           : 'Total Contacts',
+    organizations: 'Supplier organizations',
+    people: 'Contact people',
     active:
       audience === 'cooperative'
         ? 'Active Membership'
@@ -9274,7 +9334,7 @@ export function getContactsListTitle(
     return wf('workflow.contacts.list_title_cooperative', 'Member directory', t);
   }
   if (isExporter) {
-    return wf('workflow.contacts.list_title_exporter', 'Supplier directory', t);
+    return wf('workflow.contacts.list_title_exporter', 'Supplier organizations', t);
   }
   return wf('workflow.contacts.list_title', 'Contact list', t);
 }

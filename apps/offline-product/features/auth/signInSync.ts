@@ -14,7 +14,7 @@ import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oau
 import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 export type SignInSyncResult =
-  | { ok: true; missingName?: boolean }
+  | { ok: true; missingName?: boolean; apiUnreachable?: boolean }
   | { ok: false; message: string };
 
 export { clearPersistedSyncAuth };
@@ -59,6 +59,14 @@ export async function signInAndSyncPlots(params: {
   }
   const res = await testBackendLogin();
   if (!res.ok) {
+    const unreachable =
+      res.message.toLowerCase().includes('network') ||
+      res.message.toLowerCase().includes('localhost') ||
+      res.message.toLowerCase().includes('failed to fetch') ||
+      res.message.toLowerCase().includes('tracebud api returned');
+    if (unreachable) {
+      return { ok: true, apiUnreachable: true };
+    }
     await clearPersistedSyncAuth();
     const code = normalizeSignInErrorCode(res.message);
     return { ok: false, message: code === res.message ? res.message : code };
