@@ -16,7 +16,7 @@ describe('CsvImportWizard completion navigation', () => {
     const onComplete = vi.fn().mockResolvedValue({
       success: 4,
       failed: 3,
-      errors: [{ row: 2, field: 'general', message: 'Duplicate email' }],
+      errors: [{ row: 2, field: 'general', message: 'Jane Doe · jane@test.com: Duplicate email' }],
     });
     const user = userEvent.setup();
 
@@ -47,7 +47,7 @@ describe('CsvImportWizard completion navigation', () => {
       expect(screen.getByText('Import Complete')).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Row 2: Duplicate email/i)).toBeInTheDocument();
+    expect(screen.getByText(/Jane Doe · jane@test.com: Duplicate email/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /View directory/i }));
     expect(onFinished).toHaveBeenCalledTimes(1);

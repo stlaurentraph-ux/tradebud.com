@@ -38,7 +38,7 @@ export const metadata = {
   icons: {
     icon: [
       { url: '/favicon-32x32-v6.png', sizes: '32x32', type: 'image/png' },
-      { url: '/tracebud-logo-v6.png', type: 'image/png' },
+      { url: '/images/tracebud-logo.png', type: 'image/png' },
     ],
     apple: '/favicon-32x32-v6.png',
   },

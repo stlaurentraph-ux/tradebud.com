@@ -15,9 +15,18 @@ export type ContactType =
   | 'exporter'
   | 'cooperative'
   | 'farmer'
-  | 'washing_station'
   | 'processing_facility'
   | 'trader'
+  | 'other';
+
+/** @deprecated Legacy CSV/API value — coerced to processing_facility + washing_station */
+export type LegacyContactTypeInput = ContactType | 'washing_station';
+
+export type ProcessingFacilitySubtype =
+  | 'washing_station'
+  | 'dry_mill'
+  | 'hulling_sorting'
+  | 'transformation_plant'
   | 'other';
 
 export interface ContactRecord {
@@ -28,6 +37,7 @@ export interface ContactRecord {
   phone: string | null;
   organization: string | null;
   contact_type: ContactType;
+  processing_subtype: ProcessingFacilitySubtype | null;
   status: ContactStatus;
   country: string | null;
   tags: string[];
@@ -46,19 +56,109 @@ export class ContactsService {
   ) {}
 
   private mapDatabaseError(error: unknown): never {
-    const pgError = error as { code?: string; message?: string } | null;
+    const pgError = error as { code?: string; message?: string; constraint?: string } | null;
     const message = pgError?.message ?? '';
+
     if (pgError?.code === '42P01' && message.includes('crm_contacts')) {
       throw new BadRequestException(
         'Contacts tables are not available. Apply TB-V16-024 migration first.',
       );
     }
-    throw new InternalServerErrorException('Failed to process contacts request.');
+    if (pgError?.code === '23514') {
+      if (
+        message.includes('contact_type') ||
+        message.includes('processing_subtype') ||
+        pgError.constraint?.includes('contact_type') ||
+        pgError.constraint?.includes('processing_subtype')
+      ) {
+        throw new BadRequestException(
+          'Activity type is not supported by the database. Apply migrations TB-V16-041 and TB-V16-047 (processing facility subtypes), then retry the import.',
+        );
+      }
+      throw new BadRequestException(`Contact data failed validation: ${message}`);
+    }
+    if (pgError?.code === '23505') {
+      throw new BadRequestException('A contact with this email already exists in your directory.');
+    }
+
+    throw new InternalServerErrorException(
+      message ? `Failed to save contact: ${message}` : 'Failed to process contacts request.',
+    );
+  }
+
+  private assertContactType(contactType?: LegacyContactTypeInput): ContactType {
+    const allowed: ContactType[] = [
+      'exporter',
+      'cooperative',
+      'farmer',
+      'processing_facility',
+      'trader',
+      'other',
+    ];
+    if (!contactType) {
+      return 'other';
+    }
+    if (contactType === 'washing_station') {
+      return 'processing_facility';
+    }
+    if (!allowed.includes(contactType)) {
+      throw new BadRequestException(
+        `Unsupported activity type "${contactType}". Allowed values: ${allowed.join(', ')}.`,
+      );
+    }
+    return contactType;
+  }
+
+  private assertProcessingSubtype(
+    subtype?: ProcessingFacilitySubtype | null,
+  ): ProcessingFacilitySubtype | null {
+    if (!subtype) {
+      return null;
+    }
+    const allowed: ProcessingFacilitySubtype[] = [
+      'washing_station',
+      'dry_mill',
+      'hulling_sorting',
+      'transformation_plant',
+      'other',
+    ];
+    if (!allowed.includes(subtype)) {
+      throw new BadRequestException(
+        `Unsupported processing subtype "${subtype}". Allowed values: ${allowed.join(', ')}.`,
+      );
+    }
+    return subtype;
+  }
+
+  private resolveContactClassification(
+    contactType?: LegacyContactTypeInput,
+    processingSubtype?: ProcessingFacilitySubtype | null,
+  ): { contact_type: ContactType; processing_subtype: ProcessingFacilitySubtype | null } {
+    if (contactType === 'washing_station') {
+      return {
+        contact_type: 'processing_facility',
+        processing_subtype: this.assertProcessingSubtype(processingSubtype) ?? 'washing_station',
+      };
+    }
+    const resolvedType = this.assertContactType(contactType);
+    if (resolvedType === 'processing_facility') {
+      return {
+        contact_type: resolvedType,
+        processing_subtype: this.assertProcessingSubtype(processingSubtype),
+      };
+    }
+    if (processingSubtype) {
+      throw new BadRequestException(
+        'processing_subtype is only valid when contact_type is processing_facility.',
+      );
+    }
+    return { contact_type: resolvedType, processing_subtype: null };
   }
 
   private mapRow(row: ContactRecord): ContactRecord {
     return {
       ...row,
+      processing_subtype: row.processing_subtype ?? null,
       farmer_profile_id: row.farmer_profile_id ?? null,
       last_activity_at: row.last_activity_at ? new Date(row.last_activity_at).toISOString() : null,
       created_at: new Date(row.created_at).toISOString(),
@@ -155,6 +255,25 @@ export class ContactsService {
     }
   }
 
+  async getById(tenantId: string, contactId: string): Promise<ContactRecord> {
+    try {
+      const result = await this.pool.query<ContactRecord>(
+        `SELECT * FROM crm_contacts WHERE tenant_id = $1 AND id = $2 LIMIT 1`,
+        [tenantId, contactId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new NotFoundException('Contact not found.');
+      }
+      return this.ensureFarmerProfileLink(tenantId, this.mapRow(row));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
   async create(
     tenantId: string,
     input: {
@@ -162,7 +281,8 @@ export class ContactsService {
       email?: string;
       phone?: string | null;
       organization?: string | null;
-      contact_type?: ContactType;
+      contact_type?: LegacyContactTypeInput;
+      processing_subtype?: ProcessingFacilitySubtype | null;
       country?: string | null;
       tags?: string[];
       consent_status?: 'unknown' | 'granted' | 'revoked';
@@ -196,18 +316,24 @@ export class ContactsService {
         await this.subscriptionBandService.assertCanAddContacts(tenantId, 1);
       }
 
+      const classification = this.resolveContactClassification(
+        input.contact_type,
+        input.processing_subtype,
+      );
+
       const result = await this.pool.query<ContactRecord>(
         `
           INSERT INTO crm_contacts (
-            id, tenant_id, full_name, email, phone, organization, contact_type, status, country, tags, consent_status
+            id, tenant_id, full_name, email, phone, organization, contact_type, processing_subtype, status, country, tags, consent_status
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, 'new', $8, $9::text[], $10)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', $9, $10::text[], $11)
           ON CONFLICT (tenant_id, email)
           DO UPDATE SET
             full_name = EXCLUDED.full_name,
             phone = EXCLUDED.phone,
             organization = EXCLUDED.organization,
             contact_type = EXCLUDED.contact_type,
+            processing_subtype = EXCLUDED.processing_subtype,
             country = EXCLUDED.country,
             tags = EXCLUDED.tags,
             consent_status = EXCLUDED.consent_status,
@@ -221,7 +347,8 @@ export class ContactsService {
           email,
           input.phone?.trim() || null,
           input.organization?.trim() || null,
-          input.contact_type ?? 'other',
+          classification.contact_type,
+          classification.processing_subtype,
           input.country?.trim().toUpperCase() || null,
           (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
           input.consent_status ?? 'unknown',
@@ -237,6 +364,143 @@ export class ContactsService {
       });
       return contact;
     } catch (error) {
+      this.mapDatabaseError(error);
+    }
+  }
+
+  async update(
+    tenantId: string,
+    contactId: string,
+    input: {
+      full_name?: string;
+      email?: string;
+      phone?: string | null;
+      organization?: string | null;
+      contact_type?: LegacyContactTypeInput;
+      processing_subtype?: ProcessingFacilitySubtype | null;
+      country?: string | null;
+      tags?: string[];
+      consent_status?: 'unknown' | 'granted' | 'revoked';
+    },
+  ): Promise<ContactRecord> {
+    try {
+      const currentRes = await this.pool.query<ContactRecord>(
+        `SELECT * FROM crm_contacts WHERE tenant_id = $1 AND id = $2 LIMIT 1`,
+        [tenantId, contactId],
+      );
+      const current = currentRes.rows[0];
+      if (!current) {
+        throw new NotFoundException('Contact not found.');
+      }
+
+      const fullName = input.full_name !== undefined ? input.full_name.trim() : current.full_name;
+      const email =
+        input.email !== undefined ? input.email.trim().toLowerCase() : current.email.toLowerCase();
+      if (!fullName) {
+        throw new BadRequestException('full_name cannot be empty.');
+      }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('Invalid email format');
+      }
+
+      if (email !== current.email.toLowerCase()) {
+        const duplicateRes = await this.pool.query<{ id: string }>(
+          `SELECT id FROM crm_contacts WHERE tenant_id = $1 AND lower(email) = $2 AND id <> $3 LIMIT 1`,
+          [tenantId, email, contactId],
+        );
+        if (duplicateRes.rows[0]) {
+          throw new BadRequestException('A contact with this email already exists in your directory.');
+        }
+      }
+
+      const contactTypeInput =
+        input.contact_type !== undefined ? input.contact_type : current.contact_type;
+      const processingSubtypeInput =
+        input.processing_subtype !== undefined
+          ? input.processing_subtype
+          : current.processing_subtype;
+      const classification = this.resolveContactClassification(contactTypeInput, processingSubtypeInput);
+
+      const phone =
+        input.phone !== undefined ? input.phone?.trim() || null : current.phone;
+      const organization =
+        input.organization !== undefined ? input.organization?.trim() || null : current.organization;
+      const country =
+        input.country !== undefined
+          ? input.country?.trim().toUpperCase() || null
+          : current.country;
+      const tags =
+        input.tags !== undefined
+          ? input.tags.map((tag) => tag.trim()).filter(Boolean)
+          : current.tags;
+      const consentStatus = input.consent_status ?? current.consent_status;
+
+      const result = await this.pool.query<ContactRecord>(
+        `
+          UPDATE crm_contacts
+          SET
+            full_name = $1,
+            email = $2,
+            phone = $3,
+            organization = $4,
+            contact_type = $5,
+            processing_subtype = $6,
+            country = $7,
+            tags = $8::text[],
+            consent_status = $9,
+            updated_at = NOW()
+          WHERE tenant_id = $10 AND id = $11
+          RETURNING *
+        `,
+        [
+          fullName,
+          email,
+          phone,
+          organization,
+          classification.contact_type,
+          classification.processing_subtype,
+          country,
+          tags,
+          consentStatus,
+          tenantId,
+          contactId,
+        ],
+      );
+      let updated = this.mapRow(result.rows[0]);
+      updated = await this.ensureFarmerProfileLink(tenantId, updated);
+      await this.emitAudit('contact_updated', {
+        tenantId,
+        contactId: updated.id,
+        email: updated.email,
+      });
+      return updated;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
+  async remove(tenantId: string, contactId: string): Promise<{ id: string; deleted: true }> {
+    try {
+      const result = await this.pool.query<{ id: string }>(
+        `DELETE FROM crm_contacts WHERE tenant_id = $1 AND id = $2 RETURNING id`,
+        [tenantId, contactId],
+      );
+      const removed = result.rows[0];
+      if (!removed) {
+        throw new NotFoundException('Contact not found.');
+      }
+      await this.emitAudit('contact_deleted', {
+        tenantId,
+        contactId: removed.id,
+      });
+      return { id: removed.id, deleted: true };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.mapDatabaseError(error);
     }
   }

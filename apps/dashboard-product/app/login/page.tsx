@@ -2,8 +2,8 @@
 
 import { useContext, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import { AuthBrandHeader } from '@/components/brand/auth-brand-header';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Button } from '@/components/ui/button';
@@ -96,17 +96,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center">
-          <Image
-            src="/tracebud-logo-v6.png"
-            alt="Tracebud"
-            width={64}
-            height={64}
-            className="rounded-xl mb-4"
-          />
-          <h1 className="text-2xl font-bold text-[#064E3B]">Tracebud</h1>
-          <p className="text-sm text-muted-foreground">{getAuthCopy('eudr_platform_tagline', t)}</p>
-        </div>
+        <AuthBrandHeader />
 
         <Card className="border-border bg-card">
           <CardHeader className="space-y-1 pb-4">

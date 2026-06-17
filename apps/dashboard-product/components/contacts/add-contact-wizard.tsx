@@ -17,6 +17,7 @@ import { WizardProgress } from '@/components/onboarding/wizard-progress';
 import { LocaleContext } from '@/lib/locale-context';
 import {
   getContactConsentLabel,
+  getContactActivityDisplayLabel,
   getContactTypeLabel,
   getContactsWizardActionLabel,
   getContactsWizardCreateError,
@@ -26,10 +27,12 @@ import {
   getContactsWizardSectionCopy,
   getContactsWizardStepLabel,
   getContactsWizardTagsHint,
+  getProcessingSubtypeLabel,
 } from '@/lib/workflow-terminology-labels';
 import { Check, ArrowLeft, ArrowRight, User, Building2, MapPin, FileText } from 'lucide-react';
 import type { ContactType } from '@/lib/contact-service';
-import type { ContactActivityType } from '@/lib/contact-activity-types';
+import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
+import { listProcessingFacilitySubtypes } from '@/lib/contact-activity-types';
 
 const DEFAULT_CONTACT_TYPE_VALUES: ContactActivityType[] = ['farmer', 'cooperative', 'exporter', 'other'];
 const CONSENT_VALUES = ['unknown', 'granted', 'revoked'] as const;
@@ -39,6 +42,7 @@ interface ContactDraft {
   email: string;
   phone: string;
   contact_type: ContactType;
+  processing_subtype: ProcessingFacilitySubtype | null;
   organization: string;
   job_title: string;
   country: string;
@@ -57,6 +61,12 @@ interface AddContactWizardProps {
   lockedTypeLabel?: string;
   isCooperative?: boolean;
   activityTypes?: ContactActivityType[];
+  prefill?: {
+    organization?: string;
+    contact_type?: ContactType;
+    processing_subtype?: ProcessingFacilitySubtype | null;
+    country?: string;
+  };
 }
 
 export function AddContactWizard({
@@ -67,6 +77,7 @@ export function AddContactWizard({
   lockedTypeLabel = 'Producer',
   isCooperative = false,
   activityTypes,
+  prefill,
 }: AddContactWizardProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
@@ -89,10 +100,11 @@ export function AddContactWizard({
     full_name: '',
     email: '',
     phone: '',
-    contact_type: defaultContactType,
-    organization: '',
+    contact_type: prefill?.contact_type ?? defaultContactType,
+    processing_subtype: prefill?.processing_subtype ?? null,
+    organization: prefill?.organization ?? '',
     job_title: '',
-    country: '',
+    country: prefill?.country ?? '',
     region: '',
     address: '',
     tags: '',
@@ -207,7 +219,13 @@ export function AddContactWizard({
                 ) : (
                   <Select
                     value={draft.contact_type}
-                    onValueChange={(value) => updateDraft('contact_type', value as ContactType)}
+                    onValueChange={(value) => {
+                      const nextType = value as ContactType;
+                      updateDraft('contact_type', nextType);
+                      if (nextType !== 'processing_facility') {
+                        updateDraft('processing_subtype', null);
+                      }
+                    }}
                   >
                     <SelectTrigger id="contact_type">
                       <SelectValue placeholder={getContactsWizardPlaceholder('select_type', t)} />
@@ -222,6 +240,33 @@ export function AddContactWizard({
                   </Select>
                 )}
               </div>
+              {draft.contact_type === 'processing_facility' ? (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="processing_subtype">
+                    {getContactsWizardFieldLabel('processing_subtype', t)}
+                  </Label>
+                  <Select
+                    value={draft.processing_subtype ?? ''}
+                    onValueChange={(value) =>
+                      updateDraft(
+                        'processing_subtype',
+                        value ? (value as ProcessingFacilitySubtype) : null,
+                      )
+                    }
+                  >
+                    <SelectTrigger id="processing_subtype">
+                      <SelectValue placeholder={getContactsWizardPlaceholder('select_subtype', t)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {listProcessingFacilitySubtypes().map((subtype) => (
+                        <SelectItem key={subtype} value={subtype}>
+                          {getProcessingSubtypeLabel(subtype, t)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -396,7 +441,15 @@ export function AddContactWizard({
                 <span className="text-sm font-medium text-muted-foreground">
                   {getContactsWizardFieldLabel('contact_type', t)}
                 </span>
-                <span className="text-sm sm:col-span-2">{getContactTypeLabel(draft.contact_type, t)}</span>
+                <span className="text-sm sm:col-span-2">
+                  {getContactActivityDisplayLabel(
+                    {
+                      contact_type: draft.contact_type,
+                      processing_subtype: draft.processing_subtype,
+                    },
+                    t,
+                  )}
+                </span>
               </div>
               <div className="grid gap-1 p-4 sm:grid-cols-3">
                 <span className="text-sm font-medium text-muted-foreground">

@@ -2,6 +2,7 @@
 
 import { use, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, FileCheck } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
   getBackToProducersLabel,
+  getContactDetailHref,
   getProducerDetailFallbackTitle,
   getProducerLoadingMessage,
   getProducerNotFoundMessage,
@@ -36,6 +38,7 @@ function deriveFpicSigned(contact: ContactRecord): boolean {
 export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
+  const router = useRouter();
   const { user } = useAuth();
   const role = user?.active_role;
   const { id } = use(params);
@@ -51,12 +54,16 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     void listContacts()
       .then(async (contacts) => {
         if (cancelled) return;
-        const match = contacts.find((item) => item.id === id && item.contact_type === 'farmer');
+        const match = contacts.find((item) => item.id === id);
         if (!match) {
           setContact(null);
           setLoadError(getProducerNotFoundMessage(role, t));
           setFarmerProfileId(null);
           setResolveError(null);
+          return;
+        }
+        if (match.contact_type !== 'farmer') {
+          router.replace(getContactDetailHref(id));
           return;
         }
         setContact(match);
@@ -89,7 +96,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [id, role, t]);
+  }, [id, role, router, t]);
 
   const fpicSigned = useMemo(() => (contact ? deriveFpicSigned(contact) : false), [contact]);
   const verified = contact?.status === 'submitted' || contact?.status === 'engaged';

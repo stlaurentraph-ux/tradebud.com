@@ -12,7 +12,11 @@ import { AddContactWizard } from '@/components/contacts/add-contact-wizard';
 import { AddOrganizationWizard } from '@/components/contacts/add-organization-wizard';
 import { CsvImportWizard } from '@/components/contacts/csv-import-wizard';
 import { createContact, type ContactType } from '@/lib/contact-service';
-import { listContactActivityTypesForRole, normalizeContactActivityType } from '@/lib/contact-activity-types';
+import type { ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
+import {
+  listContactActivityTypesForRole,
+  parseContactActivityClassification,
+} from '@/lib/contact-activity-types';
 import {
   getContactsAddBreadcrumbLabel,
   getContactsAddCardCopy,
@@ -50,6 +54,7 @@ interface ContactDraft {
   email: string;
   phone: string;
   contact_type: ContactType;
+  processing_subtype: ProcessingFacilitySubtype | null;
   organization: string;
   job_title: string;
   country: string;
@@ -108,16 +113,32 @@ export default function AddContactPage() {
     const requestedMode = searchParams.get('mode');
     if (requestedMode && MODE_FROM_QUERY[requestedMode]) {
       setMode(MODE_FROM_QUERY[requestedMode]);
+      return;
+    }
+    if (searchParams.get('organization')) {
+      setMode('contact');
     }
   }, [searchParams]);
 
   const contactWizardDefaults = useMemo(() => {
+    const organization = searchParams.get('organization') ?? undefined;
+    const contactTypeParam = searchParams.get('contact_type');
+    const processingSubtypeParam = searchParams.get('processing_subtype');
+    const country = searchParams.get('country') ?? undefined;
+    const prefill = {
+      organization,
+      country,
+      contact_type: contactTypeParam as ContactType | undefined,
+      processing_subtype: processingSubtypeParam as ProcessingFacilitySubtype | null | undefined,
+    };
+
     if (isCooperative) {
       return {
         defaultContactType: 'farmer' as ContactType,
         lockContactType: true,
         lockedTypeLabel: 'Member',
         activityTypes: listContactActivityTypesForRole('cooperative'),
+        prefill,
       };
     }
     if (isImporter) {
@@ -126,6 +147,7 @@ export default function AddContactPage() {
         lockContactType: false,
         lockedTypeLabel: 'Contact',
         activityTypes: listContactActivityTypesForRole('importer'),
+        prefill,
       };
     }
     if (isExporter) {
@@ -134,6 +156,7 @@ export default function AddContactPage() {
         lockContactType: false,
         lockedTypeLabel: 'Supplier',
         activityTypes: listContactActivityTypesForRole('exporter'),
+        prefill,
       };
     }
     return {
@@ -141,8 +164,9 @@ export default function AddContactPage() {
       lockContactType: false,
       lockedTypeLabel: 'Producer',
       activityTypes: listContactActivityTypesForRole('other'),
+      prefill,
     };
-  }, [isCooperative, isImporter, isExporter]);
+  }, [isCooperative, isImporter, isExporter, searchParams]);
 
   const pageMode = resolveAddPageMode(mode);
 
@@ -153,6 +177,8 @@ export default function AddContactPage() {
       phone: data.phone || null,
       organization: data.organization || null,
       contact_type: data.contact_type,
+      processing_subtype:
+        data.contact_type === 'processing_facility' ? data.processing_subtype : null,
       country: data.country || null,
       tags: data.tags ? data.tags.split(',').map((tag) => tag.trim()) : [],
       consent_status: data.consent_status,
@@ -190,13 +216,22 @@ export default function AddContactPage() {
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
+      const contactLabel =
+        [row.full_name || row.name, row.email || row.primary_email].filter(Boolean).join(' · ') ||
+        `Row ${i + 1}`;
+      const activityLabel = row.contact_type || row.activity_type;
       try {
+        const classification = parseContactActivityClassification(
+          row.contact_type || row.activity_type,
+          row.processing_subtype,
+        );
         await createContact({
           full_name: row.full_name || row.name || '',
           email: row.email || row.primary_email || '',
           phone: row.phone || row.primary_phone || null,
           organization: row.organization || row.name || null,
-          contact_type: normalizeContactActivityType(row.contact_type || row.activity_type),
+          contact_type: classification.contact_type,
+          processing_subtype: classification.processing_subtype,
           country: row.country || null,
           tags: parseTags(row.tags),
           consent_status: (row.consent_status as 'unknown' | 'granted' | 'revoked') || 'unknown',
@@ -204,10 +239,13 @@ export default function AddContactPage() {
         success++;
       } catch (err) {
         failed++;
+        const reason = err instanceof Error ? err.message : 'Unknown error';
         errors.push({
           row: i + 1,
           field: 'general',
-          message: err instanceof Error ? err.message : 'Unknown error',
+          message: activityLabel
+            ? `${contactLabel} (${activityLabel}): ${reason}`
+            : `${contactLabel}: ${reason}`,
         });
       }
     }
@@ -389,6 +427,7 @@ export default function AddContactPage() {
               lockedTypeLabel={contactWizardDefaults.lockedTypeLabel}
               isCooperative={isCooperative}
               activityTypes={contactWizardDefaults.activityTypes}
+              prefill={contactWizardDefaults.prefill}
             />
           )}
 

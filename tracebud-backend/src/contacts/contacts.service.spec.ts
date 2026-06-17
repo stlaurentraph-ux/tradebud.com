@@ -163,5 +163,148 @@ describe('ContactsService', () => {
       NotFoundException,
     );
   });
+
+  it('creates processing_facility contacts with washing_station subtype', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'contact_wash',
+              tenant_id: 'tenant_1',
+              full_name: 'Grace Nakato',
+              email: 'grace@wash.test',
+              phone: null,
+              organization: 'Lake Victoria Washing Station',
+              contact_type: 'processing_facility',
+              processing_subtype: 'washing_station',
+              status: 'new',
+              country: 'UG',
+              tags: ['coffee'],
+              consent_status: 'unknown',
+              farmer_profile_id: null,
+              last_activity_at: null,
+              created_at: '2026-04-22T10:00:00.000Z',
+              updated_at: '2026-04-22T10:00:00.000Z',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    const service = makeContactsService(pool);
+
+    const created = await service.create('tenant_1', {
+      full_name: 'Grace Nakato',
+      email: 'grace@wash.test',
+      contact_type: 'washing_station',
+      country: 'UG',
+    });
+
+    expect(created.contact_type).toBe('processing_facility');
+    expect(created.processing_subtype).toBe('washing_station');
+  });
+
+  it('maps contact_type check violations to actionable errors', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce({
+          code: '23514',
+          constraint: 'crm_contacts_contact_type_check',
+          message: 'new row for relation "crm_contacts" violates check constraint "crm_contacts_contact_type_check"',
+        }),
+    };
+    const service = makeContactsService(pool);
+
+    await expect(
+      service.create('tenant_1', {
+        full_name: 'Grace Nakato',
+        email: 'grace@wash.test',
+        contact_type: 'processing_facility',
+        processing_subtype: 'washing_station',
+      }),
+    ).rejects.toThrow('Apply migrations TB-V16-041 and TB-V16-047');
+  });
+
+  it('updates contact profile fields', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'contact_1',
+              tenant_id: 'tenant_1',
+              full_name: 'Amina Mwangi',
+              email: 'amina@test.com',
+              phone: null,
+              organization: 'Kilimanjaro Coop',
+              contact_type: 'cooperative',
+              processing_subtype: null,
+              status: 'new',
+              country: 'TZ',
+              tags: ['coffee'],
+              consent_status: 'unknown',
+              farmer_profile_id: null,
+              last_activity_at: null,
+              created_at: '2026-04-22T10:00:00.000Z',
+              updated_at: '2026-04-22T10:00:00.000Z',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'contact_1',
+              tenant_id: 'tenant_1',
+              full_name: 'Amina Mwangi Updated',
+              email: 'amina@test.com',
+              phone: '+255 700 000',
+              organization: 'Kilimanjaro Coop',
+              contact_type: 'cooperative',
+              processing_subtype: null,
+              status: 'new',
+              country: 'TZ',
+              tags: ['coffee', 'arabica'],
+              consent_status: 'granted',
+              farmer_profile_id: null,
+              last_activity_at: null,
+              created_at: '2026-04-22T10:00:00.000Z',
+              updated_at: '2026-04-22T12:00:00.000Z',
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    const service = makeContactsService(pool);
+
+    const updated = await service.update('tenant_1', 'contact_1', {
+      full_name: 'Amina Mwangi Updated',
+      phone: '+255 700 000',
+      tags: ['coffee', 'arabica'],
+      consent_status: 'granted',
+    });
+
+    expect(updated.full_name).toBe('Amina Mwangi Updated');
+    expect(updated.consent_status).toBe('granted');
+  });
+
+  it('deletes a contact from the directory', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'contact_1' }] })
+        .mockResolvedValueOnce({ rows: [] }),
+    };
+    const service = makeContactsService(pool);
+
+    await expect(service.remove('tenant_1', 'contact_1')).resolves.toEqual({
+      id: 'contact_1',
+      deleted: true,
+    });
+  });
 });
 

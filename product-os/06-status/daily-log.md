@@ -6068,3 +6068,10 @@ Append-only session log.
 - Files changed: `apps/dashboard-product/app/packages/[id]/page.test.tsx`, `apps/dashboard-product/lib/dashboard-north-star.ts`, `apps/dashboard-product/lib/dashboard-north-star.test.ts`, `apps/dashboard-product/lib/terminology-labels.ts`, `apps/dashboard-product/lib/supply-chain-terminology-handoff.test.ts`, `apps/dashboard-product/components/dashboards/importer-dashboard.tsx`, `apps/dashboard-product/components/dashboards/importer-dashboard.test.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/04-quality/importer-critical-path-qa.md`, `product-os/04-quality/dashboard-a-plus-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
 - Verification: package detail, north-star, importer/exporter dashboard, and handoff terminology tests pass.
 - Next step: manual sign-off using `exporter-critical-path-qa.md` and `importer-critical-path-qa.md`.
+
+### 2026-06-17 (execution: CRM processing facility subtypes)
+- Focus: `processing_facility` as top-level supplier type; washing/dry mill/etc. stored in `processing_subtype`.
+- Files changed: `tracebud-backend/sql/tb_v16_047_processing_facility_subtypes.sql`, `supabase/migrations/202606170002_processing_facility_subtypes.sql`, backend `contacts.service.ts`, dashboard `contact-activity-types.ts`, contacts add/CSV flows, sample import CSV.
+- Decisions: legacy CSV `washing_station` activity column coerced to `processing_facility` + `washing_station` subtype; existing DB rows migrated on apply.
+- Verification: migration applied locally; `contacts.service.spec.ts` and `contact-activity-types.test.ts` pass.
+- Next step: re-import sample suppliers CSV to confirm combined activity labels in `/contacts`.

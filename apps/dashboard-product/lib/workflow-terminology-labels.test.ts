@@ -249,6 +249,9 @@ describe('workflow-terminology-labels', () => {
     expect(getContactsPageTitle('exporter')).toBe('Suppliers');
     expect(getProducersNavHref('exporter')).toBe('/contacts');
     expect(getProducerDetailHref('contact_1')).toBe('/farmers/contact_1');
+    expect(getProducerDetailHref('contact_1', 'exporter')).toBe('/contacts/contact_1');
+    expect(getProducerDetailHref('contact_1', 'cooperative', 'cooperative')).toBe('/contacts/contact_1');
+    expect(getProducerDetailHref('contact_1', 'cooperative', 'farmer')).toBe('/farmers/contact_1');
     expect(getHarvestFilterStatusLabel('warning')).toBe('Warning');
     expect(getHarvestReceiveDeliveryCopy('assemble_cta', undefined, undefined, 'exporter')).toBe(
       'Create shipment',

@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useState, startTransition, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Image from 'next/image';
+import { TracebudLogo } from '@/components/brand/tracebud-logo';
 import { Menu, X } from 'lucide-react';
 import { AppSidebar } from './app-sidebar';
 import { useAuth } from '@/lib/auth-context';
@@ -138,15 +138,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-                <Image
-                  src="/tracebud-logo-v6.png"
-                  alt="Tracebud"
-                  width={20}
-                  height={20}
-                  className="rounded-sm"
-                />
-              </div>
+              <TracebudLogo size="sm" />
               <span className="font-semibold text-foreground">{getAppChromeCopy('mobile_brand', t)}</span>
             </div>
           </div>

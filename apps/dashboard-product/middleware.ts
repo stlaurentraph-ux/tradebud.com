@@ -55,5 +55,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Run auth/gates on app routes only — never on public static assets (logos, manifest, screenshots).
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|json|webmanifest)$).*)',
+  ],
 };

@@ -22,6 +22,7 @@ import {
   getContactsFilterAllStatusesLabel,
   getContactConsentLabel,
   getContactStatusLabel,
+  getContactActivityDisplayLabel,
   getContactTypeLabel,
   getContactsListTitle,
   getContactsNoMatchesLabel,
@@ -312,7 +313,7 @@ export default function ContactsPage() {
                       <tr key={contact.id} className="border-t">
                         <td className="px-3 py-2 font-medium">
                           <Link
-                            href={getProducerDetailHref(contact.id)}
+                            href={getProducerDetailHref(contact.id, role, contact.contact_type)}
                             className="text-foreground hover:text-primary hover:underline"
                           >
                             {contact.full_name}
@@ -321,7 +322,15 @@ export default function ContactsPage() {
                         <td className="px-3 py-2">{contact.email}</td>
                         <td className="px-3 py-2">{contact.organization ?? '—'}</td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline">{getContactTypeLabel(contact.contact_type, t)}</Badge>
+                          <Badge variant="outline">
+                            {getContactActivityDisplayLabel(
+                              {
+                                contact_type: contact.contact_type,
+                                processing_subtype: contact.processing_subtype,
+                              },
+                              t,
+                            )}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant="outline">{getContactStatusLabel(contact.status, t)}</Badge>

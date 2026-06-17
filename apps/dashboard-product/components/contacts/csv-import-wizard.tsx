@@ -68,6 +68,7 @@ const CONTACT_FIELDS = [
   { value: 'phone', label: 'Phone' },
   { value: 'organization', label: 'Organization' },
   { value: 'contact_type', label: 'Activity type' },
+  { value: 'processing_subtype', label: 'Processing subtype' },
   { value: 'country', label: 'Country' },
   { value: 'region', label: 'Region' },
   { value: 'tags', label: 'Tags' },
@@ -166,8 +167,17 @@ export function CsvImportWizard({ importType, onComplete, onCancel, onFinished }
             'role',
             'type',
           ]);
+          const subtypeAliases = new Set([
+            'processingsubtype',
+            'facilitysubtype',
+            'subtype',
+            'subrole',
+          ]);
           if (importType === 'contacts' && activityAliases.has(normalizedHeader)) {
             return { csvColumn: header, targetField: 'contact_type' };
+          }
+          if (importType === 'contacts' && subtypeAliases.has(normalizedHeader)) {
+            return { csvColumn: header, targetField: 'processing_subtype' };
           }
           const matchedField = fields.find((f) => {
             const normalizedField = f.value.toLowerCase().replace(/[_\s-]/g, '');
@@ -573,11 +583,7 @@ export function CsvImportWizard({ importType, onComplete, onCancel, onFinished }
                 </p>
                 <ul className="space-y-1 text-sm text-red-800">
                   {importResult.errors.map((entry) => (
-                    <li key={`${entry.row}-${entry.message}`}>
-                      {getContactsCsvWizardLabel('failed_row_item', t)
-                        .replace('{{row}}', String(entry.row))
-                        .replace('{{message}}', entry.message)}
-                    </li>
+                    <li key={`${entry.row}-${entry.message}`}>{entry.message}</li>
                   ))}
                 </ul>
               </div>

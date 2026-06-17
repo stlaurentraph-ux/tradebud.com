@@ -1,7 +1,11 @@
-import type { ContactActivityType } from '@/lib/contact-activity-types';
+import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
 
 export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
-export type { ContactActivityType, ContactActivityType as ContactType } from '@/lib/contact-activity-types';
+export type {
+  ContactActivityType,
+  ContactActivityType as ContactType,
+  ProcessingFacilitySubtype,
+} from '@/lib/contact-activity-types';
 
 export interface ContactRecord {
   id: string;
@@ -10,6 +14,7 @@ export interface ContactRecord {
   phone: string | null;
   organization: string | null;
   contact_type: ContactActivityType;
+  processing_subtype: ProcessingFacilitySubtype | null;
   status: ContactStatus;
   country: string | null;
   tags: string[];
@@ -42,7 +47,7 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
       throw new Error('Unauthorized: please sign in again.');
     }
     if (response.status === 403) {
-      throw new Error('Forbidden: your current role cannot access Contacts.');
+      throw new Error(extractApiErrorMessage(payload, response.status, 'Forbidden: your current role cannot access Contacts.'));
     }
     if (response.status === 503) {
       const message =
@@ -51,13 +56,35 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
           : 'Contacts service is unavailable in this environment.';
       throw new Error(message);
     }
-    const message =
-      payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
-        ? payload.error
-        : `Contact request failed (status ${response.status}).`;
-    throw new Error(message);
+    throw new Error(extractApiErrorMessage(payload, response.status));
   }
   return payload as T;
+}
+
+function extractApiErrorMessage(payload: unknown, status: number, fallback?: string): string {
+  if (!payload || typeof payload !== 'object') {
+    return fallback ?? `Contact request failed (status ${status}).`;
+  }
+  const record = payload as Record<string, unknown>;
+  if (typeof record.message === 'string' && record.message.trim()) {
+    return record.message;
+  }
+  if (Array.isArray(record.message)) {
+    const parts = record.message.filter((part): part is string => typeof part === 'string');
+    if (parts.length > 0) {
+      return parts.join(' ');
+    }
+  }
+  if (record.message && typeof record.message === 'object' && record.message !== null) {
+    const nested = record.message as Record<string, unknown>;
+    if (typeof nested.message === 'string' && nested.message.trim()) {
+      return nested.message;
+    }
+  }
+  if (typeof record.error === 'string' && record.error.trim()) {
+    return record.error;
+  }
+  return fallback ?? `Contact request failed (status ${status}).`;
 }
 
 export async function listContacts(): Promise<ContactRecord[]> {
@@ -70,6 +97,7 @@ export async function createContact(input: {
   phone?: string | null;
   organization?: string | null;
   contact_type?: ContactActivityType;
+  processing_subtype?: ProcessingFacilitySubtype | null;
   country?: string | null;
   tags?: string[];
   consent_status?: 'unknown' | 'granted' | 'revoked';
@@ -84,6 +112,32 @@ export async function updateContactStatus(id: string, status: ContactStatus): Pr
   return requestJson<ContactRecord>(`/api/contacts/${encodeURIComponent(id)}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateContact(
+  id: string,
+  input: {
+    full_name?: string;
+    email?: string;
+    phone?: string | null;
+    organization?: string | null;
+    contact_type?: ContactActivityType;
+    processing_subtype?: ProcessingFacilitySubtype | null;
+    country?: string | null;
+    tags?: string[];
+    consent_status?: 'unknown' | 'granted' | 'revoked';
+  },
+): Promise<ContactRecord> {
+  return requestJson<ContactRecord>(`/api/contacts/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteContact(id: string): Promise<{ id: string; deleted: true }> {
+  return requestJson<{ id: string; deleted: true }>(`/api/contacts/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
   });
 }
 

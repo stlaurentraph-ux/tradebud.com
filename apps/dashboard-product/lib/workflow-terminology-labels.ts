@@ -1180,11 +1180,26 @@ export function getProducersNavLabel(role?: SupplyChainRole, t?: TranslateFn): s
 
 /** Canonical list href for producer/member/supplier directory navigation. */
 export function getProducersNavHref(role?: SupplyChainRole): string {
-  return role === 'exporter' ? '/contacts' : '/farmers';
+  return role === 'exporter' || role === 'importer' ? '/contacts' : '/farmers';
 }
 
-/** Contact directory detail — shared route; breadcrumbs adapt by role. */
-export function getProducerDetailHref(contactId: string): string {
+/** Supplier/contact directory detail — all activity types. */
+export function getContactDetailHref(contactId: string): string {
+  return `/contacts/${encodeURIComponent(contactId)}`;
+}
+
+/** Contact directory detail — role-aware (suppliers use /contacts, farmer producers use /farmers). */
+export function getProducerDetailHref(
+  contactId: string,
+  role?: SupplyChainRole,
+  contactType?: import('@/lib/contact-activity-types').ContactActivityType,
+): string {
+  if (role === 'exporter' || role === 'importer') {
+    return getContactDetailHref(contactId);
+  }
+  if (contactType && contactType !== 'farmer') {
+    return getContactDetailHref(contactId);
+  }
   return `/farmers/${encodeURIComponent(contactId)}`;
 }
 
@@ -1283,6 +1298,13 @@ export function getProducerLoadingMessage(role?: SupplyChainRole, t?: TranslateF
 }
 
 export function getProducerNotFoundMessage(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'exporter') {
+    return wf(
+      'workflow.contacts.detail.not_found.exporter',
+      'Supplier contact not found in your directory.',
+      t,
+    );
+  }
   const key =
     role === 'cooperative'
       ? 'workflow.producers.detail.not_found.cooperative'
@@ -1294,6 +1316,81 @@ export function getProducerNotFoundMessage(role?: SupplyChainRole, t?: Translate
       : 'Producer contact not found in your directory.',
     t,
   );
+}
+
+export function getContactNotFoundMessage(role?: SupplyChainRole, t?: TranslateFn): string {
+  if (role === 'exporter') {
+    return wf(
+      'workflow.contacts.detail.not_found.exporter',
+      'Supplier contact not found in your directory.',
+      t,
+    );
+  }
+  if (role === 'importer') {
+    return wf(
+      'workflow.contacts.detail.not_found.importer',
+      'Contact not found in your directory.',
+      t,
+    );
+  }
+  if (role === 'cooperative') {
+    return wf(
+      'workflow.producers.detail.not_found.cooperative',
+      'Member contact not found in your directory.',
+      t,
+    );
+  }
+  return wf(
+    'workflow.contacts.detail.not_found.default',
+    'Contact not found in your directory.',
+    t,
+  );
+}
+
+export function getBackToContactsLabel(role?: SupplyChainRole, t?: TranslateFn): string {
+  return getBackToProducersLabel(role, t);
+}
+
+export function getContactDetailActionLabel(
+  action: 'edit' | 'delete' | 'save' | 'saving' | 'cancel' | 'add_colleague' | 'confirm_delete',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    edit: 'workflow.contacts.detail.action.edit',
+    delete: 'workflow.contacts.detail.action.delete',
+    save: 'workflow.contacts.detail.action.save',
+    saving: 'workflow.contacts.detail.action.saving',
+    cancel: 'workflow.contacts.detail.action.cancel',
+    add_colleague: 'workflow.contacts.detail.action.add_colleague',
+    confirm_delete: 'workflow.contacts.detail.action.confirm_delete',
+  } as const;
+  const fallbackMap = {
+    edit: 'Edit details',
+    delete: 'Remove from directory',
+    save: 'Save changes',
+    saving: 'Saving…',
+    cancel: 'Cancel',
+    add_colleague: 'Add another contact person',
+    confirm_delete: 'Remove this contact from your supplier directory? This cannot be undone.',
+  } as const;
+  return wf(keyMap[action], fallbackMap[action], t);
+}
+
+export function getContactColleaguesCopy(
+  field: 'title' | 'empty' | 'description',
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    title: 'workflow.contacts.detail.colleagues.title',
+    empty: 'workflow.contacts.detail.colleagues.empty',
+    description: 'workflow.contacts.detail.colleagues.description',
+  } as const;
+  const fallbackMap = {
+    title: 'Other people at this organization',
+    empty: 'No other contacts listed for this organization yet.',
+    description: 'Add buyers, logistics, or quality managers at the same supplier.',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
 }
 
 const PRODUCER_DETAIL_COPY: Record<string, { key: string; fallback: string; cooperativeFallback?: string }> = {
@@ -1355,6 +1452,22 @@ const PRODUCER_DETAIL_COPY: Record<string, { key: string; fallback: string; coop
     key: 'workflow.producers.detail.load_error',
     fallback: 'Failed to load producer.',
     cooperativeFallback: 'Failed to load member.',
+  },
+  field_activity: {
+    key: 'workflow.contacts.detail.field.activity',
+    fallback: 'Activity type',
+  },
+  field_tags: {
+    key: 'workflow.contacts.detail.field.tags',
+    fallback: 'Tags',
+  },
+  section_directory: {
+    key: 'workflow.contacts.detail.section.directory',
+    fallback: 'Directory management',
+  },
+  status_update_hint: {
+    key: 'workflow.contacts.detail.status_update_hint',
+    fallback: 'Update onboarding and engagement status for this supplier.',
   },
 };
 
@@ -9306,7 +9419,6 @@ export function getContactTypeLabel(
   const keyMap = {
     farmer: 'workflow.contacts.type.farmer',
     cooperative: 'workflow.contacts.type.cooperative',
-    washing_station: 'workflow.contacts.type.washing_station',
     processing_facility: 'workflow.contacts.type.processing_facility',
     trader: 'workflow.contacts.type.trader',
     exporter: 'workflow.contacts.type.exporter',
@@ -9315,13 +9427,46 @@ export function getContactTypeLabel(
   const fallbackMap = {
     farmer: 'Producer / farmer',
     cooperative: 'Cooperative',
-    washing_station: 'Washing station',
-    processing_facility: 'Processing / transformation plant',
+    processing_facility: 'Processing facility',
     trader: 'Trader / intermediary',
     exporter: 'Exporter',
     other: 'Other supplier',
   } as const;
   return wf(keyMap[type], fallbackMap[type], t);
+}
+
+export function getProcessingSubtypeLabel(
+  subtype: import('@/lib/contact-activity-types').ProcessingFacilitySubtype,
+  t?: TranslateFn,
+): string {
+  const keyMap = {
+    washing_station: 'workflow.contacts.subtype.washing_station',
+    dry_mill: 'workflow.contacts.subtype.dry_mill',
+    hulling_sorting: 'workflow.contacts.subtype.hulling_sorting',
+    transformation_plant: 'workflow.contacts.subtype.transformation_plant',
+    other: 'workflow.contacts.subtype.other',
+  } as const;
+  const fallbackMap = {
+    washing_station: 'Washing station',
+    dry_mill: 'Dry mill',
+    hulling_sorting: 'Hulling / sorting',
+    transformation_plant: 'Transformation plant',
+    other: 'Other processing',
+  } as const;
+  return wf(keyMap[subtype], fallbackMap[subtype], t);
+}
+
+export function getContactActivityDisplayLabel(
+  contact: {
+    contact_type: import('@/lib/contact-activity-types').ContactActivityType;
+    processing_subtype: import('@/lib/contact-activity-types').ProcessingFacilitySubtype | null;
+  },
+  t?: TranslateFn,
+): string {
+  if (contact.contact_type === 'processing_facility' && contact.processing_subtype) {
+    return `${getContactTypeLabel('processing_facility', t)} · ${getProcessingSubtypeLabel(contact.processing_subtype, t)}`;
+  }
+  return getContactTypeLabel(contact.contact_type, t);
 }
 
 export function getContactsPageTitle(
@@ -9581,6 +9726,7 @@ export function getContactsWizardFieldLabel(
     | 'email'
     | 'phone'
     | 'contact_type'
+    | 'processing_subtype'
     | 'consent_status'
     | 'organization'
     | 'job_title'
@@ -9597,6 +9743,7 @@ export function getContactsWizardFieldLabel(
     email: 'workflow.contacts.wizard.field.email',
     phone: 'workflow.contacts.wizard.field.phone',
     contact_type: 'workflow.contacts.wizard.field.contact_type',
+    processing_subtype: 'workflow.contacts.wizard.field.processing_subtype',
     consent_status: 'workflow.contacts.wizard.field.consent_status',
     organization: 'workflow.contacts.wizard.field.organization',
     job_title: 'workflow.contacts.wizard.field.job_title',
@@ -9612,6 +9759,7 @@ export function getContactsWizardFieldLabel(
     email: 'Email',
     phone: 'Phone',
     contact_type: 'Contact Type',
+    processing_subtype: 'Processing subtype',
     consent_status: 'Consent Status',
     organization: 'Organization Name',
     job_title: 'Job Title / Role',
@@ -9634,14 +9782,20 @@ export function getContactsWizardTagsHint(t?: TranslateFn): string {
 }
 
 export function getContactsWizardPlaceholder(
-  field: 'select_type' | 'select_consent',
+  field: 'select_type' | 'select_subtype' | 'select_consent',
   t?: TranslateFn,
 ): string {
   const keyMap = {
     select_type: 'workflow.contacts.wizard.placeholder.select_type',
+    select_subtype: 'workflow.contacts.wizard.placeholder.select_subtype',
     select_consent: 'workflow.contacts.wizard.placeholder.select_consent',
   } as const;
-  return wf(keyMap[field], field === 'select_type' ? 'Select type' : 'Select consent status', t);
+  const fallbackMap = {
+    select_type: 'Select type',
+    select_subtype: 'Select processing subtype',
+    select_consent: 'Select consent status',
+  } as const;
+  return wf(keyMap[field], fallbackMap[field], t);
 }
 
 export function getContactsWizardActionLabel(

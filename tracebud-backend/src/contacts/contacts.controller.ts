@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -13,7 +14,12 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { ContactStatus, ContactsService } from './contacts.service';
+import {
+  ContactStatus,
+  ContactsService,
+  type LegacyContactTypeInput,
+  type ProcessingFacilitySubtype,
+} from './contacts.service';
 
 @ApiTags('Contacts')
 @ApiBearerAuth()
@@ -53,7 +59,8 @@ export class ContactsController {
       email?: string;
       phone?: string | null;
       organization?: string | null;
-      contact_type?: 'exporter' | 'cooperative' | 'farmer' | 'other';
+      contact_type?: LegacyContactTypeInput;
+      processing_subtype?: ProcessingFacilitySubtype | null;
       country?: string | null;
       tags?: string[];
       consent_status?: 'unknown' | 'granted' | 'revoked';
@@ -65,6 +72,45 @@ export class ContactsController {
       throw new BadRequestException('Invalid payload.');
     }
     return this.contactsService.create(tenantId, body);
+  }
+
+  @Get(':id')
+  async getById(@Req() req: any, @Param('id') id: string) {
+    this.requireContactAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.contactsService.getById(tenantId, id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      full_name?: string;
+      email?: string;
+      phone?: string | null;
+      organization?: string | null;
+      contact_type?: LegacyContactTypeInput;
+      processing_subtype?: ProcessingFacilitySubtype | null;
+      country?: string | null;
+      tags?: string[];
+      consent_status?: 'unknown' | 'granted' | 'revoked';
+    },
+  ) {
+    this.requireContactAccess(req);
+    const tenantId = this.getTenantId(req);
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('Invalid payload.');
+    }
+    return this.contactsService.update(tenantId, id, body);
+  }
+
+  @Delete(':id')
+  async remove(@Req() req: any, @Param('id') id: string) {
+    this.requireContactAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.contactsService.remove(tenantId, id);
   }
 
   @Patch(':id/status')

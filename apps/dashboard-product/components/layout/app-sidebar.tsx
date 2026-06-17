@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { TracebudLogo } from '@/components/brand/tracebud-logo';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -233,18 +233,10 @@ export function AppSidebar({ workspaceDisplayName }: { workspaceDisplayName?: st
     <aside className="flex h-screen w-64 flex-col bg-sidebar">
 
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-5 flex-shrink-0">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white flex-shrink-0 shadow-sm">
-          <Image
-            src="/tracebud-logo-v6.png"
-            alt="Tracebud"
-            width={28}
-            height={28}
-            className="rounded-md"
-          />
-        </div>
+      <div className="flex h-[4.5rem] items-center gap-3.5 px-5 flex-shrink-0">
+        <TracebudLogo size="lg" variant="contrast" priority />
         <div className="flex flex-col min-w-0">
-          <span className="text-[15px] font-semibold text-white leading-tight">Tracebud</span>
+          <span className="text-base font-semibold text-white leading-tight">Tracebud</span>
           <span className="text-[11px] text-white/50 leading-tight">{getAppChromeCopy('eudr_platform', t)}</span>
         </div>
       </div>

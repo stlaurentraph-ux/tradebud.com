@@ -1,7 +1,7 @@
 'use client';
 
 import { useContext, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
+import { AuthBrandHeader } from '@/components/brand/auth-brand-header';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocaleContext } from '@/lib/locale-context';
-import { getAppChromeCopy, getAuthCopy } from '@/lib/workflow-terminology-labels';
+import { getAuthCopy } from '@/lib/workflow-terminology-labels';
 
 type ConfirmStatus = 'loading' | 'success' | 'sign_in_required' | 'error';
 
@@ -77,17 +77,7 @@ export default function AuthConfirmPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center">
-          <Image
-            src="/tracebud-logo-v6.png"
-            alt={getAuthCopy('logo_alt', t)}
-            width={64}
-            height={64}
-            className="mb-4 rounded-xl"
-          />
-          <h1 className="text-2xl font-bold text-[#064E3B]">{getAppChromeCopy('mobile_brand', t)}</h1>
-          <p className="text-sm text-muted-foreground">{getAuthCopy('eudr_platform_tagline', t)}</p>
-        </div>
+        <AuthBrandHeader />
 
         <Card className="border-border bg-card">
           <CardHeader className="space-y-1 pb-4">
