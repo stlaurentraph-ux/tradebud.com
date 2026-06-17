@@ -1183,6 +1183,11 @@ export function getProducersNavHref(role?: SupplyChainRole): string {
   return role === 'exporter' ? '/contacts' : '/farmers';
 }
 
+/** Contact directory detail — shared route; breadcrumbs adapt by role. */
+export function getProducerDetailHref(contactId: string): string {
+  return `/farmers/${encodeURIComponent(contactId)}`;
+}
+
 export function getProducersPageTitle(role?: SupplyChainRole, t?: TranslateFn): string {
   if (role === 'exporter') {
     return wf('workflow.producers.title.exporter', 'Suppliers', t);
@@ -5232,13 +5237,28 @@ export function getHarvestReceiveDeliveryCopy(
                   ? 'Voucher not found or not available for your organisation. Confirm the supplier chose you as recipient, is linked with consent, and synced from the field app.'
                   : entry.fallback
                 : field === 'browse_toggle'
-                  ? 'Browse pending vouchers'
-                  : entry.fallback;
+                  ? role === 'exporter'
+                    ? 'Browse supplier vouchers'
+                    : role === 'cooperative'
+                      ? 'Browse member vouchers'
+                      : 'Browse pending vouchers'
+                  : field === 'assemble_cta'
+                    ? role === 'exporter'
+                      ? 'Create shipment'
+                      : entry.fallback
+                    : entry.fallback;
   if (
     roleSuffix &&
-    ['description', 'staged_empty', 'available_empty', 'available_title', 'loading', 'qr_not_found'].includes(
-      field,
-    )
+    [
+      'description',
+      'staged_empty',
+      'available_empty',
+      'available_title',
+      'loading',
+      'qr_not_found',
+      'browse_toggle',
+      'assemble_cta',
+    ].includes(field)
   ) {
     return wf(roleKey, roleFallback, t, values);
   }
@@ -5286,6 +5306,28 @@ export function getHarvestSearchPlaceholder(role?: SupplyChainRole, t?: Translat
 
 export function getHarvestEmptyFilterMessage(role?: SupplyChainRole, t?: TranslateFn): string {
   return wf('workflow.harvest.empty_filter', en.getHarvestEmptyFilterMessage(role), t);
+}
+
+export type HarvestYieldFilterStatus = 'all' | 'pass' | 'warning' | 'blocked';
+
+export function getHarvestFilterStatusHeading(t?: TranslateFn): string {
+  return wf('workflow.harvest.filter.status_heading', 'Status', t);
+}
+
+export function getHarvestFilterStatusLabel(status: HarvestYieldFilterStatus, t?: TranslateFn): string {
+  const keyMap: Record<HarvestYieldFilterStatus, string> = {
+    all: 'workflow.harvest.filter.all',
+    pass: 'workflow.harvest.filter.pass',
+    warning: 'workflow.harvest.filter.warning',
+    blocked: 'workflow.harvest.filter.blocked',
+  };
+  const fallbackMap: Record<HarvestYieldFilterStatus, string> = {
+    all: 'All',
+    pass: 'Pass',
+    warning: 'Warning',
+    blocked: 'Blocked',
+  };
+  return wf(keyMap[status], fallbackMap[status], t);
 }
 
 export function getHarvestOriginColumnLabel(role?: SupplyChainRole, t?: TranslateFn): string {

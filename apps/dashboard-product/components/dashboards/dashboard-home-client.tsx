@@ -23,6 +23,7 @@ import { useHarvestPackages } from '@/lib/use-harvest-packages';
 import { useDashboardSummary } from '@/lib/use-dashboard-summary';
 import { useDemoData } from '@/lib/demo-data-context';
 import { buildDashboardAttentionItems } from '@/lib/dashboard-attention';
+import { isVirginTenantForRole } from '@/lib/dashboard-maturity';
 import type { DashboardHomeResources } from '@/lib/dashboard-home-data';
 import type { DashboardSummaryPayload } from '@/lib/load-dashboard-summary';
 import type { LaunchState } from '@/lib/load-launch-state';
@@ -329,6 +330,11 @@ export function DashboardHomeClient({
   };
 
   const subtitle = user ? getDashboardSubtitle(user.active_role, t) : getDashboardSubtitle(undefined, t);
+  const metrics = dashboardMetrics ?? VIRGIN_DASHBOARD_METRICS;
+  const showOnboardingChecklist =
+    Boolean(user) &&
+    user!.active_role !== 'exporter' &&
+    !isVirginTenantForRole(user!.active_role, metrics);
 
   return (
     <div className="flex flex-col">
@@ -374,9 +380,11 @@ export function DashboardHomeClient({
         ) : (
           <>
             <DashboardAttentionStrip items={attentionItems} role={user?.active_role} t={t} />
-            <div className="mb-6">
-              <OnboardingChecklistCard />
-            </div>
+            {showOnboardingChecklist ? (
+              <div className="mb-6">
+                <OnboardingChecklistCard />
+              </div>
+            ) : null}
             {renderDashboard()}
           </>
         )}

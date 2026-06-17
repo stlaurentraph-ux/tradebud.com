@@ -10,8 +10,14 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
+const authState: {
+  user: { active_role: 'cooperative' | 'exporter'; tenant_id: string };
+} = {
+  user: { active_role: 'cooperative', tenant_id: 'tenant_1' },
+};
+
 vi.mock('@/lib/auth-context', () => ({
-  useAuth: () => ({ user: { active_role: 'cooperative', tenant_id: 'tenant_1' } }),
+  useAuth: () => ({ user: authState.user }),
 }));
 
 vi.mock('@/lib/locale-context', () => ({
@@ -48,6 +54,7 @@ describe('HarvestReceiveDeliveryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     push.mockReset();
+    authState.user = { active_role: 'cooperative', tenant_id: 'tenant_1' };
     vi.mocked(listTenantHarvestVouchers).mockResolvedValue([eligibleVoucher]);
   });
 
@@ -56,15 +63,31 @@ describe('HarvestReceiveDeliveryPanel', () => {
     render(<HarvestReceiveDeliveryPanel />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Browse pending vouchers/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Browse member vouchers/i })).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: /Browse pending vouchers/i }));
+    await user.click(screen.getByRole('button', { name: /Browse member vouchers/i }));
     await user.click(screen.getByRole('button', { name: /^Add$/i }));
 
     expect(screen.getByText(/1 voucher\(s\) staged/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Assemble batch/i }));
+
+    expect(push).toHaveBeenCalledWith('/packages/new?voucherIds=voucher_1');
+  });
+
+  it('uses exporter supplier copy and create-shipment CTA', async () => {
+    authState.user = { active_role: 'exporter', tenant_id: 'tenant_exporter' };
+    const user = userEvent.setup();
+    render(<HarvestReceiveDeliveryPanel />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Browse supplier vouchers/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /Browse supplier vouchers/i }));
+    await user.click(screen.getByRole('button', { name: /^Add$/i }));
+    await user.click(screen.getByRole('button', { name: /Create shipment/i }));
 
     expect(push).toHaveBeenCalledWith('/packages/new?voucherIds=voucher_1');
   });

@@ -38,6 +38,8 @@ import {
   getHarvestAggregatedVolumeLabel,
   getHarvestAvgYieldMetricLabel,
   getHarvestEmptyFilterMessage,
+  getHarvestFilterStatusHeading,
+  getHarvestFilterStatusLabel,
   getHarvestFlaggedBatchesMetricLabel,
   getHarvestListPageSubtitle,
   getHarvestOriginColumnLabel,
@@ -219,16 +221,17 @@ export default function HarvestsPage() {
                 className="max-w-xs"
               />
               <div className="flex gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {getHarvestFilterStatusHeading(t)}:
+                </span>
                 {(['all', 'pass', 'warning', 'blocked'] as const).map((status) => (
                   <Button
                     key={status}
                     variant={filterStatus === status ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setFilterStatus(status)}
-                    className="capitalize"
                   >
-                    {status === 'all' ? 'All' : status === 'pass' ? 'Pass' : status === 'warning' ? 'Warning' : 'Blocked'}
+                    {getHarvestFilterStatusLabel(status, t)}
                   </Button>
                 ))}
               </div>

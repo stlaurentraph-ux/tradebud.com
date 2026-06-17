@@ -42,6 +42,10 @@ import {
   getContactStatusLabel,
   getContactConsentLabel,
   getContactTypeLabel,
+  getHarvestFilterStatusLabel,
+  getHarvestReceiveDeliveryCopy,
+  getProducerDetailHref,
+  getProducersNavHref,
   getContactsAddPageTitle,
   getContactsWizardStepLabel,
   getAdminUsersSubtitle,
@@ -243,6 +247,15 @@ describe('workflow-terminology-labels', () => {
     expect(getContactConsentLabel('granted')).toBe('Granted');
     expect(getContactTypeLabel('farmer')).toBe('Producer / farmer');
     expect(getContactsPageTitle('exporter')).toBe('Suppliers');
+    expect(getProducersNavHref('exporter')).toBe('/contacts');
+    expect(getProducerDetailHref('contact_1')).toBe('/farmers/contact_1');
+    expect(getHarvestFilterStatusLabel('warning')).toBe('Warning');
+    expect(getHarvestReceiveDeliveryCopy('assemble_cta', undefined, undefined, 'exporter')).toBe(
+      'Create shipment',
+    );
+    expect(getHarvestReceiveDeliveryCopy('browse_toggle', undefined, undefined, 'exporter')).toBe(
+      'Browse supplier vouchers',
+    );
     expect(getContactsAddPageTitle('select', true)).toBe('Add Member or Organization');
     expect(getContactsWizardStepLabel('review')).toBe('Review');
     expect(getAdminUsersSubtitle()).toBe('Manage user accounts and access');

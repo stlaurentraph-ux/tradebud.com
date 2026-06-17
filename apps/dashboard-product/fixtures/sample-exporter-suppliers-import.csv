@@ -1,0 +1,8 @@
+Full Name,Email,Phone,Organization,Activity type,Country,Region,Tags,Consent Status,Notes
+Amina Mwangi,amina.mwangi@kilimanjaro-coop.test,+255 754 100 201,Kilimanjaro Arabica Cooperative Union,cooperative,TZ,Kilimanjaro,coffee;arabica,unknown,Primary cooperative contact — bulk parchment intake
+Joseph Okello,joseph.okello@nyeri-farm.test,+254 712 300 402,Okello Family Estate,farmer,KE,Nyeri,coffee;smallholder,unknown,Direct farmer supplier — 12 ha shaded arabica
+Grace Nakato,grace.nakato@lake-wash.test,+256 772 400 503,Lake Victoria Washing Station,washing_station,UG,Jinja,coffee;washed,unknown,Wet mill — cherry delivery point Moshi corridor
+Samuel Byaruhanga,samuel.byaruhanga@rwenzori-mill.test,+256 701 500 604,Rwenzori Processing Ltd,processing_facility,UG,Kasese,coffee;export_grade,unknown,Dry mill and hulling — export prep
+Fatou Diallo,fatou.diallo@bamako-trade.test,+223 76 600 705,Sahel Commodities Trading,trader,ML,Bamako,coffee;cocoa,unknown,Regional trader — consolidates lots for export
+Elena Vasquez,elena.vasquez@andes-export.test,+57 310 800 906,Andes Origin Exporters SA,exporter,CO,Huila,coffee;eudr_ready,unknown,Sister exporter — occasional back-to-back shipments
+Marco Bianchi,marco.bianchi@logistics-hub.test,+39 335 900 107,Med Logistics Hub,other,IT,Milan,coffee;logistics,unknown,Third-party warehouse — not a producer node

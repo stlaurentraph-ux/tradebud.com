@@ -395,6 +395,23 @@ export function formatExporterComplianceRateSrOnly(
   });
 }
 
+const EXPORTER_SHIPMENT_OVERVIEW_COPY = {
+  title: { key: 'dashboard.exporter.shipments.title', fallback: 'Shipments' },
+  description: {
+    key: 'dashboard.exporter.shipments.description',
+    fallback: 'Package counts by workflow stage. Open Shipments for detail, SLA, and seal actions.',
+  },
+  manage_cta: { key: 'dashboard.exporter.shipments.manage_cta', fallback: 'Manage shipments' },
+} as const;
+
+export function getExporterShipmentOverviewCopy(
+  field: keyof typeof EXPORTER_SHIPMENT_OVERVIEW_COPY,
+  t?: TranslateFn,
+): string {
+  const entry = EXPORTER_SHIPMENT_OVERVIEW_COPY[field];
+  return resolveLabel(entry.key, t) === entry.key ? entry.fallback : resolveLabel(entry.key, t);
+}
+
 export function getExporterDashboardLabels(t?: TranslateFn) {
   return {
     campaignDescription: resolveLabel('dashboard.exporter.campaign.description', t),

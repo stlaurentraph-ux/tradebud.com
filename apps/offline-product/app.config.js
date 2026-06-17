@@ -86,10 +86,17 @@ module.exports = ({ config }) => {
   }
 
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
+  const googleOAuth = {
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() || undefined,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() || undefined,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() || undefined,
+    expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID?.trim() || undefined,
+  };
   const extra = {
     ...(appJson.expo.extra ?? {}),
     ...(config.extra ?? {}),
     ...(sentryDsn ? { sentryDsn } : {}),
+    googleOAuth,
   };
 
   return {

@@ -30,6 +30,7 @@ import {
   getContactsSearchPlaceholder,
   getContactsStatLabel,
   getContactsTableColumnLabel,
+  getProducerDetailHref,
 } from '@/lib/workflow-terminology-labels';
 import { Plus, Upload } from 'lucide-react';
 
@@ -309,7 +310,14 @@ export default function ContactsPage() {
                   <tbody>
                     {filtered.map((contact) => (
                       <tr key={contact.id} className="border-t">
-                        <td className="px-3 py-2 font-medium">{contact.full_name}</td>
+                        <td className="px-3 py-2 font-medium">
+                          <Link
+                            href={getProducerDetailHref(contact.id)}
+                            className="text-foreground hover:text-primary hover:underline"
+                          >
+                            {contact.full_name}
+                          </Link>
+                        </td>
                         <td className="px-3 py-2">{contact.email}</td>
                         <td className="px-3 py-2">{contact.organization ?? '—'}</td>
                         <td className="px-3 py-2">

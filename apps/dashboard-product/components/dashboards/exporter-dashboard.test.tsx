@@ -72,12 +72,14 @@ const virginMetrics = {
 };
 
 describe('ExporterDashboard', () => {
-  it('renders pipeline and KPI sections for mature tenants', () => {
+  it('renders consolidated overview for mature tenants', () => {
     render(<ExporterDashboard metrics={matureMetrics} />);
     expect(screen.getByText('Campaigns')).toBeInTheDocument();
-    expect(screen.getByText('Shipment Readiness Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Shipments')).toBeInTheDocument();
     expect(screen.getByText('Your priority')).toBeInTheDocument();
-    expect(screen.getByText('Shipments ready to seal')).toBeInTheDocument();
+    expect(screen.queryByText('Shipment Readiness Pipeline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Shipment status pipeline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add suppliers')).not.toBeInTheDocument();
   });
 
   it('shows lineage checklist until seal milestone is reached', () => {

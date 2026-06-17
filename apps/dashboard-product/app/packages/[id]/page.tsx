@@ -90,6 +90,7 @@ import {
   getPackageSubmittedDateLabel,
   getPackageUpdatedLabel,
   getPackageVerifiedStatusLabel,
+  getProducerDetailHref,
   getQuickStatsProducerLabel,
   getRunPackageComplianceLabel,
   getTracesReferenceLabel,
@@ -470,7 +471,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     {pkg.farmers.map((farmer) => (
                       <Link
                         key={farmer.id}
-                        href={`/farmers/${farmer.id}`}
+                        href={getProducerDetailHref(farmer.id)}
                         className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-secondary/50"
                       >
                         <div className="flex items-center gap-3">
