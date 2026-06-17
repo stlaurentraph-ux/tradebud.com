@@ -61,6 +61,23 @@ module.exports = ({ config }) => {
     ].filter((value, index, arr) => arr.indexOf(value) === index);
   }
 
+  const iosGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
+  const iosGoogleSchemeMatch =
+    iosGoogleClientId && /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(iosGoogleClientId);
+  if (iosGoogleSchemeMatch) {
+    const reversedScheme = `com.googleusercontent.apps.${iosGoogleSchemeMatch[1]}`;
+    const existingTypes = ios.infoPlist?.CFBundleURLTypes ?? [];
+    const hasScheme = existingTypes.some((entry) =>
+      (entry.CFBundleURLSchemes ?? []).includes(reversedScheme),
+    );
+    if (!hasScheme) {
+      ios.infoPlist = {
+        ...(ios.infoPlist ?? {}),
+        CFBundleURLTypes: [...existingTypes, { CFBundleURLSchemes: [reversedScheme] }],
+      };
+    }
+  }
+
   const android = { ...(config.android ?? appJson.expo.android) };
   const existingFilters = android.intentFilters ?? [];
   const hasAppLinkFilter = existingFilters.some(

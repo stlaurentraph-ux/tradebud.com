@@ -9492,8 +9492,8 @@ export function getContactsAddTipLabel(tip: 1 | 2 | 3 | 4, isCooperative: boolea
 }
 
 export function getContactsAddToastMessage(
-  kind: 'contact_created' | 'member_added' | 'organization_created' | 'import_success',
-  values?: { count?: number },
+  kind: 'contact_created' | 'member_added' | 'organization_created' | 'import_success' | 'import_partial',
+  values?: { count?: number; success?: number; failed?: number },
   t?: TranslateFn,
 ): string {
   if (kind === 'import_success' && values?.count !== undefined) {
@@ -9502,6 +9502,14 @@ export function getContactsAddToastMessage(
         ? 'workflow.contacts.add.toast.import_success'
         : 'workflow.contacts.add.toast.import_success_plural';
     return wf(key, 'Successfully imported {{count}} record(s)', t, { count: values.count });
+  }
+  if (kind === 'import_partial' && values?.success !== undefined && values?.failed !== undefined) {
+    return wf(
+      'workflow.contacts.add.toast.import_partial',
+      'Imported {{success}}, but {{failed}} row(s) failed. Review errors below.',
+      t,
+      { success: values.success, failed: values.failed },
+    );
   }
   const keyMap = {
     contact_created: 'workflow.contacts.add.toast.contact_created',
@@ -11047,6 +11055,9 @@ export function getContactsCsvWizardLabel(key: string, t?: TranslateFn): string 
     action_importing: 'workflow.contacts.csv.action.importing',
     action_import_records: 'workflow.contacts.csv.action.import_records',
     action_done: 'workflow.contacts.csv.action.done',
+    action_view_contacts: 'workflow.contacts.csv.action.view_contacts',
+    failed_rows_title: 'workflow.contacts.csv.failed_rows.title',
+    failed_row_item: 'workflow.contacts.csv.failed_rows.item',
     error_upload_csv: 'workflow.contacts.csv.error.upload_csv',
     error_empty_csv: 'workflow.contacts.csv.error.empty_csv',
     error_read_file: 'workflow.contacts.csv.error.read_file',
@@ -11097,6 +11108,9 @@ export function getContactsCsvWizardLabel(key: string, t?: TranslateFn): string 
     action_importing: 'Importing...',
     action_import_records: 'Import {{count}} Records',
     action_done: 'Done',
+    action_view_contacts: 'View directory',
+    failed_rows_title: 'Rows that could not be imported',
+    failed_row_item: 'Row {{row}}: {{message}}',
     error_upload_csv: 'Please upload a CSV file.',
     error_empty_csv: 'The CSV file appears to be empty.',
     error_read_file: 'Failed to read the file. Please try again.',

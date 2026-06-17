@@ -25,7 +25,11 @@ export async function signInWithGoogleNative(): Promise<Session> {
   }
 
   const redirectUri = getGoogleOAuthRedirectUri(ids.clientId);
-  const nonce = Crypto.randomUUID();
+  const rawNonce = Crypto.randomUUID();
+  const hashedNonce = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    rawNonce,
+  );
 
   const request = new AuthRequest({
     clientId: ids.clientId,
@@ -33,7 +37,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
     scopes: ['openid', 'profile', 'email'],
     responseType: ResponseType.Code,
     usePKCE: true,
-    extraParams: { nonce },
+    extraParams: { nonce: hashedNonce },
   });
 
   const result = await request.promptAsync(GOOGLE_DISCOVERY);
@@ -65,7 +69,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider: 'google',
     token: idToken,
-    nonce,
+    nonce: rawNonce,
   });
 
   if (error) {

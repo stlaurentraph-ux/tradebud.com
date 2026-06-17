@@ -53,7 +53,11 @@ export async function completeOAuthFarmerSession(params: {
   const res = await testBackendLogin();
   if (!res.ok) {
     await clearPersistedSyncAuth();
-    return { ok: false, message: 'sign_in_oauth_failed' };
+    const msg = res.message.toLowerCase();
+    if (msg.includes('api') || msg.includes('localhost') || msg.includes('network')) {
+      return { ok: false, message: 'sign_in_api_unreachable' };
+    }
+    return { ok: false, message: res.message };
   }
 
   void registerFarmerPushToken();

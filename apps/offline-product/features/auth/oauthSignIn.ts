@@ -4,6 +4,12 @@ import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import { signInWithAppleNative } from '@/features/auth/appleSignIn.native';
+import {
+  getGoogleOAuthClientIds,
+  isGoogleNativeSignInConfigured,
+} from '@/features/auth/googleOAuthConfig';
+import { signInWithGoogleNative } from '@/features/auth/googleSignIn.native';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 
@@ -90,14 +96,11 @@ async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session>
 
 export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<Session> {
   if (provider === 'apple' && Platform.OS === 'ios') {
-    const { signInWithAppleNative } = await import('@/features/auth/appleSignIn.native');
     return signInWithAppleNative();
   }
 
   if (provider === 'google' && Platform.OS !== 'web') {
-    const { isGoogleNativeSignInConfigured } = await import('@/features/auth/googleOAuthConfig');
     if (isGoogleNativeSignInConfigured()) {
-      const { signInWithGoogleNative } = await import('@/features/auth/googleSignIn.native');
       return signInWithGoogleNative();
     }
   }

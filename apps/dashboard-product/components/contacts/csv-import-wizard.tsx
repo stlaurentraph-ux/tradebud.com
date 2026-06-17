@@ -96,9 +96,11 @@ interface CsvImportWizardProps {
   importType: ImportType;
   onComplete: (data: CsvRow[]) => Promise<ImportResult>;
   onCancel: () => void;
+  /** Called after import completes — e.g. navigate back to the contacts list. */
+  onFinished?: () => void;
 }
 
-export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportWizardProps) {
+export function CsvImportWizard({ importType, onComplete, onCancel, onFinished }: CsvImportWizardProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const [step, setStep] = useState(1);
@@ -274,11 +276,22 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
       const result = await onComplete(transformedData);
       setImportResult(result);
       setStep(4);
+      if (result.failed === 0 && result.success > 0) {
+        onFinished?.();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : getContactsCsvWizardLabel('error_import_failed', t));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFinished = () => {
+    if (onFinished) {
+      onFinished();
+      return;
+    }
+    onCancel();
   };
 
   const canProceed = () => {
@@ -553,6 +566,22 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
                 <div className="text-sm text-red-600">{getContactsCsvWizardLabel('failed_count', t)}</div>
               </div>
             </div>
+            {importResult.errors.length > 0 ? (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50/50 p-4">
+                <p className="mb-2 text-sm font-medium text-red-900">
+                  {getContactsCsvWizardLabel('failed_rows_title', t)}
+                </p>
+                <ul className="space-y-1 text-sm text-red-800">
+                  {importResult.errors.map((entry) => (
+                    <li key={`${entry.row}-${entry.message}`}>
+                      {getContactsCsvWizardLabel('failed_row_item', t)
+                        .replace('{{row}}', String(entry.row))
+                        .replace('{{message}}', entry.message)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}
@@ -575,8 +604,8 @@ export function CsvImportWizard({ importType, onComplete, onCancel }: CsvImportW
             )}
           </>
         ) : (
-          <Button onClick={onCancel} className="ml-auto">
-            {getContactsCsvWizardLabel('action_done', t)}
+          <Button onClick={handleFinished} className="ml-auto">
+            {getContactsCsvWizardLabel(onFinished ? 'action_view_contacts' : 'action_done', t)}
           </Button>
         )}
       </div>

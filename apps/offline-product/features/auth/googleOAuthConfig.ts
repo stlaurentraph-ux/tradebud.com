@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+import { GOOGLE_OAUTH_ENV } from '@/features/auth/googleOAuthEnv';
 import { getNativeOAuthCallbackUri } from '@/features/auth/oauthRedirect';
 
 export type GoogleOAuthClientIds = {
@@ -22,10 +23,16 @@ function readGoogleOAuthExtra(): GoogleOAuthExtra {
     (Constants.expoConfig?.extra as { googleOAuth?: GoogleOAuthExtra } | undefined)?.googleOAuth ??
     {};
   return {
-    webClientId: fromConfig.webClientId ?? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: fromConfig.iosClientId ?? process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: fromConfig.androidClientId ?? process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    expoClientId: fromConfig.expoClientId ?? process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+    webClientId:
+      fromConfig.webClientId || GOOGLE_OAUTH_ENV.webClientId || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    iosClientId:
+      fromConfig.iosClientId || GOOGLE_OAUTH_ENV.iosClientId || process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId:
+      fromConfig.androidClientId ||
+      GOOGLE_OAUTH_ENV.androidClientId ||
+      process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    expoClientId:
+      fromConfig.expoClientId || GOOGLE_OAUTH_ENV.expoClientId || process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
   };
 }
 

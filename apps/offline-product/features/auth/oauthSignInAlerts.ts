@@ -12,6 +12,8 @@ export function showOAuthSignInFailureAlert(
       ? t('sign_in_apple_not_completed')
       : messageCode === 'sign_in_field_bootstrap_failed'
         ? t('sign_in_field_bootstrap_failed')
+        : messageCode === 'sign_in_api_unreachable'
+          ? t('sign_in_api_unreachable')
       : messageCode === 'sign_in_oauth_needs_signup'
       ? t('sign_in_oauth_needs_signup')
       : messageCode === 'sign_in_oauth_cancelled'
@@ -22,7 +24,11 @@ export function showOAuthSignInFailureAlert(
             ? t('sign_in_oauth_provider_disabled')
           : messageCode;
 
-  if (messageCode === 'sign_in_oauth_cancelled' || messageCode === 'sign_in_field_bootstrap_failed') {
+  if (
+    messageCode === 'sign_in_oauth_cancelled' ||
+    messageCode === 'sign_in_field_bootstrap_failed' ||
+    messageCode === 'sign_in_api_unreachable'
+  ) {
     Alert.alert(t('sign_in'), body);
     return;
   }

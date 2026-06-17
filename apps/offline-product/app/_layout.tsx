@@ -12,6 +12,7 @@ import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { initObservability } from '@/features/observability/initObservability';
+import '@/features/auth/googleOAuthEnv';
 import { AppStateProvider } from '@/features/state/AppStateContext';
 import { LanguageProvider } from '@/features/state/LanguageContext';
 

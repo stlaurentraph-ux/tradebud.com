@@ -185,6 +185,9 @@ export default function AddContactPage() {
     let failed = 0;
     const errors: { row: number; field: string; message: string }[] = [];
 
+    const parseTags = (raw: string | undefined) =>
+      raw ? raw.split(/[,;]/).map((tag) => tag.trim()).filter(Boolean) : [];
+
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       try {
@@ -195,7 +198,7 @@ export default function AddContactPage() {
           organization: row.organization || row.name || null,
           contact_type: normalizeContactActivityType(row.contact_type || row.activity_type),
           country: row.country || null,
-          tags: row.tags ? row.tags.split(',').map((tag) => tag.trim()) : [],
+          tags: parseTags(row.tags),
           consent_status: (row.consent_status as 'unknown' | 'granted' | 'revoked') || 'unknown',
         });
         success++;
@@ -214,7 +217,15 @@ export default function AddContactPage() {
       toast.success(getContactsAddToastMessage('import_success', { count: success }, t));
     }
 
+    if (failed > 0) {
+      toast.error(getContactsAddToastMessage('import_partial', { success, failed }, t));
+    }
+
     return { success, failed, errors };
+  };
+
+  const handleCsvFinished = () => {
+    router.push('/contacts');
   };
 
   const handleCancel = () => {
@@ -390,6 +401,7 @@ export default function AddContactPage() {
               importType="contacts"
               onComplete={handleCsvImport}
               onCancel={handleCancel}
+              onFinished={handleCsvFinished}
             />
           )}
 
@@ -398,6 +410,7 @@ export default function AddContactPage() {
               importType="organizations"
               onComplete={handleCsvImport}
               onCancel={handleCancel}
+              onFinished={handleCsvFinished}
             />
           )}
         </div>
