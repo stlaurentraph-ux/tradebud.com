@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import {
+  abortSyncAuthForSignOut,
   clearPersistedSyncAuth,
   getAuthUiGeneration,
   hasSyncAuthSession,
@@ -53,10 +54,9 @@ import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
+import { runAutoBackup, type RunAutoBackupResult } from '@/features/sync/runAutoBackup';
 import {
   listUnsyncedLocalPlots,
-  type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
@@ -66,6 +66,61 @@ import { getSetting, loadPendingSyncActions, setSetting } from '@/features/state
 import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
+
+function buildBackupOutcomeMessage(backup: RunAutoBackupResult | null, t: (key: string, params?: Record<string, string | number>) => string): string {
+  if (!backup) {
+    return t('sync_no_farmer_profile');
+  }
+
+  const parts: string[] = [];
+  const { plotResult, queueResult } = backup;
+
+  if (plotResult?.fetchFailed) {
+    parts.push(t('sync_plots_fetch_failed'));
+  } else if (plotResult?.stoppedForAuth) {
+    parts.push(t('sync_session_expired_short'));
+  } else if (plotResult && plotResult.uploaded > 0) {
+    if (plotResult.failed > 0) {
+      parts.push(
+        t('sign_in_backup_partial', {
+          uploaded: plotResult.uploaded,
+          failed: plotResult.failed,
+        }),
+      );
+    } else if (plotResult.unsyncedBefore > 0 && plotResult.uploaded === plotResult.unsyncedBefore) {
+      parts.push(
+        t('sync_plots_uploaded_all', {
+          uploaded: plotResult.uploaded,
+          total: plotResult.unsyncedBefore,
+        }),
+      );
+    } else {
+      parts.push(t('sign_in_backup_done', { n: plotResult.uploaded }));
+    }
+  } else if (plotResult && plotResult.failed > 0) {
+    parts.push(
+      t('sign_in_backup_partial', {
+        uploaded: plotResult.uploaded,
+        failed: plotResult.failed,
+      }),
+    );
+  } else if (plotResult && plotResult.unsyncedBefore === 0) {
+    parts.push(t('sync_plots_already_synced'));
+  }
+
+  if (queueResult.fetchFailed) {
+    parts.push(t('sync_queue_fetch_failed'));
+  } else {
+    if (queueResult.completed > 0) {
+      parts.push(t('sync_queue_sent', { n: queueResult.completed }));
+    }
+    if (queueResult.failedActions > 0) {
+      parts.push(t('sync_queue_failed_remain', { n: queueResult.failedActions }));
+    }
+  }
+
+  return parts.length > 0 ? parts.join('\n\n') : t('backup_up_to_date');
+}
 
 export type SignInVariant = 'general' | 'after_plot' | 'sync';
 
@@ -121,18 +176,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
   }, [farmer?.id, plots]);
 
-  const showBackupResultAlert = useCallback(
-    (sync: UploadUnsyncedPlotsResult | null) => {
-      if (sync && sync.uploaded > 0 && sync.failed === 0) {
-        Alert.alert(t('sign_in_to_backup_title'), t('sign_in_backup_done', { n: sync.uploaded }));
-      } else if (sync && (sync.failed > 0 || sync.fetchFailed)) {
-        Alert.alert(
-          t('sign_in_to_backup_title'),
-          sync.fetchFailed
-            ? t('backend_unreachable')
-            : t('sign_in_backup_partial', { uploaded: sync.uploaded, failed: sync.failed }),
-        );
-      }
+  const showBackupOutcomeAlert = useCallback(
+    (backup: RunAutoBackupResult | null) => {
+      Alert.alert(t('backup_consent_title'), buildBackupOutcomeMessage(backup, t));
     },
     [t],
   );
@@ -143,12 +189,13 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     if (unsynced <= 0 && pendingQueue.length === 0) return;
     if ((await hasDataProcessingConsent()) && farmer?.id) {
       const backup = await runAutoBackup({ farmerId: farmer.id, localPlots: plots });
-      showBackupResultAlert(backup.plotResult);
+      showBackupOutcomeAlert(backup);
       return;
     }
+    if (backupBusy) return;
     setBackupPlotCount(unsynced || plots.length || pendingQueue.length);
     setBackupModalVisible(true);
-  }, [countUnsyncedPlots, farmer?.id, plots, showBackupResultAlert]);
+  }, [backupBusy, countUnsyncedPlots, farmer?.id, plots, showBackupOutcomeAlert]);
 
   const promptBackupConsent = useCallback(
     async (onConfirmed?: () => void | Promise<void>) => {
@@ -158,29 +205,44 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       }
       const unsynced = await countUnsyncedPlots();
       backupConfirmedCallbackRef.current = onConfirmed;
+      if (backupBusy) return;
       setBackupPlotCount(unsynced || plots.length);
       setBackupModalVisible(true);
     },
-    [countUnsyncedPlots, plots.length],
+    [backupBusy, countUnsyncedPlots, plots.length],
   );
 
   const handleBackupConfirm = useCallback(async () => {
-    if (!farmer?.id) {
-      setBackupModalVisible(false);
-      return;
-    }
+    if (backupBusy) return;
+
     setBackupBusy(true);
     try {
-      const backup = await runBackupWithConsent({ farmerId: farmer.id, localPlots: plots });
-      setBackupModalVisible(false);
-      showBackupResultAlert(backup?.plotResult ?? null);
+      const { farmer: alignedFarmer, rekeyed } = await alignFarmerWithAuthUser(farmer, {
+        localPlots: plots,
+      });
+      if (rekeyed && alignedFarmer) {
+        setFarmer(alignedFarmer);
+        await reloadFromDisk();
+      }
+      const farmerId = alignedFarmer?.id ?? farmer?.id;
+      if (!farmerId) {
+        Alert.alert(t('backup_consent_title'), t('sync_no_farmer_profile'));
+        return;
+      }
+
+      const backup = await runBackupWithConsent({ farmerId, localPlots: plots });
+      showBackupOutcomeAlert(backup);
       const cb = backupConfirmedCallbackRef.current;
       backupConfirmedCallbackRef.current = undefined;
       if (cb) await cb();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      Alert.alert(t('backup_consent_title'), message || t('backend_unreachable'));
     } finally {
+      setBackupModalVisible(false);
       setBackupBusy(false);
     }
-  }, [farmer?.id, plots, showBackupResultAlert]);
+  }, [backupBusy, farmer, plots, reloadFromDisk, setFarmer, showBackupOutcomeAlert, t]);
 
   const handleBackupDecline = useCallback(() => {
     trackEvent(ANALYTICS_EVENTS.BACKUP_DECLINED, { plotCount: backupPlotCount });
@@ -215,14 +277,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const refreshAuth = useCallback(async () => {
     const generationAtStart = getAuthUiGeneration();
     await hydrateSyncAuthFromSettings();
-    if (generationAtStart !== getAuthUiGeneration()) {
-      if (!hasSyncAuthSession()) {
-        setIsSignedIn(false);
-        setEmail('');
-      }
-      return;
-    }
-    if (!hasSyncAuthSession()) {
+    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
       setIsSignedIn(false);
       setEmail('');
       return;
@@ -231,19 +286,16 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     if (savedEmail) setEmail(savedEmail);
     setIsSignedIn(true);
     const res = await testBackendLogin();
-    if (generationAtStart !== getAuthUiGeneration()) {
-      if (!hasSyncAuthSession()) {
-        setIsSignedIn(false);
-        setEmail('');
-      }
-      return;
-    }
-    if (!hasSyncAuthSession()) {
+    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
       setIsSignedIn(false);
       setEmail('');
       return;
     }
     if (!res.ok) {
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+      }
       return;
     }
     try {
@@ -251,7 +303,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     } catch {
       // Auth session is valid; local farmer alignment is best-effort on refresh.
     }
-    if (!hasSyncAuthSession()) {
+    if (!hasSyncAuthSession() || generationAtStart !== getAuthUiGeneration()) {
       setIsSignedIn(false);
       setEmail('');
     }
@@ -329,6 +381,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutOnDevice = useCallback(async () => {
+    abortSyncAuthForSignOut();
     setIsSignedIn(false);
     setEmail('');
     setPassword('');

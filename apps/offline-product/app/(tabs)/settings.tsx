@@ -31,7 +31,6 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotsForFarmer,
   getTracebudApiBaseUrl,
-  testBackendLogin,
 } from '@/features/api/postPlot';
 import {
   getAuthCredentials,
@@ -51,7 +50,17 @@ import {
   uploadUnsyncedPlotsForFarmer,
 } from '@/features/sync/plotServerSync';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
-import { withSyncQueueLock } from '@/features/sync/syncQueueMutex';
+import {
+  getSyncQueueLockSnapshot,
+  setSyncQueuePhase,
+  subscribeSyncQueueLock,
+  withSyncQueueLock,
+} from '@/features/sync/syncQueueMutex';
+import { formatSyncProgressCaption } from '@/features/sync/syncProgressCaption';
+import {
+  buildUnreachableSyncMessage,
+  isNetworkReachabilityFailure,
+} from '@/features/sync/syncReachabilityMessage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brand, Colors, Spacing } from '@/constants/theme';
@@ -95,6 +104,8 @@ export default function SettingsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
+  const [syncLockSnapshot, setSyncLockSnapshot] = useState(getSyncQueueLockSnapshot);
+  const [syncProgressTick, setSyncProgressTick] = useState(0);
   /** SQLite queue: harvests, photo sync, evidence sync (not plot geometry upload). */
   const [queuePendingCount, setQueuePendingCount] = useState(0);
   const [queueRetryingCount, setQueueRetryingCount] = useState(0);
@@ -259,6 +270,35 @@ export default function SettingsScreen() {
       void refreshSyncMetrics();
     });
   }, [refreshSyncMetrics]);
+
+  useEffect(() => {
+    return subscribeSyncQueueLock(() => {
+      const next = getSyncQueueLockSnapshot();
+      setSyncLockSnapshot(next);
+      if (!next.locked) {
+        void refreshSyncMetrics();
+      }
+    });
+  }, [refreshSyncMetrics]);
+
+  useEffect(() => {
+    if (!syncLockSnapshot.locked && !syncNowBusy) return;
+    const id = setInterval(() => {
+      setSyncProgressTick((tick) => tick + 1);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [syncLockSnapshot.locked, syncNowBusy]);
+
+  const syncProgressCaption = useMemo(
+    () =>
+      formatSyncProgressCaption(t, syncLockSnapshot, {
+        syncNowBusy,
+        nowMs: Date.now(),
+      }),
+    [t, syncLockSnapshot, syncNowBusy, syncProgressTick],
+  );
+
+  const showSyncProgress = Boolean(syncProgressCaption && (syncNowBusy || syncLockSnapshot.locked));
 
   useEffect(() => {
     setNameInput(farmer?.name ?? '');
@@ -648,114 +688,147 @@ export default function SettingsScreen() {
     setSyncNowBusy(true);
     setSyncMessage(null);
     try {
-      await withSyncQueueLock(async () => {
-      const res = await testBackendLogin();
-      if (!res.ok) {
-        setSyncMessage(res.message);
-        return;
-      }
-      if (!farmer?.id) {
-        setSyncMessage(t('sync_no_farmer_profile'));
-        return;
-      }
+      await withSyncQueueLock(
+        async () => {
+          try {
+            if (!hasSyncAuthSession()) {
+              setSyncMessage(t('sync_session_expired_short'));
+              return;
+            }
+            if (!farmer?.id) {
+              setSyncMessage(t('sync_no_farmer_profile'));
+              return;
+            }
 
-      const parts: string[] = [];
+            const parts: string[] = [];
 
-      if (plots.length === 0) {
-        parts.push(t('sync_plots_none'));
-      } else {
-        const syncRes = await uploadUnsyncedPlotsForFarmer({
-          farmerId: farmer.id,
-          localPlots: plots,
-          t,
-        });
-        if (syncRes.stoppedForAuth) {
-          parts.push(t('sync_session_expired_short'));
-        } else if (syncRes.fetchFailed) {
-          parts.push(t('sync_plots_fetch_failed'));
-        } else if (syncRes.unsyncedBefore === 0) {
-          parts.push(t('sync_plots_already_synced'));
-        } else if (syncRes.uploaded === syncRes.unsyncedBefore) {
-          parts.push(
-            t('sync_plots_uploaded_all', {
-              uploaded: syncRes.uploaded,
-              total: syncRes.unsyncedBefore,
-            }),
-          );
-        } else {
-          parts.push(
-            t('sync_plots_partial', {
-              uploaded: syncRes.uploaded,
-              total: syncRes.unsyncedBefore,
-              failed: syncRes.failed,
-            }) + (syncRes.firstError ? `\n${syncRes.firstError}` : ''),
-          );
-        }
-      }
+            setSyncQueuePhase(
+              plots.length > 0
+                ? 'uploading_plots'
+                : selectedQueueActionTypes.length > 0
+                  ? 'processing_queue'
+                  : 'preparing',
+            );
 
-      const appendQueueResultParts = (
-        queueRes: Awaited<ReturnType<typeof processPendingSyncQueue>>,
-        label?: string,
-      ) => {
-        if (label) parts.push(label);
-        if (queueRes.fetchFailed) {
-          parts.push(t('sync_queue_fetch_failed'));
-          return;
-        }
-        if (queueRes.completed > 0) {
-          parts.push(t('sync_queue_sent', { n: queueRes.completed }));
-        }
-        if (queueRes.droppedInvalid > 0) {
-          parts.push(t('sync_queue_dropped_invalid', { n: queueRes.droppedInvalid }));
-        }
-        if (queueRes.failedActions > 0) {
-          parts.push(t('sync_queue_failed_remain', { n: queueRes.failedActions }));
-          if (queueRes.firstError) parts.push(queueRes.firstError);
-        }
-      };
-      if (selectedQueueActionTypes.length === 0) {
-        parts.push(t('sync_queue_no_action_selected'));
-      } else if (queueSmartSweepEnabled) {
-        const retryingPass = await processPendingSyncQueue({
-          farmerId: farmer.id,
-          localPlots: plots,
-          actionTypes: selectedQueueActionTypes,
-          attemptScope: 'retrying_only',
-          maxActions: queueSmartSweepCap,
-        });
-        appendQueueResultParts(retryingPass, t('sync_queue_smart_pass_retrying'));
-        const firstPassProcessed =
-          retryingPass.completed + retryingPass.failedActions + retryingPass.droppedInvalid;
-        const remainingBudget = Math.max(0, queueSmartSweepCap - firstPassProcessed);
-        if (!retryingPass.fetchFailed) {
-          if (remainingBudget > 0) {
-            const firstAttemptPass = await processPendingSyncQueue({
-              farmerId: farmer.id,
-              localPlots: plots,
-              actionTypes: selectedQueueActionTypes,
-              attemptScope: 'first_attempt_only',
-              maxActions: remainingBudget,
-            });
-            appendQueueResultParts(firstAttemptPass, t('sync_queue_smart_pass_first'));
+            if (plots.length === 0) {
+              parts.push(t('sync_plots_none'));
+            } else {
+              const syncRes = await uploadUnsyncedPlotsForFarmer({
+                farmerId: farmer.id,
+                localPlots: plots,
+                t,
+              });
+              if (syncRes.stoppedForAuth) {
+                parts.push(t('sync_session_expired_short'));
+              } else if (syncRes.fetchFailed) {
+                setSyncMessage(buildUnreachableSyncMessage(t));
+                return;
+              } else if (syncRes.unsyncedBefore === 0) {
+                parts.push(t('sync_plots_already_synced'));
+              } else if (syncRes.uploaded === syncRes.unsyncedBefore) {
+                parts.push(
+                  t('sync_plots_uploaded_all', {
+                    uploaded: syncRes.uploaded,
+                    total: syncRes.unsyncedBefore,
+                  }),
+                );
+              } else {
+                parts.push(
+                  t('sync_plots_partial', {
+                    uploaded: syncRes.uploaded,
+                    total: syncRes.unsyncedBefore,
+                    failed: syncRes.failed,
+                  }) + (syncRes.firstError ? `\n${syncRes.firstError}` : ''),
+                );
+              }
+            }
+
+          const appendQueueResultParts = (
+            queueRes: Awaited<ReturnType<typeof processPendingSyncQueue>>,
+            label?: string,
+          ) => {
+            if (label) parts.push(label);
+            if (queueRes.fetchFailed) {
+              if (!parts.some((part) => part === t('sync_plots_fetch_failed'))) {
+                parts.push(t('sync_queue_fetch_failed'));
+              }
+              return;
+            }
+            if (queueRes.completed > 0) {
+              parts.push(t('sync_queue_sent', { n: queueRes.completed }));
+            }
+            if (queueRes.droppedInvalid > 0) {
+              parts.push(t('sync_queue_dropped_invalid', { n: queueRes.droppedInvalid }));
+            }
+            if (queueRes.failedActions > 0) {
+              parts.push(t('sync_queue_failed_remain', { n: queueRes.failedActions }));
+              if (queueRes.firstError) parts.push(queueRes.firstError);
+            }
+          };
+          if (selectedQueueActionTypes.length === 0) {
+            parts.push(t('sync_queue_no_action_selected'));
           } else {
-            parts.push(t('sync_queue_smart_cap_reached'));
+            setSyncQueuePhase('processing_queue');
+            if (queueSmartSweepEnabled) {
+              const retryingPass = await processPendingSyncQueue({
+                farmerId: farmer.id,
+                localPlots: plots,
+                actionTypes: selectedQueueActionTypes,
+                attemptScope: 'retrying_only',
+                maxActions: queueSmartSweepCap,
+              });
+              appendQueueResultParts(retryingPass, t('sync_queue_smart_pass_retrying'));
+              const firstPassProcessed =
+                retryingPass.completed + retryingPass.failedActions + retryingPass.droppedInvalid;
+              const remainingBudget = Math.max(0, queueSmartSweepCap - firstPassProcessed);
+              if (!retryingPass.fetchFailed) {
+                if (remainingBudget > 0) {
+                  const firstAttemptPass = await processPendingSyncQueue({
+                    farmerId: farmer.id,
+                    localPlots: plots,
+                    actionTypes: selectedQueueActionTypes,
+                    attemptScope: 'first_attempt_only',
+                    maxActions: remainingBudget,
+                  });
+                  appendQueueResultParts(firstAttemptPass, t('sync_queue_smart_pass_first'));
+                } else {
+                  parts.push(t('sync_queue_smart_cap_reached'));
+                }
+              }
+            } else {
+              const queueRes = await processPendingSyncQueue({
+                farmerId: farmer.id,
+                localPlots: plots,
+                actionTypes: selectedQueueActionTypes,
+                attemptScope: queueAttemptScope,
+              });
+              appendQueueResultParts(queueRes);
+            }
           }
-        }
-      } else {
-        const queueRes = await processPendingSyncQueue({
-          farmerId: farmer.id,
-          localPlots: plots,
-          actionTypes: selectedQueueActionTypes,
-          attemptScope: queueAttemptScope,
-        });
-        appendQueueResultParts(queueRes);
-      }
 
-      setSyncMessage(parts.filter(Boolean).join('\n\n'));
-      });
+          const message = parts.filter(Boolean).join('\n\n');
+          setSyncMessage(message || t('backup_up_to_date'));
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          setSyncMessage(
+            isNetworkReachabilityFailure(message)
+              ? buildUnreachableSyncMessage(t)
+              : message || t('backend_unreachable'),
+          );
+        }
+      },
+        { waitMs: 'never' },
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setSyncMessage(
+        isNetworkReachabilityFailure(message)
+          ? buildUnreachableSyncMessage(t)
+          : message || t('backend_unreachable'),
+      );
     } finally {
       setSyncNowBusy(false);
-      await refreshSyncMetrics();
+      void refreshSyncMetrics();
     }
   };
 
@@ -902,11 +975,6 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {isSignedIn && plotsFetchState === 'failed' && totalSyncPending > 0 ? (
-                  <ThemedText type="caption" style={styles.syncQueueWarningText}>
-                    {t('sync_plots_fetch_failed')}
-                  </ThemedText>
-                ) : null}
 
                 <View style={styles.btnWrap}>
                   {isSignedIn ? (
@@ -941,7 +1009,11 @@ export default function SettingsScreen() {
                   )}
                 </View>
 
-                {syncMessage ? (
+                {showSyncProgress ? (
+                  <ThemedText type="caption" style={styles.syncHint}>
+                    {syncProgressCaption}
+                  </ThemedText>
+                ) : syncMessage ? (
                   <ThemedText type="caption" style={styles.syncHint}>
                     {syncMessage}
                   </ThemedText>

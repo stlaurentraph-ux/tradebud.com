@@ -39,7 +39,7 @@ export function BackupConsentModal({
             {body}
           </ThemedText>
           <View style={styles.actions}>
-            <Button variant="primary" fullWidth disabled={busy} onPress={onConfirm}>
+            <Button variant="primary" fullWidth loading={busy} disabled={busy} onPress={onConfirm}>
               {consentLabel}
             </Button>
             <Pressable onPress={onDecline} hitSlop={12} style={styles.declineBtn} disabled={busy}>

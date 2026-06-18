@@ -1,6 +1,6 @@
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
-import { getAccessTokenFromSupabase } from './syncAuthSession';
+import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 import { ensureFieldProducerBootstrapped } from './fieldAppBootstrap';
 
@@ -235,27 +235,41 @@ export async function updatePlotMetadataOnBackend(params: {
   return res.json();
 }
 
+const PLOT_FETCH_TIMEOUT_MS = 20_000;
+
 export async function fetchPlotsForFarmer(farmerId: string) {
-  const accessToken = await getAccessTokenFromSupabase();
+  const accessToken = await getAccessTokenFromSupabaseWithTimeout();
   if (!accessToken) {
     throw new Error('No access token available for plot sync');
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PLOT_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        signal: controller.signal,
       },
-    },
-  );
+    );
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Plot fetch error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `Plot fetch error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Network request failed');
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return res.json();
 }
 
 export async function postHarvestToBackend(params: {

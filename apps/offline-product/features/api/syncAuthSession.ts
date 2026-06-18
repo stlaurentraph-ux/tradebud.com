@@ -158,6 +158,9 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
         throw new Error('sign_in_session_expired');
       }
       if (data.session.refresh_token && data.session.refresh_token !== currentRefreshToken) {
+        if (!syncAuthStillActive(revisionAtStart) || (await isSyncAuthDismissedOnDevice())) {
+          return null;
+        }
         await saveOAuthSyncAuthCredentials(
           data.session.user.email ?? currentEmail,
           data.session.refresh_token,
@@ -201,10 +204,32 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
   });
 }
 
+const DEFAULT_ACCESS_TOKEN_TIMEOUT_MS = 12_000;
+
+/** Bounds OAuth/password refresh so sync UI cannot spin forever on a hung auth call. */
+export async function getAccessTokenFromSupabaseWithTimeout(
+  timeoutMs = DEFAULT_ACCESS_TOKEN_TIMEOUT_MS,
+): Promise<string | null> {
+  try {
+    return await Promise.race([
+      getAccessTokenFromSupabase(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          const err = new Error('Network request failed');
+          err.name = 'AbortError';
+          reject(err);
+        }, timeoutMs);
+      }),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
 export async function testBackendLogin(options?: {
   timeoutMs?: number;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
-  const timeoutMs = options?.timeoutMs ?? 30_000;
+  const timeoutMs = options?.timeoutMs ?? 12_000;
   try {
     const apiBase = getRuntimeGuardedApiBaseUrl();
     if (isLocalhostApi(apiBase) && !IS_DEV_RUNTIME && !ALLOW_LOCALHOST_API) {
@@ -214,7 +239,9 @@ export async function testBackendLogin(options?: {
           'EXPO_PUBLIC_API_URL points to localhost. For preview/production builds, set a reachable HTTPS API URL.',
       };
     }
-    const token = await getAccessTokenFromSupabase();
+    const token = await getAccessTokenFromSupabaseWithTimeout(
+      Math.min(timeoutMs, DEFAULT_ACCESS_TOKEN_TIMEOUT_MS),
+    );
     if (!token) {
       return {
         ok: false,
@@ -263,11 +290,20 @@ export function getAuthCredentials() {
   return { email: currentEmail, password: currentPassword };
 }
 
+/** Immediately invalidate in-memory sync auth (call before async credential wipe). */
+export function abortSyncAuthForSignOut(): void {
+  signOutRevision += 1;
+  authUiGeneration += 1;
+  syncAuthDismissedByUser = true;
+  clearInMemorySyncAuth();
+}
+
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
   return runAuthStateMutation(async () => {
     try {
-      syncAuthDismissedByUser = await isSyncAuthDismissedOnDevice();
-      if (syncAuthDismissedByUser) {
+      const dismissed = await isSyncAuthDismissedOnDevice();
+      syncAuthDismissedByUser = dismissed;
+      if (dismissed) {
         clearInMemorySyncAuth();
         return;
       }
@@ -277,7 +313,6 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
         clearInMemorySyncAuth();
         return;
       }
-      syncAuthDismissedByUser = false;
       if (credentials.method === 'oauth') {
         applyOAuthAuth(credentials.email, credentials.refreshToken);
         return;
@@ -324,12 +359,9 @@ export async function saveAndApplyOAuthSyncAuth(
 }
 
 export async function clearPersistedSyncAuth(): Promise<void> {
+  abortSyncAuthForSignOut();
   return runAuthStateMutation(async () => {
-    signOutRevision += 1;
-    authUiGeneration += 1;
-    syncAuthDismissedByUser = true;
     await clearSyncAuthCredentials();
-    clearInMemorySyncAuth();
     try {
       await getSupabaseAuthClient().auth.signOut();
     } catch {

@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
-import { Brand, Colors, Radius } from '@/constants/theme';
+import { Brand, Colors, Radius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -26,11 +26,15 @@ import { scaleText } from '@/features/demo/storeUiScale';
 
 const HOME_SCREEN_PAD = 16;
 const HOME_TILE_GAP = 12;
-const HOME_TILE_MIN_HEIGHT = 120;
+/** Home tile layout contract — keep ≥16px padding, flexible height, wrapping text (see device-qa-preflight). */
+const HOME_TILE_PAD_MIN = 16;
+const HOME_TILE_ICON_SIZE = 40;
+const HOME_TILE_ICON_GAP = 12;
+const HOME_TILE_TEXT_GAP = 6;
+const HOME_TILE_TITLE_LINE_HEIGHT = scaleText(20);
+const HOME_TILE_SUBTITLE_LINE_HEIGHT = scaleText(18);
 
 export default function HomeScreen() {
-  const { width: windowWidth } = useWindowDimensions();
-  const tileWidth = Math.floor((windowWidth - HOME_SCREEN_PAD * 2 - HOME_TILE_GAP) / 2);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -200,26 +204,13 @@ export default function HomeScreen() {
     return all;
   }, [t, plots]);
 
-  const homeTileLabelsKey = useMemo(
-    () => homeTiles.map((tile) => `${tile.title}\0${tile.subtitle}`).join('\n'),
-    [homeTiles],
-  );
-
-  const [uniformTileHeight, setUniformTileHeight] = useState<number | null>(null);
-  const tileHeightsRef = useRef([0, 0, 0, 0]);
-
-  useEffect(() => {
-    tileHeightsRef.current = [0, 0, 0, 0];
-    setUniformTileHeight(null);
-  }, [homeTileLabelsKey, tileWidth]);
-
-  const reportTileHeight = useCallback((index: number, height: number) => {
-    if (height <= 0) return;
-    tileHeightsRef.current[index] = height;
-    if (tileHeightsRef.current.some((h) => h <= 0)) return;
-    const max = Math.max(...tileHeightsRef.current, HOME_TILE_MIN_HEIGHT);
-    setUniformTileHeight((prev) => (prev === max ? prev : max));
-  }, []);
+  const homeTileRows = useMemo(() => {
+    const rows: (typeof homeTiles)[] = [];
+    for (let i = 0; i < homeTiles.length; i += 2) {
+      rows.push(homeTiles.slice(i, i + 2));
+    }
+    return rows;
+  }, [homeTiles]);
 
   return (
     <ThemedView style={styles.screen}>
@@ -348,21 +339,22 @@ export default function HomeScreen() {
           )}
         </LinearGradient>
 
-        <View style={styles.tilesGrid}>
-          {homeTiles.map((tile, index) => (
-            <HomeTile
-              key={tile.key}
-              testID={`home-tile-${tile.key.replace(/_/g, '-')}`}
-              width={tileWidth}
-              height={uniformTileHeight}
-              title={tile.title}
-              subtitle={tile.subtitle}
-              icon={tile.icon}
-              tint={tile.tint}
-              iconColor={tile.iconColor}
-              onPress={tile.onPress}
-              onMeasure={(height) => reportTileHeight(index, height)}
-            />
+        <View style={styles.tilesSection}>
+          {homeTileRows.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.tilesRow}>
+              {row.map((tile) => (
+                <HomeTile
+                  key={tile.key}
+                  testID={`home-tile-${tile.key.replace(/_/g, '-')}`}
+                  title={tile.title}
+                  subtitle={tile.subtitle}
+                  icon={tile.icon}
+                  tint={tile.tint}
+                  iconColor={tile.iconColor}
+                  onPress={tile.onPress}
+                />
+              ))}
+            </View>
           ))}
         </View>
 
@@ -464,8 +456,6 @@ export default function HomeScreen() {
 
 function HomeTile(props: {
   testID: string;
-  width: number;
-  height: number | null;
   title: string;
   subtitle: string;
   icon: ComponentProps<typeof Ionicons>['name'];
@@ -473,55 +463,33 @@ function HomeTile(props: {
   iconColor: string;
   highlighted?: boolean;
   onPress: () => void;
-  onMeasure: (height: number) => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const measuring = props.height == null;
 
   return (
     <Pressable
       testID={props.testID}
       onPress={props.onPress}
-      style={({ pressed }) => [
-        styles.tileWrapper,
-        {
-          width: props.width,
-          ...(measuring ? { minHeight: HOME_TILE_MIN_HEIGHT } : { height: props.height }),
-        },
-        pressed && styles.tilePressed,
-      ]}
+      style={({ pressed }) => [styles.tileWrapper, pressed && styles.tilePressed]}
     >
       <Card
         variant="outlined"
         padding="none"
-        onLayout={
-          measuring
-            ? (event) => {
-                props.onMeasure(event.nativeEvent.layout.height);
-              }
-            : undefined
-        }
         style={[
           styles.tileCard,
-          measuring ? styles.tileCardMeasuring : styles.tileCardSized,
           props.highlighted && styles.tileCardHighlighted,
         ]}
       >
-        <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
-          <Ionicons name={props.icon} size={22} color={props.iconColor} />
+        <View style={styles.tileContent}>
+          <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
+            <Ionicons name={props.icon} size={22} color={props.iconColor} />
+          </View>
+          <ThemedText style={styles.tileTitle}>{props.title}</ThemedText>
+          <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]}>
+            {props.subtitle}
+          </ThemedText>
         </View>
-        <ThemedText type="defaultSemiBold" style={styles.tileTitle} numberOfLines={2} ellipsizeMode="tail">
-          {props.title}
-        </ThemedText>
-        <ThemedText
-          type="caption"
-          style={[styles.tileSubtitle, { color: colors.textSecondary }]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {props.subtitle}
-        </ThemedText>
       </Card>
     </Pressable>
   );
@@ -589,43 +557,47 @@ const styles = StyleSheet.create({
   statValuePending: {
     color: '#FFE08A',
   },
-  tilesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  tilesSection: {
     gap: HOME_TILE_GAP,
-    justifyContent: 'space-between',
+  },
+  tilesRow: {
+    flexDirection: 'row',
+    gap: HOME_TILE_GAP,
+    alignItems: 'stretch',
   },
   tileWrapper: {
-    flexGrow: 0,
-    flexShrink: 0,
+    flex: 1,
+    alignSelf: 'stretch',
   },
   tileCard: {
-    padding: 16,
+    flex: 1,
+    paddingHorizontal: HOME_TILE_PAD_MIN,
+    paddingVertical: HOME_TILE_PAD_MIN,
     borderRadius: 18,
-    borderColor: '#CDD2D6',
-    borderWidth: 1.4,
+    borderColor: '#C5CCD3',
+    borderWidth: 1,
     backgroundColor: '#FFFFFF',
+    ...Shadows.sm,
+  },
+  tileContent: {
+    width: '100%',
+    flexGrow: 1,
     justifyContent: 'flex-start',
   },
-  tileCardMeasuring: {
-    flex: 1,
-    minHeight: HOME_TILE_MIN_HEIGHT,
-  },
-  tileCardSized: {
-    flex: 1,
-    height: '100%',
-  },
   tileTitle: {
+    width: '100%',
     fontSize: scaleText(15),
-    lineHeight: scaleText(20),
+    lineHeight: HOME_TILE_TITLE_LINE_HEIGHT,
+    fontWeight: '600',
     color: '#0F172A',
-    marginTop: 2,
     flexShrink: 1,
   },
   tileSubtitle: {
+    width: '100%',
     fontSize: scaleText(13),
-    lineHeight: scaleText(18),
-    marginTop: 4,
+    lineHeight: HOME_TILE_SUBTITLE_LINE_HEIGHT,
+    fontWeight: '400',
+    marginTop: HOME_TILE_TEXT_GAP,
     flexShrink: 1,
   },
   tileCardHighlighted: {
@@ -638,12 +610,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.995 }],
   },
   tileIcon: {
-    width: 40,
-    height: 40,
+    width: HOME_TILE_ICON_SIZE,
+    height: HOME_TILE_ICON_SIZE,
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: HOME_TILE_ICON_GAP,
   },
   actionRequired: {
     padding: 18,

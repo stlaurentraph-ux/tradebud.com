@@ -22,6 +22,15 @@ function assertIncludes(rel, needle, label) {
   console.log(`OK wiring: ${label}`);
 }
 
+function assertNotIncludes(rel, needle, label) {
+  const text = read(rel);
+  if (text.includes(needle)) {
+    console.error(`FAIL wiring: ${label} — must not include "${needle}" in ${rel}`);
+    process.exit(1);
+  }
+  console.log(`OK wiring: ${label}`);
+}
+
 function assertFile(rel, label) {
   const full = path.join(root, rel);
   if (!fs.existsSync(full)) {
@@ -64,8 +73,29 @@ assertIncludes('scripts/store-ops-preflight.mjs', 'NSUserNotificationsUsageDescr
 assertIncludes('features/api/postPlot.ts', "from './syncAuthSession'", 'postPlot unified auth');
 assertIncludes('scripts/security-preflight.mjs', 'sanitizeLogContext', 'security preflight script');
 
+// Home screen 2×2 tiles — layout + copy contract (dev + prod)
+assertIncludes('app/(tabs)/index.tsx', 'HOME_TILE_PAD_MIN = 16', 'home tiles min padding');
+assertIncludes('app/(tabs)/index.tsx', 'flex: 1,\n    alignSelf: \'stretch\'', 'home tiles flex row height');
+assertIncludes('app/(tabs)/index.tsx', 'testID={`home-tile-${tile.key.replace(/_/g, \'-\')}`}', 'home tile test ids');
+assertNotIncludes('app/(tabs)/index.tsx', 'numberOfLines', 'home tiles wrap text (no numberOfLines)');
+
 const en = JSON.parse(read('features/i18n/messages/en.json'));
-const placeholderKeys = Object.entries(en).filter(([k, v]) => k === v).map(([k]) => k);
+const homeTileTitles = {
+  register_plot_tile: 'Mapping',
+  log_harvest_tile: 'Deliveries',
+  documents_tile: 'Documents',
+  my_vouchers_tile: 'Vouchers',
+};
+for (const [key, expected] of Object.entries(homeTileTitles)) {
+  if (en[key] !== expected) {
+    console.error(`FAIL home tile title: ${key} expected "${expected}", got "${en[key]}"`);
+    process.exit(1);
+  }
+}
+console.log('OK home tiles: canonical EN titles');
+
+const enForPlaceholders = en;
+const placeholderKeys = Object.entries(enForPlaceholders).filter(([k, v]) => k === v).map(([k]) => k);
 if (placeholderKeys.length > 0) {
   console.error(`FAIL en.json placeholder keys (${placeholderKeys.length}): ${placeholderKeys.slice(0, 5).join(', ')}…`);
   process.exit(1);
