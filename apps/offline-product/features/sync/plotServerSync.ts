@@ -14,6 +14,7 @@ import { getSetting } from '@/features/state/persistence';
 import { loadPlotCadastralKey } from '@/features/state/persistence';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
+import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 
 const LANG_STORAGE_KEY = 'tracebudAppLanguage';
 
@@ -120,9 +121,12 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
   localPlots: Plot[];
   /** When provided (e.g. Settings sync), uses active UI language for error strings. */
   t?: TranslateFn;
+  /** Use `settings` when sync runs from Settings so copy says "tap Sync Now below". */
+  surface?: 'settings' | 'default';
 }): Promise<UploadUnsyncedPlotsResult> {
   const { farmerId, localPlots } = params;
   const t = await resolveTranslator(params.t);
+  const surface = params.surface ?? 'default';
 
   if (localPlots.length === 0) {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
@@ -194,8 +198,11 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     failed += 1;
     firstError =
       firstError ??
-      r.message ??
-      t('sync_plot_upload_failed', { name: plot.name });
+      mapPlotUploadErrorMessage(r.message, t, {
+        reason: r.reason,
+        statusCode: r.statusCode,
+        surface,
+      });
   }
 
   if (uploaded > 0) {

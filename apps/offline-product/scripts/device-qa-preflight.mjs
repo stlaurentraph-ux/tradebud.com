@@ -54,6 +54,13 @@ assertIncludes('components/AutoPlotUploadBridge.tsx', 'runAutoBackup', 'auto upl
 assertIncludes('features/sync/runAutoBackup.ts', 'processPendingSyncQueue', 'auto backup drains queue');
 assertIncludes('app/(tabs)/settings.tsx', 'withSyncQueueLock', 'Settings sync uses queue mutex');
 assertIncludes('features/sync/runAutoBackup.ts', 'withSyncQueueLock', 'auto backup uses queue mutex');
+assertIncludes('features/sync/runAutoBackup.ts', 'withSyncOperationTimeout', 'auto backup operation timeout');
+assertIncludes('features/sync/runAutoBackup.ts', 'SYNC_BACKGROUND_OPERATION_MS', 'auto backup timeout budget');
+assertIncludes('app/(tabs)/settings.tsx', 'withSyncOperationTimeout', 'manual sync operation timeout');
+assertIncludes('app/(tabs)/settings.tsx', 'SYNC_MANUAL_OPERATION_MS', 'manual sync timeout budget');
+assertIncludes('app/(tabs)/settings.tsx', 'SYNC_LOCK_WAIT_MS', 'manual sync lock wait budget');
+assertIncludes('app/(tabs)/settings.tsx', 'syncTimedOutMessage', 'manual sync timeout message');
+assertIncludes('features/i18n/messages/en.json', 'sync_progress_stopping_soon', 'sync stopping soon copy');
 assertIncludes('features/sync/processPendingSyncQueue.ts', 'computeBackoffMs', 'sync queue exponential backoff');
 assertIncludes('features/state/persistence.native.ts', 'MAX_PENDING_SYNC_ACTIONS', 'native queue cap');
 assertIncludes('features/i18n/messages/en.json', 'harvest_queued_offline', 'harvest queued i18n');
@@ -80,6 +87,12 @@ assertIncludes('app/(tabs)/index.tsx', 'testID={`home-tile-${tile.key.replace(/_
 assertNotIncludes('app/(tabs)/index.tsx', 'numberOfLines', 'home tiles wrap text (no numberOfLines)');
 
 const en = JSON.parse(read('features/i18n/messages/en.json'));
+const homeTileTitleKeys = [
+  'register_plot_tile',
+  'log_harvest_tile',
+  'documents_tile',
+  'my_vouchers_tile',
+];
 const homeTileTitles = {
   register_plot_tile: 'Mapping',
   log_harvest_tile: 'Deliveries',
@@ -93,6 +106,29 @@ for (const [key, expected] of Object.entries(homeTileTitles)) {
   }
 }
 console.log('OK home tiles: canonical EN titles');
+
+const localeDir = 'features/i18n/messages';
+const localeFiles = fs
+  .readdirSync(localeDir)
+  .filter((f) => f.endsWith('.json') && f !== 'en.json');
+const HOME_TILE_TITLE_MAX_LEN = 22;
+for (const file of localeFiles) {
+  const locale = JSON.parse(read(`${localeDir}/${file}`));
+  for (const key of homeTileTitleKeys) {
+    const value = locale[key];
+    if (typeof value !== 'string' || !value.trim()) {
+      console.error(`FAIL ${file}: missing home tile key ${key}`);
+      process.exit(1);
+    }
+    if (value.length > HOME_TILE_TITLE_MAX_LEN) {
+      console.error(
+        `FAIL ${file}: ${key} too long (${value.length} > ${HOME_TILE_TITLE_MAX_LEN}): "${value}"`,
+      );
+      process.exit(1);
+    }
+  }
+}
+console.log(`OK home tiles: short titles in ${localeFiles.length} locales`);
 
 const enForPlaceholders = en;
 const placeholderKeys = Object.entries(enForPlaceholders).filter(([k, v]) => k === v).map(([k]) => k);

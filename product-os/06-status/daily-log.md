@@ -1,3 +1,9 @@
+### 2026-06-18 (offline: documents overview UX)
+- **Documents overview** — status strip (producer attestations + plot land-paper counts), plot rows with compliance chips sorted by needs-attention, tap-to-preview producer files.
+- **Plot land documents** — richer nav subtitle from shared readiness; “Do this next” card; producer FPIC/labor link to `/documents`; land-title photo preview.
+- **Shared helpers** — `plotDocumentSummary.ts`, `DocumentPreviewModal`, `DocumentListRow`; evidence rows open preview on plot + producer screens.
+- Verification: `plotDocumentSummary.test.ts` + `plotChecklist.test.ts` green.
+
 ### 2026-06-16 (offline: documents scope, OAuth, sign-out, navigation)
 - **Producer vs plot documents** — FPIC/labor/declarations on Home → `/documents` once per farmer; tenure/permits on plot Documents tab; `evidenceScope.ts` + checklist counts producer evidence.
 - **Google OAuth UX** — `completeOAuthFarmerSession` returns after credential save; post-connect tasks backgrounded; OAuth spinner cleared earlier.

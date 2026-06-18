@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useAppState } from '@/features/state/AppStateContext';
-import { buildGeometryFromLocalPlot, postPlotToBackend } from '@/features/api/postPlot';
+import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { isSyncSignedIn } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
@@ -83,6 +83,11 @@ function segmentsIntersect(p1: LatLng, p2: LatLng, p3: LatLng, p4: LatLng): bool
 const PIN_CAPTURE_AVG_SECONDS = 30;
 /** Corner GPS averaging — shorter than legacy vertex setting so corners feel responsive. */
 const CORNER_CAPTURE_AVG_SECONDS = 30;
+
+/** Seconds left in a hold countdown (1..budget), aligned with the progress bar. */
+function holdSecondsRemaining(elapsedSeconds: number, budgetSeconds: number): number {
+  return Math.max(1, budgetSeconds - elapsedSeconds);
+}
 
 type CaptureMethod = 'walk' | 'draw' | 'centroid' | 'pin';
 type CaptureMethodPage = CaptureMethod;
@@ -426,6 +431,20 @@ export function WalkPerimeterScreen() {
     return Math.max(0, Math.min(100, Math.round((elapsed / PIN_CAPTURE_AVG_SECONDS) * 100)));
   }, [captureMethod, isRecording, mode, pinHoldAnchor, recordingSeconds]);
 
+  const pinHoldSecondsRemaining = useMemo(() => {
+    if (!isRecording || captureMethod !== 'pin' || mode !== 'vertex_avg' || pinHoldPercent >= 100) {
+      return PIN_CAPTURE_AVG_SECONDS;
+    }
+    return holdSecondsRemaining(recordingSeconds - pinHoldAnchor, PIN_CAPTURE_AVG_SECONDS);
+  }, [captureMethod, isRecording, mode, pinHoldAnchor, pinHoldPercent, recordingSeconds]);
+
+  const cornerHoldSecondsRemaining = useMemo(() => {
+    if (!isRecording || captureMethod !== 'centroid' || mode !== 'vertex_avg' || cornerHoldPercent >= 100) {
+      return CORNER_CAPTURE_AVG_SECONDS;
+    }
+    return holdSecondsRemaining(recordingSeconds - cornerHoldAnchor, CORNER_CAPTURE_AVG_SECONDS);
+  }, [captureMethod, cornerHoldAnchor, cornerHoldPercent, isRecording, mode, recordingSeconds]);
+
   const handlePinCapturePress = () => {
     if (declaredAreaHaInput.trim()) {
       const parsedDeclared = Number(declaredAreaHaInput.trim().replace(',', '.'));
@@ -629,13 +648,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         return;
       }
       if (result.reason === 'server_error' || result.reason === 'network_error') {
-        const raw = result.message ?? '';
-        const friendly =
-          /tenant claim/i.test(raw)
-            ? t('plot_upload_account_error')
-            : result.reason === 'network_error'
-              ? t('plot_upload_network_error')
-              : t('plot_upload_server_error');
+        const friendly = mapPlotUploadErrorMessage(result.message, t, {
+          reason: result.reason,
+        });
         Alert.alert(t('plot_saved_title'), friendly);
       }
     },
@@ -877,10 +892,10 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         : t('walk_corner_hint_start');
     }
     if (cornerHoldPercent < 100) {
-      return t('walk_corner_hold_progress', { seconds: CORNER_CAPTURE_AVG_SECONDS });
+      return t('walk_corner_hold_progress', { seconds: cornerHoldSecondsRemaining });
     }
     return t('walk_corner_ready');
-  }, [captureMethod, cornerHoldPercent, isRecording, points.length, showCapturePage, t]);
+  }, [captureMethod, cornerHoldPercent, cornerHoldSecondsRemaining, isRecording, points.length, showCapturePage, t]);
 
   const drawCaptureHint = useMemo(() => {
     if (!showCapturePage || captureMethod !== 'draw') {
@@ -1569,7 +1584,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         {!isRecording
           ? t('walk_corner_start_first')
           : cornerHoldPercent < 100
-            ? t('walk_corner_hold_progress', { seconds: CORNER_CAPTURE_AVG_SECONDS })
+            ? t('walk_corner_hold_progress', { seconds: cornerHoldSecondsRemaining })
             : t('walk_corner_save_this')}
       </Button>
       {points.length >= 3 && canSavePlot ? (
@@ -2168,7 +2183,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                     </View>
                     <ThemedText type="caption" style={styles.cornerHoldLabel}>
                       {pinHoldPercent < 100
-                        ? t('walk_pin_hold_progress', { seconds: PIN_CAPTURE_AVG_SECONDS })
+                        ? t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })
                         : t('walk_pin_ready')}
                     </ThemedText>
                   </View>
@@ -2193,7 +2208,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                     {isRecording
                       ? pinHoldPercent >= 100
                         ? t('walk_pin_confirm')
-                        : t('walk_pin_hold_progress', { seconds: PIN_CAPTURE_AVG_SECONDS })
+                        : t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })
                       : t('walk_pin_save')}
                   </Button>
                 </View>

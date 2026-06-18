@@ -1,8 +1,10 @@
 import type { TranslateFn } from '@/features/i18n/translate';
 
+import {
+  SYNC_SLOW_HINT_SECONDS,
+  SYNC_STOPPING_SOON_SECONDS,
+} from './syncOperationLimits';
 import type { SyncQueueLockSnapshot, SyncQueuePhase } from './syncQueueMutex';
-
-const SLOW_SYNC_HINT_SECONDS = 25;
 
 function phaseStepLabel(t: TranslateFn, phase: SyncQueuePhase): string {
   switch (phase) {
@@ -32,8 +34,11 @@ function withElapsed(
   t: TranslateFn,
   step: string,
   seconds: number | null,
-  options?: { slow?: boolean },
+  options?: { slow?: boolean; stoppingSoon?: boolean },
 ): string {
+  if (options?.stoppingSoon === true) {
+    return t('sync_progress_stopping_soon', { step, seconds: seconds ?? 0 });
+  }
   if (options?.slow === true) {
     return t('sync_progress_slow', { step, seconds: seconds ?? 0 });
   }
@@ -51,7 +56,9 @@ export function formatSyncProgressCaption(
 
   const holderStep = phaseStepLabel(t, snapshot.phase);
   const holderElapsed = elapsedSeconds(options.nowMs, snapshot.lockStartedAt);
-  const slow = holderElapsed != null && holderElapsed >= SLOW_SYNC_HINT_SECONDS;
+  const slow = holderElapsed != null && holderElapsed >= SYNC_SLOW_HINT_SECONDS;
+  const stoppingSoon =
+    holderElapsed != null && holderElapsed >= SYNC_STOPPING_SOON_SECONDS;
 
   if (options.syncNowBusy && snapshot.waiterCount > 0) {
     const waitElapsed = elapsedSeconds(options.nowMs, snapshot.waitingSince);
@@ -59,18 +66,18 @@ export function formatSyncProgressCaption(
       t,
       t('sync_progress_waiting_for_step', { step: holderStep }),
       waitElapsed,
-      { slow },
+      { slow, stoppingSoon },
     );
   }
 
   if (options.syncNowBusy) {
-    return withElapsed(t, holderStep, holderElapsed, { slow });
+    return withElapsed(t, holderStep, holderElapsed, { slow, stoppingSoon });
   }
 
   return withElapsed(
     t,
     t('sync_background_in_progress', { step: holderStep }),
     holderElapsed,
-    { slow },
+    { slow, stoppingSoon },
   );
 }

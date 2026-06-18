@@ -21,6 +21,8 @@ export type PlotReadinessLoadResult = {
   plotId: string;
   done: boolean;
   photoCount: number;
+  titlePhotoCount: number;
+  evidenceCount: number;
   checklist: PlotReadinessChecklist;
 };
 
@@ -68,6 +70,8 @@ export async function loadPlotReadinessForLocalPlot(
     plotId: plot.id,
     done: checklist.done,
     photoCount: photos.length,
+    titlePhotoCount: titleRows.length,
+    evidenceCount: evidenceRows.length,
     checklist,
   };
 }

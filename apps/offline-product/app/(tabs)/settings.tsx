@@ -54,9 +54,18 @@ import {
   getSyncQueueLockSnapshot,
   setSyncQueuePhase,
   subscribeSyncQueueLock,
+  SyncQueueLockTimeoutError,
   withSyncQueueLock,
 } from '@/features/sync/syncQueueMutex';
 import { formatSyncProgressCaption } from '@/features/sync/syncProgressCaption';
+import {
+  SYNC_LOCK_WAIT_MS,
+  SYNC_MANUAL_OPERATION_MS,
+  SyncOperationTimeoutError,
+  withSyncOperationTimeout,
+} from '@/features/sync/syncOperationLimits';
+import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
+import { mapSyncActionErrorMessage, syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import {
   buildUnreachableSyncMessage,
   isNetworkReachabilityFailure,
@@ -280,6 +289,13 @@ export default function SettingsScreen() {
       }
     });
   }, [refreshSyncMetrics]);
+
+  useEffect(() => {
+    return subscribeSyncOperationOutcome((outcome) => {
+      if (outcome.kind !== 'timeout' || outcome.source !== 'background') return;
+      setSyncMessage(syncTimedOutMessage(t, 'settings'));
+    });
+  }, [t]);
 
   useEffect(() => {
     if (!syncLockSnapshot.locked && !syncNowBusy) return;
@@ -690,6 +706,8 @@ export default function SettingsScreen() {
     try {
       await withSyncQueueLock(
         async () => {
+          await withSyncOperationTimeout(
+            (async () => {
           try {
             if (!hasSyncAuthSession()) {
               setSyncMessage(t('sync_session_expired_short'));
@@ -717,6 +735,7 @@ export default function SettingsScreen() {
                 farmerId: farmer.id,
                 localPlots: plots,
                 t,
+                surface: 'settings',
               });
               if (syncRes.stoppedForAuth) {
                 parts.push(t('sync_session_expired_short'));
@@ -738,7 +757,8 @@ export default function SettingsScreen() {
                     uploaded: syncRes.uploaded,
                     total: syncRes.unsyncedBefore,
                     failed: syncRes.failed,
-                  }) + (syncRes.firstError ? `\n${syncRes.firstError}` : ''),
+                  }) +
+                    (syncRes.firstError ? `\n${syncRes.firstError}` : ''),
                 );
               }
             }
@@ -762,7 +782,9 @@ export default function SettingsScreen() {
             }
             if (queueRes.failedActions > 0) {
               parts.push(t('sync_queue_failed_remain', { n: queueRes.failedActions }));
-              if (queueRes.firstError) parts.push(queueRes.firstError);
+              if (queueRes.firstError) {
+                parts.push(mapSyncActionErrorMessage(queueRes.firstError, t, 'settings'));
+              }
             }
           };
           if (selectedQueueActionTypes.length === 0) {
@@ -809,6 +831,10 @@ export default function SettingsScreen() {
           const message = parts.filter(Boolean).join('\n\n');
           setSyncMessage(message || t('backup_up_to_date'));
         } catch (e) {
+          if (e instanceof SyncOperationTimeoutError) {
+            setSyncMessage(syncTimedOutMessage(t, 'settings'));
+            return;
+          }
           const message = e instanceof Error ? e.message : String(e);
           setSyncMessage(
             isNetworkReachabilityFailure(message)
@@ -816,10 +842,21 @@ export default function SettingsScreen() {
               : message || t('backend_unreachable'),
           );
         }
+            })(),
+            SYNC_MANUAL_OPERATION_MS,
+          );
       },
-        { waitMs: 'never' },
+        { waitMs: SYNC_LOCK_WAIT_MS },
       );
     } catch (e) {
+      if (e instanceof SyncQueueLockTimeoutError) {
+        setSyncMessage(t('sync_busy_try_later_settings'));
+        return;
+      }
+      if (e instanceof SyncOperationTimeoutError) {
+        setSyncMessage(syncTimedOutMessage(t, 'settings'));
+        return;
+      }
       const message = e instanceof Error ? e.message : String(e);
       setSyncMessage(
         isNetworkReachabilityFailure(message)
@@ -1033,7 +1070,7 @@ export default function SettingsScreen() {
                           {queueLastErrorActionType
                             ? ` (${queueActionTypeLabel(queueLastErrorActionType)})`
                             : ''}
-                          : {queueLastError}
+                          : {mapSyncActionErrorMessage(queueLastError, t, 'settings')}
                         </ThemedText>
                       ) : null}
                       {queuePendingCount > 0 ? (

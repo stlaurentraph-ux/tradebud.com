@@ -576,6 +576,27 @@ export class PlotsService {
     // Insert using raw SQL to leverage PostGIS functions for area and centroid.
     // For polygons, auto-correct invalid geometry via ST_MakeValid and reject if
     // correction changes area by more than 5%.
+    const hasGeometryCapture = await this.plotHasGeometryCaptureColumn();
+    const geometryCaptureInsertSql = hasGeometryCapture
+      ? `,
+          geometry_capture`
+      : '';
+    const geometryCaptureValueSql = hasGeometryCapture ? `,
+          $9::jsonb` : '';
+    const insertParams: unknown[] = [
+      farmerId,
+      plotName,
+      kind,
+      declaredAreaHa ?? null,
+      precisionMeters ?? null,
+      hdop ?? null,
+      kind,
+      productionSystem ?? null,
+    ];
+    if (hasGeometryCapture) {
+      insertParams.push(geometryCapturePayload ? JSON.stringify(geometryCapturePayload) : null);
+    }
+
     const text = `
       WITH input_geom AS (
         SELECT ST_SnapToGrid(${geometrySql}, 1e-6) AS geom
@@ -619,8 +640,7 @@ export class PlotsService {
           declared_area_ha,
           precision_m_at_capture,
           hdop_at_capture,
-          production_system,
-          geometry_capture
+          production_system${geometryCaptureInsertSql}
         )
         SELECT
           $1,
@@ -633,8 +653,7 @@ export class PlotsService {
           $4,
           $5,
           $6,
-          $8,
-          $9::jsonb
+          $8${geometryCaptureValueSql}
         FROM validated v
         WHERE (
           $7::text <> 'polygon'
@@ -655,17 +674,7 @@ export class PlotsService {
       CROSS JOIN validated v;
     `;
 
-    const result = await this.pool.query(text, [
-      farmerId,
-      plotName,
-      kind,
-      declaredAreaHa ?? null,
-      precisionMeters ?? null,
-      hdop ?? null,
-      kind,
-      productionSystem ?? null,
-      geometryCapturePayload ? JSON.stringify(geometryCapturePayload) : null,
-    ]);
+    const result = await this.pool.query(text, insertParams);
 
     if (result.rowCount === 0 && kind === 'polygon') {
       const varianceProbe = await this.pool.query(

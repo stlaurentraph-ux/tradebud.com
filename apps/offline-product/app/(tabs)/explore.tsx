@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,12 +52,14 @@ function renderPlotListAreaCaption(plot: Plot, tr: PlotListTranslate) {
   );
 }
 
+type PlotPickerIntent = 'voucher' | 'documents';
+
 export default function PlotsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const params = useLocalSearchParams<{ plotId?: string; focus?: string }>();
-  const { plots, farmer, removePlot } = useAppState();
+  const { plots, farmer } = useAppState();
   const { t, languageCode, openLanguagePicker } = useLanguage();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
@@ -67,6 +69,9 @@ export default function PlotsScreen() {
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
+  /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
+  const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
+  const clearingFocusRef = useRef(false);
 
   const refreshVouchers = useCallback(() => {
     if (!farmer?.id) {
@@ -95,8 +100,18 @@ export default function PlotsScreen() {
     });
   };
 
-  const plotSectionFocus =
-    params.focus === 'voucher' || params.focus === 'documents' ? params.focus : null;
+  // Capture Home deep-link intent once, then drop sticky ?focus= from the tab URL.
+  useEffect(() => {
+    if (clearingFocusRef.current) return;
+    const focus = params.focus;
+    if (focus !== 'voucher' && focus !== 'documents') return;
+    setPickerIntent(focus);
+    clearingFocusRef.current = true;
+    router.setParams({ focus: undefined, plotId: undefined });
+    queueMicrotask(() => {
+      clearingFocusRef.current = false;
+    });
+  }, [params.focus]);
 
   useEffect(() => {
     const pid = typeof params.plotId === 'string' ? params.plotId : undefined;
@@ -107,13 +122,29 @@ export default function PlotsScreen() {
     }
   }, [params.plotId, params.focus]);
 
+  // Home → vouchers with multiple plots: skip list when only one plot has deliveries.
   useEffect(() => {
-    if (plotSectionFocus !== 'voucher' || plots.length === 0) return;
+    if (pickerIntent !== 'voucher' || plots.length === 0) return;
     const withVouchers = plots.filter((plot) => harvestCountForPlot(plot) > 0);
-    if (withVouchers.length === 1) {
-      router.replace(`/plot/${encodeURIComponent(withVouchers[0]!.id)}?sub=voucher`);
-    }
-  }, [plotSectionFocus, plots, vouchers, backendPlots]);
+    if (withVouchers.length !== 1) return;
+    const targetId = withVouchers[0]!.id;
+    setPickerIntent(null);
+    router.replace(`/plot/${encodeURIComponent(targetId)}?sub=voucher`);
+  }, [pickerIntent, plots, vouchers, backendPlots]);
+
+  const openPlotDetail = useCallback(
+    (plotId: string) => {
+      setSelectedPlotId(plotId);
+      if (pickerIntent) {
+        const intent = pickerIntent;
+        setPickerIntent(null);
+        router.push(`/plot/${encodeURIComponent(plotId)}?sub=${intent}`);
+        return;
+      }
+      router.push(`/plot/${encodeURIComponent(plotId)}`);
+    },
+    [pickerIntent],
+  );
 
   useEffect(() => {
     if (!farmer?.id) {
@@ -167,21 +198,6 @@ export default function PlotsScreen() {
   const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' =>
     plotChecklistDoneByPlotId[plot.id] === true ? 'Compliant' : 'Action Needed';
 
-  const confirmDeletePlot = (plot: Plot) => {
-    Alert.alert(t('warning'), t('delete_plot_body'), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('delete'),
-        style: 'destructive',
-        onPress: () => {
-          const fallback = plots.find((p) => p.id !== plot.id)?.id;
-          removePlot(plot.id);
-          if (selectedPlotId === plot.id) setSelectedPlotId(fallback);
-        },
-      },
-    ]);
-  };
-
   return (
     <ThemedView style={styles.screen}>
       <CompactTabHeader
@@ -194,16 +210,6 @@ export default function PlotsScreen() {
       />
 
       <ThemedScrollView contentContainerStyle={styles.containerCompact}>
-        {plotSectionFocus ? (
-          <Card variant="outlined" style={styles.focusHintCard}>
-            <ThemedText type="defaultSemiBold">
-              {plotSectionFocus === 'voucher'
-                ? t('plots_pick_voucher_hint')
-                : t('plots_pick_documents_hint')}
-            </ThemedText>
-          </Card>
-        ) : null}
-
         {plots.length === 0 ? (
           <Card variant="outlined" style={styles.emptyPlotsCard}>
             <View style={styles.emptyPlotsIconWrap}>
@@ -224,6 +230,21 @@ export default function PlotsScreen() {
           </Card>
         ) : null}
 
+        {pickerIntent === 'voucher' ? (
+          <Card variant="outlined" style={styles.pickerHintCard}>
+            <ThemedText type="caption" style={styles.pickerHintText}>
+              {t('plots_pick_voucher_hint')}
+            </ThemedText>
+          </Card>
+        ) : null}
+        {pickerIntent === 'documents' ? (
+          <Card variant="outlined" style={styles.pickerHintCard}>
+            <ThemedText type="caption" style={styles.pickerHintText}>
+              {t('plots_pick_documents_hint')}
+            </ThemedText>
+          </Card>
+        ) : null}
+
         {plots.map((plot) => {
           const status = statusForPlot(plot);
           const isComplete = status === 'Compliant';
@@ -237,14 +258,7 @@ export default function PlotsScreen() {
             <Pressable
               key={plot.id}
               testID="plot-card"
-              onPress={() => {
-                setSelectedPlotId(plot.id);
-                if (plotSectionFocus) {
-                  router.push(`/plot/${encodeURIComponent(plot.id)}?sub=${plotSectionFocus}`);
-                  return;
-                }
-                router.push(`/plot/${encodeURIComponent(plot.id)}`);
-              }}
+              onPress={() => openPlotDetail(plot.id)}
             >
               <Card
                 variant="outlined"
@@ -265,21 +279,9 @@ export default function PlotsScreen() {
                       <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>
                         {plot.name}
                       </ThemedText>
-                      <View style={styles.plotCardActions}>
-                        <Badge variant={badgeVariant} size="sm">
-                          {statusLabel}
-                        </Badge>
-                        <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            confirmDeletePlot(plot);
-                          }}
-                          style={styles.deletePlotButton}
-                          accessibilityLabel={t('delete')}
-                        >
-                          <Ionicons name="trash-outline" size={14} color="#B42318" />
-                        </Pressable>
-                      </View>
+                      <Badge variant={badgeVariant} size="sm">
+                        {statusLabel}
+                      </Badge>
                     </View>
                     {renderPlotListAreaCaption(plot, t)}
                     <View style={styles.plotMetaRow}>
@@ -321,12 +323,6 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
   },
-  focusHintCard: {
-    borderRadius: 14,
-    borderColor: '#D8C4F5',
-    backgroundColor: '#F9F3FF',
-    padding: 14,
-  },
   emptyPlotsCard: {
     borderRadius: 18,
     borderColor: '#AEE6D3',
@@ -364,6 +360,17 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   emptyPlotsCtaText: { color: '#FFFFFF' },
+  pickerHintCard: {
+    borderRadius: 14,
+    borderColor: '#C9E8DC',
+    backgroundColor: '#F3FBF7',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  pickerHintText: {
+    color: '#1F6B57',
+    lineHeight: 18,
+  },
   plotProtoCard: { borderRadius: 18, padding: 12 },
   plotProtoCardSelected: { borderColor: '#74D7B8', borderWidth: 1.8 },
   plotCardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
@@ -375,17 +382,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
-  },
-  plotCardActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  deletePlotButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#F5C2C0',
-    backgroundColor: '#FFF1F0',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   plotMetaRow: {
     marginTop: 8,

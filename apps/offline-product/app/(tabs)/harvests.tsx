@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -118,6 +118,20 @@ export default function HarvestsScreen() {
     deliveryDeepLinkHandled.current = false;
   }, [params.plotId, params.record]);
 
+  const syncedHarvestPlots = useMemo(
+    () => mergedHarvestPlots.filter((p) => !p.localOnly),
+    [mergedHarvestPlots],
+  );
+  const canStartMultiPlotDelivery = syncedHarvestPlots.length > 1;
+
+  const openSinglePlotDelivery = useCallback((plotId: string) => {
+    setSelectedPlotId(plotId);
+    setWeightInput('');
+    setDeliveryRecipient(null);
+    setShowNewHarvestLog(true);
+    setShowRecordWeight(true);
+  }, []);
+
   useEffect(() => {
     if (params.record !== '1' || typeof params.plotId !== 'string' || deliveryDeepLinkHandled.current) {
       return;
@@ -130,7 +144,6 @@ export default function HarvestsScreen() {
     });
     if (!target) return;
     deliveryDeepLinkHandled.current = true;
-    setSelectedPlotId(target.id);
     if (!isSignedIn) {
       openSignIn({ variant: 'sync' });
       return;
@@ -140,11 +153,18 @@ export default function HarvestsScreen() {
       return;
     }
     setMessage(null);
-    setShowNewHarvestLog(true);
-    setShowRecordWeight(true);
-    setDeliveryRecipient(null);
-    setWeightInput('');
-  }, [params.record, params.plotId, mergedHarvestPlots, localPlots, backendPlots, isSignedIn, openSignIn, t]);
+    openSinglePlotDelivery(target.id);
+  }, [
+    params.record,
+    params.plotId,
+    mergedHarvestPlots,
+    localPlots,
+    backendPlots,
+    isSignedIn,
+    openSignIn,
+    openSinglePlotDelivery,
+    t,
+  ]);
 
   const selectedPlot = useMemo(
     () =>
@@ -187,8 +207,13 @@ export default function HarvestsScreen() {
       return;
     }
     setMessage(null);
-    setShowNewHarvestLog(true);
     setDeliveryRecipient(null);
+    if (syncedHarvestPlots.length === 1) {
+      openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
+      return;
+    }
+    setShowNewHarvestLog(true);
+    setShowRecordWeight(false);
   };
 
   const startMultiPlotFlow = () => {
@@ -378,6 +403,10 @@ export default function HarvestsScreen() {
               textStyle={styles.btnTextOnGreen}
               onPress={() => {
                 resetLoggedState();
+                if (syncedHarvestPlots.length === 1) {
+                  openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
+                  return;
+                }
                 setShowNewHarvestLog(true);
                 setShowRecordWeight(false);
               }}
@@ -552,9 +581,7 @@ export default function HarvestsScreen() {
                           Alert.alert(t('harvest_backup_first_title'), t('harvest_backup_first'));
                           return;
                         }
-                        setSelectedPlotId(p.id);
-                        setWeightInput('');
-                        setShowRecordWeight(true);
+                        openSinglePlotDelivery(p.id);
                       }}
                     >
                       <Card
@@ -601,45 +628,48 @@ export default function HarvestsScreen() {
               </ThemedText>
             </View>
           </View>
-        </Card>
 
-        {!isSignedIn ? (
-          <Card variant="outlined" style={styles.signInHarvestCard}>
-            <View style={styles.signInHarvestIconWrap}>
-              <Ionicons name="log-in-outline" size={22} color="#0B6F50" />
+          {!isSignedIn ? (
+            <View style={styles.introActions}>
+              <ThemedText type="caption" style={styles.signInHarvestBody}>
+                {t('harvest_sign_in_to_record_body')}
+              </ThemedText>
+              <Button
+                variant="secondary"
+                style={{ backgroundColor: '#0A7F59' }}
+                textStyle={styles.btnTextOnGreen}
+                fullWidth
+                onPress={() => openSignIn({ variant: 'sync' })}
+              >
+                {t('sign_in')}
+              </Button>
             </View>
-            <ThemedText type="defaultSemiBold" style={styles.signInHarvestTitle}>
-              {t('harvest_sign_in_to_record')}
-            </ThemedText>
-            <ThemedText type="caption" style={styles.signInHarvestBody}>
-              {t('harvest_sign_in_to_record_body')}
-            </ThemedText>
-            <Button
-              variant="secondary"
-              style={{ backgroundColor: '#0A7F59' }}
-              textStyle={styles.btnTextOnGreen}
-              fullWidth
-              onPress={() => openSignIn({ variant: 'sync' })}
-            >
-              {t('sign_in')}
-            </Button>
-          </Card>
-        ) : (
-          <>
-          <Button
-            variant="secondary"
-            style={{ backgroundColor: '#0A7F59' }}
-            textStyle={styles.btnTextOnGreen}
-            fullWidth
-            onPress={startNewHarvestFlow}
-          >
-            {t('start_new_harvest')}
-          </Button>
-          <Button variant="outline" fullWidth onPress={startMultiPlotFlow}>
-            {t('multi_plot_delivery_start')}
-          </Button>
-          </>
-        )}
+          ) : (
+            <View style={styles.introActions}>
+              <Button
+                variant="secondary"
+                style={{ backgroundColor: '#0A7F59' }}
+                textStyle={styles.btnTextOnGreen}
+                fullWidth
+                onPress={startNewHarvestFlow}
+              >
+                {t('record_delivery')}
+              </Button>
+              {canStartMultiPlotDelivery ? (
+                <Pressable
+                  onPress={startMultiPlotFlow}
+                  accessibilityRole="button"
+                  style={styles.multiPlotLinkRow}
+                >
+                  <ThemedText type="defaultSemiBold" style={styles.multiPlotLinkText}>
+                    {t('multi_plot_delivery_link')}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={18} color="#0B6F50" />
+                </Pressable>
+              ) : null}
+            </View>
+          )}
+        </Card>
 
         <SectionHeader title={t('recent_deliveries')} />
         {recentDeliveries.length === 0 ? (
@@ -983,6 +1013,22 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderColor: '#AEE6D3',
     backgroundColor: '#DDEFE8',
+    gap: 14,
+  },
+  introActions: {
+    gap: 10,
+    marginTop: 4,
+  },
+  multiPlotLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+  },
+  multiPlotLinkText: {
+    color: '#0B6F50',
+    fontSize: 14,
   },
   sectionHeaderRow: {
     flexDirection: 'row',

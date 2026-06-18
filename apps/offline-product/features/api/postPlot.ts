@@ -3,6 +3,7 @@ import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeom
 import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 import { ensureFieldProducerBootstrapped } from './fieldAppBootstrap';
+import { logError } from '@/features/errors/ErrorLogger';
 
 export {
   clearPersistedSyncAuth,
@@ -82,6 +83,7 @@ export type PostPlotToBackendResult =
       ok: false;
       reason: 'no_access_token' | 'network_error' | 'server_error';
       message?: string;
+      statusCode?: number;
     };
 
 const API_BASE_URL = getRuntimeGuardedApiBaseUrl();
@@ -144,7 +146,13 @@ export async function postPlotToBackend(params: {
       const body = await res.json().catch(() => ({}));
       const message =
         messageFromBackendJson(body) ?? `Plot upload failed (${res.status})`;
-      return { ok: false, reason: 'server_error', message };
+      logError(new Error(message), {
+        phase: 'plot_upload',
+        statusCode: res.status,
+        farmerId: params.farmerId,
+        clientPlotId: params.clientPlotId,
+      });
+      return { ok: false, reason: 'server_error', message, statusCode: res.status };
     }
     return { ok: true };
   } catch (e) {

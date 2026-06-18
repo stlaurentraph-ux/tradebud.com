@@ -54,13 +54,15 @@ import {
   type PlotEvidenceItem,
 } from '@/features/state/persistence';
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
-import { PlotAttestationsCard } from '@/components/compliance/PlotAttestationsCard';
+import { DocumentPreviewModal } from '@/components/evidence/DocumentPreviewModal';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
 import { PlotComplianceStatusCards } from '@/components/compliance/PlotComplianceStatusCards';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
 import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { DocumentUploadHint } from '@/components/evidence/DocumentUploadHint';
+import type { DocumentPreviewItem } from '@/features/evidence/documentPreview';
+import { formatPlotDocumentsNavSubtitle } from '@/features/evidence/plotDocumentSummary';
 import {
   autoUploadLandTitleDocuments,
   type AutoUploadOutcome,
@@ -88,7 +90,7 @@ export default function PlotDetailScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { id, sub, from } = useLocalSearchParams<{ id: string; sub?: Sub; from?: string }>();
-  const { plots, farmer, updatePlot } = useAppState();
+  const { plots, farmer, updatePlot, removePlot } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
@@ -134,6 +136,7 @@ export default function PlotDetailScreen() {
   const [legalSyncReason, setLegalSyncReason] = useState('');
   const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
   const [docSyncTone, setDocSyncTone] = useState<'success' | 'error' | 'info'>('info');
+  const [docPreviewItem, setDocPreviewItem] = useState<DocumentPreviewItem | null>(null);
   const [addingTitlePhoto, setAddingTitlePhoto] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
@@ -278,8 +281,12 @@ export default function PlotDetailScreen() {
   }, [farmer?.id]);
 
   useEffect(() => {
-    if (typeof sub === 'string') setActive(sub as Sub);
-  }, [sub]);
+    if (typeof sub === 'string') {
+      setActive(sub as Sub);
+      return;
+    }
+    setActive(null);
+  }, [sub, plotId]);
 
   useEffect(() => {
     if (plot?.name) setRenameDraft(plot.name);
@@ -475,6 +482,50 @@ export default function PlotDetailScreen() {
   );
 
   const nextSetupRow = plotStatusRemainingRows[0];
+
+  const nextDocumentStep = useMemo(
+    () => plotStatusRows.find((r) => !r.done && (r.id === 'land' || r.id === 'fpic' || r.id === 'permit')),
+    [plotStatusRows],
+  );
+
+  const documentsNavSubtitle = useMemo(() => {
+    if (!plot) return t('plot_nav_documents_sub_empty');
+    const evidenceKinds = evidence.map((e) => e.kind);
+    const checklist = computePlotReadinessChecklist({
+      groundTruthPhotos: photos,
+      plot,
+      titlePhotoCount: titlePhotos.length,
+      evidenceKinds,
+      producerEvidenceKinds,
+      producerAttestationsComplete,
+      isSyncedToServer: Boolean(backendPlotId),
+      tenureVerifications,
+      backendFlags:
+        backendPlotId != null
+          ? {
+              sinaph_overlap: overlapFlags.sinaph,
+              indigenous_overlap: overlapFlags.indigenous,
+            }
+          : null,
+    });
+    return formatPlotDocumentsNavSubtitle(
+      checklist,
+      { titlePhotos: titlePhotos.length, evidenceCount: evidence.length },
+      t,
+    );
+  }, [
+    plot,
+    photos,
+    titlePhotos.length,
+    evidence,
+    producerEvidenceKinds,
+    producerAttestationsComplete,
+    backendPlotId,
+    tenureVerifications,
+    overlapFlags.sinaph,
+    overlapFlags.indigenous,
+    t,
+  ]);
 
   const harvestPlotId = backendPlotId ?? plot?.id ?? null;
 
@@ -682,6 +733,42 @@ export default function PlotDetailScreen() {
     }
     router.back();
   }, [active, from]);
+
+  const confirmDeletePlot = useCallback(() => {
+    if (!plot) return;
+    Alert.alert(
+      t('delete_plot_title'),
+      t('delete_plot_confirm_body', {
+        name: plot.name,
+        photos: photos.length,
+        deliveries: plotDeliveryCount,
+      }),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete_plot_confirm_continue'),
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              t('delete_plot_final_title'),
+              t('delete_plot_final_body', { name: plot.name }),
+              [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('delete'),
+                  style: 'destructive',
+                  onPress: () => {
+                    removePlot(plot.id);
+                    router.replace('/(tabs)/explore');
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }, [plot, photos.length, plotDeliveryCount, removePlot, t]);
 
   return (
     <ThemedView style={styles.screen}>
@@ -952,9 +1039,7 @@ export default function PlotDetailScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText type="subtitle">{t('plot_nav_documents_title')}</ThemedText>
-            <ThemedText type="default">
-              {titlePhotos.length > 0 ? t('plot_nav_documents_sub_done') : t('plot_nav_documents_sub_empty')}
-            </ThemedText>
+            <ThemedText type="default">{documentsNavSubtitle}</ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -980,6 +1065,17 @@ export default function PlotDetailScreen() {
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
+
+        {plot ? (
+          <View style={styles.deletePlotSection}>
+            <ThemedText type="caption" style={styles.deletePlotSectionNote}>
+              {t('delete_plot_section_note')}
+            </ThemedText>
+            <UiButton variant="danger" fullWidth onPress={confirmDeletePlot} style={styles.deletePlotButton}>
+              {t('delete_plot_action')}
+            </UiButton>
+          </View>
+        ) : null}
         </>
         ) : null}
 
@@ -1005,7 +1101,31 @@ export default function PlotDetailScreen() {
               isSyncedToServer={Boolean(backendPlotId)}
             />
 
-            <PlotAttestationsCard plot={plot} />
+            {nextDocumentStep ? (
+              <Card variant="outlined" style={styles.docNextStepCard}>
+                <ThemedText type="defaultSemiBold">{t('plot_documents_next_step_title')}</ThemedText>
+                <ThemedText type="defaultSemiBold" style={{ marginTop: 6 }}>
+                  {nextDocumentStep.title}
+                </ThemedText>
+                <ThemedText type="caption" style={{ marginTop: 4 }}>
+                  {nextDocumentStep.hint}
+                </ThemedText>
+              </Card>
+            ) : null}
+
+            <Card variant="outlined" style={styles.docCard}>
+              <ThemedText type="defaultSemiBold">{t('plot_documents_producer_scope_link_title')}</ThemedText>
+              <ThemedText type="caption" style={{ marginTop: 6 }}>
+                {t('plot_documents_producer_scope_link_body')}
+              </ThemedText>
+              <View style={{ marginTop: 10 }}>
+                <Button
+                  title={t('plot_documents_open_documents')}
+                  variant="secondary"
+                  onPress={() => router.push('/documents')}
+                />
+              </View>
+            </Card>
 
             <DocumentUploadHint />
 
@@ -1029,7 +1149,19 @@ export default function PlotDetailScreen() {
               {titlePhotos.length > 0 ? (
                 <View style={styles.photoRow} testID="plot-land-title-photo-count">
                   {titlePhotos.slice(0, 4).map((p) => (
-                    <Image key={p.id} source={{ uri: p.uri }} style={styles.photoThumb} />
+                    <Pressable
+                      key={p.id}
+                      accessibilityRole="button"
+                      onPress={() =>
+                        setDocPreviewItem({
+                          uri: p.uri,
+                          mimeType: 'image/jpeg',
+                          label: t('plot_documents_land_title_section'),
+                        })
+                      }
+                    >
+                      <Image source={{ uri: p.uri }} style={styles.photoThumb} />
+                    </Pressable>
                   ))}
                   {titlePhotos.length > 4 ? (
                     <View style={styles.photoThumbMore}>
@@ -1364,6 +1496,12 @@ export default function PlotDetailScreen() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      <DocumentPreviewModal
+        visible={docPreviewItem != null}
+        item={docPreviewItem}
+        onClose={() => setDocPreviewItem(null)}
+      />
     </ThemedView>
   );
 }
@@ -1619,6 +1757,11 @@ const styles = StyleSheet.create({
   },
   docCard: {
     gap: 0,
+  },
+  docNextStepCard: {
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
   },
   docNoteCard: {
     paddingVertical: 4,
@@ -1895,6 +2038,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  deletePlotSection: {
+    marginTop: 8,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: 10,
+  },
+  deletePlotSectionNote: {
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  deletePlotButton: {
+    marginTop: 4,
   },
 });
 

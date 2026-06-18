@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
+import { DocumentListRow } from '@/components/evidence/DocumentListRow';
+import { DocumentPreviewModal } from '@/components/evidence/DocumentPreviewModal';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,11 +59,6 @@ function badgeForKind(kind: PlotEvidenceKind): { labelKey: string } {
   }
 }
 
-function isImageEvidence(uri: string, mimeType: string | null): boolean {
-  if (mimeType?.startsWith('image/')) return true;
-  return /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(uri);
-}
-
 function fallbackLabel(kind: PlotEvidenceKind): string {
   switch (kind) {
     case 'fpic_repository':
@@ -91,6 +88,11 @@ export function PlotEvidencePanel({
 }: PlotEvidencePanelProps) {
   const { t } = useLanguage();
   const [fpicSignerName, setFpicSignerName] = useState('');
+  const [previewItem, setPreviewItem] = useState<{
+    uri: string;
+    mimeType: string | null;
+    label: string | null;
+  } | null>(null);
 
   const applyEvidenceUploadOutcome = (outcome: AutoUploadOutcome, itemCount: number, showAlert = false) => {
     let message: string;
@@ -253,28 +255,22 @@ export function PlotEvidencePanel({
         </View>
         {evidence
           .filter((d) => d.kind === kind)
-          .slice(0, 4)
           .map((d) => (
-            <Card key={d.id} variant="outlined" style={styles.rowCard}>
-              <View style={styles.evidenceRow}>
-                {isImageEvidence(d.uri, d.mimeType) ? (
-                  <Image source={{ uri: d.uri }} style={styles.evidenceThumb} />
-                ) : null}
-                <View style={styles.evidenceTextCol}>
-                  <View style={styles.itemHeader}>
-                    <ThemedText type="defaultSemiBold" style={styles.itemTitle} numberOfLines={2}>
-                      {d.label ?? t(fallbackLabel(kind))}
-                    </ThemedText>
-                    <View style={styles.itemBadgeWrap}>
-                      <Badge variant="default" size="sm">
-                        {t(badge.labelKey)}
-                      </Badge>
-                    </View>
-                  </View>
-                  <ThemedText type="caption">{new Date(d.takenAt).toLocaleDateString()}</ThemedText>
-                </View>
-              </View>
-            </Card>
+            <DocumentListRow
+              key={d.id}
+              label={d.label ?? t(fallbackLabel(kind))}
+              dateLabel={new Date(d.takenAt).toLocaleDateString()}
+              badgeLabel={t(badge.labelKey)}
+              uri={d.uri}
+              mimeType={d.mimeType}
+              onPress={() =>
+                setPreviewItem({
+                  uri: d.uri,
+                  mimeType: d.mimeType,
+                  label: d.label ?? t(fallbackLabel(kind)),
+                })
+              }
+            />
           ))}
       </Card>
     );
@@ -354,6 +350,12 @@ export function PlotEvidencePanel({
           </View>
         </Card>
       ) : null}
+
+      <DocumentPreviewModal
+        visible={previewItem != null}
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+      />
     </View>
   );
 }
@@ -385,39 +387,6 @@ const styles = StyleSheet.create({
   sectionActions: {
     gap: 10,
     marginTop: 10,
-  },
-  rowCard: { padding: 12, marginTop: 8 },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
-  },
-  itemTitle: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  itemBadgeWrap: {
-    flexShrink: 0,
-    maxWidth: '42%',
-  },
-  evidenceRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  evidenceTextCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  evidenceThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: '#eee',
-    flexShrink: 0,
   },
   promptCard: {
     padding: 12,
