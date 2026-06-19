@@ -20,6 +20,11 @@ fi
 
 echo ""
 echo "Metro (LAN): http://${IP}:${METRO_PORT}"
+if [[ -n "${EXPO_PUBLIC_API_URL:-}" ]]; then
+  echo "Sync API: ${EXPO_PUBLIC_API_URL}"
+else
+  echo "Sync API: from .env (local Nest on ${IP}:4000 unless overridden)"
+fi
 echo "Phone and Mac must be on the same Wi‑Fi. In the app: shake → Reload, or tap Reload JS."
 echo ""
 

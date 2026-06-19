@@ -1,4 +1,3 @@
-import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   compactDuplicatePendingSyncActions,
@@ -6,6 +5,7 @@ import {
   loadPlotServerLinks,
 } from '@/features/state/persistence';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 
 export type TotalSyncPendingSnapshot = {
   queuePendingCount: number;
@@ -16,6 +16,8 @@ export type TotalSyncPendingSnapshot = {
 /** Queue rows + local plots missing on server (same math as Home / Settings backup card). */
 export async function measureTotalSyncPending(params: {
   farmerId?: string;
+  /** Merges server plots from every owned profile (auth uid vs linked farmer id). */
+  ownedFarmerIds?: string[];
   plots: Plot[];
   isSignedIn: boolean;
 }): Promise<TotalSyncPendingSnapshot> {
@@ -26,7 +28,11 @@ export async function measureTotalSyncPending(params: {
   if (params.isSignedIn && params.farmerId && params.plots.length > 0) {
     const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
     try {
-      const backend = await fetchPlotsForFarmer(params.farmerId);
+      const backend = await fetchServerPlotListForUi({
+        profileFarmerId: params.farmerId,
+        localPlots: params.plots,
+        ownedFarmerIds: params.ownedFarmerIds,
+      });
       unsyncedPlotCount = listUnsyncedLocalPlots(
         params.plots,
         backend ?? [],

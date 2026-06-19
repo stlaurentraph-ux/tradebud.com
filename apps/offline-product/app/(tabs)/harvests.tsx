@@ -17,9 +17,9 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
-  fetchPlotsForFarmer,
   fetchVouchersForFarmer,
 } from '@/features/api/postPlot';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import {
   buyerLabelForDeliveryRecipient,
@@ -35,24 +35,15 @@ import { MultiPlotDeliveryWizard } from '@/features/harvest/MultiPlotDeliveryWiz
 import { sumDeliveredKgByPlot } from '@/features/harvest/plotYieldCapacity';
 import { buildMergedHarvestPlots, findHarvestPlotOption, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import { validateHarvestKg } from '@/features/validation/validators';
-import {
-  DeliveryLoggedPanel,
-  type DeliverySyncFeedback,
-  type LoggedDeliverySnapshot,
-} from '@/components/harvest/DeliveryLoggedPanel';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
-import { findSyncedVoucherForLoggedDelivery } from '@/features/harvest/findSyncedVoucherForLoggedDelivery';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
-import { reconcilePlotServerLinks, resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
-import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import {
   loadLocalDeliveryReceiptsForFarmer,
-  loadPendingSyncActions,
   loadPlotServerLinks,
   persistPlotServerLinks,
-  updateLocalDeliveryReceipt,
 } from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
@@ -71,10 +62,6 @@ export default function HarvestsScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [showNewHarvestLog, setShowNewHarvestLog] = useState(false);
   const [showRecordWeight, setShowRecordWeight] = useState(false);
-  const [showHarvestLogged, setShowHarvestLogged] = useState(false);
-  const [loggedDelivery, setLoggedDelivery] = useState<LoggedDeliverySnapshot | null>(null);
-  const [deliverySyncBusy, setDeliverySyncBusy] = useState(false);
-  const [deliverySyncFeedback, setDeliverySyncFeedback] = useState<DeliverySyncFeedback | null>(null);
   const [weightInput, setWeightInput] = useState('');
   const [deliveryRecipient, setDeliveryRecipient] = useState<DeliveryRecipientSelection | null>(null);
   const [showMultiPlotDelivery, setShowMultiPlotDelivery] = useState(false);
@@ -88,7 +75,7 @@ export default function HarvestsScreen() {
   const [pendingReceiptsScroll, setPendingReceiptsScroll] = useState(false);
   const [deviceReceipts, setDeviceReceipts] = useState<DeliveryReceiptRecord[]>([]);
 
-  const refreshHarvestData = useCallback(async () => {
+  const refreshHarvestData = useCallback(async (options?: { forcePlotFetch?: boolean }) => {
     if (!farmer) {
       setBackendPlots([]);
       setPlotServerLinks({});
@@ -111,7 +98,11 @@ export default function HarvestsScreen() {
     const existingLinks = await loadPlotServerLinks();
     try {
       const [plotsRows, voucherPayload] = await Promise.all([
-        fetchPlotsForFarmer(farmer.id),
+        fetchServerPlotListForUi({
+          profileFarmerId: farmer.id,
+          localPlots,
+          force: options?.forcePlotFetch === true,
+        }),
         fetchVouchersForFarmer(farmer.id),
       ]);
       const reconciled = reconcilePlotServerLinks(localPlots, plotsRows ?? [], existingLinks);
@@ -138,7 +129,7 @@ export default function HarvestsScreen() {
 
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
-      void refreshHarvestData();
+      void refreshHarvestData({ forcePlotFetch: true });
     });
   }, [refreshHarvestData]);
 
@@ -180,11 +171,9 @@ export default function HarvestsScreen() {
     if (params.focus !== 'receipts') return;
     setShowNewHarvestLog(false);
     setShowRecordWeight(false);
-    setShowHarvestLogged(false);
     setShowMultiPlotDelivery(false);
     setMultiPlotRestrictedIds(null);
     setDeliveryPlotSelection(new Set());
-    setLoggedDelivery(null);
     setPendingReceiptsScroll(true);
     router.setParams({ focus: undefined });
   }, [params.focus]);
@@ -193,11 +182,9 @@ export default function HarvestsScreen() {
     if (params.focus !== 'select') return;
     setShowNewHarvestLog(true);
     setShowRecordWeight(false);
-    setShowHarvestLogged(false);
     setShowMultiPlotDelivery(false);
     setMultiPlotRestrictedIds(null);
     setDeliveryPlotSelection(new Set());
-    setLoggedDelivery(null);
     setMessage(null);
     router.setParams({ focus: undefined });
   }, [params.focus]);
@@ -300,178 +287,6 @@ export default function HarvestsScreen() {
       isDeliveryRecipientComplete(deliveryRecipient),
   );
 
-  const resetLoggedState = () => {
-    setShowHarvestLogged(false);
-    setLoggedDelivery(null);
-    setDeliverySyncFeedback(null);
-    setDeliverySyncBusy(false);
-  };
-
-  const runDeliverySyncNow = useCallback(async () => {
-    if (!farmer?.id || !loggedDelivery) return;
-    if (!isSignedIn || !hasSyncAuthSession()) {
-      openSignIn({ variant: 'sync' });
-      return;
-    }
-
-    if (loggedDelivery.qrCodeRef) {
-      setDeliverySyncFeedback({
-        variant: 'success',
-        message: t('harvest_receipt_sync_success'),
-      });
-      return;
-    }
-
-    setDeliverySyncBusy(true);
-    setDeliverySyncFeedback(null);
-    try {
-      const backup = await runAutoBackup({
-        farmerId: farmer.id,
-        localPlots,
-      });
-
-      if (backup.plotResult?.stoppedForAuth) {
-        setDeliverySyncFeedback({
-          variant: 'error',
-          message: t('sync_session_expired_short'),
-        });
-        return;
-      }
-
-      if (backup.plotResult?.fetchFailed || backup.queueResult.fetchFailed) {
-        setDeliverySyncFeedback({
-          variant: 'error',
-          message: t('harvest_receipt_sync_failed_reach'),
-        });
-        return;
-      }
-
-      const voucherPayload = await fetchVouchersForFarmer(farmer.id).catch(() => []);
-      const refreshedVouchers = normalizeVoucherRows(voucherPayload);
-      setVouchers(refreshedVouchers);
-
-      const links = await loadPlotServerLinks();
-      setPlotServerLinks(links);
-
-      const plotsRows = await fetchPlotsForFarmer(farmer.id).catch(() => backendPlots);
-      setBackendPlots(plotsRows ?? backendPlots);
-
-      const localPlot = resolveLocalPlotForHarvestSubmit({
-        selectedPlotId: loggedDelivery.plotId,
-        localPlots,
-        backendPlots: plotsRows ?? backendPlots,
-        plotServerLinks: links,
-      });
-      const serverPlotId = localPlot
-        ? resolveServerPlotIdForLocal(localPlot, plotsRows ?? backendPlots, links)
-        : null;
-
-      let qrCodeRef = findSyncedVoucherForLoggedDelivery({
-        delivery: loggedDelivery,
-        vouchers: refreshedVouchers,
-        localPlots,
-        backendPlots: plotsRows ?? backendPlots,
-        plotServerLinks: links,
-      });
-
-      if (qrCodeRef && loggedDelivery.receiptId) {
-        await updateLocalDeliveryReceipt(loggedDelivery.receiptId, {
-          qrCodeRef,
-          pendingSync: false,
-          serverPlotId: serverPlotId ?? undefined,
-        }).catch(() => undefined);
-      }
-
-      if (qrCodeRef) {
-        const seasonTotalKg =
-          sumDeliveredKgByPlot(refreshedVouchers)[String(loggedDelivery.plotId)] ??
-          loggedDelivery.seasonTotalKg;
-        setLoggedDelivery({
-          ...loggedDelivery,
-          mode: 'synced',
-          qrCodeRef,
-          seasonTotalKg,
-          queuedMessageKey: null,
-        });
-        setDeliverySyncFeedback({
-          variant: 'success',
-          message: t('harvest_receipt_sync_success'),
-        });
-        void refreshHarvestData();
-        return;
-      }
-
-      const pendingHarvest = (await loadPendingSyncActions()).some((action) => {
-        if (action.actionType !== 'harvest') return false;
-        try {
-          const payload = JSON.parse(action.payloadJson) as { plotId?: string; kg?: number };
-          return (
-            String(payload.plotId ?? '') === String(loggedDelivery.plotId) &&
-            Math.abs(Number(payload.kg ?? 0) - loggedDelivery.kg) < 0.5
-          );
-        } catch {
-          return false;
-        }
-      });
-
-      if (backup.queueResult.failedActions > 0 || (backup.plotResult?.failed ?? 0) > 0) {
-        setDeliverySyncFeedback({
-          variant: 'error',
-          message: t('harvest_receipt_sync_failed_partial'),
-        });
-        return;
-      }
-
-      if (pendingHarvest) {
-        setDeliverySyncFeedback({
-          variant: 'info',
-          message: t('harvest_receipt_sync_pending_qr'),
-        });
-        return;
-      }
-
-      if (backup.queueResult.completed > 0 || backup.plotResult?.uploaded) {
-        setDeliverySyncFeedback({
-          variant: 'info',
-          message: t('harvest_receipt_sync_pending_qr'),
-        });
-        return;
-      }
-
-      setDeliverySyncFeedback({
-        variant: 'info',
-        message: t('harvest_receipt_sync_nothing_pending'),
-      });
-    } catch {
-      setDeliverySyncFeedback({
-        variant: 'error',
-        message: t('harvest_receipt_sync_failed'),
-      });
-    } finally {
-      setDeliverySyncBusy(false);
-    }
-  }, [
-    backendPlots,
-    farmer?.id,
-    isSignedIn,
-    localPlots,
-    loggedDelivery,
-    openSignIn,
-    refreshHarvestData,
-    t,
-  ]);
-
-  const openAnotherDelivery = () => {
-    resetLoggedState();
-    setDeliveryPlotSelection(new Set());
-    if (syncedHarvestPlots.length === 1) {
-      openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
-      return;
-    }
-    setShowNewHarvestLog(true);
-    setShowRecordWeight(false);
-  };
-
   const startNewHarvestFlow = () => {
     if (!isSignedIn) {
       openSignIn({ variant: 'sync' });
@@ -514,15 +329,11 @@ export default function HarvestsScreen() {
       >
         <View style={styles.headerRowCompact}>
             <View style={[styles.headerSideSlot, styles.headerSideLeft]}>
-            {showHarvestLogged || showRecordWeight || showNewHarvestLog || showMultiPlotDelivery ? (
+            {showRecordWeight || showNewHarvestLog || showMultiPlotDelivery ? (
             <Pressable
               onPress={() => {
                 if (showMultiPlotDelivery) {
                   multiPlotBackRef.current?.();
-                  return;
-                }
-                if (showHarvestLogged) {
-                  resetLoggedState();
                   return;
                 }
                 if (showRecordWeight) {
@@ -562,10 +373,6 @@ export default function HarvestsScreen() {
             <ThemedText numberOfLines={1} type="defaultSemiBold" style={styles.headerTitleCompact}>
               {showMultiPlotDelivery
                 ? multiPlotHeaderTitle || t('multi_plot_delivery_title')
-                : showHarvestLogged
-                ? loggedDelivery?.mode === 'queued'
-                  ? t('harvest_queued_success_title')
-                  : t('harvest_header_logged')
                 : showRecordWeight
                   ? t('harvest_header_weight')
                   : showNewHarvestLog
@@ -604,30 +411,6 @@ export default function HarvestsScreen() {
               <ThemedText type="caption">{t('harvest_setup_farmer_first')}</ThemedText>
             </Card>
           )
-        ) : showHarvestLogged && loggedDelivery ? (
-          <DeliveryLoggedPanel
-            t={t}
-            delivery={loggedDelivery}
-            onShareAnother={openAnotherDelivery}
-            onViewPlot={(plotId) => {
-              const localPlot = resolveLocalPlotForHarvestSubmit({
-                selectedPlotId: plotId,
-                localPlots,
-                backendPlots,
-                plotServerLinks,
-              });
-              const targetPlotId = localPlot?.id ?? plotId;
-              const receiptParam = loggedDelivery.receiptId
-                ? `&receiptId=${encodeURIComponent(loggedDelivery.receiptId)}`
-                : '';
-              router.push(
-                `/plot/${encodeURIComponent(targetPlotId)}?sub=voucher&from=harvests${receiptParam}`,
-              );
-            }}
-            onSyncNow={() => void runDeliverySyncNow()}
-            syncBusy={deliverySyncBusy}
-            syncFeedback={deliverySyncFeedback}
-          />
         ) : showRecordWeight ? (
           <>
             {selectedPlot ? (
@@ -751,51 +534,27 @@ export default function HarvestsScreen() {
                     return;
                   }
 
-                  const snapshotBase = {
-                    receiptId: result.receiptId,
-                    plotId: localPlot.id,
-                    plotName,
-                    kg: validation.value,
-                    recordedAt: Date.now(),
-                    deliveryRecipient,
-                  };
-
                   if (result.status === 'queued') {
-                    const priorKg = deliveredByPlot[String(localPlot.id)] ?? 0;
-                    setLoggedDelivery({
-                      ...snapshotBase,
-                      qrCodeRef: null,
-                      mode: 'queued',
-                      queuedMessageKey: result.messageKey,
-                      seasonTotalKg: priorKg + validation.value,
-                    });
                     void refreshHarvestData();
                     setWeightInput('');
                     setDeliveryRecipient(null);
                     setShowRecordWeight(false);
                     setShowNewHarvestLog(false);
-                    setShowHarvestLogged(true);
                     setMessage(null);
+                    router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
                     return;
                   }
 
                   const voucherPayload = await fetchVouchersForFarmer(farmer.id);
                   const refreshedVouchers = normalizeVoucherRows(voucherPayload);
                   setVouchers(refreshedVouchers);
-                  const seasonTotalKg = sumDeliveredKgByPlot(refreshedVouchers)[String(localPlot.id)] ?? null;
-                  setLoggedDelivery({
-                    ...snapshotBase,
-                    qrCodeRef: result.qrCodeRef,
-                    mode: 'synced',
-                    seasonTotalKg,
-                  });
                   void refreshHarvestData();
                   setWeightInput('');
                   setDeliveryRecipient(null);
                   setShowRecordWeight(false);
                   setShowNewHarvestLog(false);
-                  setShowHarvestLogged(true);
                   setMessage(null);
+                  router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
                 } catch (e) {
                   setMessage(e instanceof Error ? e.message : String(e));
                 }

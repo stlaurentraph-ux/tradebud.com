@@ -33,6 +33,7 @@ import {
 import { GroundTruthPhotoCapture } from '@/components/plot-photo-vault/GroundTruthPhotoCapture';
 import { GeometryConfidenceBanner } from '@/components/mapping/GeometryConfidenceBanner';
 import { CornerMapOverlay } from '@/components/mapping/CornerMapOverlay';
+import { CaptureInstructionsLink } from '@/components/mapping/CaptureInstructionsLink';
 import { PlotContiguityRuleCard } from '@/components/mapping/PlotContiguityRuleCard';
 import { isGroundTruthPhotoSetComplete, countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { assessGeometryConfidence } from '@/features/compliance/plotGeometryConfidence';
@@ -401,15 +402,19 @@ export function WalkPerimeterScreen() {
     }
     const saved = addAveragedVertex(CORNER_CAPTURE_HOLD_SECONDS);
     if (!saved) {
+      Alert.alert(t('walk_corner_wait_title'), t('walk_corner_wait_body'));
       return;
     }
-    setCornerHoldAnchor(recordingSeconds);
+    stopRecording();
+    setCornerHoldAnchor(0);
   }, [
     addAveragedVertex,
     cornerHoldAnchor,
     isRecording,
     recordingSeconds,
     startRecording,
+    stopRecording,
+    t,
   ]);
 
   const handleCancelCornerSettling = useCallback(() => {
@@ -832,6 +837,14 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     return Math.min(560, Math.max(300, Math.round(available * 0.82)));
   }, [captureMethod, insets.top, windowHeight]);
 
+  const pinMapHeight = useMemo(() => {
+    if (captureMethod !== 'pin') return 330;
+    const headerAllowance = insets.top + 56;
+    const footerAllowance = 132;
+    const available = Math.max(240, windowHeight - headerAllowance - footerAllowance);
+    return Math.min(480, Math.max(280, Math.round(available * 0.72)));
+  }, [captureMethod, insets.top, windowHeight]);
+
   const ensureMinimalFarmerForPlot = useCallback(() => {
     const id = resolveProfileId();
     setFarmerIdInput(id);
@@ -857,6 +870,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   const walkActionsPinned = showDetailedForm && showCapturePage && isWalkCaptureMode;
   const centroidActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'centroid';
   const drawActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'draw';
+  const pinActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'pin';
 
   const switchToCaptureMethod = useCallback(
     (method: CaptureMethod, page: CaptureMethodPage) => {
@@ -869,9 +883,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       setSelectedMethodPage(page);
       setAlternateCaptureOpen(false);
       setDrawTracingActive(false);
-      if (method === 'centroid') {
-        setCornerGuideExpanded(true);
-      }
     },
     [isRecording, reset, setCaptureMode, stopRecording],
   );
@@ -952,18 +963,19 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   );
 
   const showCaptureInstructions = useCallback(() => {
-    if (captureMethod === 'centroid') {
-      Alert.alert(t('walk_method_centroid'), t('walk_corner_instructions_alert'));
-      return;
-    }
-    Alert.alert(
-      captureMethod === 'draw'
-        ? t('walk_method_draw')
-        : t('walk_instructions_title'),
-      captureMethod === 'draw'
-        ? t('walk_draw_steps_body')
-        : t('walk_instructions_body'),
-    );
+    const titleByMethod: Record<CaptureMethod, string> = {
+      walk: t('walk_instructions_title'),
+      draw: t('walk_method_draw'),
+      centroid: t('walk_method_centroid'),
+      pin: t('walk_method_pin'),
+    };
+    const bodyByMethod: Record<CaptureMethod, string> = {
+      walk: t('walk_instructions_body'),
+      draw: t('walk_draw_steps_body'),
+      centroid: t('walk_corner_instructions_alert'),
+      pin: t('walk_pin_instructions_alert'),
+    };
+    Alert.alert(titleByMethod[captureMethod], bodyByMethod[captureMethod]);
   }, [captureMethod, t]);
 
   const walkCaptureHint = useMemo(() => {
@@ -995,31 +1007,21 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   ]);
 
   const drawCaptureHint = useMemo(() => {
-    if (!showCapturePage || captureMethod !== 'draw') {
+    if (!showCapturePage || captureMethod !== 'draw' || !drawTracingActive) {
       return null;
-    }
-    if (!drawTracingActive) {
-      if (manualTraceImagery?.imagerySource === 'offline_pack') {
-        return t('walk_draw_hint_explore_offline');
-      }
-      return t('walk_draw_hint_explore');
-    }
-    if (points.length === 0) {
-      return t('walk_draw_hint_trace');
     }
     if (points.length < 3) {
       return t('walk_draw_hint_more_corners', { n: points.length });
     }
-    return t('walk_draw_hint_close', { ha: area.hectares > 0 ? area.hectares.toFixed(2) : '—' });
-  }, [
-    area.hectares,
-    captureMethod,
-    drawTracingActive,
-    manualTraceImagery?.imagerySource,
-    points.length,
-    showCapturePage,
-    t,
-  ]);
+    return null;
+  }, [captureMethod, drawTracingActive, points.length, showCapturePage, t]);
+
+  const pinCaptureHint = useMemo(() => {
+    if (!showCapturePage || captureMethod !== 'pin' || !isRecording || pinHoldPercent >= 100) {
+      return null;
+    }
+    return t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining });
+  }, [captureMethod, isRecording, pinHoldPercent, pinHoldSecondsRemaining, showCapturePage, t]);
 
   const completedPlot = useMemo(() => {
     const id = lastRegisteredPlotIdRef.current;
@@ -1680,6 +1682,134 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     </View>
   );
 
+  const renderCaptureInstructionsLink = () => (
+    <CaptureInstructionsLink
+      onPress={showCaptureInstructions}
+      label={t('walk_instructions_link')}
+      hint={t('walk_instructions_preview')}
+    />
+  );
+
+  const renderBoundaryCaptureStatsRow = () => {
+    if (points.length === 0 && !isRecording) {
+      return null;
+    }
+    return (
+      <View style={styles.walkStatsRow}>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="git-network-outline" size={20} color="#6B7280" />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {boundaryPointCount}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t(boundaryPointsStatLabelKey)}
+          </ThemedText>
+        </View>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="leaf-outline" size={20} color="#0F8A64" />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {area.hectares > 0 ? area.hectares.toFixed(1) : '0.0'}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t('walk_area')}
+          </ThemedText>
+        </View>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="locate-outline" size={20} color={gpsStrengthColor} />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {gpsStrengthLabel}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t('walk_gps_signal')}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  };
+
+  const renderPinCaptureStatsRow = () => {
+    if (!isRecording && points.length === 0) {
+      return null;
+    }
+    const declaredHa = declaredAreaHaInput.trim()
+      ? Number(declaredAreaHaInput.trim().replace(',', '.'))
+      : NaN;
+    const areaDisplay =
+      area.hectares > 0
+        ? area.hectares.toFixed(1)
+        : Number.isFinite(declaredHa) && declaredHa > 0
+          ? declaredHa.toFixed(1)
+          : '—';
+    return (
+      <View style={styles.walkStatsRow}>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="radio-outline" size={20} color="#6B7280" />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {precisionMeters != null ? `${precisionMeters.toFixed(0)}m` : '—'}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t('walk_precision')}
+          </ThemedText>
+        </View>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="leaf-outline" size={20} color="#0F8A64" />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {areaDisplay}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t('walk_area')}
+          </ThemedText>
+        </View>
+        <View style={styles.walkStatCard}>
+          <Ionicons name="locate-outline" size={20} color={gpsStrengthColor} />
+          <ThemedText type="subtitle" style={styles.walkStatValue}>
+            {gpsStrengthLabel}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.walkStatLabel}>
+            {t('walk_gps_signal')}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  };
+
+  const renderPinCaptureActions = () => (
+    <View style={{ gap: 8 }}>
+      {pinCaptureHint ? (
+        <ThemedText type="caption" style={styles.walkCaptureHint}>
+          {pinCaptureHint}
+        </ThemedText>
+      ) : null}
+      {isRecording ? (
+        <View style={styles.averagingTrackCompact}>
+          <View
+            style={[styles.averagingFillCompact, { width: `${Math.max(pinHoldPercent, 2)}%` }]}
+          />
+        </View>
+      ) : null}
+      <Button
+        variant="secondary"
+        style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
+        icon={
+          <Ionicons
+            name={isRecording ? 'hourglass-outline' : 'location'}
+            size={20}
+            color="#FFFFFF"
+          />
+        }
+        onPress={handlePinCapturePress}
+        fullWidth
+        disabled={isRecording && pinHoldPercent < 100}
+      >
+        {isRecording
+          ? pinHoldPercent >= 100
+            ? t('walk_pin_confirm')
+            : t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })
+          : t('walk_pin_save')}
+      </Button>
+    </View>
+  );
+
   const renderCornerCaptureActions = () => (
     <View style={{ gap: 8 }}>
       {isRecording ? (
@@ -1791,17 +1921,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               : t('walk_header_register_plot')}
           </ThemedText>
           <View style={styles.headerTrailing}>
-            {showDetailedForm && showCapturePage && (captureMethod === 'centroid' || captureMethod === 'draw') ? (
-              <Pressable
-                hitSlop={8}
-                onPress={showCaptureInstructions}
-                accessibilityRole="button"
-                accessibilityLabel={t('walk_instructions_link')}
-                style={styles.headerInstructionsButton}
-              >
-                <Ionicons name="help-circle-outline" size={20} color={colors.textInverse} />
-              </Pressable>
-            ) : null}
             <View style={styles.langPill}>
               <ThemedText type="caption" style={{ color: colors.textInverse }}>
                 {String(lang).toUpperCase()}
@@ -1828,23 +1947,17 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             centroidActionsPinned && {
               paddingBottom: Math.max(insets.bottom, 12) + 120,
             },
+            pinActionsPinned && {
+              paddingBottom: Math.max(insets.bottom, 12) + 120,
+            },
           ]}
         >
         {!showDetailedForm ? (
           <>
-            <View style={styles.plotLandingHero}>
-              <View style={styles.plotLandingHeroIcon}>
-                <Ionicons name="footsteps" size={28} color="#0A7F59" />
-              </View>
-              <ThemedText type="title" style={styles.plotLandingHeadline}>
-                {t('walk_landing_headline')}
-              </ThemedText>
-              <ThemedText type="caption" style={styles.plotLandingSubhead}>
-                {t('walk_landing_subhead')}
-              </ThemedText>
-            </View>
-
             <Card variant="elevated" style={styles.plotLandingCombinedCard}>
+              <ThemedText type="caption" style={styles.plotRegisterLandingHint}>
+                {t('plot_register_landing_hint')}
+              </ThemedText>
               <Input
                 label={t('walk_plot_name_label')}
                 placeholder={t('walk_plot_name_ph')}
@@ -2106,21 +2219,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               </>
             ) : showCapturePage && captureMethod === 'walk' ? (
               <>
-                <Pressable
-                  onPress={showCaptureInstructions}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('walk_instructions_link')}
-                  accessibilityHint={t('walk_instructions_preview')}
-                  style={({ pressed }) => [
-                    styles.walkInstructionsLink,
-                    pressed && styles.walkInstructionsLinkPressed,
-                  ]}
-                >
-                  <ThemedText type="defaultSemiBold" style={styles.walkInstructionsLinkText}>
-                    {t('walk_instructions_link')}
-                  </ThemedText>
-                  <Ionicons name="chevron-down-circle-outline" size={20} color="#0A7F59" />
-                </Pressable>
+                {renderCaptureInstructionsLink()}
 
                 <View
                   style={[styles.walkMapPanel, { minHeight: walkMapHeight }]}
@@ -2208,6 +2307,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               </>
             ) : showCapturePage && captureMethod === 'draw' ? (
               <>
+                {renderCaptureInstructionsLink()}
+
                 <View
                   style={[styles.walkMapPanel, { minHeight: drawMapHeight }]}
                   onTouchStart={() => setMapScrollLock(true)}
@@ -2255,34 +2356,37 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         {area.hectares > 0 ? ` · ${area.hectares.toFixed(2)} ha` : ''}
                       </ThemedText>
                     </View>
-                  ) : null}
+                  ) : drawTracingActive ? (
+                    <View style={styles.cornerCountChip} pointerEvents="none">
+                      <ThemedText type="caption" style={styles.cornerCountChipText}>
+                        {t('walk_draw_map_trace')}
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <View style={styles.cornerCountChip} pointerEvents="none">
+                      <ThemedText type="caption" style={styles.cornerCountChipText}>
+                        {points.length > 0 ? t('walk_draw_map_resume') : t('walk_draw_map_explore')}
+                      </ThemedText>
+                    </View>
+                  )}
                 </View>
+
+                {renderBoundaryCaptureStatsRow()}
 
                 {points.length >= 3 ? renderGeometryConfidenceBanner() : null}
               </>
             ) : showCapturePage && captureMethod === 'pin' ? (
               <>
-                <ThemedText type="caption" style={styles.pinModeHint}>
-                  {t('walk_pin_mode_hint')}
-                </ThemedText>
-
-                <Input
-                  label={t('walk_pin_declared_area_label')}
-                  placeholder={t('walk_declared_area_ph')}
-                  keyboardType="decimal-pad"
-                  value={declaredAreaHaInput}
-                  onChangeText={setDeclaredAreaHaInput}
-                  containerStyle={{ marginTop: 4 }}
-                />
+                {renderCaptureInstructionsLink()}
 
                 <View
-                  style={[styles.walkMapPanel, { minHeight: 220, marginTop: 10 }]}
+                  style={[styles.walkMapPanel, { minHeight: pinMapHeight }]}
                   onTouchStart={() => setMapScrollLock(true)}
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
                   <MapView
-                    style={[styles.walkMap, { height: 212 }]}
+                    style={[styles.walkMap, { height: pinMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
                     {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
@@ -2299,55 +2403,47 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showStartMarker={points.length > 0}
                     />
                   </MapView>
-                </View>
-
-                <View style={styles.gpsStrip}>
-                  <View style={[styles.gpsStripDot, { backgroundColor: gpsStrengthColor }]} />
-                  <ThemedText type="defaultSemiBold" style={styles.gpsStripLabel}>
-                    {t('walk_gps_signal')}: {gpsStrengthLabel}
-                  </ThemedText>
-                </View>
-
-                {isRecording ? (
-                  <View style={styles.averagingTrackWrap}>
-                    <View style={styles.averagingTrackCompact}>
-                      <View
-                        style={[
-                          styles.averagingFillCompact,
-                          { width: `${Math.max(pinHoldPercent, 2)}%` },
-                        ]}
-                      />
-                    </View>
+                  <View style={styles.mapGpsPill} pointerEvents="none">
+                    <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
+                    <ThemedText type="caption" style={styles.mapGpsPillText}>
+                      {gpsStrengthLabel}
+                    </ThemedText>
                   </View>
-                ) : null}
+                  <View style={styles.coordChip}>
+                    <ThemedText type="caption">
+                      {formatLatLon(mapCoordDisplay.latitude, mapCoordDisplay.longitude)}
+                    </ThemedText>
+                  </View>
+                  {isRecording ? (
+                    <View style={styles.recordingMapBadge} pointerEvents="none">
+                      <Animated.View
+                        style={[styles.recordingMapPulse, { transform: [{ scale: recordingPulse }] }]}
+                      />
+                      <View style={styles.recordingMapDot} />
+                      <ThemedText type="caption" style={styles.recordingMapLabel}>
+                        {t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })}
+                      </ThemedText>
+                    </View>
+                  ) : null}
+                </View>
+
+                {renderPinCaptureStatsRow()}
+
+                <Input
+                  label={t('walk_pin_declared_area_label')}
+                  placeholder={t('walk_declared_area_ph')}
+                  keyboardType="decimal-pad"
+                  value={declaredAreaHaInput}
+                  onChangeText={setDeclaredAreaHaInput}
+                  containerStyle={{ marginTop: 4 }}
+                />
 
                 {!isRecording && points.length >= 1 ? renderGeometryConfidenceBanner() : null}
-
-                <View style={{ marginTop: 12 }}>
-                  <Button
-                    variant="secondary"
-                    style={{ backgroundColor: '#0A7F59' }}
-                    icon={
-                      <Ionicons
-                        name={isRecording ? 'hourglass-outline' : 'location'}
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                    }
-                    onPress={handlePinCapturePress}
-                    fullWidth
-                    disabled={isRecording && pinHoldPercent < 100}
-                  >
-                    {isRecording
-                      ? pinHoldPercent >= 100
-                        ? t('walk_pin_confirm')
-                        : t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })
-                      : t('walk_pin_save')}
-                  </Button>
-                </View>
               </>
             ) : showCapturePage && captureMethod === 'centroid' ? (
               <>
+                {renderCaptureInstructionsLink()}
+
                 <View
                   style={[styles.walkMapPanel, { minHeight: cornerMapHeight }]}
                   onTouchStart={() => setMapScrollLock(true)}
@@ -2410,6 +2506,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   </View>
                 </View>
 
+                {renderBoundaryCaptureStatsRow()}
+
                 {points.length >= 3 ? renderGeometryConfidenceBanner() : null}
               </>
             ) : null}
@@ -2424,42 +2522,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               ? renderDrawCaptureActions()
               : null}
 
-            {!isWalkLandingState && showCapturePage && isRecording && captureMethod !== 'walk' && captureMethod !== 'pin' && captureMethod !== 'centroid' ? (
-              <View style={styles.statsGrid}>
-                <View style={styles.statChip}>
-                  <ThemedText type="caption" style={styles.statLabel}>
-                    {t('walk_time')}
-                  </ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                    {formatTime(recordingSeconds)}
-                  </ThemedText>
-                </View>
-                <View style={styles.statChip}>
-                  <ThemedText type="caption" style={styles.statLabel}>
-                    {t(boundaryPointsStatLabelKey)}
-                  </ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                    {boundaryPointCount}
-                  </ThemedText>
-                </View>
-                <View style={styles.statChip}>
-                  <ThemedText type="caption" style={styles.statLabel}>
-                    {t('walk_precision')}
-                  </ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                    {precisionMeters != null ? `${precisionMeters.toFixed(0)}m` : '—'}
-                  </ThemedText>
-                </View>
-                <View style={styles.statChip}>
-                  <ThemedText type="caption" style={styles.statLabel}>
-                    {t('walk_area')}
-                  </ThemedText>
-                  <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                    {area.hectares > 0 ? `${area.hectares.toFixed(2)}ha` : '—'}
-                  </ThemedText>
-                </View>
-              </View>
-            ) : null}
+            {showCapturePage && captureMethod === 'pin' && !pinActionsPinned
+              ? renderPinCaptureActions()
+              : null}
 
             {!isWalkLandingState && showCapturePage && estimatedSize === 'lt4' && captureMethod !== 'walk' && captureMethod !== 'pin' ? (
               <View style={{ marginTop: 8 }}>
@@ -2515,7 +2580,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         </Card>
         ) : null}
       </ThemedScrollView>
-        {(walkActionsPinned || centroidActionsPinned || drawActionsPinned) ? (
+        {(walkActionsPinned || centroidActionsPinned || drawActionsPinned || pinActionsPinned) ? (
           <View
             style={[
               styles.walkPinnedFooter,
@@ -2526,6 +2591,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             {walkActionsPinned ? renderWalkCaptureActions() : null}
             {centroidActionsPinned ? renderCornerCaptureActions() : null}
             {drawActionsPinned ? renderDrawCaptureActions() : null}
+            {pinActionsPinned ? renderPinCaptureActions() : null}
           </View>
         ) : null}
       </View>
@@ -2617,20 +2683,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  headerInstructionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    maxWidth: 120,
-  },
-  headerInstructionsText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   langDot: {
     width: 8,
@@ -3101,21 +3153,6 @@ const styles = StyleSheet.create({
   walkStatCardCompact: {
     minHeight: 72,
   },
-  walkInstructionsLink: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    marginBottom: 6,
-    paddingVertical: 2,
-  },
-  walkInstructionsLinkText: {
-    color: '#0A7F59',
-  },
-  walkInstructionsLinkPressed: {
-    opacity: 0.72,
-  },
   walkGuideStrip: {
     gap: 8,
     marginBottom: 8,
@@ -3356,37 +3393,15 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   plotLandingCombinedCard: {
-    marginTop: 14,
+    marginTop: 8,
     borderRadius: 18,
     padding: 18,
     gap: 4,
   },
-  plotLandingHero: {
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
-    paddingHorizontal: 8,
-  },
-  plotLandingHeroIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E9F5EE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  plotLandingHeadline: {
-    textAlign: 'center',
-    color: '#0F172A',
-    fontSize: scaleText(22),
-  },
-  plotLandingSubhead: {
-    marginTop: 6,
-    textAlign: 'center',
+  plotRegisterLandingHint: {
     color: '#6B7280',
     lineHeight: scaleText(20),
-    maxWidth: 300,
+    marginBottom: 8,
   },
   plotLandingIntro: {
     color: '#4B5563',
@@ -3713,11 +3728,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-  },
-  pinModeHint: {
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 4,
   },
   captureTitleRow: {
     flexDirection: 'row',

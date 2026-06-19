@@ -2,6 +2,7 @@
 
 ## Work now
 
+- **Field app sync (2026-06-19)** — Hardened offline sync against the production 429/"plot not on server" loop: one cached server plot-fetch per sync run (`serverPlotFetchCache`) + deterministic farmer scope (no auth-uid flip-flop). Prod DB verified healthy for the reported account (one profile `dcdd88e5…`, one plot `39d548f9…`). Device QA: with production API (`dev:metro:production`), Sync now should clear the queue without 429; watch console for a single `GET /v1/plots` per farmer id and `apiFarmerId = dcdd88e5…`.
 - **Field app (2026-06-16)** — Delivery saved screen (`DeliveryLoggedPanel`) shipped on harvests tab; plot receipt tab + land-paper gating. Device QA: record delivery → share PNG → view plot receipt; queued path → Sync now.
 - Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md`.
 - Dashboard exporter supplier directory + processing facility subtypes (contacts org list, CSV import labels).

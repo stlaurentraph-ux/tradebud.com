@@ -19,7 +19,7 @@ import {
   loadPendingSyncActions,
   loadPlotServerLinks,
 } from '@/features/state/persistence';
-import { fetchPlotsForFarmer } from '@/features/api/postPlot';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
@@ -74,6 +74,30 @@ export default function HomeScreen() {
     setActionRequired({ message, plotId: plot.id });
   }, [plots, backendPlots, t]);
 
+  const refreshBackendPlots = useCallback(
+    async (force = false) => {
+      if (!farmer?.id || !isSignedIn) {
+        setBackendPlots([]);
+        setLoadingBackend(false);
+        return;
+      }
+      setLoadingBackend(true);
+      try {
+        const rows = await fetchServerPlotListForUi({
+          profileFarmerId: farmer.id,
+          localPlots: plots,
+          force,
+        });
+        setBackendPlots(rows ?? []);
+      } catch {
+        setBackendPlots([]);
+      } finally {
+        setLoadingBackend(false);
+      }
+    },
+    [farmer?.id, isSignedIn, plots],
+  );
+
   useFocusEffect(
     useCallback(() => {
       void refreshAuth();
@@ -83,13 +107,9 @@ export default function HomeScreen() {
       loadPlotServerLinks()
         .then((links) => setPlotServerLinks(links))
         .catch(() => undefined);
-      if (farmer?.id && isSignedIn) {
-        fetchPlotsForFarmer(farmer.id)
-          .then((rows) => setBackendPlots(rows ?? []))
-          .catch(() => setBackendPlots([]));
-      }
+      void refreshBackendPlots(false);
       void refreshPlotReadiness();
-    }, [refreshAuth, farmer?.id, isSignedIn, refreshPlotReadiness]),
+    }, [refreshAuth, refreshBackendPlots, refreshPlotReadiness]),
   );
 
   const unsyncedPlotCount = useMemo(() => {
@@ -115,17 +135,8 @@ export default function HomeScreen() {
   }, [plots.length, farmer?.id]);
 
   useEffect(() => {
-    if (!farmer || !isSignedIn) {
-      setBackendPlots([]);
-      setLoadingBackend(false);
-      return;
-    }
-    setLoadingBackend(true);
-    fetchPlotsForFarmer(farmer.id)
-      .then((rows) => setBackendPlots(rows ?? []))
-      .catch(() => setBackendPlots([]))
-      .finally(() => setLoadingBackend(false));
-  }, [farmer, isSignedIn, t]);
+    void refreshBackendPlots(false);
+  }, [farmer?.id, isSignedIn, refreshBackendPlots]);
 
   useEffect(() => {
     void refreshPlotReadiness();

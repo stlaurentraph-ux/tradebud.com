@@ -21,6 +21,17 @@ export REACT_NATIVE_PACKAGER_HOSTNAME=$IP
 export SENTRY_DISABLE_AUTO_UPLOAD=true
 EOF
 
+should_skip_lan_api_sync() {
+  if [[ "${TRACEBUD_SKIP_LAN_API_SYNC:-}" == "1" ]]; then
+    return 0
+  fi
+  local preset="${EXPO_PUBLIC_API_URL:-}"
+  if [[ -n "$preset" ]] && [[ "$preset" != *":4000/api" ]] && [[ "$preset" != *"localhost"* ]]; then
+    return 0
+  fi
+  return 1
+}
+
 sync_api_url_file() {
   local file="$1"
   [[ -f "$file" ]] || return 0
@@ -29,7 +40,32 @@ sync_api_url_file() {
   fi
 }
 
-sync_api_url_file "$ROOT/.env"
-sync_api_url_file "$ROOT/.env.local"
+ENV_DEV_LOCAL="$ROOT/.env.development.local"
+ENV_DEV_LOCAL_MARKER="# tracebud-metro-api-target"
+
+write_production_api_env() {
+  local url="${EXPO_PUBLIC_API_URL:-https://api.tracebud.com/api}"
+  cat >"$ENV_DEV_LOCAL" <<EOF
+${ENV_DEV_LOCAL_MARKER}
+EXPO_PUBLIC_API_URL=${url}
+EOF
+  echo "Wrote ${url} to .env.development.local (Metro bundle will use production API)" >&2
+}
+
+clear_production_api_env() {
+  if [[ -f "$ENV_DEV_LOCAL" ]] && head -n 1 "$ENV_DEV_LOCAL" | grep -q "tracebud-metro-api-target"; then
+    rm -f "$ENV_DEV_LOCAL"
+    echo "Removed .env.development.local API override (local Nest)" >&2
+  fi
+}
+
+if should_skip_lan_api_sync; then
+  echo "Skipping LAN API URL sync (using ${EXPO_PUBLIC_API_URL:-production target})" >&2
+  write_production_api_env
+else
+  clear_production_api_env
+  sync_api_url_file "$ROOT/.env"
+  sync_api_url_file "$ROOT/.env.local"
+fi
 
 echo "$IP"

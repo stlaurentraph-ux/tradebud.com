@@ -38,8 +38,9 @@ export default async function SupportPage({ params }: Props) {
           </Link>
           <h1 className="text-5xl font-bold mb-4">Support</h1>
           <p className="text-white/80 text-lg max-w-2xl">
-            Help for farmers using the Tracebud mobile field app. The app is free for producers — no
-            subscription or in-app purchase is required.
+            Help for the Tracebud mobile field app. The app is free for everyone — farmers,
+            cooperatives, and other Tracebud users. No subscription or in-app purchase is required in
+            the app.
           </p>
         </div>
       </div>
@@ -81,11 +82,11 @@ export default async function SupportPage({ params }: Props) {
             </div>
           </Section>
 
-          <Section title="Mobile field app (farmers)">
+          <Section title="Mobile field app">
             <ul className="list-disc list-inside space-y-2">
               <li>
-                <strong>Sign in:</strong> Use Google, Apple, or email with a farmer account created in
-                the app or invited by your cooperative. Exporter and importer dashboard accounts use{' '}
+                <strong>Sign in:</strong> Use Google, Apple, or email with any Tracebud account —
+                including farmers, cooperative staff, and other users who also use{' '}
                 <a
                   href="https://dashboard.tracebud.com"
                   className="text-[var(--data-emerald)] font-semibold hover:underline"
@@ -99,7 +100,7 @@ export default async function SupportPage({ params }: Props) {
                 from Settings to back up to the cloud.
               </li>
               <li>
-                <strong>Backup &amp; sync:</strong> Requires internet and a signed-in farmer account.
+                <strong>Backup &amp; sync:</strong> Requires internet and a signed-in account.
               </li>
               <li>
                 <strong>Privacy:</strong> See our{' '}
@@ -114,10 +115,18 @@ export default async function SupportPage({ params }: Props) {
             </ul>
           </Section>
 
-          <Section title="Cooperatives, exporters, and buyers">
+          <Section title="Organization dashboard (paid)">
             <p>
-              Paid Tracebud workspace subscriptions are purchased on our website for organizations —
-              not inside the farmer mobile app. For billing, trials, or dashboard access, contact{' '}
+              Tracebud workspace subscriptions for cooperatives, exporters, and importers are purchased
+              on our website and used at{' '}
+              <a
+                href="https://dashboard.tracebud.com"
+                className="text-[var(--data-emerald)] font-semibold hover:underline"
+              >
+                dashboard.tracebud.com
+              </a>
+              . Those subscriptions are separate from the free mobile field app. For billing, trials, or
+              dashboard access, contact{' '}
               <a
                 href="mailto:support@tracebud.com"
                 className="text-[var(--data-emerald)] font-semibold hover:underline"

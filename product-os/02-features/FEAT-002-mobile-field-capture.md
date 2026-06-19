@@ -48,6 +48,15 @@ Prod diagnostic identified copy, auth, and sync gaps. Phased execution plan:
 
 Priority: i18n copy fix → auth unification (Google/Apple/email) → sync reliability → observability → CI/release gates.
 
+## Sync reliability hardening (2026-06-19)
+
+Field-sync failure ("12 waiting to upload", "Plot not on server yet", `plot_upload` 429) for a production account was traced to client-side chatter, not server data. Verified directly against the production DB: the auth user owns exactly one farmer profile, which owns exactly one plot — no duplicate/orphaned rows under the auth uid.
+
+- **Single plot-fetch per sync run** — `features/sync/serverPlotFetchCache.ts` memoizes `GET /v1/plots?farmerId=…` for the duration of one sync run (opened in Settings "Sync now", the Settings plot refresh, and `runAutoBackup`; invalidated after a plot upload). Previously each step (scope resolution, link warming, upload, every queue pass, pending count) re-fetched, producing ~16 identical reads → 120 req/min IP rate limit (429) and non-deterministic local↔server link establishment.
+- **Deterministic farmer scope** — `alignFarmerWithAuthUser` treats the server's owned-farmer list as authoritative and never rekeys the device onto the Supabase auth uid when a distinct linked producer profile exists, removing the cross-run flip-flop between auth uid and producer profile.
+- **State transitions / exceptions:** unchanged canonical transitions; cache never caches errors (transient 403/timeout for one farmer id does not poison later passes). Plot links persist and are honored even when the scoped server list is transiently empty, so the queue can still drain.
+- **Tests:** `serverPlotFetchCache.test.ts`, `alignFarmerWithAuthUser.test.ts`.
+
 ## Tasks checklist
 
 - [x] Confirm permissions and tenant boundaries

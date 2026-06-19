@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
-import { DeliveryReceiptDetailPanel } from '@/components/harvest/DeliveryReceiptDetailPanel';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
@@ -18,12 +18,10 @@ import {
   mergeDeliveryReceiptLists,
   receiptMatchesPlotFilter,
 } from '@/features/harvest/localDeliveryReceipts';
+import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import type { TranslateFn } from '@/features/i18n/translate';
 
-type ReceiptsScreen =
-  | { kind: 'plots' }
-  | { kind: 'plot'; plotId: string }
-  | { kind: 'detail'; receiptId: string };
+type ReceiptsScreen = { kind: 'plots' } | { kind: 'plot'; plotId: string };
 
 type DeliveryReceiptsBrowserProps = {
   t: TranslateFn;
@@ -36,11 +34,6 @@ type DeliveryReceiptsBrowserProps = {
   plotNameFilter?: string | null;
   pendingReceipts?: DeliveryReceiptRecord[];
   deviceReceipts?: DeliveryReceiptRecord[];
-  /** Open this receipt on load (e.g. after logging a delivery). */
-  initialReceiptId?: string | null;
-  /** When filtered to one plot, open the newest matching receipt (e.g. from Deliveries tab). */
-  openLatestReceipt?: boolean;
-  onScreenChange?: (title: string | null) => void;
 };
 
 export function DeliveryReceiptsBrowser({
@@ -52,9 +45,6 @@ export function DeliveryReceiptsBrowser({
   plotNameFilter = null,
   pendingReceipts = [],
   deviceReceipts = [],
-  initialReceiptId = null,
-  openLatestReceipt = false,
-  onScreenChange,
 }: DeliveryReceiptsBrowserProps) {
   const receipts = useMemo(() => {
     const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t });
@@ -90,75 +80,23 @@ export function DeliveryReceiptsBrowser({
       .filter((group): group is NonNullable<typeof group> => group != null);
   }, [plotGroups, plotFilterIds]);
 
-  const [screen, setScreen] = useState<ReceiptsScreen>(() =>
-    resolveInitialReceiptsScreen(plotIdFilter, initialReceiptId),
-  );
-
-  useEffect(() => {
-    if (!initialReceiptId) return;
-    const match = receipts.find((row) => row.id === initialReceiptId);
-    if (!match) return;
-    setScreen({ kind: 'detail', receiptId: match.id });
-  }, [initialReceiptId, receipts]);
-
-  useEffect(() => {
-    if (initialReceiptId || !openLatestReceipt || plotFilterIds.size === 0) return;
-    const matching = receipts.filter((row) => receiptMatchesPlotFilter(row, plotFilterIds));
-    if (matching.length === 0) return;
-    setScreen({ kind: 'detail', receiptId: matching[0]!.id });
-  }, [initialReceiptId, openLatestReceipt, receipts, plotFilterIds]);
+  const screen: ReceiptsScreen = plotIdFilter
+    ? { kind: 'plot', plotId: plotIdFilter }
+    : { kind: 'plots' };
 
   const activePlotGroup = useMemo(() => {
     if (screen.kind === 'plots') return null;
-    const plotId = screen.kind === 'plot' ? screen.plotId : findReceiptPlotId(receipts, screen.receiptId);
-    if (!plotId) return null;
-    return findPlotReceiptGroupForScreen(filteredGroups, plotId, plotFilterIds);
-  }, [screen, filteredGroups, receipts, plotFilterIds]);
+    return findPlotReceiptGroupForScreen(filteredGroups, screen.plotId, plotFilterIds);
+  }, [screen, filteredGroups, plotFilterIds]);
 
-  const activeReceipt = useMemo(() => {
-    if (screen.kind !== 'detail') return null;
-    return receipts.find((row) => row.id === screen.receiptId) ?? null;
-  }, [screen, receipts]);
-
-  const navigate = (next: ReceiptsScreen) => {
-    setScreen(next);
-    if (next.kind === 'plots') {
-      onScreenChange?.(null);
-      return;
-    }
-    if (next.kind === 'plot') {
-      const group = plotGroups.find((row) => String(row.plotId) === String(next.plotId));
-      onScreenChange?.(group?.plotName ?? plotNameFilter ?? null);
-      return;
-    }
-    const receipt = receipts.find((row) => row.id === next.receiptId);
-    onScreenChange?.(receipt ? `${receipt.kg} kg` : null);
+  const openReceipt = (receiptId: string) => {
+    router.push(deliveryReceiptHref(receiptId));
   };
 
   if (receipts.length === 0) {
     return (
       <Card variant="outlined" style={styles.card}>
         <ThemedText type="caption">{t('no_deliveries')}</ThemedText>
-      </Card>
-    );
-  }
-
-  if (screen.kind === 'detail' && activeReceipt) {
-    return (
-      <DeliveryReceiptDetailPanel
-        t={t}
-        receipt={activeReceipt}
-        onBack={() => {
-          navigate({ kind: 'plot', plotId: activeReceipt.plotId });
-        }}
-      />
-    );
-  }
-
-  if (screen.kind === 'detail') {
-    return (
-      <Card variant="outlined" style={styles.card}>
-        <ThemedText type="caption">{t('voucher_share_loading')}</ThemedText>
       </Card>
     );
   }
@@ -180,18 +118,6 @@ export function DeliveryReceiptsBrowser({
     }
     return (
       <View style={styles.wrap}>
-        {!plotIdFilter ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => navigate({ kind: 'plots' })}
-            style={styles.backRow}
-          >
-            <Ionicons name="chevron-back" size={18} color="#0A7F59" />
-            <ThemedText type="defaultSemiBold" style={styles.backText}>
-              {t('harvest_receipts_all_plots')}
-            </ThemedText>
-          </Pressable>
-        ) : null}
         <ThemedText type="defaultSemiBold" style={styles.plotHeading}>
           {activePlotGroup.plotName}
         </ThemedText>
@@ -204,7 +130,7 @@ export function DeliveryReceiptsBrowser({
               key={receipt.id}
               receipt={receipt}
               t={t}
-              onPress={() => navigate({ kind: 'detail', receiptId: receipt.id })}
+              onPress={() => openReceipt(receipt.id)}
             />
           ))}
         </View>
@@ -218,7 +144,7 @@ export function DeliveryReceiptsBrowser({
         <Pressable
           key={group.plotId}
           accessibilityRole="button"
-          onPress={() => navigate({ kind: 'plot', plotId: group.plotId })}
+          onPress={() => router.push(`/plot/${encodeURIComponent(group.plotId)}?sub=deliveries`)}
         >
           <Card variant="outlined" style={styles.plotCard}>
             <View style={styles.plotCardRow}>
@@ -273,35 +199,10 @@ function ReceiptRow({
   );
 }
 
-function findReceiptPlotId(receipts: DeliveryReceiptRecord[], receiptId: string): string | null {
-  return receipts.find((row) => row.id === receiptId)?.plotId ?? null;
-}
-
-function resolveInitialReceiptsScreen(
-  plotIdFilter: string | null,
-  initialReceiptId: string | null,
-): ReceiptsScreen {
-  if (initialReceiptId) {
-    return { kind: 'detail', receiptId: initialReceiptId };
-  }
-  if (plotIdFilter) {
-    return { kind: 'plot', plotId: plotIdFilter };
-  }
-  return { kind: 'plots' };
-}
-
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
   card: { padding: 14 },
   list: { gap: 10 },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-  },
-  backText: { color: '#0A7F59' },
   plotHeading: { color: '#1F2937', fontSize: 18 },
   plotSubheading: { color: '#6B7280', marginBottom: 4 },
   plotCard: { padding: 14, borderRadius: 16 },

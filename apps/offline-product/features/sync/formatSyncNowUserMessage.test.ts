@@ -6,37 +6,33 @@ const t = (key: string, params?: Record<string, string | number>) =>
   params ? `${key}:${JSON.stringify(params)}` : key;
 
 describe('formatSyncNowUserMessage', () => {
-  it('returns partial copy when queue items fail', () => {
-    expect(formatSyncNowUserMessage({ queueFailed: 2 }, t)).toBe('settings_sync_result_partial');
-  });
-
-  it('returns upload success when all plots uploaded', () => {
-    expect(
-      formatSyncNowUserMessage({ plotsUploadedAll: { uploaded: 2, total: 2 } }, t),
-    ).toBe('sync_plots_uploaded_all:{"uploaded":2,"total":2}');
-  });
-
-  it('returns sent copy when queue completes', () => {
-    expect(formatSyncNowUserMessage({ queueCompleted: 3 }, t)).toBe(
-      'settings_sync_result_sent:{"n":3}',
+  it('returns complete when nothing remains pending', () => {
+    expect(formatSyncNowUserMessage({ plotsAlreadySynced: true, remainingPending: 0 }, t)).toBe(
+      'sync_result_complete',
     );
   });
 
-  it('prefers queue success when plot fetch failed but queue drained', () => {
-    expect(
-      formatSyncNowUserMessage({ plotsFetchFailed: true, queueCompleted: 2 }, t),
-    ).toBe('settings_sync_result_sent:{"n":2}');
+  it('returns incomplete count when pending without a reason', () => {
+    expect(formatSyncNowUserMessage({ remainingPending: 12 }, t)).toBe(
+      'sync_result_incomplete:{"n":12}',
+    );
   });
 
-  it('does not claim backed up when items remain pending', () => {
+  it('prefers a farmer-facing failure reason over generic incomplete', () => {
     expect(
-      formatSyncNowUserMessage({ plotsAlreadySynced: true, remainingPending: 12 }, t),
-    ).toBe('settings_sync_still_pending:{"n":12}');
+      formatSyncNowUserMessage(
+        {
+          remainingPending: 12,
+          failureReason: 'Plot not on server yet — upload plot from My Plots first.',
+        },
+        t,
+      ),
+    ).toBe('Plot not on server yet — upload plot from My Plots first.');
   });
 
-  it('reports partial progress when some queue items uploaded', () => {
+  it('returns short reach failure when fetch fails with pending items', () => {
     expect(
-      formatSyncNowUserMessage({ queueCompleted: 3, remainingPending: 9 }, t),
-    ).toBe('settings_sync_result_sent_with_remaining:{"sent":3,"n":9}');
+      formatSyncNowUserMessage({ queueFetchFailed: true, remainingPending: 3 }, t),
+    ).toBe('sync_reach_failed_short');
   });
 });

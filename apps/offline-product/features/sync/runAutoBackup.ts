@@ -9,6 +9,16 @@ import {
   uploadUnsyncedPlotsForFarmer,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
+import {
+  beginServerPlotFetchRun,
+  endServerPlotFetchRun,
+} from '@/features/sync/serverPlotFetchCache';
+import {
+  evaluateConservativeAutoBackup,
+  recordAutoBackupAttempt,
+  recordAutoBackupOutcome,
+  summarizeAutoBackupError,
+} from '@/features/sync/autoBackupPolicy';
 import { setSyncQueuePhase, withSyncQueueLock } from '@/features/sync/syncQueueMutex';
 import {
   SYNC_BACKGROUND_OPERATION_MS,
@@ -24,14 +34,18 @@ export type RunAutoBackupResult = {
   queueResult: ProcessPendingSyncQueueResult;
 };
 
-/** Upload unsynced plots and drain the offline queue (harvests, photos, documents). */
+/** Upload unsynced plots and optionally drain the offline queue (harvests, photos, documents). */
 export async function runAutoBackup(params: {
   farmerId: string;
   localPlots: Plot[];
+  /** When true, uploads plots + consent only — skips harvest/photo/evidence queue drain. */
+  skipQueueDrain?: boolean;
 }): Promise<RunAutoBackupResult> {
   try {
     return await withSyncQueueLock(async () => {
       const work = (async () => {
+        beginServerPlotFetchRun();
+        try {
         const syncContext = await prepareFieldSyncContext({
           profileFarmerId: params.farmerId,
           localPlots: params.localPlots,
@@ -51,16 +65,28 @@ export async function runAutoBackup(params: {
         }
         setSyncQueuePhase('processing_consent');
         await processPendingConsentQueue();
-        setSyncQueuePhase('processing_queue');
-        const queueResult = await drainPendingSyncQueueForManualSync({
-          farmerId,
-          localPlots: params.localPlots,
-          farmerScopeIds: syncContext.ownedFarmerIds,
-          actionTypes: [...QUEUE_ACTION_TYPES],
-          attemptScope: 'all',
-          maxPasses: 2,
-        });
+
+        let queueResult: ProcessPendingSyncQueueResult = {
+          completed: 0,
+          failedActions: 0,
+          droppedInvalid: 0,
+          fetchFailed: false,
+        };
+        if (!params.skipQueueDrain) {
+          setSyncQueuePhase('processing_queue');
+          queueResult = await drainPendingSyncQueueForManualSync({
+            farmerId,
+            localPlots: params.localPlots,
+            farmerScopeIds: syncContext.ownedFarmerIds,
+            actionTypes: [...QUEUE_ACTION_TYPES],
+            attemptScope: 'all',
+            maxPasses: 2,
+          });
+        }
         return { plotResult, queueResult };
+        } finally {
+          endServerPlotFetchRun();
+        }
       })();
       return withSyncOperationTimeout(work, SYNC_BACKGROUND_OPERATION_MS);
     });
@@ -68,6 +94,54 @@ export async function runAutoBackup(params: {
     if (e instanceof SyncOperationTimeoutError) {
       emitSyncOperationOutcome({ kind: 'timeout', source: 'background' });
     }
+    throw e;
+  }
+}
+
+/**
+ * Background auto-backup: only when local work exists, throttle window elapsed,
+ * and not in failure backoff. Skips queue drain when rows repeat the same error.
+ */
+export async function runConservativeAutoBackup(params: {
+  farmerId: string;
+  localPlots: Plot[];
+}): Promise<RunAutoBackupResult | null> {
+  const { gate, skipQueueDrain } = await evaluateConservativeAutoBackup({
+    plots: params.localPlots,
+  });
+  if (!gate.allowed) {
+    return null;
+  }
+
+  recordAutoBackupAttempt();
+  try {
+    const result = await runAutoBackup({
+      farmerId: params.farmerId,
+      localPlots: params.localPlots,
+      skipQueueDrain,
+    });
+    const plotFailed =
+      (result.plotResult?.failed ?? 0) > 0 ||
+      result.plotResult?.fetchFailed === true ||
+      result.plotResult?.stoppedForAuth === true;
+    const queueFailed = result.queueResult.failedActions > 0 || result.queueResult.fetchFailed;
+    const success = !plotFailed && !queueFailed;
+    recordAutoBackupOutcome({
+      success,
+      errorSignature: success
+        ? undefined
+        : summarizeAutoBackupError({
+            plotFirstError: result.plotResult?.firstError,
+            queueFirstError: result.queueResult.firstError,
+            queueFailedActions: result.queueResult.failedActions,
+          }),
+    });
+    return result;
+  } catch (e) {
+    recordAutoBackupOutcome({
+      success: false,
+      errorSignature: e instanceof Error ? e.message : String(e),
+    });
     throw e;
   }
 }

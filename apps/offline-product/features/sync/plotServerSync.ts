@@ -2,9 +2,11 @@ import type { Plot } from '@/features/state/AppStateContext';
 import { ensureFieldProducerBootstrapped } from '@/features/api/fieldAppBootstrap';
 import {
   buildGeometryFromLocalPlot,
-  fetchPlotsForFarmer,
   postPlotToBackend,
 } from '@/features/api/postPlot';
+import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import { invalidateServerPlotFetchCache } from '@/features/sync/serverPlotFetchCache';
+import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import {
   assessPlotGeometryQuality,
   localPlotRefsForGeometry,
@@ -18,7 +20,12 @@ import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/feature
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 
+const PLOT_UPLOAD_GAP_MS = 400;
 const LANG_STORAGE_KEY = 'tracebudAppLanguage';
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function uploadGeometryQualityError(
   plot: Plot,
@@ -102,6 +109,37 @@ export function emitServerPlotSyncChanged(): void {
   }
 }
 
+/** Fetch server plots across owned farmer ids and refresh local↔server link table. */
+export async function warmPlotServerLinksForSync(params: {
+  farmerId: string;
+  ownedFarmerIds?: string[];
+  localPlots: Plot[];
+}): Promise<void> {
+  const farmerId = params.farmerId.trim();
+  if (!farmerId) return;
+
+  await ensureFieldProducerBootstrapped(farmerId);
+
+  let backendPlots: unknown[] = [];
+  try {
+    backendPlots = await fetchBackendPlotsForSyncScope({
+      farmerId,
+      ownedFarmerIds: params.ownedFarmerIds,
+    });
+  } catch {
+    return;
+  }
+
+  const existing = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+  const reconciled = reconcilePlotServerLinks(params.localPlots, backendPlots, existing);
+  if (
+    Object.keys(reconciled).length !== Object.keys(existing).length ||
+    Object.entries(reconciled).some(([localId, serverId]) => existing[localId] !== serverId)
+  ) {
+    await persistPlotServerLinks(reconciled).catch(() => undefined);
+  }
+}
+
 export type UploadUnsyncedPlotsResult = {
   uploaded: number;
   /** Local plots that had no server row before this run (attempt set). */
@@ -120,6 +158,8 @@ export type UploadUnsyncedPlotsResult = {
 export async function uploadUnsyncedPlotsForFarmer(params: {
   farmerId: string;
   localPlots: Plot[];
+  /** Merges server plots from every owned profile (auth uid vs linked farmer id). */
+  ownedFarmerIds?: string[];
   /** When provided (e.g. Settings sync), uses active UI language for error strings. */
   t?: TranslateFn;
   /** Use `settings` when sync runs from Settings (Sync now is above the status message). */
@@ -139,7 +179,10 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
   let plotServerLinks: Record<string, string>;
   try {
     plotServerLinks = await loadPlotServerLinks();
-    backendPlots = await fetchPlotsForFarmer(farmerId);
+    backendPlots = await fetchBackendPlotsForSyncScope({
+      farmerId,
+      ownedFarmerIds: params.ownedFarmerIds,
+    });
     const reconciled = reconcilePlotServerLinks(localPlots, backendPlots ?? [], plotServerLinks);
     await persistPlotServerLinks(reconciled);
     plotServerLinks = reconciled;
@@ -211,6 +254,9 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
         await savePlotServerLink(plot.id, r.serverPlotId);
         plotServerLinks = { ...plotServerLinks, [plot.id]: r.serverPlotId };
       }
+      if (uploaded < unsynced.length) {
+        await sleep(PLOT_UPLOAD_GAP_MS);
+      }
       continue;
     }
     if (r.reason === 'no_access_token') {
@@ -226,11 +272,19 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
         statusCode: r.statusCode,
         surface,
       });
+    if (r.statusCode === 429) {
+      break;
+    }
   }
 
   if (uploaded > 0) {
+    invalidateServerPlotFetchCache();
+    invalidateServerPlotListCache();
     try {
-      backendPlots = await fetchPlotsForFarmer(farmerId);
+      backendPlots = await fetchBackendPlotsForSyncScope({
+        farmerId,
+        ownedFarmerIds: params.ownedFarmerIds,
+      });
       const reconciled = reconcilePlotServerLinks(localPlots, backendPlots ?? [], plotServerLinks);
       await persistPlotServerLinks(reconciled);
     } catch {

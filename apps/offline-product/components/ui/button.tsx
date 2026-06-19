@@ -161,7 +161,12 @@ export const Button = forwardRef<React.ElementRef<typeof Pressable>, ButtonProps
         {...props}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={variantStyles.text.color} />
+          <>
+            <ActivityIndicator size="small" color={variantStyles.text.color} />
+            {children ? (
+              <Text style={[styles.text, sizeStyles.text, variantStyles.text, textStyle]}>{children}</Text>
+            ) : null}
+          </>
         ) : (
           <>
             {icon}

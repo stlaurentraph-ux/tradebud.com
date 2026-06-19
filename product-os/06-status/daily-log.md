@@ -1,3 +1,22 @@
+### 2026-06-19 (offline: unified deliveries & receipt routes)
+- **Receipt detail route** — `/receipt/[id]` replaces nested `DeliveryReceiptsBrowser` detail state; share + Sync now for queued receipts live on the dedicated screen.
+- **Post-log flow** — single-plot harvest submit navigates straight to `/receipt/{id}?fresh=1` instead of plot voucher sub-view.
+- **Plot detail** — merged Deliveries + Delivery receipt nav into one **Deliveries & receipts** section (`?sub=deliveries`; legacy `sub=voucher` / `sub=harvests` redirect).
+- **Cleanup** — removed dead `PlotDeliveryReceiptPanel.tsx`; extracted `buildDeliveryReceiptCatalog`, `syncQueuedDeliveryReceipt`, `loggedDeliverySnapshot`.
+
+### 2026-06-19 (offline: conservative auto-sync + shared plot list cache)
+- **Background sync** — `AutoPlotUploadBridge` now calls `runConservativeAutoBackup`: only when local queue/unsynced work exists, ≥15 min since last attempt, and not in 15 min failure backoff. Skips auto queue drain when ≥3 rows share the same `lastError`.
+- **Shared UI cache** — `serverPlotListCache.ts` (3 min TTL) for Home, My Plots, Settings metrics, Harvests; manual Sync now / plot upload still force-refresh.
+- **runAutoBackup** — `skipQueueDrain` option for conservative path; full drain unchanged for sign-in and user “Sync now”.
+- **Tests** — `autoBackupPolicy.test.ts`, `serverPlotListCache.test.ts`; sync suite green (36).
+
+### 2026-06-19 (offline: sync hardening — single plot-fetch run + deterministic farmer scope)
+- **Root cause (verified in prod DB)** — Server state is healthy: auth user `66b5dafa…` owns farmer profile `dcdd88e5…` which owns the only plot `39d548f9…` (Carl kjelsens); no duplicate profile/plot under the auth uid. So the failure is client-side: a single "Sync now" fanned out ~16 identical `GET /v1/plots` across scope resolution, link warming, plot upload, every queue pass, and the pending count → production 429 burst + non-deterministic local↔server link establishment, and the device farmer id could flip-flop between the auth uid and the linked producer profile.
+- **Per-run plot-fetch cache** — `features/sync/serverPlotFetchCache.ts` de-duplicates `GET /v1/plots?farmerId=…` for the lifetime of one sync run (`beginServerPlotFetchRun`/`endServerPlotFetchRun`), invalidated after a plot upload. Wired through `resolveFieldSyncScope`, `processPendingSyncQueue`, `plotServerSync`, `alignFarmerWithAuthUser`; opened in Settings Sync now + the Settings plot refresh + `runAutoBackup`. Collapses the burst to ~1 fetch per farmer id.
+- **Deterministic farmer scope** — `alignFarmerWithAuthUser` no longer collapses the device onto the auth uid when the server reports the user owns a different producer profile (prevents the flip-flop even on a transient empty plot list).
+- **Fixed regressions in working tree** — restored `LANG_STORAGE_KEY` constant and typed the link map in `plotServerSync.ts` (were breaking typecheck).
+- **Tests** — `serverPlotFetchCache.test.ts` (7), `alignFarmerWithAuthUser.test.ts` (3); full `features/sync` + `features/auth` suites green (50).
+
 ### 2026-06-16 (offline: backup queue dedup + duplicate error line)
 - **Queue explosion** — `enqueuePendingSync` now upserts by logical key (one harvest / plot evidence / producer supporting per item); compacts duplicates on Settings refresh and before queue drain.
 - **Settings UX** — hide yellow warning when Sync now already shows the same error (no duplicate reachability lines).

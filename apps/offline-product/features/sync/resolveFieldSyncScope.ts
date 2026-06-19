@@ -1,9 +1,9 @@
-import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import {
   bootstrapFieldAppProducer,
   fetchOwnedFarmerIdsFromApi,
   getBootstrapOwnedFarmerIds,
 } from '@/features/api/fieldAppBootstrap';
+import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   adoptOnDeviceFarmerScope,
@@ -35,7 +35,7 @@ export async function fetchMergedServerPlots(farmerIds: string[]): Promise<unkno
   const merged: unknown[] = [];
   for (const farmerId of farmerIds) {
     try {
-      const rows = (await fetchPlotsForFarmer(farmerId)) as { id?: unknown }[];
+      const rows = (await fetchPlotsForFarmerCached(farmerId)) as { id?: unknown }[];
       for (const row of rows ?? []) {
         const id = String(row?.id ?? '').trim();
         if (!id || seen.has(id)) continue;
@@ -47,6 +47,20 @@ export async function fetchMergedServerPlots(farmerIds: string[]): Promise<unkno
     }
   }
   return merged;
+}
+
+/** Single entry for sync UI + upload: merged list when multiple owned profiles exist. */
+export async function fetchBackendPlotsForSyncScope(params: {
+  farmerId: string;
+  ownedFarmerIds?: string[];
+}): Promise<unknown[]> {
+  const scopeIds = uniqueIds([params.farmerId, ...(params.ownedFarmerIds ?? [])]);
+  if (scopeIds.length > 1) {
+    return fetchMergedServerPlots(scopeIds);
+  }
+  const farmerId = params.farmerId.trim();
+  if (!farmerId) return [];
+  return (await fetchPlotsForFarmerCached(farmerId)) ?? [];
 }
 
 /**
@@ -72,31 +86,35 @@ export async function resolveFieldSyncScope(params: {
 
   let apiFarmerId = profileFarmerId;
   let bestPlotCount = -1;
-  let mergedPlotCount = 0;
+  const mergedSeen = new Set<string>();
+  const merged: unknown[] = [];
 
   for (const farmerId of ownedFarmerIds) {
     try {
-      const rows = await fetchPlotsForFarmer(farmerId);
+      const rows = (await fetchPlotsForFarmerCached(farmerId)) as { id?: unknown }[];
       const count = rows?.length ?? 0;
       if (count > bestPlotCount) {
         bestPlotCount = count;
         apiFarmerId = farmerId;
       }
+      for (const row of rows ?? []) {
+        const id = String(row?.id ?? '').trim();
+        if (!id || mergedSeen.has(id)) continue;
+        mergedSeen.add(id);
+        merged.push(row);
+      }
     } catch {
-      // continue
+      // try next owned profile
     }
   }
 
-  const merged = await fetchMergedServerPlots(ownedFarmerIds);
-  mergedPlotCount = merged.length;
-  if (mergedPlotCount > bestPlotCount) {
-    bestPlotCount = mergedPlotCount;
-  }
+  const mergedPlotCount = merged.length;
+  const serverPlotCount = Math.max(bestPlotCount, mergedPlotCount);
 
   return {
-    apiFarmerId,
+    apiFarmerId: serverPlotCount > 0 ? apiFarmerId : profileFarmerId,
     ownedFarmerIds,
-    serverPlotCount: bestPlotCount,
+    serverPlotCount,
   };
 }
 
@@ -158,7 +176,12 @@ export async function applyCanonicalFarmerScopeIfNeeded(params: {
     return { farmerId: profileFarmerId, rekeyed: false };
   }
 
-  await rekeyFarmerIdInDatabase(profileFarmerId, apiFarmerId);
-  await adoptOnDeviceFarmerScope(apiFarmerId).catch(() => false);
-  return { farmerId: apiFarmerId, rekeyed: true };
+  try {
+    await rekeyFarmerIdInDatabase(profileFarmerId, apiFarmerId);
+    await adoptOnDeviceFarmerScope(apiFarmerId).catch(() => false);
+    return { farmerId: apiFarmerId, rekeyed: true };
+  } catch {
+    // Local SQLite rekey can fail (e.g. id collision); still sync under linked profile id.
+    return { farmerId: apiFarmerId, rekeyed: false };
+  }
 }

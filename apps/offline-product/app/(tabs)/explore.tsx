@@ -11,7 +11,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { fetchPlotsForFarmer, fetchVouchersForFarmer } from '@/features/api/postPlot';
+import { fetchVouchersForFarmer } from '@/features/api/postPlot';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
@@ -48,7 +49,7 @@ function renderPlotListAreaCaption(plot: Plot, tr: PlotListTranslate) {
   );
 }
 
-type PlotPickerIntent = 'voucher' | 'documents';
+type PlotPickerIntent = 'receipts' | 'documents';
 
 export default function PlotsScreen() {
   const insets = useSafeAreaInsets();
@@ -77,12 +78,19 @@ export default function PlotsScreen() {
       .catch(() => setVouchers([]));
   }, [farmer?.id]);
 
-  const refreshFromBackend = useCallback(() => {
-    if (!farmer?.id) return Promise.resolve();
-    return fetchPlotsForFarmer(farmer.id)
-      .then((rows) => setBackendPlots(rows ?? []))
-      .catch(() => setBackendPlots([]));
-  }, [farmer?.id]);
+  const refreshFromBackend = useCallback(
+    (force = false) => {
+      if (!farmer?.id) return Promise.resolve();
+      return fetchServerPlotListForUi({
+        profileFarmerId: farmer.id,
+        localPlots: plots,
+        force,
+      })
+        .then((rows) => setBackendPlots(rows ?? []))
+        .catch(() => setBackendPlots([]));
+    },
+    [farmer?.id, plots],
+  );
 
   const harvestCountForPlot = (plot: Plot) => {
     const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
@@ -98,8 +106,8 @@ export default function PlotsScreen() {
   useEffect(() => {
     if (clearingFocusRef.current) return;
     const focus = params.focus;
-    if (focus !== 'voucher' && focus !== 'documents') return;
-    setPickerIntent(focus);
+    if (focus !== 'receipts' && focus !== 'voucher' && focus !== 'documents') return;
+    setPickerIntent(focus === 'voucher' ? 'receipts' : focus);
     clearingFocusRef.current = true;
     router.setParams({ focus: undefined, plotId: undefined });
     queueMicrotask(() => {
@@ -116,14 +124,14 @@ export default function PlotsScreen() {
     }
   }, [params.plotId, params.focus]);
 
-  // Home → vouchers with multiple plots: skip list when only one plot has deliveries.
+  // Home → receipts with multiple plots: skip list when only one plot has deliveries.
   useEffect(() => {
-    if (pickerIntent !== 'voucher' || plots.length === 0) return;
+    if (pickerIntent !== 'receipts' || plots.length === 0) return;
     const withVouchers = plots.filter((plot) => harvestCountForPlot(plot) > 0);
     if (withVouchers.length !== 1) return;
     const targetId = withVouchers[0]!.id;
     setPickerIntent(null);
-    router.replace(`/plot/${encodeURIComponent(targetId)}?sub=voucher`);
+    router.replace(`/plot/${encodeURIComponent(targetId)}?sub=deliveries`);
   }, [pickerIntent, plots, vouchers, backendPlots]);
 
   const openPlotDetail = useCallback(
@@ -132,7 +140,7 @@ export default function PlotsScreen() {
       if (pickerIntent) {
         const intent = pickerIntent;
         setPickerIntent(null);
-        router.push(`/plot/${encodeURIComponent(plotId)}?sub=${intent}`);
+        router.push(`/plot/${encodeURIComponent(plotId)}?sub=${intent === 'receipts' ? 'deliveries' : intent}`);
         return;
       }
       router.push(`/plot/${encodeURIComponent(plotId)}`);
@@ -146,14 +154,14 @@ export default function PlotsScreen() {
       setVouchers([]);
       return;
     }
-    void refreshFromBackend();
+    void refreshFromBackend(false);
     void refreshVouchers();
   }, [farmer?.id, refreshFromBackend, refreshVouchers]);
 
   useFocusEffect(
     useCallback(() => {
       if (farmer?.id) {
-        void refreshFromBackend();
+        void refreshFromBackend(false);
         void refreshVouchers();
       }
     }, [farmer?.id, refreshFromBackend, refreshVouchers]),
@@ -198,7 +206,7 @@ export default function PlotsScreen() {
         {plots.length === 0 ? (
           <Card variant="outlined" style={styles.emptyPlotsCard}>
             <View style={styles.emptyPlotsIconWrap}>
-              <Ionicons name="walk-outline" size={32} color="#0A7F59" />
+              <Ionicons name="map-outline" size={32} color="#0A7F59" />
             </View>
             <ThemedText type="defaultSemiBold" style={styles.emptyPlotsTitle}>
               {t('walk_landing_headline')}
@@ -215,10 +223,10 @@ export default function PlotsScreen() {
           </Card>
         ) : null}
 
-        {pickerIntent === 'voucher' ? (
+        {pickerIntent === 'receipts' ? (
           <Card variant="outlined" style={styles.pickerHintCard}>
             <ThemedText type="caption" style={styles.pickerHintText}>
-              {t('plots_pick_voucher_hint')}
+              {t('plots_pick_receipts_hint')}
             </ThemedText>
           </Card>
         ) : null}

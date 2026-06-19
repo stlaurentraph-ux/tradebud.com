@@ -15,7 +15,7 @@ export function PlotContiguityRuleCard({ t }: PlotContiguityRuleCardProps) {
     <View style={styles.card} accessibilityRole="summary">
       <View style={styles.row}>
         <View style={styles.iconWrap}>
-          <Ionicons name="trail-sign-outline" size={22} color="#2454D7" />
+          <Ionicons name="alert-circle-outline" size={22} color="#D97706" />
         </View>
         <View style={styles.copy}>
           <ThemedText type="defaultSemiBold" style={styles.title}>
@@ -34,8 +34,8 @@ const styles = StyleSheet.create({
   card: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#C9D9EE',
-    backgroundColor: '#EAF1FB',
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
     borderRadius: 16,
     padding: 14,
   },
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#DCE9FF',
+    backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -57,11 +57,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    color: '#0F172A',
+    color: '#92400E',
     fontSize: scaleText(15),
   },
   body: {
-    color: '#475569',
+    color: '#B45309',
     lineHeight: scaleText(20),
   },
 });

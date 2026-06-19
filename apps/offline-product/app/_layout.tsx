@@ -46,6 +46,7 @@ export default function RootLayout() {
                 <Stack.Screen name="documents" options={{ headerShown: false }} />
                 <Stack.Screen name="data-sharing" options={{ headerShown: false }} />
                 <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="auto" />

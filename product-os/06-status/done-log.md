@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app sync hardening (2026-06-19): per-run `serverPlotFetchCache` collapses the ~16 redundant `GET /v1/plots` per "Sync now" into ~1 fetch/farmer id (production 429 root cause); deterministic farmer-scope alignment (no auth-uid flip-flop when a linked producer profile exists); verified prod DB shows healthy single profile/plot for the reported account. Tests: `serverPlotFetchCache.test.ts`, `alignFarmerWithAuthUser.test.ts`.
 - Field app delivery saved screen (2026-06-16): `DeliveryLoggedPanel` on harvests tab — receipt summary, PNG share, queued Sync now, plot receipt deep link; shared `shareDeliveryReceipt` with plot receipt tab.
 - Field app documents + auth slice (2026-06-16): producer/plot document scope, producer declarations on `/documents`, Google OAuth fast completion, sign-out race fixes, Documents navigation + back stack, declaration card layout.
 - FEAT-003 S5 Phase D: dashboard geometry reviewer assist — Douglas–Peucker preview on satellite, `PATCH /api/plots/:id/geometry` proxy, exporter/cooperative/admin/reviewer backend roles, `plot_geometry_revision_applied` analytics.

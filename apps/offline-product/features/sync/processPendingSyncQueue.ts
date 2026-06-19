@@ -1,11 +1,11 @@
 import { pingTracebudApi } from '@/features/network/pingTracebudApi';
 import {
-  fetchPlotsForFarmer,
   postHarvestToBackend,
   syncPlotLegalToBackend,
   syncPlotPhotosToBackend,
 } from '@/features/api/postPlot';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
+import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
 import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
@@ -100,7 +100,7 @@ export async function processPendingSyncQueue(params: {
     backendRows =
       scopeIds.length > 1
         ? await fetchMergedServerPlots(scopeIds)
-        : await fetchPlotsForFarmer(params.farmerId);
+        : await fetchPlotsForFarmerCached(params.farmerId);
   } catch (e) {
     plotListFetchFailed = true;
     plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
@@ -136,8 +136,10 @@ export async function processPendingSyncQueue(params: {
     const directLink = plotServerLinks[trimmedId]?.trim();
     if (directLink) {
       if (backendRows.length === 0) {
-        if (plotListFetchFailed) return directLink;
-      } else if (
+        // Honor persisted links even when the scoped farmer list is empty (wrong device farmer id).
+        return directLink;
+      }
+      if (
         (backendRows as { id?: unknown }[]).some(
           (row) => String(row?.id ?? '') === directLink,
         )

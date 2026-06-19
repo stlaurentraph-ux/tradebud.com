@@ -17,9 +17,15 @@ type DeliveryReceiptDetailPanelProps = {
   t: TranslateFn;
   receipt: DeliveryReceiptRecord;
   onBack: () => void;
+  hideBackRow?: boolean;
 };
 
-export function DeliveryReceiptDetailPanel({ t, receipt, onBack }: DeliveryReceiptDetailPanelProps) {
+export function DeliveryReceiptDetailPanel({
+  t,
+  receipt,
+  onBack,
+  hideBackRow = false,
+}: DeliveryReceiptDetailPanelProps) {
   const shareCaptureRef = useRef<View>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -48,12 +54,14 @@ export function DeliveryReceiptDetailPanel({ t, receipt, onBack }: DeliveryRecei
 
   return (
     <View style={styles.wrap}>
-      <Pressable accessibilityRole="button" onPress={onBack} style={styles.backRow}>
-        <Ionicons name="chevron-back" size={18} color="#0A7F59" />
-        <ThemedText type="defaultSemiBold" style={styles.backText}>
-          {receipt.plotName}
-        </ThemedText>
-      </Pressable>
+      {hideBackRow ? null : (
+        <Pressable accessibilityRole="button" onPress={onBack} style={styles.backRow}>
+          <Ionicons name="chevron-back" size={18} color="#0A7F59" />
+          <ThemedText type="defaultSemiBold" style={styles.backText}>
+            {receipt.plotName}
+          </ThemedText>
+        </Pressable>
+      )}
 
       <Card variant="outlined" style={styles.receiptCard}>
         <View ref={shareCaptureRef} collapsable={false} style={styles.shareCapture}>

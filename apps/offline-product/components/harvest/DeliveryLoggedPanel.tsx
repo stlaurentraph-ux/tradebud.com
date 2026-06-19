@@ -8,26 +8,13 @@ import { Card } from '@/components/ui/card';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import { formatDeliveryRecipientLabel } from '@/features/harvest/formatDeliveryRecipientLabel';
+import type { LoggedDeliverySnapshot } from '@/features/harvest/loggedDeliverySnapshot';
 import { shareDeliveryReceipt } from '@/features/harvest/shareDeliveryReceipt';
 import type { TranslateFn } from '@/features/i18n/translate';
 
 export type DeliverySyncFeedback = {
   variant: 'success' | 'error' | 'info';
   message: string;
-};
-
-export type LoggedDeliverySnapshot = {
-  /** Local SQLite receipt row id (`clientEventId` from submit). */
-  receiptId?: string;
-  plotId: string;
-  plotName: string;
-  kg: number;
-  recordedAt: number;
-  deliveryRecipient: DeliveryRecipientSelection | null;
-  qrCodeRef: string | null;
-  mode: 'synced' | 'queued';
-  queuedMessageKey?: string | null;
-  seasonTotalKg?: number | null;
 };
 
 type DeliveryLoggedPanelProps = {

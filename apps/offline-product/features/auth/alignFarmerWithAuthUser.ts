@@ -1,4 +1,3 @@
-import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import {
   fetchOwnedFarmerIdsFromApi,
   getBootstrapOwnedFarmerIds,
@@ -7,27 +6,35 @@ import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { isUuid } from '@/features/auth/farmerProfileBootstrap';
 import { logAuditEvent, rekeyFarmerIdInDatabase, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
+import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 
 async function shouldAlignFarmerIdToAuth(
   currentFarmerId: string,
   authUserId: string,
-  localPlots: Plot[],
+  _localPlots: Plot[],
 ): Promise<boolean> {
   if (currentFarmerId === authUserId) return false;
   if (!isUuid(currentFarmerId) || !isUuid(authUserId)) return false;
 
-  const ownedFarmerIds = [
-    ...new Set([
-      ...(await fetchOwnedFarmerIdsFromApi()),
-      ...getBootstrapOwnedFarmerIds(),
-      currentFarmerId,
-      authUserId,
-    ]),
-  ];
+  // Server is the source of truth for which farmer profiles this auth user owns.
+  // If it owns a producer profile that is NOT the auth uid, that profile is the
+  // canonical home for plots/harvests — never collapse the device onto the
+  // (usually empty) auth-uid profile, even when a plot fetch transiently returns
+  // nothing. This is what previously caused the device id to flip-flop between
+  // the auth uid and the linked producer profile across sync runs.
+  const serverOwnedIds = new Set(
+    [...(await fetchOwnedFarmerIdsFromApi()), ...getBootstrapOwnedFarmerIds()]
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
+  if ([...serverOwnedIds].some((id) => id !== authUserId)) {
+    return false;
+  }
 
+  const candidateIds = [...new Set([...serverOwnedIds, currentFarmerId, authUserId])];
   try {
-    for (const farmerId of ownedFarmerIds) {
-      const rows = await fetchPlotsForFarmer(farmerId);
+    for (const farmerId of candidateIds) {
+      const rows = await fetchPlotsForFarmerCached(farmerId);
       if ((rows?.length ?? 0) > 0) {
         return false;
       }
@@ -36,10 +43,8 @@ async function shouldAlignFarmerIdToAuth(
     return false;
   }
 
-  if (localPlots.length === 0) {
-    return true;
-  }
-
+  // No server profile other than the auth uid and no plots anywhere: it is safe
+  // to align the local device id with the Supabase auth uid.
   return true;
 }
 

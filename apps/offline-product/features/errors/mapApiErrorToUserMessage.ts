@@ -54,6 +54,14 @@ export function mapPlotUploadErrorMessage(
       surface === 'settings' ? 'plot_upload_account_error_settings' : 'plot_upload_account_error',
     );
   }
+  if (
+    ctx?.statusCode === 429 ||
+    /too many requests|rate limit|please slow down/i.test(raw ?? '')
+  ) {
+    return t(
+      surface === 'settings' ? 'plot_upload_rate_limited_settings' : 'plot_upload_rate_limited',
+    );
+  }
   if (ctx?.reason === 'network_error' || isNetworkFailureMessage(raw ?? '')) {
     return t(
       surface === 'settings' ? 'plot_upload_network_error_settings' : 'plot_upload_network_error',
@@ -88,6 +96,14 @@ export function mapSyncActionErrorMessage(
   }
   if (/plot not on server/i.test(trimmed.toLowerCase())) {
     return trimmed;
+  }
+  if (/upload a plot to tracebud first/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (/too many requests|rate limit|please slow down/i.test(trimmed)) {
+    return t(
+      surface === 'settings' ? 'plot_upload_rate_limited_settings' : 'plot_upload_rate_limited',
+    );
   }
   if (isNetworkFailureMessage(trimmed)) {
     return t(

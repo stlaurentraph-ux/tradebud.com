@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import { useFocusEffect } from '@react-navigation/native';
 import { PhotoVaultPanel } from '@/components/plot-photo-vault/PhotoVaultPanel';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
@@ -89,13 +90,14 @@ import {
 } from '@/features/harvest/deliveryReceiptModels';
 import {
   normalizeLocalDeliveryReceipts,
+  receiptMatchesPlotFilter,
   resolvePlotReceiptFilterIds,
 } from '@/features/harvest/localDeliveryReceipts';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 
-type Sub = 'photos' | 'documents' | 'harvests' | 'voucher';
+type Sub = 'photos' | 'documents' | 'deliveries';
 type SetupTarget = Sub | 'settings';
 
 export default function PlotDetailScreen() {
@@ -105,7 +107,7 @@ export default function PlotDetailScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { id, sub, from, receiptId } = useLocalSearchParams<{
     id: string;
-    sub?: Sub;
+    sub?: Sub | 'harvests' | 'voucher';
     from?: string;
     receiptId?: string;
   }>();
@@ -113,8 +115,6 @@ export default function PlotDetailScreen() {
   const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
-  const voucherReceiptId = typeof receiptId === 'string' ? receiptId.trim() : '';
-  const openVoucherReceiptDirectly = from === 'harvests';
   const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
 
   const [active, setActive] = useState<Sub | null>((sub as Sub) ?? null);
@@ -391,18 +391,30 @@ export default function PlotDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (active !== 'voucher') return;
+      if (active !== 'deliveries') return;
       void refreshVoucherReceipts();
     }, [active, refreshVoucherReceipts]),
   );
 
   useEffect(() => {
-    if (typeof sub === 'string') {
-      setActive(sub as Sub);
+    const receiptIdParam = typeof receiptId === 'string' ? receiptId.trim() : '';
+    if (receiptIdParam) {
+      router.replace(deliveryReceiptHref(receiptIdParam, from === 'harvests' ? { from: 'harvests' } : undefined));
       return;
     }
-    setActive(null);
-  }, [sub, plotId]);
+
+    if (typeof sub !== 'string') {
+      setActive(null);
+      return;
+    }
+
+    if (sub === 'harvests' || sub === 'voucher') {
+      setActive('deliveries');
+      return;
+    }
+
+    setActive(sub as Sub);
+  }, [sub, plotId, receiptId, from]);
 
   useEffect(() => {
     if (plot?.name) setRenameDraft(plot.name);
@@ -675,9 +687,25 @@ export default function PlotDetailScreen() {
   }, [plot, backendPlots]);
 
   const plotDeliveryCount = useMemo(() => {
-    if (!harvestPlotId) return 0;
-    return vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId).length;
-  }, [harvestPlotId, vouchers]);
+    if (plotReceiptFilterIds.length === 0) return 0;
+    const filterIds = new Set(plotReceiptFilterIds);
+    const localCount = deviceHarvestReceipts.filter((row) =>
+      receiptMatchesPlotFilter(row, filterIds),
+    ).length;
+    const pendingCount = pendingHarvestReceipts.filter((row) =>
+      receiptMatchesPlotFilter(row, filterIds),
+    ).length;
+    const voucherCount = harvestPlotId
+      ? vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId).length
+      : 0;
+    return Math.max(localCount + pendingCount, voucherCount);
+  }, [
+    deviceHarvestReceipts,
+    harvestPlotId,
+    pendingHarvestReceipts,
+    plotReceiptFilterIds,
+    vouchers,
+  ]);
 
   const harvestPlotOptions = useMemo((): HarvestPlotOption[] => {
     if (!plot || !harvestPlotId) return [];
@@ -979,7 +1007,7 @@ export default function PlotDetailScreen() {
       }
       return;
     }
-    if (from === 'harvests' && active === 'voucher') {
+    if (from === 'harvests' && active === 'deliveries') {
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -1051,10 +1079,8 @@ export default function PlotDetailScreen() {
                 ? t('plot_photo_vault')
                 : active === 'documents'
                   ? t('plot_land_documents')
-                  : active === 'harvests'
-                    ? t('plot_harvest_records')
-                    : active === 'voucher'
-                      ? t('plot_delivery_receipt_header')
+                  : active === 'deliveries'
+                      ? t('plot_nav_deliveries_title')
                       : t('plot_detail_title')}
             </ThemedText>
           </View>
@@ -1304,24 +1330,18 @@ export default function PlotDetailScreen() {
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
 
-        <Pressable style={[styles.navCard, active === 'harvests' && styles.navCardSelected]} onPress={() => setActive('harvests')}>
+        <Pressable
+          style={[styles.navCard, active === 'deliveries' && styles.navCardSelected]}
+          onPress={() => setActive('deliveries')}
+        >
           <View style={styles.navIconWrapHarvest}>
-            <Ionicons name="scale-outline" size={28} color="#0B6F50" />
+            <Ionicons name="receipt-outline" size={28} color="#0B6F50" />
           </View>
           <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">{t('plot_nav_harvests_title')}</ThemedText>
-            <ThemedText type="default">{t('plot_nav_harvests_sub', { n: plotDeliveryCount })}</ThemedText>
-          </View>
-          <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
-        </Pressable>
-
-        <Pressable style={[styles.navCard, active === 'voucher' && styles.navCardSelected]} onPress={() => setActive('voucher')}>
-          <View style={styles.navIconWrapVoucher}>
-            <Ionicons name="qr-code-outline" size={26} color="#7B2CBF" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="subtitle">{t('plot_nav_voucher_title')}</ThemedText>
-            <ThemedText type="default">{t('plot_nav_voucher_sub')}</ThemedText>
+            <ThemedText type="subtitle">{t('plot_nav_deliveries_title')}</ThemedText>
+            <ThemedText type="default">
+              {t('plot_nav_deliveries_sub', { n: plotDeliveryCount })}
+            </ThemedText>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
         </Pressable>
@@ -1461,15 +1481,22 @@ export default function PlotDetailScreen() {
           </>
         ) : null}
 
-        {active === 'harvests' ? (
+        {active === 'deliveries' && !plot ? (
+          <Card variant="outlined" style={styles.harvestRowCard}>
+            <ThemedText type="defaultSemiBold">{t('plot_not_found')}</ThemedText>
+            <ThemedText type="caption" style={{ marginTop: 6, color: '#6B7280' }}>
+              {t('harvest_plot_not_on_device')}
+            </ThemedText>
+          </Card>
+        ) : null}
+
+        {active === 'deliveries' && plot ? (
           <>
-            {plot ? (
-              <View style={{ marginBottom: 12 }}>
-                <UiButton variant="primary" fullWidth onPress={openRecordDeliveryForPlot}>
-                  {t('plot_harvest_record_delivery')}
-                </UiButton>
-              </View>
-            ) : null}
+            <View style={{ marginBottom: 12 }}>
+              <UiButton variant="primary" fullWidth onPress={openRecordDeliveryForPlot}>
+                {t('plot_harvest_record_delivery')}
+              </UiButton>
+            </View>
 
             <Card variant="outlined" style={styles.harvestSummaryCard}>
               <View style={styles.rowHeader}>
@@ -1487,48 +1514,6 @@ export default function PlotDetailScreen() {
               ) : null}
             </Card>
 
-            {plotHarvestSummary.rows.length > 0 ? (
-              plotHarvestSummary.rows.map((row) => (
-                <Card key={row.id} variant="outlined" style={styles.harvestRowCard}>
-                  <View style={styles.rowHeader}>
-                    <View>
-                      <ThemedText type="title" style={styles.harvestKgText}>{`${row.kg} kg`}</ThemedText>
-                      <ThemedText type="default" style={styles.harvestDateText}>
-                        {row.dateLabel}
-                      </ThemedText>
-                    </View>
-                    <ThemedText type="subtitle" style={styles.harvestCoopText}>
-                      {t('plot_harvest_no_coop')}
-                    </ThemedText>
-                  </View>
-                </Card>
-              ))
-            ) : (
-              <Card variant="outlined" style={styles.harvestRowCard}>
-                <ThemedText type="default" style={styles.harvestDateText}>
-                  {t('plot_harvest_no_records')}
-                </ThemedText>
-              </Card>
-            )}
-          </>
-        ) : null}
-
-        {active === 'voucher' && !plot ? (
-          <Card variant="outlined" style={styles.harvestRowCard}>
-            <ThemedText type="defaultSemiBold">{t('plot_not_found')}</ThemedText>
-            <ThemedText type="caption" style={{ marginTop: 6, color: '#6B7280' }}>
-              {t('harvest_plot_not_on_device')}
-            </ThemedText>
-          </Card>
-        ) : null}
-
-        {active === 'voucher' && plot ? (
-          <>
-            <View style={{ marginBottom: 12 }}>
-              <UiButton variant="primary" fullWidth onPress={openRecordDeliveryForPlot}>
-                {t('plot_harvest_record_delivery')}
-              </UiButton>
-            </View>
             <DeliveryReceiptsBrowser
               t={t}
               vouchers={vouchers}
@@ -1538,8 +1523,6 @@ export default function PlotDetailScreen() {
               plotNameFilter={String(plot.name ?? t('plot_fallback'))}
               pendingReceipts={pendingHarvestReceipts}
               deviceReceipts={deviceHarvestReceipts}
-              initialReceiptId={voucherReceiptId || null}
-              openLatestReceipt={openVoucherReceiptDirectly && !voucherReceiptId}
             />
           </>
         ) : null}
