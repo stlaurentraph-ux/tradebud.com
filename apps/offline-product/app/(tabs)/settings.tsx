@@ -56,7 +56,7 @@ import {
   uploadUnsyncedPlotsForFarmer,
 } from '@/features/sync/plotServerSync';
 import { drainPendingSyncQueueForManualSync } from '@/features/sync/drainPendingSyncQueue';
-import { resolveFieldApiFarmerId } from '@/features/sync/resolveFieldApiFarmerId';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { processPendingSyncQueue } from '@/features/sync/processPendingSyncQueue';
 import { processPendingConsentQueue } from '@/features/sync/processPendingConsentQueue';
 import {
@@ -830,19 +830,27 @@ export default function SettingsScreen() {
             }
 
             await reloadFromDisk();
-            const diskState = await loadAppState();
-            const syncFarmer = diskState.farmer ?? farmer;
-            const syncPlots = diskState.plots.length > 0 ? diskState.plots : plots;
+            let diskState = await loadAppState();
+            let syncFarmer = diskState.farmer ?? farmer;
+            let syncPlots = diskState.plots.length > 0 ? diskState.plots : plots;
             if (!syncFarmer?.id) {
               setSyncMessage(t('sync_no_farmer_profile'));
               return;
             }
             await adoptOnDeviceFarmerScope(syncFarmer.id).catch(() => false);
             await ensureFieldProducerBootstrapped(syncFarmer.id);
-            const apiFarmerId = await resolveFieldApiFarmerId({
+            const syncContext = await prepareFieldSyncContext({
               profileFarmerId: syncFarmer.id,
               localPlots: syncPlots,
             });
+            const apiFarmerId = syncContext.farmerId;
+            const farmerScopeIds = syncContext.ownedFarmerIds;
+            if (syncContext.rekeyed) {
+              await reloadFromDisk();
+              diskState = await loadAppState();
+              syncFarmer = diskState.farmer ?? syncFarmer;
+              syncPlots = diskState.plots.length > 0 ? diskState.plots : syncPlots;
+            }
 
             const apiReachable = await pingTracebudApi();
             if (!apiReachable) {
@@ -928,6 +936,7 @@ export default function SettingsScreen() {
                 const retryingPass = await processPendingSyncQueue({
                   farmerId: apiFarmerId,
                   localPlots: syncPlots,
+                  farmerScopeIds,
                   actionTypes: queueDrainTypes,
                   attemptScope: 'retrying_only',
                   maxActions: queueSmartSweepCap,
@@ -942,6 +951,7 @@ export default function SettingsScreen() {
                   const firstAttemptPass = await processPendingSyncQueue({
                     farmerId: apiFarmerId,
                     localPlots: syncPlots,
+                    farmerScopeIds,
                     actionTypes: queueDrainTypes,
                     attemptScope: 'first_attempt_only',
                     maxActions: remainingBudget,
@@ -954,6 +964,7 @@ export default function SettingsScreen() {
                 const queueRes = await drainPendingSyncQueueForManualSync({
                   farmerId: apiFarmerId,
                   localPlots: syncPlots,
+                  farmerScopeIds,
                   actionTypes: queueDrainTypes,
                   attemptScope: 'all',
                   maxPasses: 4,

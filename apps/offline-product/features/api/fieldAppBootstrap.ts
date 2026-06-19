@@ -134,3 +134,37 @@ export async function ensureFieldProducerBootstrapped(farmerId: string): Promise
   }
   await bootstrapFieldAppProducer({ farmerId: scopedFarmerId }).catch(() => undefined);
 }
+
+/** Lightweight lookup of linked farmer profiles (works without parsing bootstrap POST body). */
+export async function fetchOwnedFarmerIdsFromApi(): Promise<string[]> {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    return [];
+  }
+
+  const apiBase = getTracebudApiBaseUrl();
+  try {
+    const res = await fetch(`${apiBase}/v1/me/field-farmer-ids`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      return [];
+    }
+    const body = (await res.json().catch(() => ({}))) as {
+      farmerIds?: unknown;
+      farmer_ids?: unknown;
+      owned_farmer_ids?: unknown;
+    };
+    const raw = body.farmerIds ?? body.farmer_ids ?? body.owned_farmer_ids;
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    const ids = raw.map((id) => String(id).trim()).filter(Boolean);
+    if (ids.length > 0) {
+      lastOwnedFarmerIds = ids;
+    }
+    return ids;
+  } catch {
+    return [];
+  }
+}

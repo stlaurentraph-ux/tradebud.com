@@ -32,6 +32,7 @@ import {
 } from '@/features/state/persistence';
 import { GroundTruthPhotoCapture } from '@/components/plot-photo-vault/GroundTruthPhotoCapture';
 import { GeometryConfidenceBanner } from '@/components/mapping/GeometryConfidenceBanner';
+import { CornerMapOverlay } from '@/components/mapping/CornerMapOverlay';
 import { PlotContiguityRuleCard } from '@/components/mapping/PlotContiguityRuleCard';
 import { isGroundTruthPhotoSetComplete, countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { assessGeometryConfidence } from '@/features/compliance/plotGeometryConfidence';
@@ -63,6 +64,12 @@ import {
   hasUnsavedMappingProgress,
   runWithMappingDiscardConfirm,
 } from '@/features/mapping/mappingDiscardConfirm';
+import {
+  canConfirmCornerSave,
+  cornerProgressNumbers,
+  CORNER_CAPTURE_HOLD_SECONDS,
+  resolveCornerCapturePhase,
+} from '@/features/mapping/cornerCaptureUx';
 
 type LatLng = {
   latitude: number;
@@ -70,8 +77,6 @@ type LatLng = {
 };
 
 const PIN_CAPTURE_AVG_SECONDS = 30;
-/** Corner GPS averaging — shorter than legacy vertex setting so corners feel responsive. */
-const CORNER_CAPTURE_AVG_SECONDS = 30;
 
 /** Seconds left in a hold countdown (1..budget), aligned with the progress bar. */
 function holdSecondsRemaining(elapsedSeconds: number, budgetSeconds: number): number {
@@ -365,9 +370,24 @@ export function WalkPerimeterScreen() {
     const elapsed = recordingSeconds - cornerHoldAnchor;
     return Math.max(
       0,
-      Math.min(100, Math.round((elapsed / CORNER_CAPTURE_AVG_SECONDS) * 100)),
+      Math.min(100, Math.round((elapsed / CORNER_CAPTURE_HOLD_SECONDS) * 100)),
     );
   }, [isRecording, captureMethod, mode, recordingSeconds, cornerHoldAnchor]);
+
+  const cornerCapturePhase = useMemo(
+    () => resolveCornerCapturePhase({ isRecording, holdPercent: cornerHoldPercent }),
+    [cornerHoldPercent, isRecording],
+  );
+
+  const cornerProgress = useMemo(
+    () => cornerProgressNumbers(points.length),
+    [points.length],
+  );
+
+  const cornerSaveReady = useMemo(
+    () => canConfirmCornerSave({ isRecording, holdPercent: cornerHoldPercent }),
+    [cornerHoldPercent, isRecording],
+  );
 
   const handleSaveCorner = useCallback(() => {
     if (!isRecording) {
@@ -376,13 +396,11 @@ export function WalkPerimeterScreen() {
       return;
     }
     const elapsed = recordingSeconds - cornerHoldAnchor;
-    if (elapsed < CORNER_CAPTURE_AVG_SECONDS) {
-      Alert.alert(t('walk_corner_wait_title'), t('walk_corner_wait_body'));
+    if (elapsed < CORNER_CAPTURE_HOLD_SECONDS) {
       return;
     }
-    const saved = addAveragedVertex(CORNER_CAPTURE_AVG_SECONDS);
+    const saved = addAveragedVertex(CORNER_CAPTURE_HOLD_SECONDS);
     if (!saved) {
-      Alert.alert(t('walk_corner_wait_title'), t('walk_corner_wait_body'));
       return;
     }
     setCornerHoldAnchor(recordingSeconds);
@@ -392,8 +410,24 @@ export function WalkPerimeterScreen() {
     isRecording,
     recordingSeconds,
     startRecording,
-    t,
   ]);
+
+  const handleCancelCornerSettling = useCallback(() => {
+    if (!isRecording) return;
+    stopRecording();
+    setCornerHoldAnchor(0);
+  }, [isRecording, stopRecording]);
+
+  const handleUndoLastCorner = useCallback(() => {
+    if (isRecording) {
+      stopRecording();
+      setCornerHoldAnchor(0);
+      return;
+    }
+    if (points.length > 0) {
+      undoLastVertex();
+    }
+  }, [isRecording, points.length, stopRecording, undoLastVertex]);
 
   const pinHoldPercent = useMemo(() => {
     if (!isRecording || captureMethod !== 'pin' || mode !== 'vertex_avg') return 0;
@@ -410,9 +444,9 @@ export function WalkPerimeterScreen() {
 
   const cornerHoldSecondsRemaining = useMemo(() => {
     if (!isRecording || captureMethod !== 'centroid' || mode !== 'vertex_avg' || cornerHoldPercent >= 100) {
-      return CORNER_CAPTURE_AVG_SECONDS;
+      return CORNER_CAPTURE_HOLD_SECONDS;
     }
-    return holdSecondsRemaining(recordingSeconds - cornerHoldAnchor, CORNER_CAPTURE_AVG_SECONDS);
+    return holdSecondsRemaining(recordingSeconds - cornerHoldAnchor, CORNER_CAPTURE_HOLD_SECONDS);
   }, [captureMethod, cornerHoldAnchor, cornerHoldPercent, isRecording, mode, recordingSeconds]);
 
   const handlePinCapturePress = () => {
@@ -790,6 +824,14 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     return Math.min(560, Math.max(320, Math.round(available * 0.72)));
   }, [captureMethod, insets.top, windowHeight]);
 
+  const cornerMapHeight = useMemo(() => {
+    if (captureMethod !== 'centroid') return 330;
+    const headerAllowance = insets.top + 56;
+    const footerAllowance = 128;
+    const available = Math.max(260, windowHeight - headerAllowance - footerAllowance);
+    return Math.min(560, Math.max(300, Math.round(available * 0.82)));
+  }, [captureMethod, insets.top, windowHeight]);
+
   const ensureMinimalFarmerForPlot = useCallback(() => {
     const id = resolveProfileId();
     setFarmerIdInput(id);
@@ -827,6 +869,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       setSelectedMethodPage(page);
       setAlternateCaptureOpen(false);
       setDrawTracingActive(false);
+      if (method === 'centroid') {
+        setCornerGuideExpanded(true);
+      }
     },
     [isRecording, reset, setCaptureMode, stopRecording],
   );
@@ -907,17 +952,17 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   );
 
   const showCaptureInstructions = useCallback(() => {
+    if (captureMethod === 'centroid') {
+      Alert.alert(t('walk_method_centroid'), t('walk_corner_instructions_alert'));
+      return;
+    }
     Alert.alert(
-      captureMethod === 'centroid'
-        ? t('walk_corner_steps_title')
-        : captureMethod === 'draw'
-          ? t('walk_method_draw')
-          : t('walk_instructions_title'),
-      captureMethod === 'centroid'
-        ? t('walk_corner_steps_body', { seconds: CORNER_CAPTURE_AVG_SECONDS })
-        : captureMethod === 'draw'
-          ? t('walk_draw_steps_body')
-          : t('walk_instructions_body'),
+      captureMethod === 'draw'
+        ? t('walk_method_draw')
+        : t('walk_instructions_title'),
+      captureMethod === 'draw'
+        ? t('walk_draw_steps_body')
+        : t('walk_instructions_body'),
     );
   }, [captureMethod, t]);
 
@@ -948,21 +993,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     showCapturePage,
     t,
   ]);
-
-  const cornerCaptureHint = useMemo(() => {
-    if (!showCapturePage || captureMethod !== 'centroid') {
-      return null;
-    }
-    if (!isRecording) {
-      return points.length > 0
-        ? t('walk_corner_hint_next', { n: points.length })
-        : t('walk_corner_hint_start');
-    }
-    if (cornerHoldPercent < 100) {
-      return t('walk_corner_hold_progress', { seconds: cornerHoldSecondsRemaining });
-    }
-    return t('walk_corner_ready');
-  }, [captureMethod, cornerHoldPercent, cornerHoldSecondsRemaining, isRecording, points.length, showCapturePage, t]);
 
   const drawCaptureHint = useMemo(() => {
     if (!showCapturePage || captureMethod !== 'draw') {
@@ -1485,7 +1515,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   const renderAlternateCapturePanel = () => (
     <View style={styles.alternateCapturePanel}>
       <ThemedText type="caption" style={styles.alternateCaptureIntro}>
-        {t('walk_other_ways_intro')}
+        {t('walk_cant_walk_edge')}
       </ThemedText>
       {estimatedSize !== 'gte4' ? (
         <Pressable
@@ -1497,7 +1527,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           <Ionicons name="location" size={20} color="#0A7F59" />
           <View style={{ flex: 1 }}>
             <ThemedText type="defaultSemiBold">{t('walk_method_pin')}</ThemedText>
-            <ThemedText type="caption">{t('walk_method_pin_body')}</ThemedText>
+            <ThemedText type="caption">{t('walk_method_pin_contrast')}</ThemedText>
           </View>
         </Pressable>
       ) : null}
@@ -1511,7 +1541,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         <Ionicons name="locate-outline" size={20} color="#7C3AED" />
         <View style={{ flex: 1 }}>
           <ThemedText type="defaultSemiBold">{t('walk_method_centroid')}</ThemedText>
-          <ThemedText type="caption">{t('walk_method_centroid_body')}</ThemedText>
+          <ThemedText type="caption">{t('walk_method_centroid_contrast')}</ThemedText>
         </View>
       </Pressable>
       <Pressable
@@ -1652,11 +1682,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderCornerCaptureActions = () => (
     <View style={{ gap: 8 }}>
-      {cornerCaptureHint ? (
-        <ThemedText type="caption" style={styles.walkCaptureHint}>
-          {cornerCaptureHint}
-        </ThemedText>
-      ) : null}
       {isRecording ? (
         <View style={styles.averagingTrackCompact}>
           <View
@@ -1670,19 +1695,22 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         testID="walk-save-corner"
         icon={
           <Ionicons
-            name={isRecording && cornerHoldPercent >= 100 ? 'checkmark-circle-outline' : 'locate-outline'}
+            name={isRecording && cornerSaveReady ? 'checkmark-circle-outline' : 'locate-outline'}
             size={20}
             color="#FFFFFF"
           />
         }
         onPress={handleSaveCorner}
         fullWidth
+        disabled={isRecording && !cornerSaveReady}
       >
         {!isRecording
-          ? t('walk_corner_start_first')
-          : cornerHoldPercent < 100
-            ? t('walk_gps_averaging_active')
-            : t('walk_corner_save_this')}
+          ? points.length > 0
+            ? t('walk_corner_start_next')
+            : t('walk_corner_start_first')
+          : cornerSaveReady
+            ? t('walk_corner_save_this')
+            : t('walk_corner_hold_progress', { seconds: cornerHoldSecondsRemaining })}
       </Button>
       {points.length >= 3 && canSavePlot ? (
         <Button
@@ -1701,13 +1729,29 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       ) : null}
       <View style={styles.buttonRow}>
         <View style={styles.buttonCell}>
-          <Button variant="outline" onPress={stopRecording} disabled={!isRecording} fullWidth>
-            {t('stop')}
-          </Button>
+          {isRecording ? (
+            <Button variant="outline" onPress={handleCancelCornerSettling} fullWidth>
+              {t('walk_corner_cancel_settling')}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onPress={handleUndoLastCorner}
+              disabled={points.length === 0}
+              fullWidth
+            >
+              {t('walk_undo_corner')}
+            </Button>
+          )}
         </View>
         <View style={styles.buttonCell}>
-          <Button variant="ghost" onPress={reset} disabled={!points.length && !isRecording} fullWidth>
-            {t('reset')}
+          <Button
+            variant="ghost"
+            onPress={reset}
+            disabled={!points.length && !isRecording}
+            fullWidth
+          >
+            {t('walk_corner_start_over')}
           </Button>
         </View>
       </View>
@@ -1755,10 +1799,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                 accessibilityLabel={t('walk_instructions_link')}
                 style={styles.headerInstructionsButton}
               >
-                <Ionicons name="book-outline" size={16} color={colors.textInverse} />
-                <ThemedText type="caption" style={styles.headerInstructionsText}>
-                  {t('walk_instructions_link')}
-                </ThemedText>
+                <Ionicons name="help-circle-outline" size={20} color={colors.textInverse} />
               </Pressable>
             ) : null}
             <View style={styles.langPill}>
@@ -1783,6 +1824,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             },
             drawActionsPinned && {
               paddingBottom: Math.max(insets.bottom, 12) + 148,
+            },
+            centroidActionsPinned && {
+              paddingBottom: Math.max(insets.bottom, 12) + 120,
             },
           ]}
         >
@@ -2304,18 +2348,21 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             ) : showCapturePage && captureMethod === 'centroid' ? (
               <>
                 <View
-                  style={styles.drawMapPanel}
+                  style={[styles.walkMapPanel, { minHeight: cornerMapHeight }]}
                   onTouchStart={() => setMapScrollLock(true)}
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
                   <MapView
-                    style={styles.drawMap}
+                    style={[styles.walkMap, { height: cornerMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
                     {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
                     moveOnMarkerPress={false}
-                    onPress={() => handleSaveCorner()}
+                    onPress={() => {
+                      if (!cornerSaveReady) return;
+                      handleSaveCorner();
+                    }}
                   >
                     <FieldMapLayers
                       lowDataMap={walkMapTileMode === 'none'}
@@ -2328,23 +2375,37 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       isRecording={isRecording}
                       showYouMarker
                       youMarkerFollowsPosition={isRecording}
-                      showStartMarker={points.length > 0}
+                      showStartMarker={false}
                       showVertexMarkers
+                      strokeOnlyBoundary
                     />
                   </MapView>
+                  {isRecording ? (
+                    <CornerMapOverlay
+                      phase={cornerCapturePhase}
+                      secondsRemaining={cornerHoldSecondsRemaining}
+                      t={t}
+                    />
+                  ) : null}
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
                       {gpsStrengthLabel}
                     </ThemedText>
                   </View>
-                  {points.length > 0 ? (
-                    <View style={styles.cornerCountChip} pointerEvents="none">
-                      <ThemedText type="caption" style={styles.cornerCountChipText} testID="walk-corners-saved-count">
-                        {t('walk_corners_saved', { n: points.length })}
-                      </ThemedText>
-                    </View>
-                  ) : null}
+                  <View style={styles.cornerCountChip} pointerEvents="none">
+                    <ThemedText type="caption" style={styles.cornerCountChipText} testID="walk-corners-saved-count">
+                      {cornerProgress.shapeReady
+                        ? t('walk_corner_progress_ready', { n: points.length })
+                        : points.length > 0
+                          ? t('walk_corner_progress_chip', {
+                              n: points.length,
+                              remaining: cornerProgress.remainingToClose,
+                            })
+                          : t('walk_corner_map_empty')}
+                      {area.hectares > 0 ? ` · ${area.hectares.toFixed(2)} ha` : ''}
+                    </ThemedText>
+                  </View>
                 </View>
 
                 {points.length >= 3 ? renderGeometryConfidenceBanner() : null}
@@ -2361,7 +2422,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
               ? renderDrawCaptureActions()
               : null}
 
-            {!isWalkLandingState && showCapturePage && isRecording && captureMethod !== 'walk' && captureMethod !== 'pin' ? (
+            {!isWalkLandingState && showCapturePage && isRecording && captureMethod !== 'walk' && captureMethod !== 'pin' && captureMethod !== 'centroid' ? (
               <View style={styles.statsGrid}>
                 <View style={styles.statChip}>
                   <ThemedText type="caption" style={styles.statLabel}>
@@ -3220,6 +3281,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: '#065F46',
     lineHeight: 18,
+  },
+  cornerModeIntro: {
+    color: '#4B5563',
+    lineHeight: 18,
+  },
+  cornerCompactStats: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
   },
   cornerHintCard: {
     borderRadius: 16,

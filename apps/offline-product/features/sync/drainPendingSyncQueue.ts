@@ -10,6 +10,7 @@ import {
 export async function drainPendingSyncQueueForManualSync(params: {
   farmerId: string;
   localPlots: Plot[];
+  farmerScopeIds?: string[];
   actionTypes?: PendingSyncAction['actionType'][];
   attemptScope?: PendingSyncAttemptScope;
   maxPasses?: number;
@@ -27,6 +28,7 @@ export async function drainPendingSyncQueueForManualSync(params: {
     const res = await processPendingSyncQueue({
       farmerId: params.farmerId,
       localPlots: params.localPlots,
+      farmerScopeIds: params.farmerScopeIds,
       actionTypes: params.actionTypes,
       attemptScope: params.attemptScope ?? 'all',
       maxActions: params.maxActionsPerPass,

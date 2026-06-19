@@ -2,12 +2,9 @@ import type { Session } from '@supabase/supabase-js';
 
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import {
-  clearPersistedSyncAuth,
-  getSupabaseAuthClient,
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
-import { isDashboardWorkspaceSession } from '@/features/auth/fieldAppEligibility';
 import { ensureFarmerOAuthProfile, getEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -88,13 +85,6 @@ export async function completeOAuthFarmerSession(params: {
 
   const nameFromSession =
     params.fullName || getNameFromSession(params.session) || '';
-
-  if (isDashboardWorkspaceSession(params.session)) {
-    const supabase = getSupabaseAuthClient();
-    await supabase.auth.signOut();
-    await clearPersistedSyncAuth();
-    return { ok: false, message: 'sign_in_dashboard_account' };
-  }
 
   await saveAndApplyOAuthSyncAuth(
     email,

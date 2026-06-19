@@ -476,15 +476,13 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           result.message === 'sign_in_oauth_failed' ||
           result.message === 'sign_in_oauth_provider_disabled' ||
           result.message === 'sign_in_field_bootstrap_failed' ||
-          result.message === 'sign_in_api_unreachable' ||
-          result.message === 'sign_in_dashboard_account'
+          result.message === 'sign_in_api_unreachable'
         ) {
           closeSignIn();
           showOAuthSignInFailureAlert(t, result.message, () => {
             if (
               result.message !== 'sign_in_field_bootstrap_failed' &&
-              result.message !== 'sign_in_api_unreachable' &&
-              result.message !== 'sign_in_dashboard_account'
+              result.message !== 'sign_in_api_unreachable'
             ) {
               void openCreateAccount();
             }

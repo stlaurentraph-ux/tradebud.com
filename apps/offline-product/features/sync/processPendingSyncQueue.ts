@@ -5,6 +5,7 @@ import {
   syncPlotLegalToBackend,
   syncPlotPhotosToBackend,
 } from '@/features/api/postPlot';
+import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
 import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
@@ -63,6 +64,8 @@ function isEligibleForRetry(row: PendingSyncAction, nowMs: number): boolean {
 export async function processPendingSyncQueue(params: {
   farmerId: string;
   localPlots: Plot[];
+  /** When set, merges server plots from every owned profile (auth uid vs linked farmer id). */
+  farmerScopeIds?: string[];
   actionTypes?: PendingSyncAction['actionType'][];
   attemptScope?: PendingSyncAttemptScope;
   maxActions?: number;
@@ -85,9 +88,19 @@ export async function processPendingSyncQueue(params: {
   let backendRows: unknown[] = [];
   let plotServerLinks: Record<string, string> = {};
   let plotListFetchFailed = false;
+  const scopeIds = Array.from(
+    new Set(
+      [params.farmerId.trim(), ...(params.farmerScopeIds ?? []).map((id) => id.trim())].filter(
+        Boolean,
+      ),
+    ),
+  );
   try {
     plotServerLinks = await loadPlotServerLinks();
-    backendRows = await fetchPlotsForFarmer(params.farmerId);
+    backendRows =
+      scopeIds.length > 1
+        ? await fetchMergedServerPlots(scopeIds)
+        : await fetchPlotsForFarmer(params.farmerId);
   } catch (e) {
     plotListFetchFailed = true;
     plotServerLinks = await loadPlotServerLinks().catch(() => ({}));

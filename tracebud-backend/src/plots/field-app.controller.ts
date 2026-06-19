@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   Post,
   Req,
   UseGuards,
@@ -21,6 +22,19 @@ export class FieldAppController {
     private readonly plotsService: PlotsService,
     private readonly onboardingEmail: OnboardingEmailService,
   ) {}
+
+  @Get('v1/me/field-farmer-ids')
+  @ApiOperation({
+    summary: 'List farmer profile ids owned by the signed-in Supabase user',
+  })
+  async listFieldFarmerIds(@Req() req: any) {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    const farmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
+    return { farmerIds };
+  }
 
   @Post('v1/me/field-app-bootstrap')
   @ApiOperation({

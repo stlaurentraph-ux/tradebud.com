@@ -4,6 +4,7 @@ import { drainPendingSyncQueueForManualSync } from '@/features/sync/drainPending
 import {
   type ProcessPendingSyncQueueResult,
 } from '@/features/sync/processPendingSyncQueue';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import {
   uploadUnsyncedPlotsForFarmer,
   type UploadUnsyncedPlotsResult,
@@ -31,6 +32,12 @@ export async function runAutoBackup(params: {
   try {
     return await withSyncQueueLock(async () => {
       const work = (async () => {
+        const syncContext = await prepareFieldSyncContext({
+          profileFarmerId: params.farmerId,
+          localPlots: params.localPlots,
+        });
+        const farmerId = syncContext.farmerId;
+
         setSyncQueuePhase(
           params.localPlots.length > 0 ? 'uploading_plots' : 'processing_consent',
         );
@@ -38,7 +45,7 @@ export async function runAutoBackup(params: {
         if (params.localPlots.length > 0) {
           setSyncQueuePhase('uploading_plots');
           plotResult = await uploadUnsyncedPlotsForFarmer({
-            farmerId: params.farmerId,
+            farmerId,
             localPlots: params.localPlots,
           });
         }
@@ -46,8 +53,9 @@ export async function runAutoBackup(params: {
         await processPendingConsentQueue();
         setSyncQueuePhase('processing_queue');
         const queueResult = await drainPendingSyncQueueForManualSync({
-          farmerId: params.farmerId,
+          farmerId,
           localPlots: params.localPlots,
+          farmerScopeIds: syncContext.ownedFarmerIds,
           actionTypes: [...QUEUE_ACTION_TYPES],
           attemptScope: 'all',
           maxPasses: 2,

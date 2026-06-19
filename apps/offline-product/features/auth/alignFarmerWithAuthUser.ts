@@ -1,4 +1,8 @@
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
+import {
+  fetchOwnedFarmerIdsFromApi,
+  getBootstrapOwnedFarmerIds,
+} from '@/features/api/fieldAppBootstrap';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { isUuid } from '@/features/auth/farmerProfileBootstrap';
@@ -12,21 +16,31 @@ async function shouldAlignFarmerIdToAuth(
   if (currentFarmerId === authUserId) return false;
   if (!isUuid(currentFarmerId) || !isUuid(authUserId)) return false;
 
+  const ownedFarmerIds = [
+    ...new Set([
+      ...(await fetchOwnedFarmerIdsFromApi()),
+      ...getBootstrapOwnedFarmerIds(),
+      currentFarmerId,
+      authUserId,
+    ]),
+  ];
+
+  try {
+    for (const farmerId of ownedFarmerIds) {
+      const rows = await fetchPlotsForFarmer(farmerId);
+      if ((rows?.length ?? 0) > 0) {
+        return false;
+      }
+    }
+  } catch {
+    return false;
+  }
+
   if (localPlots.length === 0) {
     return true;
   }
 
-  try {
-    const [oldServer, newServer] = await Promise.all([
-      fetchPlotsForFarmer(currentFarmerId),
-      fetchPlotsForFarmer(authUserId),
-    ]);
-    if ((oldServer?.length ?? 0) > 0) return false;
-    if ((newServer?.length ?? 0) > 0) return false;
-    return true;
-  } catch {
-    return false;
-  }
+  return true;
 }
 
 /**
