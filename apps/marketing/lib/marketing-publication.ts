@@ -21,14 +21,11 @@ export type MarketingRouteId =
   | 'sponsors'
   | 'why-tracebud'
   | 'impact'
+  | 'impact-supply-chains'
   | 'impact-farmer-livelihood'
-  | 'impact-regenerative-farming'
   | 'impact-climate-biodiversity'
   | 'home-preview'
-  | 'draft-index'
-  | 'impact-smallholders'
-  | 'impact-forests'
-  | 'impact-supply-chains';
+  | 'draft-index';
 
 export const MARKETING_PREVIEW_COOKIE = 'marketing_preview';
 export const MARKETING_PREVIEW_PARAM = 'marketing_preview';
@@ -56,14 +53,11 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   sponsors: false,
   'why-tracebud': false,
   impact: false,
+  'impact-supply-chains': false,
   'impact-farmer-livelihood': false,
-  'impact-regenerative-farming': false,
   'impact-climate-biodiversity': false,
   'home-preview': false,
   'draft-index': false,
-  'impact-smallholders': false,
-  'impact-forests': false,
-  'impact-supply-chains': false,
 };
 
 export function isDevelopmentPreview(): boolean {

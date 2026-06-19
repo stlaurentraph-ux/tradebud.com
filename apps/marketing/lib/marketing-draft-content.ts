@@ -88,28 +88,28 @@ export const complianceHub: DraftHubContent = {
 
 export const impactHub: DraftHubContent = {
   routeId: 'impact',
-  eyebrow: 'Impact',
-  title: 'Real-world impact',
+  eyebrow: 'Outcomes',
+  title: 'Outcomes that hold up to scrutiny',
   description:
-    'Tracebud links compliance infrastructure to outcomes that matter — fairer livelihoods for smallholders, healthier forests, and supply chains that hold up to scrutiny.',
+    'Compliance is the entry point — not the goal. Tracebud turns verified origin data into three durable outcomes: supply chains that survive audit, smallholders who capture more value, and a measurable path to nature-positive sourcing.',
   links: [
-    {
-      routeId: 'impact-smallholders',
-      href: '/impact/smallholders',
-      title: 'Smallholder livelihoods',
-      description: 'How verified origin data unlocks premium markets for small-scale farmers.',
-    },
-    {
-      routeId: 'impact-forests',
-      href: '/impact/forests',
-      title: 'Forest protection',
-      description: 'Identity-preserved traceability as a direct tool for reducing deforestation.',
-    },
     {
       routeId: 'impact-supply-chains',
       href: '/impact/supply-chains',
-      title: 'Ethical supply chains',
-      description: 'Structural transparency that goes beyond checkbox compliance.',
+      title: 'Resilient supply chains',
+      description: 'Structural, audit-ready transparency that goes beyond self-reported claims.',
+    },
+    {
+      routeId: 'impact-farmer-livelihood',
+      href: '/impact/farmer-livelihood',
+      title: 'Farmer livelihoods',
+      description: 'Verified origin as the entry key to premium markets and fairer prices.',
+    },
+    {
+      routeId: 'impact-climate-biodiversity',
+      href: '/impact/climate-biodiversity',
+      title: 'Nature-positive & climate',
+      description: 'Deforestation-free as the floor, with a path to ESRS-aligned nature evidence.',
     },
   ],
 };
@@ -352,66 +352,60 @@ export const draftPages: Record<string, DraftPageContent> = {
   },
   'impact-farmer-livelihood': {
     routeId: 'impact-farmer-livelihood',
-    eyebrow: 'Impact',
-    title: 'Farmer livelihood',
+    eyebrow: 'Outcomes',
+    title: 'Farmer livelihoods',
     description:
-      'Smallholders should benefit from compliance — not bear its cost alone. Tracebud puts farmers in control of their data and their market choices.',
+      'Verified origin data is not just a compliance mechanism — it is the entry key to premium markets that pay fairer prices to small-scale farmers. Smallholders should benefit from compliance, not bear its cost alone.',
     sections: [
       {
-        heading: 'Capture once, sell broadly',
-        body: 'Farmers map plots and build a compliance passport once, then grant access to cooperatives and buyers without repeating field work.',
+        heading: 'The premium market barrier',
+        body: "Specialty buyers, Fairtrade, and Rainforest Alliance premiums require documented origin. Without it, smallholders' high-quality output is sold into undifferentiated bulk channels at commodity prices.",
       },
       {
-        heading: 'Self-sovereign data wallet',
-        body: 'GeoIDs and evidence stay farmer-owned. Grants can be revoked. No forced lock-in to a single exporter ecosystem.',
+        heading: 'Capture once, sell to every market',
+        body: "A single Tracebud GeoID links a farmer's plots, photos, and consent records to every buyer relationship they form — eliminating the capture-once burden that shuts smallholders out of multi-buyer access.",
+        bullets: [
+          'Field capture in under 20 minutes per farm, with offline support',
+          'Farmer-owned data wallet: grant or revoke access per buyer',
+          'Reusable across EUDR, ESG, and certification workflows',
+          'No forced lock-in to a single exporter ecosystem',
+        ],
       },
       {
         heading: 'Free entry for producers',
-        body: 'Tier 1 is free forever — removing the financial barrier that often excludes smallholders from export markets.',
+        body: 'Tier 1 is free forever — removing the financial barrier that often excludes smallholders from export markets entirely.',
+      },
+      {
+        heading: 'Income resilience',
+        body: 'Access to premium channels and multi-buyer price comparison helps smallholders reduce single-buyer dependency — a structural income resilience gain that compounds over seasons.',
       },
       {
         heading: 'Tracebud connection',
-        body: 'Mobile offline capture → reusable records → explicit grants → better market access.',
+        body: 'Mobile offline capture → reusable farmer-owned records → explicit grants → better market access and fairer prices.',
       },
     ],
     relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-farmer-livelihood'),
   },
-  'impact-regenerative-farming': {
-    routeId: 'impact-regenerative-farming',
-    eyebrow: 'Impact',
-    title: 'Regenerative farming',
-    description:
-      'Shade-grown, agroforestry, and soil-health practices need evidence — not just intentions. Plot-level records make farm resilience auditable.',
-    sections: [
-      {
-        heading: 'Practice + place',
-        body: 'Regenerative outcomes are tied to specific plots. Identity-preserved batches keep practice evidence linked to origin coordinates.',
-      },
-      {
-        heading: 'Ground truth over false positives',
-        body: 'Timestamped field photos and waypoint-averaged boundaries help distinguish seasonal pruning from deforestation — protecting shade-grown systems.',
-      },
-      {
-        heading: 'Cooperative roll-up',
-        body: 'Cooperatives aggregate member practice and plot health without laundering origins through mass-balance pools.',
-      },
-      {
-        heading: 'Tracebud connection',
-        body: 'Photo vault + AI verification + long-lived plot records → defensible regenerative narratives for buyers.',
-      },
-    ],
-    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-regenerative-farming'),
-  },
   'impact-climate-biodiversity': {
     routeId: 'impact-climate-biodiversity',
-    eyebrow: 'Impact',
-    title: 'Climate & biodiversity',
+    eyebrow: 'Outcomes',
+    title: 'Nature-positive & climate',
     description:
-      'EUDR is the floor. Downstream buyers increasingly need climate and nature evidence aligned with ESRS — built on the same plot data.',
+      'EUDR is the floor. Downstream buyers increasingly need climate and nature evidence aligned with ESRS — built on the same plot data, and protecting the regenerative practices that should be rewarded rather than penalised.',
     sections: [
       {
-        heading: 'Deforestation-free as baseline',
-        body: 'Geospatial foundation models and degradation checks flag structural forest cover change — with manual review for buffer zones and agroforestry.',
+        heading: 'Deforestation-free as the baseline',
+        body: 'Geospatial foundation models evaluate each registered plot against satellite time series to surface conversion events. Identity-preserved batches — each tracing to a verified plot polygon — eliminate the mass-balance pathway that lets deforestation-linked commodity launder into compliant supply.',
+        bullets: [
+          'Temporal analysis distinguishes seasonal pruning from conversion',
+          'Photo vault provides local evidence for manual flag review',
+          'Degradation checks catch non-deforestation forest damage',
+          'Protected-area overlap routes to review, not silent pass',
+        ],
+      },
+      {
+        heading: 'Regenerative practice, made auditable',
+        body: 'Shade-grown, agroforestry, and soil-health practices need evidence, not just intentions. Timestamped field photos and waypoint-averaged boundaries keep practice evidence linked to origin coordinates — distinguishing regenerative systems from cleared canopy so they are protected rather than flagged as false positives.',
       },
       {
         heading: 'Pathway to ESRS-aligned metrics',
@@ -419,16 +413,15 @@ export const draftPages: Record<string, DraftPageContent> = {
         bullets: [
           'Scope 3 visibility starts at verified origin',
           'Land-use change tracked over multi-year windows',
-          'Protected-area overlap routes to review, not silent pass',
         ],
       },
       {
         heading: 'Honest roadmap labelling',
-        body: 'We do not claim full carbon accounting or certification today. We build the traceability base that makes those claims possible later.',
+        body: 'We do not claim full carbon accounting or certification today. We build the traceability base that makes those claims possible later — and label clearly what is live versus roadmap.',
       },
       {
         heading: 'Tracebud connection',
-        body: 'Plot capture → verification → ESG connector APIs (roadmap) → buyer reporting without manual re-entry.',
+        body: 'Plot capture → AI verification → ESG connector APIs (roadmap) → buyer reporting without manual re-entry.',
       },
     ],
     relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-climate-biodiversity'),
@@ -461,64 +454,10 @@ export const draftPages: Record<string, DraftPageContent> = {
       },
     ],
   },
-  'impact-smallholders': {
-    routeId: 'impact-smallholders',
-    eyebrow: 'Impact',
-    title: 'Smallholder livelihoods',
-    description:
-      'Verified origin data is not just a compliance mechanism — it is the entry key to premium markets that pay fairer prices to small-scale farmers.',
-    sections: [
-      {
-        heading: 'The premium market barrier',
-        body: "Specialty buyers, Fairtrade, and Rainforest Alliance premiums require documented origin. Without it, smallholders' high-quality output is sold into undifferentiated bulk channels at commodity prices.",
-      },
-      {
-        heading: 'One map, every market',
-        body: "A single Tracebud GeoID links a farmer's plots, photos, and consent records to every buyer relationship they form — eliminating the capture-once burden that shuts smallholders out of multi-buyer access.",
-        bullets: [
-          'Field capture in < 20 minutes per farm with offline support',
-          'Farmer-owned data wallet: grant or revoke per buyer',
-          'Reusable across EUDR, ESG, and certification workflows',
-        ],
-      },
-      {
-        heading: 'Income resilience',
-        body: 'Access to premium channels and multi-buyer price comparison helps smallholders reduce single-buyer dependency — a structural income resilience gain that compounds over seasons.',
-      },
-    ],
-    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-smallholders'),
-  },
-  'impact-forests': {
-    routeId: 'impact-forests',
-    eyebrow: 'Impact',
-    title: 'Forest protection',
-    description:
-      'Identity-preserved traceability creates accountability at the plot level — the most direct lever available to reduce deforestation driven by agricultural expansion.',
-    sections: [
-      {
-        heading: 'Why identity preservation matters',
-        body: 'Mass-balance chains allow deforestation-linked commodity to be laundered into compliant batches. Identity-preserved supply chains — where each batch traces to a verified plot polygon — eliminate that pathway.',
-      },
-      {
-        heading: 'AI deforestation detection',
-        body: 'Geospatial foundation models evaluate each registered plot against satellite time series to surface conversion events. Agroforestry and shade-grown systems are distinguished from cleared canopy to avoid false positives that penalise regenerative practices.',
-        bullets: [
-          'Temporal analysis distinguishes seasonal pruning from conversion',
-          'Photo vault provides local evidence for manual flag review',
-          'Degradation checks catch non-deforestation forest damage',
-        ],
-      },
-      {
-        heading: 'Systemic pressure',
-        body: 'When buyers require identity-preserved, EUDR-compliant supply, deforestation-linked production loses its market outlet. Tracebud creates that market structure.',
-      },
-    ],
-    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-forests'),
-  },
   'impact-supply-chains': {
     routeId: 'impact-supply-chains',
-    eyebrow: 'Impact',
-    title: 'Ethical supply chains',
+    eyebrow: 'Outcomes',
+    title: 'Resilient supply chains',
     description:
       'Structural transparency — not self-reported claims — is the foundation of supply chains that hold up to independent scrutiny.',
     sections: [
