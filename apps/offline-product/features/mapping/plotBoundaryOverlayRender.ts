@@ -13,11 +13,18 @@ export function sanitizeMapCoordinates(coords: MapCoordinate[]): MapCoordinate[]
   return coords.filter(isValidMapCoordinate);
 }
 
-/** Closed ring for stroke preview while tracing (avoids filled Polygon on custom tiles). */
-export function boundaryStrokeCoordinates(vertices: MapCoordinate[]): MapCoordinate[] {
+/**
+ * Open or closed stroke chain for boundary preview.
+ * Closing the ring on custom map tiles can crash native MapView on iOS/Android.
+ */
+export function boundaryStrokeCoordinates(
+  vertices: MapCoordinate[],
+  options?: { closeRing?: boolean },
+): MapCoordinate[] {
   const safe = sanitizeMapCoordinates(vertices);
   if (safe.length < 2) return [];
-  if (safe.length >= 3) {
+  const closeRing = options?.closeRing === true;
+  if (safe.length >= 3 && closeRing) {
     return [...safe, safe[0]];
   }
   return safe;

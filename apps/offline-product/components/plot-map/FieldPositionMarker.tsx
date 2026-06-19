@@ -4,6 +4,7 @@ import { Marker } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { MapCoordinate } from '@/features/mapping/fieldMapRegion';
+import { isValidMapCoordinate } from '@/features/mapping/plotBoundaryOverlayRender';
 
 type FieldPositionMarkerProps = {
   coordinate: MapCoordinate;
@@ -50,6 +51,10 @@ export function FieldPositionMarker({
   followPosition = false,
   trackInitially = true,
 }: FieldPositionMarkerProps) {
+  if (!isValidMapCoordinate(coordinate)) {
+    return null;
+  }
+
   const { tracksViewChanges, onMarkerLayout } = useMarkerViewTracking(
     followPosition,
     trackInitially,

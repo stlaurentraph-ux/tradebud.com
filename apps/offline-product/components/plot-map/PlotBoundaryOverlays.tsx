@@ -32,6 +32,8 @@ type PlotBoundaryOverlaysProps = {
    * Filled Polygon + UrlTile is unstable on iOS when the ring first closes.
    */
   strokeOnlyBoundary?: boolean;
+  /** Only set true on stable basemaps; closing stroke rings on tiles can crash MapView. */
+  closeStrokeRing?: boolean;
 };
 
 export function PlotBoundaryOverlays({
@@ -44,10 +46,18 @@ export function PlotBoundaryOverlays({
   showVertexMarkers = false,
   youMarkerFollowsPosition = false,
   strokeOnlyBoundary = false,
+  closeStrokeRing = false,
 }: PlotBoundaryOverlaysProps) {
   const safeVertices = sanitizeMapCoordinates(vertices);
-  const youPosition = resolveYouPosition({ liveTrail, userPosition, vertices: safeVertices });
-  const strokeCoordinates = boundaryStrokeCoordinates(safeVertices);
+  const safeLiveTrail = sanitizeMapCoordinates(liveTrail);
+  const youPosition = resolveYouPosition({
+    liveTrail: safeLiveTrail,
+    userPosition,
+    vertices: safeVertices,
+  });
+  const strokeCoordinates = boundaryStrokeCoordinates(safeVertices, {
+    closeRing: strokeOnlyBoundary ? closeStrokeRing : true,
+  });
   const showStart = shouldShowStartMarker({
     showStartMarker,
     showVertexMarkers,
@@ -56,9 +66,9 @@ export function PlotBoundaryOverlays({
 
   return (
     <>
-      {isRecording && liveTrail.length > 1 ? (
+      {isRecording && safeLiveTrail.length > 1 ? (
         <Polyline
-          coordinates={liveTrail}
+          coordinates={safeLiveTrail}
           strokeColor={LIVE_TRAIL_COLOR}
           strokeWidth={4}
           lineDashPattern={[10, 7]}
@@ -104,7 +114,7 @@ export function PlotBoundaryOverlays({
       {showVertexMarkers
         ? safeVertices.map((p, idx) => (
             <FieldPositionMarker
-              key={`vertex-${idx}`}
+              key={`vertex-${p.latitude.toFixed(6)}-${p.longitude.toFixed(6)}`}
               coordinate={p}
               variant="vertex"
               label={`${idx + 1}`}

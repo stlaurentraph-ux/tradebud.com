@@ -7,12 +7,24 @@ import {
 } from './plotBoundaryOverlayRender';
 
 describe('plotBoundaryOverlayRender', () => {
-  it('closes the ring once three corners exist', () => {
-    const ring = boundaryStrokeCoordinates([
+  it('keeps an open chain by default while corners are being placed', () => {
+    const open = boundaryStrokeCoordinates([
       { latitude: 14.1, longitude: -87.2 },
       { latitude: 14.101, longitude: -87.2 },
       { latitude: 14.101, longitude: -87.199 },
     ]);
+    expect(open).toHaveLength(3);
+  });
+
+  it('can close the ring when explicitly requested', () => {
+    const ring = boundaryStrokeCoordinates(
+      [
+        { latitude: 14.1, longitude: -87.2 },
+        { latitude: 14.101, longitude: -87.2 },
+        { latitude: 14.101, longitude: -87.199 },
+      ],
+      { closeRing: true },
+    );
     expect(ring).toHaveLength(4);
     expect(ring[3]).toEqual(ring[0]);
   });

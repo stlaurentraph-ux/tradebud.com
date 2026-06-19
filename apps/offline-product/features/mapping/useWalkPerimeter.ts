@@ -304,7 +304,13 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     }
 
     const averaged = weightedAverageSamples(window);
-    if (!averaged) {
+    if (
+      !averaged ||
+      !Number.isFinite(averaged.latitude) ||
+      !Number.isFinite(averaged.longitude) ||
+      Math.abs(averaged.latitude) > 90 ||
+      Math.abs(averaged.longitude) > 180
+    ) {
       return null;
     }
 

@@ -2239,6 +2239,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showStartMarker={points.length > 0}
                       showVertexMarkers={drawTracingActive}
                       strokeOnlyBoundary={drawTracingActive}
+                      closeStrokeRing={false}
                     />
                   </MapView>
                   <View style={styles.mapGpsPill} pointerEvents="none">
@@ -2354,7 +2355,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
                   <MapView
-                    style={[styles.walkMap, { height: cornerMapHeight - 8 }]}
+                    style={[styles.walkMap, { height: Math.max(200, cornerMapHeight - 8) }]}
                     initialRegion={mapAnchorRegion}
                     {...FIELD_MAP_CAPTURE_UI_PROPS}
                     mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
@@ -2378,6 +2379,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showStartMarker={false}
                       showVertexMarkers
                       strokeOnlyBoundary
+                      closeStrokeRing={false}
                     />
                   </MapView>
                   {isRecording ? (
