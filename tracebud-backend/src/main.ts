@@ -25,6 +25,7 @@ async function bootstrap() {
     if (
       req.method === 'GET' &&
       (url.includes('/v1/me/field-farmer-ids') ||
+        url.includes('/v1/plots') ||
         url === '/api/health' ||
         url.startsWith('/api/health?') ||
         url === '/health')

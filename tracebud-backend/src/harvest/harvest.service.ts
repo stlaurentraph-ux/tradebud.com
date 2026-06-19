@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { BillingService } from '../billing/billing.service';
 import { isPlotDeforestationFreeVerified } from '../compliance/plot-compliance-status';
@@ -288,19 +289,21 @@ export class HarvestService {
       }
     }
 
+    const harvestId = randomUUID();
     const insertRes = await this.pool.query(
       `
         INSERT INTO harvest_transaction (
+          id,
           farmer_id,
           plot_id,
           kg,
           harvest_date,
           created_by
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `,
-      [effectiveFarmerId, plotId, kg, harvestDate ?? null, userId ?? null],
+      [harvestId, effectiveFarmerId, plotId, kg, harvestDate ?? null, userId ?? null],
     );
 
     const tx = insertRes.rows[0];
@@ -312,19 +315,22 @@ export class HarvestService {
       deliverToEmail,
     });
 
+    const voucherId = randomUUID();
     const voucherRes = await this.pool.query(
       `
         INSERT INTO voucher (
+          id,
           farmer_id,
           transaction_id,
           qr_code_ref,
           intended_recipient_tenant_id,
           intended_recipient_email
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `,
       [
+        voucherId,
         effectiveFarmerId,
         tx.id,
         qrRef,
