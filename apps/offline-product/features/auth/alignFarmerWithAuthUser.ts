@@ -2,7 +2,7 @@ import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { isUuid } from '@/features/auth/farmerProfileBootstrap';
-import { logAuditEvent, rekeyFarmerIdInDatabase } from '@/features/state/persistence';
+import { logAuditEvent, rekeyFarmerIdInDatabase, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 
 async function shouldAlignFarmerIdToAuth(
   currentFarmerId: string,
@@ -59,6 +59,7 @@ export async function alignFarmerWithAuthUser(
 
   const previousId = farmer.id;
   await rekeyFarmerIdInDatabase(previousId, authUserId);
+  await adoptOnDeviceFarmerScope(authUserId).catch(() => undefined);
   const aligned: FarmerProfile = { ...farmer, id: authUserId };
 
   await logAuditEvent({

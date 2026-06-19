@@ -180,19 +180,36 @@ export class HarvestService {
       `
         SELECT
           p.id,
+          p.farmer_id,
           p.area_ha,
           p.sinaph_overlap,
           p.indigenous_overlap,
-          COALESCE(fp.country_code, $3) AS country_code
+          COALESCE(fp.country_code, $2) AS country_code
         FROM plot p
         LEFT JOIN farmer_profile fp ON fp.id = p.farmer_id
         WHERE p.id = $1
-          AND p.farmer_id = $2
       `,
-      [plotId, farmerId, DEFAULT_YIELD_BENCHMARK_GEOGRAPHY],
+      [plotId, DEFAULT_YIELD_BENCHMARK_GEOGRAPHY],
     );
     if (plotRes.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    const plotFarmerId = String(plotRes.rows[0].farmer_id ?? '').trim();
+    if (!plotFarmerId) {
       throw new BadRequestException('Plot does not belong to farmer');
+    }
+
+    let effectiveFarmerId = farmerId;
+    if (plotFarmerId !== farmerId) {
+      if (!userId) {
+        throw new BadRequestException('Plot does not belong to farmer');
+      }
+      const ownsPlotFarmer = await this.isFarmerOwnedByUser(plotFarmerId, userId);
+      if (!ownsPlotFarmer) {
+        throw new BadRequestException('Plot does not belong to farmer');
+      }
+      effectiveFarmerId = plotFarmerId;
     }
 
     const areaHa = Number(plotRes.rows[0].area_ha);
@@ -240,7 +257,7 @@ export class HarvestService {
         userId ?? null,
         capResolution.source === 'benchmark' ? 'yield_cap_resolved' : 'yield_cap_fallback_used',
         {
-          farmerId,
+          farmerId: effectiveFarmerId,
           plotId,
           commodity: DEFAULT_YIELD_BENCHMARK_COMMODITY,
           geography: capResolution.geography,
@@ -252,7 +269,7 @@ export class HarvestService {
       const capKg = areaHa * capResolution.capKgPerHa;
       if (kg > capKg) {
         await this.appendYieldCapAuditEvent(userId ?? null, 'yield_cap_violation_detected', {
-          farmerId,
+          farmerId: effectiveFarmerId,
           plotId,
           commodity: DEFAULT_YIELD_BENCHMARK_COMMODITY,
           geography: capResolution.geography,
@@ -283,14 +300,14 @@ export class HarvestService {
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *
       `,
-      [farmerId, plotId, kg, harvestDate ?? null, null],
+      [effectiveFarmerId, plotId, kg, harvestDate ?? null, userId ?? null],
     );
 
     const tx = insertRes.rows[0];
 
     const qrRef = `V-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     const deliveryRecipient = await resolveVoucherDeliveryRecipient(this.pool, {
-      farmerId,
+      farmerId: effectiveFarmerId,
       deliverToTenantId,
       deliverToEmail,
     });
@@ -308,7 +325,7 @@ export class HarvestService {
         RETURNING *
       `,
       [
-        farmerId,
+        effectiveFarmerId,
         tx.id,
         qrRef,
         deliveryRecipient.intendedRecipientTenantId,
@@ -331,7 +348,7 @@ export class HarvestService {
         userId ?? null,
         'harvest_recorded',
         JSON.stringify({
-          farmerId,
+          farmerId: effectiveFarmerId,
           plotId,
           kg,
           harvestId: tx.id,
@@ -358,10 +375,14 @@ export class HarvestService {
           v.qr_code_ref,
           v.status,
           v.created_at,
+          v.intended_recipient_email,
+          v.intended_recipient_tenant_id,
           tx.plot_id,
-          tx.kg
+          tx.kg,
+          p.name AS plot_name
         FROM voucher v
         LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
         WHERE v.farmer_id = $1
         ORDER BY v.created_at DESC
       `,
@@ -516,6 +537,27 @@ export class HarvestService {
 
   async isFarmerOwnedByUser(farmerId: string, userId: string): Promise<boolean> {
     return isFarmerProfileOwnedByUser(this.pool, farmerId, userId);
+  }
+
+  async getPlotFarmerId(plotId: string): Promise<string | null> {
+    const trimmedPlotId = plotId.trim();
+    if (!trimmedPlotId) {
+      return null;
+    }
+    const res = await this.pool.query<{ farmer_id: string }>(
+      `
+        SELECT farmer_id::text AS farmer_id
+        FROM plot
+        WHERE id = $1::uuid
+        LIMIT 1
+      `,
+      [trimmedPlotId],
+    );
+    if ((res.rowCount ?? 0) === 0) {
+      return null;
+    }
+    const farmerId = String(res.rows[0]?.farmer_id ?? '').trim();
+    return farmerId || null;
   }
 
   async getVoucherByQrRef(qrRef: string) {

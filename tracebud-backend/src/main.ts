@@ -21,6 +21,19 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', 1);
   expressApp.use((req: any, res: any, next: () => void) => {
+    const url = String(req.originalUrl ?? req.url ?? '');
+    if (
+      req.method === 'GET' &&
+      (url === '/api/health' || url.startsWith('/api/health?') || url === '/health')
+    ) {
+      next();
+      return;
+    }
+    if (req.method === 'POST' && url.includes('/v1/me/field-app-bootstrap')) {
+      next();
+      return;
+    }
+
     const ip =
       req.ip ||
       req.headers['x-forwarded-for'] ||
@@ -35,7 +48,10 @@ async function bootstrap() {
     bucket.count += 1;
     buckets.set(ip, bucket);
 
-    if (bucket.count > MAX_REQUESTS) {
+    const maxRequests =
+      process.env.NODE_ENV === 'production' ? MAX_REQUESTS : Math.max(MAX_REQUESTS, 600);
+
+    if (bucket.count > maxRequests) {
       res.status(429).json({ message: 'Too many requests, please slow down.' });
       return;
     }

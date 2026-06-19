@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import * as DocumentPicker from 'expo-document-picker';
 
-import { ProducerAttestationsCard } from '@/components/compliance/ProducerAttestationsCard';
-import { DocumentListRow } from '@/components/evidence/DocumentListRow';
+import { ProducerDeclarationsSection } from '@/components/evidence/ProducerDeclarationsSection';
+import { ProducerSupportingFilesSection } from '@/components/evidence/ProducerSupportingFilesSection';
 import { DocumentPreviewModal } from '@/components/evidence/DocumentPreviewModal';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -15,6 +14,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
+import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
@@ -24,19 +24,24 @@ import {
 } from '@/features/compliance/loadPlotReadiness';
 import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import type { DocumentPreviewItem } from '@/features/evidence/documentPreview';
-import {
-  countPlotsNeedingLandDocuments,
-  summarizePlotDocumentsForOverview,
-} from '@/features/evidence/plotDocumentSummary';
+import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
+import { resolveProducerDocumentsNextStep } from '@/features/evidence/producerDocumentNextStep';
+import { summarizePlotDocumentsForOverview } from '@/features/evidence/plotDocumentSummary';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
+  deletePlotEvidenceItem,
   loadEvidenceForPlot,
   persistPlotEvidenceItem,
   type PlotEvidenceItem,
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
+import {
+  hasSyncedPlotForFarmer,
+  producerSupportingHasPendingSync,
+  uploadProducerSupportingEvidence,
+} from '@/features/evidence/producerSupportingEvidence';
 
 function chipBadgeVariant(
   variant: 'success' | 'warning' | 'info' | 'default',
@@ -48,14 +53,46 @@ export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { farmer, plots } = useAppState();
-  const { lang, t } = useLanguage();
+  const { farmer, plots, reloadFromDisk } = useAppState();
+  const { lang, t, openLanguagePicker } = useLanguage();
   const { isSignedIn } = useSignInSheet();
 
   const [profileDocs, setProfileDocs] = useState<PlotEvidenceItem[]>([]);
   const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
   const [plotReadiness, setPlotReadiness] = useState<PlotReadinessLoadResult[]>([]);
   const [previewItem, setPreviewItem] = useState<DocumentPreviewItem | null>(null);
+  const [attestationsEditRequest, setAttestationsEditRequest] = useState(0);
+  const [supportingExpanded, setSupportingExpanded] = useState(false);
+  const [hasSyncedPlot, setHasSyncedPlot] = useState(false);
+  const [pendingProducerSync, setPendingProducerSync] = useState(false);
+  const [supportingUploadNote, setSupportingUploadNote] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const attestationsAnchorRef = useRef<View>(null);
+  const supportingAnchorRef = useRef<View>(null);
+
+  const scrollToSection = useCallback((anchorRef: RefObject<View | null>, delayMs = 0) => {
+    const run = () => {
+      const anchor = anchorRef.current;
+      const scrollView = scrollRef.current;
+      if (!anchor || !scrollView) return;
+
+      anchor.measureInWindow((_ax, anchorPageY) => {
+        const scrollHost = scrollView as unknown as View;
+        scrollHost.measureInWindow((_sx: number, scrollPageY: number) => {
+          const topInset = 12;
+          const targetY = scrollYRef.current + (anchorPageY - scrollPageY) - topInset;
+          scrollView.scrollTo({ y: Math.max(0, targetY), animated: true });
+        });
+      });
+    };
+    const schedule = () => requestAnimationFrame(() => requestAnimationFrame(run));
+    if (delayMs > 0) {
+      setTimeout(schedule, delayMs);
+    } else {
+      schedule();
+    }
+  }, []);
 
   const refreshProfileDocs = useCallback(async () => {
     if (!farmer?.id) {
@@ -83,8 +120,60 @@ export default function DocumentsScreen() {
     void refreshProfileDocs();
   }, [refreshProfileDocs]);
 
+  const refreshSupportingSyncMeta = useCallback(async () => {
+    if (!farmer?.id) {
+      setHasSyncedPlot(false);
+      setPendingProducerSync(false);
+      return;
+    }
+    const [syncedPlot, pending] = await Promise.all([
+      hasSyncedPlotForFarmer({
+        farmerId: farmer.id,
+        localPlots: plots,
+        backendPlots,
+      }),
+      producerSupportingHasPendingSync(farmer.id),
+    ]);
+    setHasSyncedPlot(syncedPlot);
+    setPendingProducerSync(pending);
+  }, [backendPlots, farmer?.id, plots]);
+
+  const tryUploadSupportingDocs = useCallback(async () => {
+    if (!farmer?.id) return;
+    const outcome = await uploadProducerSupportingEvidence({
+      farmerId: farmer.id,
+      localPlots: plots,
+      backendPlots,
+    });
+    await refreshProfileDocs();
+    await refreshSupportingSyncMeta();
+    if (outcome.status === 'uploaded') {
+      setSupportingUploadNote(t('plot_documents_auto_upload_ok', { n: outcome.uploadedCount }));
+    } else if (outcome.status === 'queued') {
+      setSupportingUploadNote(t('plot_documents_auto_upload_queued'));
+    } else if (outcome.status === 'local_only' && outcome.reason === 'not_signed_in') {
+      setSupportingUploadNote(t('plot_documents_auto_upload_local_only'));
+    } else {
+      setSupportingUploadNote(null);
+    }
+  }, [backendPlots, farmer?.id, plots, refreshProfileDocs, refreshSupportingSyncMeta, t]);
+
+  useEffect(() => {
+    void refreshSupportingSyncMeta();
+  }, [refreshSupportingSyncMeta]);
+
   useFocusEffect(
     useCallback(() => {
+      void reloadFromDisk().then(async () => {
+        await refreshProfileDocs();
+        await refreshSupportingSyncMeta();
+        if (isSignedIn && farmer?.id) {
+          const alreadyQueued = await producerSupportingHasPendingSync(farmer.id);
+          if (!alreadyQueued) {
+            await tryUploadSupportingDocs();
+          }
+        }
+      });
       if (farmer?.id && isSignedIn) {
         fetchPlotsForFarmer(farmer.id)
           .then((rows) => setBackendPlots(rows ?? []))
@@ -92,42 +181,31 @@ export default function DocumentsScreen() {
       } else {
         setBackendPlots([]);
       }
-    }, [farmer?.id, isSignedIn]),
+    }, [farmer?.id, isSignedIn, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, tryUploadSupportingDocs]),
   );
 
   useEffect(() => {
     void refreshPlotReadiness();
   }, [refreshPlotReadiness]);
 
-  const counts = useMemo(() => {
-    const byKind = (items: PlotEvidenceItem[], kind: PlotEvidenceKind) =>
-      items.filter((i) => i.kind === kind).length;
-    return {
-      total: profileDocs.length,
-      fpic: byKind(profileDocs, 'fpic_repository'),
-      labor: byKind(profileDocs, 'labor_evidence'),
-    };
-  }, [profileDocs]);
-
   const producerAttestationsComplete = hasProducerAttestationsComplete(farmer);
 
-  const overviewStrip = useMemo(() => {
-    const attestationsLabel = producerAttestationsComplete
-      ? t('documents_overview_attestations_done')
-      : t('documents_overview_attestations_pending');
-    const producerDocsLabel =
-      counts.total > 0
-        ? t('documents_overview_producer_files', { n: counts.total })
-        : t('documents_overview_producer_files_none');
-    const needsLand = countPlotsNeedingLandDocuments(plotReadiness);
-    const plotsLabel =
-      plots.length === 0
-        ? t('documents_overview_no_plots')
-        : needsLand > 0
-          ? t('documents_overview_plots_need_land', { needs: needsLand, total: plots.length })
-          : t('documents_overview_plots_all_good', { total: plots.length });
-    return { attestationsLabel, producerDocsLabel, plotsLabel };
-  }, [counts.total, plotReadiness, plots.length, producerAttestationsComplete, t]);
+  const nextStep = useMemo(
+    () =>
+      resolveProducerDocumentsNextStep({
+        farmer,
+        profileDocCount: profileDocs.length,
+        plotReadiness,
+        plots,
+      }),
+    [farmer, profileDocs.length, plotReadiness, plots],
+  );
+
+  useEffect(() => {
+    if (nextStep.kind === 'producer_files_optional') {
+      setSupportingExpanded(true);
+    }
+  }, [nextStep.kind]);
 
   const sortedPlotRows = useMemo(() => {
     const readinessById = Object.fromEntries(plotReadiness.map((r) => [r.plotId, r]));
@@ -153,7 +231,7 @@ export default function DocumentsScreen() {
               },
               { titlePhotos: 0, evidenceCount: 0 },
             );
-        return { plot, readiness, status };
+        return { plot, status };
       })
       .sort((a, b) => a.status.priority - b.status.priority || a.plot.name.localeCompare(b.plot.name));
   }, [plots, plotReadiness]);
@@ -168,178 +246,254 @@ export default function DocumentsScreen() {
 
   const addProfileDoc = async (kind: PlotEvidenceKind, label: string) => {
     if (!farmer?.id) return;
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
-      copyToCacheDirectory: true,
-      multiple: false,
+    const picked = await pickEvidenceFile({
+      pick_source_title: t('evidence_pick_source_title'),
+      pick_source_body: t('evidence_pick_source_body'),
+      pick_browse_files: t('evidence_pick_browse_files'),
+      pick_failed_title: t('evidence_pick_failed_title'),
+      pick_failed_body: t('evidence_pick_failed_body'),
+      pick_photo_library: t('evidence_pick_photo_library'),
+      pick_take_photo: t('evidence_pick_take_photo'),
+      pick_cancel: t('cancel'),
+      perm_library_title: t('evidence_perm_library_title'),
+      perm_library_body: t('evidence_perm_library_body'),
+      perm_camera_title: t('evidence_perm_camera_title'),
+      perm_camera_body: t('evidence_perm_camera_body'),
     });
-    if (picked.canceled || !picked.assets?.[0]?.uri) return;
-    const asset = picked.assets[0];
+    if (!picked) return;
     try {
       await persistPlotEvidenceItem({
         plotId: producerEvidenceScopeId(farmer.id),
         kind,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? null,
-        label: asset.name ?? label,
+        uri: picked.uri,
+        mimeType: picked.mimeType,
+        label,
         takenAt: Date.now(),
       });
       await refreshProfileDocs();
+      if (isSignedIn) {
+        await tryUploadSupportingDocs();
+      } else {
+        setSupportingUploadNote(t('plot_documents_auto_upload_local_only'));
+        await refreshSupportingSyncMeta();
+      }
     } catch {
       Alert.alert(t('documents_save_failed_title'), t('documents_save_failed_body'));
     }
   };
 
-  const renderProducerDocs = (kind: PlotEvidenceKind, fallbackKey: string, badgeKey: string) =>
-    profileDocs
-      .filter((d) => d.kind === kind)
-      .map((d) => (
-        <DocumentListRow
-          key={d.id}
-          label={d.label ?? t(fallbackKey)}
-          dateLabel={new Date(d.takenAt).toLocaleDateString()}
-          badgeLabel={t(badgeKey)}
-          uri={d.uri}
-          mimeType={d.mimeType}
-          onPress={() => openPreview(d)}
-        />
-      ));
+  const deleteProfileDoc = (item: PlotEvidenceItem) => {
+    Alert.alert(t('documents_delete_supporting_title'), t('documents_delete_supporting_body'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('delete'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            await deletePlotEvidenceItem(item.id);
+            if (previewItem?.uri === item.uri) {
+              setPreviewItem(null);
+            }
+            await refreshProfileDocs();
+            await refreshSupportingSyncMeta();
+          })();
+        },
+      },
+    ]);
+  };
+
+  const handleNextStep = () => {
+    if (nextStep.kind === 'plot_land') {
+      router.push(`/plot/${encodeURIComponent(nextStep.plotId)}?sub=documents&from=documents`);
+      return;
+    }
+    if (nextStep.kind === 'attestations') {
+      if (!farmer?.id) {
+        Alert.alert(t('documents_no_farmer'), undefined, [
+          { text: t('documents_empty_plots_cta'), onPress: () => router.push('/(tabs)') },
+          { text: t('cancel'), style: 'cancel' },
+        ]);
+        return;
+      }
+      setAttestationsEditRequest((n) => n + 1);
+      scrollToSection(attestationsAnchorRef, 100);
+      return;
+    }
+    if (nextStep.kind === 'producer_files_optional') {
+      setSupportingExpanded(true);
+      scrollToSection(supportingAnchorRef, 100);
+    }
+  };
+
+  const heroTitle =
+    nextStep.kind === 'all_set'
+      ? t('documents_hero_all_set_title')
+      : nextStep.kind === 'attestations'
+        ? t('documents_hero_attestations_title')
+        : nextStep.kind === 'plot_land'
+          ? nextStep.plotCount === 1
+            ? t('documents_hero_plots_valid_land_title_one')
+            : t('documents_hero_plots_valid_land_title_other', { n: nextStep.plotCount })
+          : t('documents_hero_optional_files_title');
+
+  const heroBody =
+    nextStep.kind === 'all_set'
+      ? t('documents_hero_all_set_body', { n: plots.length })
+      : nextStep.kind === 'attestations'
+        ? t('documents_hero_attestations_body')
+        : nextStep.kind === 'plot_land'
+          ? t('documents_hero_plots_valid_land_body')
+          : t('documents_hero_optional_files_body');
+
+  const declarationsSection = farmer?.id ? (
+    <ProducerDeclarationsSection
+      sectionRef={attestationsAnchorRef}
+      openEditingRequest={attestationsEditRequest}
+    />
+  ) : null;
+
+  const plotLandPapersSection = (
+    <Card variant="elevated" style={styles.card}>
+      <View style={styles.rowHeader}>
+        <ThemedText type="defaultSemiBold">{t('documents_plot_land_papers_title')}</ThemedText>
+        <Badge variant="info" size="sm">
+          {plots.length}
+        </Badge>
+      </View>
+      <View style={{ gap: 10, marginTop: 10 }}>
+        {plots.length === 0 ? (
+          <View style={styles.emptyPlots}>
+            <ThemedText type="caption">{t('documents_no_plots')}</ThemedText>
+            <Button
+              title={t('documents_empty_plots_cta')}
+              variant="secondary"
+              onPress={() => router.push('/(tabs)')}
+            />
+          </View>
+        ) : (
+          sortedPlotRows.map(({ plot, status }) => (
+            <Pressable
+              key={plot.id}
+              onPress={() =>
+                router.push(`/plot/${encodeURIComponent(plot.id)}?sub=documents&from=documents`)
+              }
+            >
+              <Card variant="outlined" style={styles.rowCard}>
+                <View style={styles.rowHeader}>
+                  <ThemedText type="defaultSemiBold" style={styles.plotName} numberOfLines={2}>
+                    {plot.name}
+                  </ThemedText>
+                  <Badge variant={chipBadgeVariant(status.chipVariant)} size="sm">
+                    {t(status.chipKey, status.chipParams)}
+                  </Badge>
+                </View>
+              </Card>
+            </Pressable>
+          ))
+        )}
+      </View>
+    </Card>
+  );
 
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
-        colors={['#0A7F59', '#0B6F50']}
+        colors={[...HEADER_GRADIENT_COLORS]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
-        <View style={styles.headerRow}>
+        <View style={styles.headerRowCompact}>
           <Pressable onPress={() => router.back()} style={styles.backPill}>
             <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {t('back')}
             </ThemedText>
           </Pressable>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+          <View style={styles.headerTitleWrap}>
+            <ThemedText
+              numberOfLines={1}
+              type="defaultSemiBold"
+              style={{ color: colors.textInverse, textAlign: 'center' }}
+            >
               {t('documents_my_docs')}
             </ThemedText>
-            <ThemedText type="caption" style={{ color: colors.textInverse, opacity: 0.9 }}>
-              {t('documents_producer_scope_subtitle')}
-            </ThemedText>
           </View>
-          <View style={styles.langPill}>
-            <Ionicons name="language" size={16} color={colors.textInverse} />
+          <Pressable
+            onPress={openLanguagePicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('language_picker_title')}
+            style={styles.langPillCompact}
+          >
             <ThemedText type="caption" style={{ color: colors.textInverse }}>
               {String(lang).toUpperCase()}
             </ThemedText>
-          </View>
+          </Pressable>
         </View>
       </LinearGradient>
 
-      <ThemedScrollView contentContainerStyle={styles.container}>
-        <Card variant="elevated" style={styles.statusStrip}>
-          <ThemedText type="defaultSemiBold">{t('documents_overview_status_title')}</ThemedText>
-          <ThemedText type="caption" style={styles.stripLine}>
-            {t('documents_overview_producer_line', {
-              attestations: overviewStrip.attestationsLabel,
-              files: overviewStrip.producerDocsLabel,
-            })}
+      <ThemedScrollView
+        ref={scrollRef}
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          scrollYRef.current = event.nativeEvent.contentOffset.y;
+        }}
+        contentContainerStyle={styles.container}
+      >
+        <Card variant="elevated" style={styles.heroCard}>
+          <ThemedText type="defaultSemiBold">{heroTitle}</ThemedText>
+          <ThemedText type="caption" style={styles.heroBody}>
+            {heroBody}
           </ThemedText>
-          <ThemedText type="caption" style={styles.stripLine}>
-            {overviewStrip.plotsLabel}
+          {nextStep.kind !== 'all_set' ? (
+            <View style={{ marginTop: 12 }}>
+              <Button
+                title={
+                  nextStep.kind === 'plot_land'
+                    ? t('documents_hero_cta_plot')
+                    : nextStep.kind === 'attestations'
+                      ? t('documents_hero_cta_attestations')
+                      : t('documents_hero_cta_optional')
+                }
+                variant="primary"
+                onPress={handleNextStep}
+              />
+            </View>
+          ) : null}
+        </Card>
+
+        {producerAttestationsComplete ? (
+          <>
+            {plotLandPapersSection}
+            {declarationsSection}
+          </>
+        ) : (
+          <>
+            {declarationsSection}
+            {plotLandPapersSection}
+          </>
+        )}
+
+        {farmer?.id ? (
+          <ProducerSupportingFilesSection
+            profileDocs={profileDocs}
+            declarationsComplete={producerAttestationsComplete}
+            expanded={supportingExpanded}
+            onExpandedChange={setSupportingExpanded}
+            sectionRef={supportingAnchorRef}
+            isSignedIn={isSignedIn}
+            hasSyncedPlot={hasSyncedPlot}
+            pendingProducerSync={pendingProducerSync}
+            onPreview={openPreview}
+            onAddDoc={addProfileDoc}
+            onDeleteDoc={deleteProfileDoc}
+          />
+        ) : null}
+        {supportingUploadNote ? (
+          <ThemedText type="caption" style={{ color: '#4B5563' }}>
+            {supportingUploadNote}
           </ThemedText>
-        </Card>
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">{t('documents_producer_scope_title')}</ThemedText>
-            <Badge variant="default" size="sm">
-              {counts.total}
-            </Badge>
-          </View>
-          <ThemedText type="caption">{t('documents_producer_scope_body')}</ThemedText>
-        </Card>
-
-        <ProducerAttestationsCard />
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">{t('documents_fpic_section')}</ThemedText>
-            <Badge variant={counts.fpic > 0 ? 'info' : 'default'} size="sm">
-              {counts.fpic}
-            </Badge>
-          </View>
-          <ThemedText type="caption">{t('documents_fpic_body')}</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
-            <Button
-              title={t('documents_add_fpic')}
-              variant="secondary"
-              onPress={() => void addProfileDoc('fpic_repository', 'fpic_doc')}
-            />
-          </View>
-          <View style={styles.docList}>{renderProducerDocs('fpic_repository', 'documents_fpic_fallback', 'documents_badge_fpic')}</View>
-        </Card>
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">{t('documents_labor_section')}</ThemedText>
-            <Badge variant={counts.labor > 0 ? 'info' : 'default'} size="sm">
-              {counts.labor}
-            </Badge>
-          </View>
-          <ThemedText type="caption">{t('documents_labor_body')}</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
-            <Button
-              title={t('documents_add_labor')}
-              variant="secondary"
-              onPress={() => void addProfileDoc('labor_evidence', 'labor_doc')}
-            />
-          </View>
-          <View style={styles.docList}>{renderProducerDocs('labor_evidence', 'documents_labor_fallback', 'documents_badge_labor')}</View>
-        </Card>
-
-        <Card variant="elevated" style={styles.card}>
-          <View style={styles.rowHeader}>
-            <ThemedText type="defaultSemiBold">{t('documents_plot_scope_title')}</ThemedText>
-            <Badge variant="info" size="sm">
-              {plots.length}
-            </Badge>
-          </View>
-          <ThemedText type="caption">{t('documents_plot_scope_body')}</ThemedText>
-          <View style={{ gap: 10, marginTop: 10 }}>
-            {plots.length === 0 ? (
-              <View style={styles.emptyPlots}>
-                <ThemedText type="caption">{t('documents_no_plots')}</ThemedText>
-                <Button
-                  title={t('documents_empty_plots_cta')}
-                  variant="secondary"
-                  onPress={() => router.push('/(tabs)')}
-                />
-              </View>
-            ) : (
-              sortedPlotRows.map(({ plot, status }) => (
-                <Pressable
-                  key={plot.id}
-                  onPress={() =>
-                    router.push(`/plot/${encodeURIComponent(plot.id)}?sub=documents&from=documents`)
-                  }
-                >
-                  <Card variant="outlined" style={styles.rowCard}>
-                    <View style={styles.rowHeader}>
-                      <ThemedText type="defaultSemiBold" style={styles.plotName} numberOfLines={2}>
-                        {plot.name}
-                      </ThemedText>
-                      <Badge variant={chipBadgeVariant(status.chipVariant)} size="sm">
-                        {t(status.chipKey, status.chipParams)}
-                      </Badge>
-                    </View>
-                  </Card>
-                </Pressable>
-              ))
-            )}
-          </View>
-        </Card>
+        ) : null}
       </ThemedScrollView>
 
       <DocumentPreviewModal
@@ -354,7 +508,18 @@ export default function DocumentsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { paddingHorizontal: 16, paddingBottom: 6 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingTop: 6, paddingBottom: 4 },
+  headerRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
   backPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -364,7 +529,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     backgroundColor: 'rgba(255,255,255,0.16)',
   },
-  langPill: {
+  langPillCompact: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -372,10 +537,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 9999,
     backgroundColor: 'rgba(255,255,255,0.16)',
+    minWidth: 54,
+    justifyContent: 'center',
   },
   container: { padding: 16, paddingBottom: 32, gap: 12 },
-  statusStrip: { gap: 6 },
-  stripLine: { color: '#4B5563' },
+  heroCard: { gap: 6 },
+  heroBody: { color: '#4B5563', marginTop: 4 },
   card: { marginTop: 2 },
   rowCard: { padding: 12 },
   rowHeader: {
@@ -388,6 +555,5 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  docList: { gap: 8, marginTop: 10 },
   emptyPlots: { gap: 10 },
 });

@@ -13,6 +13,8 @@ import {
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
 import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
+import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
+import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
@@ -60,6 +62,14 @@ function clearInMemorySyncAuth(): void {
   currentPassword = '';
   currentRefreshToken = '';
   clearSessionCache();
+}
+
+function authRefreshFailureError(error: { message?: string }): Error {
+  const msg = String(error.message ?? '');
+  if (isLikelyNetworkError(msg)) {
+    return new Error('Network request failed');
+  }
+  return new Error('sign_in_session_expired');
 }
 
 function isLocalhostApi(url: string): boolean {
@@ -152,12 +162,16 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
         return null;
       }
       if (error) {
-        throw new Error('sign_in_session_expired');
+        throw authRefreshFailureError(error);
       }
       if (!data.session) {
         throw new Error('sign_in_session_expired');
       }
-      if (data.session.refresh_token && data.session.refresh_token !== currentRefreshToken) {
+      if (
+        currentAuthMethod === 'oauth' &&
+        data.session.refresh_token &&
+        data.session.refresh_token !== currentRefreshToken
+      ) {
         if (!syncAuthStillActive(revisionAtStart) || (await isSyncAuthDismissedOnDevice())) {
           return null;
         }
@@ -210,19 +224,18 @@ const DEFAULT_ACCESS_TOKEN_TIMEOUT_MS = 12_000;
 export async function getAccessTokenFromSupabaseWithTimeout(
   timeoutMs = DEFAULT_ACCESS_TOKEN_TIMEOUT_MS,
 ): Promise<string | null> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       getAccessTokenFromSupabase(),
       new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          const err = new Error('Network request failed');
-          err.name = 'AbortError';
-          reject(err);
+        timeoutId = setTimeout(() => {
+          reject(new Error('Network request failed'));
         }, timeoutMs);
       }),
     ]);
-  } catch {
-    return null;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 
@@ -328,6 +341,7 @@ export async function saveAndApplySyncAuth(email: string, password: string): Pro
   return runAuthStateMutation(async () => {
     syncAuthDismissedByUser = false;
     await activateSyncAuthOnSignIn();
+    authUiGeneration += 1;
     const e = email.trim();
     await saveSyncAuthCredentials(e, password);
     applyPasswordAuth(e, password);
@@ -352,6 +366,7 @@ export async function saveAndApplyOAuthSyncAuth(
   return runAuthStateMutation(async () => {
     syncAuthDismissedByUser = false;
     await activateSyncAuthOnSignIn();
+    authUiGeneration += 1;
     const e = email.trim();
     await saveOAuthSyncAuthCredentials(e, refreshToken);
     applyOAuthAuth(e, refreshToken, accessToken, expiresAt);
@@ -369,6 +384,7 @@ export async function clearPersistedSyncAuth(): Promise<void> {
     } finally {
       supabaseClient = null;
     }
+    clearOAuthCallbackDedupState();
   });
 }
 
@@ -409,6 +425,55 @@ export async function getAuthenticatedSupabaseClient(): Promise<SupabaseClient |
       detectSessionInUrl: false,
     },
   });
+}
+
+/**
+ * Shared Supabase client with an in-memory auth session — required for auth mutations
+ * such as `updateUser` (Bearer-only clients are not enough).
+ */
+export async function getAuthenticatedSupabaseClientWithSession(): Promise<SupabaseClient | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return null;
+  }
+  if (!hasSyncAuthSession()) {
+    return null;
+  }
+
+  const supabase = getSupabaseAuthClient();
+
+  if (currentAuthMethod === 'oauth' && currentRefreshToken) {
+    let accessToken: string | null;
+    try {
+      accessToken = await getAccessTokenFromSupabase();
+    } catch {
+      return null;
+    }
+    if (!accessToken) {
+      return null;
+    }
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: currentRefreshToken,
+    });
+    if (error) {
+      return null;
+    }
+    return supabase;
+  }
+
+  if (currentAuthMethod === 'password' && currentEmail && currentPassword) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: currentEmail,
+      password: currentPassword,
+    });
+    if (error || !data.session) {
+      return null;
+    }
+    applySessionToCache(data.session);
+    return supabase;
+  }
+
+  return null;
 }
 
 /** Supabase Auth user for the current sync session (JWT claims including app_metadata). */

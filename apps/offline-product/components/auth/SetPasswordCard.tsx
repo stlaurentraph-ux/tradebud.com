@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Brand } from '@/constants/theme';
 import {
   getLinkedOAuthProviders,
+  hasStoredPasswordCredential,
   setAccountPasswordForCurrentUser,
   shouldOfferChangePassword,
   shouldOfferSetPassword,
@@ -24,6 +25,7 @@ import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import {
   getSyncAuthMethod,
   getSyncAuthUser,
+  hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
 import type { TranslateFn } from '@/features/i18n/translate';
 
@@ -67,11 +69,29 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
     }
     setLoading(true);
     try {
+      const hasPasswordCredential = await hasStoredPasswordCredential();
+      if (hasPasswordCredential && getSyncAuthMethod() !== 'password') {
+        await hydrateSyncAuthFromSettings();
+      }
       const user = await getSyncAuthUser();
       const method = getSyncAuthMethod();
       setOauthProviders(getLinkedOAuthProviders(user));
-      setOfferSet(shouldOfferSetPassword({ signedIn: true, authMethod: method, user }));
-      setOfferChange(shouldOfferChangePassword({ signedIn: true, user }));
+      setOfferSet(
+        shouldOfferSetPassword({
+          signedIn: true,
+          authMethod: method,
+          user,
+          hasPasswordCredential,
+        }),
+      );
+      setOfferChange(
+        shouldOfferChangePassword({
+          signedIn: true,
+          user,
+          authMethod: method,
+          hasPasswordCredential,
+        }),
+      );
     } finally {
       setLoading(false);
     }
@@ -115,6 +135,10 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
       setOfferChange(true);
       onPasswordSaved?.();
       await refresh();
+    } catch (e) {
+      setMessage(
+        formatSignInErrorMessage(t, e instanceof Error ? e.message : 'sign_in_failed'),
+      );
     } finally {
       setBusy(false);
     }
@@ -127,11 +151,20 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
   return (
     <>
       <View style={styles.wrap}>
-        <ThemedText type="caption" style={styles.body}>
-          {mode === 'set'
-            ? t('settings_password_set_body', { providers: providerLabel })
-            : t('settings_password_change_body')}
-        </ThemedText>
+        {mode === 'change' ? (
+          <>
+            <ThemedText type="defaultSemiBold" style={styles.statusTitle}>
+              {t('settings_password_set_status')}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.body}>
+              {t('settings_password_change_body')}
+            </ThemedText>
+          </>
+        ) : (
+          <ThemedText type="caption" style={styles.body}>
+            {t('settings_password_set_body', { providers: providerLabel })}
+          </ThemedText>
+        )}
         <Pressable
           onPress={() => {
             setMessage(null);
@@ -207,6 +240,9 @@ const styles = StyleSheet.create({
   body: {
     opacity: 0.88,
     lineHeight: 18,
+  },
+  statusTitle: {
+    color: '#0A7F59',
   },
   link: {
     color: Brand.primary,

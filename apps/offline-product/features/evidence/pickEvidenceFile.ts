@@ -43,9 +43,9 @@ type PickSource = 'files' | 'library' | 'camera';
 function offerPickSource(messages: PickMessages): Promise<PickSource | null> {
   const options = [
     messages.pick_cancel,
-    messages.pick_browse_files,
-    messages.pick_photo_library,
     messages.pick_take_photo,
+    messages.pick_photo_library,
+    messages.pick_browse_files,
   ];
 
   if (Platform.OS === 'ios') {
@@ -58,9 +58,9 @@ function offerPickSource(messages: PickMessages): Promise<PickSource | null> {
           cancelButtonIndex: 0,
         },
         (index) => {
-          if (index === 1) resolve('files');
+          if (index === 1) resolve('camera');
           else if (index === 2) resolve('library');
-          else if (index === 3) resolve('camera');
+          else if (index === 3) resolve('files');
           else resolve(null);
         },
       );
@@ -70,9 +70,9 @@ function offerPickSource(messages: PickMessages): Promise<PickSource | null> {
   return new Promise((resolve) => {
     Alert.alert(messages.pick_source_title, messages.pick_source_body, [
       { text: messages.pick_cancel, style: 'cancel', onPress: () => resolve(null) },
-      { text: messages.pick_browse_files, onPress: () => resolve('files') },
-      { text: messages.pick_photo_library, onPress: () => resolve('library') },
       { text: messages.pick_take_photo, onPress: () => resolve('camera') },
+      { text: messages.pick_photo_library, onPress: () => resolve('library') },
+      { text: messages.pick_browse_files, onPress: () => resolve('files') },
     ]);
   });
 }

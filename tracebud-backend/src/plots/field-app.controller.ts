@@ -62,6 +62,7 @@ export class FieldAppController {
         })
         .catch(() => undefined);
     }
-    return { ok: true, farmer_id: farmerId };
+    const ownedFarmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
+    return { ok: true, farmer_id: farmerId, owned_farmer_ids: ownedFarmerIds };
   }
 }

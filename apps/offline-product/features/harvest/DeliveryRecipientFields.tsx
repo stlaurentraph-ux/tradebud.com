@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -102,10 +102,12 @@ export function DeliveryRecipientFields({ t, value, onChange }: DeliveryRecipien
           })}
         </View>
       ) : (
-        <Alert
-          title={t('delivery_recipient_no_buyers_title')}
-          message={t('delivery_recipient_no_buyers_body')}
-        />
+        <Card variant="outlined" style={styles.noBuyersCard}>
+          <ThemedText type="defaultSemiBold">{t('delivery_recipient_no_buyers_title')}</ThemedText>
+          <ThemedText type="caption" style={styles.hint}>
+            {t('delivery_recipient_no_buyers_body')}
+          </ThemedText>
+        </Card>
       )}
 
       <View style={styles.gapSm}>
@@ -177,6 +179,7 @@ const styles = StyleSheet.create({
   hint: { color: '#6B7280' },
   optionHint: { color: '#6B7280', marginTop: 2 },
   optionCard: { padding: 10, borderRadius: 12 },
+  noBuyersCard: { padding: 12, borderRadius: 12, gap: 4 },
   optionCardSelected: { borderColor: '#0A7F59', backgroundColor: '#F0FAF5' },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   emailInput: {

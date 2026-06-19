@@ -1,7 +1,11 @@
+import { normalizeEvidenceContentType, isLocalEvidenceUri } from './evidenceContentType';
+
 import {
   getAuthenticatedSupabaseClient,
   getAuthenticatedSupabaseUserId,
 } from '@/features/api/syncAuthSession';
+
+export { isLocalEvidenceUri, normalizeEvidenceContentType } from './evidenceContentType';
 
 const EVIDENCE_BUCKET = process.env.EXPO_PUBLIC_EVIDENCE_STORAGE_BUCKET ?? 'plot-evidence';
 
@@ -11,21 +15,6 @@ const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
 export type EvidenceUploadResult =
   | { ok: true; remoteUrl: string; storagePath: string }
   | { ok: false; reason: 'not_configured' | 'not_signed_in' | 'not_local_file' | 'read_failed' | 'upload_failed'; message?: string };
-
-function isLocalEvidenceUri(uri: string): boolean {
-  if (uri.startsWith('text:')) return false;
-  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
-  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
-}
-
-function guessContentType(mimeType: string | null, label: string | null): string {
-  if (mimeType && mimeType.length > 0) return mimeType;
-  const name = (label ?? '').toLowerCase();
-  if (name.endsWith('.pdf')) return 'application/pdf';
-  if (name.endsWith('.png')) return 'image/png';
-  if (name.endsWith('.webp')) return 'image/webp';
-  return 'image/jpeg';
-}
 
 /**
  * Upload a local evidence file to Supabase Storage (`plot-evidence` bucket).
@@ -69,7 +58,7 @@ export async function uploadEvidenceFileToStorage(params: {
     .replace(/[^a-zA-Z0-9._-]+/g, '_')
     .slice(0, 80);
   const storagePath = `${authUserId}/${params.plotId}/${params.kind}/${Date.now()}-${safeName}`;
-  const contentType = guessContentType(params.mimeType, params.label);
+  const contentType = normalizeEvidenceContentType(params.mimeType, params.label, params.localUri);
 
   try {
     const { error } = await supabase.storage.from(EVIDENCE_BUCKET).upload(storagePath, body, {

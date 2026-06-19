@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getLinkedOAuthProviders,
+  shouldOfferChangePassword,
   shouldOfferSetPassword,
   userHasEmailPasswordIdentity,
   validateAccountPassword,
@@ -32,6 +33,45 @@ describe('accountPassword', () => {
         signedIn: true,
         authMethod: 'oauth',
         user: { identities: [{ provider: 'google' }, { provider: 'email' }] } as never,
+      }),
+    ).toBe(false);
+  });
+
+  it('does not offer set password when oauth user already saved a password session', () => {
+    expect(
+      shouldOfferSetPassword({
+        signedIn: true,
+        authMethod: 'password',
+        user: { identities: [{ provider: 'google' }], email: 'farmer@example.com' } as never,
+      }),
+    ).toBe(false);
+  });
+
+  it('offers change password when password auth is active', () => {
+    expect(
+      shouldOfferChangePassword({
+        signedIn: true,
+        authMethod: 'password',
+        user: { email: 'farmer@example.com', identities: [{ provider: 'google' }] } as never,
+      }),
+    ).toBe(true);
+  });
+
+  it('offers change password when password credential is stored', () => {
+    expect(
+      shouldOfferChangePassword({
+        signedIn: true,
+        authMethod: 'oauth',
+        hasPasswordCredential: true,
+        user: { identities: [{ provider: 'google' }] } as never,
+      }),
+    ).toBe(true);
+    expect(
+      shouldOfferSetPassword({
+        signedIn: true,
+        authMethod: 'oauth',
+        hasPasswordCredential: true,
+        user: { identities: [{ provider: 'google' }] } as never,
       }),
     ).toBe(false);
   });

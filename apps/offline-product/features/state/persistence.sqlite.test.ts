@@ -63,4 +63,34 @@ describe('persistence.native sqlite integration', () => {
     expect(loaded[0]?.label).toBe('Land title scan');
     expect(loaded[0]?.mimeType).toBe('application/pdf');
   });
+
+  it('deletePlotTitlePhoto removes a saved title photo', async () => {
+    const { persistPlotTitlePhoto, loadTitlePhotosForPlot, deletePlotTitlePhoto } = await import(
+      './persistence.native'
+    );
+    const plotId = 'plot-test-delete-title';
+    await persistPlotTitlePhoto({ plotId, uri: 'file:///title.jpg', takenAt: 1 });
+    const [photo] = await loadTitlePhotosForPlot(plotId);
+    expect(photo?.id).toBeDefined();
+    await deletePlotTitlePhoto(photo!.id);
+    expect(await loadTitlePhotosForPlot(plotId)).toHaveLength(0);
+  });
+
+  it('deletePlotEvidenceItem removes a saved evidence row', async () => {
+    const { persistPlotEvidenceItem, loadEvidenceForPlot, deletePlotEvidenceItem } = await import(
+      './persistence.native'
+    );
+    const plotId = 'plot-test-delete-evidence';
+    await persistPlotEvidenceItem({
+      plotId,
+      kind: 'tenure_evidence',
+      uri: 'file:///tenure.pdf',
+      mimeType: 'application/pdf',
+      label: 'Lease',
+      takenAt: 1,
+    });
+    const [item] = await loadEvidenceForPlot(plotId, 'tenure_evidence');
+    await deletePlotEvidenceItem(item!.id);
+    expect(await loadEvidenceForPlot(plotId, 'tenure_evidence')).toHaveLength(0);
+  });
 });

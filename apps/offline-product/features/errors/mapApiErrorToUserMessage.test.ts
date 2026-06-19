@@ -47,10 +47,28 @@ describe('mapPlotUploadErrorMessage', () => {
 });
 
 describe('mapSyncActionErrorMessage', () => {
-  it('maps technical queue errors to generic retry copy', () => {
+  it('maps network failures in settings', () => {
+    expect(mapSyncActionErrorMessage('TypeError: Network request failed', t, 'settings')).toBe(
+      'settings_sync_reach_failed',
+    );
+  });
+
+  it('maps technical queue errors to farmer copy', () => {
     expect(mapSyncActionErrorMessage('Internal Server Error', t)).toBe('sync_action_failed_generic');
     expect(mapSyncActionErrorMessage('Internal Server Error', t, 'settings')).toBe(
-      'sync_action_failed_generic_settings',
+      'settings_sync_online_server_busy',
+    );
+  });
+
+  it('keeps farmer-readable queue errors', () => {
+    expect(
+      mapSyncActionErrorMessage('Plot not on server — upload from My Plots first.', t, 'settings'),
+    ).toBe('Plot not on server — upload from My Plots first.');
+  });
+
+  it('maps auth failures to sign-in guidance', () => {
+    expect(mapSyncActionErrorMessage('401 Unauthorized', t, 'settings')).toBe(
+      'sync_session_expired_short',
     );
   });
 });

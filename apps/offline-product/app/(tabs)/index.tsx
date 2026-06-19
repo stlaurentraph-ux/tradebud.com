@@ -17,6 +17,7 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   loadPendingSyncActions,
+  loadPlotServerLinks,
 } from '@/features/state/persistence';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
@@ -43,6 +44,7 @@ export default function HomeScreen() {
 
   const [pendingCount, setPendingCount] = useState(0);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
+  const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
   const [loadingBackend, setLoadingBackend] = useState(false);
   const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
@@ -78,6 +80,9 @@ export default function HomeScreen() {
       loadPendingSyncActions()
         .then((rows) => setPendingCount(rows.length))
         .catch(() => undefined);
+      loadPlotServerLinks()
+        .then((links) => setPlotServerLinks(links))
+        .catch(() => undefined);
       if (farmer?.id && isSignedIn) {
         fetchPlotsForFarmer(farmer.id)
           .then((rows) => setBackendPlots(rows ?? []))
@@ -89,8 +94,8 @@ export default function HomeScreen() {
 
   const unsyncedPlotCount = useMemo(() => {
     if (!isSignedIn || plots.length === 0) return 0;
-    return listUnsyncedLocalPlots(plots, backendPlots).length;
-  }, [plots, backendPlots, isSignedIn]);
+    return listUnsyncedLocalPlots(plots, backendPlots, plotServerLinks).length;
+  }, [plots, backendPlots, plotServerLinks, isSignedIn]);
 
   const totalPendingSync = pendingCount + unsyncedPlotCount;
   const needsBackupAttention = isSignedIn && totalPendingSync > 0;
@@ -140,20 +145,14 @@ export default function HomeScreen() {
     return 'register_plot';
   }, [plots.length, farmer]);
   const homeTiles = useMemo(() => {
-    const openPlotSection = (sub: 'documents' | 'voucher') => {
+    const openPlotSection = (sub: 'documents') => {
       if (sub === 'documents') {
         router.push('/documents');
-        return;
       }
-      if (plots.length === 0) {
-        router.navigate('/(tabs)/harvests');
-        return;
-      }
-      if (plots.length === 1) {
-        router.push(`/plot/${encodeURIComponent(plots[0]!.id)}?sub=${sub}`);
-        return;
-      }
-      router.navigate(`/(tabs)/explore?focus=${sub}`);
+    };
+
+    const openReceipts = () => {
+      router.navigate('/(tabs)/harvests?focus=receipts');
     };
 
     const all = [
@@ -174,7 +173,7 @@ export default function HomeScreen() {
         icon: 'scale-outline' as const,
         tint: '#F8EDC8',
         iconColor: '#B45A00',
-        onPress: () => router.navigate('/(tabs)/harvests'),
+        onPress: () => router.navigate('/(tabs)/harvests?focus=select'),
         showWhenEmpty: true,
       },
       {
@@ -194,7 +193,7 @@ export default function HomeScreen() {
         icon: 'qr-code-outline' as const,
         tint: '#F0E3FF',
         iconColor: '#7A1FD1',
-        onPress: () => openPlotSection('voucher'),
+        onPress: openReceipts,
         showWhenEmpty: false,
       },
     ];

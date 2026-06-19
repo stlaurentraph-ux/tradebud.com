@@ -26,6 +26,8 @@ export const MIN_POLYGON_AREA_HA = 0.01;
 export const MIN_POLYGON_COMPACTNESS = 0.02;
 export const MIN_PARCEL_OVERLAP_HA = 0.01;
 export const MIN_PARCEL_OVERLAP_RATIO = 0.05;
+/** Two point plots closer than this are treated as duplicate parcels. */
+export const MIN_POINT_PLOT_SEPARATION_M = 25;
 
 type XY = { x: number; y: number };
 
@@ -221,9 +223,55 @@ function estimateIntersectionAreaM2(ringA: XY[], ringB: XY[]): number {
   return insideCount * dx * dy;
 }
 
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6_371_000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function latLngToXY(point: LatLng): XY {
+  const ring = projectRing([point]);
+  return ring[0] ?? { x: 0, y: 0 };
+}
+
+function pointInsidePolygon(point: LatLng, polygonPoints: LatLng[]): boolean {
+  if (polygonPoints.length < 3) return false;
+  return pointInRing(latLngToXY(point), projectRing(polygonPoints));
+}
+
+function pushOverlapIssue(
+  overlaps: Array<{
+    plotId: string;
+    plotName: string;
+    overlapHa: number;
+    smallerAreaHa: number;
+  }>,
+  params: {
+    plotId: string;
+    plotName: string;
+    overlapHa: number;
+    candidateAreaHa: number;
+    otherAreaHa: number;
+  },
+) {
+  const existing = overlaps.find((row) => row.plotId === params.plotId);
+  if (existing) return;
+  overlaps.push({
+    plotId: params.plotId,
+    plotName: params.plotName,
+    overlapHa: params.overlapHa,
+    smallerAreaHa: Math.min(params.candidateAreaHa, params.otherAreaHa),
+  });
+}
+
 export function findLocalPlotOverlaps(params: {
   candidatePoints: LatLng[];
   candidateAreaHa: number;
+  candidateKind?: 'point' | 'polygon';
   otherPlots: LocalPlotPolygonRef[];
   excludePlotId?: string;
 }): Array<{
@@ -232,8 +280,15 @@ export function findLocalPlotOverlaps(params: {
   overlapHa: number;
   smallerAreaHa: number;
 }> {
+  const candidateKind =
+    params.candidateKind ?? (params.candidatePoints.length < 3 ? 'point' : 'polygon');
   const candidateRing = projectRing(params.candidatePoints);
-  const candidateAreaHa = params.candidateAreaHa > 0 ? params.candidateAreaHa : polygonAreaM2(candidateRing) / 10_000;
+  const candidateAreaHa =
+    params.candidateAreaHa > 0
+      ? params.candidateAreaHa
+      : candidateKind === 'polygon' && candidateRing.length >= 3
+        ? polygonAreaM2(candidateRing) / 10_000
+        : 0;
   const overlaps: Array<{
     plotId: string;
     plotName: string;
@@ -241,9 +296,77 @@ export function findLocalPlotOverlaps(params: {
     smallerAreaHa: number;
   }> = [];
 
+  if (candidateKind === 'point' && params.candidatePoints.length > 0) {
+    const candidatePoint = params.candidatePoints[params.candidatePoints.length - 1];
+    for (const plot of params.otherPlots) {
+      if (params.excludePlotId && plot.id === params.excludePlotId) continue;
+      if (plot.points.length === 0) continue;
+
+      const otherAreaHa =
+        plot.areaHectares != null && plot.areaHectares > 0
+          ? plot.areaHectares
+          : plot.points.length >= 3
+            ? polygonAreaM2(projectRing(plot.points)) / 10_000
+            : 0;
+
+      if (plot.points.length >= 3) {
+        if (pointInsidePolygon(candidatePoint, plot.points)) {
+          pushOverlapIssue(overlaps, {
+            plotId: plot.id,
+            plotName: plot.name,
+            overlapHa: Math.max(candidateAreaHa, otherAreaHa, MIN_PARCEL_OVERLAP_HA),
+            candidateAreaHa,
+            otherAreaHa,
+          });
+        }
+        continue;
+      }
+
+      const otherPoint = plot.points[plot.points.length - 1];
+      const distanceM = haversineMeters(
+        candidatePoint.latitude,
+        candidatePoint.longitude,
+        otherPoint.latitude,
+        otherPoint.longitude,
+      );
+      if (distanceM < MIN_POINT_PLOT_SEPARATION_M) {
+        pushOverlapIssue(overlaps, {
+          plotId: plot.id,
+          plotName: plot.name,
+          overlapHa: MIN_PARCEL_OVERLAP_HA,
+          candidateAreaHa,
+          otherAreaHa,
+        });
+      }
+    }
+
+    return overlaps;
+  }
+
   for (const plot of params.otherPlots) {
     if (params.excludePlotId && plot.id === params.excludePlotId) continue;
-    if (plot.points.length < 3) continue;
+    if (plot.points.length === 0) continue;
+
+    const otherAreaHa =
+      plot.areaHectares != null && plot.areaHectares > 0
+        ? plot.areaHectares
+        : plot.points.length >= 3
+          ? polygonAreaM2(projectRing(plot.points)) / 10_000
+          : 0;
+
+    if (plot.points.length < 3) {
+      const otherPoint = plot.points[plot.points.length - 1];
+      if (pointInsidePolygon(otherPoint, params.candidatePoints)) {
+        pushOverlapIssue(overlaps, {
+          plotId: plot.id,
+          plotName: plot.name,
+          overlapHa: Math.max(candidateAreaHa, otherAreaHa, MIN_PARCEL_OVERLAP_HA),
+          candidateAreaHa,
+          otherAreaHa,
+        });
+      }
+      continue;
+    }
 
     const otherRing = projectRing(plot.points);
     if (!ringsMayOverlap(candidateRing, otherRing)) continue;
@@ -251,15 +374,12 @@ export function findLocalPlotOverlaps(params: {
     const overlapM2 = estimateIntersectionAreaM2(candidateRing, otherRing);
     if (overlapM2 <= 0) continue;
 
-    const otherAreaHa =
-      plot.areaHectares != null && plot.areaHectares > 0
-        ? plot.areaHectares
-        : polygonAreaM2(otherRing) / 10_000;
-    overlaps.push({
+    pushOverlapIssue(overlaps, {
       plotId: plot.id,
       plotName: plot.name,
       overlapHa: overlapM2 / 10_000,
-      smallerAreaHa: Math.min(candidateAreaHa, otherAreaHa),
+      candidateAreaHa,
+      otherAreaHa,
     });
   }
 
@@ -309,13 +429,14 @@ function buildLocalPolygonQualityIssues(params: {
   areaHa: number;
   overlaps: ReturnType<typeof findLocalPlotOverlaps>;
   sliverSeverity: LocalGeometryQualitySeverity;
+  checkSelfIntersection?: boolean;
 }): LocalGeometryQualityIssue[] {
   const ring = projectRing(params.points);
   const perimeterM = polygonPerimeterM(ring);
   const compactness = polygonCompactness(params.areaHa, perimeterM);
   const issues: LocalGeometryQualityIssue[] = [];
 
-  if (hasSelfIntersection(params.points)) {
+  if (params.checkSelfIntersection !== false && hasSelfIntersection(params.points)) {
     const details = { kind: 'self_intersection' as const };
     issues.push({
       code: 'GEO-104',
@@ -375,7 +496,22 @@ function buildLocalPolygonQualityIssues(params: {
   return issues;
 }
 
-export function assessLocalPolygonQuality(params: {
+export function localPlotRefsForGeometry(
+  plots: Array<Pick<LocalPlotPolygonRef, 'id' | 'name' | 'points' | 'areaHectares'>>,
+  excludePlotId?: string,
+): LocalPlotPolygonRef[] {
+  return plots
+    .filter((plot) => plot.id !== excludePlotId && plot.points.length > 0)
+    .map((plot) => ({
+      id: plot.id,
+      name: plot.name,
+      points: plot.points,
+      areaHectares: plot.areaHectares,
+    }));
+}
+
+export function assessPlotGeometryQuality(params: {
+  kind: 'point' | 'polygon';
   points: LatLng[];
   areaHa: number;
   otherPlots: LocalPlotPolygonRef[];
@@ -390,19 +526,43 @@ export function assessLocalPolygonQuality(params: {
   const overlaps = findLocalPlotOverlaps({
     candidatePoints: params.points,
     candidateAreaHa: params.areaHa,
+    candidateKind: params.kind,
     otherPlots: params.otherPlots,
     excludePlotId: params.excludePlotId,
   });
   const sliverSeverity: LocalGeometryQualitySeverity = params.phase === 'upload' ? 'error' : 'warning';
   const allIssues = buildLocalPolygonQualityIssues({
-    points: params.points,
+    points: params.kind === 'polygon' ? params.points : [],
     areaHa: params.areaHa,
     overlaps,
     sliverSeverity,
+    checkSelfIntersection: params.kind === 'polygon',
   });
   const blockingIssues = allIssues.filter((issue) => issue.severity === 'error');
   const warnings = allIssues.filter((issue) => issue.severity === 'warning');
   return { blockingIssues, warnings, allIssues };
+}
+
+export function assessLocalPolygonQuality(params: {
+  points: LatLng[];
+  areaHa: number;
+  otherPlots: LocalPlotPolygonRef[];
+  excludePlotId?: string;
+  /** Sliver / micro-area issues are warnings on save, errors on upload. */
+  phase: 'save' | 'upload';
+}): {
+  blockingIssues: LocalGeometryQualityIssue[];
+  warnings: LocalGeometryQualityIssue[];
+  allIssues: LocalGeometryQualityIssue[];
+} {
+  return assessPlotGeometryQuality({
+    kind: 'polygon',
+    points: params.points,
+    areaHa: params.areaHa,
+    otherPlots: params.otherPlots,
+    excludePlotId: params.excludePlotId,
+    phase: params.phase,
+  });
 }
 
 export function localPolygonQualityMessage(

@@ -103,7 +103,13 @@ export class HarvestController {
       if (!userId) {
         throw new ForbiddenException('Missing authenticated user');
       }
-      const owned = await this.harvestService.isFarmerOwnedByUser(dto.farmerId, userId);
+      let owned = await this.harvestService.isFarmerOwnedByUser(dto.farmerId, userId);
+      if (!owned) {
+        const plotFarmerId = await this.harvestService.getPlotFarmerId(dto.plotId);
+        if (plotFarmerId) {
+          owned = await this.harvestService.isFarmerOwnedByUser(plotFarmerId, userId);
+        }
+      }
       if (!owned) {
         throw new ForbiddenException('Farmer scope violation');
       }

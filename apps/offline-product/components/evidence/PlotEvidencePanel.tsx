@@ -37,6 +37,8 @@ type PlotEvidencePanelProps = {
   producerAttestationsComplete?: boolean;
   /** Shared optional audit note (land title + evidence uploads). */
   auditNote?: string;
+  /** When true, only overlap-driven sections (permit / plot FPIC) are shown. */
+  overlapOnly?: boolean;
   onSyncMessage?: (message: string | null, tone?: 'success' | 'info' | 'error') => void;
   onSyncComplete?: () => void | Promise<void>;
 };
@@ -83,10 +85,13 @@ export function PlotEvidencePanel({
   producerFpicCount = 0,
   producerAttestationsComplete = false,
   auditNote = '',
+  overlapOnly = false,
   onSyncMessage,
   onSyncComplete,
 }: PlotEvidencePanelProps) {
   const { t } = useLanguage();
+  const [overlapSyncMessage, setOverlapSyncMessage] = useState<string | null>(null);
+  const [overlapSyncTone, setOverlapSyncTone] = useState<'success' | 'error' | 'info'>('info');
   const [fpicSignerName, setFpicSignerName] = useState('');
   const [previewItem, setPreviewItem] = useState<{
     uri: string;
@@ -117,7 +122,12 @@ export function PlotEvidencePanel({
       default:
         return;
     }
-    onSyncMessage?.(message, tone);
+    if (overlapOnly) {
+      setOverlapSyncMessage(message);
+      setOverlapSyncTone(tone);
+    } else {
+      onSyncMessage?.(message, tone);
+    }
     if (showAlert) {
       Alert.alert(t('evidence_sync_title'), message);
     }
@@ -125,7 +135,11 @@ export function PlotEvidencePanel({
 
   const runEvidenceUpload = async (items: PlotEvidenceItem[], showAlert = false) => {
     if (items.length === 0) return;
-    onSyncMessage?.(null);
+    if (overlapOnly) {
+      setOverlapSyncMessage(null);
+    } else {
+      onSyncMessage?.(null);
+    }
     const outcome = await autoUploadPlotEvidenceDocuments({
         localPlotId: scopeId,
         serverPlotId: serverPlotId ?? null,
@@ -152,6 +166,10 @@ export function PlotEvidencePanel({
   const needsPermit = overlapFlags?.sinaph === true;
   const fpicSatisfied =
     producerFpicCount > 0 || counts.fpic > 0 || producerAttestationsComplete;
+
+  if (overlapOnly && !needsFpic && !needsPermit) {
+    return null;
+  }
 
   const refresh = async () => {
     const updated = await loadEvidenceForPlot(scopeId);
@@ -278,7 +296,24 @@ export function PlotEvidencePanel({
 
   return (
     <View style={styles.wrap}>
-      {(needsFpic && !fpicSatisfied) || (needsPermit && counts.permit === 0) || counts.tenure === 0 ? (
+      {overlapOnly && overlapSyncMessage ? (
+        <ThemedText
+          type="caption"
+          style={[
+            styles.overlapSyncFeedback,
+            overlapSyncTone === 'success'
+              ? styles.overlapSyncSuccess
+              : overlapSyncTone === 'error'
+                ? styles.overlapSyncError
+                : styles.overlapSyncInfo,
+          ]}
+        >
+          {overlapSyncMessage}
+        </ThemedText>
+      ) : null}
+
+      {!overlapOnly &&
+      ((needsFpic && !fpicSatisfied) || (needsPermit && counts.permit === 0) || counts.tenure === 0) ? (
         <Card variant="outlined" style={styles.promptCard}>
           <ThemedText type="defaultSemiBold">{t('evidence_upload_prompt_title')}</ThemedText>
           <ThemedText type="caption" style={styles.promptBody}>
@@ -287,7 +322,7 @@ export function PlotEvidencePanel({
         </Card>
       ) : null}
 
-      {needsFpic && producerFpicCount === 0 && !producerAttestationsComplete ? (
+      {!overlapOnly && needsFpic && producerFpicCount === 0 && !producerAttestationsComplete ? (
         <Card variant="outlined" style={styles.sectionCard}>
           <ThemedText type="defaultSemiBold">{t('documents_fpic_section')}</ThemedText>
           <ThemedText type="caption" style={styles.sectionBody}>
@@ -303,15 +338,17 @@ export function PlotEvidencePanel({
         </Card>
       ) : null}
 
-      {renderSection('tenure_evidence', 'documents_tenure_section', 'documents_tenure_body', true)}
-      {renderSection(
-        'protected_area_permit',
-        'documents_permits_section',
-        'documents_permits_body',
-        needsPermit,
-      )}
+      {!overlapOnly ? renderSection('tenure_evidence', 'documents_tenure_section', 'documents_tenure_body', true) : null}
+      {needsPermit
+        ? renderSection(
+            'protected_area_permit',
+            'documents_permits_section_short',
+            'documents_permits_body_short',
+            true,
+          )
+        : null}
 
-      {showFpicStructured ? (
+      {showFpicStructured && needsFpic ? (
         <Card variant="outlined" style={styles.sectionCard}>
           <ThemedText type="defaultSemiBold">{t('evidence_fpic_structured_title')}</ThemedText>
           <ThemedText type="caption" style={styles.sectionBody}>
@@ -397,4 +434,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   requiredHint: { marginTop: 6, color: '#B45309' },
+  overlapSyncFeedback: { marginBottom: 4 },
+  overlapSyncSuccess: { color: '#0A7F59' },
+  overlapSyncError: { color: '#B91C1C' },
+  overlapSyncInfo: { color: '#6B7280' },
 });

@@ -25,9 +25,10 @@ type DocumentPreviewModalProps = {
   visible: boolean;
   item: DocumentPreviewItem | null;
   onClose: () => void;
+  onDelete?: () => void;
 };
 
-export function DocumentPreviewModal({ visible, item, onClose }: DocumentPreviewModalProps) {
+export function DocumentPreviewModal({ visible, item, onClose, onDelete }: DocumentPreviewModalProps) {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
@@ -84,6 +85,17 @@ export function DocumentPreviewModal({ visible, item, onClose }: DocumentPreview
         {item && canOpenExternally(item.uri) && !isImage ? (
           <View style={styles.footer}>
             <Button title={t('documents_preview_open')} variant="primary" onPress={() => void openExternally()} />
+          </View>
+        ) : null}
+        {onDelete ? (
+          <View style={[styles.footer, item && canOpenExternally(item.uri) && !isImage ? styles.footerStacked : null]}>
+            <Button
+              title={t('delete_land_document_action')}
+              variant="secondary"
+              onPress={onDelete}
+              style={styles.deleteBtn}
+              textStyle={styles.deleteBtnText}
+            />
           </View>
         ) : null}
       </View>
@@ -147,5 +159,15 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: 16,
     paddingBottom: 12,
+  },
+  footerStacked: {
+    paddingTop: 0,
+  },
+  deleteBtn: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
+  },
+  deleteBtnText: {
+    color: '#B91C1C',
   },
 });

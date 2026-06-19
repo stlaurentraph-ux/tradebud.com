@@ -15,6 +15,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleSheet,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,7 @@ import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
 import { authSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
+import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
 import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
@@ -62,7 +64,7 @@ import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { getSetting, loadPendingSyncActions, setSetting } from '@/features/state/persistence';
+import { getSetting, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
@@ -264,9 +266,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots: plots,
       });
       if (!aligned) return;
-      if (rekeyed || shouldUpdateBootstrappedFarmer(farmer, aligned)) {
+      const adopted = await adoptOnDeviceFarmerScope(aligned.id).catch(() => false);
+      if (rekeyed || adopted || shouldUpdateBootstrappedFarmer(farmer, aligned)) {
         setFarmer(aligned);
-        if (rekeyed) {
+        if (rekeyed || adopted) {
           await reloadFromDisk();
         }
       }
@@ -316,9 +319,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
       void (async () => {
         try {
-          if (await isSyncAuthSignedOutOnDevice()) {
+          await hydrateSyncAuthFromSettings();
+          if (hasSyncAuthSession()) {
+            const { email: signedInEmail } = getAuthCredentials();
+            if (signedInEmail) setEmail(signedInEmail);
+            setIsSignedIn(true);
+            void syncLocalFarmerFromAuth();
             return;
           }
+
           const session = await sessionFromOAuthCallbackUrl(event.url);
           const result = await completeOAuthFarmerSession({
             session,
@@ -390,6 +399,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setEmailMode(false);
     onSuccessRef.current = undefined;
     await unregisterFarmerPushToken().catch(() => undefined);
+    clearFieldProducerBootstrapCache();
     await clearPersistedSyncAuth();
   }, []);
 
@@ -427,8 +437,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
     setIsSignedIn(true);
     setPassword('');
+    await syncLocalFarmerFromAuth();
     closeSignIn();
-    void syncLocalFarmerFromAuth();
     const onSuccess = onSuccessRef.current;
     if (onSuccess) {
       void Promise.resolve(onSuccess());
@@ -447,6 +457,17 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots: plots,
       });
       if (!result.ok) {
+        await hydrateSyncAuthFromSettings();
+        if (hasSyncAuthSession()) {
+          const { email: signedInEmail } = getAuthCredentials();
+          if (signedInEmail) setEmail(signedInEmail);
+          trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, {
+            method: provider,
+            source: 'in_app_recovered',
+          });
+          await finishSuccessfulSignIn();
+          return;
+        }
         setIsSignedIn(false);
         if (__DEV__ && result.message && !result.message.startsWith('sign_in_')) {
           Alert.alert(t('sign_in'), result.message);
@@ -456,13 +477,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           result.message === 'sign_in_oauth_failed' ||
           result.message === 'sign_in_oauth_provider_disabled' ||
           result.message === 'sign_in_field_bootstrap_failed' ||
-          result.message === 'sign_in_api_unreachable'
+          result.message === 'sign_in_api_unreachable' ||
+          result.message === 'sign_in_dashboard_account'
         ) {
           closeSignIn();
           showOAuthSignInFailureAlert(t, result.message, () => {
             if (
               result.message !== 'sign_in_field_bootstrap_failed' &&
-              result.message !== 'sign_in_api_unreachable'
+              result.message !== 'sign_in_api_unreachable' &&
+              result.message !== 'sign_in_dashboard_account'
             ) {
               void openCreateAccount();
             }
@@ -604,17 +627,28 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         onConfirm={() => void handleBackupConfirm()}
         onDecline={handleBackupDecline}
       />
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={closeSignIn}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        onRequestClose={closeSignIn}
+      >
         <KeyboardAvoidingView
           style={authSheetStyles.keyboardRoot}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         >
-          <Pressable
+          <View
             style={[authSheetStyles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
-            onPress={closeSignIn}
           >
-            <Pressable style={authSheetStyles.card} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+              style={authSheetStyles.backdropPress}
+              accessibilityRole="button"
+              accessibilityLabel={t('sign_in_skip')}
+              onPress={closeSignIn}
+            />
+            <View style={authSheetStyles.card}>
               <View style={authSheetStyles.headerRow}>
                 {emailMode ? (
                   <Pressable
@@ -719,8 +753,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                   </Pressable>
                 </View>
               ) : null}
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </SignInSheetContext.Provider>

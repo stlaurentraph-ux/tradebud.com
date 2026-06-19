@@ -1,32 +1,44 @@
 import type { Plot } from '@/features/state/AppStateContext';
+import { ensureFieldProducerBootstrapped } from '@/features/api/fieldAppBootstrap';
 import {
   buildGeometryFromLocalPlot,
   fetchPlotsForFarmer,
   postPlotToBackend,
 } from '@/features/api/postPlot';
 import {
-  assessLocalPolygonQuality,
+  assessPlotGeometryQuality,
+  localPlotRefsForGeometry,
   localPolygonQualityMessage,
 } from '@/features/compliance/plotGeometryQuality';
 import { createTranslator, type TranslateFn } from '@/features/i18n/translate';
 import { defaultLocale, isSupportedLanguage } from '@/features/i18n/config';
 import { getSetting } from '@/features/state/persistence';
-import { loadPlotCadastralKey } from '@/features/state/persistence';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { loadPlotCadastralKey, loadPlotServerLinks, persistPlotServerLinks, savePlotServerLink } from '@/features/state/persistence';
+import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 
 const LANG_STORAGE_KEY = 'tracebudAppLanguage';
 
-function polygonPlotRefs(plots: Plot[], excludePlotId?: string) {
-  return plots
-    .filter((p) => p.kind === 'polygon' && p.points.length >= 3 && p.id !== excludePlotId)
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      points: p.points,
-      areaHectares: p.areaHectares,
-    }));
+function uploadGeometryQualityError(
+  plot: Plot,
+  localPlots: Plot[],
+  t: TranslateFn,
+): string | null {
+  if (plot.points.length === 0) return null;
+  const quality = assessPlotGeometryQuality({
+    kind: plot.kind,
+    points: plot.points,
+    areaHa: plot.areaHectares,
+    otherPlots: localPlotRefsForGeometry(localPlots, plot.id),
+    excludePlotId: plot.id,
+    phase: 'upload',
+  });
+  if (quality.allIssues.length === 0) return null;
+  return t('sync_plot_geometry_block', {
+    name: plot.name,
+    message: localPolygonQualityMessage(quality.allIssues, t),
+  });
 }
 
 async function resolveTranslator(t?: TranslateFn): Promise<TranslateFn> {
@@ -42,30 +54,14 @@ async function resolveTranslator(t?: TranslateFn): Promise<TranslateFn> {
   return createTranslator(defaultLocale);
 }
 
-function uploadGeometryQualityError(
-  plot: Plot,
-  localPlots: Plot[],
-  t: TranslateFn,
-): string | null {
-  if (plot.kind !== 'polygon' || plot.points.length < 3) return null;
-  const quality = assessLocalPolygonQuality({
-    points: plot.points,
-    areaHa: plot.areaHectares,
-    otherPlots: polygonPlotRefs(localPlots, plot.id),
-    excludePlotId: plot.id,
-    phase: 'upload',
-  });
-  if (quality.allIssues.length === 0) return null;
-  return t('sync_plot_geometry_block', {
-    name: plot.name,
-    message: localPolygonQualityMessage(quality.allIssues, t),
-  });
-}
-
-/** Server row when stable client id (or legacy display name) matches. */
-export function backendHasMatchingPlot(localPlot: Plot, backendPlots: unknown[]): boolean {
+/** Server row when stable client id (persisted link, or legacy name/area match). */
+export function backendHasMatchingPlot(
+  localPlot: Plot,
+  backendPlots: unknown[],
+  plotServerLinks?: Record<string, string> | null,
+): boolean {
   return (
-    findBackendPlotForLocal(
+    resolveServerPlotIdForLocal(
       {
         id: localPlot.id,
         name: localPlot.name,
@@ -73,12 +69,17 @@ export function backendHasMatchingPlot(localPlot: Plot, backendPlots: unknown[])
         kind: localPlot.kind,
       },
       backendPlots,
+      plotServerLinks,
     ) != null
   );
 }
 
-export function listUnsyncedLocalPlots(localPlots: Plot[], backendPlots: unknown[]): Plot[] {
-  return localPlots.filter((p) => !backendHasMatchingPlot(p, backendPlots));
+export function listUnsyncedLocalPlots(
+  localPlots: Plot[],
+  backendPlots: unknown[],
+  plotServerLinks?: Record<string, string> | null,
+): Plot[] {
+  return localPlots.filter((p) => !backendHasMatchingPlot(p, backendPlots, plotServerLinks));
 }
 
 const syncListeners = new Set<() => void>();
@@ -121,7 +122,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
   localPlots: Plot[];
   /** When provided (e.g. Settings sync), uses active UI language for error strings. */
   t?: TranslateFn;
-  /** Use `settings` when sync runs from Settings so copy says "tap Sync Now below". */
+  /** Use `settings` when sync runs from Settings (Sync now is above the status message). */
   surface?: 'settings' | 'default';
 }): Promise<UploadUnsyncedPlotsResult> {
   const { farmerId, localPlots } = params;
@@ -132,14 +133,32 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
   }
 
+  await ensureFieldProducerBootstrapped(farmerId);
+
   let backendPlots: unknown[];
+  let plotServerLinks: Record<string, string>;
   try {
+    plotServerLinks = await loadPlotServerLinks();
     backendPlots = await fetchPlotsForFarmer(farmerId);
-  } catch {
-    return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: true, stoppedForAuth: false };
+    const reconciled = reconcilePlotServerLinks(localPlots, backendPlots ?? [], plotServerLinks);
+    await persistPlotServerLinks(reconciled);
+    plotServerLinks = reconciled;
+  } catch (e) {
+    plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+    backendPlots = [];
+    if (Object.keys(plotServerLinks).length === 0) {
+      return {
+        uploaded: 0,
+        unsyncedBefore: 0,
+        failed: 0,
+        fetchFailed: true,
+        stoppedForAuth: false,
+        firstError: e instanceof Error ? e.message : String(e),
+      };
+    }
   }
 
-  const unsynced = listUnsyncedLocalPlots(localPlots, backendPlots ?? []);
+  const unsynced = listUnsyncedLocalPlots(localPlots, backendPlots ?? [], plotServerLinks);
   if (unsynced.length === 0) {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
   }
@@ -188,6 +207,10 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
 
     if (r.ok) {
       uploaded += 1;
+      if (r.serverPlotId) {
+        await savePlotServerLink(plot.id, r.serverPlotId);
+        plotServerLinks = { ...plotServerLinks, [plot.id]: r.serverPlotId };
+      }
       continue;
     }
     if (r.reason === 'no_access_token') {
@@ -206,6 +229,13 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
   }
 
   if (uploaded > 0) {
+    try {
+      backendPlots = await fetchPlotsForFarmer(farmerId);
+      const reconciled = reconcilePlotServerLinks(localPlots, backendPlots ?? [], plotServerLinks);
+      await persistPlotServerLinks(reconciled);
+    } catch {
+      // Links saved per-plot above; list refresh is best-effort.
+    }
     emitServerPlotSyncChanged();
   }
 

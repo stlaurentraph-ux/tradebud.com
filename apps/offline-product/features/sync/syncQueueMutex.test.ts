@@ -18,9 +18,6 @@ const t = (key: string, params?: Record<string, string | number>) => {
   if (key === 'sync_progress_waiting_for_step') {
     return `Waiting to start — ${params?.step} in progress`;
   }
-  if (key === 'sync_background_in_progress') {
-    return `Backing up in the background — ${params?.step}`;
-  }
   const labels: Record<string, string> = {
     sync_progress_connecting: 'Checking connection to Tracebud',
     sync_progress_plots: 'Uploading plot boundaries',
@@ -107,7 +104,7 @@ describe('formatSyncProgressCaption', () => {
     expect(caption).toContain('(5s)');
   });
 
-  it('describes background sync without a manual tap', () => {
+  it('shows the active step when backup was started elsewhere', () => {
     const caption = formatSyncProgressCaption(
       t,
       {
@@ -119,7 +116,7 @@ describe('formatSyncProgressCaption', () => {
       },
       { syncNowBusy: false, nowMs: Date.now() },
     );
-    expect(caption).toContain('Backing up in the background');
+    expect(caption).toContain('Sending deliveries, photos, and documents');
     expect(caption).toContain('(3s)');
   });
 });

@@ -22,4 +22,20 @@ if ! lsof -i :8081 -sTCP:LISTEN >/dev/null 2>&1; then
   echo ""
 fi
 
+DEVICE_UDID="${TRACE_BUD_IOS_DEVICE_UDID:-}"
+if [[ -z "$DEVICE_UDID" ]]; then
+  DEVICE_UDID="$(
+    xcrun xctrace list devices 2>/dev/null \
+      | grep -E '^iPhone|^iPad' \
+      | grep -v Simulator \
+      | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' \
+      | tail -1 \
+      || true
+  )"
+fi
+
+if [[ -n "$DEVICE_UDID" ]]; then
+  exec npx expo run:ios --device "$DEVICE_UDID" "$@"
+fi
+
 exec npx expo run:ios --device "$@"

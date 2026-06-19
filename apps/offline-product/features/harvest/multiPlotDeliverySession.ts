@@ -1,6 +1,8 @@
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
+import { validateHarvestKg } from '@/features/validation/validators';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import type { Plot } from '@/features/state/AppStateContext';
+import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 
 export type MultiPlotDeliveryLine = {
@@ -57,11 +59,55 @@ export function sessionTotalKg(lines: readonly MultiPlotDeliveryLine[]): number 
   return lines.reduce((sum, line) => sum + line.kg, 0);
 }
 
+/** Build delivery lines from inline per-plot weight fields (one screen, no wizard hops). */
+export function buildMultiPlotLinesFromWeights(params: {
+  plots: readonly HarvestPlotOption[];
+  weightByPlotId: Readonly<Record<string, string>>;
+  deliveredByPlot: Record<string, number>;
+}): { ok: true; lines: MultiPlotDeliveryLine[] } | { ok: false; error: string } {
+  const lines: MultiPlotDeliveryLine[] = [];
+
+  for (const plot of params.plots) {
+    const validation = validateHarvestKg(params.weightByPlotId[plot.id] ?? '');
+    if (!validation.ok) {
+      return { ok: false, error: `${plot.name}: ${validation.error}` };
+    }
+    const canAdd = canAddLineToSession({
+      plot,
+      kg: validation.value,
+      deliveredByPlot: params.deliveredByPlot,
+      existingLines: lines,
+    });
+    if (!canAdd.ok) {
+      if (canAdd.reason === 'local_only') {
+        return { ok: false, error: `${plot.name}: backup plot first` };
+      }
+      return { ok: false, error: `${plot.name}: invalid weight` };
+    }
+    lines.push({ plotId: plot.id, plotName: plot.name, kg: validation.value });
+  }
+
+  if (lines.length === 0) {
+    return { ok: false, error: 'No plots selected' };
+  }
+
+  return { ok: true, lines };
+}
+
+export function inlineMultiPlotWeightsComplete(params: {
+  plots: readonly HarvestPlotOption[];
+  weightByPlotId: Readonly<Record<string, string>>;
+  deliveredByPlot: Record<string, number>;
+}): boolean {
+  return buildMultiPlotLinesFromWeights(params).ok;
+}
+
 export async function submitMultiPlotDeliverySession(params: {
   farmerId: string;
   lines: MultiPlotDeliveryLine[];
   localPlots: Plot[];
   backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
   sessionId?: string;
   deliveryRecipient?: DeliveryRecipientSelection | null;
 }): Promise<MultiPlotDeliveryLineResult[]> {
@@ -80,6 +126,7 @@ export async function submitMultiPlotDeliverySession(params: {
       kg: line.kg,
       localPlots: params.localPlots,
       backendPlots: params.backendPlots,
+      plotServerLinks: params.plotServerLinks,
       deliveryRecipient: params.deliveryRecipient,
     });
 

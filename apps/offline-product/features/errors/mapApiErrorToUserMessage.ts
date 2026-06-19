@@ -1,16 +1,10 @@
+import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
+
 const TECHNICAL_MESSAGE =
   /internal server error|http \d{3}|plot upload failed \(\d{3}\)|unexpected token|econnrefused|socket hang up|network request failed|failed to fetch|abort/i;
 
 function isNetworkFailureMessage(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes('network request failed') ||
-    m.includes('failed to fetch') ||
-    m.includes('network error') ||
-    m.includes('abort') ||
-    m.includes('timeout') ||
-    m.includes('unreachable')
-  );
+  return isLikelyNetworkError(message);
 }
 
 /** True when the API message is for logs/Sentry, not the farmer UI. */
@@ -23,6 +17,10 @@ export function isTechnicalApiMessage(message: string | undefined | null): boole
 }
 
 export type UserMessageSurface = 'settings' | 'default';
+
+export type SyncActionErrorContext = {
+  actionType?: string;
+};
 
 type PlotUploadErrorContext = {
   reason?: 'no_access_token' | 'network_error' | 'server_error';
@@ -75,11 +73,33 @@ export function mapSyncActionErrorMessage(
   raw: string | undefined,
   t: (key: string, params?: Record<string, string | number>) => string,
   surface: UserMessageSurface = 'default',
+  _ctx?: SyncActionErrorContext,
 ): string {
-  if (!raw || isTechnicalApiMessage(raw) || isNetworkFailureMessage(raw)) {
-    return t(surfaceKey('sync_action_failed_generic', surface));
+  const trimmed = raw?.trim() ?? '';
+
+  if (/session expired|401|unauthorized|jwt|sign in again|sign_in_session_expired/i.test(trimmed)) {
+    return t('sync_session_expired_short');
   }
-  return raw;
+  if (/no access token available/i.test(trimmed)) {
+    return t('sync_session_expired_short');
+  }
+  if (/403|forbidden|farmer scope violation|another account|tenant claim|workspace directory/i.test(trimmed)) {
+    return t(surfaceKey('plot_upload_account_error', surface));
+  }
+  if (/plot not on server/i.test(trimmed.toLowerCase())) {
+    return trimmed;
+  }
+  if (isNetworkFailureMessage(trimmed)) {
+    return t(
+      surface === 'settings' ? 'settings_sync_reach_failed' : surfaceKey('plot_upload_network_error', surface),
+    );
+  }
+  if (!trimmed || isTechnicalApiMessage(trimmed)) {
+    return t(
+      surface === 'settings' ? 'settings_sync_online_server_busy' : surfaceKey('sync_action_failed_generic', surface),
+    );
+  }
+  return trimmed;
 }
 
 /** Sync timed out or background backup exceeded its budget. */

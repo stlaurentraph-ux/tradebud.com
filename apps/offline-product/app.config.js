@@ -35,10 +35,28 @@ function withAppleSignInPlugin(plugins) {
   return hasApple ? plugins : [...plugins, 'expo-apple-authentication'];
 }
 
+function isPrivateLanApiUrl(apiUrl) {
+  if (!apiUrl?.trim()) return false;
+  try {
+    const parsed = new URL(apiUrl.replace(/\/$/, ''));
+    if (parsed.protocol !== 'http:') return false;
+    const host = parsed.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return true;
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /** @type {import('@expo/config').ExpoConfig} */
 module.exports = ({ config }) => {
   const profile = process.env.EAS_BUILD_PROFILE;
   const includePush = profile === 'production' || profile === 'simulator';
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
+  const allowInsecureLanApi = isPrivateLanApiUrl(apiUrl);
 
   const plugins = withAppleSignInPlugin(withSentryPlugin([...(config.plugins ?? appJson.expo.plugins)]));
   if (includePush && !plugins.some((p) => (Array.isArray(p) ? p[0] : p) === 'expo-notifications')) {
@@ -46,6 +64,16 @@ module.exports = ({ config }) => {
   }
 
   const ios = { ...(config.ios ?? appJson.expo.ios) };
+  if (allowInsecureLanApi) {
+    ios.infoPlist = {
+      ...(ios.infoPlist ?? {}),
+      NSAppTransportSecurity: {
+        NSAllowsLocalNetworking: true,
+      },
+      NSLocalNetworkUsageDescription:
+        'Tracebud connects to your computer on the same Wi‑Fi to upload plots and deliveries during development.',
+    };
+  }
   if (includePush) {
     ios.entitlements = {
       ...(ios.entitlements ?? {}),
@@ -79,6 +107,9 @@ module.exports = ({ config }) => {
   }
 
   const android = { ...(config.android ?? appJson.expo.android) };
+  if (allowInsecureLanApi) {
+    android.usesCleartextTraffic = true;
+  }
   const existingFilters = android.intentFilters ?? [];
   const hasAppLinkFilter = existingFilters.some(
     (filter: { data?: { host?: string }[] }) =>

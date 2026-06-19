@@ -23,9 +23,12 @@ export function shouldOfferSetPassword(params: {
   signedIn: boolean;
   authMethod: 'password' | 'oauth' | null;
   user: User | null;
+  hasPasswordCredential?: boolean;
 }): boolean {
   if (!params.signedIn || !params.user) return false;
+  if (params.hasPasswordCredential) return false;
   if (userHasEmailPasswordIdentity(params.user)) return false;
+  if (params.authMethod === 'password') return false;
   if (params.authMethod === 'oauth') return true;
   return getLinkedOAuthProviders(params.user).length > 0;
 }
@@ -33,9 +36,13 @@ export function shouldOfferSetPassword(params: {
 export function shouldOfferChangePassword(params: {
   signedIn: boolean;
   user: User | null;
+  authMethod?: 'password' | 'oauth' | null;
+  hasPasswordCredential?: boolean;
 }): boolean {
   if (!params.signedIn || !params.user) return false;
-  return userHasEmailPasswordIdentity(params.user);
+  if (params.hasPasswordCredential) return true;
+  if (userHasEmailPasswordIdentity(params.user)) return true;
+  return params.authMethod === 'password';
 }
 
 export function validateAccountPassword(password: string, confirm: string): string | null {

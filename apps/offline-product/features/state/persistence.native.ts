@@ -4,6 +4,11 @@ import Constants from 'expo-constants';
 import type { FarmerProfile, Plot } from './AppStateContext';
 import { parsePlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { generateHlcTimestamp } from '@/features/sync/hlc';
+import {
+  pendingSyncDedupKey,
+  planPendingSyncCompaction,
+} from '@/features/sync/pendingSyncDedup';
+import { resolveDominantFarmerIdFromPlots } from '@/features/state/farmerScopeRepair';
 
 export type PlotPhoto = {
   id: number;
@@ -185,6 +190,25 @@ export async function initDatabase() {
   await ensurePendingSyncSchemaExtras(db);
   await ensurePlotSchemaExtras(db);
   await ensurePlotPhotosSchemaExtras(db);
+  await ensurePlotLegalSchemaExtras(db);
+  await ensureLocalDeliveryReceiptsSchema(db);
+}
+
+async function ensureLocalDeliveryReceiptsSchema(db: SQLite.SQLiteDatabase) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS local_delivery_receipts (
+      id TEXT PRIMARY KEY NOT NULL,
+      farmerId TEXT NOT NULL,
+      localPlotId TEXT NOT NULL,
+      serverPlotId TEXT,
+      plotName TEXT,
+      kg REAL NOT NULL,
+      recordedAt INTEGER NOT NULL,
+      qrCodeRef TEXT,
+      pendingSync INTEGER NOT NULL DEFAULT 0,
+      buyerLabel TEXT
+    );
+  `);
 }
 
 async function ensureFarmerSchemaExtras(db: SQLite.SQLiteDatabase) {
@@ -243,6 +267,14 @@ async function ensurePlotSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
   if (!has('geometryCaptureMetaJson')) {
     await db.execAsync('ALTER TABLE plots ADD COLUMN geometryCaptureMetaJson TEXT;');
+  }
+}
+
+async function ensurePlotLegalSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(plot_legal);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('serverPlotId')) {
+    await db.execAsync('ALTER TABLE plot_legal ADD COLUMN serverPlotId TEXT;');
   }
 }
 
@@ -321,6 +353,60 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
 
   if (plotsNeedPersist && plots.length > 0) {
     await persistPlots(plots);
+  }
+
+  if (!farmer && plots.length > 0) {
+    const dominantId = resolveDominantFarmerIdFromPlots(plots);
+    if (dominantId && isUuid(dominantId)) {
+      farmer = {
+        id: dominantId,
+        role: 'farmer',
+        selfDeclared: false,
+      };
+      await persistFarmer(farmer);
+    }
+  }
+
+  if (farmer && plots.some((plot) => plot.farmerId !== farmer!.id)) {
+    await adoptOnDeviceFarmerScope(farmer.id);
+    const repairedRows = await db.getAllAsync<any>('SELECT * FROM plots ORDER BY createdAt DESC;');
+    const repairedPlots: Plot[] = (repairedRows ?? []).map((row) => {
+      let points: any[] = [];
+      try {
+        points = JSON.parse(row.pointsJson);
+      } catch {
+        points = [];
+      }
+      let kind = row.kind as Plot['kind'];
+      if (kind === 'point' && points.length >= 3) {
+        kind = 'polygon';
+      }
+      return {
+        id: row.id,
+        farmerId: row.farmerId,
+        name: row.name,
+        createdAt: row.createdAt,
+        areaSquareMeters: row.areaSquareMeters,
+        areaHectares: row.areaHectares,
+        kind,
+        points,
+        declaredAreaHectares: row.declaredAreaHectares ?? undefined,
+        discrepancyPercent: row.discrepancyPercent ?? undefined,
+        precisionMetersAtSave: row.precisionMetersAtSave ?? null,
+        landTenureDeclared:
+          row.landTenureDeclared === 1 ? true : row.landTenureDeclared === 0 ? false : undefined,
+        landTenureDeclaredAt: row.landTenureDeclaredAt ?? undefined,
+        noDeforestationDeclared:
+          row.noDeforestationDeclared === 1
+            ? true
+            : row.noDeforestationDeclared === 0
+              ? false
+              : undefined,
+        noDeforestationDeclaredAt: row.noDeforestationDeclaredAt ?? undefined,
+        geometryCapture: parsePlotGeometryCaptureMetadata(row.geometryCaptureMetaJson) ?? undefined,
+      };
+    });
+    return { farmer, plots: repairedPlots };
   }
 
   return { farmer, plots };
@@ -499,6 +585,21 @@ export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitleP
   }));
 }
 
+export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM plot_title_photos WHERE id = ?;', [photoId]);
+}
+
+export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM plot_evidence WHERE id = ?;', [evidenceId]);
+}
+
+export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE plot_evidence SET uri = ? WHERE id = ?;', [uri, evidenceId]);
+}
+
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {
   const db = await getDb();
   if (!cadastralKey) {
@@ -520,6 +621,39 @@ export async function loadPlotCadastralKey(plotId: string): Promise<string | nul
     [plotId],
   );
   return row?.cadastralKey ?? null;
+}
+
+export async function savePlotServerLink(localPlotId: string, serverPlotId: string): Promise<void> {
+  const db = await getDb();
+  const trimmed = serverPlotId.trim();
+  if (!trimmed) return;
+  await db.runAsync(
+    `INSERT INTO plot_legal (plotId, serverPlotId)
+     VALUES (?, ?)
+     ON CONFLICT(plotId) DO UPDATE SET serverPlotId = excluded.serverPlotId;`,
+    [localPlotId, trimmed],
+  );
+}
+
+export async function loadPlotServerLinks(): Promise<Record<string, string>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ plotId: string; serverPlotId: string | null }>(
+    `SELECT plotId, serverPlotId FROM plot_legal
+     WHERE serverPlotId IS NOT NULL AND TRIM(serverPlotId) != '';`,
+  );
+  const links: Record<string, string> = {};
+  for (const row of rows ?? []) {
+    if (row.plotId && row.serverPlotId?.trim()) {
+      links[row.plotId] = row.serverPlotId.trim();
+    }
+  }
+  return links;
+}
+
+export async function persistPlotServerLinks(links: Record<string, string>): Promise<void> {
+  for (const [localPlotId, serverPlotId] of Object.entries(links)) {
+    await savePlotServerLink(localPlotId, serverPlotId);
+  }
 }
 
 export async function savePlotTenure(
@@ -586,9 +720,34 @@ export async function loadEvidenceForPlot(
   }));
 }
 
+export async function compactDuplicatePendingSyncActions(): Promise<number> {
+  const rows = await loadPendingSyncActions();
+  const { deleteIds } = planPendingSyncCompaction(rows);
+  for (const id of deleteIds) {
+    await deletePendingSyncAction(id);
+  }
+  return deleteIds.length;
+}
+
 export async function enqueuePendingSync(
   action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp' | 'lastAttemptAt'> & { hlcTimestamp?: string },
 ) {
+  const dedupKey = pendingSyncDedupKey(action.actionType, action.payloadJson);
+  if (dedupKey) {
+    const existing = (await loadPendingSyncActions()).find(
+      (row) => pendingSyncDedupKey(row.actionType, row.payloadJson) === dedupKey,
+    );
+    if (existing) {
+      const db = await getDb();
+      await db.runAsync('UPDATE pending_sync SET payloadJson = ?, lastError = ? WHERE id = ?;', [
+        action.payloadJson,
+        action.lastError ?? existing.lastError ?? null,
+        existing.id,
+      ]);
+      return;
+    }
+  }
+
   const db = await getDb();
   const last = await db.getFirstAsync<{ hlcTimestamp?: string | null }>(
     'SELECT hlcTimestamp FROM pending_sync ORDER BY id DESC LIMIT 1;',
@@ -645,6 +804,96 @@ export async function deletePendingSyncAction(id: number) {
   await db.runAsync('DELETE FROM pending_sync WHERE id = ?;', [id]);
 }
 
+export type LocalDeliveryReceiptRow = {
+  id: string;
+  farmerId: string;
+  localPlotId: string;
+  serverPlotId: string | null;
+  plotName: string;
+  kg: number;
+  recordedAt: number;
+  qrCodeRef: string | null;
+  pendingSync: boolean;
+  buyerLabel: string;
+};
+
+export async function persistLocalDeliveryReceipt(row: LocalDeliveryReceiptRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT OR REPLACE INTO local_delivery_receipts
+      (id, farmerId, localPlotId, serverPlotId, plotName, kg, recordedAt, qrCodeRef, pendingSync, buyerLabel)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+    [
+      row.id,
+      row.farmerId,
+      row.localPlotId,
+      row.serverPlotId,
+      row.plotName,
+      row.kg,
+      row.recordedAt,
+      row.qrCodeRef,
+      row.pendingSync ? 1 : 0,
+      row.buyerLabel,
+    ],
+  );
+}
+
+export async function loadLocalDeliveryReceiptsForFarmer(
+  farmerId: string,
+): Promise<LocalDeliveryReceiptRow[]> {
+  const db = await getDb();
+  const mapRows = (rows: any[] | null | undefined) =>
+    (rows ?? []).map((row) => ({
+      id: String(row.id),
+      farmerId: String(row.farmerId),
+      localPlotId: String(row.localPlotId),
+      serverPlotId: row.serverPlotId != null ? String(row.serverPlotId) : null,
+      plotName: String(row.plotName ?? ''),
+      kg: Number(row.kg),
+      recordedAt: Number(row.recordedAt),
+      qrCodeRef: row.qrCodeRef != null ? String(row.qrCodeRef) : null,
+      pendingSync: row.pendingSync === 1,
+      buyerLabel: String(row.buyerLabel ?? ''),
+    }));
+
+  const scoped = await db.getAllAsync<any>(
+    'SELECT * FROM local_delivery_receipts WHERE farmerId = ? ORDER BY recordedAt DESC;',
+    [farmerId],
+  );
+  const scopedRows = mapRows(scoped);
+  if (scopedRows.length > 0) {
+    return scopedRows;
+  }
+
+  const all = await db.getAllAsync<any>(
+    'SELECT * FROM local_delivery_receipts ORDER BY recordedAt DESC;',
+  );
+  return mapRows(all);
+}
+
+export async function updateLocalDeliveryReceipt(
+  id: string,
+  patch: Partial<Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId'>>,
+): Promise<void> {
+  const db = await getDb();
+  const existing = await db.getFirstAsync<any>(
+    'SELECT * FROM local_delivery_receipts WHERE id = ? LIMIT 1;',
+    [id],
+  );
+  if (!existing) return;
+  await db.runAsync(
+    `UPDATE local_delivery_receipts
+     SET qrCodeRef = ?, pendingSync = ?, serverPlotId = ?
+     WHERE id = ?;`,
+    [
+      patch.qrCodeRef !== undefined ? patch.qrCodeRef : existing.qrCodeRef,
+      patch.pendingSync !== undefined ? (patch.pendingSync ? 1 : 0) : existing.pendingSync,
+      patch.serverPlotId !== undefined ? patch.serverPlotId : existing.serverPlotId,
+      id,
+    ],
+  );
+}
+
 export async function getSetting(key: string): Promise<string | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<any>('SELECT value FROM settings WHERE key = ? LIMIT 1;', [key]);
@@ -685,6 +934,78 @@ export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string
   await db.runAsync('UPDATE plots SET farmerId = ? WHERE farmerId = ?;', [nextId, previousId]);
   await db.runAsync('UPDATE farmer SET id = ? WHERE id = ?;', [nextId, previousId]);
   await db.runAsync('UPDATE audit_log SET userId = ? WHERE userId = ?;', [nextId, previousId]);
+  await db.runAsync('UPDATE local_delivery_receipts SET farmerId = ? WHERE farmerId = ?;', [
+    nextId,
+    previousId,
+  ]);
+  await repairPendingSyncPayloadFarmerIds(nextId, previousId);
+}
+
+/** Rewrite stale farmerId fields inside queued sync payloads after sign-in / scope repair. */
+export async function repairPendingSyncPayloadFarmerIds(
+  targetFarmerId: string,
+  previousFarmerId?: string,
+): Promise<number> {
+  const scopedId = targetFarmerId.trim();
+  if (!scopedId) return 0;
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ id: number; payloadJson: string }>(
+    'SELECT id, payloadJson FROM pending_sync ORDER BY createdAt ASC;',
+  );
+  let updated = 0;
+  for (const row of rows ?? []) {
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(row.payloadJson) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+    const payloadFarmerId =
+      typeof payload.farmerId === 'string' ? payload.farmerId.trim() : '';
+    if (!payloadFarmerId || payloadFarmerId === scopedId) continue;
+    if (previousFarmerId && payloadFarmerId !== previousFarmerId) continue;
+    payload.farmerId = scopedId;
+    await db.runAsync('UPDATE pending_sync SET payloadJson = ? WHERE id = ?;', [
+      JSON.stringify(payload),
+      row.id,
+    ]);
+    updated += 1;
+  }
+  return updated;
+}
+
+/**
+ * After sign-in, attach plots/deliveries that still use a pre-auth local farmer id
+ * to the active farmer profile (single-producer field app).
+ */
+export async function adoptOnDeviceFarmerScope(targetFarmerId: string): Promise<boolean> {
+  const scopedId = targetFarmerId.trim();
+  if (!scopedId || !isUuid(scopedId)) return false;
+
+  const db = await getDb();
+  const plotIds = await db.getAllAsync<{ farmerId: string }>(
+    'SELECT DISTINCT farmerId FROM plots WHERE farmerId IS NOT NULL AND farmerId != ?;',
+    [scopedId],
+  );
+  const receiptIds = await db.getAllAsync<{ farmerId: string }>(
+    'SELECT DISTINCT farmerId FROM local_delivery_receipts WHERE farmerId IS NOT NULL AND farmerId != ?;',
+    [scopedId],
+  );
+
+  const orphanIds = new Set<string>();
+  for (const row of plotIds ?? []) {
+    if (row.farmerId?.trim()) orphanIds.add(row.farmerId.trim());
+  }
+  for (const row of receiptIds ?? []) {
+    if (row.farmerId?.trim()) orphanIds.add(row.farmerId.trim());
+  }
+
+  if (orphanIds.size === 0) return false;
+
+  for (const orphanId of orphanIds) {
+    await rekeyFarmerIdInDatabase(orphanId, scopedId);
+  }
+  return true;
 }
 
 /** Collect on-device media URIs referenced by Tracebud SQLite tables (for storage footprint). */

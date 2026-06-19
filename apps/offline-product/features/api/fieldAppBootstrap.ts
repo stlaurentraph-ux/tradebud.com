@@ -1,7 +1,37 @@
 import { getAccessTokenFromSupabase, getTracebudApiBaseUrl, hasSyncAuthSession } from '@/features/api/syncAuthSession';
-import { safeAuthenticatedFetch } from '@/features/errors/safeFetch';
 
 const BOOTSTRAP_TIMEOUT_MS = 12_000;
+/** Skip repeat bootstrap POSTs during a single sync session (plot upload calls this per plot). */
+const BOOTSTRAP_CACHE_MS = 15 * 60 * 1000;
+
+const bootstrappedAtByFarmerId = new Map<string, number>();
+const inflightByFarmerId = new Map<string, Promise<{ ok: true } | { ok: false; message: string }>>();
+let lastOwnedFarmerIds: string[] = [];
+
+export function clearFieldProducerBootstrapCache(): void {
+  bootstrappedAtByFarmerId.clear();
+  inflightByFarmerId.clear();
+  lastOwnedFarmerIds = [];
+}
+
+export function getBootstrapOwnedFarmerIds(): string[] {
+  return [...lastOwnedFarmerIds];
+}
+
+function rememberOwnedFarmerIds(body: unknown): void {
+  if (!body || typeof body !== 'object') return;
+  const raw = (body as { owned_farmer_ids?: unknown }).owned_farmer_ids;
+  if (!Array.isArray(raw)) return;
+  const ids = raw.map((id) => String(id).trim()).filter(Boolean);
+  if (ids.length > 0) {
+    lastOwnedFarmerIds = ids;
+  }
+}
+
+function isBootstrapCached(farmerId: string): boolean {
+  const at = bootstrappedAtByFarmerId.get(farmerId);
+  return at != null && Date.now() - at < BOOTSTRAP_CACHE_MS;
+}
 
 export async function bootstrapFieldAppProducer(
   params: {
@@ -9,43 +39,91 @@ export async function bootstrapFieldAppProducer(
     fullName?: string;
     countryCode?: string;
   },
-  options?: { timeoutMs?: number },
+  options?: { timeoutMs?: number; force?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const farmerId = params.farmerId.trim();
   if (!farmerId) {
     return { ok: false, message: 'sign_in_oauth_failed' };
   }
 
-  const accessToken = await getAccessTokenFromSupabase();
-  if (!accessToken) {
-    return { ok: false, message: 'Sign in to sync your plots to Tracebud.' };
+  if (!options?.force && isBootstrapCached(farmerId)) {
+    return { ok: true };
   }
 
-  const apiBase = getTracebudApiBaseUrl();
-  const res = await safeAuthenticatedFetch(`${apiBase}/v1/me/field-app-bootstrap`, accessToken, {
-    method: 'POST',
-    timeout: options?.timeoutMs ?? BOOTSTRAP_TIMEOUT_MS,
-    body: JSON.stringify({
-      farmerId,
-      fullName: params.fullName?.trim() || undefined,
-      countryCode: params.countryCode?.trim() || undefined,
-    }),
-  });
-
-  if (!res.ok) {
-    if (res.statusCode === 403 || res.statusCode === 409) {
-      return { ok: false, message: 'sign_in_field_bootstrap_failed' };
-    }
-    if (res.message === 'Request timeout' || res.message === 'Network error') {
-      return { ok: false, message: res.message };
-    }
-    return {
-      ok: false,
-      message: res.message || `Field app bootstrap failed (${res.statusCode ?? 'unknown'})`,
-    };
+  const inflight = inflightByFarmerId.get(farmerId);
+  if (!options?.force && inflight) {
+    return inflight;
   }
 
-  return { ok: true };
+  const run = (async (): Promise<{ ok: true } | { ok: false; message: string }> => {
+    const accessToken = await getAccessTokenFromSupabase();
+    if (!accessToken) {
+      return { ok: false, message: 'Sign in to sync your plots to Tracebud.' };
+    }
+
+    const apiBase = getTracebudApiBaseUrl();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? BOOTSTRAP_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(`${apiBase}/v1/me/field-app-bootstrap`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          farmerId,
+          fullName: params.fullName?.trim() || undefined,
+          countryCode: params.countryCode?.trim() || undefined,
+        }),
+        signal: controller.signal,
+      });
+
+      if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+        rememberOwnedFarmerIds(body);
+        bootstrappedAtByFarmerId.set(farmerId, Date.now());
+        return { ok: true };
+      }
+
+      const body = await res.json().catch(() => ({}));
+      const message =
+        typeof body?.message === 'string'
+          ? body.message
+          : `Field app bootstrap failed (${res.status})`;
+
+      if (res.status === 429 && isBootstrapCached(farmerId)) {
+        return { ok: true };
+      }
+
+      if (res.status === 403 || res.status === 409) {
+        return { ok: false, message: 'sign_in_field_bootstrap_failed' };
+      }
+
+      return { ok: false, message };
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        return { ok: false, message: 'Request timeout' };
+      }
+      if (isBootstrapCached(farmerId)) {
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        message: e instanceof Error ? e.message : 'Network error',
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+
+  inflightByFarmerId.set(farmerId, run);
+  try {
+    return await run;
+  } finally {
+    inflightByFarmerId.delete(farmerId);
+  }
 }
 
 /** Best-effort server link before plot sync (creates farmer_profile when missing). */

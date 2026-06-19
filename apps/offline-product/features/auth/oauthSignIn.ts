@@ -75,8 +75,7 @@ async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session>
     options: {
       redirectTo,
       skipBrowserRedirect: true,
-      queryParams:
-        provider === 'google' ? { access_type: 'offline', prompt: 'select_account' } : undefined,
+      queryParams: provider === 'google' ? { access_type: 'offline' } : undefined,
     },
   });
 

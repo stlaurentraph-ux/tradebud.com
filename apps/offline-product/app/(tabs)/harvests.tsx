@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View, type ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import QRCode from 'react-native-qrcode-svg';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { SectionHeader } from '@/components/ui/section-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,67 +22,125 @@ import {
 } from '@/features/api/postPlot';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import {
+  buyerLabelForDeliveryRecipient,
+  normalizeLocalDeliveryReceipts,
+} from '@/features/harvest/localDeliveryReceipts';
+import type { DeliveryReceiptRecord } from '@/features/harvest/deliveryReceiptModels';
+import {
   DeliveryRecipientFields,
   isDeliveryRecipientComplete,
   type DeliveryRecipientSelection,
 } from '@/features/harvest/DeliveryRecipientFields';
 import { MultiPlotDeliveryWizard } from '@/features/harvest/MultiPlotDeliveryWizard';
 import { sumDeliveredKgByPlot } from '@/features/harvest/plotYieldCapacity';
-import { buildMergedHarvestPlots, findHarvestPlotOption } from '@/features/harvest/mergeHarvestPlotOptions';
+import { buildMergedHarvestPlots, findHarvestPlotOption, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import { validateHarvestKg } from '@/features/validation/validators';
-
-type HarvestLoggedMode = 'synced' | 'queued';
-
-function normalizeVoucherRows(payload: unknown): any[] {
-  if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object' && Array.isArray((payload as { vouchers?: unknown }).vouchers)) {
-    return (payload as { vouchers: any[] }).vouchers;
-  }
-  return [];
-}
+import {
+  DeliveryLoggedPanel,
+  type DeliverySyncFeedback,
+  type LoggedDeliverySnapshot,
+} from '@/components/harvest/DeliveryLoggedPanel';
+import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
+import { findSyncedVoucherForLoggedDelivery } from '@/features/harvest/findSyncedVoucherForLoggedDelivery';
+import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
+import { reconcilePlotServerLinks, resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { runAutoBackup } from '@/features/sync/runAutoBackup';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import {
+  loadLocalDeliveryReceiptsForFarmer,
+  loadPendingSyncActions,
+  loadPlotServerLinks,
+  persistPlotServerLinks,
+  updateLocalDeliveryReceipt,
+} from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const params = useLocalSearchParams<{ plotId?: string; record?: string }>();
+  const params = useLocalSearchParams<{ plotId?: string; record?: string; focus?: string }>();
   const { farmer, plots: localPlots } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
+  const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showNewHarvestLog, setShowNewHarvestLog] = useState(false);
   const [showRecordWeight, setShowRecordWeight] = useState(false);
   const [showHarvestLogged, setShowHarvestLogged] = useState(false);
-  const [loggedMode, setLoggedMode] = useState<HarvestLoggedMode>('synced');
-  const [lastQrRef, setLastQrRef] = useState<string | null>(null);
-  const [queuedMessageKey, setQueuedMessageKey] = useState<string | null>(null);
+  const [loggedDelivery, setLoggedDelivery] = useState<LoggedDeliverySnapshot | null>(null);
+  const [deliverySyncBusy, setDeliverySyncBusy] = useState(false);
+  const [deliverySyncFeedback, setDeliverySyncFeedback] = useState<DeliverySyncFeedback | null>(null);
   const [weightInput, setWeightInput] = useState('');
   const [deliveryRecipient, setDeliveryRecipient] = useState<DeliveryRecipientSelection | null>(null);
   const [showMultiPlotDelivery, setShowMultiPlotDelivery] = useState(false);
+  const [multiPlotRestrictedIds, setMultiPlotRestrictedIds] = useState<string[] | null>(null);
+  const [deliveryPlotSelection, setDeliveryPlotSelection] = useState<Set<string>>(() => new Set());
   const [multiPlotHeaderTitle, setMultiPlotHeaderTitle] = useState('');
   const multiPlotBackRef = useRef<(() => void) | null>(null);
   const deliveryDeepLinkHandled = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const receiptsSectionY = useRef(0);
+  const [pendingReceiptsScroll, setPendingReceiptsScroll] = useState(false);
+  const [deviceReceipts, setDeviceReceipts] = useState<DeliveryReceiptRecord[]>([]);
 
-  useEffect(() => {
-    if (!farmer || !isSignedIn) {
+  const refreshHarvestData = useCallback(async () => {
+    if (!farmer) {
       setBackendPlots([]);
+      setPlotServerLinks({});
+      setVouchers([]);
+      setDeviceReceipts([]);
+      return;
+    }
+
+    const localRows = await loadLocalDeliveryReceiptsForFarmer(farmer.id);
+    setDeviceReceipts(normalizeLocalDeliveryReceipts(localRows, t));
+
+    if (!isSignedIn) {
+      const existingLinks = await loadPlotServerLinks();
+      setBackendPlots([]);
+      setPlotServerLinks(existingLinks);
       setVouchers([]);
       return;
     }
-    Promise.all([fetchPlotsForFarmer(farmer.id), fetchVouchersForFarmer(farmer.id)])
-      .then(([plotsRows, voucherPayload]) => {
-        setBackendPlots(plotsRows ?? []);
-        setVouchers(normalizeVoucherRows(voucherPayload));
-      })
-      .catch(() => {
-        setBackendPlots([]);
-        setVouchers([]);
-      });
-  }, [farmer, isSignedIn, params.plotId]);
+
+    const existingLinks = await loadPlotServerLinks();
+    try {
+      const [plotsRows, voucherPayload] = await Promise.all([
+        fetchPlotsForFarmer(farmer.id),
+        fetchVouchersForFarmer(farmer.id),
+      ]);
+      const reconciled = reconcilePlotServerLinks(localPlots, plotsRows ?? [], existingLinks);
+      await persistPlotServerLinks(reconciled);
+      setPlotServerLinks(reconciled);
+      setBackendPlots(plotsRows ?? []);
+      setVouchers(normalizeVoucherRows(voucherPayload));
+    } catch {
+      setBackendPlots([]);
+      setPlotServerLinks(existingLinks);
+      setVouchers([]);
+    }
+  }, [farmer, isSignedIn, localPlots, t]);
+
+  useEffect(() => {
+    void refreshHarvestData();
+  }, [refreshHarvestData, params.plotId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshHarvestData();
+    }, [refreshHarvestData]),
+  );
+
+  useEffect(() => {
+    return subscribeServerPlotSyncChanged(() => {
+      void refreshHarvestData();
+    });
+  }, [refreshHarvestData]);
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
   const mergedHarvestPlots = useMemo(
@@ -92,8 +149,9 @@ export default function HarvestsScreen() {
         backendPlots,
         localPlots,
         farmerId: farmer?.id,
+        plotServerLinks,
       }),
-    [backendPlots, localPlots, farmer?.id],
+    [backendPlots, localPlots, farmer?.id, plotServerLinks],
   );
 
   useEffect(() => {
@@ -118,6 +176,32 @@ export default function HarvestsScreen() {
     deliveryDeepLinkHandled.current = false;
   }, [params.plotId, params.record]);
 
+  useEffect(() => {
+    if (params.focus !== 'receipts') return;
+    setShowNewHarvestLog(false);
+    setShowRecordWeight(false);
+    setShowHarvestLogged(false);
+    setShowMultiPlotDelivery(false);
+    setMultiPlotRestrictedIds(null);
+    setDeliveryPlotSelection(new Set());
+    setLoggedDelivery(null);
+    setPendingReceiptsScroll(true);
+    router.setParams({ focus: undefined });
+  }, [params.focus]);
+
+  useEffect(() => {
+    if (params.focus !== 'select') return;
+    setShowNewHarvestLog(true);
+    setShowRecordWeight(false);
+    setShowHarvestLogged(false);
+    setShowMultiPlotDelivery(false);
+    setMultiPlotRestrictedIds(null);
+    setDeliveryPlotSelection(new Set());
+    setLoggedDelivery(null);
+    setMessage(null);
+    router.setParams({ focus: undefined });
+  }, [params.focus]);
+
   const syncedHarvestPlots = useMemo(
     () => mergedHarvestPlots.filter((p) => !p.localOnly),
     [mergedHarvestPlots],
@@ -132,6 +216,36 @@ export default function HarvestsScreen() {
     setShowRecordWeight(true);
   }, []);
 
+  const toggleDeliveryPlotSelection = useCallback((plotId: string) => {
+    setDeliveryPlotSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(plotId)) {
+        next.delete(plotId);
+      } else {
+        next.add(plotId);
+      }
+      return next;
+    });
+  }, []);
+
+  const continueFromPlotSelection = useCallback(() => {
+    if (!isSignedIn) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+    const ids = [...deliveryPlotSelection];
+    if (ids.length === 0) return;
+    setMessage(null);
+    if (ids.length === 1) {
+      openSinglePlotDelivery(ids[0]!);
+      setDeliveryPlotSelection(new Set());
+      return;
+    }
+    setMultiPlotRestrictedIds(ids);
+    setShowMultiPlotDelivery(true);
+    setDeliveryPlotSelection(new Set());
+  }, [deliveryPlotSelection, isSignedIn, openSignIn, openSinglePlotDelivery]);
+
   useEffect(() => {
     if (params.record !== '1' || typeof params.plotId !== 'string' || deliveryDeepLinkHandled.current) {
       return;
@@ -141,6 +255,7 @@ export default function HarvestsScreen() {
       mergedPlots: mergedHarvestPlots,
       localPlots,
       backendPlots,
+      plotServerLinks,
     });
     if (!target) return;
     deliveryDeepLinkHandled.current = true;
@@ -161,6 +276,7 @@ export default function HarvestsScreen() {
     localPlots,
     backendPlots,
     isSignedIn,
+    plotServerLinks,
     openSignIn,
     openSinglePlotDelivery,
     t,
@@ -172,16 +288,6 @@ export default function HarvestsScreen() {
     [mergedHarvestPlots, selectedPlotId],
   );
   const deliveredByPlot = useMemo(() => sumDeliveredKgByPlot(vouchers), [vouchers]);
-  const recentDeliveries = useMemo(() => {
-    return vouchers
-      .slice()
-      .sort((a, b) => {
-        const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const db = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return db - da;
-      })
-      .slice(0, 6);
-  }, [vouchers]);
   const numericWeight = Number(weightInput.trim().replace(',', '.'));
   const canRecord = Boolean(
     isSignedIn &&
@@ -196,9 +302,174 @@ export default function HarvestsScreen() {
 
   const resetLoggedState = () => {
     setShowHarvestLogged(false);
-    setLoggedMode('synced');
-    setLastQrRef(null);
-    setQueuedMessageKey(null);
+    setLoggedDelivery(null);
+    setDeliverySyncFeedback(null);
+    setDeliverySyncBusy(false);
+  };
+
+  const runDeliverySyncNow = useCallback(async () => {
+    if (!farmer?.id || !loggedDelivery) return;
+    if (!isSignedIn || !hasSyncAuthSession()) {
+      openSignIn({ variant: 'sync' });
+      return;
+    }
+
+    if (loggedDelivery.qrCodeRef) {
+      setDeliverySyncFeedback({
+        variant: 'success',
+        message: t('harvest_receipt_sync_success'),
+      });
+      return;
+    }
+
+    setDeliverySyncBusy(true);
+    setDeliverySyncFeedback(null);
+    try {
+      const backup = await runAutoBackup({
+        farmerId: farmer.id,
+        localPlots,
+      });
+
+      if (backup.plotResult?.stoppedForAuth) {
+        setDeliverySyncFeedback({
+          variant: 'error',
+          message: t('sync_session_expired_short'),
+        });
+        return;
+      }
+
+      if (backup.plotResult?.fetchFailed || backup.queueResult.fetchFailed) {
+        setDeliverySyncFeedback({
+          variant: 'error',
+          message: t('harvest_receipt_sync_failed_reach'),
+        });
+        return;
+      }
+
+      const voucherPayload = await fetchVouchersForFarmer(farmer.id).catch(() => []);
+      const refreshedVouchers = normalizeVoucherRows(voucherPayload);
+      setVouchers(refreshedVouchers);
+
+      const links = await loadPlotServerLinks();
+      setPlotServerLinks(links);
+
+      const plotsRows = await fetchPlotsForFarmer(farmer.id).catch(() => backendPlots);
+      setBackendPlots(plotsRows ?? backendPlots);
+
+      const localPlot = resolveLocalPlotForHarvestSubmit({
+        selectedPlotId: loggedDelivery.plotId,
+        localPlots,
+        backendPlots: plotsRows ?? backendPlots,
+        plotServerLinks: links,
+      });
+      const serverPlotId = localPlot
+        ? resolveServerPlotIdForLocal(localPlot, plotsRows ?? backendPlots, links)
+        : null;
+
+      let qrCodeRef = findSyncedVoucherForLoggedDelivery({
+        delivery: loggedDelivery,
+        vouchers: refreshedVouchers,
+        localPlots,
+        backendPlots: plotsRows ?? backendPlots,
+        plotServerLinks: links,
+      });
+
+      if (qrCodeRef && loggedDelivery.receiptId) {
+        await updateLocalDeliveryReceipt(loggedDelivery.receiptId, {
+          qrCodeRef,
+          pendingSync: false,
+          serverPlotId: serverPlotId ?? undefined,
+        }).catch(() => undefined);
+      }
+
+      if (qrCodeRef) {
+        const seasonTotalKg =
+          sumDeliveredKgByPlot(refreshedVouchers)[String(loggedDelivery.plotId)] ??
+          loggedDelivery.seasonTotalKg;
+        setLoggedDelivery({
+          ...loggedDelivery,
+          mode: 'synced',
+          qrCodeRef,
+          seasonTotalKg,
+          queuedMessageKey: null,
+        });
+        setDeliverySyncFeedback({
+          variant: 'success',
+          message: t('harvest_receipt_sync_success'),
+        });
+        void refreshHarvestData();
+        return;
+      }
+
+      const pendingHarvest = (await loadPendingSyncActions()).some((action) => {
+        if (action.actionType !== 'harvest') return false;
+        try {
+          const payload = JSON.parse(action.payloadJson) as { plotId?: string; kg?: number };
+          return (
+            String(payload.plotId ?? '') === String(loggedDelivery.plotId) &&
+            Math.abs(Number(payload.kg ?? 0) - loggedDelivery.kg) < 0.5
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      if (backup.queueResult.failedActions > 0 || (backup.plotResult?.failed ?? 0) > 0) {
+        setDeliverySyncFeedback({
+          variant: 'error',
+          message: t('harvest_receipt_sync_failed_partial'),
+        });
+        return;
+      }
+
+      if (pendingHarvest) {
+        setDeliverySyncFeedback({
+          variant: 'info',
+          message: t('harvest_receipt_sync_pending_qr'),
+        });
+        return;
+      }
+
+      if (backup.queueResult.completed > 0 || backup.plotResult?.uploaded) {
+        setDeliverySyncFeedback({
+          variant: 'info',
+          message: t('harvest_receipt_sync_pending_qr'),
+        });
+        return;
+      }
+
+      setDeliverySyncFeedback({
+        variant: 'info',
+        message: t('harvest_receipt_sync_nothing_pending'),
+      });
+    } catch {
+      setDeliverySyncFeedback({
+        variant: 'error',
+        message: t('harvest_receipt_sync_failed'),
+      });
+    } finally {
+      setDeliverySyncBusy(false);
+    }
+  }, [
+    backendPlots,
+    farmer?.id,
+    isSignedIn,
+    localPlots,
+    loggedDelivery,
+    openSignIn,
+    refreshHarvestData,
+    t,
+  ]);
+
+  const openAnotherDelivery = () => {
+    resetLoggedState();
+    setDeliveryPlotSelection(new Set());
+    if (syncedHarvestPlots.length === 1) {
+      openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
+      return;
+    }
+    setShowNewHarvestLog(true);
+    setShowRecordWeight(false);
   };
 
   const startNewHarvestFlow = () => {
@@ -208,6 +479,7 @@ export default function HarvestsScreen() {
     }
     setMessage(null);
     setDeliveryRecipient(null);
+    setDeliveryPlotSelection(new Set());
     if (syncedHarvestPlots.length === 1) {
       openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
       return;
@@ -222,12 +494,13 @@ export default function HarvestsScreen() {
       return;
     }
     setMessage(null);
+    setMultiPlotRestrictedIds(null);
     setShowMultiPlotDelivery(true);
   };
 
   const refreshVouchers = async () => {
     if (!farmer) return;
-    const voucherPayload = await fetchVouchersForFarmer(farmer.id);
+    const voucherPayload = await fetchVouchersForFarmer(farmer.id).catch(() => []);
     setVouchers(normalizeVoucherRows(voucherPayload));
   };
 
@@ -258,6 +531,7 @@ export default function HarvestsScreen() {
                 }
                 if (showNewHarvestLog) {
                   setShowNewHarvestLog(false);
+                  setDeliveryPlotSelection(new Set());
                   return;
                 }
               }}
@@ -289,7 +563,7 @@ export default function HarvestsScreen() {
               {showMultiPlotDelivery
                 ? multiPlotHeaderTitle || t('multi_plot_delivery_title')
                 : showHarvestLogged
-                ? loggedMode === 'queued'
+                ? loggedDelivery?.mode === 'queued'
                   ? t('harvest_queued_success_title')
                   : t('harvest_header_logged')
                 : showRecordWeight
@@ -302,7 +576,7 @@ export default function HarvestsScreen() {
         </View>
       </LinearGradient>
 
-      <ThemedScrollView contentContainerStyle={styles.container}>
+      <ThemedScrollView ref={scrollRef} contentContainerStyle={styles.container}>
         {showMultiPlotDelivery ? (
           farmer || localPlots.length > 0 ? (
           <MultiPlotDeliveryWizard
@@ -312,121 +586,48 @@ export default function HarvestsScreen() {
             deliveredByPlot={deliveredByPlot}
             localPlots={localPlots}
             backendPlots={backendPlots}
+            plotServerLinks={plotServerLinks}
             onExit={() => {
               setShowMultiPlotDelivery(false);
               setMultiPlotHeaderTitle('');
+              setMultiPlotRestrictedIds(null);
             }}
             onComplete={refreshVouchers}
             onRegisterBackHandler={(handler) => {
               multiPlotBackRef.current = handler;
             }}
             onHeaderTitleChange={setMultiPlotHeaderTitle}
+            restrictedPlotIds={multiPlotRestrictedIds}
           />
           ) : (
             <Card variant="outlined" style={styles.deliveryCard}>
               <ThemedText type="caption">{t('harvest_setup_farmer_first')}</ThemedText>
             </Card>
           )
-        ) : showHarvestLogged ? (
-          <>
-            <View style={styles.harvestLoggedHeroWrap}>
-              <View
-                style={[
-                  styles.harvestLoggedIconWrap,
-                  loggedMode === 'queued' ? styles.harvestQueuedIconWrap : null,
-                ]}
-              >
-                <Ionicons
-                  name={loggedMode === 'queued' ? 'cloud-offline-outline' : 'checkmark'}
-                  size={loggedMode === 'queued' ? 44 : 52}
-                  color="#0A9F68"
-                />
-              </View>
-            </View>
-            <ThemedText type="title" style={styles.harvestLoggedTitle}>
-              {loggedMode === 'queued'
-                ? t('harvest_queued_success_title')
-                : t('harvest_logged_title')}
-            </ThemedText>
-            <ThemedText type="default" style={styles.harvestLoggedBody}>
-              {loggedMode === 'queued'
-                ? t(queuedMessageKey ?? 'harvest_queued_success_body')
-                : t('harvest_logged_body')}
-            </ThemedText>
-
-            {loggedMode === 'synced' && lastQrRef ? (
-              <Card variant="outlined" style={styles.harvestLoggedQrCard}>
-                <View style={styles.harvestLoggedQrWrap}>
-                  <QRCode
-                    value={lastQrRef}
-                    size={176}
-                    color="#111111"
-                    backgroundColor="#FFFFFF"
-                    ecl="M"
-                  />
-                </View>
-                <Pressable
-                  onPress={() => void Share.share({ message: lastQrRef })}
-                  style={styles.voucherCodePill}
-                >
-                  <ThemedText type="defaultSemiBold" style={styles.voucherCodeText}>
-                    {lastQrRef}
-                  </ThemedText>
-                </Pressable>
-                <ThemedText type="caption" style={styles.harvestLoggedQrText}>
-                  {t('harvest_share_qr')}
-                </ThemedText>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  fullWidth
-                  onPress={() => void Share.share({ message: lastQrRef, title: 'Tracebud voucher' })}
-                >
-                  {t('harvest_copy_voucher_code')}
-                </Button>
-              </Card>
-            ) : loggedMode === 'synced' ? (
-              <Card variant="outlined" style={styles.harvestLoggedQrCard}>
-                <View style={styles.harvestLoggedQrWrap}>
-                  <Ionicons name="qr-code-outline" size={78} color="#A7A7A7" />
-                </View>
-                <ThemedText type="caption" style={styles.harvestLoggedQrText}>
-                  {t('harvest_share_qr')}
-                </ThemedText>
-              </Card>
-            ) : null}
-
-            <Button
-              variant="secondary"
-              fullWidth
-              style={{ backgroundColor: '#0A9F68' }}
-              textStyle={styles.btnTextOnGreen}
-              onPress={() => {
-                resetLoggedState();
-                if (syncedHarvestPlots.length === 1) {
-                  openSinglePlotDelivery(syncedHarvestPlots[0]!.id);
-                  return;
-                }
-                setShowNewHarvestLog(true);
-                setShowRecordWeight(false);
-              }}
-            >
-              {t('log_another_harvest')}
-            </Button>
-
-            <Button
-              variant="secondary"
-              fullWidth
-              style={styles.harvestLoggedBackBtn}
-              textStyle={styles.btnTextOnGray}
-              onPress={() => {
-                resetLoggedState();
-                router.push('/');
-              }}
-            >
-              {t('back_to_home')}
-            </Button>
-          </>
+        ) : showHarvestLogged && loggedDelivery ? (
+          <DeliveryLoggedPanel
+            t={t}
+            delivery={loggedDelivery}
+            onShareAnother={openAnotherDelivery}
+            onViewPlot={(plotId) => {
+              const localPlot = resolveLocalPlotForHarvestSubmit({
+                selectedPlotId: plotId,
+                localPlots,
+                backendPlots,
+                plotServerLinks,
+              });
+              const targetPlotId = localPlot?.id ?? plotId;
+              const receiptParam = loggedDelivery.receiptId
+                ? `&receiptId=${encodeURIComponent(loggedDelivery.receiptId)}`
+                : '';
+              router.push(
+                `/plot/${encodeURIComponent(targetPlotId)}?sub=voucher&from=harvests${receiptParam}`,
+              );
+            }}
+            onSyncNow={() => void runDeliverySyncNow()}
+            syncBusy={deliverySyncBusy}
+            syncFeedback={deliverySyncFeedback}
+          />
         ) : showRecordWeight ? (
           <>
             {selectedPlot ? (
@@ -517,23 +718,60 @@ export default function HarvestsScreen() {
                     return;
                   }
 
+                  const localPlot = resolveLocalPlotForHarvestSubmit({
+                    selectedPlotId,
+                    localPlots,
+                    backendPlots,
+                    plotServerLinks,
+                  });
+                  if (!localPlot) {
+                    setMessage(t('harvest_plot_not_on_device'));
+                    return;
+                  }
+
+                  const plotName = String(localPlot.name ?? t('plot_fallback'));
+
                   const result = await submitHarvestRecord({
                     farmerId: farmer.id,
                     selectedPlotId,
                     kg: validation.value,
                     localPlots,
                     backendPlots,
+                    plotServerLinks,
                     deliveryRecipient,
+                    plotName,
+                    buyerLabel: buyerLabelForDeliveryRecipient(deliveryRecipient, t),
                   });
                   if (result.status === 'error') {
-                    setMessage(result.message);
+                    setMessage(
+                      'messageKey' in result && result.messageKey
+                        ? t(result.messageKey)
+                        : result.message,
+                    );
                     return;
                   }
+
+                  const snapshotBase = {
+                    receiptId: result.receiptId,
+                    plotId: localPlot.id,
+                    plotName,
+                    kg: validation.value,
+                    recordedAt: Date.now(),
+                    deliveryRecipient,
+                  };
+
                   if (result.status === 'queued') {
-                    setLoggedMode('queued');
-                    setQueuedMessageKey(result.messageKey);
-                    setLastQrRef(null);
+                    const priorKg = deliveredByPlot[String(localPlot.id)] ?? 0;
+                    setLoggedDelivery({
+                      ...snapshotBase,
+                      qrCodeRef: null,
+                      mode: 'queued',
+                      queuedMessageKey: result.messageKey,
+                      seasonTotalKg: priorKg + validation.value,
+                    });
+                    void refreshHarvestData();
                     setWeightInput('');
+                    setDeliveryRecipient(null);
                     setShowRecordWeight(false);
                     setShowNewHarvestLog(false);
                     setShowHarvestLogged(true);
@@ -542,11 +780,18 @@ export default function HarvestsScreen() {
                   }
 
                   const voucherPayload = await fetchVouchersForFarmer(farmer.id);
-                  setVouchers(normalizeVoucherRows(voucherPayload));
-                  setLoggedMode('synced');
-                  setQueuedMessageKey(null);
-                  setLastQrRef(result.qrCodeRef);
+                  const refreshedVouchers = normalizeVoucherRows(voucherPayload);
+                  setVouchers(refreshedVouchers);
+                  const seasonTotalKg = sumDeliveredKgByPlot(refreshedVouchers)[String(localPlot.id)] ?? null;
+                  setLoggedDelivery({
+                    ...snapshotBase,
+                    qrCodeRef: result.qrCodeRef,
+                    mode: 'synced',
+                    seasonTotalKg,
+                  });
+                  void refreshHarvestData();
                   setWeightInput('');
+                  setDeliveryRecipient(null);
                   setShowRecordWeight(false);
                   setShowNewHarvestLog(false);
                   setShowHarvestLogged(true);
@@ -572,16 +817,18 @@ export default function HarvestsScreen() {
               ) : (
                 mergedHarvestPlots.slice(0, 24).map((p) => {
                   const seasonKg = Math.round(deliveredByPlot[String(p.id)] ?? 0);
-                  const selected = String(selectedPlotId) === String(p.id);
+                  const selected = deliveryPlotSelection.has(String(p.id));
                   return (
                     <Pressable
                       key={p.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected, disabled: p.localOnly }}
                       onPress={() => {
                         if (p.localOnly) {
                           Alert.alert(t('harvest_backup_first_title'), t('harvest_backup_first'));
                           return;
                         }
-                        openSinglePlotDelivery(p.id);
+                        toggleDeliveryPlotSelection(String(p.id));
                       }}
                     >
                       <Card
@@ -606,13 +853,33 @@ export default function HarvestsScreen() {
                             {t('plot_season_delivered_kg', { n: seasonKg.toLocaleString() })}
                           </ThemedText>
                         </View>
-                        <Ionicons name="chevron-forward" size={22} color="#B1B1B1" />
+                        <Ionicons
+                          name={selected ? 'checkbox' : 'square-outline'}
+                          size={24}
+                          color={selected ? '#0A7F59' : '#9CA3AF'}
+                        />
                       </Card>
                     </Pressable>
                   );
                 })
               )}
             </View>
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={deliveryPlotSelection.size === 0}
+              style={
+                deliveryPlotSelection.size > 0
+                  ? { backgroundColor: '#0A7F59' }
+                  : styles.disabledRecordBtn
+              }
+              textStyle={
+                deliveryPlotSelection.size > 0 ? styles.btnTextOnGreen : styles.btnTextDisabled
+              }
+              onPress={continueFromPlotSelection}
+            >
+              {t('harvest_select_plots_continue', { n: deliveryPlotSelection.size })}
+            </Button>
           </>
         ) : (
           <>
@@ -671,41 +938,25 @@ export default function HarvestsScreen() {
           )}
         </Card>
 
-        <SectionHeader title={t('recent_deliveries')} />
-        {recentDeliveries.length === 0 ? (
-          <Card variant="outlined" style={styles.card}>
-            <ThemedText type="caption">{t('no_deliveries')}</ThemedText>
-          </Card>
-        ) : (
-          <View style={{ gap: 10 }}>
-            {recentDeliveries.map((v) => {
-              const kg = Number(v.kg ?? v.kg_delivered ?? v.weight_kg ?? 0);
-              const statusLabel =
-                v.status === 'active' || v.status === 'synced' ? t('status_synced') : t('status_pending');
-              const statusVariant = statusLabel === 'Synced' ? 'success' : 'warning';
-              const plotLabel = String(v.plot_name ?? v.plot_label ?? t('plot_fallback'));
-              const dateLabel = v.created_at
-                ? new Date(v.created_at).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: '2-digit',
-                  })
-                : '—';
-              return (
-                <Card key={v.id} variant="outlined" style={styles.deliveryCard}>
-                  <View style={styles.rowHeader}>
-                    <View>
-                      <ThemedText type="subtitle">{`${Number.isFinite(kg) ? kg : 0} kg`}</ThemedText>
-                      <ThemedText type="caption">{`${plotLabel} - ${dateLabel}`}</ThemedText>
-                    </View>
-                    <Badge variant={statusVariant} size="sm">
-                      {statusLabel}
-                    </Badge>
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
-        )}
+        <View
+          onLayout={(event) => {
+            receiptsSectionY.current = event.nativeEvent.layout.y;
+            if (!pendingReceiptsScroll) return;
+            scrollRef.current?.scrollTo({
+              y: Math.max(0, event.nativeEvent.layout.y - 12),
+              animated: true,
+            });
+            setPendingReceiptsScroll(false);
+          }}
+        >
+          <SectionHeader title={t('harvest_receipts_title')} />
+          <DeliveryReceiptsBrowser
+            t={t}
+            vouchers={vouchers}
+            mergedPlots={mergedHarvestPlots}
+            deviceReceipts={deviceReceipts}
+          />
+        </View>
           </>
         )}
         {message ? <ThemedText type="caption">{message}</ThemedText> : null}
@@ -917,64 +1168,6 @@ const styles = StyleSheet.create({
   btnTextDisabled: {
     color: '#4B5563',
   },
-  harvestLoggedHeroWrap: {
-    alignItems: 'center',
-    marginTop: -4,
-    marginBottom: 6,
-  },
-  harvestLoggedIconWrap: {
-    width: 124,
-    height: 124,
-    borderRadius: 62,
-    backgroundColor: '#CDEEDF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  harvestQueuedIconWrap: {
-    backgroundColor: '#E8F4EC',
-  },
-  harvestLoggedTitle: {
-    textAlign: 'center',
-    color: '#1C1C1C',
-    fontSize: 50,
-    lineHeight: 56,
-  },
-  harvestLoggedBody: {
-    textAlign: 'center',
-    color: '#555555',
-    marginTop: 6,
-  },
-  harvestLoggedQrCard: {
-    borderRadius: 22,
-    borderColor: '#D5D5D5',
-    backgroundColor: '#F8F8F8',
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  harvestLoggedQrWrap: {
-    width: 210,
-    height: 210,
-    borderRadius: 20,
-    backgroundColor: '#ECECEC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  harvestLoggedQrText: {
-    marginTop: 10,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  voucherCodePill: {
-    marginTop: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#ECECEC',
-  },
-  voucherCodeText: {
-    color: '#1F2937',
-    textAlign: 'center',
-  },
   signInHarvestCard: {
     borderRadius: 18,
     borderColor: '#AEE6D3',
@@ -1004,9 +1197,6 @@ const styles = StyleSheet.create({
   selectPlotCardDisabled: {
     opacity: 0.72,
     backgroundColor: '#F3F4F6',
-  },
-  harvestLoggedBackBtn: {
-    backgroundColor: '#DFDFDF',
   },
   card: { marginTop: 2 },
   introCard: {

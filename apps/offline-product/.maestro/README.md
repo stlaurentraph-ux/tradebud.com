@@ -98,7 +98,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 |--------|--------|
 | `plot-card` | My Plots list |
 | `plot-nav-documents` | Plot detail → Documents tab |
-| `plot-add-land-title-photo` | Add land title photo |
+| `plot-upload-land-proof` | Upload land proof (photo, file, or camera) |
 | `plot-add-tenure-evidence` | Add tenure evidence |
 | `plot-land-title-photo-count` | Land title photo count |
 | `plot-tenure-evidence-section` | Tenure evidence section |

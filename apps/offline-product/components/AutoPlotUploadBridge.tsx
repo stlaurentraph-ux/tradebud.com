@@ -22,6 +22,8 @@ export function AutoPlotUploadBridge() {
     inFlight.current = true;
     try {
       await runAutoBackup({ farmerId: farmer.id, localPlots: plots });
+    } catch {
+      // Background backup must not surface transport errors to farmers.
     } finally {
       inFlight.current = false;
     }

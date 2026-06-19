@@ -148,6 +148,13 @@ export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: 
   }
 
   if (await supportsSecureStore()) {
+    const existingMethod = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_METHOD_KEY))?.trim() ?? '';
+    if (existingMethod === 'password') {
+      const existingPassword = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY)) ?? '';
+      if (existingPassword) {
+        return;
+      }
+    }
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'oauth');
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, normalizedEmail);
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY, refreshToken);

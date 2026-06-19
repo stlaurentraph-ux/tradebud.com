@@ -1,51 +1,32 @@
 import { postHarvestToBackend } from '@/features/api/postPlot';
-import { logError } from '@/features/errors/ErrorLogger';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { logError, getUserMessage } from '@/features/errors/ErrorLogger';
+import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
+import { resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
+import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import type { Plot } from '@/features/state/AppStateContext';
-import { enqueuePendingSync } from '@/features/state/persistence';
+import { enqueuePendingSync, persistLocalDeliveryReceipt } from '@/features/state/persistence';
 import {
   deliveryRecipientToApiPayload,
   type DeliveryRecipientSelection,
 } from '@/features/harvest/DeliveryRecipientFields';
 
 export type SubmitHarvestResult =
-  | { status: 'synced'; qrCodeRef: string | null }
-  | { status: 'queued'; messageKey: 'harvest_queued_offline' | 'harvest_queued_plot_not_synced' }
+  | { status: 'synced'; qrCodeRef: string | null; receiptId: string }
+  | { status: 'queued'; messageKey: 'harvest_queued_offline' | 'harvest_queued_plot_not_synced'; receiptId: string }
+  | {
+      status: 'error';
+      messageKey: 'harvest_plot_not_on_device';
+      message: string;
+    }
   | { status: 'error'; message: string };
 
-function readQrCodeRef(response: unknown): string | null {
-  if (!response || typeof response !== 'object') return null;
-  const voucher = (response as { voucher?: { qr_code_ref?: unknown } }).voucher;
-  const ref = voucher?.qr_code_ref;
-  if (ref == null) return null;
-  const trimmed = String(ref).trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function resolveLocalPlotForSelection(
-  selectedPlotId: string,
-  localPlots: Plot[],
+function resolveServerPlotId(
+  localPlot: Plot,
   backendPlots: unknown[],
-): Plot | null {
-  const direct = localPlots.find((p) => p.id === selectedPlotId);
-  if (direct) return direct;
-
-  const serverRow = (backendPlots as { id?: unknown; name?: string }[]).find(
-    (row) => String(row.id ?? '') === selectedPlotId,
-  );
-  if (!serverRow) return null;
-
-  const clientKey = String(serverRow.name ?? '');
-  return (
-    localPlots.find((p) => p.id === clientKey) ??
-    localPlots.find((p) => p.name === clientKey) ??
-    null
-  );
-}
-
-function resolveServerPlotId(localPlot: Plot, backendPlots: unknown[]): string | null {
-  const hit = findBackendPlotForLocal(
+  plotServerLinks?: PlotServerLinks | null,
+): string | null {
+  return resolveServerPlotIdForLocal(
     {
       id: localPlot.id,
       name: localPlot.name,
@@ -53,10 +34,8 @@ function resolveServerPlotId(localPlot: Plot, backendPlots: unknown[]): string |
       kind: localPlot.kind,
     },
     backendPlots,
+    plotServerLinks,
   );
-  return hit != null && (hit as { id?: unknown }).id != null
-    ? String((hit as { id: unknown }).id)
-    : null;
 }
 
 export async function submitHarvestRecord(params: {
@@ -65,22 +44,51 @@ export async function submitHarvestRecord(params: {
   kg: number;
   localPlots: Plot[];
   backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
   deliveryRecipient?: DeliveryRecipientSelection | null;
+  plotName?: string;
+  buyerLabel?: string;
 }): Promise<SubmitHarvestResult> {
-  const localPlot = resolveLocalPlotForSelection(
-    params.selectedPlotId,
-    params.localPlots,
-    params.backendPlots,
-  );
+  const localPlot = resolveLocalPlotForHarvestSubmit({
+    selectedPlotId: params.selectedPlotId,
+    localPlots: params.localPlots,
+    backendPlots: params.backendPlots,
+    plotServerLinks: params.plotServerLinks,
+  });
   if (!localPlot) {
-    return { status: 'error', message: 'Plot not found on this device.' };
+    return {
+      status: 'error',
+      messageKey: 'harvest_plot_not_on_device',
+      message: 'Plot not found on this device.',
+    };
   }
 
-  const serverPlotId = resolveServerPlotId(localPlot, params.backendPlots);
+  const serverPlotId = resolveServerPlotId(
+    localPlot,
+    params.backendPlots,
+    params.plotServerLinks,
+  );
   const createdAt = Date.now();
   const clientEventId = `harvest-${localPlot.id}-${createdAt}`;
 
   const deliveryPayload = deliveryRecipientToApiPayload(params.deliveryRecipient ?? null);
+  const plotName = params.plotName?.trim() || String(localPlot.name ?? 'Plot');
+  const buyerLabel = params.buyerLabel?.trim() || '';
+
+  const persistLocalReceipt = async (pendingSync: boolean, qrCodeRef: string | null) => {
+    await persistLocalDeliveryReceipt({
+      id: clientEventId,
+      farmerId: params.farmerId,
+      localPlotId: localPlot.id,
+      serverPlotId: serverPlotId,
+      plotName,
+      kg: params.kg,
+      recordedAt: createdAt,
+      qrCodeRef,
+      pendingSync,
+      buyerLabel,
+    });
+  };
 
   if (serverPlotId) {
     try {
@@ -91,13 +99,15 @@ export async function submitHarvestRecord(params: {
         clientEventId,
         ...deliveryPayload,
       });
+      const qrCodeRef = readHarvestSubmitQrCodeRef(response);
+      await persistLocalReceipt(false, qrCodeRef);
       trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
         plotId: localPlot.id,
         serverPlotId,
         kg: params.kg,
         deliveryMode: params.deliveryRecipient?.mode ?? 'unspecified',
       });
-      return { status: 'synced', qrCodeRef: readQrCodeRef(response) };
+      return { status: 'synced', qrCodeRef, receiptId: clientEventId };
     } catch (e) {
       const classified = logError(e, {
         context: 'harvest_submission',
@@ -110,6 +120,13 @@ export async function submitHarvestRecord(params: {
           reason: classified.code ?? classified.category,
         });
         return { status: 'error', message: classified.message };
+      }
+      if (classified.category === 'server') {
+        trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_FAILURE, {
+          plotId: localPlot.id,
+          reason: classified.code ?? classified.category,
+        });
+        return { status: 'error', message: getUserMessage(classified) };
       }
     }
   }
@@ -126,6 +143,7 @@ export async function submitHarvestRecord(params: {
     }),
     lastError: null,
   });
+  await persistLocalReceipt(true, null);
 
   trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_FAILURE, {
     plotId: localPlot.id,
@@ -136,5 +154,6 @@ export async function submitHarvestRecord(params: {
   return {
     status: 'queued',
     messageKey: serverPlotId ? 'harvest_queued_offline' : 'harvest_queued_plot_not_synced',
+    receiptId: clientEventId,
   };
 }

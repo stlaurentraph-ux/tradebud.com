@@ -19,3 +19,12 @@ export function isImageDocumentUri(uri: string, mimeType: string | null): boolea
 export function canOpenExternally(uri: string): boolean {
   return !uri.startsWith('text:');
 }
+
+export type DocumentPreviewItem = {
+  uri: string;
+  mimeType: string | null;
+  label?: string | null;
+  deleteTarget?:
+    | { kind: 'land_title_photo'; id: number }
+    | { kind: 'tenure_evidence'; id: number };
+};

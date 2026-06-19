@@ -2,7 +2,7 @@
 
 ## Work now
 
-- **Field app (2026-06-16)** — Google sign-in + sign-out hardened; producer/plot documents split shipped; Documents navigation + declaration UI aligned. Device re-verify sign-out after Metro reload.
+- **Field app (2026-06-16)** — Delivery saved screen (`DeliveryLoggedPanel`) shipped on harvests tab; plot receipt tab + land-paper gating. Device QA: record delivery → share PNG → view plot receipt; queued path → Sync now.
 - Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md`.
 - Dashboard exporter supplier directory + processing facility subtypes (contacts org list, CSV import labels).
 

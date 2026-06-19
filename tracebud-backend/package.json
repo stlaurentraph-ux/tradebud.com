@@ -50,6 +50,10 @@
     "db:verify:evidence-documents-phase2": "node scripts/apply-evidence-documents-phase2-migration.mjs --verify-only",
     "db:apply:compliance-issue-ownership": "node scripts/run-with-root-test-db.mjs node scripts/apply-compliance-issue-ownership-migration.mjs",
     "db:verify:compliance-issue-ownership": "node scripts/run-with-root-test-db.mjs node scripts/apply-compliance-issue-ownership-migration.mjs --verify-only",
+    "db:apply:voucher-delivery-routing": "node scripts/apply-voucher-delivery-routing-migration.mjs",
+    "db:verify:voucher-delivery-routing": "node scripts/apply-voucher-delivery-routing-migration.mjs --verify-only",
+    "db:apply:harvest-transaction-created-by": "node scripts/apply-harvest-transaction-created-by-migration.mjs",
+    "db:verify:harvest-transaction-created-by": "node scripts/apply-harvest-transaction-created-by-migration.mjs --verify-only",
     "railway:preflight:local": "node scripts/railway-local-preflight.mjs",
     "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs",
     "billing:finalize-period-cron": "node scripts/billing-finalize-period-cron.mjs"

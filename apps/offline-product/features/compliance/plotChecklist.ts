@@ -39,6 +39,29 @@ export type PlotReadinessChecklist = {
   done: boolean;
 };
 
+export type LandDocumentsUiStatus =
+  | 'missing'
+  | 'local_only'
+  | 'reviewing'
+  | 'blocked'
+  | 'verified';
+
+/** Farmer-facing land-papers state — do not equate upload with “verified”. */
+export function resolveLandDocumentsUiStatus(params: {
+  titlePhotoCount: number;
+  evidenceKinds: readonly string[];
+  tenureParseGate: TenureParseGateStatus;
+}): LandDocumentsUiStatus {
+  const hasLandDocuments =
+    params.titlePhotoCount > 0 || evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
+  if (!hasLandDocuments) return 'missing';
+  if (params.tenureParseGate === 'blocked') return 'blocked';
+  if (params.tenureParseGate === 'pending') return 'reviewing';
+  if (params.tenureParseGate === 'not_synced') return 'local_only';
+  if (params.tenureParseGate === 'cleared') return 'verified';
+  return 'missing';
+}
+
 export function evaluateTenureParseGate(params: {
   /** Land title photos and/or tenure evidence documents uploaded for this plot. */
   hasLandDocuments: boolean;

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  buildMultiPlotLinesFromWeights,
   canAddLineToSession,
+  inlineMultiPlotWeightsComplete,
   reservedKgByPlot,
   sessionTotalKg,
   submitMultiPlotDeliverySession,
@@ -76,10 +78,39 @@ describe('multiPlotDeliverySession', () => {
     ).toEqual({ ok: false, reason: 'duplicate_plot' });
   });
 
+  it('builds delivery lines from inline weight map', () => {
+    const built = buildMultiPlotLinesFromWeights({
+      plots: [
+        { id: 'plot_a', name: 'Block A', area_ha: 2 },
+        { id: 'plot_b', name: 'Block B', area_ha: 3 },
+      ],
+      weightByPlotId: { plot_a: '100', plot_b: '80' },
+      deliveredByPlot: {},
+    });
+    expect(built).toEqual({
+      ok: true,
+      lines: [
+        { plotId: 'plot_a', plotName: 'Block A', kg: 100 },
+        { plotId: 'plot_b', plotName: 'Block B', kg: 80 },
+      ],
+    });
+    expect(
+      inlineMultiPlotWeightsComplete({
+        plots: [{ id: 'plot_a', name: 'Block A', area_ha: 2 }],
+        weightByPlotId: { plot_a: '50' },
+        deliveredByPlot: {},
+      }),
+    ).toBe(true);
+  });
+
   it('submits each line sequentially and preserves per-line outcomes', async () => {
     vi.mocked(submitHarvestRecord)
-      .mockResolvedValueOnce({ status: 'synced', qrCodeRef: 'V-AAA' })
-      .mockResolvedValueOnce({ status: 'queued', messageKey: 'harvest_queued_offline' });
+      .mockResolvedValueOnce({ status: 'synced', qrCodeRef: 'V-AAA', receiptId: 'r1' })
+      .mockResolvedValueOnce({
+        status: 'queued',
+        messageKey: 'harvest_queued_offline',
+        receiptId: 'r2',
+      });
 
     const results = await submitMultiPlotDeliverySession({
       farmerId: 'farmer_1',

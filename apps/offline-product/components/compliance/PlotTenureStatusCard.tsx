@@ -9,7 +9,9 @@ import {
   computePlotTenureStatus,
   type PlotTenureStatusBadge,
 } from '@/features/compliance/plotTenureStatus';
+import { evaluateTenureParseGate } from '@/features/compliance/plotChecklist';
 import { PlotTenureDocumentReviewList } from '@/components/compliance/PlotTenureDocumentReviewList';
+import { summarizeTenureBlockedBadge } from '@/features/compliance/plotTenureVerificationReview';
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 import { useLanguage } from '@/features/state/LanguageContext';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -26,8 +28,10 @@ type PlotTenureStatusCardProps = {
   onOpenDocuments?: () => void;
 };
 
-function badgeVariant(badge: PlotTenureStatusBadge): 'success' | 'warning' | 'default' {
+function badgeVariant(badge: PlotTenureStatusBadge): 'success' | 'warning' | 'default' | 'info' {
   if (badge === 'formal_documented' || badge === 'producer_in_possession') return 'success';
+  if (badge === 'documentation_reviewing') return 'info';
+  if (badge === 'documentation_blocked' || badge === 'documentation_local_only') return 'warning';
   if (badge === 'attestation_only') return 'warning';
   return 'default';
 }
@@ -44,6 +48,12 @@ export function PlotTenureStatusCard({
   onOpenDocuments,
 }: PlotTenureStatusCardProps) {
   const { t } = useLanguage();
+  const docCount = titlePhotoCount + tenureEvidenceCount;
+  const tenureParseGate = evaluateTenureParseGate({
+    hasLandDocuments: docCount > 0,
+    isSyncedToServer,
+    tenureVerifications,
+  });
   const status = computePlotTenureStatus({
     informalTenure,
     cadastralKey,
@@ -51,6 +61,7 @@ export function PlotTenureStatusCard({
     tenureEvidenceCount,
     landTenureDeclared: plot.landTenureDeclared,
     noDeforestationDeclared: plot.noDeforestationDeclared,
+    tenureParseGate,
   });
 
   const pathLabel =
@@ -60,6 +71,11 @@ export function PlotTenureStatusCard({
         ? t('plot_tenure_path_formal')
         : t('plot_tenure_path_undeclared');
 
+  const blockedBadgeKind =
+    status.badge === 'documentation_blocked'
+      ? summarizeTenureBlockedBadge(tenureVerifications)
+      : null;
+
   const badgeLabel =
     status.badge === 'formal_documented'
       ? t('plot_tenure_badge_formal')
@@ -67,10 +83,26 @@ export function PlotTenureStatusCard({
         ? t('plot_productor_posesion')
         : status.badge === 'attestation_only'
           ? t('plot_tenure_badge_attestation_only')
-          : t('plot_tenure_badge_missing');
+          : status.badge === 'documentation_reviewing'
+            ? t('plot_tenure_badge_checking')
+            : status.badge === 'documentation_blocked'
+              ? blockedBadgeKind === 'reupload'
+                ? t('plot_tenure_badge_upload_again')
+                : t('plot_tenure_badge_needs_review')
+              : status.badge === 'documentation_local_only'
+                ? t('plot_tenure_badge_on_phone')
+                : t('plot_tenure_badge_missing');
 
-  const docCount = titlePhotoCount + tenureEvidenceCount;
   const hasVerificationRows = tenureVerifications.length > 0;
+
+  const isEmptyLandState =
+    status.path === 'undeclared' &&
+    docCount === 0 &&
+    !cadastralKey?.trim() &&
+    !(informalTenure && informalTenureNote?.trim()) &&
+    !hasVerificationRows;
+
+  if (isEmptyLandState) return null;
 
   return (
     <Card variant="outlined" style={styles.card}>
@@ -85,14 +117,16 @@ export function PlotTenureStatusCard({
         </View>
       </View>
 
-      <View style={styles.pathRow}>
-        <Ionicons
-          name={status.path === 'producer_in_possession' ? 'hand-left-outline' : 'document-text-outline'}
-          size={18}
-          color="#0A7F59"
-        />
-        <ThemedText type="defaultSemiBold">{pathLabel}</ThemedText>
-      </View>
+      {status.path !== 'undeclared' ? (
+        <View style={styles.pathRow}>
+          <Ionicons
+            name={status.path === 'producer_in_possession' ? 'hand-left-outline' : 'document-text-outline'}
+            size={18}
+            color="#0A7F59"
+          />
+          <ThemedText type="defaultSemiBold">{pathLabel}</ThemedText>
+        </View>
+      ) : null}
 
       {cadastralKey?.trim() ? (
         <View style={styles.metaRow}>
@@ -108,19 +142,16 @@ export function PlotTenureStatusCard({
         </View>
       ) : null}
 
-      <View style={styles.countsRow}>
-        {titlePhotoCount > 0 ? (
-          <ThemedText type="caption">{t('plot_tenure_title_photos_count', { n: titlePhotoCount })}</ThemedText>
-        ) : null}
-        {tenureEvidenceCount > 0 ? (
-          <ThemedText type="caption">{t('plot_tenure_evidence_count', { n: tenureEvidenceCount })}</ThemedText>
-        ) : null}
-        {docCount === 0 && !cadastralKey?.trim() ? (
-          <ThemedText type="caption" style={styles.muted}>
-            {t('plot_status_land_hint')}
-          </ThemedText>
-        ) : null}
-      </View>
+      {(titlePhotoCount > 0 || tenureEvidenceCount > 0) && !hasVerificationRows ? (
+        <View style={styles.countsRow}>
+          {titlePhotoCount > 0 ? (
+            <ThemedText type="caption">{t('plot_tenure_title_photos_count', { n: titlePhotoCount })}</ThemedText>
+          ) : null}
+          {tenureEvidenceCount > 0 ? (
+            <ThemedText type="caption">{t('plot_tenure_evidence_count', { n: tenureEvidenceCount })}</ThemedText>
+          ) : null}
+        </View>
+      ) : null}
 
       {status.attestationsComplete ? (
         <View style={styles.linkedRow}>
@@ -139,6 +170,7 @@ export function PlotTenureStatusCard({
       ) : null}
 
       <PlotTenureDocumentReviewList
+        embedded
         tenureVerifications={tenureVerifications}
         titlePhotoCount={titlePhotoCount}
         tenureEvidenceCount={tenureEvidenceCount}

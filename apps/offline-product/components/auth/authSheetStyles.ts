@@ -12,6 +12,9 @@ export const authSheetStyles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: Spacing.md,
   },
+  backdropPress: {
+    ...StyleSheet.absoluteFillObject,
+  },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,

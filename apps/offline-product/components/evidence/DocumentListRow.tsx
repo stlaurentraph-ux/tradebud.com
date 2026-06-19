@@ -10,25 +10,33 @@ type DocumentListRowProps = {
   label: string;
   dateLabel: string;
   badgeLabel?: string;
+  statusLabel?: string;
+  statusVariant?: 'success' | 'warning' | 'info' | 'default';
   uri: string;
   mimeType: string | null;
   onPress: () => void;
+  onDelete?: () => void;
+  deleteAccessibilityLabel?: string;
 };
 
 export function DocumentListRow({
   label,
   dateLabel,
   badgeLabel,
+  statusLabel,
+  statusVariant = 'default',
   uri,
   mimeType,
   onPress,
+  onDelete,
+  deleteAccessibilityLabel,
 }: DocumentListRowProps) {
-  const showThumb = isImageDocumentUri(uri, mimeType);
+  const showThumb = Boolean(uri?.trim()) && isImageDocumentUri(uri, mimeType);
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Card variant="outlined" style={styles.rowCard}>
-        <View style={styles.row}>
+    <Card variant="outlined" style={styles.rowCard}>
+      <View style={styles.row}>
+        <Pressable accessibilityRole="button" onPress={onPress} style={styles.pressableMain}>
           {showThumb ? (
             <Image source={{ uri }} style={styles.thumb} />
           ) : (
@@ -50,11 +58,29 @@ export function DocumentListRow({
               ) : null}
             </View>
             <ThemedText type="caption">{dateLabel}</ThemedText>
+            {statusLabel ? (
+              <View style={styles.statusWrap}>
+                <Badge variant={statusVariant} size="sm">
+                  {statusLabel}
+                </Badge>
+              </View>
+            ) : null}
           </View>
           <Ionicons name="chevron-forward" size={18} color="#A3A3A3" />
-        </View>
-      </Card>
-    </Pressable>
+        </Pressable>
+        {onDelete ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={deleteAccessibilityLabel}
+            onPress={onDelete}
+            style={styles.deleteBtn}
+            hitSlop={8}
+          >
+            <Ionicons name="trash-outline" size={20} color="#B91C1C" />
+          </Pressable>
+        ) : null}
+      </View>
+    </Card>
   );
 }
 
@@ -63,7 +89,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  pressableMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    minWidth: 0,
   },
   thumb: {
     width: 48,
@@ -99,5 +132,13 @@ const styles = StyleSheet.create({
   badgeWrap: {
     flexShrink: 0,
     maxWidth: '42%',
+  },
+  statusWrap: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  deleteBtn: {
+    padding: 6,
+    flexShrink: 0,
   },
 });

@@ -11,8 +11,13 @@
  * See STATE_MIGRATION_GUIDE.md for migration instructions.
  */
 
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
+import {
+  hasProducerAttestationsComplete,
+  mergeFarmerProfileFromDisk,
+  mergeFarmerProfileOnUpdate,
+} from '@/features/compliance/farmerDeclarations';
 import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import {
   deletePlotLocalData,
@@ -78,6 +83,8 @@ type AppStateContextValue = {
   farmer?: FarmerProfile;
   plots: Plot[];
   setFarmer: (farmer: FarmerProfile) => void;
+  /** Persist farmer to SQLite and update in-memory state (await for critical saves). */
+  saveFarmer: (farmer: FarmerProfile) => Promise<void>;
   /** Returns the new plot id when created; undefined if no farmer or not called. */
   addPlot: (input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>) => string | undefined;
   renamePlot: (plotId: string, newName: string) => void;
@@ -94,6 +101,7 @@ const AppStateContext = createContext<AppStateContextValue | undefined>(undefine
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [farmer, setFarmerState] = useState<FarmerProfile | undefined>(undefined);
   const [plots, setPlots] = useState<Plot[]>([]);
+  const reloadGenerationRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,19 +125,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const persistMergedFarmer = (merged: FarmerProfile) => {
+    persistFarmer(merged).catch(() => undefined);
+  };
+
   const reloadFromDisk = async () => {
+    const generation = ++reloadGenerationRef.current;
     const loaded = await loadAppState();
-    setFarmerState(loaded.farmer);
+    if (generation !== reloadGenerationRef.current) return;
+    setFarmerState((prev) => {
+      const merged = mergeFarmerProfileFromDisk(prev, loaded.farmer);
+      if (
+        merged &&
+        hasProducerAttestationsComplete(merged) &&
+        !hasProducerAttestationsComplete(loaded.farmer)
+      ) {
+        persistMergedFarmer(merged);
+      }
+      return merged;
+    });
     setPlots(loaded.plots);
   };
 
   const setFarmer = (nextFarmer: FarmerProfile) => {
     setFarmerState((prev) => {
-      const merged: FarmerProfile = {
-        ...nextFarmer,
-        profilePhotoUri: nextFarmer.profilePhotoUri ?? prev?.profilePhotoUri,
-      };
-      persistFarmer(merged).catch(() => undefined);
+      const merged = mergeFarmerProfileOnUpdate(prev, nextFarmer);
+      persistMergedFarmer(merged);
       return merged;
     });
     logAuditEvent({
@@ -147,6 +168,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         declarationLatitude: nextFarmer.declarationLatitude ?? null,
         declarationLongitude: nextFarmer.declarationLongitude ?? null,
         declarationGeoCapturedAt: nextFarmer.declarationGeoCapturedAt ?? null,
+      },
+    }).catch(() => undefined);
+  };
+
+  const saveFarmer = async (nextFarmer: FarmerProfile) => {
+    let merged!: FarmerProfile;
+    setFarmerState((prev) => {
+      merged = mergeFarmerProfileOnUpdate(prev, nextFarmer);
+      return merged;
+    });
+    await persistFarmer(merged);
+    logAuditEvent({
+      userId: merged.id,
+      eventType: 'farmer_set',
+      payload: {
+        role: merged.role,
+        selfDeclared: merged.selfDeclared,
+        selfDeclaredAt: merged.selfDeclaredAt ?? null,
+        fpicConsent: merged.fpicConsent ?? null,
+        laborNoChildLabor: merged.laborNoChildLabor ?? null,
+        laborNoForcedLabor: merged.laborNoForcedLabor ?? null,
+        postalAddress: merged.postalAddress ?? null,
+        commodityCode: merged.commodityCode ?? null,
+        declarationLatitude: merged.declarationLatitude ?? null,
+        declarationLongitude: merged.declarationLongitude ?? null,
+        declarationGeoCapturedAt: merged.declarationGeoCapturedAt ?? null,
       },
     }).catch(() => undefined);
   };
@@ -201,6 +248,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         farmer,
         plots,
         setFarmer,
+        saveFarmer,
         addPlot,
         renamePlot: (plotId: string, newName: string) => {
           setPlots((prev) => {

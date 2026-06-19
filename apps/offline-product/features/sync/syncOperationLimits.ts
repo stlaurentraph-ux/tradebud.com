@@ -2,7 +2,7 @@
 export const SYNC_LOCK_WAIT_MS = 60_000;
 
 /** Wall-clock budget for manual "Sync now" in Settings. */
-export const SYNC_MANUAL_OPERATION_MS = 120_000;
+export const SYNC_MANUAL_OPERATION_MS = 180_000;
 
 /** Wall-clock budget for automatic background backup. */
 export const SYNC_BACKGROUND_OPERATION_MS = 120_000;

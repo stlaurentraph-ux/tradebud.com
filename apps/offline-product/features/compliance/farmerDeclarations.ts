@@ -37,6 +37,70 @@ export function applyProducerAttestationsToFarmer(
   };
 }
 
+/** Keep saved producer attestations when a partial farmer patch omits them. */
+export function mergeFarmerProfileOnUpdate(
+  previous: FarmerProfile | undefined,
+  next: FarmerProfile,
+): FarmerProfile {
+  const merged: FarmerProfile = {
+    ...next,
+    profilePhotoUri: next.profilePhotoUri ?? previous?.profilePhotoUri,
+  };
+  if (!previous || !hasProducerAttestationsComplete(previous) || hasProducerAttestationsComplete(next)) {
+    return merged;
+  }
+  return {
+    ...merged,
+    selfDeclared: previous.selfDeclared,
+    selfDeclaredAt: previous.selfDeclaredAt,
+    fpicConsent: previous.fpicConsent,
+    laborNoChildLabor: previous.laborNoChildLabor,
+    laborNoForcedLabor: previous.laborNoForcedLabor,
+  };
+}
+
+/** Prefer the freshest complete attestation set when reloading SQLite into memory. */
+export function mergeFarmerProfileFromDisk(
+  inMemory: FarmerProfile | undefined,
+  disk: FarmerProfile | undefined,
+): FarmerProfile | undefined {
+  if (!disk) return inMemory;
+  if (!inMemory) return disk;
+
+  const memoryComplete = hasProducerAttestationsComplete(inMemory);
+  const diskComplete = hasProducerAttestationsComplete(disk);
+  const memoryAt = inMemory.selfDeclaredAt ?? 0;
+  const diskAt = disk.selfDeclaredAt ?? 0;
+  const profilePhotoUri = inMemory.profilePhotoUri ?? disk.profilePhotoUri;
+
+  if (memoryComplete && !diskComplete) {
+    return {
+      ...disk,
+      selfDeclared: inMemory.selfDeclared,
+      selfDeclaredAt: inMemory.selfDeclaredAt,
+      fpicConsent: inMemory.fpicConsent,
+      laborNoChildLabor: inMemory.laborNoChildLabor,
+      laborNoForcedLabor: inMemory.laborNoForcedLabor,
+      profilePhotoUri,
+    };
+  }
+
+  if (diskComplete && memoryComplete) {
+    const attestations = diskAt >= memoryAt ? disk : inMemory;
+    return {
+      ...disk,
+      selfDeclared: attestations.selfDeclared,
+      selfDeclaredAt: attestations.selfDeclaredAt,
+      fpicConsent: attestations.fpicConsent,
+      laborNoChildLabor: attestations.laborNoChildLabor,
+      laborNoForcedLabor: attestations.laborNoForcedLabor,
+      profilePhotoUri,
+    };
+  }
+
+  return { ...disk, profilePhotoUri };
+}
+
 export function buildPlotAttestationFields(
   attestations: PlotAttestations,
   at: number = Date.now(),

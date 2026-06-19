@@ -10,7 +10,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { validateHarvestKg } from '@/features/validation/validators';
 import {
+  buildMultiPlotLinesFromWeights,
   canAddLineToSession,
+  inlineMultiPlotWeightsComplete,
   sessionTotalKg,
   submitMultiPlotDeliverySession,
   type HarvestPlotOption,
@@ -22,10 +24,23 @@ import {
   isDeliveryRecipientComplete,
   type DeliveryRecipientSelection,
 } from '@/features/harvest/DeliveryRecipientFields';
+import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import type { TranslateFn } from '@/features/i18n/translate';
 
-type WizardStep = 'list' | 'pick_plot' | 'weight' | 'review' | 'complete';
+type WizardStep = 'list' | 'pick_plot' | 'weight' | 'inline_weights' | 'review' | 'complete';
+
+function initialWeightByPlotIds(plotIds: string[] | null | undefined): Record<string, string> {
+  if (!plotIds?.length) return {};
+  return Object.fromEntries(plotIds.map((id) => [id, '']));
+}
+
+function initialWizardStep(
+  restrictedPlotIds: string[] | null | undefined,
+): WizardStep {
+  if (restrictedPlotIds && restrictedPlotIds.length >= 2) return 'inline_weights';
+  return 'list';
+}
 
 export interface MultiPlotDeliveryWizardProps {
   t: TranslateFn;
@@ -34,10 +49,13 @@ export interface MultiPlotDeliveryWizardProps {
   deliveredByPlot: Record<string, number>;
   localPlots: Plot[];
   backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
   onExit: () => void;
   onComplete: () => Promise<void>;
   onRegisterBackHandler: (handler: (() => void) | null) => void;
   onHeaderTitleChange: (title: string) => void;
+  /** When set, plot picker only offers these plots (e.g. pre-ticked on Deliveries). */
+  restrictedPlotIds?: string[] | null;
 }
 
 export function MultiPlotDeliveryWizard({
@@ -47,13 +65,18 @@ export function MultiPlotDeliveryWizard({
   deliveredByPlot,
   localPlots,
   backendPlots,
+  plotServerLinks,
   onExit,
   onComplete,
   onRegisterBackHandler,
   onHeaderTitleChange,
+  restrictedPlotIds = null,
 }: MultiPlotDeliveryWizardProps) {
-  const [step, setStep] = useState<WizardStep>('list');
+  const [step, setStep] = useState<WizardStep>(() => initialWizardStep(restrictedPlotIds));
   const [lines, setLines] = useState<MultiPlotDeliveryLine[]>([]);
+  const [weightByPlotId, setWeightByPlotId] = useState<Record<string, string>>(() =>
+    initialWeightByPlotIds(restrictedPlotIds),
+  );
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [weightInput, setWeightInput] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -66,6 +89,31 @@ export function MultiPlotDeliveryWizard({
   const selectedPlot = useMemo(
     () => mergedHarvestPlots.find((p) => String(p.id) === String(selectedPlotId ?? '')) ?? null,
     [mergedHarvestPlots, selectedPlotId],
+  );
+
+  const inlinePlots = useMemo(() => {
+    if (!restrictedPlotIds?.length) return [];
+    const allowed = new Set(restrictedPlotIds);
+    return mergedHarvestPlots.filter((p) => allowed.has(p.id));
+  }, [mergedHarvestPlots, restrictedPlotIds]);
+
+  const inlinePreviewLines = useMemo(() => {
+    const built = buildMultiPlotLinesFromWeights({
+      plots: inlinePlots,
+      weightByPlotId,
+      deliveredByPlot,
+    });
+    return built.ok ? built.lines : [];
+  }, [deliveredByPlot, inlinePlots, weightByPlotId]);
+
+  const canSubmitInline = useMemo(
+    () =>
+      inlineMultiPlotWeightsComplete({
+        plots: inlinePlots,
+        weightByPlotId,
+        deliveredByPlot,
+      }) && isDeliveryRecipientComplete(deliveryRecipient),
+    [deliveredByPlot, deliveryRecipient, inlinePlots, weightByPlotId],
   );
 
   const numericWeight = Number(weightInput.trim().replace(',', '.'));
@@ -84,6 +132,7 @@ export function MultiPlotDeliveryWizard({
       list: t('multi_plot_delivery_title'),
       pick_plot: t('multi_plot_delivery_pick_plot'),
       weight: t('multi_plot_delivery_weight'),
+      inline_weights: t('harvest_header_weight'),
       review: t('multi_plot_delivery_review'),
       complete: t('multi_plot_delivery_complete'),
     };
@@ -97,7 +146,15 @@ export function MultiPlotDeliveryWizard({
         return;
       }
       if (step === 'review') {
+        if (restrictedPlotIds?.length) {
+          setStep('inline_weights');
+          return;
+        }
         setStep('list');
+        return;
+      }
+      if (step === 'inline_weights') {
+        onExit();
         return;
       }
       if (step === 'weight') {
@@ -114,7 +171,7 @@ export function MultiPlotDeliveryWizard({
     };
     onRegisterBackHandler(goBack);
     return () => onRegisterBackHandler(null);
-  }, [onExit, onRegisterBackHandler, step]);
+  }, [onExit, onRegisterBackHandler, restrictedPlotIds, step]);
 
   const removeLine = (plotId: string) => {
     setLines((prev) => prev.filter((line) => line.plotId !== plotId));
@@ -127,36 +184,62 @@ export function MultiPlotDeliveryWizard({
       setMessage(validation.error);
       return;
     }
-    setLines((prev) => [
-      ...prev,
-      { plotId: selectedPlot.id, plotName: selectedPlot.name, kg: validation.value },
-    ]);
+    setLines((prev) => {
+      const nextLines = [
+        ...prev,
+        { plotId: selectedPlot.id, plotName: selectedPlot.name, kg: validation.value },
+      ];
+      return nextLines;
+    });
     setWeightInput('');
     setSelectedPlotId(null);
     setMessage(null);
     setStep('list');
   };
 
-  const handleSubmitSession = async () => {
-    if (lines.length === 0 || submitting) return;
+  const handleSubmitSession = async (linesToSubmit?: MultiPlotDeliveryLine[]) => {
+    const submitLines = linesToSubmit ?? lines;
+    if (submitLines.length === 0 || submitting) return;
     setSubmitting(true);
     setMessage(null);
     try {
       const nextResults = await submitMultiPlotDeliverySession({
         farmerId,
-        lines,
+        lines: submitLines,
         localPlots,
         backendPlots,
+        plotServerLinks,
         deliveryRecipient,
       });
       setResults(nextResults);
-      await onComplete();
+      try {
+        await onComplete();
+      } catch {
+        // Deliveries may have synced even when voucher refresh fails (e.g. schema lag).
+      }
       setStep('complete');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleInlineSubmit = async () => {
+    const built = buildMultiPlotLinesFromWeights({
+      plots: inlinePlots,
+      weightByPlotId,
+      deliveredByPlot,
+    });
+    if (!built.ok) {
+      setMessage(built.error);
+      return;
+    }
+    if (!isDeliveryRecipientComplete(deliveryRecipient)) {
+      return;
+    }
+    setLines(built.lines);
+    await handleSubmitSession(built.lines);
   };
 
   if (step === 'complete') {
@@ -186,6 +269,11 @@ export function MultiPlotDeliveryWizard({
                   </Pressable>
                 </View>
               ) : null}
+              {row.status === 'synced' && !row.qrCodeRef ? (
+                <ThemedText type="caption" style={styles.generatingText}>
+                  {t('harvest_receipt_qr_generating')}
+                </ThemedText>
+              ) : null}
               {row.status === 'queued' ? (
                 <ThemedText type="caption">{t(row.messageKey ?? 'harvest_queued_success_body')}</ThemedText>
               ) : null}
@@ -211,6 +299,72 @@ export function MultiPlotDeliveryWizard({
         >
           {t('back_to_home')}
         </Button>
+      </View>
+    );
+  }
+
+  if (step === 'inline_weights') {
+    return (
+      <View style={styles.gap}>
+        <ThemedText type="defaultSemiBold">{t('multi_plot_delivery_inline_hint')}</ThemedText>
+        <View style={styles.gapSm}>
+          {inlinePlots.map((plot) => {
+            const seasonKg = Math.round(deliveredByPlot[plot.id] ?? 0);
+            return (
+              <Card key={plot.id} variant="outlined" style={styles.inlinePlotCard}>
+                <View style={styles.inlinePlotHeader}>
+                  <View style={styles.inlinePlotIcon}>
+                    <Ionicons name="leaf-outline" size={18} color="#0B8B63" />
+                  </View>
+                  <View style={styles.inlinePlotText}>
+                    <ThemedText type="subtitle">{plot.name}</ThemedText>
+                    <ThemedText type="caption" style={styles.plotSeasonText}>
+                      {t('plot_season_delivered_kg', { n: seasonKg.toLocaleString() })}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.inlineWeightRow}>
+                  <TextInput
+                    placeholder={t('enter_weight_ph')}
+                    placeholderTextColor="#B0B8B5"
+                    value={weightByPlotId[plot.id] ?? ''}
+                    onChangeText={(value) => {
+                      setWeightByPlotId((prev) => ({ ...prev, [plot.id]: value }));
+                      setMessage(null);
+                    }}
+                    keyboardType="decimal-pad"
+                    style={styles.inlineWeightInput}
+                    accessibilityLabel={`${plot.name} ${t('record_weight_label')}`}
+                  />
+                  <ThemedText type="defaultSemiBold" style={styles.weightUnit}>
+                    kg
+                  </ThemedText>
+                </View>
+              </Card>
+            );
+          })}
+        </View>
+        {inlinePreviewLines.length > 0 ? (
+          <ThemedText type="defaultSemiBold">
+            {t('multi_plot_delivery_total', { n: sessionTotalKg(inlinePreviewLines).toLocaleString() })}
+          </ThemedText>
+        ) : null}
+        <DeliveryRecipientFields t={t} value={deliveryRecipient} onChange={setDeliveryRecipient} />
+        <Button
+          variant="secondary"
+          fullWidth
+          disabled={submitting || !canSubmitInline}
+          style={canSubmitInline ? { backgroundColor: '#0A7F59' } : styles.disabledBtn}
+          textStyle={canSubmitInline ? styles.btnTextOnGreen : styles.btnTextDisabled}
+          onPress={() => void handleInlineSubmit()}
+        >
+          {submitting ? t('multi_plot_delivery_submitting') : t('multi_plot_delivery_submit')}
+        </Button>
+        {message ? (
+          <ThemedText type="caption" style={styles.errorText}>
+            {message}
+          </ThemedText>
+        ) : null}
       </View>
     );
   }
@@ -301,7 +455,13 @@ export function MultiPlotDeliveryWizard({
 
   if (step === 'pick_plot') {
     const usedPlotIds = new Set(lines.map((line) => line.plotId));
-    const availablePlots = mergedHarvestPlots.filter((p) => !usedPlotIds.has(p.id));
+    const restrictedSet =
+      restrictedPlotIds && restrictedPlotIds.length > 0 ? new Set(restrictedPlotIds) : null;
+    const availablePlots = mergedHarvestPlots.filter((p) => {
+      if (usedPlotIds.has(p.id)) return false;
+      if (restrictedSet && !restrictedSet.has(p.id)) return false;
+      return true;
+    });
     return (
       <View style={styles.gap}>
         <ThemedText type="defaultSemiBold">{t('multi_plot_delivery_pick_plot')}</ThemedText>
@@ -467,6 +627,36 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   weightUnit: { color: '#6B7280', fontSize: 16, minWidth: 24 },
+  inlinePlotCard: { padding: 14, borderRadius: 16, gap: 10 },
+  inlinePlotHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  inlinePlotIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F7F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlinePlotText: { flex: 1, minWidth: 0 },
+  inlineWeightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D8E0DD',
+    borderRadius: 14,
+    backgroundColor: '#F9FAFA',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  inlineWeightInput: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    paddingVertical: 4,
+  },
   disabledBtn: { backgroundColor: '#D9D9D9' },
   btnTextOnGreen: { color: '#FFFFFF' },
   btnTextDisabled: { color: '#4B5563' },
@@ -475,5 +665,6 @@ const styles = StyleSheet.create({
   resultCard: { padding: 14, borderRadius: 16, alignItems: 'center', gap: 8 },
   qrWrap: { alignItems: 'center', gap: 8, marginTop: 8 },
   voucherCode: { color: '#1F2937' },
+  generatingText: { color: '#6B7280', textAlign: 'center' },
   errorText: { color: '#B45309' },
 });

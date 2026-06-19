@@ -11,14 +11,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import {
-  getSetting,
-} from '@/features/state/persistence';
 import { fetchPlotsForFarmer, fetchVouchersForFarmer } from '@/features/api/postPlot';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
-import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -67,8 +63,6 @@ export default function PlotsScreen() {
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
-  const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
-  const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
   /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
   const clearingFocusRef = useRef(false);
@@ -165,15 +159,6 @@ export default function PlotsScreen() {
     }, [farmer?.id, refreshFromBackend, refreshVouchers]),
   );
 
-  useEffect(() => {
-    getSetting('offlineTilesEnabled')
-      .then((v) => setOfflineTilesEnabled(v === '1'))
-      .catch(() => undefined);
-    getSetting('offlineTilesActivePackId')
-      .then((v) => setOfflineTilesPackId(v && v.length > 0 ? v : null))
-      .catch(() => undefined);
-  }, []);
-
   const refreshPlotChecklists = useCallback(async () => {
     if (plots.length === 0) {
       setPhotoCountByPlotId({});
@@ -252,8 +237,6 @@ export default function PlotsScreen() {
           const badgeVariant = isComplete ? 'success' : 'warning';
           const photosCount = photoCountByPlotId[plot.id] ?? 0;
           const harvestCount = harvestCountForPlot(plot);
-          const region = computeRegionFromPlot(plot);
-
           return (
             <Pressable
               key={plot.id}
@@ -268,12 +251,7 @@ export default function PlotsScreen() {
                 ]}
               >
                 <View style={styles.plotCardRow}>
-                  <PlotListThumbnail
-                    plot={plot}
-                    region={region}
-                    offlineTilesEnabled={offlineTilesEnabled}
-                    offlineTilesPackId={offlineTilesPackId}
-                  />
+                  <PlotListThumbnail plot={plot} />
                   <View style={styles.plotCardBody}>
                     <View style={styles.rowHeader}>
                       <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>

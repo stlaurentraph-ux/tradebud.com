@@ -21,6 +21,7 @@ import { ShipmentHeadersModule } from './shipment-headers/shipment-headers.modul
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      // First file wins for duplicate keys — keep machine-specific overrides in .env.local first.
       envFilePath: ['.env.local', '.env'],
     }),
     DbModule,

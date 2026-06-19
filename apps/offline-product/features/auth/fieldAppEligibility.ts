@@ -13,6 +13,10 @@ export function isDashboardWorkspaceRole(role: string | null): boolean {
   return role !== 'farmer' && role !== 'agent';
 }
 
+export function isDashboardWorkspaceSession(session: Session): boolean {
+  return isDashboardWorkspaceRole(getAppRoleFromSession(session));
+}
+
 /** Dashboard users need field-app bootstrap to link local farmer id before sync APIs work. */
 export function shouldBootstrapFieldAppProfile(session: Session): boolean {
   return isDashboardWorkspaceRole(getAppRoleFromSession(session));

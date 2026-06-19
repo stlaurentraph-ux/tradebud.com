@@ -2,6 +2,10 @@
 
 import type { FarmerProfile, Plot } from './AppStateContext';
 import { generateHlcTimestamp } from '@/features/sync/hlc';
+import {
+  pendingSyncDedupKey,
+  planPendingSyncCompaction,
+} from '@/features/sync/pendingSyncDedup';
 
 export type PlotPhoto = {
   id: number;
@@ -69,9 +73,10 @@ let memPlots: Plot[] = [];
 let memPhotos: PlotPhoto[] = [];
 let memTitlePhotos: PlotTitlePhoto[] = [];
 let memEvidence: PlotEvidenceItem[] = [];
-let memLegal: Record<string, { cadastralKey?: string | null; tenure?: PlotTenure }> = {};
+let memLegal: Record<string, { cadastralKey?: string | null; serverPlotId?: string | null; tenure?: PlotTenure }> = {};
 let memAudit: LocalAuditEvent[] = [];
 let memPending: PendingSyncAction[] = [];
+let memLocalDeliveryReceipts: LocalDeliveryReceiptRow[] = [];
 let memSettings: Record<string, string> = {};
 
 let seq = 1;
@@ -135,12 +140,46 @@ export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitleP
   return memTitlePhotos.filter((p) => p.plotId === plotId);
 }
 
+export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
+  memTitlePhotos = memTitlePhotos.filter((p) => p.id !== photoId);
+}
+
+export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
+  memEvidence = memEvidence.filter((e) => e.id !== evidenceId);
+}
+
+export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Promise<void> {
+  memEvidence = memEvidence.map((row) => (row.id === evidenceId ? { ...row, uri } : row));
+}
+
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {
   memLegal[plotId] = { ...(memLegal[plotId] ?? {}), cadastralKey };
 }
 
 export async function loadPlotCadastralKey(plotId: string): Promise<string | null> {
   return memLegal[plotId]?.cadastralKey ?? null;
+}
+
+export async function savePlotServerLink(localPlotId: string, serverPlotId: string): Promise<void> {
+  const trimmed = serverPlotId.trim();
+  if (!trimmed) return;
+  memLegal[localPlotId] = { ...(memLegal[localPlotId] ?? {}), serverPlotId: trimmed };
+}
+
+export async function loadPlotServerLinks(): Promise<Record<string, string>> {
+  const links: Record<string, string> = {};
+  for (const [plotId, row] of Object.entries(memLegal)) {
+    if (row.serverPlotId?.trim()) {
+      links[plotId] = row.serverPlotId.trim();
+    }
+  }
+  return links;
+}
+
+export async function persistPlotServerLinks(links: Record<string, string>): Promise<void> {
+  for (const [localPlotId, serverPlotId] of Object.entries(links)) {
+    await savePlotServerLink(localPlotId, serverPlotId);
+  }
 }
 
 export async function savePlotTenure(plotId: string, params: { informalTenure: boolean; informalTenureNote: string | null }) {
@@ -159,9 +198,29 @@ export async function loadEvidenceForPlot(plotId: string, kind?: PlotEvidenceKin
   return memEvidence.filter((e) => e.plotId === plotId && (!kind || e.kind === kind));
 }
 
+export async function compactDuplicatePendingSyncActions(): Promise<number> {
+  const { deleteIds } = planPendingSyncCompaction(memPending);
+  if (deleteIds.length === 0) return 0;
+  const drop = new Set(deleteIds);
+  memPending = memPending.filter((row) => !drop.has(row.id));
+  return deleteIds.length;
+}
+
 export async function enqueuePendingSync(
   action: Omit<PendingSyncAction, 'id' | 'attempts' | 'hlcTimestamp' | 'lastAttemptAt'> & { hlcTimestamp?: string },
 ) {
+  const dedupKey = pendingSyncDedupKey(action.actionType, action.payloadJson);
+  if (dedupKey) {
+    const existing = memPending.find(
+      (row) => pendingSyncDedupKey(row.actionType, row.payloadJson) === dedupKey,
+    );
+    if (existing) {
+      existing.payloadJson = action.payloadJson;
+      existing.lastError = action.lastError ?? existing.lastError;
+      return;
+    }
+  }
+
   const previous = memPending.length > 0 ? memPending[memPending.length - 1].hlcTimestamp : null;
   memPending.push({
     id: nextId(),
@@ -190,6 +249,54 @@ export async function markPendingSyncAttempt(
 
 export async function deletePendingSyncAction(id: number) {
   memPending = memPending.filter((a) => a.id !== id);
+}
+
+export type LocalDeliveryReceiptRow = {
+  id: string;
+  farmerId: string;
+  localPlotId: string;
+  serverPlotId: string | null;
+  plotName: string;
+  kg: number;
+  recordedAt: number;
+  qrCodeRef: string | null;
+  pendingSync: boolean;
+  buyerLabel: string;
+};
+
+export async function persistLocalDeliveryReceipt(row: LocalDeliveryReceiptRow): Promise<void> {
+  memLocalDeliveryReceipts = [
+    row,
+    ...memLocalDeliveryReceipts.filter((existing) => existing.id !== row.id),
+  ];
+}
+
+export async function loadLocalDeliveryReceiptsForFarmer(
+  farmerId: string,
+): Promise<LocalDeliveryReceiptRow[]> {
+  const scoped = memLocalDeliveryReceipts
+    .filter((row) => row.farmerId === farmerId)
+    .sort((a, b) => b.recordedAt - a.recordedAt);
+  if (scoped.length > 0) {
+    return scoped;
+  }
+  return [...memLocalDeliveryReceipts].sort((a, b) => b.recordedAt - a.recordedAt);
+}
+
+export async function updateLocalDeliveryReceipt(
+  id: string,
+  patch: Partial<Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId'>>,
+): Promise<void> {
+  memLocalDeliveryReceipts = memLocalDeliveryReceipts.map((row) =>
+    row.id === id
+      ? {
+          ...row,
+          qrCodeRef: patch.qrCodeRef !== undefined ? patch.qrCodeRef : row.qrCodeRef,
+          pendingSync: patch.pendingSync !== undefined ? patch.pendingSync : row.pendingSync,
+          serverPlotId: patch.serverPlotId !== undefined ? patch.serverPlotId : row.serverPlotId,
+        }
+      : row,
+  );
 }
 
 export async function getSetting(key: string): Promise<string | null> {

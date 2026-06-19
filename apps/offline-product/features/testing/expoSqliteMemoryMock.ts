@@ -76,6 +76,16 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
         tables.evidence.push(row);
         return { lastInsertRowId: row.id };
       }
+      if (sql.includes('DELETE FROM plot_title_photos WHERE id')) {
+        const id = Number(params[0]);
+        tables.titlePhotos = tables.titlePhotos.filter((row) => row.id !== id);
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('DELETE FROM plot_evidence WHERE id')) {
+        const id = Number(params[0]);
+        tables.evidence = tables.evidence.filter((row) => row.id !== id);
+        return { lastInsertRowId: 0 };
+      }
       return { lastInsertRowId: 0 };
     },
     getAllAsync: async <T>(sql: string, params: unknown[] = []): Promise<T[]> => {

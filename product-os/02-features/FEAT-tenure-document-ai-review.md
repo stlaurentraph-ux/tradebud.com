@@ -62,7 +62,10 @@
 - Mismatch → `MANUAL_REQUIRED` (same review queue as Phase 2)
 
 ### Offline
-- `syncLandTitlePhotosWithFiles` uploads title photos before `photos-sync`
+- `syncLandTitlePhotosWithFiles` uploads title photos to `plot-evidence` before `photos-sync`; only rows with `storagePath` are sent so AI tenure parse can run
+- Failed storage uploads throw (queued for Sync now) instead of silent metadata-only sync
+- PDF/Word land papers (`tenure_evidence`) auto-upload on add when signed in (same as photos)
+- HEIC/HEIF iPhone photos supported (`202606160001_plot_evidence_heic_mime`)
 - Legality backup in My Plots triggers cadastral AI review when signed in
 
 ## Phase 4 behavior

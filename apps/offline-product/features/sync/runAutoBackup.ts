@@ -1,7 +1,7 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import { processPendingConsentQueue } from '@/features/sync/processPendingConsentQueue';
+import { drainPendingSyncQueueForManualSync } from '@/features/sync/drainPendingSyncQueue';
 import {
-  processPendingSyncQueue,
   type ProcessPendingSyncQueueResult,
 } from '@/features/sync/processPendingSyncQueue';
 import {
@@ -45,11 +45,12 @@ export async function runAutoBackup(params: {
         setSyncQueuePhase('processing_consent');
         await processPendingConsentQueue();
         setSyncQueuePhase('processing_queue');
-        const queueResult = await processPendingSyncQueue({
+        const queueResult = await drainPendingSyncQueueForManualSync({
           farmerId: params.farmerId,
           localPlots: params.localPlots,
           actionTypes: [...QUEUE_ACTION_TYPES],
           attemptScope: 'all',
+          maxPasses: 2,
         });
         return { plotResult, queueResult };
       })();

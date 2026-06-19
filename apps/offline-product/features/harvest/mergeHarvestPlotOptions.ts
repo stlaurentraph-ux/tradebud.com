@@ -1,5 +1,8 @@
 import { effectivePlotAreaHectares } from '@/features/harvest/plotYieldCapacity';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import {
+  resolveServerPlotIdForLocal,
+  type PlotServerLinks,
+} from '@/features/plots/plotServerLink';
 import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
 
 type PlotForHarvestPicker = {
@@ -10,32 +13,6 @@ type PlotForHarvestPicker = {
   name?: string;
 };
 
-/** Id used in harvest plot pickers — server row when linked, else local plot id. */
-export function resolveHarvestPlotPickerId(
-  plot: PlotForHarvestPicker,
-  backendPlots: unknown[],
-): string {
-  const match = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
-  if (match?.id != null) return String(match.id);
-  return plot.id;
-}
-
-export function findHarvestPlotOption(params: {
-  plotId: string;
-  mergedPlots: readonly HarvestPlotOption[];
-  localPlots: readonly PlotForHarvestPicker[];
-  backendPlots: unknown[];
-}): HarvestPlotOption | undefined {
-  const direct = params.mergedPlots.find((p) => String(p.id) === String(params.plotId));
-  if (direct) return direct;
-
-  const local = params.localPlots.find((p) => String(p.id) === String(params.plotId));
-  if (!local) return undefined;
-
-  const pickerId = resolveHarvestPlotPickerId(local, params.backendPlots);
-  return params.mergedPlots.find((p) => String(p.id) === String(pickerId));
-}
-
 type LocalPlotForMerge = {
   id: string;
   farmerId: string;
@@ -44,6 +21,82 @@ type LocalPlotForMerge = {
   declaredAreaHectares?: number;
   kind: 'point' | 'polygon';
 };
+
+/** Id used in harvest plot pickers — server row when linked, else local plot id. */
+export function resolveHarvestPlotPickerId(
+  plot: PlotForHarvestPicker,
+  backendPlots: unknown[],
+  plotServerLinks?: PlotServerLinks | null,
+): string {
+  const resolved = resolveServerPlotIdForLocal(plot, backendPlots, plotServerLinks);
+  if (resolved) return resolved;
+  return plot.id;
+}
+
+export function findHarvestPlotOption(params: {
+  plotId: string;
+  mergedPlots: readonly HarvestPlotOption[];
+  localPlots: readonly PlotForHarvestPicker[];
+  backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
+}): HarvestPlotOption | undefined {
+  const direct = params.mergedPlots.find((p) => String(p.id) === String(params.plotId));
+  if (direct) return direct;
+
+  const local = params.localPlots.find((p) => String(p.id) === String(params.plotId));
+  if (!local) return undefined;
+
+  const pickerId = resolveHarvestPlotPickerId(
+    local,
+    params.backendPlots,
+    params.plotServerLinks,
+  );
+  return params.mergedPlots.find((p) => String(p.id) === String(pickerId));
+}
+
+/** Map harvest picker id (often server uuid) back to the on-device plot row. */
+export function resolveLocalPlotForHarvestSubmit<T extends LocalPlotForMerge>(params: {
+  selectedPlotId: string;
+  localPlots: readonly T[];
+  backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
+}): T | null {
+  const selectedId = String(params.selectedPlotId);
+
+  const direct = params.localPlots.find((plot) => String(plot.id) === selectedId);
+  if (direct) return direct;
+
+  const linkedLocalId = Object.entries(params.plotServerLinks ?? {}).find(
+    ([, serverId]) => String(serverId) === selectedId,
+  )?.[0];
+  if (linkedLocalId) {
+    const linked = params.localPlots.find((plot) => plot.id === linkedLocalId);
+    if (linked) return linked;
+  }
+
+  for (const localPlot of params.localPlots) {
+    const resolved = resolveServerPlotIdForLocal(
+      localPlot,
+      params.backendPlots,
+      params.plotServerLinks,
+    );
+    if (resolved && String(resolved) === selectedId) {
+      return localPlot;
+    }
+  }
+
+  const serverRow = (params.backendPlots as { id?: unknown; name?: string }[]).find(
+    (row) => String(row.id ?? '') === selectedId,
+  );
+  if (!serverRow) return null;
+
+  const clientKey = String(serverRow.name ?? '');
+  return (
+    params.localPlots.find((plot) => plot.id === clientKey) ??
+    params.localPlots.find((plot) => plot.name === clientKey) ??
+    null
+  );
+}
 
 /**
  * Plots keyed to the active farmer, with a fallback to all on-device plots when ids
@@ -63,8 +116,10 @@ export function buildMergedHarvestPlots(params: {
   backendPlots: unknown[];
   localPlots: readonly LocalPlotForMerge[];
   farmerId?: string | null;
+  plotServerLinks?: PlotServerLinks | null;
 }): HarvestPlotOption[] {
   const scopedLocal = resolveLocalPlotsForFarmer(params.localPlots, params.farmerId);
+  const links = params.plotServerLinks ?? null;
   const byId = new Map<string, HarvestPlotOption>();
   const localIdsLinkedToServer = new Set<string>();
 
@@ -74,8 +129,8 @@ export function buildMergedHarvestPlots(params: {
 
     const localMatch =
       params.localPlots.find((lp) => {
-        const match = findBackendPlotForLocal(lp, params.backendPlots) as { id?: unknown } | null;
-        return match != null && String(match.id ?? '') === id;
+        const resolved = resolveServerPlotIdForLocal(lp, params.backendPlots, links);
+        return resolved === id;
       }) ?? null;
 
     if (localMatch) {
@@ -106,6 +161,31 @@ export function buildMergedHarvestPlots(params: {
 
   for (const lp of scopedLocal) {
     if (localIdsLinkedToServer.has(lp.id)) continue;
+
+    const persisted = links?.[lp.id]?.trim();
+    if (persisted) {
+      const linkStillValid =
+        params.backendPlots.length === 0 ||
+        (params.backendPlots as { id?: unknown }[]).some(
+          (row) => String(row?.id ?? '') === persisted,
+        );
+      if (linkStillValid) {
+        localIdsLinkedToServer.add(lp.id);
+        if (!byId.has(persisted)) {
+          byId.set(persisted, {
+            id: persisted,
+            name: lp.name,
+            area_ha: effectivePlotAreaHectares({
+              kind: lp.kind,
+              declaredAreaHectares: lp.declaredAreaHectares,
+              areaHectares: lp.areaHectares,
+            }),
+            localOnly: false,
+          });
+        }
+        continue;
+      }
+    }
 
     const id = String(lp.id);
     if (byId.has(id)) continue;

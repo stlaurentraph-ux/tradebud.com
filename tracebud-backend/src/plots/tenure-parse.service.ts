@@ -6,6 +6,7 @@ import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
 import { EvidenceDocumentsService } from './evidence-documents.service';
 import { applyCadastralCrossCheck, type PlotCadastralContext } from './cadastral-cross-check';
 import { evaluateTenureParseResult } from './tenure-parse.evaluator';
+import { isRetryableTenureParseFailure } from './tenure-parse.failure';
 import {
   buildTenureParseRequestBody,
   extractJsonFromLlmContent,
@@ -49,7 +50,8 @@ Return ONLY valid JSON matching this schema:
   "summary": string | null
 }
 For customary / producer-in-possession letters, clauses_found may include occupation_rights, community_consent, witness_signatures, community_stamp.
-List missing legal elements in clauses_missing. Be conservative: if unreadable, lower confidence and list gaps.`;
+List missing legal elements in clauses_missing. Be conservative: if unreadable, lower ocr_quality and list gaps.
+If the file is readable but is NOT a land title, lease, possession letter, or cadastral document (e.g. selfie, landscape, receipt, unrelated photo), set tenure_type to UNKNOWN, add "not_a_land_document" to clauses_missing, keep ocr_quality high (>=0.7), set field_completeness low (<=0.2), and state that in summary.`;
 
 const FORMAL_CADASTRAL_PARSE_SYSTEM_PROMPT = `You extract formal land-title and cadastral fields from farmer-uploaded documents (deeds, Clave Catastral certificates, municipal registrations) for EUDR compliance.
 Return ONLY valid JSON matching this schema:
@@ -74,7 +76,8 @@ Return ONLY valid JSON matching this schema:
   },
   "summary": string | null
 }
-Focus on Clave Catastral / parcel reference patterns (e.g. Honduras 012-345-678-9). Put the cadastral key in both parcel_reference and title_number when present. tenure_type must be FORMAL for deeds and cadastral certificates.`;
+Focus on Clave Catastral / parcel reference patterns (e.g. Honduras 012-345-678-9). Put the cadastral key in both parcel_reference and title_number when present. tenure_type must be FORMAL for deeds and cadastral certificates.
+If the file is readable but is NOT a formal land title or cadastral document, set tenure_type to UNKNOWN, add "not_a_land_document" to clauses_missing, keep ocr_quality high, set field_completeness low, and explain in summary.`;
 
 export type TenureReviewQueueItem = PlotTenureVerificationRow & {
   plot_name: string | null;
@@ -404,21 +407,24 @@ export class TenureParseService {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Tenure parse failed';
+      const retryable = isRetryableTenureParseFailure(message);
       const failedResult = {
         error: message,
         parser: 'llm',
+        retryable,
       };
+      const parseStatus = retryable ? 'MANUAL_REQUIRED' : 'FAILED';
       await this.pool.query(
         `
           UPDATE plot_tenure_verification
           SET
-            parse_status = 'FAILED',
-            parse_result = $2::jsonb,
+            parse_status = $2,
+            parse_result = $3::jsonb,
             parse_confidence = 0,
             updated_at = NOW()
           WHERE id = $1
         `,
-        [recordId, JSON.stringify(failedResult)],
+        [recordId, parseStatus, JSON.stringify(failedResult)],
       );
 
       const tenantRes = row.evidence_document_id
@@ -430,7 +436,7 @@ export class TenureParseService {
 
       await this.evidenceDocuments.syncParseOutcome({
         evidenceDocumentId: row.evidence_document_id,
-        parseStatus: 'FAILED',
+        parseStatus,
         parseResult: failedResult,
         parseConfidence: 0,
         plotId: row.plot_id,

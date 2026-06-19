@@ -5,10 +5,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
-import { tenureAiParseLabelKey } from '@/features/compliance/plotTenureAiReview';
+import { tenureDocRowStatusLabelKey } from '@/features/compliance/plotTenureAiReview';
 import {
   describeTenureVerificationReview,
+  formatTenureVerificationDocumentLabel,
   formatTenureVerificationReviewMessage,
+  shouldShowTenureDocReasonBox,
+  shouldShowTenureDocStatusBadge,
 } from '@/features/compliance/plotTenureVerificationReview';
 import { useLanguage } from '@/features/state/LanguageContext';
 
@@ -17,6 +20,8 @@ type PlotTenureDocumentReviewListProps = {
   titlePhotoCount: number;
   tenureEvidenceCount: number;
   isSyncedToServer: boolean;
+  /** When true, render as a section inside the land-rights card (no nested card). */
+  embedded?: boolean;
 };
 
 function badgeVariant(
@@ -29,27 +34,57 @@ function badgeVariant(
   return 'default';
 }
 
+function reasonIconName(
+  status: PlotTenureVerificationRecord['parse_status'],
+): keyof typeof Ionicons.glyphMap {
+  if (status === 'COMPLETED') return 'checkmark-circle-outline';
+  if (status === 'FAILED') return 'close-circle-outline';
+  return 'alert-circle-outline';
+}
+
+function reasonIconColor(status: PlotTenureVerificationRecord['parse_status']): string {
+  if (status === 'COMPLETED') return '#0A7F59';
+  if (status === 'FAILED') return '#B91C1C';
+  return '#B45309';
+}
+
+function reasonBoxStyle(status: PlotTenureVerificationRecord['parse_status']) {
+  if (status === 'COMPLETED') return styles.reasonBoxSuccess;
+  if (status === 'FAILED') return styles.reasonBoxFailed;
+  return styles.reasonBoxWarning;
+}
+
 export function PlotTenureDocumentReviewList({
   tenureVerifications,
   titlePhotoCount,
   tenureEvidenceCount,
   isSyncedToServer,
+  embedded = false,
 }: PlotTenureDocumentReviewListProps) {
   const { t } = useLanguage();
   const uploadedCount = titlePhotoCount + tenureEvidenceCount;
 
   if (uploadedCount === 0) return null;
 
+  const awaitingContent = (
+    <>
+      <ThemedText type="defaultSemiBold">{t('plot_tenure_doc_review_section')}</ThemedText>
+      <View style={styles.awaitingRow}>
+        <Ionicons name="time-outline" size={18} color="#6B7280" />
+        <ThemedText type="caption" style={styles.awaitingText}>
+          {t('plot_tenure_doc_reason_awaiting_ai')}
+        </ThemedText>
+      </View>
+    </>
+  );
+
   if (isSyncedToServer && tenureVerifications.length === 0) {
+    if (embedded) {
+      return <View style={styles.embeddedSection}>{awaitingContent}</View>;
+    }
     return (
       <Card variant="outlined" style={styles.card}>
-        <ThemedText type="defaultSemiBold">{t('plot_tenure_doc_review_section')}</ThemedText>
-        <View style={styles.reasonRow}>
-          <Ionicons name="time-outline" size={16} color="#8A8A8A" />
-          <ThemedText type="caption" style={styles.reasonText}>
-            {t('plot_tenure_doc_reason_awaiting_ai')}
-          </ThemedText>
-        </View>
+        {awaitingContent}
       </Card>
     );
   }
@@ -64,8 +99,8 @@ export function PlotTenureDocumentReviewList({
       row.parse_status === 'IN_PROGRESS',
   );
 
-  return (
-    <Card variant="outlined" style={styles.card}>
+  const content = (
+    <>
       <ThemedText type="defaultSemiBold">{t('plot_tenure_doc_review_section')}</ThemedText>
       {needsAttention ? (
         <ThemedText type="caption" style={styles.sectionHint}>
@@ -73,39 +108,41 @@ export function PlotTenureDocumentReviewList({
         </ThemedText>
       ) : null}
       <View style={styles.list}>
-        {tenureVerifications.map((record) => {
-          const detail = describeTenureVerificationReview(record);
+        {(() => {
+          const seenReasons = new Set<string>();
+          return tenureVerifications.map((record) => {
+          const detail = describeTenureVerificationReview(record, t);
+          const label = formatTenureVerificationDocumentLabel(record, t);
           const reason = formatTenureVerificationReviewMessage(detail, t);
-          const showReason = record.parse_status !== 'COMPLETED' || detail.reasonDetail;
+          const showBadge = shouldShowTenureDocStatusBadge(record);
+          const showReason = shouldShowTenureDocReasonBox(record, detail, reason, seenReasons);
+          if (showReason) seenReasons.add(reason);
 
           return (
             <View key={record.id} style={styles.item}>
-              <View style={styles.itemHeader}>
-                <ThemedText type="defaultSemiBold" style={styles.itemLabel}>
-                  {detail.label}
-                </ThemedText>
-                <Badge variant={badgeVariant(record.parse_status)} size="sm">
-                  {t(tenureAiParseLabelKey(record.parse_status))}
-                </Badge>
+              <View style={styles.itemTop}>
+                <View style={styles.itemIconWrap}>
+                  <Ionicons name="document-text-outline" size={20} color="#0A7F59" />
+                </View>
+                <View style={styles.itemBody}>
+                  <ThemedText type="defaultSemiBold" style={styles.itemLabel} numberOfLines={2}>
+                    {label}
+                  </ThemedText>
+                  {showBadge ? (
+                    <View style={styles.badgeRow}>
+                      <Badge variant={badgeVariant(record.parse_status)} size="sm">
+                        {t(tenureDocRowStatusLabelKey(record))}
+                      </Badge>
+                    </View>
+                  ) : null}
+                </View>
               </View>
               {showReason ? (
-                <View style={styles.reasonRow}>
+                <View style={[styles.reasonBox, reasonBoxStyle(record.parse_status)]}>
                   <Ionicons
-                    name={
-                      record.parse_status === 'COMPLETED'
-                        ? 'checkmark-circle-outline'
-                        : record.parse_status === 'FAILED'
-                          ? 'close-circle-outline'
-                          : 'alert-circle-outline'
-                    }
+                    name={reasonIconName(record.parse_status)}
                     size={16}
-                    color={
-                      record.parse_status === 'COMPLETED'
-                        ? '#0A7F59'
-                        : record.parse_status === 'FAILED'
-                          ? '#B91C1C'
-                          : '#B45309'
-                    }
+                    color={reasonIconColor(record.parse_status)}
                   />
                   <ThemedText type="caption" style={styles.reasonText}>
                     {reason}
@@ -114,45 +151,110 @@ export function PlotTenureDocumentReviewList({
               ) : null}
             </View>
           );
-        })}
+        });
+        })()}
       </View>
+    </>
+  );
+
+  if (embedded) {
+    return <View style={styles.embeddedSection}>{content}</View>;
+  }
+
+  return (
+    <Card variant="outlined" style={styles.card}>
+      {content}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: { marginBottom: 12 },
+  embeddedSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#D1D5DB',
+    gap: 8,
+  },
   sectionHint: {
-    marginTop: 4,
-    opacity: 0.85,
+    marginTop: 2,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  awaitingRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+  },
+  awaitingText: {
+    flex: 1,
+    color: '#6B7280',
+    lineHeight: 20,
   },
   list: {
-    marginTop: 10,
+    marginTop: 8,
     gap: 10,
   },
   item: {
     borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 10,
-    padding: 10,
-    gap: 6,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+    backgroundColor: '#FAFAFA',
   },
-  itemHeader: {
+  itemTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    gap: 10,
+  },
+  itemIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#E8F7F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  itemBody: {
+    flex: 1,
+    minWidth: 0,
     gap: 8,
   },
   itemLabel: {
-    flex: 1,
+    color: '#1F2937',
+    lineHeight: 22,
   },
-  reasonRow: {
+  badgeRow: {
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+  },
+  reasonBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+  },
+  reasonBoxSuccess: {
+    backgroundColor: '#F0FAF5',
+  },
+  reasonBoxFailed: {
+    backgroundColor: '#FEF2F2',
+  },
+  reasonBoxWarning: {
+    backgroundColor: '#FFFBEB',
   },
   reasonText: {
     flex: 1,
-    opacity: 0.9,
+    minWidth: 0,
+    color: '#374151',
+    lineHeight: 20,
   },
 });

@@ -2,8 +2,8 @@ import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordina
 import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } from './syncAuthSession';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
-import { ensureFieldProducerBootstrapped } from './fieldAppBootstrap';
 import { logError } from '@/features/errors/ErrorLogger';
+import { normalizeNetworkError } from '@/features/network/normalizeNetworkError';
 
 export {
   clearPersistedSyncAuth,
@@ -78,7 +78,7 @@ export function buildGeometryFromLocalPlot(
 }
 
 export type PostPlotToBackendResult =
-  | { ok: true }
+  | { ok: true; serverPlotId?: string }
   | {
       ok: false;
       reason: 'no_access_token' | 'network_error' | 'server_error';
@@ -123,8 +123,6 @@ export async function postPlotToBackend(params: {
     return { ok: false, reason: 'no_access_token' };
   }
 
-  await ensureFieldProducerBootstrapped(params.farmerId);
-
   try {
     const res = await fetch(`${API_BASE_URL}/v1/plots`, {
       method: 'POST',
@@ -154,7 +152,9 @@ export async function postPlotToBackend(params: {
       });
       return { ok: false, reason: 'server_error', message, statusCode: res.status };
     }
-    return { ok: true };
+    const body = (await res.json().catch(() => ({}))) as { id?: unknown };
+    const serverPlotId = body?.id != null ? String(body.id) : undefined;
+    return { ok: true, serverPlotId };
   } catch (e) {
     const base = getTracebudApiBaseUrl();
     const hint =
@@ -182,30 +182,34 @@ export async function syncPlotPhotosToBackend(params: {
     throw new Error('No access token available for photo sync');
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kind: params.kind,
+          photos: params.photos,
+          note: params.note ?? null,
+          hlcTimestamp: params.hlcTimestamp ?? null,
+          clientEventId: params.clientEventId ?? null,
+        }),
       },
-      body: JSON.stringify({
-        kind: params.kind,
-        photos: params.photos,
-        note: params.note ?? null,
-        hlcTimestamp: params.hlcTimestamp ?? null,
-        clientEventId: params.clientEventId ?? null,
-      }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Photo sync error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `Photo sync error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    throw normalizeNetworkError(e);
   }
-
-  return res.json();
 }
 
 export async function updatePlotMetadataOnBackend(params: {
@@ -271,10 +275,7 @@ export async function fetchPlotsForFarmer(farmerId: string) {
 
     return res.json();
   } catch (e) {
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Network request failed');
-    }
-    throw e;
+    throw normalizeNetworkError(e);
   } finally {
     clearTimeout(timeout);
   }
@@ -296,31 +297,35 @@ export async function postHarvestToBackend(params: {
     throw new Error('No access token available for harvest sync');
   }
 
-  const res = await fetch(`${API_BASE_URL}/v1/harvest`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      farmerId: params.farmerId,
-      plotId: params.plotId,
-      kg: params.kg,
-      harvestDate: params.harvestDate ?? null,
-      note: params.note ?? null,
-      hlcTimestamp: params.hlcTimestamp ?? null,
-      clientEventId: params.clientEventId ?? null,
-      deliverToTenantId: params.deliverToTenantId ?? null,
-      deliverToEmail: params.deliverToEmail ?? null,
-    }),
-  });
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/harvest`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        farmerId: params.farmerId,
+        plotId: params.plotId,
+        kg: params.kg,
+        harvestDate: params.harvestDate ?? null,
+        note: params.note ?? null,
+        hlcTimestamp: params.hlcTimestamp ?? null,
+        clientEventId: params.clientEventId ?? null,
+        deliverToTenantId: params.deliverToTenantId ?? null,
+        deliverToEmail: params.deliverToEmail ?? null,
+      }),
+    });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Harvest error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `Harvest error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    throw normalizeNetworkError(e);
   }
-
-  return res.json();
 }
 
 export async function fetchVouchersForFarmer(farmerId: string) {
@@ -555,32 +560,36 @@ export async function syncPlotLegalToBackend(params: {
     throw new Error('No access token available for legality sync');
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/legal-sync`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cadastralKey: params.cadastralKey,
+          informalTenure: params.informalTenure,
+          informalTenureNote: params.informalTenureNote,
+          reason: params.reason,
+          deviceId: params.deviceId ?? null,
+          hlcTimestamp: params.hlcTimestamp ?? null,
+          clientEventId: params.clientEventId ?? null,
+        }),
       },
-      body: JSON.stringify({
-        cadastralKey: params.cadastralKey,
-        informalTenure: params.informalTenure,
-        informalTenureNote: params.informalTenureNote,
-        reason: params.reason,
-        deviceId: params.deviceId ?? null,
-        hlcTimestamp: params.hlcTimestamp ?? null,
-        clientEventId: params.clientEventId ?? null,
-      }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Legality sync error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `Legality sync error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    throw normalizeNetworkError(e);
   }
-
-  return res.json();
 }
 
 export type PlotTenureParseStatus =
@@ -623,7 +632,77 @@ export async function fetchPlotTenureVerification(
     return [];
   }
   const body = await res.json().catch(() => []);
-  return Array.isArray(body) ? body : [];
+  if (!Array.isArray(body)) return [];
+  return body
+    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object')
+    .map((row) => normalizePlotTenureVerificationRecord(row))
+    .filter((row): row is PlotTenureVerificationRecord => row != null);
+}
+
+const PARSE_STATUSES: PlotTenureParseStatus[] = [
+  'PENDING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'FAILED',
+  'MANUAL_REQUIRED',
+];
+
+function normalizePlotTenureVerificationRecord(
+  row: Record<string, unknown>,
+): PlotTenureVerificationRecord | null {
+  const id = row.id != null ? String(row.id) : '';
+  const plotId = row.plot_id != null ? String(row.plot_id) : row.plotId != null ? String(row.plotId) : '';
+  if (!id || !plotId) return null;
+
+  const rawStatus = String(row.parse_status ?? row.parseStatus ?? 'PENDING').toUpperCase();
+  const parse_status = PARSE_STATUSES.includes(rawStatus as PlotTenureParseStatus)
+    ? (rawStatus as PlotTenureParseStatus)
+    : 'PENDING';
+
+  return {
+    id,
+    plot_id: plotId,
+    storage_path: String(row.storage_path ?? row.storagePath ?? ''),
+    mime_type:
+      row.mime_type != null
+        ? String(row.mime_type)
+        : row.mimeType != null
+          ? String(row.mimeType)
+          : null,
+    evidence_label:
+      row.evidence_label != null
+        ? String(row.evidence_label)
+        : row.evidenceLabel != null
+          ? String(row.evidenceLabel)
+          : null,
+    parse_status,
+    parse_result:
+      row.parse_result != null && typeof row.parse_result === 'object'
+        ? (row.parse_result as Record<string, unknown>)
+        : row.parseResult != null && typeof row.parseResult === 'object'
+          ? (row.parseResult as Record<string, unknown>)
+          : null,
+    parse_confidence:
+      row.parse_confidence != null
+        ? Number(row.parse_confidence)
+        : row.parseConfidence != null
+          ? Number(row.parseConfidence)
+          : null,
+    parse_reviewed_by:
+      row.parse_reviewed_by != null
+        ? String(row.parse_reviewed_by)
+        : row.parseReviewedBy != null
+          ? String(row.parseReviewedBy)
+          : null,
+    parse_reviewed_at:
+      row.parse_reviewed_at != null
+        ? String(row.parse_reviewed_at)
+        : row.parseReviewedAt != null
+          ? String(row.parseReviewedAt)
+          : null,
+    created_at: String(row.created_at ?? row.createdAt ?? ''),
+    updated_at: String(row.updated_at ?? row.updatedAt ?? ''),
+  };
 }
 
 export async function syncPlotEvidenceToBackend(params: {
@@ -640,31 +719,35 @@ export async function syncPlotEvidenceToBackend(params: {
     throw new Error('No access token available for evidence sync');
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/evidence-sync`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kind: params.kind,
+          items: params.items,
+          reason: params.reason,
+          note: params.note ?? null,
+          hlcTimestamp: params.hlcTimestamp ?? null,
+          clientEventId: params.clientEventId ?? null,
+        }),
       },
-      body: JSON.stringify({
-        kind: params.kind,
-        items: params.items,
-        reason: params.reason,
-        note: params.note ?? null,
-        hlcTimestamp: params.hlcTimestamp ?? null,
-        clientEventId: params.clientEventId ?? null,
-      }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `Evidence sync error: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message ?? `Evidence sync error: ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    throw normalizeNetworkError(e);
   }
-
-  return res.json();
 }
 
 export type PostAuditEventResult =

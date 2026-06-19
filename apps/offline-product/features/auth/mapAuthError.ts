@@ -7,6 +7,7 @@ export type SignInErrorCode =
   | 'sign_in_email_not_confirmed'
   | 'sign_up_email_already_exists'
   | 'sign_in_failed'
+  | 'sign_in_dashboard_account'
   | 'settings_password_too_short'
   | 'settings_password_mismatch'
   | 'settings_password_weak'
@@ -106,6 +107,8 @@ export function formatSignInErrorMessage(
       return t('sign_up_email_already_exists');
     case 'sign_in_failed':
       return t('sign_in_failed');
+    case 'sign_in_dashboard_account':
+      return t('sign_in_dashboard_account');
     case 'settings_password_too_short':
       return t('settings_password_too_short');
     case 'settings_password_mismatch':

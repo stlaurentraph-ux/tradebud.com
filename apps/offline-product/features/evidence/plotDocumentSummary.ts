@@ -23,10 +23,10 @@ export function summarizePlotDocumentsForOverview(
     return { priority: 10, chipKey: 'documents_plot_chip_land_missing', chipVariant: 'warning' };
   }
   if (checklist.needsPermit && !checklist.permitOk) {
-    return { priority: 20, chipKey: 'documents_plot_chip_permit', chipVariant: 'warning' };
+    return { priority: 20, chipKey: 'documents_plot_chip_protected_area', chipVariant: 'warning' };
   }
   if (checklist.needsFpic && !checklist.fpicOk) {
-    return { priority: 25, chipKey: 'documents_plot_chip_fpic', chipVariant: 'warning' };
+    return { priority: 25, chipKey: 'documents_plot_chip_community', chipVariant: 'warning' };
   }
   if (checklist.tenureParseGate === 'pending') {
     return { priority: 30, chipKey: 'documents_plot_chip_reviewing', chipVariant: 'info' };
@@ -34,7 +34,7 @@ export function summarizePlotDocumentsForOverview(
   if (!checklist.syncOk && docCount > 0) {
     return {
       priority: 40,
-      chipKey: 'documents_plot_chip_backup_pending',
+      chipKey: 'documents_plot_chip_on_phone',
       chipVariant: 'info',
       chipParams: { n: docCount },
     };
@@ -46,7 +46,7 @@ export function summarizePlotDocumentsForOverview(
   ) {
     return {
       priority: 100,
-      chipKey: 'documents_plot_chip_complete',
+      chipKey: 'documents_plot_chip_all_set',
       chipVariant: 'success',
       chipParams: docCount > 0 ? { n: docCount } : undefined,
     };
@@ -76,16 +76,16 @@ export function formatPlotDocumentsNavSubtitle(
     return t('plot_nav_documents_sub_add_land');
   }
   if (checklist.needsPermit && !checklist.permitOk) {
-    return t('plot_nav_documents_sub_permit');
+    return t('plot_nav_documents_sub_protected_area');
   }
   if (checklist.needsFpic && !checklist.fpicOk) {
-    return t('plot_nav_documents_sub_fpic');
+    return t('plot_nav_documents_sub_community');
   }
   if (checklist.tenureParseGate === 'pending') {
     return t('plot_nav_documents_sub_reviewing');
   }
   if (!checklist.syncOk && docCount > 0) {
-    return t('plot_nav_documents_sub_backup', { n: docCount });
+    return t('plot_nav_documents_sub_on_phone', { n: docCount });
   }
   if (docCount === 0) {
     return t('plot_nav_documents_sub_empty');
@@ -97,4 +97,20 @@ export function countPlotsNeedingLandDocuments(
   readiness: { checklist: PlotReadinessChecklist }[],
 ): number {
   return readiness.filter((r) => !r.checklist.landOk).length;
+}
+
+/** Plots missing land papers or not yet AI-cleared as a valid land title. */
+export function countPlotsNeedingValidLandTitle(
+  readiness: {
+    titlePhotoCount: number;
+    evidenceCount: number;
+    checklist: PlotReadinessChecklist;
+  }[],
+): number {
+  return readiness.filter((r) => {
+    const hasLand =
+      r.titlePhotoCount > 0 || (r.checklist.landOk && r.evidenceCount > 0);
+    if (!hasLand) return true;
+    return r.checklist.tenureParseGate !== 'cleared';
+  }).length;
 }

@@ -44,6 +44,7 @@ export default function RootLayout() {
                 <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                 <Stack.Screen name="documents" options={{ headerShown: false }} />
+                <Stack.Screen name="data-sharing" options={{ headerShown: false }} />
                 <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
               </Stack>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -8,20 +8,18 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   useWindowDimensions,
   View,
 } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { PhotoVaultPanel } from '@/components/plot-photo-vault/PhotoVaultPanel';
-import QRCode from 'react-native-qrcode-svg';
-
+import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
+import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -38,7 +36,6 @@ import {
   fetchPlotTenureVerification,
   fetchPlotsForFarmer,
   fetchVouchersForFarmer,
-  updatePlotMetadataOnBackend,
   type PlotTenureVerificationRecord,
 } from '@/features/api/postPlot';
 import {
@@ -47,37 +44,54 @@ import {
   loadPlotTenure,
   loadTitlePhotosForPlot,
   loadEvidenceForPlot,
-  persistPlotTitlePhoto,
+  deletePlotTitlePhoto,
+  deletePlotEvidenceItem,
   getSetting,
+  loadPlotServerLinks,
+  loadPendingSyncActions,
+  loadLocalDeliveryReceiptsForFarmer,
+  persistPlotServerLinks,
   type PlotPhoto,
   type PlotTitlePhoto,
   type PlotEvidenceItem,
 } from '@/features/state/persistence';
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import { DocumentPreviewModal } from '@/components/evidence/DocumentPreviewModal';
+import { PlotLandPapersCard } from '@/components/evidence/PlotLandPapersCard';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
 import { PlotComplianceStatusCards } from '@/components/compliance/PlotComplianceStatusCards';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
 import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
-import { DocumentUploadHint } from '@/components/evidence/DocumentUploadHint';
 import type { DocumentPreviewItem } from '@/features/evidence/documentPreview';
 import { formatPlotDocumentsNavSubtitle } from '@/features/evidence/plotDocumentSummary';
+import { pickAndSaveLandProof } from '@/features/evidence/saveLandProof';
 import {
   autoUploadLandTitleDocuments,
+  autoUploadPlotEvidenceDocuments,
   type AutoUploadOutcome,
 } from '@/features/evidence/autoUploadPlotDocuments';
+import { filterTenureVerificationsForLocalLandDocs } from '@/features/compliance/filterTenureVerificationsForLocalDocs';
 import {
   MIN_GROUND_TRUTH_PHOTOS,
   computePlotReadinessChecklist,
+  resolveLandDocumentsUiStatus,
 } from '@/features/compliance/plotChecklist';
 import {
-  describeTenureVerificationReview,
-  formatTenureVerificationReviewMessage,
+  resolvePlotLandBlockedShortHint,
 } from '@/features/compliance/plotTenureVerificationReview';
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
-import { resolveHarvestPlotPickerId } from '@/features/harvest/mergeHarvestPlotOptions';
+import { resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { resolveHarvestPlotPickerId, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
+import {
+  normalizePendingHarvestReceipts,
+  type DeliveryReceiptRecord,
+} from '@/features/harvest/deliveryReceiptModels';
+import {
+  normalizeLocalDeliveryReceipts,
+  resolvePlotReceiptFilterIds,
+} from '@/features/harvest/localDeliveryReceipts';
+import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 
@@ -89,12 +103,19 @@ export default function PlotDetailScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { id, sub, from } = useLocalSearchParams<{ id: string; sub?: Sub; from?: string }>();
+  const { id, sub, from, receiptId } = useLocalSearchParams<{
+    id: string;
+    sub?: Sub;
+    from?: string;
+    receiptId?: string;
+  }>();
   const { plots, farmer, updatePlot, removePlot } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
-  const plot = useMemo(() => plots.find((p) => p.id === plotId) ?? null, [plots, plotId]);
+  const voucherReceiptId = typeof receiptId === 'string' ? receiptId.trim() : '';
+  const openVoucherReceiptDirectly = from === 'harvests';
+  const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
 
   const [active, setActive] = useState<Sub | null>((sub as Sub) ?? null);
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
@@ -103,7 +124,19 @@ export default function PlotDetailScreen() {
   const [producerEvidenceKinds, setProducerEvidenceKinds] = useState<string[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [pendingHarvestReceipts, setPendingHarvestReceipts] = useState<DeliveryReceiptRecord[]>([]);
+  const [deviceHarvestReceipts, setDeviceHarvestReceipts] = useState<DeliveryReceiptRecord[]>([]);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
+  const plot = useMemo(() => {
+    const direct = plots.find((p) => p.id === plotId) ?? null;
+    if (direct || !plotId) return direct;
+    return resolveLocalPlotForHarvestSubmit({
+      selectedPlotId: plotId,
+      localPlots: plots,
+      backendPlots,
+      plotServerLinks,
+    });
+  }, [plots, plotId, backendPlots, plotServerLinks]);
   const [, setLoadingBackend] = useState(false);
   const [, setBackendError] = useState<string | null>(null);
   const [backendPlotMeta, setBackendPlotMeta] = useState<{
@@ -125,19 +158,17 @@ export default function PlotDetailScreen() {
     () => ({ sinaph: backendPlotMeta.sinaph, indigenous: backendPlotMeta.indigenous }),
     [backendPlotMeta.indigenous, backendPlotMeta.sinaph],
   );
-  const voucherShareCaptureRef = useRef<View>(null);
-  const [voucherShareBusy, setVoucherShareBusy] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState('');
   const [declaredHaDraft, setDeclaredHaDraft] = useState('');
   const [cadastralKey, setCadastralKey] = useState('');
   const [informalTenure, setInformalTenure] = useState(false);
   const [informalTenureNote, setInformalTenureNote] = useState('');
-  const [legalSyncReason, setLegalSyncReason] = useState('');
   const [docSyncMessage, setDocSyncMessage] = useState<string | null>(null);
   const [docSyncTone, setDocSyncTone] = useState<'success' | 'error' | 'info'>('info');
   const [docPreviewItem, setDocPreviewItem] = useState<DocumentPreviewItem | null>(null);
-  const [addingTitlePhoto, setAddingTitlePhoto] = useState(false);
+  const [uploadingLandProof, setUploadingLandProof] = useState(false);
+  const [landPapersExpanded, setLandPapersExpanded] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
 
@@ -156,14 +187,15 @@ export default function PlotDetailScreen() {
   }, []);
 
   useEffect(() => {
-    if (!plotId) return;
-    loadPhotosForPlot(plotId).then(setPhotos).catch(() => setPhotos([]));
-    loadTitlePhotosForPlot(plotId).then(setTitlePhotos).catch(() => setTitlePhotos([]));
-    loadEvidenceForPlot(plotId).then(setEvidence).catch(() => setEvidence([]));
-    loadPlotCadastralKey(plotId)
+    const resolvedPlotId = plot?.id ?? plotId;
+    if (!resolvedPlotId) return;
+    loadPhotosForPlot(resolvedPlotId).then(setPhotos).catch(() => setPhotos([]));
+    loadTitlePhotosForPlot(resolvedPlotId).then(setTitlePhotos).catch(() => setTitlePhotos([]));
+    loadEvidenceForPlot(resolvedPlotId).then(setEvidence).catch(() => setEvidence([]));
+    loadPlotCadastralKey(resolvedPlotId)
       .then((key) => setCadastralKey(key ?? ''))
       .catch(() => setCadastralKey(''));
-    loadPlotTenure(plotId)
+    loadPlotTenure(resolvedPlotId)
       .then((row) => {
         setInformalTenure(row.informalTenure);
         setInformalTenureNote(row.informalTenureNote ?? '');
@@ -172,7 +204,7 @@ export default function PlotDetailScreen() {
         setInformalTenure(false);
         setInformalTenureNote('');
       });
-  }, [plotId]);
+  }, [plot?.id, plotId]);
 
   useEffect(() => {
     if (!farmer?.id) {
@@ -204,13 +236,19 @@ export default function PlotDetailScreen() {
     setLoadingBackend(true);
     setBackendError(null);
     fetchPlotsForFarmer(farmer.id)
-      .then((rows) => setBackendPlots(rows ?? []))
+      .then(async (rows) => {
+        const links = await loadPlotServerLinks();
+        const reconciled = reconcilePlotServerLinks(plots, rows ?? [], links);
+        await persistPlotServerLinks(reconciled);
+        setPlotServerLinks(reconciled);
+        setBackendPlots(rows ?? []);
+      })
       .catch((err) => {
         setBackendPlots([]);
         setBackendError(err instanceof Error ? err.message : String(err));
       })
       .finally(() => setLoadingBackend(false));
-  }, [farmer?.id]);
+  }, [farmer?.id, plots]);
 
   useEffect(() => {
     if (!plot) {
@@ -223,19 +261,24 @@ export default function PlotDetailScreen() {
       });
       return;
     }
-    const match = findBackendPlotForLocal(plot, backendPlots) as {
-      id?: unknown;
-      status?: unknown;
-      deforestation_screening?: unknown;
-      sinaph_overlap?: boolean;
-      indigenous_overlap?: boolean;
-    } | null;
-    setBackendPlotMeta({
-      id: match?.id != null ? String(match.id) : null,
-      status: match?.status ?? 'pending_check',
-      deforestationScreening: match?.deforestation_screening ?? null,
-      sinaph: match?.sinaph_overlap === true,
-      indigenous: match?.indigenous_overlap === true,
+    void loadPlotServerLinks().then((links) => {
+      const serverId = resolveServerPlotIdForLocal(plot, backendPlots, links);
+      const match = serverId
+        ? (backendPlots as {
+            id?: unknown;
+            status?: unknown;
+            deforestation_screening?: unknown;
+            sinaph_overlap?: boolean;
+            indigenous_overlap?: boolean;
+          }[]).find((row) => String(row?.id ?? '') === serverId)
+        : null;
+      setBackendPlotMeta({
+        id: serverId,
+        status: match?.status ?? 'pending_check',
+        deforestationScreening: match?.deforestation_screening ?? null,
+        sinaph: match?.sinaph_overlap === true,
+        indigenous: match?.indigenous_overlap === true,
+      });
     });
   }, [backendPlots, plot]);
 
@@ -270,15 +313,88 @@ export default function PlotDetailScreen() {
     return () => clearInterval(timer);
   }, [backendPlotId, evidence, titlePhotos, tenureVerifications, refreshTenureVerification]);
 
-  useEffect(() => {
+  const refreshVoucherReceipts = useCallback(async () => {
     if (!farmer?.id) {
       setVouchers([]);
+      setPendingHarvestReceipts([]);
+      setDeviceHarvestReceipts([]);
       return;
     }
-    fetchVouchersForFarmer(farmer.id)
-      .then((rows) => setVouchers(rows ?? []))
-      .catch(() => setVouchers([]));
-  }, [farmer?.id]);
+
+    const routePlotId = plotId?.trim() || null;
+    const resolvedPlot =
+      plot ??
+      (routePlotId
+        ? resolveLocalPlotForHarvestSubmit({
+            selectedPlotId: routePlotId,
+            localPlots: plots,
+            backendPlots,
+            plotServerLinks,
+          })
+        : null);
+
+    try {
+      const links = await loadPlotServerLinks();
+      const serverPlotId = resolvedPlot
+        ? resolveServerPlotIdForLocal(resolvedPlot, backendPlots, links)
+        : null;
+      const plotIds = new Set(
+        resolvePlotReceiptFilterIds({
+          localPlotId: resolvedPlot?.id ?? routePlotId,
+          serverPlotId,
+          plotServerLinks: links,
+        }),
+      );
+      if (plotIds.size === 0 && routePlotId) {
+        plotIds.add(routePlotId);
+      }
+
+      const [voucherPayload, pendingActions, localRows] = await Promise.all([
+        fetchVouchersForFarmer(farmer.id).catch(() => []),
+        loadPendingSyncActions(),
+        loadLocalDeliveryReceiptsForFarmer(farmer.id),
+      ]);
+      setVouchers(normalizeVoucherRows(voucherPayload));
+
+      const plotName = String(resolvedPlot?.name ?? t('plot_fallback'));
+      const groupPlotId = serverPlotId ?? resolvedPlot?.id ?? routePlotId ?? 'unknown';
+
+      setDeviceHarvestReceipts(
+        normalizeLocalDeliveryReceipts(
+          localRows.filter(
+            (row) =>
+              plotIds.has(row.localPlotId) ||
+              (row.serverPlotId != null && plotIds.has(row.serverPlotId)),
+          ),
+          t,
+        ),
+      );
+      setPendingHarvestReceipts(
+        normalizePendingHarvestReceipts({
+          actions: pendingActions.filter((action) => action.actionType === 'harvest'),
+          plotIds,
+          groupPlotId,
+          plotName,
+          t,
+        }),
+      );
+    } catch {
+      setVouchers([]);
+      setPendingHarvestReceipts([]);
+      setDeviceHarvestReceipts([]);
+    }
+  }, [backendPlots, farmer?.id, plot, plotId, plots, plotServerLinks, t]);
+
+  useEffect(() => {
+    void refreshVoucherReceipts();
+  }, [refreshVoucherReceipts]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (active !== 'voucher') return;
+      void refreshVoucherReceipts();
+    }, [active, refreshVoucherReceipts]),
+  );
 
   useEffect(() => {
     if (typeof sub === 'string') {
@@ -342,22 +458,24 @@ export default function PlotDetailScreen() {
 
     updatePlot(plot.id, patch);
 
-    if (backendPlotId && farmer?.id) {
-      try {
-        await updatePlotMetadataOnBackend({
-          plotId: backendPlotId,
-          name: next,
-          reason: t('plot_rename_backend_reason'),
-        });
-        const rows = await fetchPlotsForFarmer(farmer.id);
-        setBackendPlots(rows ?? []);
-      } catch {
-        setNote(t('plot_rename_local_only'));
-      }
-    }
     Keyboard.dismiss();
     setRenameModalOpen(false);
   };
+
+  const tenureEvidenceItems = useMemo(
+    () => evidence.filter((item) => item.kind === 'tenure_evidence'),
+    [evidence],
+  );
+
+  const visibleTenureVerifications = useMemo(
+    () =>
+      filterTenureVerificationsForLocalLandDocs(
+        tenureVerifications,
+        titlePhotos,
+        tenureEvidenceItems,
+      ),
+    [tenureVerifications, titlePhotos, tenureEvidenceItems],
+  );
 
   const producerFpicCount = useMemo(
     () => producerEvidenceKinds.filter((kind) => kind === 'fpic_repository').length,
@@ -370,7 +488,7 @@ export default function PlotDetailScreen() {
 
   const plotStatusRows = useMemo(() => {
     const evidenceKinds = evidence.map((e) => e.kind);
-    const { groundOk, landOk, fpicOk, permitOk, syncOk, tenureParseGate } =
+    const { groundOk, fpicOk, permitOk, syncOk, tenureParseGate } =
       computePlotReadinessChecklist({
         groundTruthPhotos: photos,
         plot,
@@ -379,7 +497,7 @@ export default function PlotDetailScreen() {
         producerEvidenceKinds,
         producerAttestationsComplete,
         isSyncedToServer: Boolean(backendPlotId),
-        tenureVerifications,
+        tenureVerifications: visibleTenureVerifications,
         backendFlags:
           backendPlotId != null
             ? {
@@ -388,19 +506,20 @@ export default function PlotDetailScreen() {
               }
             : null,
       });
+    const landDocumentsUiStatus = resolveLandDocumentsUiStatus({
+      titlePhotoCount: titlePhotos.length,
+      evidenceKinds,
+      tenureParseGate,
+    });
+    const landDocCount =
+      titlePhotos.length + evidence.filter((e) => e.kind === 'tenure_evidence').length;
     const minG = MIN_GROUND_TRUTH_PHOTOS;
     const verifiedGround = plot ? countGeoVerifiedGroundTruthDirections(photos, plot) : 0;
 
-    const blockedVerification = tenureVerifications.find(
+    const blockedVerification = visibleTenureVerifications.find(
       (row) => row.parse_status === 'FAILED' || row.parse_status === 'MANUAL_REQUIRED',
     );
-    const landBlockedHint =
-      blockedVerification != null
-        ? formatTenureVerificationReviewMessage(
-            describeTenureVerificationReview(blockedVerification),
-            t,
-          )
-        : t('plot_status_land_parse_blocked');
+    const landBlockedHint = resolvePlotLandBlockedShortHint(blockedVerification, t);
 
     const rows: {
       id: string;
@@ -420,12 +539,14 @@ export default function PlotDetailScreen() {
         id: 'land',
         title: t('plot_status_land'),
         hint:
-          tenureParseGate === 'blocked'
+          landDocumentsUiStatus === 'blocked'
             ? landBlockedHint
-            : tenureParseGate === 'pending'
+            : landDocumentsUiStatus === 'reviewing'
               ? t('plot_status_land_parse_pending')
-              : t('plot_status_land_hint'),
-        done: landOk,
+              : landDocumentsUiStatus === 'local_only'
+                ? t('plot_nav_documents_sub_on_phone', { n: landDocCount })
+                : t('plot_status_land_hint'),
+        done: landDocumentsUiStatus === 'verified',
         target: 'documents',
       },
     ];
@@ -465,7 +586,7 @@ export default function PlotDetailScreen() {
     overlapFlags.indigenous,
     overlapFlags.sinaph,
     backendPlotId,
-    tenureVerifications,
+    visibleTenureVerifications,
     t,
   ]);
 
@@ -488,6 +609,15 @@ export default function PlotDetailScreen() {
     [plotStatusRows],
   );
 
+  const landChecklistDone = useMemo(
+    () => plotStatusRows.find((r) => r.id === 'land')?.done ?? false,
+    [plotStatusRows],
+  );
+
+  useEffect(() => {
+    if (!landChecklistDone) setLandPapersExpanded(false);
+  }, [landChecklistDone]);
+
   const documentsNavSubtitle = useMemo(() => {
     if (!plot) return t('plot_nav_documents_sub_empty');
     const evidenceKinds = evidence.map((e) => e.kind);
@@ -499,7 +629,7 @@ export default function PlotDetailScreen() {
       producerEvidenceKinds,
       producerAttestationsComplete,
       isSyncedToServer: Boolean(backendPlotId),
-      tenureVerifications,
+      tenureVerifications: visibleTenureVerifications,
       backendFlags:
         backendPlotId != null
           ? {
@@ -521,13 +651,23 @@ export default function PlotDetailScreen() {
     producerEvidenceKinds,
     producerAttestationsComplete,
     backendPlotId,
-    tenureVerifications,
+    visibleTenureVerifications,
     overlapFlags.sinaph,
     overlapFlags.indigenous,
     t,
   ]);
 
   const harvestPlotId = backendPlotId ?? plot?.id ?? null;
+
+  const plotReceiptFilterIds = useMemo(
+    () =>
+      resolvePlotReceiptFilterIds({
+        localPlotId: plot?.id,
+        serverPlotId: harvestPlotId,
+        plotServerLinks,
+      }),
+    [plot?.id, harvestPlotId, plotServerLinks],
+  );
 
   const harvestPickerPlotId = useMemo(() => {
     if (!plot) return null;
@@ -538,6 +678,23 @@ export default function PlotDetailScreen() {
     if (!harvestPlotId) return 0;
     return vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId).length;
   }, [harvestPlotId, vouchers]);
+
+  const harvestPlotOptions = useMemo((): HarvestPlotOption[] => {
+    if (!plot || !harvestPlotId) return [];
+    const { hectares } = resolvePlotAreaHa({
+      kind: plot.kind,
+      areaHectares: plot.areaHectares,
+      declaredAreaHectares: plot.declaredAreaHectares,
+    });
+    return [
+      {
+        id: harvestPlotId,
+        name: String(plot.name ?? ''),
+        area_ha: hectares,
+        localOnly: !backendPlotId,
+      },
+    ];
+  }, [plot, harvestPlotId, backendPlotId]);
 
   const plotAreaCaption = useMemo(() => {
     if (!plot) return null;
@@ -613,10 +770,9 @@ export default function PlotDetailScreen() {
     }
   }, []);
 
-  const notifyDocSync = (message: string, alertTitle?: string, tone: 'success' | 'error' | 'info' = 'error') => {
+  const notifyDocSync = (message: string, tone: 'success' | 'error' | 'info' = 'error') => {
     setDocSyncMessage(message);
     setDocSyncTone(tone);
-    Alert.alert(alertTitle ?? t('plot_documents_legality_sync_button'), message);
   };
 
   const applyLandTitleUploadOutcome = useCallback(
@@ -628,7 +784,8 @@ export default function PlotDetailScreen() {
           message =
             outcome.uploadedCount > 0
               ? t('plot_documents_auto_upload_ok', { n: outcome.uploadedCount })
-              : t('plot_documents_legality_sync_ok');
+              : t('plot_documents_auto_upload_queued');
+          tone = outcome.uploadedCount > 0 ? 'success' : 'info';
           break;
         case 'queued':
           message = t('plot_documents_auto_upload_queued');
@@ -664,7 +821,6 @@ export default function PlotDetailScreen() {
         cadastralKey: cadastralKey.trim() || null,
         informalTenure,
         informalTenureNote: informalTenureNote.trim() || null,
-        customReason: legalSyncReason,
       });
       applyLandTitleUploadOutcome(outcome, photos.length, showAlert);
       if (outcome.status === 'uploaded') {
@@ -678,45 +834,141 @@ export default function PlotDetailScreen() {
       farmer?.id,
       informalTenure,
       informalTenureNote,
-      legalSyncReason,
       plot,
       refreshTenureVerification,
     ],
   );
 
-  const addLandTitlePhoto = async () => {
-    if (!plot || addingTitlePhoto) return;
-    const file = await pickEvidenceFile({
-      pick_source_title: t('evidence_pick_source_title'),
-      pick_source_body: t('evidence_pick_source_body'),
-      pick_browse_files: t('evidence_pick_browse_files'),
-      pick_failed_title: t('evidence_pick_failed_title'),
-      pick_failed_body: t('evidence_pick_failed_body'),
-      pick_photo_library: t('evidence_pick_photo_library'),
-      pick_take_photo: t('evidence_pick_take_photo'),
-      pick_cancel: t('cancel'),
-      perm_library_title: t('evidence_perm_library_title'),
-      perm_library_body: t('evidence_perm_library_body'),
-      perm_camera_title: t('evidence_perm_camera_title'),
-      perm_camera_body: t('evidence_perm_camera_body'),
-    });
-    if (!file) return;
-    setAddingTitlePhoto(true);
+  const uploadLandProof = async () => {
+    if (!plot || uploadingLandProof) return;
+    setUploadingLandProof(true);
     try {
-      await persistPlotTitlePhoto({
+      const result = await pickAndSaveLandProof({
         plotId: plot.id,
-        uri: file.uri,
-        takenAt: Date.now(),
+        pickMessages: {
+          pick_source_title: t('plot_land_papers_pick_title'),
+          pick_source_body: t('plot_land_papers_pick_body'),
+          pick_browse_files: t('evidence_pick_browse_files'),
+          pick_failed_title: t('evidence_pick_failed_title'),
+          pick_failed_body: t('evidence_pick_failed_body'),
+          pick_photo_library: t('evidence_pick_photo_library'),
+          pick_take_photo: t('evidence_pick_take_photo'),
+          pick_cancel: t('cancel'),
+          perm_library_title: t('evidence_perm_library_title'),
+          perm_library_body: t('evidence_perm_library_body'),
+          perm_camera_title: t('evidence_perm_camera_title'),
+          perm_camera_body: t('evidence_perm_camera_body'),
+        },
       });
-      const updated = await loadTitlePhotosForPlot(plot.id);
-      setTitlePhotos(updated);
-      await runLandTitleUpload(updated, false);
+      if (!result) return;
+
+      setTitlePhotos(result.titlePhotos);
+      setEvidence(result.evidence);
+
+      if (result.kind === 'photo') {
+        try {
+          await runLandTitleUpload(result.titlePhotos, false);
+        } catch {
+          notifyDocSync(
+            t('plot_documents_land_title_save_failed_body'),
+            'error',
+          );
+        }
+        return;
+      }
+
+      const tenureItems = result.evidence.filter((row) => row.kind === 'tenure_evidence');
+      if (tenureItems.length === 0) {
+        setDocSyncMessage(t('plot_documents_evidence_saved_local', { n: 0 }));
+        setDocSyncTone('info');
+        return;
+      }
+
+      try {
+        const outcome = await autoUploadPlotEvidenceDocuments({
+          localPlotId: plot.id,
+          serverPlotId: backendPlotId,
+          farmerId: farmer?.id,
+          items: tenureItems,
+        });
+        applyLandTitleUploadOutcome(outcome, tenureItems.length, false);
+        if (outcome.status === 'uploaded') {
+          await refreshTenureVerification();
+        }
+      } catch {
+        notifyDocSync(t('plot_documents_land_title_save_failed_body'), 'error');
+      }
     } catch {
-      notifyDocSync(t('plot_documents_land_title_save_failed_body'), t('plot_documents_land_title_save_failed'));
+      notifyDocSync(t('plot_documents_land_title_save_failed_body'), 'error');
     } finally {
-      setAddingTitlePhoto(false);
+      setUploadingLandProof(false);
     }
   };
+
+  const confirmDeleteLandDocument = useCallback(
+    (onConfirm: () => void) => {
+      Alert.alert(t('delete_land_document_title'), t('delete_land_document_body'), [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('delete'), style: 'destructive', onPress: onConfirm },
+      ]);
+    },
+    [t],
+  );
+
+  const removeLandTitlePhoto = useCallback(
+    async (photo: PlotTitlePhoto) => {
+      if (!plot) return;
+      await deletePlotTitlePhoto(photo.id);
+      const [nextPhotos, nextEvidence] = await Promise.all([
+        loadTitlePhotosForPlot(plot.id),
+        loadEvidenceForPlot(plot.id),
+      ]);
+      setTitlePhotos(nextPhotos);
+      setEvidence(nextEvidence);
+      setDocPreviewItem((prev) =>
+        prev?.deleteTarget?.kind === 'land_title_photo' && prev.deleteTarget.id === photo.id
+          ? null
+          : prev,
+      );
+      notifyDocSync(t('plot_land_document_removed'), 'info');
+      if (nextPhotos.length > 0) {
+        await runLandTitleUpload(nextPhotos, false);
+      } else {
+        await refreshTenureVerification();
+      }
+    },
+    [plot, runLandTitleUpload, refreshTenureVerification, t],
+  );
+
+  const removeTenureEvidence = useCallback(
+    async (item: PlotEvidenceItem) => {
+      if (!plot) return;
+      await deletePlotEvidenceItem(item.id);
+      const nextEvidence = await loadEvidenceForPlot(plot.id);
+      setEvidence(nextEvidence);
+      setDocPreviewItem((prev) =>
+        prev?.deleteTarget?.kind === 'tenure_evidence' && prev.deleteTarget.id === item.id
+          ? null
+          : prev,
+      );
+      notifyDocSync(t('plot_land_document_removed'), 'info');
+      const remaining = nextEvidence.filter((row) => row.kind === 'tenure_evidence');
+      if (remaining.length > 0 && backendPlotId && farmer?.id) {
+        const outcome = await autoUploadPlotEvidenceDocuments({
+          localPlotId: plot.id,
+          serverPlotId: backendPlotId,
+          farmerId: farmer.id,
+          items: remaining,
+        });
+        if (outcome.status === 'uploaded') {
+          await refreshTenureVerification();
+        }
+      } else {
+        await refreshTenureVerification();
+      }
+    },
+    [plot, backendPlotId, farmer?.id, refreshTenureVerification, t],
+  );
 
   const handleHeaderBack = useCallback(() => {
     if (from === 'documents' && active === 'documents') {
@@ -724,6 +976,14 @@ export default function PlotDetailScreen() {
         router.back();
       } else {
         router.replace('/documents');
+      }
+      return;
+    }
+    if (from === 'harvests' && active === 'voucher') {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/harvests');
       }
       return;
     }
@@ -794,7 +1054,7 @@ export default function PlotDetailScreen() {
                   : active === 'harvests'
                     ? t('plot_harvest_records')
                     : active === 'voucher'
-                      ? t('plot_compliance_voucher')
+                      ? t('plot_delivery_receipt_header')
                       : t('plot_detail_title')}
             </ThemedText>
           </View>
@@ -1097,101 +1357,93 @@ export default function PlotDetailScreen() {
               informalTenureNote={informalTenureNote.trim() || null}
               titlePhotoCount={titlePhotos.length}
               tenureEvidenceCount={evidence.filter((e) => e.kind === 'tenure_evidence').length}
-              tenureVerifications={tenureVerifications}
+              tenureVerifications={visibleTenureVerifications}
               isSyncedToServer={Boolean(backendPlotId)}
             />
 
             {nextDocumentStep ? (
               <Card variant="outlined" style={styles.docNextStepCard}>
                 <ThemedText type="defaultSemiBold">{t('plot_documents_next_step_title')}</ThemedText>
-                <ThemedText type="defaultSemiBold" style={{ marginTop: 6 }}>
-                  {nextDocumentStep.title}
-                </ThemedText>
-                <ThemedText type="caption" style={{ marginTop: 4 }}>
-                  {nextDocumentStep.hint}
-                </ThemedText>
+                {!(nextDocumentStep.id === 'land' && visibleTenureVerifications.length > 0) ? (
+                  <ThemedText type="caption" style={{ marginTop: 4 }}>
+                    {nextDocumentStep.hint}
+                  </ThemedText>
+                ) : null}
               </Card>
-            ) : null}
-
-            <Card variant="outlined" style={styles.docCard}>
-              <ThemedText type="defaultSemiBold">{t('plot_documents_producer_scope_link_title')}</ThemedText>
-              <ThemedText type="caption" style={{ marginTop: 6 }}>
-                {t('plot_documents_producer_scope_link_body')}
-              </ThemedText>
-              <View style={{ marginTop: 10 }}>
-                <Button
-                  title={t('plot_documents_open_documents')}
-                  variant="secondary"
-                  onPress={() => router.push('/documents')}
-                />
-              </View>
-            </Card>
-
-            <DocumentUploadHint />
-
-            <Card variant="outlined" style={styles.docCard}>
-              <ThemedText type="defaultSemiBold">{t('plot_documents_land_title_section')}</ThemedText>
-              <View style={{ marginTop: 10 }}>
-                <Button
-                  title={
-                    addingTitlePhoto
-                      ? t('evidence_sync_busy')
-                      : titlePhotos.length > 0
-                        ? `${t('plot_documents_add_land_title')} (${titlePhotos.length})`
-                        : t('plot_documents_add_land_title')
-                  }
-                  variant="secondary"
-                  disabled={addingTitlePhoto}
-                  onPress={() => void addLandTitlePhoto()}
-                  testID="plot-add-land-title-photo"
-                />
-              </View>
-              {titlePhotos.length > 0 ? (
-                <View style={styles.photoRow} testID="plot-land-title-photo-count">
-                  {titlePhotos.slice(0, 4).map((p) => (
-                    <Pressable
-                      key={p.id}
-                      accessibilityRole="button"
-                      onPress={() =>
-                        setDocPreviewItem({
-                          uri: p.uri,
-                          mimeType: 'image/jpeg',
-                          label: t('plot_documents_land_title_section'),
-                        })
-                      }
-                    >
-                      <Image source={{ uri: p.uri }} style={styles.photoThumb} />
-                    </Pressable>
-                  ))}
-                  {titlePhotos.length > 4 ? (
-                    <View style={styles.photoThumbMore}>
-                      <ThemedText type="caption">+{titlePhotos.length - 4}</ThemedText>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-              <Input
-                label={t('plot_documents_cadastral_label')}
-                placeholder={t('plot_documents_cadastral_ph')}
-                value={cadastralKey}
-                onChangeText={setCadastralKey}
-                containerStyle={{ marginTop: 10 }}
-              />
-              {!backendPlotId && farmer?.id && titlePhotos.length > 0 ? (
-                <ThemedText type="caption" style={{ marginTop: 8, color: colors.error }}>
-                  {t('plot_documents_plot_not_synced_hint')}
+            ) : (
+              <Card variant="outlined" style={styles.docAllSetCard}>
+                <ThemedText type="defaultSemiBold">
+                  {landChecklistDone
+                    ? t('plot_land_papers_all_set')
+                    : t('plot_documents_next_step_title')}
                 </ThemedText>
-              ) : null}
-            </Card>
+                {!landChecklistDone &&
+                plotStatusRemainingRows[0] &&
+                !(plotStatusRemainingRows[0].id === 'land' && visibleTenureVerifications.length > 0) ? (
+                  <ThemedText type="caption" style={{ marginTop: 4 }}>
+                    {plotStatusRemainingRows[0].hint}
+                  </ThemedText>
+                ) : null}
+              </Card>
+            )}
 
-            <Card variant="outlined" style={styles.docNoteCard}>
-              <Input
-                label={t('plot_documents_legality_reason_optional_label')}
-                placeholder={t('plot_documents_legality_reason_ph')}
-                value={legalSyncReason}
-                onChangeText={setLegalSyncReason}
-              />
-            </Card>
+            {landChecklistDone && !landPapersExpanded ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: false }}
+                onPress={() => setLandPapersExpanded(true)}
+              >
+                <Card variant="outlined" style={styles.docLandEditToggle}>
+                  <View style={styles.docLandEditToggleRow}>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="defaultSemiBold">{t('plot_land_papers_show_edit')}</ThemedText>
+                      <ThemedText type="caption" style={styles.docLandEditToggleSub}>
+                        {t('plot_land_papers_show_edit_sub', { n: titlePhotos.length })}
+                      </ThemedText>
+                    </View>
+                    <Ionicons name="chevron-down" size={20} color="#0A7F59" />
+                  </View>
+                </Card>
+              </Pressable>
+            ) : (
+              <>
+                {landChecklistDone ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: true }}
+                    onPress={() => setLandPapersExpanded(false)}
+                    style={styles.docLandCollapseHeader}
+                  >
+                    <ThemedText type="caption" style={styles.docLandCollapseLabel}>
+                      {t('plot_land_papers_hide_edit')}
+                    </ThemedText>
+                    <Ionicons name="chevron-up" size={18} color="#6B7280" />
+                  </Pressable>
+                ) : null}
+                <PlotLandPapersCard
+                  titlePhotos={titlePhotos}
+                  tenureEvidence={tenureEvidenceItems}
+                  cadastralKey={cadastralKey}
+                  onCadastralKeyChange={setCadastralKey}
+                  uploadingProof={uploadingLandProof}
+                  onUploadProof={() => void uploadLandProof()}
+                  onPreview={(item) => setDocPreviewItem(item)}
+                  onDeleteTitlePhoto={(photo) =>
+                    confirmDeleteLandDocument(() => void removeLandTitlePhoto(photo))
+                  }
+                  onDeleteTenureEvidence={(item) =>
+                    confirmDeleteLandDocument(() => void removeTenureEvidence(item))
+                  }
+                  notSyncedHint={
+                    !backendPlotId && farmer?.id && titlePhotos.length > 0
+                      ? t('plot_documents_plot_not_synced_hint')
+                      : null
+                  }
+                  syncMessage={docSyncMessage}
+                  syncTone={docSyncTone}
+                />
+              </>
+            )}
 
             <PlotEvidencePanel
               scopeId={plot.id}
@@ -1200,35 +1452,12 @@ export default function PlotDetailScreen() {
               onEvidenceChange={setEvidence}
               overlapFlags={overlapFlags}
               serverPlotId={backendPlotId}
+              overlapOnly
               showFpicStructured={overlapFlags.indigenous}
               producerFpicCount={producerFpicCount}
               producerAttestationsComplete={producerAttestationsComplete}
-              auditNote={legalSyncReason}
-              onSyncMessage={(message, tone = 'info') => {
-                setDocSyncMessage(message);
-                if (message) setDocSyncTone(tone);
-              }}
               onSyncComplete={refreshTenureVerification}
             />
-
-            {docSyncMessage ? (
-              <Card variant="outlined" style={styles.docStatusCard}>
-                <ThemedText
-                  type="caption"
-                  style={{
-                    color:
-                      docSyncTone === 'success'
-                        ? colors.tint
-                        : docSyncTone === 'error'
-                          ? colors.error
-                          : undefined,
-                  }}
-                >
-                  {docSyncMessage}
-                </ThemedText>
-              </Card>
-            ) : null}
-
           </>
         ) : null}
 
@@ -1284,122 +1513,34 @@ export default function PlotDetailScreen() {
           </>
         ) : null}
 
-        {active === 'voucher' ? (
+        {active === 'voucher' && !plot ? (
+          <Card variant="outlined" style={styles.harvestRowCard}>
+            <ThemedText type="defaultSemiBold">{t('plot_not_found')}</ThemedText>
+            <ThemedText type="caption" style={{ marginTop: 6, color: '#6B7280' }}>
+              {t('harvest_plot_not_on_device')}
+            </ThemedText>
+          </Card>
+        ) : null}
+
+        {active === 'voucher' && plot ? (
           <>
-            {(() => {
-              const forPlot = vouchers.filter((v) => {
-                const pid = String(v?.plot_id ?? v?.plotId ?? '');
-                if (!pid || !backendPlotId) return false;
-                return pid === backendPlotId;
-              });
-              const list = forPlot.length > 0 ? forPlot : vouchers;
-              const latest = list[0] ?? null;
-              const voucherCode =
-                latest?.qr_code_ref
-                  ? String(latest.qr_code_ref)
-                  : plot
-                    ? `HN-COP-${new Date(plot.createdAt).getFullYear()}-001-V`
-                    : 'HN-COP-2024-001-V';
-              /** Payload encoded in the QR: backend ref when synced, else stable local tracebud URI. */
-              const qrPayload =
-                latest?.qr_code_ref != null && String(latest.qr_code_ref).trim() !== ''
-                  ? String(latest.qr_code_ref).trim()
-                  : `tracebud:voucher:${plot?.id ?? 'local'}:${voucherCode}`;
-              return (
-                <>
-                  <Card variant="outlined" style={styles.voucherCard}>
-                    <View
-                      ref={voucherShareCaptureRef}
-                      collapsable={false}
-                      style={styles.voucherShareCapture}
-                    >
-                      <View style={styles.voucherQrWrap}>
-                        <View style={styles.voucherQrInner}>
-                          <QRCode
-                            value={qrPayload}
-                            size={176}
-                            color="#111111"
-                            backgroundColor="#FFFFFF"
-                            ecl="M"
-                          />
-                        </View>
-                      </View>
-                      <ThemedText type="title" style={styles.voucherTitle}>
-                        {t('plot_voucher_title')}
-                      </ThemedText>
-                      <ThemedText type="default" style={styles.voucherSubtitle}>
-                        {t('plot_voucher_subtitle')}
-                      </ThemedText>
-                      <View style={styles.voucherCodeWrap}>
-                        <ThemedText type="defaultSemiBold" style={styles.voucherCodeText}>
-                          {voucherCode}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </Card>
-
-                  <ThemedText type="default" style={styles.voucherBodyText}>
-                    {t('plot_voucher_body')}
-                  </ThemedText>
-
-                  <View style={{ marginTop: 6 }}>
-                    <Button
-                      title={t('voucher_share')}
-                      variant="secondary"
-                      style={{ backgroundColor: '#0A9F68' }}
-                      loading={voucherShareBusy}
-                      disabled={voucherShareBusy}
-                      onPress={async () => {
-                        const shareMessage = t('voucher_share_message', {
-                          code: voucherCode,
-                          payload: qrPayload,
-                        });
-                        setVoucherShareBusy(true);
-                        setNote(null);
-                        try {
-                          if (Platform.OS === 'web') {
-                            await Share.share({
-                              title: t('voucher_share_title'),
-                              message: shareMessage,
-                            });
-                            return;
-                          }
-                          await new Promise<void>((resolve) => setTimeout(() => resolve(), 150));
-                          const uri = await captureRef(voucherShareCaptureRef, {
-                            format: 'png',
-                            quality: 0.95,
-                            result: 'tmpfile',
-                          });
-                          const available = await Sharing.isAvailableAsync();
-                          if (available && uri) {
-                            await Sharing.shareAsync(uri, {
-                              mimeType: 'image/png',
-                              dialogTitle: t('voucher_share_title'),
-                            });
-                          } else {
-                            await Share.share({
-                              title: t('voucher_share_title'),
-                              message: shareMessage,
-                            });
-                          }
-                        } catch {
-                          try {
-                            await Share.share({
-                              title: t('voucher_share_title'),
-                              message: shareMessage,
-                            });
-                          } catch {
-                            setNote(t('voucher_share_failed'));
-                          }
-                        } finally {
-                          setVoucherShareBusy(false);
-                        }
-                      }}
-                    />
-                  </View>
-                </>
-              );
-            })()}
+            <View style={{ marginBottom: 12 }}>
+              <UiButton variant="primary" fullWidth onPress={openRecordDeliveryForPlot}>
+                {t('plot_harvest_record_delivery')}
+              </UiButton>
+            </View>
+            <DeliveryReceiptsBrowser
+              t={t}
+              vouchers={vouchers}
+              mergedPlots={harvestPlotOptions}
+              plotIdFilter={harvestPlotId ?? plot?.id ?? null}
+              plotIdAliases={plotReceiptFilterIds}
+              plotNameFilter={String(plot.name ?? t('plot_fallback'))}
+              pendingReceipts={pendingHarvestReceipts}
+              deviceReceipts={deviceHarvestReceipts}
+              initialReceiptId={voucherReceiptId || null}
+              openLatestReceipt={openVoucherReceiptDirectly && !voucherReceiptId}
+            />
           </>
         ) : null}
 
@@ -1501,6 +1642,22 @@ export default function PlotDetailScreen() {
         visible={docPreviewItem != null}
         item={docPreviewItem}
         onClose={() => setDocPreviewItem(null)}
+        onDelete={
+          docPreviewItem?.deleteTarget
+            ? () => {
+                const target = docPreviewItem.deleteTarget!;
+                confirmDeleteLandDocument(() => {
+                  if (target.kind === 'land_title_photo') {
+                    const photo = titlePhotos.find((row) => row.id === target.id);
+                    if (photo) void removeLandTitlePhoto(photo);
+                    return;
+                  }
+                  const row = tenureEvidenceItems.find((item) => item.id === target.id);
+                  if (row) void removeTenureEvidence(row);
+                });
+              }
+            : undefined
+        }
       />
     </ThemedView>
   );
@@ -1762,6 +1919,33 @@ const styles = StyleSheet.create({
     padding: 12,
     borderLeftWidth: 3,
     borderLeftColor: '#F59E0B',
+  },
+  docAllSetCard: {
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#0A7F59',
+  },
+  docLandEditToggle: {
+    padding: 12,
+  },
+  docLandEditToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  docLandEditToggleSub: {
+    marginTop: 4,
+    color: '#6B7280',
+  },
+  docLandCollapseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginBottom: 4,
+  },
+  docLandCollapseLabel: {
+    color: '#6B7280',
   },
   docNoteCard: {
     paddingVertical: 4,

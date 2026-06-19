@@ -18,10 +18,10 @@ appId: com.tracebud.app
     text: ".*Documents.*"
     optional: true
 - assertVisible:
-    id: "plot-add-land-title-photo"
+    id: "plot-upload-land-proof"
     optional: true
 - tapOn:
-    id: "plot-add-land-title-photo"
+    id: "plot-upload-land-proof"
     optional: true
 - tapOn:
     text: ".*Photo Library.*|.*Choose Photo.*|.*Browse.*"

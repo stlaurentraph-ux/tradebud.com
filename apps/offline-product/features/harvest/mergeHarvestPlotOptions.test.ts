@@ -3,6 +3,7 @@ import {
   buildMergedHarvestPlots,
   findHarvestPlotOption,
   resolveHarvestPlotPickerId,
+  resolveLocalPlotForHarvestSubmit,
   resolveLocalPlotsForFarmer,
 } from './mergeHarvestPlotOptions';
 
@@ -66,6 +67,25 @@ describe('mergeHarvestPlotOptions', () => {
     expect(found?.id).toBe('server-1');
   });
 
+  it('treats plot as synced when only a persisted server link exists', () => {
+    const merged = buildMergedHarvestPlots({
+      backendPlots: [{ id: 'server-9', name: 'Renamed plot', area_ha: 2, kind: 'polygon' }],
+      localPlots: [
+        {
+          id: 'local-renamed',
+          farmerId: 'farmer-old',
+          name: 'Renamed plot',
+          areaHectares: 2,
+          kind: 'polygon',
+        },
+      ],
+      farmerId: 'farmer-old',
+      plotServerLinks: { 'local-renamed': 'server-9' },
+    });
+    expect(merged.find((p) => p.id === 'server-9')?.localOnly).toBe(false);
+    expect(merged.some((p) => p.id === 'local-renamed')).toBe(false);
+  });
+
   it('uses GPS area for mapped polygons and declared area for point plots', () => {
     const merged = buildMergedHarvestPlots({
       backendPlots: [],
@@ -91,5 +111,49 @@ describe('mergeHarvestPlotOptions', () => {
     });
     expect(merged.find((p) => p.id === 'poly-1')?.area_ha).toBe(2.1);
     expect(merged.find((p) => p.id === 'point-1')?.area_ha).toBe(3);
+  });
+
+  it('resolves local plot from server picker id via persisted link when API list is empty', () => {
+    const localPlots = [
+      {
+        id: 'local-renamed',
+        farmerId: 'farmer-old',
+        name: 'Plot 2',
+        areaHectares: 2,
+        kind: 'polygon' as const,
+      },
+    ];
+    const plotServerLinks = { 'local-renamed': 'server-9' };
+
+    const resolved = resolveLocalPlotForHarvestSubmit({
+      selectedPlotId: 'server-9',
+      localPlots,
+      backendPlots: [],
+      plotServerLinks,
+    });
+
+    expect(resolved?.id).toBe('local-renamed');
+  });
+
+  it('resolves local plot from server picker id when server name is display label not client id', () => {
+    const localPlots = [
+      {
+        id: 'local-renamed',
+        farmerId: 'farmer-old',
+        name: 'Plot 2',
+        areaHectares: 2,
+        kind: 'polygon' as const,
+      },
+    ];
+    const backendPlots = [{ id: 'server-9', name: 'Plot 2', area_ha: 2, kind: 'polygon' }];
+
+    const resolved = resolveLocalPlotForHarvestSubmit({
+      selectedPlotId: 'server-9',
+      localPlots,
+      backendPlots,
+      plotServerLinks: { 'local-renamed': 'server-9' },
+    });
+
+    expect(resolved?.id).toBe('local-renamed');
   });
 });

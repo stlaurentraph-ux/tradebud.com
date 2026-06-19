@@ -31,7 +31,7 @@ describe('summarizePlotDocumentsForOverview', () => {
       backendFlags: null,
     });
     const status = summarizePlotDocumentsForOverview(checklist, { titlePhotos: 1, evidenceCount: 1 });
-    expect(status.chipKey).toBe('documents_plot_chip_backup_pending');
+    expect(status.chipKey).toBe('documents_plot_chip_on_phone');
     expect(status.chipParams).toEqual({ n: 2 });
   });
 });
@@ -49,7 +49,7 @@ describe('formatPlotDocumentsNavSubtitle', () => {
       { titlePhotos: 1, evidenceCount: 0 },
       t,
     );
-    expect(subtitle).toBe('plot_nav_documents_sub_permit');
+    expect(subtitle).toBe('plot_nav_documents_sub_protected_area');
   });
 });
 

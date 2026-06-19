@@ -1,3 +1,89 @@
+### 2026-06-16 (offline: backup queue dedup + duplicate error line)
+- **Queue explosion** — `enqueuePendingSync` now upserts by logical key (one harvest / plot evidence / producer supporting per item); compacts duplicates on Settings refresh and before queue drain.
+- **Settings UX** — hide yellow warning when Sync now already shows the same error (no duplicate reachability lines).
+
+### 2026-06-16 (offline: home → deliveries lands on plot picker with checkboxes)
+- **Home tile** — Record delivery opens Deliveries on Select plot (`focus=select`).
+- **Plot picker** — tick one or more plots; Continue → single-plot weight or multi-plot weight flow for each selection.
+
+### 2026-06-16 (offline: backup sync — network errors + misleading server busy)
+- **Auth refresh** — Supabase network failures no longer masquerade as session expired; timeout no longer swallowed as missing token.
+- **API calls** — harvest/photo/legal/evidence sync wrap fetch failures as `Network request failed`; queue ping before drain.
+- **Settings UX** — Sync now pings `/health` first; connectivity issues show reach-failed copy (not “server busy”); backup panel prioritizes unreachable API over stale queue errors.
+- **Background sync** — Auto backup catches transport errors (no LogBox toast).
+
+### 2026-06-16 (offline: supporting files — per-category list, delete, sync status)
+- **Grouped UI** — uploads appear under Community / Labor / Additional row where they were added; each row keeps its own Add (+) action.
+- **Delete** — trash per file with confirm; local removal only.
+- **Sync status** — badge per file: On Tracebud (remote URI), On this phone, Waiting to upload, Sign in to upload, Upload a plot first; auto-upload on add when signed in; Settings sync drains producer-scope `evidence_sync`.
+- **Tests** — `producerSupportingEvidence.test.ts`; i18n `documents_supporting_status_*`, `documents_delete_supporting_*`.
+
+### 2026-06-16 (offline: view receipt — open detail directly)
+- **After logging delivery** — View receipt passes `receiptId` and opens `DeliveryReceiptDetailPanel` immediately (fallback: newest receipt for that plot).
+
+### 2026-06-16 (offline: settings backup sync fix)
+- **Sync now** — hydrate auth before run; process consent queue separately; never pass consent rows to plot/harvest drain (they were dropped); continue queue drain when plot list fetch fails; always show result message under the button.
+
+### 2026-06-16 (offline: supporting files — pick source sheet)
+- **Supporting documents +** — action sheet with Take photo, Photo library, Browse files (same as plot evidence); category label preserved on save.
+
+### 2026-06-16 (offline: delivery receipt sync + navigation)
+- **View receipt empty** — plot receipt browser matched local plot id to server-grouped receipts; `findPlotReceiptGroupForScreen` + prefer server id for `plotIdFilter`; normalize voucher API payloads on plot screen.
+- **Sync now** — tolerate voucher fetch failures; persist QR to `local_delivery_receipts` after queue drain; early success when QR already present; reload device receipts.
+- **Back from receipt** — `from=harvests` on view-receipt navigation; plot header back returns to Deliveries tab.
+
+### 2026-06-16 (offline: mapping back — discard confirm)
+- **Walk / pin / draw / corners** — header Back and Android hardware back prompt before leaving when boundary capture is in progress; completion photos on post-save screen also guarded.
+- **Tests** — `mappingProgress.ts` / `mappingDiscardConfirm.test.ts`.
+
+### 2026-06-16 (offline: documents — declarations persist + supporting files)
+- **Declarations** — `await persistFarmer` on save; reload from disk on Documents focus; read-only summary with saved date when complete.
+- **Supporting files** — third row “Additional files”; community/labor hints clarify FPIC overlap + photo-vs-audit; `additional_file` label on `labor_evidence` for buyer extras.
+- **Tests** — `producerSupportingFileLabels.test.ts`.
+
+### 2026-06-16 (offline: land document photo sync + AI review)
+- **Root cause** — storage upload failures were still sent to `photos-sync` without `storagePath`, so backend skipped AI tenure parse; UI could show success anyway.
+- **Fix** — only sync uploaded rows with `storagePath`; throw/queue on failure; auto-upload PDF land papers on add; HEIC mime support + migration `202606160001_plot_evidence_heic_mime`.
+- **Tests** — `landTitleSyncOutcome.test.ts`, `evidenceContentType` mime inference.
+
+### 2026-06-16 (offline: documents hub — producer declarations UX)
+- **Split producer block** — flat “Your declarations” (2 checkboxes, one Save, single Done/Not done pill) + collapsible “Supporting files (optional)” with one Add file flow (community letter / labor photo).
+- **Screen order** — hero → declarations (always visible) → plot land papers → optional supporting files.
+- **Plain language** — documents-specific i18n (`documents_declarations_*`, `documents_supporting_*`); FPIC only in hint text.
+- Removed `ProducerDocumentsCollapsible` and `ProducerAttestationsCard`; new `ProducerDeclarationsSection` + `ProducerSupportingFilesSection`.
+
+### 2026-06-19 (offline: delivery saved screen UX pass 2)
+- **Delivery saved** — always show QR area (code, pending-after-sync, or generating); removed duplicate offline banner and extra footer links.
+- **Queued + buyer QR** — clear copy that QR appears after sync; actions reduced to Sync now + Log another + View plot receipt.
+
+### 2026-06-16 (offline: delivery saved screen UX)
+- New `DeliveryLoggedPanel` — receipt summary (plot, kg, date, buyer), season total, PNG share via `shareDeliveryReceipt`, no empty QR.
+- Queued deliveries: **Sync now** → Settings backup; synced: primary **Share receipt**, secondary log another, links to plot receipt tab + home.
+- `harvests.tsx` holds `LoggedDeliverySnapshot` from submit before form reset; `PlotDeliveryReceiptPanel` shares same PNG helper.
+
+### 2026-06-16 (offline: delivery receipt naming + plot receipt UX)
+- Renamed farmer-facing “compliance voucher” → **delivery receipt** / traceability code (EN).
+- Plot receipt tab: no placeholder QR; empty state until a real delivery exists; amber banner when plot checklist incomplete.
+- New `PlotDeliveryReceiptPanel`; removed fake cross-plot voucher fallback.
+
+### 2026-06-16 (offline: plot documents — land papers only)
+- **Removed “More options”** on plot Documents tab (producer link, sync note field, upload hint junk drawer).
+- **Sync feedback inline** — upload/sync messages on `PlotLandPapersCard`; overlap permit/FPIC sync on `PlotEvidencePanel`.
+- **Land-paper gating** — “Land papers verified” only after AI cleared; no false “look good” during review.
+- Deleted `PlotDocumentsMoreSection`, `DocumentUploadHint`.
+
+### 2026-06-19 (offline: documents UX second pass)
+- **No auto-camera after map** — post-save navigates to plot land-papers tab only; farmer chooses when to take a photo.
+- **Land papers collapse** — when land checklist is complete, show compact “Land papers look good” + tap-to-expand “Add or change land papers”.
+- **i18n** — documents UX strings for es/fr/de/pt; EN fallback for other locales; `scripts/apply-documents-ux-i18n.mjs`.
+
+### 2026-06-19 (offline: documents UX first pass — less overwhelm)
+- **Documents hub** — single “do this next” hero + plot list; producer FPIC/labor collapsed behind “Producer papers”.
+- **Plot land papers** — one combined card (photo + file + cadastral); overlap-only permit/community sections; “More options” for sync note and producer link.
+- **Post-map prompt** — after saving a plot, “Add land papers” on completion screen and save alert.
+- **Plain-language chips** — “All set”, “Protected-area paper”, “on phone”, etc. (EN).
+- Verification: `plotDocumentSummary` + `producerDocumentNextStep` tests green.
+
 ### 2026-06-18 (offline: documents overview UX)
 - **Documents overview** — status strip (producer attestations + plot land-paper counts), plot rows with compliance chips sorted by needs-attention, tap-to-preview producer files.
 - **Plot land documents** — richer nav subtitle from shared readiness; “Do this next” card; producer FPIC/labor link to `/documents`; land-title photo preview.

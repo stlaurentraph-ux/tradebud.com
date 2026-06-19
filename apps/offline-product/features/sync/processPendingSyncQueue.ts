@@ -1,3 +1,4 @@
+import { pingTracebudApi } from '@/features/network/pingTracebudApi';
 import {
   fetchPlotsForFarmer,
   postHarvestToBackend,
@@ -6,15 +7,21 @@ import {
 } from '@/features/api/postPlot';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
 import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
+import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   deletePendingSyncAction,
+  compactDuplicatePendingSyncActions,
   loadEvidenceForPlot,
   loadPendingSyncActions,
+  loadPlotServerLinks,
   loadTitlePhotosForPlot,
   logAuditEvent,
   markPendingSyncAttempt,
+  persistPlotServerLinks,
+  updateLocalDeliveryReceipt,
+  updatePlotEvidenceUri,
   type PendingSyncAction,
 } from '@/features/state/persistence';
 import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
@@ -59,23 +66,78 @@ export async function processPendingSyncQueue(params: {
   actionTypes?: PendingSyncAction['actionType'][];
   attemptScope?: PendingSyncAttemptScope;
   maxActions?: number;
+  /** Manual Sync now — retry rows even if exponential backoff has not elapsed. */
+  ignoreBackoff?: boolean;
 }): Promise<ProcessPendingSyncQueueResult> {
-  let backendRows: unknown[] = [];
-  try {
-    backendRows = await fetchPlotsForFarmer(params.farmerId);
-  } catch {
+  await compactDuplicatePendingSyncActions().catch(() => 0);
+
+  const apiReachable = await pingTracebudApi();
+  if (!apiReachable) {
     return {
       completed: 0,
       failedActions: 0,
       droppedInvalid: 0,
       fetchFailed: true,
+      firstError: 'Network request failed',
     };
   }
 
+  let backendRows: unknown[] = [];
+  let plotServerLinks: Record<string, string> = {};
+  let plotListFetchFailed = false;
+  try {
+    plotServerLinks = await loadPlotServerLinks();
+    backendRows = await fetchPlotsForFarmer(params.farmerId);
+  } catch (e) {
+    plotListFetchFailed = true;
+    plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+    backendRows = [];
+    const hasLinks = Object.keys(plotServerLinks).length > 0;
+    const hasLocalPlots = params.localPlots.length > 0;
+    if (!hasLinks && !hasLocalPlots) {
+      return {
+        completed: 0,
+        failedActions: 0,
+        droppedInvalid: 0,
+        fetchFailed: true,
+        firstError: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
+
+  const reconciledLinks = reconcilePlotServerLinks(
+    params.localPlots,
+    backendRows,
+    plotServerLinks,
+  );
+  if (Object.keys(reconciledLinks).length !== Object.keys(plotServerLinks).length ||
+      Object.entries(reconciledLinks).some(([localId, serverId]) => plotServerLinks[localId] !== serverId)) {
+    await persistPlotServerLinks(reconciledLinks).catch(() => undefined);
+  }
+  plotServerLinks = reconciledLinks;
+
   const resolveBackendPlotId = (localPlotId: string): string | null => {
-    const local = params.localPlots.find((p) => p.id === localPlotId);
-    if (!local) return null;
-    const hit = findBackendPlotForLocal(
+    const trimmedId = localPlotId.trim();
+    if (!trimmedId) return null;
+
+    const directLink = plotServerLinks[trimmedId]?.trim();
+    if (directLink) {
+      if (backendRows.length === 0) {
+        if (plotListFetchFailed) return directLink;
+      } else if (
+        (backendRows as { id?: unknown }[]).some(
+          (row) => String(row?.id ?? '') === directLink,
+        )
+      ) {
+        return directLink;
+      }
+    }
+
+    const local = params.localPlots.find((p) => p.id === trimmedId);
+    if (!local) {
+      return directLink || null;
+    }
+    const hit = resolveServerPlotIdForLocal(
       {
         id: local.id,
         name: local.name,
@@ -83,10 +145,9 @@ export async function processPendingSyncQueue(params: {
         kind: local.kind,
       },
       backendRows,
+      plotServerLinks,
     );
-    return hit != null && (hit as { id?: unknown }).id != null
-      ? String((hit as { id: unknown }).id)
-      : null;
+    return hit;
   };
 
   let completed = 0;
@@ -97,6 +158,7 @@ export async function processPendingSyncQueue(params: {
   const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync'];
   const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
   const attemptScope = params.attemptScope ?? 'all';
+  const ignoreBackoff = params.ignoreBackoff === true;
   const nowMs = Date.now();
   const scopedActions = (await loadPendingSyncActions())
     .filter((row) => allowedActionTypeSet.has(row.actionType))
@@ -105,7 +167,7 @@ export async function processPendingSyncQueue(params: {
       if (attemptScope === 'first_attempt_only') return (row.attempts ?? 0) === 0;
       return true;
     })
-    .filter((row) => isEligibleForRetry(row, nowMs))
+    .filter((row) => ignoreBackoff || isEligibleForRetry(row, nowMs))
     .sort((a, b) => {
       const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
       if (cmp !== 0) return cmp;
@@ -152,6 +214,8 @@ export async function processPendingSyncQueue(params: {
         const localId = String(payload?.plotId ?? '');
         const sid = resolveBackendPlotId(localId);
         if (!sid) {
+          failedActions += 1;
+          firstError = firstError ?? 'Plot not on server yet — upload plot from My Plots first.';
           await markPendingSyncAttempt(a.id, {
             attempts: (a.attempts ?? 0) + 1,
             lastError: 'Plot not on server yet — upload plot from My Plots first.',
@@ -159,9 +223,23 @@ export async function processPendingSyncQueue(params: {
           });
           continue;
         }
-        await postHarvestToBackend({ ...payload, plotId: sid, hlcTimestamp: a.hlcTimestamp, clientEventId: `pending-sync-${a.id}` } as Parameters<
-          typeof postHarvestToBackend
-        >[0]);
+        const clientEventId =
+          typeof payload?.clientEventId === 'string' && payload.clientEventId.trim().length > 0
+            ? payload.clientEventId.trim()
+            : `pending-sync-${a.id}`;
+        const harvestResponse = await postHarvestToBackend({
+          ...payload,
+          farmerId: params.farmerId,
+          plotId: sid,
+          hlcTimestamp: a.hlcTimestamp,
+          clientEventId,
+        } as Parameters<typeof postHarvestToBackend>[0]);
+        const qrCodeRef = readHarvestSubmitQrCodeRef(harvestResponse);
+        await updateLocalDeliveryReceipt(clientEventId, {
+          qrCodeRef,
+          pendingSync: false,
+          serverPlotId: sid,
+        }).catch(() => undefined);
         trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
           plotId: localId,
           serverPlotId: sid,
@@ -171,6 +249,8 @@ export async function processPendingSyncQueue(params: {
         const localId = String(payload?.plotId ?? '');
         const sid = resolveBackendPlotId(localId);
         if (!sid) {
+          failedActions += 1;
+          firstError = firstError ?? 'Plot not on server — upload from My Plots first.';
           await markPendingSyncAttempt(a.id, {
             attempts: (a.attempts ?? 0) + 1,
             lastError: 'Plot not on server — upload from My Plots first.',
@@ -233,12 +313,29 @@ export async function processPendingSyncQueue(params: {
       } else if (a.actionType === 'evidence_sync') {
         const plotIdRaw = payload?.plotId as string | undefined;
         const reason = String(payload?.reason ?? '').trim();
-        const sid = plotIdRaw ? resolveBackendPlotId(plotIdRaw) : null;
+        const scope = String(payload?.scope ?? '');
+        const isProducerScope = scope === 'producer' || String(plotIdRaw ?? '').startsWith('profile:');
+
+        let sid: string | null = null;
+        if (isProducerScope) {
+          for (const plot of params.localPlots) {
+            sid = resolveBackendPlotId(plot.id);
+            if (sid) break;
+          }
+        } else {
+          sid = plotIdRaw ? resolveBackendPlotId(plotIdRaw) : null;
+        }
+
         if (!plotIdRaw || !sid || reason.length === 0) {
           if (plotIdRaw && reason.length > 0 && !sid) {
+            failedActions += 1;
+            const blockedError = isProducerScope
+              ? 'Upload a plot to Tracebud first (My Plots → Sync).'
+              : 'Plot not on server — upload from My Plots first.';
+            firstError = firstError ?? blockedError;
             await markPendingSyncAttempt(a.id, {
               attempts: (a.attempts ?? 0) + 1,
-              lastError: 'Plot not on server — upload from My Plots first.',
+              lastError: blockedError,
               lastAttemptAt: Date.now(),
             });
           } else {
@@ -267,9 +364,14 @@ export async function processPendingSyncQueue(params: {
           farmerId: params.farmerId,
           items,
           reason,
-          note: 'Evidence repository sync from pending queue',
+          note: isProducerScope
+            ? 'Producer supporting documents sync from pending queue'
+            : 'Evidence repository sync from pending queue',
           hlcTimestamp: a.hlcTimestamp,
           clientEventId: `pending-sync-${a.id}`,
+          onUriResolved: async (item, remoteUri) => {
+            await updatePlotEvidenceUri(item.id, remoteUri);
+          },
         });
       } else {
         await deletePendingSyncAction(a.id);
@@ -334,7 +436,9 @@ export async function processPendingSyncQueue(params: {
     completed,
     failedActions,
     droppedInvalid,
-    fetchFailed: false,
-    firstError,
+    fetchFailed: plotListFetchFailed && completed === 0 && failedActions === 0 && droppedInvalid === 0,
+    firstError:
+      firstError ??
+      (plotListFetchFailed ? 'Plot list could not be refreshed — used saved plot links.' : undefined),
   };
 }

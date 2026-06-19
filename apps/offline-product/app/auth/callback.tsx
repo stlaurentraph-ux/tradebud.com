@@ -8,6 +8,11 @@ import { Colors, Spacing } from '@/constants/theme';
 import { sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
+import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
+import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -59,6 +64,17 @@ export default function AuthCallbackScreen() {
           source: 'cold_start',
           reason: 'missing_initial_url',
         });
+        return;
+      }
+
+      if (deliverOAuthCallbackUrl(url)) {
+        router.replace('/(tabs)');
+        return;
+      }
+
+      await hydrateSyncAuthFromSettings();
+      if (hasSyncAuthSession()) {
+        finishSuccess();
         return;
       }
 

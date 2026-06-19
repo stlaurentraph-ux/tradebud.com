@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computePlotReadinessChecklist, evaluateTenureParseGate } from './plotChecklist';
+import {
+  computePlotReadinessChecklist,
+  evaluateTenureParseGate,
+  resolveLandDocumentsUiStatus,
+} from './plotChecklist';
 
 describe('plotChecklist tenure parse gating', () => {
   it('waits for AI when only title photos exist on a synced plot', () => {
@@ -11,6 +15,13 @@ describe('plotChecklist tenure parse gating', () => {
     });
     expect(checklist.landOk).toBe(true);
     expect(checklist.tenureParseGate).toBe('pending');
+    expect(
+      resolveLandDocumentsUiStatus({
+        titlePhotoCount: 1,
+        evidenceKinds: [],
+        tenureParseGate: checklist.tenureParseGate,
+      }),
+    ).toBe('reviewing');
   });
 
   it('blocks land when synced tenure parse is MANUAL_REQUIRED', () => {
@@ -66,6 +77,23 @@ describe('plotChecklist tenure parse gating', () => {
     });
     expect(checklist.tenureParseGate).toBe('blocked');
     expect(checklist.landOk).toBe(false);
+  });
+
+  it('does not mark land papers verified while AI is reviewing', () => {
+    expect(
+      resolveLandDocumentsUiStatus({
+        titlePhotoCount: 1,
+        evidenceKinds: [],
+        tenureParseGate: 'pending',
+      }),
+    ).toBe('reviewing');
+    expect(
+      resolveLandDocumentsUiStatus({
+        titlePhotoCount: 1,
+        evidenceKinds: [],
+        tenureParseGate: 'cleared',
+      }),
+    ).toBe('verified');
   });
 
   it('clears land when tenure parse is COMPLETED', () => {

@@ -1,7 +1,11 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { resolveFarmerIdsForTenant, isFarmerInTenant } from '../common/tenant-farmer-scope';
-import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
+import {
+  claimSelfLinkedFarmerProfileForAuthUser,
+  isFarmerProfileOwnedByUser,
+  listFarmerProfileIdsForUser,
+} from '../auth/farmer-ownership';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -328,6 +332,11 @@ export class PlotsService {
       countryCode: params.countryCode,
       producerDisplayName: params.fullName ?? null,
     });
+    await claimSelfLinkedFarmerProfileForAuthUser(
+      this.pool,
+      params.farmerId,
+      params.userId,
+    );
     if (params.fullName) {
       await this.pool.query(
         `
@@ -339,6 +348,10 @@ export class PlotsService {
       );
     }
     return { created };
+  }
+
+  async listFarmerProfileIdsForAuthUser(userId: string): Promise<string[]> {
+    return listFarmerProfileIdsForUser(this.pool, userId);
   }
 
   private maybeSendFarmerWelcome(input: {

@@ -74,10 +74,5 @@ export function formatSyncProgressCaption(
     return withElapsed(t, holderStep, holderElapsed, { slow, stoppingSoon });
   }
 
-  return withElapsed(
-    t,
-    t('sync_background_in_progress', { step: holderStep }),
-    holderElapsed,
-    { slow, stoppingSoon },
-  );
+  return withElapsed(t, holderStep, holderElapsed, { slow, stoppingSoon });
 }

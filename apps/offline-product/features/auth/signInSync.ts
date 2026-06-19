@@ -2,9 +2,11 @@ import {
   clearPersistedSyncAuth,
   getSupabaseAuthClient,
   hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
   saveAndApplyPasswordSession,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
+import { isDashboardWorkspaceSession } from '@/features/auth/fieldAppEligibility';
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import type { Plot } from '@/features/state/AppStateContext';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
@@ -44,6 +46,11 @@ export async function signInAndSyncPlots(params: {
   }
   if (!data.session) {
     return { ok: false, message: 'sign_in_failed' };
+  }
+
+  if (isDashboardWorkspaceSession(data.session)) {
+    await supabase.auth.signOut();
+    return { ok: false, message: 'sign_in_dashboard_account' };
   }
 
   await saveAndApplyPasswordSession(email, params.password, data.session);
@@ -93,6 +100,10 @@ export async function signInWithOAuthAndSyncPlots(params: {
       localPlots: params.localPlots,
     });
   } catch (e) {
+    await hydrateSyncAuthFromSettings();
+    if (hasSyncAuthSession()) {
+      return { ok: true };
+    }
     return { ok: false, message: mapOAuthErrorToCode(e) };
   }
 }
