@@ -3,6 +3,11 @@ import { Polygon, Polyline } from 'react-native-maps';
 
 import { FieldPositionMarker } from '@/components/plot-map/FieldPositionMarker';
 import type { MapCoordinate } from '@/features/mapping/fieldMapRegion';
+import {
+  boundaryStrokeCoordinates,
+  sanitizeMapCoordinates,
+  shouldShowStartMarker,
+} from '@/features/mapping/plotBoundaryOverlayRender';
 import { resolveYouPosition } from '@/features/mapping/plotBoundaryOverlayLogic';
 
 const BOUNDARY_GREEN = '#0A7F59';
@@ -22,6 +27,11 @@ type PlotBoundaryOverlaysProps = {
   showVertexMarkers?: boolean;
   /** Keep the you-marker visible while the coordinate updates during capture. */
   youMarkerFollowsPosition?: boolean;
+  /**
+   * Stroke-only preview while manually tracing on satellite tiles.
+   * Filled Polygon + UrlTile is unstable on iOS when the ring first closes.
+   */
+  strokeOnlyBoundary?: boolean;
 };
 
 export function PlotBoundaryOverlays({
@@ -33,13 +43,16 @@ export function PlotBoundaryOverlays({
   showStartMarker = true,
   showVertexMarkers = false,
   youMarkerFollowsPosition = false,
+  strokeOnlyBoundary = false,
 }: PlotBoundaryOverlaysProps) {
-  const youPosition = resolveYouPosition({ liveTrail, userPosition, vertices });
-
-  const boundaryLine =
-    vertices.length === 2
-      ? vertices
-      : [];
+  const safeVertices = sanitizeMapCoordinates(vertices);
+  const youPosition = resolveYouPosition({ liveTrail, userPosition, vertices: safeVertices });
+  const strokeCoordinates = boundaryStrokeCoordinates(safeVertices);
+  const showStart = shouldShowStartMarker({
+    showStartMarker,
+    showVertexMarkers,
+    vertexCount: safeVertices.length,
+  });
 
   return (
     <>
@@ -53,36 +66,49 @@ export function PlotBoundaryOverlays({
         />
       ) : null}
 
-      {vertices.length >= 3 ? (
+      {!strokeOnlyBoundary && safeVertices.length >= 3 ? (
         <Polygon
-          coordinates={vertices}
+          coordinates={safeVertices}
           fillColor={BOUNDARY_FILL}
           strokeColor={BOUNDARY_GREEN}
           strokeWidth={4}
+          geodesic
           zIndex={ANDROID_OVERLAY_BASE_Z + 2}
         />
       ) : null}
 
-      {boundaryLine.length === 2 ? (
+      {strokeOnlyBoundary && strokeCoordinates.length >= 2 ? (
         <Polyline
-          coordinates={boundaryLine}
+          coordinates={strokeCoordinates}
+          strokeColor={BOUNDARY_GREEN}
+          strokeWidth={4}
+          geodesic
+          zIndex={ANDROID_OVERLAY_BASE_Z + 2}
+        />
+      ) : null}
+
+      {!strokeOnlyBoundary && safeVertices.length === 2 ? (
+        <Polyline
+          coordinates={safeVertices}
           strokeColor={BOUNDARY_GREEN}
           strokeWidth={isRecording ? 5 : 4}
+          geodesic
           zIndex={ANDROID_OVERLAY_BASE_Z + 3}
         />
       ) : null}
 
-      {showStartMarker && vertices.length > 0 ? (
-        <FieldPositionMarker coordinate={vertices[0]} variant="start" />
+      {showStart ? (
+        <FieldPositionMarker coordinate={safeVertices[0]} variant="start" />
       ) : null}
 
       {showVertexMarkers
-        ? vertices.map((p, idx) => (
+        ? safeVertices.map((p, idx) => (
             <FieldPositionMarker
-              key={`vertex-${idx}-${p.latitude}-${p.longitude}`}
+              key={`vertex-${idx}`}
               coordinate={p}
               variant="vertex"
               label={`${idx + 1}`}
+              trackInitially={idx === safeVertices.length - 1}
             />
           ))
         : null}

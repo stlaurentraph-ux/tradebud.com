@@ -16,7 +16,7 @@ Pair with `npm run release:preflight:production:online` and `DEVICE_SMOKE_CHECKL
 - [ ] App name: **Tracebud** (or approved marketing name)
 - [ ] Subtitle: offline field mapping + EUDR plot backup (≤ 30 chars)
 - [ ] Primary category: **Productivity** or **Business**
-- [ ] Support URL: `https://tracebud.com/support` (or live help page)
+- [x] Support URL: `https://tracebud.com/support` (live help page at `apps/marketing/app/[locale]/support`)
 - [ ] Privacy policy URL: `https://tracebud.com/privacy`
 - [ ] Copyright, age rating questionnaire completed
 - [ ] `ITSAppUsesNonExemptEncryption` = **No** (already in `app.json`)

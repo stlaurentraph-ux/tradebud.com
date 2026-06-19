@@ -14,6 +14,8 @@ export function showOAuthSignInFailureAlert(
         ? t('sign_in_field_bootstrap_failed')
         : messageCode === 'sign_in_api_unreachable'
           ? t('sign_in_api_unreachable')
+          : messageCode === 'sign_in_dashboard_account'
+            ? t('sign_in_dashboard_account')
       : messageCode === 'sign_in_oauth_needs_signup'
       ? t('sign_in_oauth_needs_signup')
       : messageCode === 'sign_in_oauth_cancelled'
@@ -27,7 +29,8 @@ export function showOAuthSignInFailureAlert(
   if (
     messageCode === 'sign_in_oauth_cancelled' ||
     messageCode === 'sign_in_field_bootstrap_failed' ||
-    messageCode === 'sign_in_api_unreachable'
+    messageCode === 'sign_in_api_unreachable' ||
+    messageCode === 'sign_in_dashboard_account'
   ) {
     Alert.alert(t('sign_in'), body);
     return;

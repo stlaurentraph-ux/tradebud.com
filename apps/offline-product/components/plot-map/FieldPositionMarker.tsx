@@ -11,18 +11,21 @@ type FieldPositionMarkerProps = {
   label?: string;
   /** Keep custom marker visible while coordinate updates (walk capture). */
   followPosition?: boolean;
+  /** When false, skip the initial bitmap snapshot (stable corner markers). */
+  trackInitially?: boolean;
 };
 
 const MARKER_Z_INDEX = Platform.OS === 'android' ? 20 : undefined;
 
 /** Custom Marker children need a brief tracksViewChanges window or maps fall back to the default pin. */
-function useMarkerViewTracking(
-  variant: FieldPositionMarkerProps['variant'],
-  followPosition: boolean,
-) {
-  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+function useMarkerViewTracking(followPosition: boolean, trackInitially = true) {
+  const [tracksViewChanges, setTracksViewChanges] = useState(trackInitially);
 
   useEffect(() => {
+    if (!trackInitially) {
+      setTracksViewChanges(false);
+      return;
+    }
     if (followPosition) {
       setTracksViewChanges(true);
       return;
@@ -30,12 +33,12 @@ function useMarkerViewTracking(
     setTracksViewChanges(true);
     const timer = setTimeout(() => setTracksViewChanges(false), 600);
     return () => clearTimeout(timer);
-  }, [followPosition, variant]);
+  }, [followPosition, trackInitially]);
 
   const onMarkerLayout = useCallback(() => {
-    if (followPosition) return;
+    if (followPosition || !trackInitially) return;
     requestAnimationFrame(() => setTracksViewChanges(false));
-  }, [followPosition]);
+  }, [followPosition, trackInitially]);
 
   return { tracksViewChanges: followPosition || tracksViewChanges, onMarkerLayout };
 }
@@ -45,8 +48,12 @@ export function FieldPositionMarker({
   variant,
   label,
   followPosition = false,
+  trackInitially = true,
 }: FieldPositionMarkerProps) {
-  const { tracksViewChanges, onMarkerLayout } = useMarkerViewTracking(variant, followPosition);
+  const { tracksViewChanges, onMarkerLayout } = useMarkerViewTracking(
+    followPosition,
+    trackInitially,
+  );
 
   return (
     <Marker

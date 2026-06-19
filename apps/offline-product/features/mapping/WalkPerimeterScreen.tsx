@@ -2191,9 +2191,10 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                     <PlotBoundaryOverlays
                       vertices={points}
                       userPosition={previewPosition}
-                      showYouMarker
+                      showYouMarker={!drawTracingActive}
                       showStartMarker={points.length > 0}
                       showVertexMarkers={drawTracingActive}
+                      strokeOnlyBoundary={drawTracingActive}
                     />
                   </MapView>
                   <View style={styles.mapGpsPill} pointerEvents="none">

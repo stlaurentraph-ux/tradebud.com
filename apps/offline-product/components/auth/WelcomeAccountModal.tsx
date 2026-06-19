@@ -32,12 +32,21 @@ export function WelcomeAccountModal({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onSkip}>
-      <Pressable
-        style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
-        onPress={onSkip}
-      >
-        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      onRequestClose={onSkip}
+    >
+      <View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
+        <Pressable
+          style={authSheetStyles.backdropPress}
+          accessibilityRole="button"
+          accessibilityLabel={skipLabel}
+          onPress={onSkip}
+        />
+        <View style={styles.card}>
           <ThemedText type="defaultSemiBold" style={styles.title}>
             {title}
           </ThemedText>
@@ -57,8 +66,8 @@ export function WelcomeAccountModal({
               {skipLabel}
             </ThemedText>
           </Pressable>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

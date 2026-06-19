@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAppRoleFromSession,
   isDashboardWorkspaceRole,
+  isDashboardWorkspaceSession,
   shouldBootstrapFieldAppProfile,
 } from './fieldAppEligibility';
 
@@ -37,5 +38,18 @@ describe('fieldAppEligibility', () => {
         user: { app_metadata: { role: 'exporter' } },
       } as never),
     ).toBe('exporter');
+  });
+
+  it('detects dashboard workspace sessions', () => {
+    expect(
+      isDashboardWorkspaceSession({
+        user: { app_metadata: { role: 'importer' } },
+      } as never),
+    ).toBe(true);
+    expect(
+      isDashboardWorkspaceSession({
+        user: { app_metadata: { role: 'farmer' } },
+      } as never),
+    ).toBe(false);
   });
 });

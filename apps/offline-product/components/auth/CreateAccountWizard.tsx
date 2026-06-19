@@ -176,17 +176,28 @@ export function CreateAccountWizard({
   const showBack = step === 'email' || step === 'name';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={authSheetStyles.keyboardRoot}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
-        <Pressable
+        <View
           style={[authSheetStyles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
-          onPress={onClose}
         >
-          <Pressable style={authSheetStyles.card} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={authSheetStyles.backdropPress}
+            accessibilityRole="button"
+            accessibilityLabel={t('cancel')}
+            onPress={onClose}
+          />
+          <View style={authSheetStyles.card}>
             <View style={authSheetStyles.headerRow}>
               {showBack ? (
                 <Pressable
@@ -329,8 +340,8 @@ export function CreateAccountWizard({
                 </Pressable>
               </View>
             ) : null}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );

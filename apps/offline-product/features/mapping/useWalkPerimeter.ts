@@ -319,6 +319,14 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
   };
 
   const addManualVertex = (latitude: number, longitude: number) => {
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      return;
+    }
     const now = Date.now();
     setPoints((prev) => {
       const nextPoints = [
