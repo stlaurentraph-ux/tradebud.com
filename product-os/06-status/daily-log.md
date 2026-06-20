@@ -1,3 +1,7 @@
+### 2026-06-20 (offline: false “Plot 1/3 still need upload” after CRM sync)
+- **Root cause** — Server rows store `client_plot_id` under the auth-user prefix (`66b5dafa-…`) while on-device plot ids use the linked farmer profile prefix (`dcdd88e5-…`) after rekey; strict client-id-only matching treated synced plots as missing. Persisted orphan links were also dropped when server `client_plot_id` looked “stale”.
+- **Fix** — Sync confirmation now matches creation-timestamp suffix, reclaims stale server client ids by display name + kind, keeps trusted device links, and reconciles links before upload/pending counts (Hector Plot 1 & 3 scenario covered in tests).
+
 ### 2026-06-20 (offline: sync false “couldn't reach Tracebud” on 304 health)
 - **Root cause** — After the first successful `/api/health` check, React Native fetch could receive **304 Not Modified**; `response.ok` is false for 304, so Sync now aborted even though the server was up (confirmed in Railway HTTP logs).
 - **Fix** — Health ping treats 304 as reachable and uses `cache: 'no-store'`; plot list GET also skips HTTP cache to avoid empty 304 bodies.
