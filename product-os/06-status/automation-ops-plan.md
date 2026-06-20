@@ -160,11 +160,11 @@ End-state commands (implement via Phase 0–1 slices):
 |----|------|-----|--------|
 | 0.0 | Cursor + product-os integration (rules, commands, queue, ADR-007) | repo | **done** |
 | **0.0.1** | Cursor workflow integration (four loops, bundles, `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `ci-secrets-and-fixtures.md`) | repo | **done** |
-| 0.1 | Dashboard `typecheck` script + CI step | dashboard | ready |
-| 0.2 | Dashboard `build` in CI (placeholder env, Sentry off) | dashboard | ready |
-| 0.3 | `field-auth` CI job (lint + test + build) | field-auth | ready |
-| 0.4 | Root `check:dashboard` script | root | ready |
-| 0.5 | `README.md` CI section update | docs | ready |
+| 0.1 | Dashboard `typecheck` script + CI step | dashboard | done |
+| 0.2 | Dashboard `build` in CI (placeholder env, Sentry off) | dashboard | done |
+| 0.3 | `field-auth` CI job (lint + test + build) | field-auth | done |
+| 0.4 | Root `check:dashboard` script | root | done |
+| 0.5 | `README.md` CI section update | docs | done |
 | **0.M.0** | Fix marketing lint errors (analytics CTA, floating CTA, insights unused var) | marketing | **done** |
 | **0.M.1** | Marketing `typecheck` + CI; plan to remove `ignoreBuildErrors` | marketing | ready |
 | **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | ready |

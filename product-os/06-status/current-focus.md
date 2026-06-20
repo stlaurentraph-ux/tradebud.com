@@ -10,7 +10,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 
 ## Work now
 
-- **Automation ops (Bundle A + Phase 0)** — Branch `chore/automation-phase-0`: **0.0.1** + **0.M.0** (plan, Cursor workflow, marketing lint). **Next:** Phase 0 dashboard CI (0.2–0.5) on this branch, then **0.M.1** and human **0.H**.
+- **Automation ops (Bundle A + Phase 0)** — Branch `chore/automation-phase-0`: **0.0.1**, **0.M.0**, **0.1–0.5** done. **Next:** open PR → human **0.H** branch protection → **0.M.1** marketing typecheck.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

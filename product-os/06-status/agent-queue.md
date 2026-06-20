@@ -17,11 +17,11 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **0.M.1** Marketing `typecheck` + CI; document path to remove `ignoreBuildErrors` — `chore/automation-marketing-typecheck`
 - [ ] **0.M.2** Marketing i18n parity guard (`marketing.*`, `header.*`) — `chore/automation-marketing-i18n-parity`
 - [ ] **0.M.3** Root `check:marketing` script — can ship with 0.M.1–0.M.2
-- [ ] **0.1** Dashboard `typecheck` script + CI — `chore/automation-dashboard-typecheck`
-- [ ] **0.2** Dashboard `build` in CI (placeholder env) — `chore/automation-dashboard-build-ci`
-- [ ] **0.3** `field-auth` CI job — `chore/automation-field-auth-ci`
-- [ ] **0.4** Root `check:dashboard` script — can ship with 0.1–0.2
-- [ ] **0.5** `README.md` CI section — can ship with 0.1–0.4
+- [x] **0.1** Dashboard `typecheck` script + CI — `chore/automation-phase-0` (typecheck on `main` Phase 3; verified here)
+- [x] **0.2** Dashboard `build` in CI (placeholder env) — `chore/automation-phase-0`
+- [x] **0.3** `field-auth` CI job — `chore/automation-phase-0`
+- [x] **0.4** Root `check:dashboard` script — `chore/automation-phase-0`
+- [x] **0.5** `README.md` CI section — `chore/automation-phase-0`
 
 **Human gate (not an agent PR):**
 
@@ -120,6 +120,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 - [x] 2026-06-20 — **0.0** Agent ops integration (rules, commands, plan, ADR-007, agent-queue)
 - [x] 2026-06-20 — Exhaustive automation-ops-plan rewrite (four loops, Phases 0–5, bundles)
+- [x] 2026-06-20 — **0.1–0.5** Dashboard + field-auth Phase 0 CI — `chore/automation-phase-0`
 - [x] 2026-06-20 — **0.0.1** Cursor workflow integration — `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `AGENTS.md` monorepo, `ci-secrets-and-fixtures.md` stub, CODEOWNERS automation paths
 - [x] 2026-06-20 — **0.M.0** Marketing lint fix — branch `chore/automation-bundle-a`
 
