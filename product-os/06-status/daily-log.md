@@ -1,6 +1,9 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 0.M.1–0.M.3 on `chore/automation-bundle-a`)
+### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
+- **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.
+- **Next** — Push PR #124; human **0.H** after merge.
+
 - **0.M.1** — Marketing CI typecheck step; removed `ignoreBuildErrors` from `next.config.mjs`.
 - **0.M.2** — `i18n-parity-assert.mjs` + CI step (`marketing.*`, `header.*`).
 - **0.M.3** — `npm run check:marketing` (root + app).
