@@ -236,9 +236,26 @@ export class TenureParseService {
               plot_tenure_verification.evidence_document_id
             ),
             parse_status = CASE
-              WHEN plot_tenure_verification.parse_status IN ('COMPLETED', 'MANUAL_REQUIRED')
-                THEN plot_tenure_verification.parse_status
+              WHEN plot_tenure_verification.parse_status = 'COMPLETED'
+                THEN 'COMPLETED'
+              WHEN plot_tenure_verification.parse_status IN ('MANUAL_REQUIRED', 'FAILED')
+                AND COALESCE((plot_tenure_verification.parse_result->>'retryable')::boolean, false)
+                THEN 'PENDING'
+              WHEN plot_tenure_verification.parse_status = 'MANUAL_REQUIRED'
+                THEN 'MANUAL_REQUIRED'
               ELSE 'PENDING'
+            END,
+            parse_result = CASE
+              WHEN plot_tenure_verification.parse_status IN ('MANUAL_REQUIRED', 'FAILED')
+                AND COALESCE((plot_tenure_verification.parse_result->>'retryable')::boolean, false)
+                THEN NULL
+              ELSE plot_tenure_verification.parse_result
+            END,
+            parse_confidence = CASE
+              WHEN plot_tenure_verification.parse_status IN ('MANUAL_REQUIRED', 'FAILED')
+                AND COALESCE((plot_tenure_verification.parse_result->>'retryable')::boolean, false)
+                THEN NULL
+              ELSE plot_tenure_verification.parse_confidence
             END,
             updated_at = NOW()
         `,
@@ -292,7 +309,28 @@ export class TenureParseService {
     }));
   }
 
+  schedulePlotParseWorker(plotId: string): void {
+    void this.processPendingForPlot(plotId).catch((error) => {
+      this.logger.warn(`Tenure parse worker failed for plot ${plotId}: ${String(error)}`);
+    });
+  }
+
   private async processPendingForPlot(plotId: string): Promise<void> {
+    await this.pool.query(
+      `
+        UPDATE plot_tenure_verification
+        SET
+          parse_status = 'PENDING',
+          parse_result = NULL,
+          parse_confidence = NULL,
+          updated_at = NOW()
+        WHERE plot_id = $1
+          AND parse_status = 'MANUAL_REQUIRED'
+          AND COALESCE((parse_result->>'retryable')::boolean, false) = true
+      `,
+      [plotId],
+    );
+
     const pending = await this.pool.query<{ id: string }>(
       `
         SELECT id::text
@@ -666,7 +704,7 @@ export class TenureParseService {
     }>(
       `
         SELECT
-          COALESCE(ua.name, fp.full_name, '') AS farmer_name,
+          COALESCE(ua.name, LEFT(fp.id::text, 8)) AS farmer_name,
           NULLIF(TRIM(fp.country_code), '') AS country_code
         FROM plot p
         JOIN farmer_profile fp ON fp.id = p.farmer_id

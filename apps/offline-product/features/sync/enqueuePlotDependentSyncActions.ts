@@ -14,6 +14,7 @@ import {
   loadPlotCadastralKey,
   loadPlotTenure,
   loadTitlePhotosForPlot,
+  isPlotTitlePhotoPendingUpload,
 } from '@/features/state/persistence';
 
 export type EnqueuePlotDependentSyncResult = {
@@ -76,7 +77,7 @@ export async function enqueuePlotDependentSyncActions(params: {
       informalTenureNote: null,
     })),
   ]);
-  if (titlePhotos.length > 0) {
+  if (titlePhotos.length > 0 && titlePhotos.some(isPlotTitlePhotoPendingUpload)) {
     await enqueuePendingSync({
       createdAt: now,
       actionType: 'photos_sync',

@@ -25,6 +25,8 @@ export type PlotTitlePhoto = {
   plotId: string;
   uri: string;
   takenAt: number;
+  /** Supabase Storage path after first successful upload — prevents duplicate uploads on Sync now. */
+  storagePath?: string | null;
 };
 
 export type PlotEvidenceKind =
@@ -81,10 +83,22 @@ export type LocalAuditEvent = {
 const DB_NAME = 'tracebud_offline.db';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+/** Serializes farmer-table writes so concurrent persist/rekey cannot hit UNIQUE on farmer.id. */
+let farmerDbLock: Promise<void> = Promise.resolve();
+
+function withFarmerDbLock<T>(task: () => Promise<T>): Promise<T> {
+  const run = farmerDbLock.then(task, task);
+  farmerDbLock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
 
 /** @internal Reset singleton DB between Vitest cases. */
 export function resetPersistenceDatabaseForTests(): void {
   dbPromise = null;
+  farmerDbLock = Promise.resolve();
 }
 
 function getDb() {
@@ -191,6 +205,7 @@ export async function initDatabase() {
   await ensurePendingSyncSchemaExtras(db);
   await ensurePlotSchemaExtras(db);
   await ensurePlotPhotosSchemaExtras(db);
+  await ensurePlotTitlePhotosSchemaExtras(db);
   await ensurePlotLegalSchemaExtras(db);
   await ensureLocalDeliveryReceiptsSchema(db);
 }
@@ -248,6 +263,14 @@ async function ensurePlotPhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
   const has = (col: string) => rows.some((r) => r.name === col);
   if (!has('direction')) {
     await db.execAsync('ALTER TABLE plot_photos ADD COLUMN direction TEXT;');
+  }
+}
+
+async function ensurePlotTitlePhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
+  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(plot_title_photos);');
+  const has = (col: string) => rows.some((r) => r.name === col);
+  if (!has('storagePath')) {
+    await db.execAsync('ALTER TABLE plot_title_photos ADD COLUMN storagePath TEXT;');
   }
 }
 
@@ -414,31 +437,33 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
 }
 
 export async function persistFarmer(farmer?: FarmerProfile) {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM farmer;');
-  if (!farmer) return;
-  await db.runAsync(
-    'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
-    [
-      farmer.id,
-      farmer.name ?? null,
-      farmer.role,
-      farmer.selfDeclared ? 1 : 0,
-      farmer.selfDeclaredAt ?? null,
-      farmer.fpicConsent ? 1 : 0,
-      farmer.laborNoChildLabor ? 1 : 0,
-      farmer.laborNoForcedLabor ? 1 : 0,
-      farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
-      farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
-      farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
-        ? farmer.declarationLatitude
-        : null,
-      farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
-        ? farmer.declarationLongitude
-        : null,
-      farmer.declarationGeoCapturedAt ?? null,
-    ],
-  );
+  return withFarmerDbLock(async () => {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM farmer;');
+    if (!farmer) return;
+    await db.runAsync(
+      'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+      [
+        farmer.id,
+        farmer.name ?? null,
+        farmer.role,
+        farmer.selfDeclared ? 1 : 0,
+        farmer.selfDeclaredAt ?? null,
+        farmer.fpicConsent ? 1 : 0,
+        farmer.laborNoChildLabor ? 1 : 0,
+        farmer.laborNoForcedLabor ? 1 : 0,
+        farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
+        farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
+        farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
+          ? farmer.declarationLatitude
+          : null,
+        farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
+          ? farmer.declarationLongitude
+          : null,
+        farmer.declarationGeoCapturedAt ?? null,
+      ],
+    );
+  });
 }
 
 export async function persistPlots(plots: Plot[]) {
@@ -583,7 +608,32 @@ export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitleP
     plotId: row.plotId,
     uri: row.uri,
     takenAt: row.takenAt,
+    storagePath: typeof row.storagePath === 'string' ? row.storagePath : null,
   }));
+}
+
+export async function updatePlotTitlePhotoRemoteRef(
+  photoId: number,
+  params: { storagePath: string; remoteUri?: string },
+): Promise<void> {
+  const db = await getDb();
+  const storagePath = params.storagePath.trim();
+  if (!storagePath) return;
+  if (params.remoteUri?.trim()) {
+    await db.runAsync(
+      'UPDATE plot_title_photos SET storagePath = ?, uri = ? WHERE id = ?;',
+      [storagePath, params.remoteUri.trim(), photoId],
+    );
+    return;
+  }
+  await db.runAsync('UPDATE plot_title_photos SET storagePath = ? WHERE id = ?;', [
+    storagePath,
+    photoId,
+  ]);
+}
+
+export function isPlotTitlePhotoPendingUpload(photo: PlotTitlePhoto): boolean {
+  return !photo.storagePath?.trim();
 }
 
 export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
@@ -931,15 +981,48 @@ export async function deletePlotLocalData(plotId: string): Promise<void> {
 /** Align local farmer UUID with Supabase auth user id when server has no plots under either id. */
 export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string): Promise<void> {
   if (!previousId || !nextId || previousId === nextId) return;
-  const db = await getDb();
-  await db.runAsync('UPDATE plots SET farmerId = ? WHERE farmerId = ?;', [nextId, previousId]);
-  await db.runAsync('UPDATE farmer SET id = ? WHERE id = ?;', [nextId, previousId]);
-  await db.runAsync('UPDATE audit_log SET userId = ? WHERE userId = ?;', [nextId, previousId]);
-  await db.runAsync('UPDATE local_delivery_receipts SET farmerId = ? WHERE farmerId = ?;', [
-    nextId,
-    previousId,
-  ]);
-  await repairPendingSyncPayloadFarmerIds(nextId, previousId);
+  return withFarmerDbLock(async () => {
+    const db = await getDb();
+    const source =
+      (await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM farmer WHERE id = ?;', [
+        previousId,
+      ])) ??
+      (await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM farmer WHERE id = ?;', [
+        nextId,
+      ]));
+
+    await db.runAsync('UPDATE plots SET farmerId = ? WHERE farmerId = ?;', [nextId, previousId]);
+    await db.runAsync('UPDATE audit_log SET userId = ? WHERE userId = ?;', [nextId, previousId]);
+    await db.runAsync('UPDATE local_delivery_receipts SET farmerId = ? WHERE farmerId = ?;', [
+      nextId,
+      previousId,
+    ]);
+    await repairPendingSyncPayloadFarmerIds(nextId, previousId);
+
+    await db.runAsync('DELETE FROM farmer;');
+    if (!source) return;
+
+    await db.runAsync(
+      'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+      [
+        nextId,
+        typeof source.name === 'string' ? source.name : null,
+        typeof source.role === 'string' ? source.role : 'farmer',
+        source.selfDeclared === 1 ? 1 : 0,
+        typeof source.selfDeclaredAt === 'number' ? source.selfDeclaredAt : null,
+        source.fpicConsent === 1 ? 1 : source.fpicConsent == null ? null : 0,
+        source.laborNoChildLabor === 1 ? 1 : source.laborNoChildLabor == null ? null : 0,
+        source.laborNoForcedLabor === 1 ? 1 : source.laborNoForcedLabor == null ? null : 0,
+        typeof source.postalAddress === 'string' ? source.postalAddress : null,
+        typeof source.commodityCode === 'string' ? source.commodityCode : null,
+        typeof source.declarationLatitude === 'number' ? source.declarationLatitude : null,
+        typeof source.declarationLongitude === 'number' ? source.declarationLongitude : null,
+        typeof source.declarationGeoCapturedAt === 'number'
+          ? source.declarationGeoCapturedAt
+          : null,
+      ],
+    );
+  });
 }
 
 /** Rewrite stale farmerId fields inside queued sync payloads after sign-in / scope repair. */

@@ -1167,6 +1167,7 @@ export class PlotsService {
   }
 
   async listTenureVerification(plotId: string) {
+    this.tenureParse.schedulePlotParseWorker(plotId);
     return this.tenureParse.listForPlot(plotId);
   }
 

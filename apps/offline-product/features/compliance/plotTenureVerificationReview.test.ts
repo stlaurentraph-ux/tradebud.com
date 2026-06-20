@@ -28,6 +28,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
     plot_status_land_check_delayed_hint: 'Finish backup first',
     plot_status_land_wrong_document_hint: 'Upload correct land paper',
     plot_tenure_doc_reason_check_delayed: 'Still checking after backup',
+    plot_tenure_doc_reason_manual_queue: 'Saved — reviewer will finish',
   };
   let out = table[key] ?? key;
   if (params) {
@@ -126,6 +127,20 @@ describe('formatTenureVerificationReviewMessage', () => {
     expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Could not read photo');
   });
 
+  it('maps automated extraction stub to manual queue copy, not sync-again', () => {
+    const detail = describeTenureVerificationReview(
+      baseRecord({
+        parse_status: 'MANUAL_REQUIRED',
+        parse_result: {
+          parser: 'manual_required_stub',
+          clauses_missing: ['automated_extraction_unavailable'],
+        },
+      }),
+    );
+    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_manual_queue');
+    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Saved — reviewer will finish');
+  });
+
   it('maps storage and LLM failures to backup-first copy, not unreadable photo', () => {
     const detail = describeTenureVerificationReview(
       baseRecord({
@@ -169,7 +184,7 @@ describe('formatTenureVerificationReviewMessage', () => {
   it('falls back when clause keys are dev-only tokens', () => {
     const detail = describeTenureVerificationReview(
       baseRecord({
-        parse_result: { clauses_missing: ['automated_extraction_unavailable'] },
+        parse_result: { clauses_missing: ['some_internal_token_xyz'] },
       }),
     );
     expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Something is missing');
@@ -235,6 +250,34 @@ describe('formatTenureVerificationReviewMessage', () => {
       }),
     );
     expect(detail.reasonKey).toBe('plot_tenure_doc_reason_unreadable');
+  });
+
+  it('prefers wrong-document copy over service error on manual review', () => {
+    const detail = describeTenureVerificationReview(
+      baseRecord({
+        parse_status: 'MANUAL_REQUIRED',
+        parse_result: {
+          parser: 'llm',
+          error: 'Could not download tenure evidence file.',
+          retryable: true,
+          tenure_type: 'UNKNOWN',
+          clauses_missing: ['not_a_land_document'],
+          confidence_breakdown: { ocr_quality: 0.9, field_completeness: 0.1 },
+        },
+      }),
+    );
+    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_unreadable');
+    expect(tenureVerificationRequiresReupload(baseRecord({
+      parse_status: 'MANUAL_REQUIRED',
+      parse_result: {
+        parser: 'llm',
+        error: 'Could not download tenure evidence file.',
+        retryable: true,
+        tenure_type: 'UNKNOWN',
+        clauses_missing: ['not_a_land_document'],
+        confidence_breakdown: { ocr_quality: 0.9, field_completeness: 0.1 },
+      },
+    }))).toBe(true);
   });
 });
 

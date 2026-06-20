@@ -22,6 +22,8 @@ vi.mock('@/features/state/persistence', () => ({
   loadPlotTenure,
   loadLocalDeliveryReceiptsForFarmer,
   loadPendingSyncActions,
+  isPlotTitlePhotoPendingUpload: (photo: { storagePath?: string | null }) =>
+    !photo.storagePath?.trim(),
 }));
 
 describe('enqueuePlotDependentSyncActions', () => {
@@ -122,6 +124,27 @@ describe('enqueuePlotDependentSyncActions', () => {
     });
 
     expect(result.harvests).toBe(0);
+    expect(enqueuePendingSync).not.toHaveBeenCalled();
+  });
+
+  it('skips land title queue when title photos already uploaded', async () => {
+    loadTitlePhotosForPlot.mockResolvedValueOnce([
+      {
+        id: 2,
+        plotId: 'local-1',
+        uri: 'https://signed.example/title.jpg',
+        takenAt: 2,
+        storagePath: 'user/plot/land_title/title-2',
+      },
+    ]);
+
+    const { enqueuePlotDependentSyncActions } = await import('./enqueuePlotDependentSyncActions');
+    const result = await enqueuePlotDependentSyncActions({
+      localPlotId: 'local-1',
+      farmerId: 'farmer-1',
+    });
+
+    expect(result.landTitle).toBe(false);
     expect(enqueuePendingSync).not.toHaveBeenCalled();
   });
 });

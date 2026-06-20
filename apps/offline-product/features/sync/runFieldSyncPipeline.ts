@@ -27,6 +27,7 @@ import {
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
 import { reportSyncFailure, reportSyncStepStart } from '@/features/sync/reportSyncFailure';
+import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import type { SyncQueuePhase } from '@/features/sync/syncQueueMutex';
 import { classifyPlotListFailure, classifySyncFailure } from '@/features/sync/syncFailure';
@@ -48,6 +49,8 @@ export type FieldSyncPipelineParams = {
   isConsentQueueActionType: (actionType: PendingSyncAction['actionType']) => boolean;
   queueSmartSweepEnabled?: boolean;
   queueSmartSweepCap?: number;
+  /** Manual sync uses 4 passes; conservative auto-backup uses 2. */
+  maxQueuePasses?: number;
   onPhase?: (phase: SyncQueuePhase) => void;
 };
 
@@ -118,6 +121,7 @@ export async function runFieldSyncPipeline(
     isConsentQueueActionType,
     queueSmartSweepEnabled = false,
     queueSmartSweepCap = 100,
+    maxQueuePasses = 4,
     onPhase,
   } = params;
 
@@ -277,7 +281,7 @@ export async function runFieldSyncPipeline(
         farmerScopeIds,
         actionTypes: queueDrainTypes,
         attemptScope: 'all',
-        maxPasses: 4,
+        maxPasses: maxQueuePasses,
         accessToken,
       });
       mergeQueueResult(outcome, queueRes);
@@ -355,6 +359,14 @@ export async function runFieldSyncPipeline(
   }
 
   const syncResultMessage = formatSyncNowUserMessage(outcome, t);
+
+  if (
+    (outcome.queueCompleted ?? 0) > 0 ||
+    (lastPlotUploadResult?.uploaded ?? 0) > 0 ||
+    outcome.plotsUploadedAll != null
+  ) {
+    emitServerPlotSyncChanged();
+  }
 
   return {
     outcome,

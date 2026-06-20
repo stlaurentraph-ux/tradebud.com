@@ -160,6 +160,22 @@ async function main() {
           'Run npm run db:apply:tenure-verification if missing',
         ),
       );
+      const cadastralSql = await client.query(`
+        SELECT COALESCE(ua.name, LEFT(fp.id::text, 8)) AS farmer_name
+        FROM plot p
+        JOIN farmer_profile fp ON fp.id = p.farmer_id
+        LEFT JOIN user_account ua ON ua.id = fp.user_id
+        LIMIT 1
+      `);
+      checks.push(
+        check(
+          'cadastral context SQL',
+          true,
+          cadastralSql.rows.length > 0
+            ? `sample farmer_name=${cadastralSql.rows[0]?.farmer_name ?? '(null)'}`
+            : 'no plots yet (query ok)',
+        ),
+      );
     } catch (error) {
       checks.push(
         check(

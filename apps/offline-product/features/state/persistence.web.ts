@@ -22,6 +22,7 @@ export type PlotTitlePhoto = {
   plotId: string;
   uri: string;
   takenAt: number;
+  storagePath?: string | null;
 };
 
 export type PlotEvidenceKind =
@@ -157,6 +158,25 @@ export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> 
 
 export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Promise<void> {
   memEvidence = memEvidence.map((row) => (row.id === evidenceId ? { ...row, uri } : row));
+}
+
+export async function updatePlotTitlePhotoRemoteRef(
+  photoId: number,
+  params: { storagePath: string; remoteUri?: string },
+): Promise<void> {
+  memTitlePhotos = memTitlePhotos.map((row) =>
+    row.id === photoId
+      ? {
+          ...row,
+          storagePath: params.storagePath,
+          uri: params.remoteUri?.trim() ? params.remoteUri.trim() : row.uri,
+        }
+      : row,
+  );
+}
+
+export function isPlotTitlePhotoPendingUpload(photo: PlotTitlePhoto): boolean {
+  return !photo.storagePath?.trim();
 }
 
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {

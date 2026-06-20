@@ -33,6 +33,13 @@ export function evaluateTenureParseResult(result: TenureParseResultV1): {
     return { parse_status: 'MANUAL_REQUIRED', parse_confidence: 0 };
   }
 
+  const wrongDocument = result.clauses_missing.some(
+    (clause) => clause.trim().toLowerCase() === 'not_a_land_document',
+  );
+  if (wrongDocument) {
+    return { parse_status: 'FAILED', parse_confidence };
+  }
+
   const crossCheckRequiresReview =
     result.cadastral_cross_check?.requires_manual_review === true;
 

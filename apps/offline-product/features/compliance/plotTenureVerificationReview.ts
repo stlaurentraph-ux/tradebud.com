@@ -215,6 +215,13 @@ export function describeTenureVerificationReview(
 
   if (record.parse_status === 'MANUAL_REQUIRED') {
     const error = typeof result.error === 'string' ? result.error.trim() : '';
+    if (isWrongDocumentTenureResult(result, { error })) {
+      return {
+        label,
+        status: record.parse_status,
+        reasonKey: 'plot_tenure_doc_reason_unreadable',
+      };
+    }
     if (error && classifyTenureParseError(error) === 'service') {
       return {
         label,
@@ -222,6 +229,23 @@ export function describeTenureVerificationReview(
         reasonKey: 'plot_tenure_doc_reason_check_delayed',
       };
     }
+  }
+
+  if (result.parser === 'manual_required_stub') {
+    const missing = asStringArray(result.clauses_missing);
+    if (missing.includes('automated_extraction_unavailable')) {
+      return {
+        label,
+        status: record.parse_status,
+        reasonKey: 'plot_tenure_doc_reason_manual_queue',
+        reasonDetail: typeof result.summary === 'string' ? result.summary : undefined,
+      };
+    }
+    return {
+      label,
+      status: record.parse_status,
+      reasonKey: 'plot_tenure_doc_reason_unreadable',
+    };
   }
 
   if (isWrongDocumentTenureResult(result)) {
@@ -233,7 +257,9 @@ export function describeTenureVerificationReview(
   }
 
   const missing = asStringArray(result.clauses_missing).filter(
-    (clause) => !WRONG_DOCUMENT_CLAUSE_KEYS.has(clause.trim().toLowerCase()),
+    (clause) =>
+      !WRONG_DOCUMENT_CLAUSE_KEYS.has(clause.trim().toLowerCase()) &&
+      clause.trim().toLowerCase() !== 'automated_extraction_unavailable',
   );
   if (missing.length > 0) {
     return {
@@ -340,23 +366,6 @@ export function describeTenureVerificationReview(
     };
   }
 
-  if (result.parser === 'manual_required_stub') {
-    const missing = asStringArray(result.clauses_missing);
-    if (missing.includes('automated_extraction_unavailable')) {
-      return {
-        label,
-        status: record.parse_status,
-        reasonKey: 'plot_tenure_doc_reason_check_delayed',
-        reasonDetail: typeof result.summary === 'string' ? result.summary : undefined,
-      };
-    }
-    return {
-      label,
-      status: record.parse_status,
-      reasonKey: 'plot_tenure_doc_reason_unreadable',
-    };
-  }
-
   return {
     label,
     status: record.parse_status,
@@ -407,12 +416,28 @@ export function resolvePlotLandBlockedShortHint(
     if (detail.reasonKey === 'plot_tenure_doc_reason_unreadable') {
       return t('plot_status_land_wrong_document_hint');
     }
-    if (detail.reasonKey === 'plot_tenure_doc_reason_check_delayed') {
+    if (
+      detail.reasonKey === 'plot_tenure_doc_reason_check_delayed' ||
+      detail.reasonKey === 'plot_tenure_doc_reason_manual_queue'
+    ) {
       return t('plot_status_land_check_delayed_hint');
     }
     return t('plot_status_land_reupload_hint');
   }
   return t('plot_status_land_review_hint');
+}
+
+/** True when the server saved the file but automated review is still pending or queued. */
+export function isTenureVerificationAwaitingReview(
+  record: PlotTenureVerificationRecord,
+): boolean {
+  const detail = describeTenureVerificationReview(record);
+  return (
+    record.parse_status === 'PENDING' ||
+    record.parse_status === 'IN_PROGRESS' ||
+    detail.reasonKey === 'plot_tenure_doc_reason_check_delayed' ||
+    detail.reasonKey === 'plot_tenure_doc_reason_manual_queue'
+  );
 }
 
 const PILL_ONLY_REASON_KEYS = new Set([
@@ -556,6 +581,8 @@ export function formatTenureVerificationReviewMessage(
       return t('plot_tenure_doc_reason_unclear_photo');
     case 'plot_tenure_doc_reason_check_delayed':
       return t('plot_tenure_doc_reason_check_delayed');
+    case 'plot_tenure_doc_reason_manual_queue':
+      return t('plot_tenure_doc_reason_manual_queue');
     default:
       return t(detail.reasonKey, detail.reasonParams);
   }

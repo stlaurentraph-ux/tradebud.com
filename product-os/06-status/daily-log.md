@@ -1,6 +1,8 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (offline: sync Phase 2 — photo failures + pipeline + Maestro)
+### 2026-06-20 (offline: tenure doc status refresh + auto-backup pipeline)
+- **Documents UI** — tenure verification GET uses cache-bust fetch; plot Documents refreshes on focus and after sync; stub/manual-queue copy when file is saved but AI review is queued.
+- **Auto-backup** — `runAutoBackup` routes through `runFieldSyncPipeline` (same session + queue path as Settings).
 - **Photo sync** — Supabase Storage vs Tracebud API failures classified separately (`photo_storage` / `photo_api`); `SyncFailureError` propagates through land title + ground truth upload paths.
 - **Pipeline** — `runFieldSyncPipeline()` replaces inline Settings plot upload + queue drain; Sentry breadcrumbs via `reportSyncFailure()`.
 - **Device QA** — Maestro `settings-sync-smoke.yaml`, `test:maestro:sync`, preflight wiring asserts.

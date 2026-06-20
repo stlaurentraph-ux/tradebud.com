@@ -30,6 +30,10 @@ export function assertLandTitlePhotosUploadedForAi(
   if (localPhotos.length === 0) {
     return;
   }
+  const pendingLocalUpload = localPhotos.filter((photo) => !photo.storagePath?.trim());
+  if (pendingLocalUpload.length === 0) {
+    return;
+  }
   if (summary.notSignedIn) {
     throw new SyncFailureError(
       summary.firstSyncFailure ?? {

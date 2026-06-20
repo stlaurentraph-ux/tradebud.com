@@ -32,6 +32,7 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
+import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
@@ -80,7 +81,9 @@ import {
   resolveLandDocumentsUiStatus,
 } from '@/features/compliance/plotChecklist';
 import {
+  isTenureVerificationAwaitingReview,
   resolvePlotLandBlockedShortHint,
+  tenureVerificationRequiresReupload,
 } from '@/features/compliance/plotTenureVerificationReview';
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
@@ -298,6 +301,18 @@ export default function PlotDetailScreen() {
     void refreshTenureVerification();
   }, [refreshTenureVerification]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshTenureVerification();
+    }, [refreshTenureVerification]),
+  );
+
+  useEffect(() => {
+    return subscribeServerPlotSyncChanged(() => {
+      void refreshTenureVerification();
+    });
+  }, [refreshTenureVerification]);
+
   useEffect(() => {
     if (!backendPlotId) return;
     const hasUploaded =
@@ -305,9 +320,7 @@ export default function PlotDetailScreen() {
     const needsPoll =
       hasUploaded &&
       tenureVerifications.length > 0 &&
-      tenureVerifications.some(
-        (v) => v.parse_status === 'PENDING' || v.parse_status === 'IN_PROGRESS',
-      );
+      tenureVerifications.some(isTenureVerificationAwaitingReview);
     if (!needsPoll) return;
     const timer = setInterval(() => {
       void refreshTenureVerification();
@@ -637,6 +650,14 @@ export default function PlotDetailScreen() {
   useEffect(() => {
     if (!landChecklistDone) setLandPapersExpanded(false);
   }, [landChecklistDone]);
+
+  useEffect(() => {
+    if (
+      visibleTenureVerifications.some((row) => tenureVerificationRequiresReupload(row))
+    ) {
+      setLandPapersExpanded(true);
+    }
+  }, [visibleTenureVerifications]);
 
   const documentsNavSubtitle = useMemo(() => {
     if (!plot) return t('plot_nav_documents_sub_empty');
@@ -975,6 +996,25 @@ export default function PlotDetailScreen() {
     },
     [plot, runLandTitleUpload, refreshTenureVerification, t],
   );
+
+  const replaceLandPaper = useCallback(async () => {
+    if (!plot || uploadingLandProof) return;
+    setLandPapersExpanded(true);
+    const needsReplace = visibleTenureVerifications.some((row) =>
+      tenureVerificationRequiresReupload(row),
+    );
+    if (needsReplace && titlePhotos.length === 1) {
+      await removeLandTitlePhoto(titlePhotos[0]!);
+    }
+    await uploadLandProof();
+  }, [
+    plot,
+    uploadingLandProof,
+    visibleTenureVerifications,
+    titlePhotos,
+    removeLandTitlePhoto,
+    uploadLandProof,
+  ]);
 
   const removeTenureEvidence = useCallback(
     async (item: PlotEvidenceItem) => {
@@ -1394,6 +1434,7 @@ export default function PlotDetailScreen() {
               tenureEvidenceCount={evidence.filter((e) => e.kind === 'tenure_evidence').length}
               tenureVerifications={visibleTenureVerifications}
               isSyncedToServer={Boolean(backendPlotId)}
+              onReplaceLandPaper={() => void replaceLandPaper()}
             />
 
             {nextDocumentStep ? (

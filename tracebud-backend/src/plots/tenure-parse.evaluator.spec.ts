@@ -59,4 +59,20 @@ describe('tenure-parse.evaluator', () => {
     expect(result.parse_status).toBe('MANUAL_REQUIRED');
     expect(result.parse_confidence).toBe(0);
   });
+
+  it('fails when the document is not a land paper', () => {
+    const result = evaluateTenureParseResult(
+      baseResult({
+        tenure_type: 'UNKNOWN',
+        holder_name: null,
+        community_or_issuer: null,
+        parcel_reference: null,
+        clauses_found: [],
+        clauses_missing: ['not_a_land_document'],
+        confidence_breakdown: { ocr_quality: 0.92, field_completeness: 0.08 },
+        summary: 'Photo shows a person outdoors, not a land document.',
+      }),
+    );
+    expect(result.parse_status).toBe('FAILED');
+  });
 });

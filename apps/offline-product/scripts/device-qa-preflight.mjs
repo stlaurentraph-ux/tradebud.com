@@ -51,7 +51,7 @@ assertIncludes('features/errors/ErrorLogger.ts', 'reportErrorToSentry', 'logErro
 assertIncludes('features/mapping/WalkPerimeterScreen.tsx', 'resolveClientPlotId', 'walk upload uses client plot id');
 assertIncludes('features/sync/plotServerSync.ts', 'resolveClientPlotId', 'plot sync uses client plot id');
 assertIncludes('components/AutoPlotUploadBridge.tsx', 'runConservativeAutoBackup', 'auto upload bridge uses conservative backup');
-assertIncludes('features/sync/runAutoBackup.ts', 'processPendingSyncQueue', 'auto backup drains queue');
+assertIncludes('features/sync/runAutoBackup.ts', 'runFieldSyncPipeline', 'auto backup uses field sync pipeline');
 assertIncludes('app/(tabs)/settings.tsx', 'withSyncQueueLock', 'Settings sync uses queue mutex');
 assertIncludes('features/sync/runAutoBackup.ts', 'withSyncQueueLock', 'auto backup uses queue mutex');
 assertIncludes('features/sync/runAutoBackup.ts', 'withSyncOperationTimeout', 'auto backup operation timeout');

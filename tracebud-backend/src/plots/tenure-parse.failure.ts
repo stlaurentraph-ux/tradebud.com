@@ -28,5 +28,13 @@ export function classifyTenureParseError(error: string): TenureParseFailureKind 
 }
 
 export function isRetryableTenureParseFailure(error: string): boolean {
+  const text = error.trim().toLowerCase();
+  if (
+    /column .* does not exist|undefined column|syntax error at or near|relation .* does not exist/.test(
+      text,
+    )
+  ) {
+    return false;
+  }
   return classifyTenureParseError(error) === 'service';
 }

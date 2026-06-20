@@ -10,6 +10,7 @@ import {
 } from '@/features/evidence/evidenceContentType';
 import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceToStorage';
 import type { PlotTitlePhoto } from '@/features/state/persistence';
+import { updatePlotTitlePhotoRemoteRef } from '@/features/state/persistence';
 import type { SyncFailure } from '@/features/sync/syncFailure';
 import { syncFailureFromEvidenceUpload } from '@/features/sync/syncFailureFromEvidenceUpload';
 import { SyncFailureError } from '@/features/sync/syncFailureError';
@@ -41,7 +42,9 @@ export async function syncLandTitlePhotosWithFiles(params: {
 
   const resolved: Array<Record<string, unknown>> = [];
   for (const photo of params.photos) {
-    if (!isLocalEvidenceUri(photo.uri)) {
+    const existingStoragePath = photo.storagePath?.trim() || null;
+
+    if (!isLocalEvidenceUri(photo.uri) && !existingStoragePath) {
       summary.metadataOnlyCount += 1;
       resolved.push({
         ...baseMeta,
@@ -60,9 +63,19 @@ export async function syncLandTitlePhotosWithFiles(params: {
       farmerId: params.farmerId,
       plotId: params.serverPlotId,
       kind: 'land_title',
+      existingStoragePath,
+      stableFileKey: existingStoragePath ? undefined : `title-${photo.id}`,
     });
     if (upload.ok) {
-      summary.uploadedCount += 1;
+      if (!existingStoragePath || existingStoragePath !== upload.storagePath) {
+        summary.uploadedCount += 1;
+      } else {
+        summary.metadataOnlyCount += 1;
+      }
+      await updatePlotTitlePhotoRemoteRef(photo.id, {
+        storagePath: upload.storagePath,
+        remoteUri: upload.remoteUrl,
+      }).catch(() => undefined);
       resolved.push({
         ...baseMeta,
         uri: upload.remoteUrl,

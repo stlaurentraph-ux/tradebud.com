@@ -26,6 +26,7 @@ type PlotTenureStatusCardProps = {
   tenureVerifications?: PlotTenureVerificationRecord[];
   isSyncedToServer?: boolean;
   onOpenDocuments?: () => void;
+  onReplaceLandPaper?: () => void;
 };
 
 function badgeVariant(badge: PlotTenureStatusBadge): 'success' | 'warning' | 'default' | 'info' {
@@ -46,6 +47,7 @@ export function PlotTenureStatusCard({
   tenureVerifications = [],
   isSyncedToServer = false,
   onOpenDocuments,
+  onReplaceLandPaper,
 }: PlotTenureStatusCardProps) {
   const { t } = useLanguage();
   const docCount = titlePhotoCount + tenureEvidenceCount;
@@ -175,6 +177,7 @@ export function PlotTenureStatusCard({
         titlePhotoCount={titlePhotoCount}
         tenureEvidenceCount={tenureEvidenceCount}
         isSyncedToServer={isSyncedToServer}
+        onReplaceLandPaper={onReplaceLandPaper}
       />
 
       {onOpenDocuments ? (

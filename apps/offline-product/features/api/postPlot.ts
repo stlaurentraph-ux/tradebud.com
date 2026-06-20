@@ -651,13 +651,18 @@ export async function fetchPlotTenureVerification(
     return [];
   }
 
-  const res = await fetch(
-    `${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/tenure-verification`,
+  const baseUrl = `${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/tenure-verification`;
+  const res = await tracebudFetchWithTimeout(
+    cacheBustUrl(baseUrl),
     {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
     },
+    15_000,
   );
-  if (!res.ok) {
+  if (res == null || !isSuccessfulApiResponse(res.status)) {
     return [];
   }
   const body = await res.json().catch(() => []);

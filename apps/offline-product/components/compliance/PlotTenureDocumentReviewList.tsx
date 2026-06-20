@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 import { tenureDocRowStatusLabelKey } from '@/features/compliance/plotTenureAiReview';
@@ -12,6 +13,7 @@ import {
   formatTenureVerificationReviewMessage,
   shouldShowTenureDocReasonBox,
   shouldShowTenureDocStatusBadge,
+  tenureVerificationRequiresReupload,
 } from '@/features/compliance/plotTenureVerificationReview';
 import { useLanguage } from '@/features/state/LanguageContext';
 
@@ -22,6 +24,7 @@ type PlotTenureDocumentReviewListProps = {
   isSyncedToServer: boolean;
   /** When true, render as a section inside the land-rights card (no nested card). */
   embedded?: boolean;
+  onReplaceLandPaper?: () => void;
 };
 
 function badgeVariant(
@@ -60,6 +63,7 @@ export function PlotTenureDocumentReviewList({
   tenureEvidenceCount,
   isSyncedToServer,
   embedded = false,
+  onReplaceLandPaper,
 }: PlotTenureDocumentReviewListProps) {
   const { t } = useLanguage();
   const uploadedCount = titlePhotoCount + tenureEvidenceCount;
@@ -116,6 +120,7 @@ export function PlotTenureDocumentReviewList({
           const reason = formatTenureVerificationReviewMessage(detail, t);
           const showBadge = shouldShowTenureDocStatusBadge(record);
           const showReason = shouldShowTenureDocReasonBox(record, detail, reason, seenReasons);
+          const needsReplace = tenureVerificationRequiresReupload(record);
           if (showReason) seenReasons.add(reason);
 
           return (
@@ -134,6 +139,12 @@ export function PlotTenureDocumentReviewList({
                         {t(tenureDocRowStatusLabelKey(record))}
                       </Badge>
                     </View>
+                  ) : needsReplace ? (
+                    <View style={styles.badgeRow}>
+                      <Badge variant="warning" size="sm">
+                        {t('plot_tenure_doc_status_reupload')}
+                      </Badge>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -148,6 +159,11 @@ export function PlotTenureDocumentReviewList({
                     {reason}
                   </ThemedText>
                 </View>
+              ) : null}
+              {needsReplace && onReplaceLandPaper ? (
+                <Button variant="secondary" size="sm" fullWidth onPress={onReplaceLandPaper}>
+                  {t('plot_tenure_replace_land_paper')}
+                </Button>
               ) : null}
             </View>
           );
