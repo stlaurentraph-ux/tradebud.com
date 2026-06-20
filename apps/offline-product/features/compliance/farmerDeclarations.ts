@@ -37,6 +37,38 @@ export function applyProducerAttestationsToFarmer(
   };
 }
 
+/** Prefer disk/next name when present; otherwise keep the last in-memory name. */
+export function mergeFarmerDisplayFields(
+  previous: FarmerProfile | undefined,
+  next: FarmerProfile,
+): Pick<FarmerProfile, 'name' | 'profilePhotoUri'> {
+  const nextName = next.name?.trim();
+  const memoryName = previous?.name?.trim();
+  return {
+    name: nextName || memoryName || undefined,
+    profilePhotoUri: next.profilePhotoUri ?? previous?.profilePhotoUri,
+  };
+}
+
+export function farmerProfilesEqual(a: FarmerProfile, b: FarmerProfile): boolean {
+  return (
+    a.id === b.id &&
+    (a.name?.trim() ?? '') === (b.name?.trim() ?? '') &&
+    a.profilePhotoUri === b.profilePhotoUri &&
+    a.role === b.role &&
+    a.selfDeclared === b.selfDeclared &&
+    a.selfDeclaredAt === b.selfDeclaredAt &&
+    a.fpicConsent === b.fpicConsent &&
+    a.laborNoChildLabor === b.laborNoChildLabor &&
+    a.laborNoForcedLabor === b.laborNoForcedLabor &&
+    a.postalAddress === b.postalAddress &&
+    a.commodityCode === b.commodityCode &&
+    a.declarationLatitude === b.declarationLatitude &&
+    a.declarationLongitude === b.declarationLongitude &&
+    a.declarationGeoCapturedAt === b.declarationGeoCapturedAt
+  );
+}
+
 /** Keep saved producer attestations when a partial farmer patch omits them. */
 export function mergeFarmerProfileOnUpdate(
   previous: FarmerProfile | undefined,
@@ -44,7 +76,7 @@ export function mergeFarmerProfileOnUpdate(
 ): FarmerProfile {
   const merged: FarmerProfile = {
     ...next,
-    profilePhotoUri: next.profilePhotoUri ?? previous?.profilePhotoUri,
+    ...mergeFarmerDisplayFields(previous, next),
   };
   if (!previous || !hasProducerAttestationsComplete(previous) || hasProducerAttestationsComplete(next)) {
     return merged;
@@ -71,7 +103,7 @@ export function mergeFarmerProfileFromDisk(
   const diskComplete = hasProducerAttestationsComplete(disk);
   const memoryAt = inMemory.selfDeclaredAt ?? 0;
   const diskAt = disk.selfDeclaredAt ?? 0;
-  const profilePhotoUri = inMemory.profilePhotoUri ?? disk.profilePhotoUri;
+  const displayFields = mergeFarmerDisplayFields(inMemory, disk);
 
   if (memoryComplete && !diskComplete) {
     return {
@@ -81,7 +113,7 @@ export function mergeFarmerProfileFromDisk(
       fpicConsent: inMemory.fpicConsent,
       laborNoChildLabor: inMemory.laborNoChildLabor,
       laborNoForcedLabor: inMemory.laborNoForcedLabor,
-      profilePhotoUri,
+      ...displayFields,
     };
   }
 
@@ -94,11 +126,11 @@ export function mergeFarmerProfileFromDisk(
       fpicConsent: attestations.fpicConsent,
       laborNoChildLabor: attestations.laborNoChildLabor,
       laborNoForcedLabor: attestations.laborNoForcedLabor,
-      profilePhotoUri,
+      ...displayFields,
     };
   }
 
-  return { ...disk, profilePhotoUri };
+  return { ...disk, ...displayFields };
 }
 
 export function buildPlotAttestationFields(

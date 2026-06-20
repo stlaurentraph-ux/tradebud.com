@@ -1,12 +1,18 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (Founder OS app extraction — `feature/founder-os-app`, PR #141)
+### 2026-06-20 (field app — sync UI + tenure jurisdiction, `feature/offline-field-sync-ui`, PR #149)
+- **Offline sync messaging** — Unified `resolveSyncAttentionMessage`; queue-before-plots priority in `measureTotalSyncPending` + `formatSyncNowUserMessage`; Settings backup pill via `backupStatusDisplay`; stable plot order on Documents (`stablePlotDisplayOrder`).
+- **Farmer name flicker** — `mergeFarmerDisplayFields` + `AppStateContext` boot/reload merge; `farmerDisplayName` on Home + Settings.
+- **Tenure jurisdiction (backend)** — Restored `tenure-jurisdiction-check` + clause allowlist; evaluator maps cross-check to FAILED/MANUAL_REQUIRED; dashboard tenure panel copy for jurisdiction hints.
+- **Backend specs** — SQL-aware `makeCreatePlotPoolMock`; harvest mock adds `getPlotFarmerId`. 383 backend tests green locally.
+- **Next** — Device QA on Hector account (Settings sync pill, Documents plot list, tenure re-upload).
+
+### 2026-06-20 (Founder OS app extraction merged, PR #141)
 - Standalone `apps/founder-os` Next.js app (port 3004); dashboard redirects `/founder-os`, `/crm`, `/content` to ops URL.
 - Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
-- **Next** — Merge PR #141 so Vercel root picker shows `apps/founder-os`; then create ops project.
 
-### 2026-06-20 (automation — 2.4 marketing post-deploy smoke, `chore/automation-marketing-deploy-smoke`)
-- **2.4 (in progress)** — `marketing-post-deploy-smoke.mjs` + `marketing-deploy-smoke.yml` workflow on production `deployment_status` and manual dispatch.
+### 2026-06-20 (automation — 2.4 marketing post-deploy smoke merged, PR #147)
+- **2.4** — `marketing-post-deploy-smoke.mjs` + `marketing-deploy-smoke.yml` workflow on production `deployment_status` and manual dispatch.
 
 ### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
 - **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.

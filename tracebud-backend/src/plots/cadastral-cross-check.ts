@@ -9,6 +9,8 @@ export type PlotCadastralContext = {
   informalTenure: boolean;
   farmerName: string | null;
   countryCode?: string | null;
+  /** Farmer postal / mailing address for exporter admin-region hints only. */
+  postalAddress?: string | null;
 };
 
 /** Normalize cadastral / parcel reference using the plot country pack (HN default). */

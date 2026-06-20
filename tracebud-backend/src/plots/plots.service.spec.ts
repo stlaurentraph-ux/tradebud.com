@@ -21,6 +21,61 @@ function makePoolMock(results: QueryResult[]): { query: jest.Mock; calls: any[] 
   };
 }
 
+/** SQL-aware pool for PlotsService.create — avoids brittle fixed query queues. */
+function makeCreatePlotPoolMock(options: {
+  insertPlotRow?: Record<string, unknown> | null;
+  variancePct?: number | null;
+} = {}) {
+  const insertPlotRow =
+    options.insertPlotRow === undefined
+      ? {
+          id: '33333333-3333-3333-3333-333333333333',
+          area_ha: 0,
+        }
+      : options.insertPlotRow;
+  const variancePct = options.variancePct ?? null;
+  const calls: unknown[][] = [];
+
+  return {
+    calls,
+    query: jest.fn(async (sql: string, params?: unknown[]) => {
+      calls.push([sql, params]);
+      const s = String(sql);
+
+      if (s.includes('information_schema.columns')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (s.includes('FROM farmer_profile WHERE')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (s.includes('INSERT INTO user_account') || s.includes('INSERT INTO farmer_profile')) {
+        return { rowCount: 1, rows: [] };
+      }
+      if (s.includes('FROM plot') && s.includes('SELECT')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (s.includes('INSERT INTO audit_log')) {
+        return { rowCount: 1, rows: [] };
+      }
+      if (s.includes('INSERT INTO plot') && s.includes('WITH input_geom')) {
+        if (insertPlotRow === null) {
+          return { rowCount: 0, rows: [] };
+        }
+        return { rowCount: 1, rows: [insertPlotRow] };
+      }
+      if (
+        s.includes('correction_variance_pct') &&
+        s.includes('FROM normalized') &&
+        !s.includes('INSERT INTO plot')
+      ) {
+        return { rowCount: 1, rows: [{ correction_variance_pct: variancePct }] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    }),
+  };
+}
+
 const gfwMock = {
   runGeometryQuery: jest.fn(),
   runRaddFallback: jest.fn(),
@@ -153,20 +208,12 @@ describe('PlotsService.create geometry policy', () => {
   });
 
   it('accepts point geometry with declared area below 4 ha without polygon area check', async () => {
-    const pool = makePoolMock([
-      { rows: [] },
-      { rows: [] },
-      { rows: [] },
-      {
-        rows: [
-          {
-            id: '33333333-3333-3333-3333-333333333333',
-            area_ha: 0,
-          },
-        ],
+    const pool = makeCreatePlotPoolMock({
+      insertPlotRow: {
+        id: '33333333-3333-3333-3333-333333333333',
+        area_ha: 0,
       },
-      { rows: [] },
-    ]);
+    });
     const service = makePlotsService(pool);
     const row = await service.create(
       {
@@ -186,24 +233,15 @@ describe('PlotsService.create geometry policy', () => {
 
 describe('PlotsService.create polygon normalization', () => {
   it('accepts polygon when correction variance is <= 5%', async () => {
-    const pool = makePoolMock([
-      { rows: [] }, // ensureFarmerProfileForPlot existing check
-      { rows: [] }, // user_account upsert
-      { rows: [] }, // farmer_profile insert
-      { rows: [] }, // plot_geometry_quality_checked audit
-      {
-        rows: [
-          {
-            id: '22222222-2222-2222-2222-222222222222',
-            area_ha: 1.0,
-            original_area_ha: 1.0,
-            normalized_area_ha: 1.03,
-            correction_variance_pct: 3.0,
-          },
-        ],
-      }, // main insert/select CTE
-      { rows: [] }, // plot_created audit
-    ]);
+    const pool = makeCreatePlotPoolMock({
+      insertPlotRow: {
+        id: '22222222-2222-2222-2222-222222222222',
+        area_ha: 1.0,
+        original_area_ha: 1.0,
+        normalized_area_ha: 1.03,
+        correction_variance_pct: 3.0,
+      },
+    });
     const service = makePlotsService(pool);
 
     const row = await service.create(makePolygonDto(), '33333333-3333-3333-3333-333333333333');
@@ -212,14 +250,10 @@ describe('PlotsService.create polygon normalization', () => {
   });
 
   it('rejects polygon when correction variance is > 5%', async () => {
-    const pool = makePoolMock([
-      { rows: [] }, // ensureFarmerProfileForPlot existing check
-      { rows: [] }, // user_account upsert
-      { rows: [] }, // farmer_profile insert
-      { rows: [] }, // plot_geometry_quality_checked audit
-      { rows: [] }, // main insert/select CTE returns nothing
-      { rows: [{ correction_variance_pct: 12.34 }] }, // variance probe
-    ]);
+    const pool = makeCreatePlotPoolMock({
+      insertPlotRow: null,
+      variancePct: 12.34,
+    });
     const service = makePlotsService(pool);
 
     await expect(
@@ -228,14 +262,10 @@ describe('PlotsService.create polygon normalization', () => {
   });
 
   it('rejects polygon with GEO-101 when normalization returns null geometry', async () => {
-    const pool = makePoolMock([
-      { rows: [] }, // ensureFarmerProfileForPlot existing check
-      { rows: [] }, // user_account upsert
-      { rows: [] }, // farmer_profile insert
-      { rows: [] }, // plot_geometry_quality_checked audit
-      { rows: [] }, // main insert/select CTE returns nothing
-      { rows: [{ correction_variance_pct: null }] }, // variance probe indicates no valid normalized geometry
-    ]);
+    const pool = makeCreatePlotPoolMock({
+      insertPlotRow: null,
+      variancePct: null,
+    });
     const service = makePlotsService(pool);
 
     await expect(

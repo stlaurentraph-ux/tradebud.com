@@ -73,6 +73,10 @@ export function formatPendingSyncSummary(
     return blockedMessage;
   }
 
+  if (pending.queuePendingCount > 0) {
+    return t('sync_result_incomplete_queue', { n: pending.queuePendingCount });
+  }
+
   const plotNames = pending.unsyncedPlotNames.filter(Boolean);
   if (plotNames.length > 0) {
     return t('sync_result_incomplete_plots', {
@@ -87,10 +91,6 @@ export function formatPendingSyncSummary(
 
   if (pending.unsyncedPlotCount > 0) {
     return t('sync_result_incomplete_plot_count', { n: pending.unsyncedPlotCount });
-  }
-
-  if (pending.queuePendingCount > 0) {
-    return t('sync_result_incomplete_queue', { n: pending.queuePendingCount });
   }
 
   return t('sync_result_incomplete', { n: pending.total });

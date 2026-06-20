@@ -11,7 +11,8 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 
 ## Work now
 
-- **Automation ops (Bundle B)** — **1.1** merged (#128). **1.3** CI path filters on `chore/automation-ci-path-filters` (PR pending). **Next:** **1.M.1** or **3.4** Dependabot.
+- **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
+- **Automation ops (Bundle B)** — **2.4** marketing post-deploy smoke PR #147 pending merge. **1.1** merged (#128). **Next:** **2.5** or offline automation **1.O.1**.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

@@ -16,7 +16,7 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
 import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { fetchPlotsForFarmer } from '@/features/api/postPlot';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import {
   loadAllPlotReadinessStates,
@@ -27,6 +27,7 @@ import type { DocumentPreviewItem } from '@/features/evidence/documentPreview';
 import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
 import { resolveProducerDocumentsNextStep } from '@/features/evidence/producerDocumentNextStep';
 import { summarizePlotDocumentsForOverview } from '@/features/evidence/plotDocumentSummary';
+import { sortPlotsForDisplay } from '@/features/plots/stablePlotDisplayOrder';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
@@ -68,6 +69,7 @@ export default function DocumentsScreen() {
   const [supportingUploadNote, setSupportingUploadNote] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
+  const plotReadinessGenerationRef = useRef(0);
   const attestationsAnchorRef = useRef<View>(null);
   const supportingAnchorRef = useRef<View>(null);
 
@@ -112,7 +114,9 @@ export default function DocumentsScreen() {
       setPlotReadiness([]);
       return;
     }
+    const generation = ++plotReadinessGenerationRef.current;
     const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
+    if (generation !== plotReadinessGenerationRef.current) return;
     setPlotReadiness(results);
   }, [plots, backendPlots, farmer]);
 
@@ -175,13 +179,16 @@ export default function DocumentsScreen() {
         }
       });
       if (farmer?.id && isSignedIn) {
-        fetchPlotsForFarmer(farmer.id)
+        void fetchServerPlotListForUi({
+          profileFarmerId: farmer.id,
+          localPlots: plots,
+        })
           .then((rows) => setBackendPlots(rows ?? []))
-          .catch(() => setBackendPlots([]));
+          .catch(() => undefined);
       } else {
         setBackendPlots([]);
       }
-    }, [farmer?.id, isSignedIn, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, tryUploadSupportingDocs]),
+    }, [farmer?.id, isSignedIn, plots, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, tryUploadSupportingDocs]),
   );
 
   useEffect(() => {
@@ -207,33 +214,31 @@ export default function DocumentsScreen() {
     }
   }, [nextStep.kind]);
 
-  const sortedPlotRows = useMemo(() => {
+  const plotDocumentRows = useMemo(() => {
     const readinessById = Object.fromEntries(plotReadiness.map((r) => [r.plotId, r]));
-    return [...plots]
-      .map((plot) => {
-        const readiness = readinessById[plot.id];
-        const status = readiness
-          ? summarizePlotDocumentsForOverview(readiness.checklist, {
-              titlePhotos: readiness.titlePhotoCount,
-              evidenceCount: readiness.evidenceCount,
-            })
-          : summarizePlotDocumentsForOverview(
-              {
-                groundOk: false,
-                landOk: false,
-                tenureParseGate: 'not_applicable',
-                needsFpic: false,
-                needsPermit: false,
-                fpicOk: false,
-                permitOk: false,
-                syncOk: false,
-                done: false,
-              },
-              { titlePhotos: 0, evidenceCount: 0 },
-            );
-        return { plot, status };
-      })
-      .sort((a, b) => a.status.priority - b.status.priority || a.plot.name.localeCompare(b.plot.name));
+    return sortPlotsForDisplay(plots).map((plot) => {
+      const readiness = readinessById[plot.id];
+      const status = readiness
+        ? summarizePlotDocumentsForOverview(readiness.checklist, {
+            titlePhotos: readiness.titlePhotoCount,
+            evidenceCount: readiness.evidenceCount,
+          })
+        : summarizePlotDocumentsForOverview(
+            {
+              groundOk: false,
+              landOk: false,
+              tenureParseGate: 'not_applicable',
+              needsFpic: false,
+              needsPermit: false,
+              fpicOk: false,
+              permitOk: false,
+              syncOk: false,
+              done: false,
+            },
+            { titlePhotos: 0, evidenceCount: 0 },
+          );
+      return { plot, status };
+    });
   }, [plots, plotReadiness]);
 
   const openPreview = (item: PlotEvidenceItem) => {
@@ -371,7 +376,7 @@ export default function DocumentsScreen() {
             />
           </View>
         ) : (
-          sortedPlotRows.map(({ plot, status }) => (
+          plotDocumentRows.map(({ plot, status }) => (
             <Pressable
               key={plot.id}
               onPress={() =>

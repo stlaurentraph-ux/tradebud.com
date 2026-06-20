@@ -178,4 +178,18 @@ describe('formatPendingSyncSummary', () => {
       ),
     ).toBe('sync_result_incomplete_queue:{"n":1}');
   });
+
+  it('prefers queue pending over plot names when both are present', () => {
+    expect(
+      formatPendingSyncSummary(
+        {
+          total: 3,
+          unsyncedPlotCount: 2,
+          queuePendingCount: 1,
+          unsyncedPlotNames: ['Plot 1', 'Plot 3'],
+        },
+        t,
+      ),
+    ).toBe('sync_result_incomplete_queue:{"n":1}');
+  });
 });

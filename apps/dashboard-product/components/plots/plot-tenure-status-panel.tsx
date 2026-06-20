@@ -35,6 +35,7 @@ import { confirmTenureReview } from '@/lib/use-tenure-review-queue';
 import { LocaleContext } from '@/lib/locale-context';
 import {
   getPlotTenurePanelCadastralCrossCheckLabel,
+  getPlotTenurePanelJurisdictionHints,
   getPlotTenurePanelCopy,
   getPlotTenurePanelFilesSyncedLabel,
 } from '@/lib/plot-tenure-panel-copy';
@@ -221,6 +222,10 @@ export function PlotTenureStatusPanel({
                       | Record<string, unknown>
                       | undefined;
                     const cadastralLabel = getPlotTenurePanelCadastralCrossCheckLabel(crossCheck, t);
+                    const jurisdictionHints = getPlotTenurePanelJurisdictionHints(
+                      record.parse_result as Record<string, unknown> | undefined,
+                      t,
+                    );
                     const label =
                       record.evidence_label?.trim() ||
                       record.storage_path.split('/').pop() ||
@@ -263,6 +268,18 @@ export function PlotTenureStatusPanel({
                               ? ` ${getPlotTenurePanelCopy('extracted_prefix', t)} ${crossCheck.extracted_parcel_reference}`
                               : ''}
                           </p>
+                        ) : null}
+                        {jurisdictionHints.length > 0 ? (
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {getPlotTenurePanelCopy('jurisdiction_exporter_heading', t)}
+                            </p>
+                            {jurisdictionHints.map((hint) => (
+                              <p key={hint} className="text-xs text-sky-800 dark:text-sky-300">
+                                {hint}
+                              </p>
+                            ))}
+                          </div>
                         ) : null}
                         {missing.length > 0 ? (
                           <p className="text-xs text-amber-700 dark:text-amber-400">

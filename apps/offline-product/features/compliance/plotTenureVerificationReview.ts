@@ -69,6 +69,30 @@ const WRONG_DOCUMENT_CLAUSE_KEYS = new Set([
   'not_land_document',
 ]);
 
+/** Plot geometry is verified on the map — not from tenure paper OCR. */
+const GEOMETRY_CLAUSE_PATTERN =
+  /\b(gps|geolocation|geo_location|coordinates?|latitude|longitude|lat_?lon|boundary|boundaries|perimeter|polygon|map_?plot|plot_?map|wgs84|utm)\b/i;
+
+function isTenureGeometryClause(clause: string): boolean {
+  return GEOMETRY_CLAUSE_PATTERN.test(clause.trim());
+}
+
+function filterTenureClauses(clauses: string[]): string[] {
+  return clauses.filter(
+    (clause) =>
+      !WRONG_DOCUMENT_CLAUSE_KEYS.has(clause.trim().toLowerCase()) &&
+      !isTenureGeometryClause(clause),
+  );
+}
+
+function hasDocumentCountryMismatch(result: Record<string, unknown>): boolean {
+  const jurisdiction = result.jurisdiction_cross_check;
+  if (!jurisdiction || typeof jurisdiction !== 'object') return false;
+  const issues = (jurisdiction as { issues?: unknown }).issues;
+  if (!Array.isArray(issues)) return false;
+  return issues.some((issue) => String(issue).trim() === 'document_country_mismatch');
+}
+
 function parseResultObject(record: PlotTenureVerificationRecord): Record<string, unknown> {
   return record.parse_result && typeof record.parse_result === 'object'
     ? (record.parse_result as Record<string, unknown>)
@@ -191,6 +215,13 @@ export function describeTenureVerificationReview(
 
   if (record.parse_status === 'FAILED') {
     const error = typeof result.error === 'string' ? result.error.trim() : '';
+    if (hasDocumentCountryMismatch(result)) {
+      return {
+        label,
+        status: record.parse_status,
+        reasonKey: 'plot_tenure_doc_reason_country_mismatch',
+      };
+    }
     if (isWrongDocumentTenureResult(result, { error })) {
       return {
         label,
@@ -256,10 +287,8 @@ export function describeTenureVerificationReview(
     };
   }
 
-  const missing = asStringArray(result.clauses_missing).filter(
-    (clause) =>
-      !WRONG_DOCUMENT_CLAUSE_KEYS.has(clause.trim().toLowerCase()) &&
-      clause.trim().toLowerCase() !== 'automated_extraction_unavailable',
+  const missing = filterTenureClauses(asStringArray(result.clauses_missing)).filter(
+    (clause) => clause.trim().toLowerCase() !== 'automated_extraction_unavailable',
   );
   if (missing.length > 0) {
     return {
@@ -278,6 +307,14 @@ export function describeTenureVerificationReview(
       }
     | undefined;
 
+  if (hasDocumentCountryMismatch(result)) {
+    return {
+      label,
+      status: record.parse_status,
+      reasonKey: 'plot_tenure_doc_reason_country_mismatch',
+    };
+  }
+
   if (cross?.keys_match === false) {
     return {
       label,
@@ -286,7 +323,12 @@ export function describeTenureVerificationReview(
     };
   }
 
-  const crossIssues = asStringArray(cross?.issues);
+  const crossIssues = [
+    ...asStringArray(cross?.issues),
+    ...asStringArray(
+      (result.jurisdiction_cross_check as { issues?: unknown } | undefined)?.issues,
+    ),
+  ];
   if (cross?.requires_manual_review) {
     if (crossIssues.length > 0) {
       return {
@@ -378,6 +420,7 @@ const REUPLOAD_REASON_KEYS = new Set([
   'plot_tenure_doc_reason_failed_detail',
   'plot_tenure_doc_reason_unreadable',
   'plot_tenure_doc_reason_low_confidence',
+  'plot_tenure_doc_reason_country_mismatch',
 ]);
 
 /** Farmer must replace or retake the file — not waiting on cooperative review. */
@@ -415,6 +458,9 @@ export function resolvePlotLandBlockedShortHint(
     const detail = describeTenureVerificationReview(blocked, t);
     if (detail.reasonKey === 'plot_tenure_doc_reason_unreadable') {
       return t('plot_status_land_wrong_document_hint');
+    }
+    if (detail.reasonKey === 'plot_tenure_doc_reason_country_mismatch') {
+      return t('plot_status_land_country_mismatch_hint');
     }
     if (
       detail.reasonKey === 'plot_tenure_doc_reason_check_delayed' ||
@@ -478,6 +524,7 @@ const CADASTRAL_ISSUE_KEYS: Record<string, string> = {
   holder_name_mismatch: 'plot_tenure_issue_holder_mismatch',
   informal_tenure_formal_document_conflict: 'plot_tenure_issue_tenure_conflict',
   declared_cadastral_key_missing: 'plot_tenure_issue_cadastral_missing',
+  issuer_jurisdiction_mismatch: 'plot_tenure_issue_issuer_jurisdiction',
 };
 
 const DEV_FACING_TEXT =

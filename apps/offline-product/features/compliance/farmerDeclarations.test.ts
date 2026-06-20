@@ -68,4 +68,31 @@ describe('mergeFarmerProfileFromDisk', () => {
     expect(merged?.name).toBe('Disk name');
     expect(merged?.selfDeclaredAt).toBe(200);
   });
+
+  it('keeps in-memory name when disk reload omits it', () => {
+    const memoryFarmer: FarmerProfile = {
+      ...baseFarmer,
+      name: 'Hector',
+    };
+    const diskFarmer: FarmerProfile = {
+      ...baseFarmer,
+    };
+    const merged = mergeFarmerProfileFromDisk(memoryFarmer, diskFarmer);
+    expect(merged?.name).toBe('Hector');
+  });
+});
+
+describe('mergeFarmerProfileOnUpdate name preservation', () => {
+  it('keeps previous name when partial patch omits it', () => {
+    const merged = mergeFarmerProfileOnUpdate(
+      { ...baseFarmer, name: 'Hector' },
+      {
+        id: baseFarmer.id,
+        role: 'farmer',
+        selfDeclared: false,
+        declarationLatitude: 59.91,
+      },
+    );
+    expect(merged.name).toBe('Hector');
+  });
 });

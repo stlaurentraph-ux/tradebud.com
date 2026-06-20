@@ -6,6 +6,8 @@ import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
 import { EvidenceDocumentsService } from './evidence-documents.service';
 import { applyCadastralCrossCheck, type PlotCadastralContext } from './cadastral-cross-check';
 import { evaluateTenureParseResult } from './tenure-parse.evaluator';
+import { sanitizeTenureParseClauses } from './tenure-clause-allowlist';
+import { applyTenureJurisdictionCrossCheck } from './tenure-jurisdiction-check';
 import { isRetryableTenureParseFailure } from './tenure-parse.failure';
 import {
   buildTenureParseRequestBody,
@@ -51,6 +53,8 @@ Return ONLY valid JSON matching this schema:
 }
 For customary / producer-in-possession letters, clauses_found may include occupation_rights, community_consent, witness_signatures, community_stamp.
 List missing legal elements in clauses_missing. Be conservative: if unreadable, lower ocr_quality and list gaps.
+Do NOT require GPS coordinates, map boundaries, or plot geometry on the document — plot location is verified separately on the field map.
+Set country_iso only from document header, stamp, or issuer jurisdiction (ISO 3166-1 alpha-2). Do not infer country from guessing where the plot might be.
 If the file is readable but is NOT a land title, lease, possession letter, or cadastral document (e.g. selfie, landscape, receipt, unrelated photo), set tenure_type to UNKNOWN, add "not_a_land_document" to clauses_missing, keep ocr_quality high (>=0.7), set field_completeness low (<=0.2), and state that in summary.`;
 
 const FORMAL_CADASTRAL_PARSE_SYSTEM_PROMPT = `You extract formal land-title and cadastral fields from farmer-uploaded documents (deeds, Clave Catastral certificates, municipal registrations) for EUDR compliance.
@@ -77,6 +81,8 @@ Return ONLY valid JSON matching this schema:
   "summary": string | null
 }
 Focus on Clave Catastral / parcel reference patterns (e.g. Honduras 012-345-678-9). Put the cadastral key in both parcel_reference and title_number when present. tenure_type must be FORMAL for deeds and cadastral certificates.
+Do NOT require GPS coordinates or map boundaries on the document — plot geometry is verified separately.
+Set country_iso from issuer stamp or document header only (ISO 3166-1 alpha-2).
 If the file is readable but is NOT a formal land title or cadastral document, set tenure_type to UNKNOWN, add "not_a_land_document" to clauses_missing, keep ocr_quality high, set field_completeness low, and explain in summary.`;
 
 export type TenureReviewQueueItem = PlotTenureVerificationRow & {
@@ -162,7 +168,8 @@ export class TenureParseService {
 
         const documentSource =
           existing.document_source ?? this.inferDocumentSource(row.storage_path);
-        const withCrossCheck = applyCadastralCrossCheck(existing, context, documentSource);
+        const withJurisdiction = applyTenureJurisdictionCrossCheck(existing, context);
+        const withCrossCheck = applyCadastralCrossCheck(withJurisdiction, context, documentSource);
         const evaluation = evaluateTenureParseResult(withCrossCheck);
 
         await this.pool.query(
@@ -425,8 +432,10 @@ export class TenureParseService {
         documentSource === 'land_title',
       );
       const cadastralContext = await this.getPlotCadastralContext(row.plot_id);
+      const sanitized = sanitizeTenureParseClauses(parseResult);
+      const withJurisdiction = applyTenureJurisdictionCrossCheck(sanitized, cadastralContext);
       const withCrossCheck = applyCadastralCrossCheck(
-        parseResult,
+        withJurisdiction,
         cadastralContext,
         documentSource,
       );
@@ -746,11 +755,20 @@ export class TenureParseService {
     const farmerRes = await this.pool.query<{
       farmer_name: string | null;
       country_code: string | null;
+      postal_address: string | null;
     }>(
       `
         SELECT
           COALESCE(ua.name, LEFT(fp.id::text, 8)) AS farmer_name,
-          NULLIF(TRIM(fp.country_code), '') AS country_code
+          NULLIF(TRIM(fp.country_code), '') AS country_code,
+          (
+            SELECT NULLIF(TRIM(al.payload ->> 'postalAddress'), '')
+            FROM audit_log al
+            WHERE al.event_type = 'farmer_set'
+              AND al.user_id = fp.user_id
+            ORDER BY al.timestamp DESC
+            LIMIT 1
+          ) AS postal_address
         FROM plot p
         JOIN farmer_profile fp ON fp.id = p.farmer_id
         LEFT JOIN user_account ua ON ua.id = fp.user_id
@@ -766,6 +784,7 @@ export class TenureParseService {
       informalTenure: legalRes.rows[0]?.informal_tenure === true,
       farmerName,
       countryCode: farmerRes.rows[0]?.country_code ?? null,
+      postalAddress: farmerRes.rows[0]?.postal_address ?? null,
     };
   }
 
@@ -924,7 +943,7 @@ export class TenureParseService {
     const antiFraud = (parsed.anti_fraud as Record<string, unknown>) ?? {};
     const confidence = (parsed.confidence_breakdown as Record<string, unknown>) ?? {};
 
-    return {
+    return sanitizeTenureParseClauses({
       tenure_type,
       holder_name: typeof parsed.holder_name === 'string' ? parsed.holder_name : null,
       community_or_issuer:
@@ -957,7 +976,7 @@ export class TenureParseService {
       },
       summary: typeof parsed.summary === 'string' ? parsed.summary : null,
       parser: 'llm',
-    };
+    });
   }
 }
 

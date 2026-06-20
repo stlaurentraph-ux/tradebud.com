@@ -33,9 +33,9 @@ export function shouldShowBackupAttentionPanel(snapshot: BackupAttentionSnapshot
   if (snapshot.syncAccessFailure === 'network' || snapshot.syncAccessFailure === 'session_expired') {
     return true;
   }
-  if (snapshot.plotsFetchFailed && snapshot.queuePendingCount > 0) return true;
-  if (snapshot.queueLastError && snapshot.queuePendingCount > 0) return true;
-  if (snapshot.unsyncedPlotCount > 0 && snapshot.plotsFetchFailed) return true;
+  if (snapshot.queuePendingCount > 0) return true;
+  if (snapshot.unsyncedPlotCount > 0) return true;
+  if (snapshot.plotsFetchFailed) return true;
   return false;
 }
 
