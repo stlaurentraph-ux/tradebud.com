@@ -1,0 +1,43 @@
+---
+description: Offline field app automation — Phase 1.O safe mode (report guards, no OTA/release)
+globs:
+  - apps/offline-product/**
+---
+
+# Offline automation (Phase 1.O)
+
+Full runbook: `product-os/04-quality/offline-automation-runbook.md`  
+Plan annex: `product-os/06-status/automation-ops-plan.md` §7 / Offline annex 1.O  
+Queue: slice **1.O.1** → **1.O.2** (strict) → **1.O.3** (Maestro prep)
+
+## Phase 1.O.1 safe mode
+
+- Guard scripts run in **report mode** in CI (non-blocking deltas vs baseline).
+- Do **not** enable `--strict` in CI until slice **1.O.2** lands on `main`.
+- Baselines live in `apps/offline-product/qa/automation-baselines/` — refresh with `npm run qa:automation:write-baselines`.
+
+## Before editing offline-product
+
+1. Read `field-app-regression-ledger.md` for touched flows.
+2. Check `agent-queue.md` — no duplicate **1.O.*** In progress on another branch.
+3. Lane 3: confirm no open Lane 1 PR on `apps/offline-product/`.
+
+## Verify before PR
+
+```bash
+cd apps/offline-product
+npm run qa:regression
+npm run qa:automation:phase1
+```
+
+## Forbidden (agents)
+
+- `npm run release:*`, `npm run update:*`, EAS submit
+- `DEVICE_SMOKE_SIGNOFF.json` fabrication; `DEVICE_SMOKE_SIGNOFF_SKIP=1`
+- Weakening `field-regression-guard.mjs` or removing CI steps to pass
+- OTA-only ship when `ota-native-fingerprint-gate` reports drift (needs native build)
+
+## Allowed (Lane 1)
+
+- Guard scripts, baselines, testIDs, Maestro flows, lint/typecheck fixes for the slice
+- CI step additions (report mode first)

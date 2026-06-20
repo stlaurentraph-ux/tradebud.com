@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-20T14:22:40.428Z",
+  "sha256": "cf88eb7dff5dbde7f5f8df754ff8784add04e923eb5dd81f8452a8e54ed8e7a8",
+  "fingerprint": {
+    "expoSdk": null,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "newArchEnabled": true,
+    "iosBundleId": "com.tracebud.app",
+    "androidPackage": "com.tracebud.app",
+    "iosPermissions": [
+      "NSCameraUsageDescription",
+      "NSLocationWhenInUseUsageDescription",
+      "NSPhotoLibraryUsageDescription",
+      "NSUserNotificationsUsageDescription"
+    ],
+    "androidPermissions": [
+      "ACCESS_COARSE_LOCATION",
+      "ACCESS_FINE_LOCATION",
+      "CAMERA",
+      "READ_MEDIA_IMAGES"
+    ],
+    "plugins": [
+      "expo-camera",
+      "expo-font",
+      "expo-router",
+      "expo-secure-store",
+      "expo-splash-screen",
+      "expo-sqlite",
+      "expo-web-browser"
+    ],
+    "easChannels": {
+      "development": "development",
+      "preview": "preview",
+      "simulator": null,
+      "production": "production"
+    }
+  }
+}
