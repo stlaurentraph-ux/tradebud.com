@@ -95,7 +95,8 @@ function readAllInsightPosts(): InsightPost[] {
 }
 
 function toSummary(post: InsightPost): InsightSummary {
-  const { body: _body, ...summary } = post;
+  const { body, ...summary } = post;
+  void body;
   return summary;
 }
 
