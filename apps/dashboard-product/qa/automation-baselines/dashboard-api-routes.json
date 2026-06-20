@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-20T15:36:32.121Z",
+  "generatedAt": "2026-06-20T15:38:12.509Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -230,36 +230,6 @@
     },
     {
       "dashboardPath": "/api/crm/exchanges",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/intelligence",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/markets",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/objections",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/partnerships",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/pilots",
       "category": "internal-tools",
       "backendPaths": [],
       "failClosed": true
