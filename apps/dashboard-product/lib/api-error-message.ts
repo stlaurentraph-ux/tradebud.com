@@ -30,13 +30,15 @@ export function formatApiErrorBody(body: unknown, fallback: string, status?: num
     }
   }
 
+  const nestedMessage = payload.message;
   if (
-    payload.message &&
-    typeof payload.message === 'object' &&
-    typeof payload.message.message === 'string' &&
-    payload.message.message.trim()
+    nestedMessage &&
+    typeof nestedMessage === 'object' &&
+    !Array.isArray(nestedMessage) &&
+    typeof nestedMessage.message === 'string' &&
+    nestedMessage.message.trim()
   ) {
-    return payload.message.message.trim();
+    return nestedMessage.message.trim();
   }
 
   return statusHint(status) ?? fallback;

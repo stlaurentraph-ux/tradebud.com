@@ -5,12 +5,21 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { LocaleContext } from '@/lib/locale-context';
 import { getRequestIntentCopy } from '@/lib/request-intent-copy';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type CampaignDecision = 'accept' | 'refuse';
 
 const STORAGE_KEY = 'tracebud_pending_request_decision_intent';
 
 export default function RequestDecisionIntentPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <RequestDecisionIntentPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function RequestDecisionIntentPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const router = useRouter();

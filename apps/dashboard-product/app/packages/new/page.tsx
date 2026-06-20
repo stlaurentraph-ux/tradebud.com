@@ -44,6 +44,7 @@ import {
   validatePackageCreateForm,
   type PackageCreateFieldErrors,
 } from '@/lib/package-create-validation';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 const PACKAGE_CREATE_ROLES = new Set(['exporter', 'cooperative', 'compliance_manager', 'admin']);
 
@@ -54,6 +55,14 @@ function formatHarvestDate(value: string | null): string {
 }
 
 export default function NewPackagePage() {
+  return (
+    <SearchParamsPageBoundary>
+      <NewPackagePageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function NewPackagePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();

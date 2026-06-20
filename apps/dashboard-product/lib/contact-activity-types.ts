@@ -127,7 +127,7 @@ export function listProcessingFacilitySubtypes(): ProcessingFacilitySubtype[] {
 }
 
 export function listContactActivityTypesForRole(
-  role: 'cooperative' | 'exporter' | 'importer' | 'other' | undefined,
+  role: ContactDirectoryRole | undefined,
 ): ContactActivityType[] {
   if (role === 'cooperative') {
     return ['farmer', 'cooperative', 'other'];
@@ -139,4 +139,14 @@ export function listContactActivityTypesForRole(
     return ['cooperative', 'farmer', 'processing_facility', 'trader', 'exporter', 'other'];
   }
   return [...CONTACT_ACTIVITY_TYPES];
+}
+
+/** CRM contact UI roles — maps full TenantRole (e.g. country_reviewer) to directory behavior. */
+export type ContactDirectoryRole = 'cooperative' | 'exporter' | 'importer' | 'other';
+
+export function resolveContactDirectoryRole(role: string | undefined): ContactDirectoryRole {
+  if (role === 'cooperative' || role === 'exporter' || role === 'importer') {
+    return role;
+  }
+  return 'other';
 }

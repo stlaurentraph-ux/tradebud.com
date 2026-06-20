@@ -53,8 +53,17 @@ import {
   getWorkflowComplianceNavLabel,
 } from '@/lib/workflow-terminology-labels';
 import { ComplianceReviewHub } from '@/components/compliance/compliance-review-hub';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function CompliancePage() {
+  return (
+    <SearchParamsPageBoundary>
+      <CompliancePageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function CompliancePageContent() {
   const { user } = useAuth();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;

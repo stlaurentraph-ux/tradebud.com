@@ -83,6 +83,7 @@ import {
   getWorkflowComplianceNavLabel,
   getWorkflowIssuesNavLabel,
 } from '@/lib/workflow-terminology-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type ComplianceIssue = ComplianceIssueRecord;
 type IssueSeverity = ComplianceIssueSeverity;
@@ -94,6 +95,14 @@ type IssuesViewMode = 'kanban' | 'list';
 type IssueKindFilter = ComplianceIssue['issueKind'] | 'all';
 
 export default function ComplianceIssuesPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <ComplianceIssuesPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function ComplianceIssuesPageContent() {
   const { user } = useAuth();
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;

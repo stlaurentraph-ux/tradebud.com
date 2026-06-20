@@ -3,7 +3,6 @@ import type { TenantRole } from '@/types';
 const GEOMETRY_REVIEW_ROLES: TenantRole[] = [
   'exporter',
   'cooperative',
-  'admin',
   'country_reviewer',
 ];
 

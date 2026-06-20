@@ -13,6 +13,7 @@ import { useSponsorView } from '@/lib/sponsor-view';
 import { NewRequestWizardDialog, type NewRequestResult } from '@/components/requests/wizard/new-request-wizard-dialog';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs, translatePageHeader } from '@/lib/nav-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type ProgrammeStatus = 'Draft' | 'Sent' | 'Completed' | 'Archived';
 
@@ -101,6 +102,14 @@ function toProgrammeCampaign(record: Record<string, unknown>): ProgrammeCampaign
 }
 
 export default function ProgrammesPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <ProgrammesPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function ProgrammesPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const pageHeader = translatePageHeader(t, 'programmes', { title: "Programmes" });

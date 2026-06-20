@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { Suspense } from 'react';
 import { DashboardHomeClient } from '@/components/dashboards/dashboard-home-client';
 import { getSessionCookieName, isSessionTokenValid } from '@/lib/auth-cookie';
 import { getTenantRoleFromAccessToken } from '@/lib/auth-claims';
@@ -30,6 +31,8 @@ export default async function DashboardPage() {
   }
 
   return (
-    <DashboardHomeClient initialSummary={initialSummary} initialLaunchState={initialLaunchState} />
+    <Suspense fallback={null}>
+      <DashboardHomeClient initialSummary={initialSummary} initialLaunchState={initialLaunchState} />
+    </Suspense>
   );
 }

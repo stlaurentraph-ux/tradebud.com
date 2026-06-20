@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProducerConsentPanel } from '@/components/farmers/producer-consent-panel';
 import { EditContactForm, type ContactEditDraft } from '@/components/contacts/edit-contact-form';
-import { listContactActivityTypesForRole } from '@/lib/contact-activity-types';
+import { listContactActivityTypesForRole, resolveContactDirectoryRole } from '@/lib/contact-activity-types';
 import { buildAddColleagueHref, buildOrganizationHref, listOrganizationColleagues } from '@/lib/contact-directory';
 import {
   deleteContact,
@@ -73,9 +73,11 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const contactDirectoryRole = resolveContactDirectoryRole(role);
+
   const activityTypes = useMemo(
-    () => listContactActivityTypesForRole(isCooperative ? 'cooperative' : isExporter ? 'exporter' : 'other'),
-    [isCooperative, isExporter],
+    () => listContactActivityTypesForRole(contactDirectoryRole),
+    [contactDirectoryRole],
   );
 
   const loadContact = async () => {
@@ -256,7 +258,7 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
                   {isEditing ? (
                     <EditContactForm
                       contact={contact}
-                      role={role}
+                      role={contactDirectoryRole}
                       activityTypes={activityTypes}
                       onSave={handleSaveEdit}
                       onCancel={() => setIsEditing(false)}

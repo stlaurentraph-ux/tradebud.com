@@ -2,7 +2,6 @@ import type { TenantRole, User } from '@/types';
 import type { CommercialProfile } from '@/lib/commercial-profile';
 import { hasPermission } from '@/lib/rbac';
 import {
-  HIGH_RES_MAP_TILES_FLAG,
   INTEGRATED_HARVEST_CAPTURE_FLAG,
   normalizeSupplyChainRoles,
   tenantHasIntegratedHarvestCapture,
@@ -48,18 +47,14 @@ export function extractIntegratedHarvestCaptureFlag(supplyChainRoles: unknown): 
 }
 
 export function mergeSupplyChainRolesForSave(
-  roles: ReturnType<typeof normalizeSupplyChainRoles>,
+  roles: unknown,
   options: boolean | { integratedHarvestCapture?: boolean },
 ): string[] {
   const integratedHarvestCapture =
     typeof options === 'boolean' ? options : (options.integratedHarvestCapture ?? false);
 
   const normalized = normalizeSupplyChainRoles(roles);
-  const withoutFlags = normalized.filter(
-    (role) => role !== INTEGRATED_HARVEST_CAPTURE_FLAG && role !== HIGH_RES_MAP_TILES_FLAG,
-  );
-
-  let result = withoutFlags;
+  let result: string[] = normalized;
   if (integratedHarvestCapture) {
     if (!(normalized.includes('cooperative') && normalized.includes('exporter'))) {
       result = [...result, INTEGRATED_HARVEST_CAPTURE_FLAG];

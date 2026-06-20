@@ -11,8 +11,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocaleContext } from '@/lib/locale-context';
 import { getAuthCopy } from '@/lib/workflow-terminology-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function LoginPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <LoginPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function LoginPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const [email, setEmail] = useState('');

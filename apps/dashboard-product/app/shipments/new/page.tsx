@@ -38,8 +38,17 @@ import {
   validateShipmentWeightGuardrail,
 } from '@/lib/shipment-weight-guardrail';
 import { createCanonicalShipmentHeader } from '@/lib/shipment-headers-client';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function NewShipmentPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <NewShipmentPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function NewShipmentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();

@@ -34,10 +34,19 @@ import {
   getContactsPageTitle,
   getProducerDetailHref,
 } from '@/lib/workflow-terminology-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
 
 export default function ContactOrganizationPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <ContactOrganizationPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function ContactOrganizationPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const router = useRouter();

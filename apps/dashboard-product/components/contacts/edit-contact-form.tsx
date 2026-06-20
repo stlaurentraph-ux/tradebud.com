@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { LocaleContext } from '@/lib/locale-context';
 import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
+import type { ContactDirectoryRole } from '@/lib/contact-activity-types';
 import { listContactActivityTypesForRole, listProcessingFacilitySubtypes } from '@/lib/contact-activity-types';
 import type { ContactRecord } from '@/lib/contact-service';
 import {
@@ -40,7 +41,7 @@ export interface ContactEditDraft {
 
 interface EditContactFormProps {
   contact: ContactRecord;
-  role?: 'cooperative' | 'exporter' | 'importer' | 'other';
+  role?: ContactDirectoryRole;
   activityTypes: ContactActivityType[];
   onSave: (draft: ContactEditDraft) => Promise<void>;
   onCancel: () => void;

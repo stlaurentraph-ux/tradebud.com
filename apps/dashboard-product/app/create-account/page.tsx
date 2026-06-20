@@ -28,6 +28,7 @@ import {
   getSignupCopy,
   getSignupStepMeta,
 } from '@/lib/workflow-terminology-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type Step = 1 | 2 | 3;
 type ApiPrimaryRole = 'importer' | 'exporter' | 'compliance_manager' | 'admin';
@@ -91,6 +92,24 @@ function parsePrefillRole(role: string | null): SupportedPrefillRole | '' {
 }
 
 export default function CreateAccountPage() {
+  return (
+    <SearchParamsPageBoundary fallback={<CreateAccountPageFallback />}>
+      <CreateAccountPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function CreateAccountPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+        <AuthBrandHeader />
+      </div>
+    </div>
+  );
+}
+
+function CreateAccountPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hydrateSessionFromToken, isAuthenticated } = useAuth();

@@ -30,6 +30,7 @@ import {
   getContactsPageTitle,
 } from '@/lib/workflow-terminology-labels';
 import { toast } from 'sonner';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 import {
   User,
   Building2,
@@ -98,6 +99,14 @@ function resolveAddPageMode(mode: AddMode): 'select' | 'contact' | 'organization
 }
 
 export default function AddContactPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <AddContactPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function AddContactPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const localeContext = useContext(LocaleContext);

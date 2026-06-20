@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useDemoData } from '@/lib/demo-data-context';
 import { mockPlots } from '@/lib/mocks';
-import { normalizePlotInventoryPayload, type PlotInventoryRow } from '@/lib/plot-inventory';
+import { normalizePlotInventoryPayload, mapTenantPlotToInventoryRow, type PlotInventoryRow } from '@/lib/plot-inventory';
 
 export type TenantPlot = PlotInventoryRow;
 
@@ -38,16 +38,18 @@ export function useTenantPlots(tenantId: string | null, options?: { enabled?: bo
     setError(null);
 
     if (demoDataEnabled) {
-      const data = mockPlots.map((plot) => ({
-        id: plot.id,
-        name: plot.name,
-        farmer_id: plot.farmer_id,
-        farmer_name: plot.farmer_name,
-        area_hectares: plot.area_hectares ?? 0,
-        deforestation_risk: plot.deforestation_risk,
-        evidence: plot.evidence ?? [],
-        verified: plot.verified,
-      }));
+      const data = mockPlots
+        .map((plot) =>
+          mapTenantPlotToInventoryRow({
+            id: plot.id,
+            name: plot.name,
+            farmer_id: plot.farmer_id,
+            area_ha: plot.area_hectares,
+            status: plot.verified ? 'deforestation_clear' : 'pending_check',
+            kind: 'polygon',
+          }),
+        )
+        .filter((row): row is PlotInventoryRow => row != null);
       if (!cancelled) {
         setPlots(data);
         setIsLoading(false);

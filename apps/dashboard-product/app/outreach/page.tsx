@@ -30,6 +30,7 @@ import {
   getOutreachViewTimelineLabel,
   getOutreachWizardDescription,
 } from '@/lib/workflow-terminology-labels';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type OutreachStatus = 'Draft' | 'Sent' | 'Completed' | 'Archived';
 
@@ -58,6 +59,14 @@ function mapCampaignStatus(status: string): OutreachStatus {
 }
 
 export default function OutreachPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <OutreachPageContent />
+    </SearchParamsPageBoundary>
+  );
+}
+
+function OutreachPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const searchParams = useSearchParams();

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlotSatelliteMap } from '@/components/plots/plot-satellite-map';
+import { PlotSatelliteMap, type PlotMapOverlayPolygon } from '@/components/plots/plot-satellite-map';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import {
@@ -72,11 +72,11 @@ export function PlotGeometryReviewerPanel({ plotId }: PlotGeometryReviewerPanelP
     [beforeAreaHa, afterAreaHa],
   );
 
-  const overlayPolygons = useMemo(() => {
+  const overlayPolygons = useMemo((): PlotMapOverlayPolygon[] => {
     const vertexDelta = coordinates.length - simplified.length;
-    const overlays = [{ coordinates, variant: 'current' as const }];
+    const overlays: PlotMapOverlayPolygon[] = [{ coordinates, variant: 'current' }];
     if (vertexDelta > 0 && simplified.length >= 3) {
-      overlays.push({ coordinates: simplified, variant: 'suggested' as const });
+      overlays.push({ coordinates: simplified, variant: 'suggested' });
     }
     return overlays;
   }, [coordinates, simplified]);

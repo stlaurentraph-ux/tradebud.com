@@ -9735,14 +9735,20 @@ export function getContactsAddToastMessage(
     member_added: 'workflow.contacts.add.toast.member_added',
     organization_created: 'workflow.contacts.add.toast.organization_created',
     import_success: 'workflow.contacts.add.toast.import_success',
+    import_partial: 'workflow.contacts.add.toast.import_partial',
   } as const;
   const fallbackMap = {
     contact_created: 'Contact created successfully',
     member_added: 'Member added to your directory',
     organization_created: 'Organization created successfully',
     import_success: 'Successfully imported {{count}} record',
+    import_partial: 'Imported {{success}}, but {{failed}} row(s) failed. Review errors below.',
   } as const;
-  return wf(keyMap[kind], fallbackMap[kind], t, { count: values?.count ?? 1 });
+  return wf(keyMap[kind], fallbackMap[kind], t, {
+    count: values?.count ?? 1,
+    success: values?.success ?? 0,
+    failed: values?.failed ?? 0,
+  });
 }
 
 export function getContactsWizardStepLabel(

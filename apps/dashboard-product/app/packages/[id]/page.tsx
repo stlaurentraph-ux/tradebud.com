@@ -290,7 +290,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
               blockingCount={readinessBlockers.length}
             />
 
-            {(role === 'exporter' || role === 'agent') && <PackageLineageSummaryCard pkg={pkg} t={t} />}
+            {role === 'exporter' && <PackageLineageSummaryCard pkg={pkg} t={t} />}
 
             <Card className="border-border bg-card">
               <CardHeader className="pb-4">

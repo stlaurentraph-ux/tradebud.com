@@ -40,7 +40,7 @@ export function getDefaultPlotDetailSectionOpen(input: {
 }
 
 export function canRunPlotDeforestationScreening(role: TenantRole | null | undefined): boolean {
-  return role === 'exporter' || role === 'cooperative' || role === 'admin';
+  return role === 'exporter' || role === 'cooperative';
 }
 
 export function shouldShowPlotDetailSection(
