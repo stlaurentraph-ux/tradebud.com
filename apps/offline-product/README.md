@@ -44,10 +44,16 @@ Production safety defaults:
 
 **Preview/TestFlight builds load JavaScript from EAS Update.** Reloading that app does **not** pick up edits on your Mac. Use a **debug build + Metro** for day-to-day UI work.
 
-From `apps/offline-product`:
+From the **repo root** (after `npm install`):
 
 ```bash
-npm install
+npm run dev:offline
+```
+
+Or from this folder:
+
+```bash
+npm run dev:metro
 
 # iOS Simulator — best for UI iteration (first run compiles native code; then hot reload)
 npm run dev:ios
@@ -55,6 +61,7 @@ npm run dev:ios
 # Physical iPhone (USB) — GPS, camera, walk perimeter on a real device
 npm run dev:metro          # terminal 1 — keep running
 npm run dev:device         # terminal 2 — build/install (only when native code changes)
+```
 ```
 
 After install, open the app on your phone. If you see **“No script URL provided”**, Metro is not reachable — ensure `dev:metro` is running and tap **Reload JS**.

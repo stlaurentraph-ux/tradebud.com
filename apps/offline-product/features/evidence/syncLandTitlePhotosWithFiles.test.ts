@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const uploadEvidenceFileToStorage = vi.fn();
 const syncPlotPhotosToBackend = vi.fn(async () => ({}));
-const updatePlotTitlePhotoRemoteRef = vi.fn(async () => undefined);
+const updatePlotTitlePhotoAfterUpload = vi.fn(async () => undefined);
 
 vi.mock('@/features/evidence/uploadEvidenceToStorage', () => ({
   uploadEvidenceFileToStorage,
@@ -13,7 +13,7 @@ vi.mock('@/features/api/postPlot', () => ({
 }));
 
 vi.mock('@/features/state/persistence', () => ({
-  updatePlotTitlePhotoRemoteRef,
+  updatePlotTitlePhotoAfterUpload,
 }));
 
 describe('syncLandTitlePhotosWithFiles', () => {
@@ -43,17 +43,17 @@ describe('syncLandTitlePhotosWithFiles', () => {
       ],
     });
 
-    expect(summary.uploadedCount).toBe(0);
-    expect(summary.metadataOnlyCount).toBe(1);
+    expect(summary.uploadedCount).toBe(1);
+    expect(summary.metadataOnlyCount).toBe(0);
     expect(uploadEvidenceFileToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        existingStoragePath: 'user/plot/land_title/title-7',
-        stableFileKey: undefined,
+        storagePath: 'user/plot/land_title/title-7',
+        stableKey: null,
       }),
     );
-    expect(updatePlotTitlePhotoRemoteRef).toHaveBeenCalledWith(7, {
+    expect(updatePlotTitlePhotoAfterUpload).toHaveBeenCalledWith(7, {
+      uri: 'https://signed.example/title.jpg',
       storagePath: 'user/plot/land_title/title-7',
-      remoteUri: 'https://signed.example/title.jpg',
     });
     expect(syncPlotPhotosToBackend).toHaveBeenCalledTimes(1);
   });
@@ -81,8 +81,8 @@ describe('syncLandTitlePhotosWithFiles', () => {
 
     expect(uploadEvidenceFileToStorage).toHaveBeenCalledWith(
       expect.objectContaining({
-        stableFileKey: 'title-3',
-        existingStoragePath: null,
+        stableKey: 3,
+        storagePath: null,
       }),
     );
   });

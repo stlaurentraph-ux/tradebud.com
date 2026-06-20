@@ -1,5 +1,18 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+- **CI** — Backend Jest runs with nested install under workspaces to avoid Expo Jest 29 hoist conflict; removed unused root `@jest/globals`.
+
+### 2026-06-20 (repo: Turborepo Phase 2)
+- **Turbo** — Added `turbo.json` with `lint`, `test`, `build`, `typecheck` pipelines; root `packageManager` field for npm 11.
+- **Root scripts** — `lint:workspaces`, `test:workspaces`, `build:workspaces`, `typecheck:workspaces`, `check:workspaces` orchestrate via `turbo run` (CI-aligned filters).
+- **Branch** — `chore/turborepo` stacks on `chore/npm-workspaces` (PR #117).
+
+### 2026-06-20 (repo: workspaces branch cleanup + agent hygiene)
+- **Branch cleanup** — Rebased `chore/npm-workspaces` onto `main` (tenure/offline commits merged first).
+- **`.cursorignore`** — Excludes `v0-prototype/`, store-assets binaries, `node_modules`, legacy root `app/page.tsx`.
+- **Branch rule** — `.cursor/rules/branch-discipline.mdc` for parallel offline vs monorepo work.
+- **Docs** — `docs/repo-branches.md` (install by branch, merge conflicts, Vercel install command).
+
 ### 2026-06-20 (offline: Metro bootstrap hardening)
 - **Crash root causes** — reverted `app.config.js` TypeScript syntax; monorepo root `react-native@0.85` vs field app `0.81.5`; stale Metro after config edits.
 - **Guards** — `check:metro-start` (config load, RN pin, expo config) runs before every `dev:metro*`; CI + field-regression-guard block TS in `app.config.js`.

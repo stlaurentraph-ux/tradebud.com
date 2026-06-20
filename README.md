@@ -13,6 +13,7 @@ Multi-tenant EUDR compliance platform: offline field app, unified SaaS dashboard
 | App topology & domains | [`apps/STRUCTURE.md`](apps/STRUCTURE.md) |
 | Product specs & delivery status | [`product-os/README.md`](product-os/README.md) |
 | Database migrations | [`supabase/README.md`](supabase/README.md) |
+| Parallel branches / workspaces | [`docs/repo-branches.md`](docs/repo-branches.md) |
 
 ## Repository layout
 
@@ -29,16 +30,27 @@ product-os/            Features, ADRs, quality gates, status logs
 docs/openapi/          API contract draft + governance artifacts
 ```
 
-This is a **multi-package repo**, not a Turborepo/pnpm workspace. Each app has its own `package.json`; install dependencies in the app directory you are working on (CI does the same).
+This is an **npm workspaces monorepo** with **Turborepo** task orchestration. Install once at the repo root:
 
-## Legacy root Next app
+```bash
+npm install
+```
 
-The repo root still contains an early v0 shell:
+Workspace packages: `dashboard-product`, `tracebud-marketing`, `tracebud-offline`, `field-auth`, `tracebud-backend`. Demos and `design/v0-prototype/` are **not** in the workspace.
 
-- `app/page.tsx` — large interactive prototype (~5k lines), **not deployed**
-- Root `package.json` — OpenAPI governance scripts + legacy deps; **not the product dashboard**
+### Root commands
 
-Production apps live under `apps/*`. CI lints the root app only when `app/**` changes (see `.github/workflows/ci.yml`).
+```bash
+npm run dev:backend      # NestJS API
+npm run dev:dashboard    # Unified dashboard
+npm run dev:marketing    # Public site
+npm run dev:offline      # Expo Metro (field app)
+npm run lint:workspaces  # turbo run lint (CI-aligned packages)
+npm run test:workspaces  # turbo run test (offline + field-auth)
+npm run check:workspaces # lint + test + typecheck via turbo
+```
+
+Legacy root Next app (`app/`) and OpenAPI governance scripts remain at the repo root — not deployed.
 
 ## Product documentation (read order)
 
@@ -66,9 +78,9 @@ npm run openapi:governance:check
 
 Per-app commands are documented in each app's README. Typical local stack:
 
-1. Backend: `cd tracebud-backend && npm install && npm run start:dev`
-2. Field app: `cd apps/offline-product && npm install && npm run dev:metro`
-3. Dashboard: `cd apps/dashboard-product && npm install && npm run dev`
+1. Backend: `npm run dev:backend`
+2. Field app: `npm run dev:offline`
+3. Dashboard: `npm run dev:dashboard`
 
 ## CI
 
@@ -79,6 +91,15 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 - `apps/dashboard-product` — lint + vitest
 - `apps/marketing` — lint + build
 - `apps/offline-product` — lint, typecheck, vitest, i18n/QA guards
+
+## Vercel deploys (workspaces)
+
+Dashboard and marketing projects that use an app subdirectory as root should install from the monorepo root:
+
+- **Install Command:** `cd ../.. && npm ci`
+- **Build Command:** unchanged (`npm run build` in the project directory)
+
+See [`docs/repo-branches.md`](docs/repo-branches.md) for merge order and rollback tag `pre-workspaces-2026-06-20`.
 
 ## Design reference (not production code)
 

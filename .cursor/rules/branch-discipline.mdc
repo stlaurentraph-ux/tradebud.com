@@ -1,0 +1,29 @@
+---
+description: Branch discipline for parallel offline product vs monorepo work
+alwaysApply: true
+---
+
+# Branch discipline
+
+Check `git branch --show-current` before editing. Keep unrelated work on separate branches.
+
+## Active integration branches
+
+| Branch | Purpose |
+| --- | --- |
+| `feature/offline-tenure` | Offline field app, tenure/evidence sync, Metro, SQLite persistence, related backend tenure parse |
+| `chore/npm-workspaces` | npm workspaces monorepo (root install, unified lockfile, CI `-w` scripts) |
+| `chore/turborepo` | Turborepo pipelines (`turbo run lint/test/build`); stacks on workspaces branch |
+| `main` | Merged, deployable baseline |
+
+## Rules
+
+1. **Do not mix scopes** — tenure/evidence/offline changes belong on `feature/offline-tenure`; workspace/CI/root `package.json` changes belong on `chore/npm-workspaces`.
+2. **Install location** — On `main` and `feature/offline-tenure` (pre-workspaces merge): `npm install` inside each app directory. On `chore/npm-workspaces` / `chore/turborepo` (and `main` after merge): `npm install` at repo root once.
+3. **Before switching branches** — stash or commit WIP; resolve lockfile conflicts carefully (one root lockfile after workspaces merge).
+4. **Rollback** — tag `pre-workspaces-2026-06-20` marks the last commit before workspaces adoption.
+
+## Merge order (when ready)
+
+1. Merge offline feature branch OR workspaces branch first (expect one lockfile conflict if both touched deps).
+2. After workspaces lands on `main`, update Vercel install command to root `npm ci` for dashboard and marketing projects.
