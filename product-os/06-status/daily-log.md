@@ -1,14 +1,17 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 1.M.2 API trace size guard, `chore/automation-marketing-api-bundle-guard`)
-- **1.M.2** — `marketing-api-trace-size-guard.mjs` after build; fails if any `/api/*` NFT trace exceeds 10MB or includes `public/` assets (749MB regression guard).
-- Wired into `check:marketing`, marketing CI (post-build), and fixed routes guard step to respect `CI_RUN` path-filter skip.
-- **Next** — PR merge; rebase/merge Dependabot PR #131.
+### 2026-06-20 (automation — 3.4 Dependabot, `chore/automation-dependabot`)
+- **3.4** — `.github/dependabot.yml`: weekly npm (root + offline-product) and GitHub Actions updates.
+- **Next** — PR #131 merge after rebase onto main.
+
+### 2026-06-20 (automation — 1.M.2 API trace size guard, PR #132)
+- **1.M.2** — `marketing-api-trace-size-guard.mjs` after build; 749MB regression guard.
+- Wired into `check:marketing` and marketing CI (post-build).
 
 ### 2026-06-20 (automation — 1.M.1 routes guard merged, PR #130)
 - **1.M.1** — Marketing routes/publication guard in CI and `check:marketing`.
 
-### 2026-06-20 (automation — 1.3 CI path filters, `chore/automation-ci-path-filters`)
+### 2026-06-20 (automation — 1.3 CI path filters, PR #129 merged)
 - **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
 
 ### 2026-06-20 (automation — 1.1 pre-commit, PR #128)
