@@ -16,8 +16,9 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5 | onboarding proxy smoke | Authenticated smoke bearer |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | CI cache auth |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Team slug |
-| `MARKETING_SMOKE_BASE_URL` | 2.4 | marketing deploy smoke | Production or staging base URL |
+| `MARKETING_SMOKE_BASE_URL` | 2.4 | marketing deploy smoke | Production base URL (use `https://www.tracebud.com`) |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4 | marketing deploy smoke | Vercel Deployment Protection bypass for CI smoke |
 
 ---
 
@@ -39,6 +40,20 @@ TRACEBUD_BACKEND_URL=https://api.example.test/api
 NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder
 ```
+
+Marketing build in CI (slice 2.1):
+
+```bash
+NEXT_PUBLIC_SENTRY_ENABLED=0
+```
+
+Deploy Sentry environment tags (slice 2.1 — set in Vercel/Railway, not GitHub):
+
+| App | Explicit override | Auto fallback |
+|-----|-------------------|---------------|
+| dashboard | `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `VERCEL_ENV=preview` → `staging` |
+| marketing | `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `VERCEL_ENV=preview` → `staging` |
+| backend | `SENTRY_ENVIRONMENT` | `RAILWAY_ENVIRONMENT_NAME` → `staging` unless `production` |
 
 Marketing build: no secrets required for static build; forms need env only at runtime on Vercel.
 

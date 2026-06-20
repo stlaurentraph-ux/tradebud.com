@@ -97,6 +97,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 
 On **pull requests**, CI uses path filters (`dorny/paths-filter`) to skip unrelated jobs. **Push to `main` always runs the full matrix.** Branch-protected checks (marketing, field-auth) still report success when skipped (fast no-op) so PRs can merge.
 
+Post-deploy: `.github/workflows/marketing-deploy-smoke.yml` runs `npm run smoke:marketing:post-deploy` after successful **Production** Vercel deployments when `MARKETING_SMOKE_BASE_URL` is set in GitHub secrets.
+
 ## Pre-commit hooks
 
 After `npm ci` at the repo root, **husky** installs a pre-commit hook that runs **lint-staged** on staged files in workspace apps (`dashboard-product`, `marketing`, `field-auth`, `tracebud-backend`, root `scripts/`). Bypass only when necessary: `git commit --no-verify`.

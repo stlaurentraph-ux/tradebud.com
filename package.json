@@ -33,6 +33,8 @@
     "build:dashboard": "npm run build -w dashboard-product",
     "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run regression:routes:assert -w dashboard-product && npm run build:dashboard",
     "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run routes:publication:assert -w tracebud-marketing && npm run build:marketing && npm run api:trace:size:assert -w tracebud-marketing",
+    "sentry:env:assert": "node scripts/sentry-env-tags-guard.mjs",
+    "smoke:marketing:post-deploy": "npm run smoke:post-deploy -w tracebud-marketing",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",

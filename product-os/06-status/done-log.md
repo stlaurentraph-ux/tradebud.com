@@ -666,3 +666,4 @@ Track completed milestones/features/docs updates.
 - Supabase RLS remediation evidence automation delivered: backend now includes `db:evidence:rls-remediation` to generate timestamped JSON evidence bundles covering TB-V16-009 and TB-V16-030 verification snapshots.
 - Supabase RLS remediation orchestrator delivered: backend now includes `db:run:rls-remediation-pack` to run apply/verify/evidence steps in deterministic order with fail-fast behavior and step-level logging.
 - Supabase RLS remediation preflight gate delivered: backend now includes `db:preflight:rls-remediation-pack` and `db:run:rls-remediation-pack:safe` to validate env/files/DB connectivity before execution.
+- Guardrails slice 2.8 (synthetic uptime probes): manifest + runner + scheduled workflow for marketing `/en`, dashboard `/login`, backend `/api/health`; CI manifest guard via `npm run uptime:probes:manifest:assert`.
