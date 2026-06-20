@@ -910,11 +910,16 @@ jobs:
         run: npm run i18n:parity:assert -w tracebud-marketing
 
       - name: Marketing routes publication guard
+        if: env.CI_RUN == 'true'
         run: npm run routes:publication:assert -w tracebud-marketing
 
       - name: Build
         if: env.CI_RUN == 'true'
         run: npm run build -w tracebud-marketing
+
+      - name: Marketing API trace size guard
+        if: env.CI_RUN == 'true'
+        run: npm run api:trace:size:assert -w tracebud-marketing
 
   app:
     name: Expo app lint
