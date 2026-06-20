@@ -1,5 +1,8 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 2.1 Sentry env tags, `chore/automation-sentry-env-tags`)
+- **2.1 (in progress)** — Shared `scripts/sentry-env-tags-guard.mjs`; Vercel preview → `staging` resolver; Sentry wiring for marketing + backend; CI guard in dashboard/marketing/backend jobs.
+
 ### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
 - **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
 

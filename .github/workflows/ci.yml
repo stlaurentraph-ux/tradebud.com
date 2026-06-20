@@ -57,6 +57,8 @@ jobs:
               - '.github/workflows/ci.yml'
             backend:
               - 'tracebud-backend/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
               - 'supabase/**'
               - 'package.json'
               - 'package-lock.json'
@@ -64,6 +66,8 @@ jobs:
               - '.github/workflows/ci.yml'
             dashboard:
               - 'apps/dashboard-product/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
               - 'package.json'
               - 'package-lock.json'
               - 'packages/**'
@@ -76,6 +80,8 @@ jobs:
               - '.github/workflows/ci.yml'
             marketing:
               - 'apps/marketing/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
               - 'package.json'
               - 'package-lock.json'
               - 'packages/**'
@@ -703,6 +709,9 @@ jobs:
       - name: Lint
         run: npm run lint -w tracebud-backend
 
+      - name: Sentry environment tag guard
+        run: npm run sentry:env:assert
+
       - name: Build
         run: npm run build -w tracebud-backend
 
@@ -802,6 +811,9 @@ jobs:
       - name: Tests
         run: npm test -w dashboard-product
 
+      - name: Sentry environment tag guard
+        run: npm run sentry:env:assert
+
       - name: Dashboard API regression guard
         run: npm run regression:routes:assert -w dashboard-product
 
@@ -889,6 +901,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI_RUN: ${{ github.event_name != 'pull_request' || needs.changes.outputs.marketing == 'true' }}
+      NEXT_PUBLIC_SENTRY_ENABLED: "0"
     steps:
       - name: Report path-filter skip (PR)
         if: env.CI_RUN != 'true'
@@ -915,6 +928,10 @@ jobs:
       - name: Lint
         if: env.CI_RUN == 'true'
         run: npm run lint -w tracebud-marketing
+
+      - name: Sentry environment tag guard
+        if: env.CI_RUN == 'true'
+        run: npm run sentry:env:assert
 
       - name: Typecheck
         if: env.CI_RUN == 'true'

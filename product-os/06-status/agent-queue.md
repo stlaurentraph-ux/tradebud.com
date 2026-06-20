@@ -40,7 +40,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle C — Verify without manual staging
 
-- [ ] **2.1** Sentry env tags (marketing, dashboard, backend) — `chore/automation-sentry-env-tags`
+- [ ] **2.1** Sentry env tags (marketing, dashboard, backend) — `chore/automation-sentry-env-tags` (in progress)
 - [ ] **2.4** Marketing post-deploy smoke workflow — `chore/automation-marketing-deploy-smoke`
 - [ ] **2.8** Synthetic uptime checks — `chore/automation-uptime-probes`
 - [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — human+agent doc slice
@@ -100,6 +100,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 ## In progress
 
 - [ ] **1.D.2** Supabase migration mirror drift — branch: `chore/automation-migration-mirror-drift`
+- [ ] **2.1** Sentry env tags — branch: `chore/automation-sentry-env-tags`
 - [ ] **1.O.1** Offline automation Phase 1 — branch: `chore/automation-offline-phase1`
 
 ---
