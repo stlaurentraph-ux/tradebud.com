@@ -1,5 +1,32 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (offline: Metro structural isolation — device debug unblocked)
+- **Root cause** — npm workspaces hoisted a second React Native stack (`0.85` + `webidl-conversions`) into Metro while the field app native build is Expo SDK 54 / RN `0.81.5`.
+- **Structure** — Removed RN/Expo deps from root `package.json`; excluded `apps/offline-product` from npm workspaces; field app owns `apps/offline-product/package-lock.json` + `npm install` in that directory.
+- **Metro** — `metro.config.js` resolves **app-only** `node_modules`; rewrites workspaces bundle paths for device debug builds; `validate-metro-start` fails if root `react-native` returns.
+- **Deps** — `expo-module-scripts` pinned to `~4.1.10` (SDK 54); added `expo-asset`.
+- **Verified** — Physical iPhone debug build loads from `dev:metro:production` (no SharedArrayBuffer / VirtualView codegen red screens).
+
+- **Lane 1 slice 0.0.1** — Wired exhaustive plan into Cursor: `automation-safety.mdc`, `pick-automation-slice` command, expanded `agent-operations.mdc` (four loops, bundles, per-app verify), updated `implement-automation-slice`, `start-agent-task`, `session-close`, `AGENTS.md`, `product-os/README.md`, lane-based PR template, `ci-secrets-and-fixtures.md` stub, CODEOWNERS for automation paths.
+- **Next** — Bundle A implementation: **0.M.0** marketing lint on `chore/automation-marketing-lint-fix`.
+
+### 2026-06-20 (automation ops — exhaustive plan rewrite)
+- **Plan** — Rewrote `automation-ops-plan.md`: four loops (build/deploy/verify/ops), four planes, Phases 0–5 with slice IDs (0.M.* marketing, 1.D.* data, 2.O.* n8n ops, 4.* E2E/contracts), per-app CI target state, secrets matrix, risk register, Bundles A→E implementation order.
+- **Queue** — Expanded `agent-queue.md` with Bundle A–E Ready items, parked later phases, blocked secrets/human gates.
+- **Next** — Execute Bundle A: **0.M.0** marketing lint fix, then **0.M.1–0.M.3** + dashboard Phase 0.1–0.5; human **0.H** branch protection after CI green on `main`.
+
+### 2026-06-20 (offline automation Phase 1.O.1 — Cursor + CI integration)
+- **Lane 1 slice 1.O.1** — Offline guard scripts (`mobile-api-openapi-parity`, `ota-native-fingerprint-gate`, `analytics-slice-guard`) with baselines; report mode in CI (strict deferred to 1.O.2).
+- **CI** — `app` job: `security:preflight` + `qa:automation:phase1`.
+- **Cursor** — `AGENTS.md`, `offline-automation.mdc`, `start-agent-task`; runbook `offline-automation-runbook.md`; PR template; CODEOWNERS offline paths; integrated with ADR-007 / `agent-queue.md`.
+- **Next** — Merge `chore/automation-offline-phase1`; after green on `main`, slice **1.O.2** strict guards; human enables branch protection.
+
+### 2026-06-20 (automation ops — Cursor integration)
+- **Decision** — ADR-007: three-lane agent ops (guardrails / maintenance / features).
+- **Cursor** — `agent-operations.mdc`, commands `implement-automation-slice`, `fix-regression`; updated `build-feature`, `session-close`, `branch-discipline`.
+- **Product OS** — `automation-ops-plan.md`, `agent-queue.md` (Phase 0 ready); `product-os/README.md` working loop extended.
+- **Next** — Phase 0.1 dashboard `typecheck` + CI on branch `chore/automation-dashboard-typecheck`.
+
 ### 2026-06-20 (repo: post-workspaces hygiene)
 - **Vercel** — `apps/dashboard-product/vercel.json` + new `apps/marketing/vercel.json` use `cd ../.. && npm ci`; added `docs/vercel-monorepo.md` checklist.
 - **Docs** — `docs/repo-branches.md` and branch discipline rule updated for workspaces-on-`main` (root install only).

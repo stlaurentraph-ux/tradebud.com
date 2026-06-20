@@ -3,19 +3,29 @@ const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
+const appNodeModules = path.resolve(projectRoot, 'node_modules');
+
+/** npm workspaces lockfile paths baked into older debug builds on device. */
+const WORKSPACE_MODULE_PREFIX = /^\.\/?apps\/offline-product\/node_modules\//;
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getSentryExpoConfig(projectRoot);
 
-// Root package.json pins react-native ^0.85; offline-product uses Expo SDK 54 (0.81.x).
-// Prefer this app's node_modules so Metro matches the native debug build on device.
+// Field app is self-contained (Expo SDK 54 / RN 0.81). Never resolve JS from root node_modules —
+// root is Next.js and must not hoist a second react-native stack into Metro.
 config.watchFolders = [monorepoRoot];
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(monorepoRoot, 'node_modules'),
-];
-config.resolver.extraNodeModules = {
-  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
+config.resolver.nodeModulesPaths = [appNodeModules];
+
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  let resolvedName = moduleName;
+  if (WORKSPACE_MODULE_PREFIX.test(resolvedName)) {
+    resolvedName = resolvedName.replace(WORKSPACE_MODULE_PREFIX, '');
+  }
+  if (defaultResolveRequest) {
+    return defaultResolveRequest(context, resolvedName, platform);
+  }
+  return context.resolveRequest(context, resolvedName, platform);
 };
 
 module.exports = config;

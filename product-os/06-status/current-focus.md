@@ -1,7 +1,17 @@
 # Current Focus
 
+## In-flight (parallel work — claim before editing)
+
+| ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
+|----|--------|-------|-------|-------------|--------|------------|
+| IF-001 | `chore/automation-offline-phase1` | cursor | Lane 1 slice **1.O.1** — guard scripts, CI, Cursor integration | `offline-automation-runbook.md` | in_progress | — |
+
+Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
+
 ## Work now
 
+- **Automation ops rollout (2026-06-20)** — Plan + Cursor workflow integrated (0.0.1 done). **Next (Bundle A):** run `pick-automation-slice` → **0.M.0** marketing lint on `chore/automation-marketing-lint-fix`. Parallel feature agents OK on other apps.
+- **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.
 - **Supabase ops browse (2026-06-20)** — Pin **`plot_ops_summary`** (not raw `plot`) as the team default in Supabase Table Editor. `plot.status` / `deforestation_screening_label` = GFW only; use `land_tenure_label` + `eudr_dossier_ready_hint` for dossier sorting (CRM plot detail remains authoritative).
