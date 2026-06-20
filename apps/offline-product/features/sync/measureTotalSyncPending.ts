@@ -9,6 +9,7 @@ import { createTranslator } from '@/features/i18n/translate';
 import { defaultLocale } from '@/features/i18n/config';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { invalidateServerPlotFetchCache } from '@/features/sync/serverPlotFetchCache';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
 import {
   classifyLocalPlotSyncPending,
@@ -53,13 +54,32 @@ export async function measureTotalSyncPending(params: {
     if (params.forcePlotFetch) {
       invalidateServerPlotFetchCache();
     }
+
+    const profileFarmerId = params.farmerId.trim();
+    let apiFarmerId = profileFarmerId;
+    let ownedFarmerIds = params.ownedFarmerIds ?? [];
+    if (ownedFarmerIds.length === 0) {
+      try {
+        const scope = await prepareFieldSyncContext({
+          profileFarmerId,
+          localPlots: params.plots,
+        });
+        apiFarmerId = scope.farmerId;
+        ownedFarmerIds = scope.ownedFarmerIds;
+      } catch {
+        ownedFarmerIds = [profileFarmerId];
+      }
+    } else {
+      apiFarmerId = profileFarmerId;
+    }
+
     let plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
     try {
       const backend = await fetchServerPlotListForUi({
-        profileFarmerId: params.farmerId,
+        profileFarmerId,
         localPlots: params.plots,
-        ownedFarmerIds: params.ownedFarmerIds,
-        resolvedFarmerId: params.farmerId,
+        ownedFarmerIds,
+        resolvedFarmerId: apiFarmerId,
         force: params.forcePlotFetch === true,
       });
       const reconciled = reconcilePlotServerLinks(params.plots, backend ?? [], plotServerLinks);

@@ -57,9 +57,11 @@
     "db:verify:harvest-transaction-created-by": "node scripts/apply-harvest-transaction-created-by-migration.mjs --verify-only",
     "railway:preflight:local": "node scripts/railway-local-preflight.mjs",
     "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs",
-    "billing:finalize-period-cron": "node scripts/billing-finalize-period-cron.mjs"
+    "billing:finalize-period-cron": "node scripts/billing-finalize-period-cron.mjs",
+    "sentry:env:assert": "node ../scripts/sentry-env-tags-guard.mjs"
   },
   "dependencies": {
+    "@sentry/nestjs": "^10.57.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.0",
@@ -74,6 +76,7 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.2",
     "rxjs": "^7.8.1",
+    "ws": "^8.18.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -85,6 +88,7 @@
     "@types/node": "^20.17.10",
     "@types/pg": "^8.18.0",
     "@types/supertest": "^7.2.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.58.2",
     "@typescript-eslint/parser": "^8.58.2",
     "drizzle-kit": "^0.30.0",

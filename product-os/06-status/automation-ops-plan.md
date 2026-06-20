@@ -138,7 +138,7 @@ End-state commands (implement via Phase 0–1 slices):
 
 | Gap | Risk | Phase |
 |-----|------|-------|
-| `ignoreBuildErrors: true` in marketing `next.config.mjs` | TS errors ship | 0.M.1 |
+| `ignoreBuildErrors: true` in marketing `next.config.mjs` | TS errors ship | **resolved 0.M.1** |
 | No marketing tests | Runtime/form regressions | 2.M / 4.M |
 | Two migration tracks without CI drift check | Schema prod/staging split | 1.D |
 | No branch protection on required checks | Broken merge to `main` | 0.H |
@@ -166,11 +166,11 @@ End-state commands (implement via Phase 0–1 slices):
 | 0.4 | Root `check:dashboard` script | root | done |
 | 0.5 | `README.md` CI section update | docs | done |
 | **0.M.0** | Fix marketing lint errors (analytics CTA, floating CTA, insights unused var) | marketing | **done** |
-| **0.M.1** | Marketing `typecheck` + CI; plan to remove `ignoreBuildErrors` | marketing | ready |
-| **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | ready |
-| **0.M.3** | Root `check:marketing` script | root | ready |
-| **0.H** | GitHub branch protection: required CI jobs per app | human | blocked until 0.1–0.3, 0.M.0–0.M.3 green on `main` |
-| **0.H.2** | Vercel Deployment Protection ↔ GitHub required checks | human | after 0.H |
+| **0.M.1** | Marketing `typecheck` + CI; removed `ignoreBuildErrors` | marketing | **done** |
+| **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | **done** |
+| **0.M.3** | Root `check:marketing` script | root | **done** |
+| **0.H** | GitHub branch protection: required CI jobs per app | human | **partial** — field-auth + marketing (2026-06-20) |
+| **0.H.2** | Vercel Deployment Protection ↔ GitHub required checks | human | **done** 2026-06-20 |
 | **0.H.3** | GitHub rule: `main` accepts PRs only (block direct v0 push) | human | after 0.H |
 
 **Dashboard CI build placeholder env (agents must use locally):**
@@ -191,9 +191,9 @@ npm run build -w dashboard-product
 
 | ID | Task | Notes |
 |----|------|-------|
-| 1.1 | husky + lint-staged (affected workspace lint on staged files) | Agent first-pass green |
+| 1.1 | husky + lint-staged (affected workspace lint on staged files) | root | **done** (PR pending) |
 | 1.2 | Turbo remote cache in GitHub Actions (`TURBO_TOKEN`, `TURBO_TEAM`) | Parallel agent speed |
-| 1.3 | Path filters: skip unrelated jobs on PRs; full run on `push` to `main` | Per ADR-007 |
+| 1.3 | Path filters: skip unrelated jobs on PRs; full run on `push` to `main` | CI | **done** (PR pending) |
 | 1.4 | `turbo run --filter=...[origin/main]` affected detection | Monorepo scale |
 | 1.5 | `dashboard-regression-guard.mjs` (changed routes vs OpenAPI/proxy list) | Dashboard drift |
 | **1.M.1** | Marketing route/publication guard (site map vs `marketing-publication.ts`) | Stealth leak prevention |
@@ -209,7 +209,7 @@ npm run build -w dashboard-product
 
 | ID | Task | Status |
 |----|------|--------|
-| 1.O.1 | Offline Phase 1 integration (guards, CI report mode, docs) | in progress |
+| 1.O.1 | Offline Phase 1 integration (guards, CI report mode, docs) | ready_for_merge (PR #122) |
 | 1.O.2 | Enable `--strict` on offline guards in CI | after 1.O.1 on `main` |
 | 1.O.3 | Maestro macOS workflow prep | Phase 3.O |
 
@@ -251,7 +251,7 @@ npm run build -w dashboard-product
 | 3.1 | Cursor Automation: CI failed on open PR → `fix-regression` agent | Cursor |
 | 3.2 | Cursor Automation: new Sentry issue (staging) → triage → `fix/*` PR | Cursor + Sentry MCP |
 | 3.3 | Cursor Automation: weekly health cron → smoke summary → `daily-log.md` | Cursor |
-| 3.4 | Dependabot (`/.github/dependabot.yml`) npm + GitHub Actions | GitHub |
+| 3.4 | Dependabot (`/.github/dependabot.yml`) npm + GitHub Actions | GitHub | **done** (PR pending) |
 | 3.5 | Cursor Automation: Dependabot PR → run affected `check:*`, fix breakages | Cursor |
 | 3.6 | Auto PR labels: `lane:*`, `app:*`, `risk:spatial` via `labeler.yml` | GitHub |
 | 3.7 | CODEOWNERS required review on sensitive paths (enforce in branch protection) | GitHub |

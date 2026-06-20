@@ -1,0 +1,40 @@
+# Dependabot — slice 3.4 (Bundle B). Root lockfile covers npm workspaces;
+# offline-product maintains its own lockfile outside workspaces.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      npm-production:
+        dependency-type: production
+      npm-development:
+        dependency-type: development
+    ignore:
+      # Expo/RN: upgrade only via intentional offline release slices.
+      - dependency-name: expo
+      - dependency-name: react-native
+
+  - package-ecosystem: npm
+    directory: /apps/offline-product
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - app:offline
+      - lane:maintenance
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - '*'

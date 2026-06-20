@@ -75,4 +75,27 @@ describe('tenure-parse.evaluator', () => {
     );
     expect(result.parse_status).toBe('FAILED');
   });
+
+  it('fails when document country does not match plot country', () => {
+    const result = evaluateTenureParseResult(
+      baseResult({
+        jurisdiction_cross_check: {
+          plot_country_iso: 'NO',
+          document_country_iso: 'IN',
+          document_country_match: false,
+          issuer_text: null,
+          issuer_inferred_country_iso: null,
+          issuer_jurisdiction_match: null,
+          document_admin_regions: [],
+          plot_admin_regions: [],
+          admin_region_match: null,
+          issues: ['document_country_mismatch'],
+          exporter_hints: [],
+          requires_manual_review: false,
+          auto_fail: true,
+        },
+      }),
+    );
+    expect(result.parse_status).toBe('FAILED');
+  });
 });

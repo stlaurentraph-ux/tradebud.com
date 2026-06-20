@@ -148,6 +148,33 @@ export function mapSyncActionErrorMessage(
     );
   }
   if (!trimmed || isTechnicalApiMessage(trimmed)) {
+    const actionType = _ctx?.actionType;
+    if (actionType === 'photos_sync') {
+      return t(
+        surface === 'settings' ? 'sync_photos_upload_failed_settings' : 'sync_photos_upload_failed',
+      );
+    }
+    if (actionType === 'evidence_sync') {
+      return t(
+        surface === 'settings'
+          ? 'sync_evidence_upload_failed_settings'
+          : 'sync_evidence_upload_failed',
+      );
+    }
+    if (actionType === 'harvest') {
+      return t(
+        surface === 'settings'
+          ? 'sync_harvest_upload_failed_settings'
+          : 'sync_harvest_upload_failed',
+      );
+    }
+    if (actionType === 'audit_sync') {
+      return t(
+        surface === 'settings'
+          ? 'sync_declaration_upload_failed_settings'
+          : 'sync_declaration_upload_failed',
+      );
+    }
     return t(
       surface === 'settings' ? 'settings_sync_online_server_busy' : surfaceKey('sync_action_failed_generic', surface),
     );

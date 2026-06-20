@@ -92,8 +92,23 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 - `tracebud-backend` — lint, build, unit + PostGIS integration tests
 - `apps/dashboard-product` — lint, typecheck, vitest, build
 - `apps/field-auth` — lint, typecheck, vitest, build
-- `apps/marketing` — lint + build
+- `apps/marketing` — lint, typecheck, i18n parity, build (`npm run check:marketing`)
 - `apps/offline-product` — lint, typecheck, vitest, i18n/QA guards
+
+On **pull requests**, CI uses path filters (`dorny/paths-filter`) to skip unrelated jobs. **Push to `main` always runs the full matrix.** Branch-protected checks (marketing, field-auth) still report success when skipped (fast no-op) so PRs can merge.
+
+Post-deploy and scheduled probes (see `product-os/04-quality/ci-secrets-and-fixtures.md` for secrets):
+
+- `.github/workflows/marketing-deploy-smoke.yml` — runs after successful **Production** marketing deploy when `MARKETING_SMOKE_BASE_URL` is set
+- `.github/workflows/uptime-probes.yml` — synthetic uptime every 30 minutes (`npm run uptime:probes:run`); manifest validated in CI via `npm run uptime:probes:manifest:assert`
+
+## Pre-commit hooks
+
+After `npm ci` at the repo root, **husky** installs a pre-commit hook that runs **lint-staged** on staged files in workspace apps (`dashboard-product`, `marketing`, `field-auth`, `tracebud-backend`, root `scripts/`). Bypass only when necessary: `git commit --no-verify`.
+
+```bash
+npm run lint:staged   # manual run (same as the hook)
+```
 
 ## Vercel deploys (workspaces)
 

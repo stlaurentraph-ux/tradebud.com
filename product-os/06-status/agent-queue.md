@@ -14,9 +14,6 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle A — Stop silent broken deploys (do first)
 
-- [ ] **0.M.1** Marketing `typecheck` + CI; document path to remove `ignoreBuildErrors` — `chore/automation-marketing-typecheck`
-- [ ] **0.M.2** Marketing i18n parity guard (`marketing.*`, `header.*`) — `chore/automation-marketing-i18n-parity`
-- [ ] **0.M.3** Root `check:marketing` script — can ship with 0.M.1–0.M.2
 - [x] **0.1** Dashboard `typecheck` script + CI — `chore/automation-phase-0` (typecheck on `main` Phase 3; verified here)
 - [x] **0.2** Dashboard `build` in CI (placeholder env) — `chore/automation-phase-0`
 - [x] **0.3** `field-auth` CI job — `chore/automation-phase-0`
@@ -25,28 +22,28 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 **Human gate (not an agent PR):**
 
-- [ ] **0.H** GitHub branch protection — required checks after 0.1–0.3 + 0.M.0–0.M.3 green on `main`
-- [ ] **0.H.2** Vercel Deployment Protection ↔ GitHub checks
+- [x] **0.H** GitHub branch protection — field-auth + marketing required on `main` (2026-06-20)
+- [x] **0.H.2** Vercel Deployment Protection — preview SSO + automation bypass (2026-06-20)
 - [ ] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push)
 
 ### Bundle B — Agent speed & hygiene
 
-- [ ] **1.1** husky + lint-staged — `chore/automation-pre-commit-hooks`
+- [x] **1.1** husky + lint-staged — PR #128
 - [ ] **1.2** Turbo remote cache in CI — `chore/automation-turbo-remote-cache`
-- [ ] **1.3** CI path filters (PR only) — `chore/automation-ci-path-filters`
-- [ ] **1.M.1** Marketing route/publication guard — `chore/automation-marketing-routes-guard`
-- [ ] **1.M.2** Marketing API trace size ceiling — `chore/automation-marketing-api-bundle-guard`
-- [ ] **1.5** Dashboard regression guard — `chore/automation-dashboard-regression-guard`
-- [ ] **1.D.1** Supabase migration naming/order CI — `chore/automation-supabase-migration-ci`
-- [ ] **1.D.2** Backend ↔ Supabase migration mirror drift check — `chore/automation-migration-mirror-drift`
-- [ ] **3.4** Dependabot config — `chore/automation-dependabot`
+- [x] **1.3** CI path filters (PR only) — PR #129
+- [x] **1.M.1** Marketing route/publication guard — PR #130
+- [x] **1.M.2** Marketing API trace size ceiling — PR #132
+- [x] **1.5** Dashboard regression guard — PR #140
+- [x] **1.D.1** Supabase migration naming/order CI — PR #142
+- [x] **1.D.2** Backend ↔ Supabase migration mirror drift check — PR #144
+- [x] **3.4** Dependabot config — PR #131
 
 ### Bundle C — Verify without manual staging
 
-- [ ] **2.1** Sentry env tags (marketing, dashboard, backend) — `chore/automation-sentry-env-tags`
-- [ ] **2.4** Marketing post-deploy smoke workflow — `chore/automation-marketing-deploy-smoke`
-- [ ] **2.8** Synthetic uptime checks — `chore/automation-uptime-probes`
-- [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — human+agent doc slice
+- [x] **2.1** Sentry env tags (marketing, dashboard, backend) — PR #145
+- [x] **2.4** Marketing post-deploy smoke workflow — PR #147
+- [x] **2.8** Synthetic uptime checks — PR #150
+- [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — `chore/automation-n8n-workflow-b` (in progress)
 - [ ] **2.O.2** n8n workflow-f missed schedule alert — human+agent doc slice
 
 ### Bundle D — Closed loops
@@ -102,7 +99,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] *(none — claim next Ready slice from agent-queue.md)*
+- [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
 
 ---
 
@@ -118,7 +115,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
 - [ ] **4.4–4.7** Playwright + release health — needs golden staging tenant (2.7) + `ci-secrets-and-fixtures.md`
 - [ ] **1.2** Turbo remote cache — needs `TURBO_TOKEN` / `TURBO_TEAM` in GitHub
-- [ ] **0.H** Branch protection — human; after Bundle A CI green on `main`
+- [ ] **0.H.3** Branch protection PR-only — human
 
 ---
 
@@ -128,7 +125,17 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — Exhaustive automation-ops-plan rewrite (four loops, Phases 0–5, bundles)
 - [x] 2026-06-20 — **0.1–0.5** Dashboard + field-auth Phase 0 CI — `chore/automation-phase-0`
 - [x] 2026-06-20 — **0.0.1** Cursor workflow integration — `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `AGENTS.md` monorepo, `ci-secrets-and-fixtures.md` stub, CODEOWNERS automation paths
-- [x] 2026-06-20 — **0.M.0** Marketing lint fix — branch `chore/automation-bundle-a`
+- [x] 2026-06-20 — **1.1** husky + lint-staged — PR #128
+- [x] 2026-06-20 — **1.3** CI path filters — PR #129
+- [x] 2026-06-20 — **2.1** Sentry environment tags — PR #145
+- [x] 2026-06-20 — **1.D.2** Supabase migration mirror drift guard — PR #144
+- [x] 2026-06-20 — **1.5** Dashboard API proxy regression guard — PR #140
+- [x] 2026-06-20 — **1.M.2** Marketing API trace size guard — PR #132
+- [x] 2026-06-20 — **3.4** Dependabot config — PR #131
+- [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
+- [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
+- [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-20 — **0.M.0–0.M.3 + 0.H + 0.H.2** — PR #124 merge; Vercel preview protection
 
 ---
 

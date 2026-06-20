@@ -20,6 +20,15 @@ const baseSnapshot = {
 };
 
 describe('backupAttentionSummary', () => {
+  it('shows the panel when queue items are waiting', () => {
+    expect(
+      shouldShowBackupAttentionPanel({
+        ...baseSnapshot,
+        queuePendingCount: 2,
+      }),
+    ).toBe(true);
+  });
+
   it('shows the panel when queue items failed', () => {
     expect(
       shouldShowBackupAttentionPanel({
@@ -58,7 +67,7 @@ describe('backupAttentionSummary', () => {
         queueLastError: 'Internal Server Error',
         plotsFetchFailed: true,
       }),
-    ).toBe('connectivity');
+    ).toBe('queue_error');
   });
 
   it('uses a single friendly primary line for queue errors', () => {

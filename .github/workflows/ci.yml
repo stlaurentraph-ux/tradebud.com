@@ -10,8 +10,98 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  changes:
+    name: Detect changed paths (PR)
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      workspace_root: ${{ steps.filter.outputs.workspace_root }}
+      backend: ${{ steps.filter.outputs.backend }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      field_auth: ${{ steps.filter.outputs.field_auth }}
+      marketing: ${{ steps.filter.outputs.marketing }}
+      offline: ${{ steps.filter.outputs.offline }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Paths filter
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts:
+              - 'docs/openapi/**'
+              - 'scripts/openapi-refresh-lint-baseline.mjs'
+              - 'scripts/openapi-governance/**'
+              - 'scripts/supabase-migration-naming-guard.mjs'
+              - 'scripts/supabase-migration-mirror-drift-guard.mjs'
+              - 'scripts/uptime-probes-manifest.json'
+              - 'scripts/uptime-probes-manifest-guard.mjs'
+              - 'scripts/uptime-probes-run.mjs'
+              - 'scripts/n8n-workflow-b-guard.mjs'
+              - 'automation/n8n/founder-os/**'
+              - 'supabase/migrations/**'
+              - 'supabase/migration-mirror-map.json'
+              - 'supabase/README.md'
+              - 'tracebud-backend/sql/**'
+              - '.redocly.yaml'
+              - 'product-os/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            workspace_root:
+              - 'app/**'
+              - 'eslint.config.mjs'
+              - 'next.config.mjs'
+              - 'tsconfig.json'
+              - 'next-env.d.ts'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            backend:
+              - 'tracebud-backend/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
+              - 'supabase/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'packages/**'
+              - '.github/workflows/ci.yml'
+            dashboard:
+              - 'apps/dashboard-product/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'packages/**'
+              - '.github/workflows/ci.yml'
+            field_auth:
+              - 'apps/field-auth/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'packages/**'
+              - '.github/workflows/ci.yml'
+            marketing:
+              - 'apps/marketing/**'
+              - 'scripts/sentry-env-tags-guard.mjs'
+              - 'scripts/lib/sentry-environment.mjs'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'packages/**'
+              - '.github/workflows/ci.yml'
+            offline:
+              - 'apps/offline-product/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+
   contracts:
     name: Contracts (OpenAPI lint)
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.contracts == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,6 +116,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Supabase migration naming guard
+        run: npm run supabase:migration:naming:assert
+
+      - name: Supabase migration mirror drift guard
+        run: npm run supabase:migration:mirror:assert
+
+      - name: Uptime probes manifest guard
+        run: npm run uptime:probes:manifest:assert
+
+      - name: n8n workflow-b guard
+        run: npm run n8n:workflow-b:assert
 
       - name: Validate OpenAPI governance README commands
         run: |
@@ -574,27 +676,14 @@ jobs:
   # Root `app/` uses repo-level eslint.config.mjs; keep separate from package-scoped jobs.
   workspace-root:
     name: Workspace root Next app lint
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.workspace_root == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Paths filter
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            root_next:
-              - 'app/**'
-              - 'eslint.config.mjs'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'next.config.mjs'
-              - 'tsconfig.json'
-              - 'next-env.d.ts'
-
       - name: Use Node 20
-        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -602,15 +691,15 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
         run: npm ci
 
       - name: Lint
-        if: github.event_name != 'pull_request' || steps.filter.outputs.root_next == 'true'
         run: npm run lint
 
   backend:
     name: Backend build, lint, and tests
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
       TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
@@ -631,6 +720,9 @@ jobs:
 
       - name: Lint
         run: npm run lint -w tracebud-backend
+
+      - name: Sentry environment tag guard
+        run: npm run sentry:env:assert
 
       - name: Build
         run: npm run build -w tracebud-backend
@@ -700,6 +792,8 @@ jobs:
 
   dashboard-product:
     name: Dashboard product lint, typecheck, tests, and build
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.dashboard == 'true'
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
@@ -729,19 +823,64 @@ jobs:
       - name: Tests
         run: npm test -w dashboard-product
 
+      - name: Sentry environment tag guard
+        run: npm run sentry:env:assert
+
+      - name: Dashboard API regression guard
+        run: npm run regression:routes:assert -w dashboard-product
+
       - name: Build
         run: npm run build -w dashboard-product
 
+  founder-os:
+    name: Founder OS lint, typecheck, and build
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint -w founder-os
+
+      - name: Typecheck
+        run: npm run typecheck -w founder-os
+
+      - name: Build
+        run: npm run build -w founder-os
+
   field-auth:
     name: Field auth lint, typecheck, tests, and build
+    needs: changes
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
+      CI_RUN: ${{ github.event_name != 'pull_request' || needs.changes.outputs.field_auth == 'true' }}
     steps:
+      - name: Report path-filter skip (PR)
+        if: env.CI_RUN != 'true'
+        run: |
+          echo "Skipping field-auth CI — no matching paths in this PR."
+          echo "Watched: apps/field-auth/**, packages/**, package.json, package-lock.json, .github/workflows/ci.yml"
+
       - name: Checkout
+        if: env.CI_RUN == 'true'
         uses: actions/checkout@v5
 
       - name: Use Node 20
+        if: env.CI_RUN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -749,28 +888,45 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: env.CI_RUN == 'true'
         run: npm ci
 
       - name: Lint
+        if: env.CI_RUN == 'true'
         run: npm run lint -w field-auth
 
       - name: Typecheck
+        if: env.CI_RUN == 'true'
         run: npm run typecheck -w field-auth
 
       - name: Tests
+        if: env.CI_RUN == 'true'
         run: npm test -w field-auth
 
       - name: Build
+        if: env.CI_RUN == 'true'
         run: npm run build -w field-auth
 
   marketing:
-    name: Marketing site lint and build
+    name: Marketing site lint, typecheck, i18n, and build
+    needs: changes
     runs-on: ubuntu-latest
+    env:
+      CI_RUN: ${{ github.event_name != 'pull_request' || needs.changes.outputs.marketing == 'true' }}
+      NEXT_PUBLIC_SENTRY_ENABLED: "0"
     steps:
+      - name: Report path-filter skip (PR)
+        if: env.CI_RUN != 'true'
+        run: |
+          echo "Skipping marketing CI — no matching paths in this PR."
+          echo "Watched: apps/marketing/**, packages/**, package.json, package-lock.json, .github/workflows/ci.yml"
+
       - name: Checkout
+        if: env.CI_RUN == 'true'
         uses: actions/checkout@v5
 
       - name: Use Node 20
+        if: env.CI_RUN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -778,19 +934,41 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        if: env.CI_RUN == 'true'
         run: npm ci
 
       - name: Lint
+        if: env.CI_RUN == 'true'
         run: npm run lint -w tracebud-marketing
 
+      - name: Sentry environment tag guard
+        if: env.CI_RUN == 'true'
+        run: npm run sentry:env:assert
+
       - name: Typecheck
+        if: env.CI_RUN == 'true'
         run: npm run typecheck -w tracebud-marketing
 
+      - name: Marketing i18n parity
+        if: env.CI_RUN == 'true'
+        run: npm run i18n:parity:assert -w tracebud-marketing
+
+      - name: Marketing routes publication guard
+        if: env.CI_RUN == 'true'
+        run: npm run routes:publication:assert -w tracebud-marketing
+
       - name: Build
+        if: env.CI_RUN == 'true'
         run: npm run build -w tracebud-marketing
+
+      - name: Marketing API trace size guard
+        if: env.CI_RUN == 'true'
+        run: npm run api:trace:size:assert -w tracebud-marketing
 
   app:
     name: Expo app lint
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.offline == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

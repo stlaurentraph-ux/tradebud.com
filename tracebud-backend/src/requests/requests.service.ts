@@ -5,7 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
@@ -1445,7 +1445,7 @@ export class RequestsService {
     }
 
     const bucket = process.env.EVIDENCE_STORAGE_BUCKET?.trim() || 'plot-evidence';
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const supabase = createSupabaseServerClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 

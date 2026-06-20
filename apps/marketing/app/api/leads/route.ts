@@ -209,19 +209,17 @@ export async function POST(request: Request) {
 
     const formLabel = FORM_LABELS[parsed.data.formType] ?? "website form";
 
-    if (parsed.data.formType !== "pilot") {
-      await syncLeadToProspects({
-        formType: parsed.data.formType,
-        name: parsed.data.name,
-        email: parsed.data.email,
-        company: parsed.data.company,
-        country: parsed.data.country,
-        sourcePage: parsed.data.sourcePage,
-        payload,
-      }).catch((syncError: unknown) => {
-        console.error("[leads] prospect sync failed:", syncError);
-      });
-    }
+    await syncLeadToProspects({
+      formType: parsed.data.formType,
+      name: parsed.data.name,
+      email: parsed.data.email,
+      company: parsed.data.company,
+      country: parsed.data.country,
+      sourcePage: parsed.data.sourcePage,
+      payload,
+    }).catch((syncError: unknown) => {
+      console.error("[leads] prospect sync failed:", syncError);
+    });
 
     await sendTeamFormNotification({
       subject: `[Tracebud] ${formLabel} — ${parsed.data.company ?? parsed.data.name}`,

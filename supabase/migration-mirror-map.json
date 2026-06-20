@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-20T00:00:00.000Z",
+  "pairs": [
+    {
+      "supabase": "202606120001_consent_grants.sql",
+      "backend": "tb_v16_033_consent_grants.sql",
+      "purpose": "consent_grants"
+    },
+    {
+      "supabase": "202606120002_plot_tenure_verification.sql",
+      "backend": "tb_v16_034_plot_tenure_verification.sql",
+      "purpose": "plot_tenure_verification"
+    },
+    {
+      "supabase": "202606130001_crm_farmer_profile_link.sql",
+      "backend": "tb_v16_040_crm_contacts_farmer_profile.sql",
+      "purpose": "crm_farmer_profile_link"
+    },
+    {
+      "supabase": "202606130002_consent_grants_rls.sql",
+      "backend": "tb_v16_041_consent_grants_rls.sql",
+      "purpose": "consent_grants_rls"
+    },
+    {
+      "supabase": "202606130003_farmer_push_devices.sql",
+      "backend": "tb_v16_042_farmer_push_devices.sql",
+      "purpose": "farmer_push_devices"
+    },
+    {
+      "supabase": "202606140001_evidence_documents_phase2.sql",
+      "backend": "tb_v16_043_evidence_documents_phase2.sql",
+      "purpose": "evidence_documents_phase2"
+    },
+    {
+      "supabase": "202606170001_voucher_delivery_routing.sql",
+      "backend": "tb_v16_044_voucher_delivery_routing.sql",
+      "purpose": "voucher_delivery_routing"
+    },
+    {
+      "supabase": "202606170002_processing_facility_subtypes.sql",
+      "backend": "tb_v16_047_processing_facility_subtypes.sql",
+      "purpose": "processing_facility_subtypes"
+    },
+    {
+      "supabase": "202606200001_plot_client_plot_id.sql",
+      "backend": "tb_v16_047_plot_client_plot_id.sql",
+      "purpose": "plot_client_plot_id"
+    },
+    {
+      "supabase": "202606200002_plot_status_column_documentation.sql",
+      "backend": "tb_v16_048_plot_status_column_documentation.sql",
+      "purpose": "plot_status_column_documentation"
+    },
+    {
+      "supabase": "202606200003_plot_farmer_display_name.sql",
+      "backend": "tb_v16_049_plot_farmer_display_name.sql",
+      "purpose": "plot_farmer_display_name"
+    },
+    {
+      "supabase": "202606200004_plot_duplicate_prevention.sql",
+      "backend": "tb_v16_050_plot_duplicate_prevention.sql",
+      "purpose": "plot_duplicate_prevention"
+    },
+    {
+      "supabase": "202606200004_plot_status_rename_compliant_to_deforestation_clear.sql",
+      "backend": "tb_v16_049z_plot_status_rename_compliant_to_deforestation_clear.sql",
+      "purpose": "plot_status_rename_compliant_to_deforestation_clear"
+    },
+    {
+      "supabase": "202606200005_plot_ops_summary_view.sql",
+      "backend": "tb_v16_051_plot_ops_summary_view.sql",
+      "purpose": "plot_ops_summary_view"
+    },
+    {
+      "supabase": "20260620110000_phase0_pending_tables.sql",
+      "backend": "tb_v16_052_phase0_pending_tables.sql",
+      "purpose": "phase0_pending_tables"
+    },
+    {
+      "supabase": "20260620110001_phase0_rls_hardening.sql",
+      "backend": "tb_v16_053_phase0_rls_hardening.sql",
+      "purpose": "phase0_rls_hardening"
+    },
+    {
+      "supabase": "20260620120000_phase1_schema_split.sql",
+      "backend": "tb_v16_054_phase1_schema_split.sql",
+      "purpose": "phase1_schema_split"
+    },
+    {
+      "supabase": "20260620120001_phase1_plot_ops_summary_internal_audit.sql",
+      "backend": "tb_v16_055_phase1_plot_ops_summary_internal_audit.sql",
+      "purpose": "phase1_plot_ops_summary_internal_audit"
+    },
+    {
+      "supabase": "20260620130000_phase2_table_comments_and_advisor_fixes.sql",
+      "backend": "tb_v16_056_phase2_table_comments.sql",
+      "purpose": "phase2_table_comments_and_advisor_fixes"
+    },
+    {
+      "supabase": "20260620130001_phase2_rls_policies.sql",
+      "backend": "tb_v16_057_phase2_rls_policies.sql",
+      "purpose": "phase2_rls_policies"
+    },
+    {
+      "supabase": "20260620130002_phase2_view_and_functions.sql",
+      "backend": "tb_v16_058_phase2_view_and_functions.sql",
+      "purpose": "phase2_view_and_functions"
+    }
+  ],
+  "supabaseOnly": [
+    {
+      "file": "20260413_001_founder_os_tables.sql",
+      "reason": "Founder OS bootstrap; no tb_v16 mirror"
+    },
+    {
+      "file": "20260413_002_founder_os_functions.sql",
+      "reason": "Founder OS bootstrap; no tb_v16 mirror"
+    },
+    {
+      "file": "202606110001_plot_evidence_storage_bucket.sql",
+      "reason": "Supabase storage bucket policy; applied via CLI track only"
+    },
+    {
+      "file": "202606110002_plot_evidence_tenant_compliance_read.sql",
+      "reason": "Supabase RLS/storage read path; CLI track only"
+    },
+    {
+      "file": "202606160001_plot_evidence_heic_mime.sql",
+      "reason": "Storage MIME allowlist; CLI track only"
+    }
+  ]
+}

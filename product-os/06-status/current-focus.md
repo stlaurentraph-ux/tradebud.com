@@ -5,12 +5,14 @@
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
 | IF-001 | `chore/automation-offline-phase1` | cursor | Lane 1 slice **1.O.1** — guard scripts, CI, Cursor integration | `offline-automation-runbook.md` | ready_for_merge | — |
+| IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
 
 ## Work now
 
-- **Automation ops (Bundle A + Phase 0)** — Branch `chore/automation-phase-0`: **0.0.1**, **0.M.0**, **0.1–0.5** done. **Next:** open PR → human **0.H** branch protection → **0.M.1** marketing typecheck.
+- **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
+- **Automation ops** — **1.O.1** PR #122 rebased onto `main`, Expo app CI green; awaiting human merge. **Next:** slice **1.O.2** (`--strict` guards) after merge.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
 import { AuthStatusCard } from '@/components/auth-status-card';
 import {
@@ -11,14 +11,26 @@ import {
 
 type ConfirmStatus = 'loading' | 'forwarding' | 'confirmed' | 'error';
 
-type ConfirmState = {
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
+type ConfirmOutcome = {
   status: ConfirmStatus;
   detail: string;
   target: string | null;
-  scrubUrl: boolean;
+  clearUrl: boolean;
 };
 
-function readConfirmState(): ConfirmState {
+function resolveConfirmOutcome(isClient: boolean): ConfirmOutcome {
+  if (!isClient) {
+    return { status: 'loading', detail: 'Confirming your email…', target: null, clearUrl: false };
+  }
+
   const search = new URLSearchParams(window.location.search);
   const hashParams = parseHashParams(window.location.hash);
 
@@ -29,7 +41,7 @@ function readConfirmState(): ConfirmState {
       status: 'error',
       detail: authErrorDescription ?? authError,
       target: null,
-      scrubUrl: true,
+      clearUrl: true,
     };
   }
 
@@ -48,7 +60,7 @@ function readConfirmState(): ConfirmState {
         status: 'forwarding',
         detail: 'Email confirmed. Opening the Tracebud app…',
         target,
-        scrubUrl: false,
+        clearUrl: false,
       };
     } catch {
       // PKCE code without a forwardable session — user signs in manually in app.
@@ -61,7 +73,7 @@ function readConfirmState(): ConfirmState {
       detail:
         'Your email is confirmed. Open the Tracebud app and sign in from Settings with your email and password.',
       target: null,
-      scrubUrl: true,
+      clearUrl: true,
     };
   }
 
@@ -70,7 +82,7 @@ function readConfirmState(): ConfirmState {
     detail:
       'This confirmation link is invalid or has expired. Sign in from the app if you already confirmed your email.',
     target: null,
-    scrubUrl: false,
+    clearUrl: false,
   };
 }
 
@@ -78,40 +90,38 @@ function readConfirmState(): ConfirmState {
  * Email confirmation landing for field-app signups (emailRedirectTo).
  */
 export default function AuthConfirmPage() {
-  const [state] = useState<ConfirmState>(() =>
-    typeof window === 'undefined'
-      ? { status: 'loading', detail: 'Confirming your email…', target: null, scrubUrl: false }
-      : readConfirmState(),
-  );
+  const isClient = useIsClient();
+  const outcome = useMemo(() => resolveConfirmOutcome(isClient), [isClient]);
 
   useEffect(() => {
-    if (state.scrubUrl) {
+    if (outcome.target) {
+      window.location.replace(outcome.target);
+      return;
+    }
+    if (outcome.clearUrl) {
       window.history.replaceState(null, '', window.location.pathname);
     }
-    if (state.target) {
-      window.location.replace(state.target);
-    }
-  }, [state.scrubUrl, state.target]);
+  }, [outcome.clearUrl, outcome.target]);
 
   const title =
-    state.status === 'loading'
+    outcome.status === 'loading'
       ? 'Confirming your email'
-      : state.status === 'forwarding'
+      : outcome.status === 'forwarding'
         ? 'Email confirmed'
-        : state.status === 'confirmed'
+        : outcome.status === 'confirmed'
           ? 'Email confirmed'
           : 'Confirmation problem';
 
   return (
     <AuthStatusCard
       title={title}
-      detail={state.detail}
-      loading={state.status === 'loading' || state.status === 'forwarding'}
-      error={state.status === 'error'}
+      detail={outcome.detail}
+      loading={outcome.status === 'loading' || outcome.status === 'forwarding'}
+      error={outcome.status === 'error'}
       footer={
-        state.status === 'confirmed'
+        outcome.status === 'confirmed'
           ? 'Tracebud field app → Settings → Sign in'
-          : state.status === 'forwarding'
+          : outcome.status === 'forwarding'
             ? 'If the app does not open, switch back to Tracebud manually.'
             : undefined
       }

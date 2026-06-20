@@ -1,7 +1,7 @@
 import { mapToOutreachActivity, mapToProspect } from '@/lib/founder-os-mapper';
 import { getSupabaseCrm } from '@/lib/supabase-admin';
 
-type ProspectFormType = 'exporter' | 'importer' | 'country' | 'farmer' | 'cooperative';
+type ProspectFormType = 'exporter' | 'importer' | 'country' | 'farmer' | 'cooperative' | 'pilot';
 
 type SyncInput = {
   formType: ProspectFormType;
@@ -37,6 +37,26 @@ export async function syncLeadToProspects(input: SyncInput): Promise<void> {
   if (activityError) {
     console.error('[prospect-sync] outreach activity failed:', activityError.message);
   }
+
+  if (input.formType === 'pilot') {
+    const commodity = asString(input.payload.commodity) ?? asString(input.payload.commodities);
+    const { error: pilotError } = await crm.from('pilots').insert({
+      prospect_id: inserted.id,
+      name: `${prospect.company ?? input.name} pilot`,
+      status: 'lead',
+      country: input.country ?? null,
+      commodity: commodity?.toLowerCase() ?? null,
+      success_criteria: asString(input.payload.successCriteria),
+      notes: `Auto-created from pilot form ${input.sourcePage}`,
+    });
+    if (pilotError) console.error('[prospect-sync] pilot record failed:', pilotError.message);
+  }
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 export async function syncWaitlistToProspects(input: {

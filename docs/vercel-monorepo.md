@@ -9,6 +9,7 @@ After PR #117, workspace apps share a **single root** `package-lock.json`. Verce
 | `dashboard-product` | `apps/dashboard-product` | `cd ../.. && npm ci` | `npm run build` |
 | `marketing` / `tradebud-com` | `apps/marketing` | `cd ../.. && npm ci` | `npm run build` |
 | `field-auth` (if deployed) | `apps/field-auth` | `cd ../.. && npm ci` | `npm run build` |
+| `founder-os` (internal ops) | `apps/founder-os` | `cd ../.. && npm ci` | `npm run build` |
 
 **Do not change** Root Directory — only the Install Command.
 
@@ -18,6 +19,7 @@ Install commands are also declared in app `vercel.json` files so new deploys pic
 
 - `apps/dashboard-product/vercel.json`
 - `apps/marketing/vercel.json`
+- `apps/founder-os/vercel.json`
 
 If the Vercel dashboard overrides `vercel.json`, align the dashboard setting with the table above.
 
@@ -47,6 +49,7 @@ After updating install commands, trigger a **Redeploy** on each project and conf
 npm ci                    # repo root — same as Vercel install
 npm run build -w dashboard-product
 npm run build -w tracebud-marketing
+npm run build -w founder-os
 ```
 
 See also [`docs/repo-branches.md`](repo-branches.md) and root [`README.md`](../README.md).

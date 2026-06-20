@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
@@ -50,9 +51,6 @@ const nextConfig = {
     apiRouteKeys.map((routeKey) => [routeKey, apiTraceExcludes]),
   ),
   serverExternalPackages: ['@supabase/supabase-js', 'resend'],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -65,4 +63,13 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG ?? 'tracebud',
+  project: process.env.SENTRY_PROJECT ?? 'marketing',
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

@@ -5,6 +5,7 @@
   "packageManager": "npm@11.9.0",
   "workspaces": [
     "apps/dashboard-product",
+    "apps/founder-os",
     "apps/marketing",
     "apps/field-auth",
     "tracebud-backend",
@@ -25,15 +26,18 @@
     "lint:field-auth": "npm run lint -w field-auth",
     "lint:workspaces": "turbo run lint --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=./apps/offline-product",
     "test:workspaces": "turbo run test --filter=./apps/offline-product --filter=field-auth",
-    "build:workspaces": "turbo run build --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
-    "typecheck:workspaces": "turbo run typecheck --filter=./apps/offline-product --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
+    "build:workspaces": "turbo run build --filter=tracebud-backend --filter=dashboard-product --filter=founder-os --filter=tracebud-marketing --filter=field-auth",
+    "typecheck:workspaces": "turbo run typecheck --filter=./apps/offline-product --filter=dashboard-product --filter=founder-os --filter=tracebud-marketing --filter=field-auth",
     "typecheck:dashboard": "npm run typecheck -w dashboard-product",
     "typecheck:marketing": "npm run typecheck -w tracebud-marketing",
     "build:dashboard": "npm run build -w dashboard-product",
-    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run build:dashboard",
-    "build:dashboard": "npm run build -w dashboard-product",
-    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run build:dashboard",
-    "agent:preflight": "node scripts/agent-preflight.mjs",
+    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run regression:routes:assert -w dashboard-product && npm run build:dashboard",
+    "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run routes:publication:assert -w tracebud-marketing && npm run build:marketing && npm run api:trace:size:assert -w tracebud-marketing",
+    "sentry:env:assert": "node scripts/sentry-env-tags-guard.mjs",
+    "smoke:marketing:post-deploy": "npm run smoke:post-deploy -w tracebud-marketing",
+    "uptime:probes:manifest:assert": "node scripts/uptime-probes-manifest-guard.mjs",
+    "uptime:probes:run": "node scripts/uptime-probes-run.mjs",
+    "n8n:workflow-b:assert": "node scripts/n8n-workflow-b-guard.mjs",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",
@@ -46,6 +50,9 @@
     "i18n:queue:verify:clean": "npm run i18n:queue:verify:clean --prefix apps/offline-product",
     "i18n:queue:verify:clean:all": "npm run i18n:queue:verify:clean:all --prefix apps/offline-product",
     "openapi:lint": "npx @redocly/cli lint --config .redocly.yaml docs/openapi/tracebud-v1-draft.yaml",
+    "supabase:migration:naming:assert": "node scripts/supabase-migration-naming-guard.mjs",
+    "supabase:migration:mirror:assert": "node scripts/supabase-migration-mirror-drift-guard.mjs",
+    "supabase:migration:mirror:baseline:refresh": "node scripts/supabase-migration-mirror-drift-guard.mjs --write-baseline",
     "openapi:baseline:refresh": "node scripts/openapi-refresh-lint-baseline.mjs",
     "openapi:governance:markdown:check": "node scripts/openapi-governance/markdown-reference-check.mjs",
     "openapi:governance:readme:check": "node scripts/openapi-governance/readme-commands-check.mjs",
@@ -68,7 +75,12 @@
     "openapi:governance:markdown:report:assert": "node scripts/openapi-governance/markdown-report-assert.mjs",
     "openapi:governance:artifacts:assert": "node scripts/openapi-governance/artifacts-assert.mjs",
     "openapi:governance:snapshot:registry:check": "node scripts/openapi-governance/snapshot-registry-check.mjs",
-    "openapi:governance:snapshot:registry:report:assert": "node scripts/openapi-governance/snapshot-registry-report-assert.mjs"
+    "openapi:governance:snapshot:registry:report:assert": "node scripts/openapi-governance/snapshot-registry-report-assert.mjs",
+    "prepare": "husky",
+    "lint:staged": "lint-staged",
+    "dev:founder-os": "npm run dev -w founder-os",
+    "lint:founder-os": "npm run lint -w founder-os",
+    "check:founder-os": "npm run lint:founder-os && npm run typecheck -w founder-os && npm run build -w founder-os"
   },
   "dependencies": {
     "yaml": "^2.8.3"
@@ -76,6 +88,8 @@
   "devDependencies": {
     "eslint": "^9.39.3",
     "eslint-config-next": "^16.1.6",
+    "husky": "9.1.7",
+    "lint-staged": "17.0.7",
     "turbo": "^2.5.4",
     "typescript": "5.7.3"
   }

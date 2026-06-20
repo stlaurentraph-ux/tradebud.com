@@ -3,14 +3,64 @@
 ### 2026-06-20 (automation — offline typecheck + CI guard ordering, `chore/automation-offline-phase1`)
 - **Typecheck** — Fixed 58 TS errors (missing imports, test fixtures, persistence export, hook deps); `npm run typecheck` green locally.
 - **CI** — Run `security:preflight` + `qa:automation:phase1` before typecheck so Phase 1.O.1 guards execute even if later steps fail.
-- **Next** — Green Expo app job on PR #122; merge 1.O.1.
+- **Next** — Rebase PR #122 onto `main`; merge 1.O.1.
 
 ### 2026-06-20 (automation — PR #122 CI unblock, `chore/automation-offline-phase1`)
 - **1.O.1 fix** — Restored `expo-asset` + `expo-module-scripts ~4.1.10`; local guards + security preflight green.
 - **CI collateral** — Field-auth lazy `useState` auth pages; de-backtick `GET/POST` in release-qa-evidence; `workflow_dispatch` on CI.
 - **Next** — Green Expo app + field-auth + contracts on PR #122; merge 1.O.1; slice **1.O.2**.
 
-### 2026-06-20 (automation Phase 0 — branch `chore/automation-phase-0`)
+### 2026-06-20 (field app — sync UI + tenure jurisdiction, `feature/offline-field-sync-ui`, PR #149)
+- **Offline sync messaging** — Unified `resolveSyncAttentionMessage`; queue-before-plots priority in `measureTotalSyncPending` + `formatSyncNowUserMessage`; Settings backup pill via `backupStatusDisplay`; stable plot order on Documents (`stablePlotDisplayOrder`).
+- **Farmer name flicker** — `mergeFarmerDisplayFields` + `AppStateContext` boot/reload merge; `farmerDisplayName` on Home + Settings.
+- **Tenure jurisdiction (backend)** — Restored `tenure-jurisdiction-check` + clause allowlist; evaluator maps cross-check to FAILED/MANUAL_REQUIRED; dashboard tenure panel copy for jurisdiction hints.
+- **Backend specs** — SQL-aware `makeCreatePlotPoolMock`; harvest mock adds `getPlotFarmerId`. 383 backend tests green locally.
+- **Next** — Device QA on Hector account (Settings sync pill, Documents plot list, tenure re-upload).
+
+### 2026-06-20 (Founder OS app extraction merged, PR #141)
+- Standalone `apps/founder-os` Next.js app (port 3004); dashboard redirects `/founder-os`, `/crm`, `/content` to ops URL.
+- Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
+
+### 2026-06-20 (automation — 2.4 marketing post-deploy smoke merged, PR #147)
+- **2.4** — `marketing-post-deploy-smoke.mjs` + `marketing-deploy-smoke.yml` workflow on production `deployment_status` and manual dispatch.
+
+### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
+- **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
+
+### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard merged, PR #142)
+- **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
+
+### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)
+- **1.5** — `dashboard-regression-guard.mjs` + `qa/automation-baselines/dashboard-api-routes.json` (99 routes, 34 OpenAPI-pinned backend paths).
+- Validates proxy manifest drift, fail-closed backend URL handling on proxy routes, and OpenAPI removal for pinned paths.
+- Wired into dashboard CI, `check:dashboard`, and app `check` script.
+
+### 2026-06-20 (automation — 3.4 Dependabot merged, PR #131)
+
+### 2026-06-20 (automation — 1.M.2 API trace size guard, PR #132)
+- **1.M.2** — `marketing-api-trace-size-guard.mjs` after build; 749MB regression guard.
+- Wired into `check:marketing` and marketing CI (post-build).
+
+### 2026-06-20 (automation — 1.M.1 routes guard merged, PR #130)
+- **1.M.1** — Marketing routes/publication guard in CI and `check:marketing`.
+
+### 2026-06-20 (automation — 1.3 CI path filters, PR #129 merged)
+- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
+
+### 2026-06-20 (Founder OS GTM — `feature/dashboard-founder-os-gtm`)
+- Dashboard GTM pages + API routes; SQL daily actions; pilot form sync. Migration applied to Supabase.
+
+### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
+- **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.
+- **Next** — Push PR #124; human **0.H** after merge.
+
+- **0.M.1** — Marketing CI typecheck step; removed `ignoreBuildErrors` from `next.config.mjs`.
+- **0.M.2** — `i18n-parity-assert.mjs` + CI step (`marketing.*`, `header.*`).
+- **0.M.3** — `npm run check:marketing` (root + app).
+- **Verified** — `npm run check:marketing` passes locally.
+- **Next** — PR merge; human **0.H** branch protection.
+
+### 2026-06-20 (automation Phase 0 — branch `chore/automation-bundle-a`)
 - **0.2–0.5** — Dashboard CI build (placeholder env); `field-auth` CI job; `check:dashboard` + `build:dashboard`; README CI section.
 - **Note** — 0.1 typecheck already landed on `main` via repo Phase 3; this branch adds build gate + field-auth job.
 - **Next** — Open PR; enable branch protection (**0.H**) after green on `main`.
@@ -6416,6 +6466,21 @@ Append-only session log.
 - Blockers: Real-tenant lineage + handoff language still need manual sign-off.
 - Next step: run `exporter-critical-path-qa.md` on staging tenant and check remaining scorecard ★ items.
 
+### 2026-06-20 (execution: guardrails slice 2.8 — synthetic uptime probes)
+- Focus: scheduled HTTP uptime checks for marketing, dashboard, and backend independent of deploy pipeline.
+- Files changed: `scripts/uptime-probes-manifest.json`, `scripts/uptime-probes-run.mjs`, `scripts/uptime-probes-manifest-guard.mjs`, `.github/workflows/uptime-probes.yml`, `package.json`, `.github/workflows/ci.yml`, `product-os/04-quality/ci-secrets-and-fixtures.md`, `README.md`, `product-os/06-status/agent-queue.md`.
+- Decisions: reuse `MARKETING_SMOKE_BASE_URL`; optional `UPTIME_DASHBOARD_BASE_URL` / `UPTIME_BACKEND_BASE_URL` with production fallbacks in manifest; cron every 30 minutes.
+- Verification: `npm run uptime:probes:manifest:assert`; `npm run uptime:probes:run` against production URLs.
+- Next step: open PR `chore/automation-uptime-probes`; merge when field-auth + marketing CI green.
+- Merged PR #150 to `main`; next Ready slice: **2.O.1** or **2.O.2** (ops doc slices).
+
+### 2026-06-20 (execution: guardrails slice 2.O.1 — n8n workflow-b form intake)
+- Focus: activation runbook + CI guard aligning n8n workflow-b spec with marketing Founder OS prospect sync.
+- Files changed: `automation/n8n/founder-os/workflow-b-website-form-intake.json`, `workflow-b-activation.md`, `scripts/n8n-workflow-b-guard.mjs`, `package.json`, `.github/workflows/ci.yml`, `product-os/04-quality/ci-secrets-and-fixtures.md`, `automation/n8n/founder-os/README.md`.
+- Decisions: marketing `syncLeadToProspects` remains canonical; n8n is optional notification-only augmentation.
+- Verification: `npm run n8n:workflow-b:assert`.
+- Next step: open PR `chore/automation-n8n-workflow-b`; merge when field-auth + marketing CI green.
+
 ### 2026-06-16 (execution: dashboard A+ slice 7 — package gate tests + importer inbox north star)
 - Focus: lock assemble readiness gate with page tests; prioritize importer inbound requests in north star; add handoff vs TRACES terminology tests and importer QA checklist.
 - Files changed: `apps/dashboard-product/app/packages/[id]/page.test.tsx`, `apps/dashboard-product/lib/dashboard-north-star.ts`, `apps/dashboard-product/lib/dashboard-north-star.test.ts`, `apps/dashboard-product/lib/terminology-labels.ts`, `apps/dashboard-product/lib/supply-chain-terminology-handoff.test.ts`, `apps/dashboard-product/components/dashboards/importer-dashboard.tsx`, `apps/dashboard-product/components/dashboards/importer-dashboard.test.tsx`, `apps/dashboard-product/locales/en.json`, `product-os/04-quality/importer-critical-path-qa.md`, `product-os/04-quality/dashboard-a-plus-scorecard.md`, `product-os/06-status/current-focus.md`, `product-os/06-status/daily-log.md`.
@@ -6428,3 +6493,10 @@ Append-only session log.
 - Decisions: legacy CSV `washing_station` activity column coerced to `processing_facility` + `washing_station` subtype; existing DB rows migrated on apply.
 - Verification: migration applied locally; `contacts.service.spec.ts` and `contact-activity-types.test.ts` pass.
 - Next step: re-import sample suppliers CSV to confirm combined activity labels in `/contacts`.
+
+### 2026-06-20 (execution: Founder OS app extraction)
+- Focus: extract Founder OS from `dashboard-product` into standalone `apps/founder-os`; dashboard redirects legacy paths to ops URL.
+- Files changed: `apps/founder-os/**`, dashboard internal-tools/middleware cleanup, root `package.json`, `.github/workflows/ci.yml`, `docs/vercel-monorepo.md`, `product-os/02-features/FEAT-founder-os-app.md`.
+- Decisions: separate Vercel project; dev redirect to `http://localhost:3004`; production via `NEXT_PUBLIC_FOUNDER_OS_URL`.
+- Verification: `npm run check:founder-os`; dashboard middleware + internal-tools tests.
+- Next step: open PR from `feature/founder-os-app`; create Vercel project + `ops.tracebud.com` domain.

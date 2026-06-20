@@ -35,6 +35,7 @@ function makeServiceMock(): jest.Mocked<
   Pick<
     HarvestService,
     | 'isFarmerOwnedByUser'
+    | 'getPlotFarmerId'
     | 'create'
     | 'listVouchersForFarmer'
     | 'listVouchersForTenant'
@@ -55,6 +56,7 @@ function makeServiceMock(): jest.Mocked<
 > {
   return {
     isFarmerOwnedByUser: jest.fn(),
+    getPlotFarmerId: jest.fn().mockResolvedValue(null),
     create: jest.fn(),
     listVouchersForFarmer: jest.fn(),
     listVouchersForTenant: jest.fn(),
