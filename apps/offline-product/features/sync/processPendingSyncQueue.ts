@@ -1,4 +1,4 @@
-import { pingTracebudApi } from '@/features/network/pingTracebudApi';
+import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
 import { postAuditEventToBackend } from '@/features/api/audit';
 import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
@@ -74,7 +74,7 @@ export async function processPendingSyncQueue(params: {
 }): Promise<ProcessPendingSyncQueueResult> {
   await compactDuplicatePendingSyncActions().catch(() => 0);
 
-  const apiReachable = await pingTracebudApi();
+  const apiReachable = await probeTracebudApiReachable();
   if (!apiReachable) {
     return {
       completed: 0,

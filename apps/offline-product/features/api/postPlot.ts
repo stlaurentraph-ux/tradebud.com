@@ -4,6 +4,11 @@ import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } fro
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 import { logError } from '@/features/errors/ErrorLogger';
 import { normalizeNetworkError } from '@/features/network/normalizeNetworkError';
+import {
+  cacheBustUrl,
+  isSuccessfulApiResponse,
+  TRACEBUD_NO_CACHE_HEADERS,
+} from '@/features/network/apiFetchResponse';
 
 export {
   clearPersistedSyncAuth,
@@ -262,20 +267,27 @@ export async function fetchPlotsForFarmer(farmerId: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PLOT_FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}&scope=farmer`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        signal: controller.signal,
-        cache: 'no-store',
+    const basePlotListUrl = `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}&scope=farmer`;
+    const fetchOptions = {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
       },
-    );
+      signal: controller.signal,
+    } as const;
 
-    if (!res.ok) {
+    let res = await fetch(cacheBustUrl(basePlotListUrl), fetchOptions);
+    if (res.status === 304) {
+      res = await fetch(cacheBustUrl(basePlotListUrl), fetchOptions);
+    }
+
+    if (!isSuccessfulApiResponse(res.status)) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.message ?? `Plot fetch error: ${res.status}`);
+    }
+
+    if (res.status === 304) {
+      throw new Error('Plot fetch error: 304');
     }
 
     return res.json();

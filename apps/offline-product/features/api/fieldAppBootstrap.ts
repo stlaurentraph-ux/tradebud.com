@@ -1,4 +1,9 @@
 import { getAccessTokenFromSupabase, getTracebudApiBaseUrl, hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import {
+  cacheBustUrl,
+  isSuccessfulApiResponse,
+  TRACEBUD_NO_CACHE_HEADERS,
+} from '@/features/network/apiFetchResponse';
 
 const BOOTSTRAP_TIMEOUT_MS = 12_000;
 /** Skip repeat bootstrap POSTs during a single sync session (plot upload calls this per plot). */
@@ -152,11 +157,17 @@ export async function fetchOwnedFarmerIdsFromApi(): Promise<string[]> {
 
   const apiBase = getTracebudApiBaseUrl();
   try {
-    const res = await fetch(`${apiBase}/v1/me/field-farmer-ids`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    const res = await fetch(cacheBustUrl(`${apiBase}/v1/me/field-farmer-ids`), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
     });
-    if (!res.ok) {
+    if (!isSuccessfulApiResponse(res.status)) {
       return [];
+    }
+    if (res.status === 304) {
+      return lastOwnedFarmerIds.length > 0 ? [...lastOwnedFarmerIds] : [];
     }
     const body = (await res.json().catch(() => ({}))) as {
       farmerIds?: unknown;

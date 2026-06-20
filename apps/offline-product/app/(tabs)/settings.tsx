@@ -79,7 +79,7 @@ import {
   SyncOperationTimeoutError,
   withSyncOperationTimeout,
 } from '@/features/sync/syncOperationLimits';
-import { pingTracebudApi } from '@/features/network/pingTracebudApi';
+import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
 import { mapSyncActionErrorMessage, mapPlotUploadErrorMessage, syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { formatSyncNowUserMessage, formatPendingSyncSummary, resolveSyncOpenPlotId, resolveSyncSupportMailto, type SyncNowUserOutcome } from '@/features/sync/formatSyncNowUserMessage';
@@ -204,6 +204,7 @@ export default function SettingsScreen() {
   const [profileEditing, setProfileEditing] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [helpTipsOpen, setHelpTipsOpen] = useState(false);
+  const [backupTechOpen, setBackupTechOpen] = useState(false);
   const [queueActionFilter, setQueueActionFilter] = useState<
     Record<PendingSyncAction['actionType'], boolean>
   >({
@@ -350,7 +351,7 @@ export default function SettingsScreen() {
           setPlotsFetchState('ok');
         }
       } else if (applyDisplay) {
-        const apiReachable = await pingTracebudApi();
+        const apiReachable = await probeTracebudApiReachable();
         setBackendPlots([]);
         setPlotsFetchState(apiReachable ? 'ok' : 'failed');
       }
@@ -529,6 +530,7 @@ export default function SettingsScreen() {
 
   const syncApiBaseUrl = getTracebudApiBaseUrl();
   const syncUsesLocalApi = useMemo(() => isLocalLanSyncApi(syncApiBaseUrl), [syncApiBaseUrl]);
+  const showBackupTechDetails = __DEV__ || syncUsesLocalApi;
 
   const showUploadAttention = useMemo(
     () => shouldShowBackupAttentionPanel({
@@ -999,7 +1001,7 @@ export default function SettingsScreen() {
               await adoptOnDeviceFarmerScope(apiFarmerId).catch(() => false);
             }
 
-            const apiReachable = await pingTracebudApi();
+            const apiReachable = await probeTracebudApiReachable();
             if (!apiReachable) {
               setSyncMessage(t('sync_reach_failed_short'));
               setSyncMessageKind('error');
@@ -1458,16 +1460,9 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {__DEV__ ? (
+                {syncUsesLocalApi && !backupTechOpen ? (
                   <ThemedText type="caption" style={styles.mutedText}>
-                    {t('settings_dev_runtime_metro')}
-                    {' · '}
-                    {t('settings_api_base')}: {syncApiBaseUrl}
-                  </ThemedText>
-                ) : null}
-                {syncUsesLocalApi ? (
-                  <ThemedText type="caption" style={styles.uploadIssueSummary}>
-                    {t('sync_local_api_warning', { api: syncApiBaseUrl })}
+                    {t('settings_sync_test_build_short')}
                   </ThemedText>
                 ) : null}
 
@@ -1570,6 +1565,48 @@ export default function SettingsScreen() {
                       </ThemedText>
                     </View>
                   </View>
+                ) : null}
+                {showBackupTechDetails ? (
+                  <>
+                    <Pressable
+                      onPress={() => setBackupTechOpen((open) => !open)}
+                      style={styles.backupTechToggle}
+                      accessibilityRole="button"
+                    >
+                      <ThemedText type="caption" style={styles.backupTechToggleText}>
+                        {backupTechOpen
+                          ? t('settings_backup_tech_hide')
+                          : t('settings_backup_tech_show')}
+                      </ThemedText>
+                      <Ionicons
+                        name={backupTechOpen ? 'chevron-up' : 'chevron-down'}
+                        size={14}
+                        color="#9CA3AF"
+                      />
+                    </Pressable>
+                    {backupTechOpen ? (
+                      <View style={styles.backupTechBody}>
+                        {__DEV__ ? (
+                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                            {t('settings_dev_runtime_metro')}
+                          </ThemedText>
+                        ) : null}
+                        <ThemedText type="caption" style={styles.backupTechDetailText}>
+                          {t('settings_api_base')}: {syncApiBaseUrl}
+                        </ThemedText>
+                        {syncUsesLocalApi ? (
+                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                            {t('sync_local_api_warning', { api: syncApiBaseUrl })}
+                          </ThemedText>
+                        ) : null}
+                        {__DEV__ && queuePendingBreakdown ? (
+                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                            {queuePendingBreakdown}
+                          </ThemedText>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </>
                 ) : null}
               </CardContent>
             </Card>
@@ -1775,7 +1812,7 @@ export default function SettingsScreen() {
                     {__DEV__ ? (
                       <View style={styles.advancedSection}>
                         <ThemedText type="defaultSemiBold" style={styles.advancedSectionTitle}>
-                          Queue debug
+                          {t('settings_queue_debug_title')}
                         </ThemedText>
                         <ThemedText type="caption">{queueFilterSummaryLabel}</ThemedText>
                         <ThemedText type="caption">{queueAttemptScopeSummaryLabel}</ThemedText>
@@ -2076,6 +2113,30 @@ const styles = StyleSheet.create({
   backupDetailsToggle: {
     color: Brand.primary,
     fontWeight: '600',
+  },
+  backupTechToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  backupTechToggleText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+  backupTechBody: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+    gap: 6,
+  },
+  backupTechDetailText: {
+    color: '#6B7280',
+    fontSize: 12,
+    lineHeight: 17,
   },
   syncQueueFilterRow: {
     flexDirection: 'row',

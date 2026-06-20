@@ -1,5 +1,3 @@
-import { getTracebudApiBaseUrl } from '@/features/api/postPlot';
-
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 
 export function isNetworkReachabilityFailure(message: string): boolean {
@@ -10,5 +8,5 @@ export function isNetworkReachabilityFailure(message: string): boolean {
 export function buildUnreachableSyncMessage(
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
-  return [t('backend_unreachable'), `${t('settings_api_base')}: ${getTracebudApiBaseUrl()}`].join('\n');
+  return t('settings_sync_reach_failed');
 }

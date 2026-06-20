@@ -15,6 +15,11 @@ import {
 import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
 import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
+import {
+  cacheBustUrl,
+  isSuccessfulApiResponse,
+  TRACEBUD_NO_CACHE_HEADERS,
+} from '@/features/network/apiFetchResponse';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
@@ -261,7 +266,7 @@ export async function testBackendLogin(options?: {
         message: 'Sign in to sync your plots to Tracebud.',
       };
     }
-    const healthUrl = `${apiBase}/health`;
+    const healthUrl = cacheBustUrl(`${apiBase}/health`);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let healthRes: Response;
@@ -269,12 +274,12 @@ export async function testBackendLogin(options?: {
       healthRes = await fetch(healthUrl, {
         method: 'GET',
         signal: controller.signal,
-        cache: 'no-store',
+        headers: TRACEBUD_NO_CACHE_HEADERS,
       });
     } finally {
       clearTimeout(timeout);
     }
-    if (!healthRes.ok && healthRes.status !== 304) {
+    if (!isSuccessfulApiResponse(healthRes.status)) {
       return {
         ok: false,
         message: `Tracebud API returned ${healthRes.status} at ${healthUrl}. Check EXPO_PUBLIC_API_URL (currently ${apiBase}).`,

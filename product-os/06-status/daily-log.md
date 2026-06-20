@@ -1,3 +1,7 @@
+### 2026-06-20 (offline: sync reachability — plot list 304 + RN cache bust)
+- **Root cause** — Health ping was fixed earlier but **`GET /v1/plots` still failed on 304** (`!res.ok`), which set `plotsFetchFailed` and surfaced “We could not reach Tracebud”. RN fetch also ignores `cache: 'no-store'` on some builds, so conditional GETs persisted.
+- **Fix** — Central `cacheBustUrl` + `TRACEBUD_NO_CACHE_HEADERS`; plot fetch retries once on 304; `probeTracebudApiReachable()` falls back to authenticated `/v1/me/field-farmer-ids` when health fails; Sync now + queue drain use the probe.
+
 ### 2026-06-20 (offline: false “Plot 1/3 still need upload” after CRM sync)
 - **Root cause** — Server rows store `client_plot_id` under the auth-user prefix (`66b5dafa-…`) while on-device plot ids use the linked farmer profile prefix (`dcdd88e5-…`) after rekey; strict client-id-only matching treated synced plots as missing. Persisted orphan links were also dropped when server `client_plot_id` looked “stale”.
 - **Fix** — Sync confirmation now matches creation-timestamp suffix, reclaims stale server client ids by display name + kind, keeps trusted device links, and reconciles links before upload/pending counts (Hector Plot 1 & 3 scenario covered in tests).
