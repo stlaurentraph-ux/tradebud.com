@@ -6,9 +6,9 @@ import type { DraftPageContent } from '@/lib/marketing-draft-content';
 
 // Hero image per routeId — extend as new content pages are added
 const HERO_IMAGES: Record<string, string> = {
-  'impact-smallholders':    '/images/placeholders/hero-farmer.png',
-  'impact-forests':         '/images/placeholders/hero-forest.png',
-  'impact-supply-chains':   '/images/placeholders/hero-supply-chain.png',
+  'impact-supply-chains':       '/images/placeholders/hero-supply-chain.png',
+  'impact-farmer-livelihood':   '/images/placeholders/hero-farmer.png',
+  'impact-climate-biodiversity':'/images/placeholders/hero-forest.png',
   'platform-field-app':     '/images/placeholders/platform-field-app.png',
   'platform-dashboard':     '/images/placeholders/platform-dashboard.png',
   'compliance-eudr':        '/images/placeholders/hero-supply-chain.png',

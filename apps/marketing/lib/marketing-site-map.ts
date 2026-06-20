@@ -63,8 +63,8 @@ export const siteMapSections: SiteMapSection[] = [
   },
   {
     id: 'impact',
-    label: 'Impact',
-    description: 'Smallholder livelihoods, forest protection, and ethical supply chains.',
+    label: 'Outcomes',
+    description: 'Resilient supply chains, farmer livelihoods, and nature-positive climate.',
   },
   {
     id: 'insights',
@@ -252,39 +252,41 @@ export const marketingSiteMap: SiteMapEntry[] = [
     routeId: 'compliance-security',
   },
 
-  // ── Impact ────────────────────────────────────────────────────────────────
+  // ── Impact ────────────────────────────────────��───────────────────────────
   {
     id: 'impact',
-    label: 'Impact hub',
+    label: 'Outcomes hub',
     href: '/impact',
     section: 'impact',
     status: 'draft-needs-style',
     routeId: 'impact',
-    v0Notes: 'Three-pillar narrative hub.',
-  },
-  {
-    id: 'impact-smallholders',
-    label: 'Smallholder livelihoods',
-    href: '/impact/smallholders',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact-smallholders',
-  },
-  {
-    id: 'impact-forests',
-    label: 'Forest protection',
-    href: '/impact/forests',
-    section: 'impact',
-    status: 'draft-needs-style',
-    routeId: 'impact-forests',
+    v0Notes: 'June 2026 IA: three-pillar Outcomes hub at canonical /impact URL.',
   },
   {
     id: 'impact-supply-chains',
-    label: 'Ethical supply chains',
+    label: 'Resilient supply chains',
     href: '/impact/supply-chains',
     section: 'impact',
     status: 'draft-needs-style',
     routeId: 'impact-supply-chains',
+  },
+  {
+    id: 'impact-farmer-livelihood',
+    label: 'Farmer livelihoods',
+    href: '/impact/farmer-livelihood',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-farmer-livelihood',
+    v0Notes: 'Absorbs former smallholder livelihoods page.',
+  },
+  {
+    id: 'impact-climate-biodiversity',
+    label: 'Nature-positive & climate',
+    href: '/impact/climate-biodiversity',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-climate-biodiversity',
+    v0Notes: 'Absorbs former forest protection and regenerative farming pages.',
   },
 
   // ── Insights ──────────────────────────────────────────────────────────────
