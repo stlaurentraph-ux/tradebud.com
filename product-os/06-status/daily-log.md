@@ -1,8 +1,11 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 3.4 Dependabot, `chore/automation-dependabot`)
-- **3.4** — `.github/dependabot.yml`: weekly npm (root + offline-product) and GitHub Actions updates.
-- **Next** — PR #131 merge after rebase onto main.
+### 2026-06-20 (automation — 1.5 dashboard regression guard, `chore/automation-dashboard-regression-guard`)
+- **1.5** — `dashboard-regression-guard.mjs` + `qa/automation-baselines/dashboard-api-routes.json` (99 routes, 34 OpenAPI-pinned backend paths).
+- Validates proxy manifest drift, fail-closed backend URL handling on proxy routes, and OpenAPI removal for pinned paths.
+- Wired into dashboard CI, `check:dashboard`, and app `check` script.
+
+### 2026-06-20 (automation — 3.4 Dependabot merged, PR #131)
 
 ### 2026-06-20 (automation — 1.M.2 API trace size guard, PR #132)
 - **1.M.2** — `marketing-api-trace-size-guard.mjs` after build; 749MB regression guard.

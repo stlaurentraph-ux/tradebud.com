@@ -790,6 +790,9 @@ jobs:
       - name: Tests
         run: npm test -w dashboard-product
 
+      - name: Dashboard API regression guard
+        run: npm run regression:routes:assert -w dashboard-product
+
       - name: Build
         run: npm run build -w dashboard-product
 
