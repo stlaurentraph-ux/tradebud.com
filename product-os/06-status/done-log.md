@@ -2,8 +2,9 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation Phase 0 dashboard + field-auth CI (2026-06-20, branch `chore/automation-phase-0`): slices 0.2–0.5 — build CI, field-auth job, `check:dashboard`; stacks on Bundle A integration on same branch.
+- Automation Bundle A integration (2026-06-20, branch `chore/automation-phase-0`): 0.0.1 agent ops plan + Cursor workflow; 0.M.0 marketing lint fixes.
 - Offline Metro structural isolation (2026-06-20): exclude field app from npm workspaces; remove root RN/Expo deps; app-only Metro resolution + workspaces path shim; independent `apps/offline-product/package-lock.json`; `expo-module-scripts@~4.1.10`; device debug bundle verified on iPhone. guard scripts + baselines, `security:preflight` and report-mode guards in CI, `AGENTS.md`, offline runbook annex, Cursor commands/rules, PR template; wired to ADR-007 agent-queue slice 1.O.1.
-- Automation ops Cursor integration (2026-06-20): ADR-007 three-lane model; `automation-ops-plan.md`, `agent-queue.md`; rules `agent-operations.mdc`; commands `implement-automation-slice`, `fix-regression`; branch-discipline + product-os working loop updated. Phase 0 CI slices queued.
 - Repo org Phase 4 (2026-06-20): `@tracebud/eslint-config`, root dependency slimming, marketing typecheck in CI.
 - Repo org Phase 3 (2026-06-20): legacy root Next shell archived under `legacy/root-v0-next-shell/`; shared `@tracebud/tsconfig`; dashboard typecheck in CI and turbo `typecheck:workspaces`.
 - Repo org post-workspaces (2026-06-20): Vercel monorepo install in app `vercel.json` + `docs/vercel-monorepo.md`; branch docs and Cursor rule updated for root-only install on `main`.

@@ -29,6 +29,8 @@
     "typecheck:workspaces": "turbo run typecheck --filter=./apps/offline-product --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
     "typecheck:dashboard": "npm run typecheck -w dashboard-product",
     "typecheck:marketing": "npm run typecheck -w tracebud-marketing",
+    "build:dashboard": "npm run build -w dashboard-product",
+    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run build:dashboard",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",

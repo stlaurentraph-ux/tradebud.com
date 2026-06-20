@@ -1,14 +1,16 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-<<<<<<< HEAD
-=======
-### 2026-06-20 (automation — Bundle A branch `chore/automation-bundle-a`)
+### 2026-06-20 (automation Phase 0 — branch `chore/automation-phase-0`)
+- **0.2–0.5** — Dashboard CI build (placeholder env); `field-auth` CI job; `check:dashboard` + `build:dashboard`; README CI section.
+- **Note** — 0.1 typecheck already landed on `main` via repo Phase 3; this branch adds build gate + field-auth job.
+- **Next** — Open PR; enable branch protection (**0.H**) after green on `main`.
+
+### 2026-06-20 (automation — Bundle A, branch `chore/automation-phase-0`)
 - **0.0.1** — Exhaustive `automation-ops-plan.md`, Cursor workflow (`automation-safety.mdc`, `pick-automation-slice`, lane PR template, `AGENTS.md`, `ci-secrets-and-fixtures.md`, ADR-007).
 - **0.M.0** — Marketing lint green: `useSyncExternalStore` for analytics consent, scroll effect without sync setState on route change, `insights.ts` summary omit.
 - **Verified** — `npm run lint -w tracebud-marketing` + `npm run build -w tracebud-marketing` pass locally.
-- **Next** — **0.M.1** marketing typecheck + CI on same branch or follow-up PR.
+- **Next** — Phase 0 dashboard CI (0.2–0.5) on same branch; then **0.M.1** marketing typecheck.
 
->>>>>>> bb61a1b ([guardrails] Bundle A: automation plan, Cursor workflow, marketing lint (0.0.1 + 0.M.0))
 ### 2026-06-20 (repo: Phase 4 — eslint-config package + root dep slimming)
 - **Shared ESLint** — `packages/eslint-config` (`@tracebud/eslint-config/nextjs`); Next apps lint via shared config; root lint scopes to governance scripts only.
 - **Root `package.json`** — Removed legacy v0 Next/Radix deps; root runtime deps reduced to `yaml` (OpenAPI governance scripts).
