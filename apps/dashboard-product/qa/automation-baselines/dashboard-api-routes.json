@@ -1,0 +1,806 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-20T15:38:12.509Z",
+  "openapiPinnedBackendPaths": [
+    "/v1/audit/gated-entry",
+    "/v1/audit/gated-entry/actors",
+    "/v1/audit/gated-entry/assignment-exports",
+    "/v1/audit/gated-entry/assignment-exports/export",
+    "/v1/audit/gated-entry/chat-threads",
+    "/v1/audit/gated-entry/dashboard-summary",
+    "/v1/audit/gated-entry/export",
+    "/v1/audit/gated-entry/exports",
+    "/v1/audit/gated-entry/filing-activity",
+    "/v1/audit/gated-entry/filing-activity/export",
+    "/v1/audit/gated-entry/risk-scores",
+    "/v1/audit/gated-entry/risk-scores/export",
+    "/v1/audit/gated-entry/workflow-activity",
+    "/v1/harvest/packages/{id}/evidence-documents",
+    "/v1/harvest/packages/{id}/generate",
+    "/v1/harvest/packages/{id}/readiness",
+    "/v1/harvest/packages/{id}/submit",
+    "/v1/integrations/assessments/requests",
+    "/v1/integrations/assessments/requests/{id}/status",
+    "/v1/integrations/eudr/dds",
+    "/v1/integrations/eudr/dds/status",
+    "/v1/launch/commercial-profile",
+    "/v1/launch/signup",
+    "/v1/plots",
+    "/v1/plots/assignments/{assignmentId}/cancel",
+    "/v1/plots/assignments/{assignmentId}/complete",
+    "/v1/plots/{id}/assignments",
+    "/v1/plots/{id}/deforestation-decision",
+    "/v1/plots/{id}/deforestation-decision-history",
+    "/v1/plots/{id}/geometry-history",
+    "/v1/requests/campaigns",
+    "/v1/shipment-headers",
+    "/v1/shipment-headers/{id}/seal",
+    "/v1/webhooks"
+  ],
+  "routes": [
+    {
+      "dashboardPath": "/api/admin/organizations",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/organizations"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/admin/users",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/users"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/admin/users/[id]/role",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/users/{id}/role"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/admin/users/[id]/status",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/users/{id}/status"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/admin/users/invite",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/users/invite"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/analytics/gated-entry",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/audit",
+        "/v1/audit/gated-entry",
+        "/v1/audit/gated-entry/actors",
+        "/v1/audit/gated-entry/assignment-exports",
+        "/v1/audit/gated-entry/assignment-exports/export",
+        "/v1/audit/gated-entry/chat-threads",
+        "/v1/audit/gated-entry/dashboard-summary",
+        "/v1/audit/gated-entry/export",
+        "/v1/audit/gated-entry/exports",
+        "/v1/audit/gated-entry/filing-activity",
+        "/v1/audit/gated-entry/filing-activity/export",
+        "/v1/audit/gated-entry/risk-scores",
+        "/v1/audit/gated-entry/risk-scores/export",
+        "/v1/audit/gated-entry/workflow-activity",
+        "/v1/webhooks",
+        "/v1/webhooks/{webhookId}/deliveries"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/auth/signup",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/signup"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/accept-band-upgrade",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/accept-band-upgrade"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/adoption-promo",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/adoption-promo"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/assess-contact-capacity",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/assess-contact-capacity"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/events",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/events{query}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/subscription-band",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/subscription-band"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/billing/usage-summary",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/billing/usage-summary{query}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/contacts",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/contacts"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/contacts/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/contacts/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/contacts/[id]/status",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/contacts/{id}/status"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/content/calendar",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/content/tasks",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/cooperative/audit-log",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages",
+        "/v1/requests/campaigns"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/cooperative/evidence",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/cooperative/insights",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/contacts",
+        "/v1/inbox-requests",
+        "/v1/plots",
+        "/v1/plots/geometry-remediation-queue",
+        "/v1/requests/campaigns"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/crm/daily-actions",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/crm/exchanges",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/crm/prospects",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/crm/templates",
+      "category": "internal-tools",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/dashboard/activity",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/admin/organizations",
+        "/v1/audit",
+        "/v1/harvest/packages",
+        "/v1/requests/campaigns"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/dashboard/sponsor-summary",
+      "category": "dashboard-aggregate",
+      "backendPaths": [
+        "/v1/admin/organizations",
+        "/v1/contacts",
+        "/v1/requests/campaigns"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/dashboard/summary",
+      "category": "dashboard-aggregate",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/evidence/signed-url",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/evidence-signed-url"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/farmers/[id]/consent-grants",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/farmers/{id}/consent-grants"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/farmers/[id]/consent-requests",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/farmers/{id}/consent-requests"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/farmers/resolve",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/farmers/resolve"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/batch-intakes",
+      "category": "backend-proxy-soft-fallback",
+      "backendPaths": [
+        "/v1/audit"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages",
+        "/v1/harvest/packages{query}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages",
+        "/v1/harvest/packages/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages/[id]/evidence-documents",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages/{id}/evidence-documents"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages/[id]/generate",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages/{id}/generate"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages/[id]/readiness",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages/{id}/readiness"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/packages/[id]/submit",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/packages/{id}/submit"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/shipment-assemblies",
+      "category": "backend-proxy-soft-fallback",
+      "backendPaths": [
+        "/v1/audit",
+        "/v1/harvest/shipment-weight/validate"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/vouchers",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/vouchers"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/vouchers/by-qr",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/vouchers/by-qr"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/vouchers/claim",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/vouchers/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/inbox-requests",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/inbox-requests"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/inbox-requests/[id]/respond",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/inbox-requests/{id}/respond"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/inbox-requests/bootstrap",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/inbox-requests/bootstrap"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/assessments/requests",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/assessments/requests"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/assessments/requests/[id]/status",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/assessments/requests/{id}/status"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/questionnaire-drafts/[id]/runs",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/questionnaire-drafts/{id}/runs"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/[runId]/claim",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/{runId}/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/[runId]/release",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/{runId}/release"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/[runId]/retry",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/{runId}/retry"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/release-stale",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/release-stale"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/release-stale/trigger",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/release-stale/trigger"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/retry-queue",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/retry-queue{limitQuery}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/runs/summary",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/coolfarm-sai/v2/runs/summary"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/coolfarm-sai/v2/scheduler/config",
+      "category": "config-local",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/eudr/dds",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/eudr/dds"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/integrations/eudr/dds/status",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/integrations/eudr/dds/status"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/launch/commercial-profile",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/commercial-profile"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/launch/entitlements",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/entitlements"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/launch/onboarding",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/onboarding",
+        "/v1/launch/onboarding/complete"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/launch/state",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/state"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/launch/supply-chain-roles",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/launch/supply-chain-roles"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/assignments",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/assignments"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/clear-review",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/clear-review"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/compliance-history",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/compliance-history"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/deforestation-decision",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/deforestation-decision"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/deforestation-decision-history",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/deforestation-decision-history"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/geometry",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/geometry"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/geometry-history",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/geometry-history"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/map-preview",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/map-preview"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/tenure-verification",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/tenure-verification"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/tenure-verification/[verificationId]/confirm-review",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/tenure-verification/{verificationId}/confirm-review"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/[id]/uphold-review",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/uphold-review"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/assignments/[assignmentId]/cancel",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/assignments/{assignmentId}/cancel"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/assignments/[assignmentId]/complete",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/assignments/{assignmentId}/complete"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/geometry-remediation",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/geometry-remediation-queue"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/review-queue",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/review-queue"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/plots/tenure-review-queue",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/tenure-review-queue"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/reports/importer-summary",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/reports/importer-summary"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns",
+        "/v1/requests/campaigns/{campaignId}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/archive",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/archive"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/decision-intent",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/decision-intent"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/decisions",
+      "category": "backend-proxy",
+      "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/send",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/send"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/decision-intent/public",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/public/requests/campaigns/decision-intent"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/evidence-feed",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/evidence-feed"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/issues",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/issues"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/issues/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/issues/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/shipment-headers",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/shipment-headers"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/shipment-headers/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/shipment-headers/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/shipment-headers/[id]/seal",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/shipment-headers/{id}/seal"
+      ],
+      "failClosed": true
+    }
+  ]
+}
