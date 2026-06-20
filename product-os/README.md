@@ -32,15 +32,50 @@ If any document conflicts with these, canonical sources win.
 - Roadmap: `product-os/01-roadmap/`
 - Features: `product-os/02-features/`
 - Workflows: `product-os/03-workflows/`
-- Quality gates: `product-os/04-quality/`
+- Quality gates: `product-os/04-quality/` (+ `ci-secrets-and-fixtures.md`)
 - Decisions (ADR): `product-os/05-decisions/`
-- Execution status: `product-os/06-status/` (`current-focus.md` for active work; `current-focus-archive.md` for history)
+- Execution status: `product-os/06-status/` (`current-focus.md`, `agent-queue.md`, `automation-ops-plan.md`)
 
 ## Working loop in Cursor
 
-1. Read canonical sources in order above.
-2. Open `product-os/06-status/current-focus.md` (archive: `current-focus-archive.md`).
-3. Pick feature from `product-os/01-roadmap/master-roadmap.md`.
-4. Use `.cursor/commands/build-feature.md`.
-5. Review with `.cursor/commands/review-feature.md`.
-6. Close session with `.cursor/commands/session-close.md`.
+### Automation / CI (Lane 1)
+
+1. `agent-queue.md` — pick **Ready** slice (Bundles A→E).
+2. `pick-automation-slice` — claim slice, branch, collision check.
+3. `implement-automation-slice` — one slice per PR; `automation-safety.mdc`.
+4. `session-close` — sync queue + plan tracker.
+
+### Features (Lane 3)
+
+1. Read canonical sources (above).
+2. `current-focus.md` — claim **In-flight** row.
+3. Confirm no guardrails PR on same app (`agent-queue.md`).
+4. `start-agent-task` → `build-feature`.
+5. `review-feature` → PR (lane-specific template section).
+6. `session-close`.
+
+### Regressions (Lane 2)
+
+1. `fix-regression` — minimal fix, no features.
+2. `session-close` if user-visible.
+
+### Agent rules
+
+| Artifact | Purpose |
+|----------|---------|
+| `AGENTS.md` | Cloud Agent fallback |
+| `.cursor/rules/agent-operations.mdc` | Always-on lanes + loops |
+| `.cursor/rules/automation-safety.mdc` | CI / queue edit safety |
+| `automation-ops-plan.md` | Exhaustive phases + bundles |
+| `ADR-007-agent-automation-ops.md` | Decision record |
+| `offline-automation-runbook.md` | Offline Phase 1.O–5 |
+
+## Parallel work
+
+- One writer per app directory; git worktrees for concurrent sessions.
+- Feature on dashboard + guardrails on marketing = OK.
+- Feature + guardrails on same app = serialize.
+
+## Current automation priority
+
+**Bundle A** — see `automation-ops-plan.md` §16 and `agent-queue.md` Ready section. Start: **0.M.0** marketing lint.
