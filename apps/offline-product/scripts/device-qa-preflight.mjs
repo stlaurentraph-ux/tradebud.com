@@ -97,7 +97,7 @@ const homeTileTitles = {
   register_plot_tile: 'Mapping',
   log_harvest_tile: 'Deliveries',
   documents_tile: 'Documents',
-  my_vouchers_tile: 'Vouchers',
+  my_vouchers_tile: 'Receipts',
 };
 for (const [key, expected] of Object.entries(homeTileTitles)) {
   if (en[key] !== expected) {
@@ -145,6 +145,9 @@ assertIncludes('app/(tabs)/settings.tsx', 'runFieldSyncPipeline', 'Settings Sync
 assertIncludes('app/(tabs)/settings.tsx', 'testID="settings-sync-now"', 'Settings sync Maestro testID');
 assertIncludes('features/sync/processPendingSyncQueue.ts', 'reportSyncFailure', 'queue drain reports failures');
 assertIncludes('features/evidence/syncGroundTruthPhotosWithFiles.ts', 'syncFailureFromEvidenceUpload', 'photo storage typed failures');
-assertFile('.maestro/flows/settings-sync-smoke.yaml', 'settings sync Maestro smoke');
+assertIncludes('components/compliance/PlotTenureDocumentReviewList.tsx', 'testID="plot-tenure-replace-land-paper"', 'tenure replace Maestro testID');
+assertIncludes('features/i18n/messages/en.json', 'plot_tenure_replace_land_paper', 'tenure replace land paper i18n');
+assertFile('.maestro/flows/land-title-wrong-doc-replace.yaml', 'land title wrong-doc Maestro smoke');
+assertFile('../../product-os/04-quality/tenure-land-title-device-qa.md', 'tenure device QA golden path');
 
 console.log('\nStatic wiring OK. Run `npm run qa:full` before `release:production:safe`.');

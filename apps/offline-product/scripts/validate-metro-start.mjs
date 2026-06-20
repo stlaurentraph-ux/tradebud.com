@@ -62,10 +62,30 @@ function checkReactNativeAlignment() {
   if (rootRn !== appRn) {
     warn(`Monorepo root react-native ${rootRn} ≠ field app ${appRn}`);
     const metroConfig = fs.readFileSync(path.join(root, 'metro.config.js'), 'utf8');
-    if (!metroConfig.includes("extraNodeModules") || !metroConfig.includes("'react-native'")) {
-      fail('metro.config.js must pin react-native to apps/offline-product/node_modules when root differs');
+    if (!metroConfig.includes('disableHierarchicalLookup')) {
+      fail('metro.config.js must set resolver.disableHierarchicalLookup for npm workspaces safety');
     } else {
-      ok('metro.config.js pins field-app react-native (monorepo isolation)');
+      ok('metro.config.js disables hierarchical lookup (workspaces-safe)');
+    }
+    if (!metroConfig.includes('WORKSPACE_MODULE_PREFIX')) {
+      fail('metro.config.js must rewrite npm workspaces entry paths for device debug builds');
+    } else {
+      ok('metro.config.js rewrites workspaces bundle paths');
+    }
+    if (!metroConfig.includes('blockList')) {
+      fail('metro.config.js must block monorepo root react-native from Metro resolution');
+    } else {
+      ok('metro.config.js blocks root react-native@0.85');
+    }
+    if (metroConfig.includes(path.resolve(monorepoRoot, 'node_modules').replace(/\\/g, '/'))) {
+      if (!metroConfig.includes('nodeModulesPaths = [appNodeModules]')) {
+        warn('metro.config.js still lists monorepo root in nodeModulesPaths');
+      }
+    }
+    if (!metroConfig.includes("extraNodeModules") || !metroConfig.includes("'expo-router'")) {
+      fail('metro.config.js must pin expo-router and react-native to apps/offline-product/node_modules');
+    } else {
+      ok('metro.config.js pins field-app react-native + expo-router');
     }
   }
 }

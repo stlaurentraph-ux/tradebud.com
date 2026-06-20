@@ -65,6 +65,7 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 - [ ] **Land documents auto-upload:** signed in + online → status shows uploaded (or queued if plot not on server) **without** tapping a separate Upload button
 - [ ] FPIC / tenure / permit sections: add document → thumbnail or row appears; auto-upload status message
 - [ ] Title photo or tenure evidence attaches locally
+- [ ] **Wrong land title photo:** sync → AI **FAILED** → **Upload correct land paper** (not “Tap Sync Now”); replace → re-sync → one server row — see `product-os/04-quality/tenure-land-title-device-qa.md`
 
 ## 8. Settings — backup, notifications, advanced
 

@@ -49,8 +49,11 @@ if (!lanIp) {
 }
 
 const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+const isProductionApi = apiUrl.includes('api.tracebud.com');
 if (!apiUrl) {
   fail('EXPO_PUBLIC_API_URL missing in .env.local');
+} else if (isProductionApi) {
+  ok(`API URL: ${apiUrl} (production — Metro bundles against live API)`);
 } else {
   let apiHost = '';
   try {
@@ -106,18 +109,20 @@ if (portListening(metroPort)) {
 
 if (portListening(apiPort)) {
   ok(`Backend listening on :${apiPort}`);
+} else if (isProductionApi) {
+  console.log(`  ⚠ Local backend not on :${apiPort} (OK for dev:metro:production)`);
 } else {
   fail(`Backend not running on :${apiPort}`);
   hint('Terminal 2: cd ../../tracebud-backend && npm run start:dev');
 }
 
-if (apiUrl && lanIp) {
+if (apiUrl) {
   try {
     const health = await fetch(`${apiUrl}/health`, { signal: AbortSignal.timeout(4000) });
-    if (health.ok) ok('Backend health check passed');
-    else fail(`Backend health returned ${health.status}`);
+    if (health.ok) ok('API health check passed');
+    else fail(`API health returned ${health.status}`);
   } catch {
-    fail('Backend not reachable at EXPO_PUBLIC_API_URL');
+    fail(`API not reachable at ${apiUrl}/health`);
   }
 }
 
@@ -151,10 +156,10 @@ if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_A
 }
 
 console.log('\nPhysical iPhone workflow:\n');
-console.log('  1. npm run dev:metro          # keep running');
-console.log('  2. cd tracebud-backend && npm run start:dev   # keep running');
-console.log('  3. npm run dev:device         # USB install (only when native code changes)');
-console.log('  4. Open app on phone → shake → Reload JS if needed\n');
-console.log('Preview/TestFlight builds do NOT use Metro — use npm run dev:device for local UI work.\n');
+console.log('  1. npm run dev:metro:production  # keep running (prod API)');
+console.log('  2. npm run dev:device              # USB debug install (native/IP changes)');
+console.log('  3. Open debug app on phone → shake → Reload JS\n');
+console.log('Preview/TestFlight builds do NOT use Metro — use dev:device for local UI work.\n');
+console.log('Run npm run dev:metro:doctor for a full Metro + device checklist.\n');
 
 process.exit(failed ? 1 : 0);

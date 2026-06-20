@@ -89,6 +89,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | Flow | Covers | Notes |
 |------|--------|-------|
 | `land-title-photo.yaml` | §7 land title thumbnail | Photo library; may need media on simulator |
+| `land-title-wrong-doc-replace.yaml` | §7 wrong-doc replace + sync | Needs FAILED tenure state on device; replace CTA optional |
 | `tenure-evidence.yaml` | §7 tenure doc row | Same |
 | `mark-three-corners.yaml` | §2 mark corners | Needs location; best on device or simulator with mocked GPS |
 
@@ -101,6 +102,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `plot-upload-land-proof` | Upload land proof (photo, file, or camera) |
 | `plot-add-tenure-evidence` | Add tenure evidence |
 | `plot-land-title-photo-count` | Land title photo count |
+| `plot-tenure-replace-land-paper` | Wrong-doc FAILED → Upload correct land paper |
 | `plot-tenure-evidence-section` | Tenure evidence section |
 | `walk-method-mark-corners` | Register plot → Mark corners |
 | `walk-save-corner` | Save corner (after hold timer on device) |

@@ -79,6 +79,7 @@ function checkSmokeChecklistCoversRegressionLedger() {
   ];
   const maestroFlows = [
     'land-title-photo.yaml',
+    'land-title-wrong-doc-replace.yaml',
     'tenure-evidence.yaml',
     'mark-three-corners.yaml',
     'settings-sync-smoke.yaml',

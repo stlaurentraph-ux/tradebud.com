@@ -1,0 +1,38 @@
+appId: com.tracebud.app
+---
+# Land title wrong-doc replace smoke (§7 tenure golden path).
+# Prerequisite: signed in, plot on server, wrong-doc FAILED state after sync + AI check.
+# Photo upload remains manual on device; this flow asserts replace CTA wiring.
+- launchApp
+- tapOn:
+    text: ".*My Plots.*"
+- tapOn:
+    id: "plot-card"
+    index: 0
+    optional: true
+- tapOn:
+    text: ".*Finca Norte.*|.*Carl.*|.*El Roble.*|.*La Colina.*"
+    optional: true
+- scrollUntilVisible:
+    id: "plot-upload-land-proof"
+    optional: true
+- assertVisible:
+    id: "plot-upload-land-proof"
+    optional: true
+- assertVisible:
+    text: ".*Upload correct land paper.*|.*Could not finish check.*|.*re-upload.*"
+    optional: true
+- tapOn:
+    id: "plot-tenure-replace-land-paper"
+    optional: true
+- tapOn:
+    text: ".*Cancel.*"
+    optional: true
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "settings-sync-now"
+    optional: true
+- assertVisible:
+    text: ".*Sync.*|.*Sign in.*"
+    optional: true

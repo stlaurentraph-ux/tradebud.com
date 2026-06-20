@@ -1,22 +1,20 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (offline: tenure device QA pack + prod cleanup)
+- **Branch** — `feature/offline-tenure`; repo org Phase 1–2 merged to `main` (PR #117).
+- **Supabase** — Plot `686b9ff6…`: superseded 5 duplicate `Date.now()` land-title rows; 1 active (`title-6`).
+- **QA** — `product-os/04-quality/tenure-land-title-device-qa.md`; DEVICE_SMOKE_CHECKLIST §7; Maestro `land-title-wrong-doc-replace.yaml`; `plot-tenure-replace-land-paper` testID; `test:maestro:land-title`.
+- **Ops** — `tracebud-backend/scripts/supersede-duplicate-land-title-verifications.mjs`.
+
 ### 2026-06-20 (repo: post-workspaces hygiene)
 - **Vercel** — `apps/dashboard-product/vercel.json` + new `apps/marketing/vercel.json` use `cd ../.. && npm ci`; added `docs/vercel-monorepo.md` checklist.
 - **Docs** — `docs/repo-branches.md` and branch discipline rule updated for workspaces-on-`main` (root install only).
 - **Branches** — Merged `chore/npm-workspaces` / `chore/turborepo` deleted from remote.
 
+### 2026-06-20 (repo: workspaces + Turborepo merged to main)
 - **CI** — Backend Jest runs with nested install under workspaces to avoid Expo Jest 29 hoist conflict; removed unused root `@jest/globals`.
-
-### 2026-06-20 (repo: Turborepo Phase 2)
-- **Turbo** — Added `turbo.json` with `lint`, `test`, `build`, `typecheck` pipelines; root `packageManager` field for npm 11.
-- **Root scripts** — `lint:workspaces`, `test:workspaces`, `build:workspaces`, `typecheck:workspaces`, `check:workspaces` orchestrate via `turbo run` (CI-aligned filters).
-- **Branch** — `chore/turborepo` stacks on `chore/npm-workspaces` (PR #117).
-
-### 2026-06-20 (repo: workspaces branch cleanup + agent hygiene)
-- **Branch cleanup** — Rebased `chore/npm-workspaces` onto `main` (tenure/offline commits merged first).
-- **`.cursorignore`** — Excludes `v0-prototype/`, store-assets binaries, `node_modules`, legacy root `app/page.tsx`.
-- **Branch rule** — `.cursor/rules/branch-discipline.mdc` for parallel offline vs monorepo work.
-- **Docs** — `docs/repo-branches.md` (install by branch, merge conflicts, Vercel install command).
+- **Turbo** — `turbo.json`; `lint:workspaces`, `test:workspaces`, `check:workspaces` (PR #117).
+- **Hygiene** — `.cursorignore`, branch discipline rule, `docs/repo-branches.md`.
 
 ### 2026-06-20 (offline: Metro bootstrap hardening)
 - **Crash root causes** — reverted `app.config.js` TypeScript syntax; monorepo root `react-native@0.85` vs field app `0.81.5`; stale Metro after config edits.

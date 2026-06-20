@@ -2,7 +2,7 @@
 
 ## Work now
 
-- **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
+- **Tenure AI lifecycle (2026-06-20)** — Backend live on `5d1b31d`; prod plot `686b9ff6…` cleaned to 1 active verification row. **Next:** run golden path on device — `product-os/04-quality/tenure-land-title-device-qa.md` with `dev:metro:production`.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.
 - **Supabase ops browse (2026-06-20)** — Pin **`plot_ops_summary`** (not raw `plot`) as the team default in Supabase Table Editor. `plot.status` / `deforestation_screening_label` = GFW only; use `land_tenure_label` + `eudr_dossier_ready_hint` for dossier sorting (CRM plot detail remains authoritative).
 - **Field app sync Phase 2 (2026-06-20)** — Photo failures split storage vs API; Settings uses `runFieldSyncPipeline`; Sentry breadcrumbs on sync failures. Device: re-add photo if queue row has stale picker URI; run `npm run test:maestro:sync` on signed-in simulator.

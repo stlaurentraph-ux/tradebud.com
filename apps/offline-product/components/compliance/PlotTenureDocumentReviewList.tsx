@@ -161,7 +161,13 @@ export function PlotTenureDocumentReviewList({
                 </View>
               ) : null}
               {needsReplace && onReplaceLandPaper ? (
-                <Button variant="secondary" size="sm" fullWidth onPress={onReplaceLandPaper}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  testID="plot-tenure-replace-land-paper"
+                  onPress={onReplaceLandPaper}
+                >
                   {t('plot_tenure_replace_land_paper')}
                 </Button>
               ) : null}
