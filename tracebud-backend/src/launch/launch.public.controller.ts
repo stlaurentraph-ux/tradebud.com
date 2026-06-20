@@ -1,6 +1,6 @@
 import { Body, Controller, ForbiddenException, Headers, HttpCode, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import {
   LaunchService,
   SignupPrimaryObjective,
@@ -40,7 +40,7 @@ export class LaunchPublicController {
       throw new ForbiddenException('Auth is not configured.');
     }
     const token = authHeader.slice('Bearer '.length);
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createSupabaseServerClient(supabaseUrl, supabaseAnonKey);
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) {
       throw new ForbiddenException('Invalid token.');

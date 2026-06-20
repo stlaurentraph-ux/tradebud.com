@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 import { Resend } from 'resend';
 import { PG_POOL } from '../db/db.module';
@@ -401,7 +402,7 @@ export class OnboardingEmailService {
     if (!supabaseUrl || !serviceRoleKey) {
       return null;
     }
-    return createClient(supabaseUrl, serviceRoleKey, {
+    return createSupabaseServerClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
   }
