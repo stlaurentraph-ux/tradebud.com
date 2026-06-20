@@ -10,6 +10,9 @@
     "lint": "eslint --config ../../packages/eslint-config/nextjs.mjs . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "regression:routes:assert": "node scripts/dashboard-regression-guard.mjs",
+    "regression:routes:baseline:refresh": "node scripts/dashboard-regression-guard.mjs --write-baseline",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run regression:routes:assert",
     "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
     "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",
     "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs"
