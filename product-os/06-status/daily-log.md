@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — PR #122 CI unblock, `chore/automation-offline-phase1`)
+- **1.O.1 fix** — Restored `expo-asset` + `expo-module-scripts ~4.1.10`; local guards + security preflight green.
+- **CI collateral** — Field-auth lazy `useState` auth pages; de-backtick `GET/POST` in release-qa-evidence; `workflow_dispatch` on CI.
+- **Next** — Green Expo app + field-auth + contracts on PR #122; merge 1.O.1; slice **1.O.2**.
+
 ### 2026-06-20 (automation Phase 0 — branch `chore/automation-phase-0`)
 - **0.2–0.5** — Dashboard CI build (placeholder env); `field-auth` CI job; `check:dashboard` + `build:dashboard`; README CI section.
 - **Note** — 0.1 typecheck already landed on `main` via repo Phase 3; this branch adds build gate + field-auth job.
