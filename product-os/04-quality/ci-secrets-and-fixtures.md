@@ -16,9 +16,11 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5 | onboarding proxy smoke | Authenticated smoke bearer |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | CI cache auth |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Team slug |
-| `MARKETING_SMOKE_BASE_URL` | 2.4 | marketing deploy smoke | Production base URL (use `https://www.tracebud.com`) |
+| `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
+| `UPTIME_DASHBOARD_BASE_URL` | 2.8 | synthetic uptime probes | Dashboard base URL (`https://dashboard.tracebud.com`); optional — manifest fallback when unset |
+| `UPTIME_BACKEND_BASE_URL` | 2.8 | synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4 | marketing deploy smoke | Vercel Deployment Protection bypass for CI smoke |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Vercel Deployment Protection bypass for CI |
 
 ---
 
@@ -80,4 +82,5 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-20 | Slice 2.8: `UPTIME_DASHBOARD_BASE_URL`, `UPTIME_BACKEND_BASE_URL`; reuse `MARKETING_SMOKE_BASE_URL` |
 | 2026-06-20 | Initial stub for automation rollout |

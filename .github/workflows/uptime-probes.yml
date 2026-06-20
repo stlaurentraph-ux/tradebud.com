@@ -1,0 +1,41 @@
+name: Synthetic uptime probes
+
+on:
+  schedule:
+    # Every 30 minutes — independent of deploy pipeline (slice 2.8)
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      marketing_base_url:
+        description: Override MARKETING_SMOKE_BASE_URL
+        required: false
+        type: string
+      dashboard_base_url:
+        description: Override UPTIME_DASHBOARD_BASE_URL
+        required: false
+        type: string
+      backend_base_url:
+        description: Override UPTIME_BACKEND_BASE_URL
+        required: false
+        type: string
+
+jobs:
+  probes:
+    name: Synthetic uptime probes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Run uptime probes
+        env:
+          MARKETING_SMOKE_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.marketing_base_url || secrets.MARKETING_SMOKE_BASE_URL }}
+          UPTIME_DASHBOARD_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.dashboard_base_url || secrets.UPTIME_DASHBOARD_BASE_URL }}
+          UPTIME_BACKEND_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.backend_base_url || secrets.UPTIME_BACKEND_BASE_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/uptime-probes-run.mjs

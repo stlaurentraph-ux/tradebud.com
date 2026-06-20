@@ -97,7 +97,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 
 On **pull requests**, CI uses path filters (`dorny/paths-filter`) to skip unrelated jobs. **Push to `main` always runs the full matrix.** Branch-protected checks (marketing, field-auth) still report success when skipped (fast no-op) so PRs can merge.
 
-Post-deploy: `.github/workflows/marketing-deploy-smoke.yml` runs `npm run smoke:marketing:post-deploy` after successful **Production** Vercel deployments when `MARKETING_SMOKE_BASE_URL` is set in GitHub secrets.
+Post-deploy and scheduled probes (see `product-os/04-quality/ci-secrets-and-fixtures.md` for secrets):
+
+- `.github/workflows/marketing-deploy-smoke.yml` — runs after successful **Production** marketing deploy when `MARKETING_SMOKE_BASE_URL` is set
+- `.github/workflows/uptime-probes.yml` — synthetic uptime every 30 minutes (`npm run uptime:probes:run`); manifest validated in CI via `npm run uptime:probes:manifest:assert`
 
 ## Pre-commit hooks
 

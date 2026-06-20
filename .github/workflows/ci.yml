@@ -37,6 +37,9 @@ jobs:
               - 'scripts/openapi-governance/**'
               - 'scripts/supabase-migration-naming-guard.mjs'
               - 'scripts/supabase-migration-mirror-drift-guard.mjs'
+              - 'scripts/uptime-probes-manifest.json'
+              - 'scripts/uptime-probes-manifest-guard.mjs'
+              - 'scripts/uptime-probes-run.mjs'
               - 'supabase/migrations/**'
               - 'supabase/migration-mirror-map.json'
               - 'supabase/README.md'
@@ -116,6 +119,9 @@ jobs:
 
       - name: Supabase migration mirror drift guard
         run: npm run supabase:migration:mirror:assert
+
+      - name: Uptime probes manifest guard
+        run: npm run uptime:probes:manifest:assert
 
       - name: Validate OpenAPI governance README commands
         run: |

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "description": "Synthetic uptime probes (slice 2.8). Scheduled independently of deploy pipeline.",
+  "probes": [
+    {
+      "id": "marketing-locale-root",
+      "platform": "marketing",
+      "envBaseUrl": "MARKETING_SMOKE_BASE_URL",
+      "fallbackBaseUrl": "https://www.tracebud.com",
+      "path": "/en",
+      "method": "GET",
+      "expectStatus": [200],
+      "maxLatencyMs": 8000
+    },
+    {
+      "id": "marketing-farmers",
+      "platform": "marketing",
+      "envBaseUrl": "MARKETING_SMOKE_BASE_URL",
+      "fallbackBaseUrl": "https://www.tracebud.com",
+      "path": "/en/farmers",
+      "method": "GET",
+      "expectStatus": [200],
+      "maxLatencyMs": 8000
+    },
+    {
+      "id": "dashboard-login",
+      "platform": "dashboard",
+      "envBaseUrl": "UPTIME_DASHBOARD_BASE_URL",
+      "fallbackBaseUrl": "https://dashboard.tracebud.com",
+      "path": "/login",
+      "method": "GET",
+      "expectStatus": [200],
+      "maxLatencyMs": 10000
+    },
+    {
+      "id": "backend-health",
+      "platform": "backend",
+      "envBaseUrl": "UPTIME_BACKEND_BASE_URL",
+      "fallbackBaseUrl": "https://api.tracebud.com",
+      "path": "/api/health",
+      "method": "GET",
+      "expectStatus": [200],
+      "expectJson": { "status": "ok" },
+      "maxLatencyMs": 5000
+    }
+  ]
+}
