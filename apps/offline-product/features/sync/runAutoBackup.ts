@@ -12,10 +12,7 @@ import {
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
 import { enqueuePlotDependentSyncForLinkedPlots } from '@/features/sync/enqueuePlotDependentSyncActions';
-import {
-  beginServerPlotFetchRun,
-  endServerPlotFetchRun,
-} from '@/features/sync/serverPlotFetchCache';
+import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import {
   evaluateConservativeAutoBackup,
   recordAutoBackupAttempt,
@@ -48,8 +45,11 @@ export async function runAutoBackup(params: {
   try {
     return await withSyncQueueLock(async () => {
       const work = (async () => {
-        beginServerPlotFetchRun();
+        const sessionOpened = await openFieldSyncSession();
         try {
+        const syncAccess = sessionOpened.ok
+          ? { ok: true as const, token: sessionOpened.session.accessToken }
+          : { ok: false as const, reason: 'network' as const };
         const syncContext = await prepareFieldSyncContext({
           profileFarmerId: params.farmerId,
           localPlots: params.localPlots,
@@ -98,11 +98,14 @@ export async function runAutoBackup(params: {
             actionTypes: [...QUEUE_ACTION_TYPES],
             attemptScope: 'all',
             maxPasses: 2,
+            accessToken: syncAccess.ok ? syncAccess.token : undefined,
           });
         }
         return { plotResult, queueResult };
         } finally {
-          endServerPlotFetchRun();
+          if (sessionOpened.ok) {
+            sessionOpened.end();
+          }
         }
       })();
       return withSyncOperationTimeout(work, SYNC_BACKGROUND_OPERATION_MS);

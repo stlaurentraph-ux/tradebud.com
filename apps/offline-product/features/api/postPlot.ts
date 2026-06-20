@@ -4,6 +4,8 @@ import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } fro
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 import { logError } from '@/features/errors/ErrorLogger';
 import { normalizeNetworkError } from '@/features/network/normalizeNetworkError';
+import { syncFailureFromPhotoApiError } from '@/features/sync/syncFailureFromEvidenceUpload';
+import { throwSyncFailure } from '@/features/sync/syncFailureError';
 import {
   cacheBustUrl,
   isSuccessfulApiResponse,
@@ -192,37 +194,46 @@ export async function syncPlotPhotosToBackend(params: {
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
-    throw new Error('No access token available for photo sync');
-  }
-
-  try {
-    const res = await fetch(
-      `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          kind: params.kind,
-          photos: params.photos,
-          note: params.note ?? null,
-          hlcTimestamp: params.hlcTimestamp ?? null,
-          clientEventId: params.clientEventId ?? null,
-        }),
-      },
+    throwSyncFailure(
+      syncFailureFromPhotoApiError({ error: 'No access token available for photo sync' }),
     );
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `Photo sync error: ${res.status}`);
-    }
-
-    return res.json();
-  } catch (e) {
-    throw normalizeNetworkError(e);
   }
+
+  const url = `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`;
+  const res = await tracebudFetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
+      body: JSON.stringify({
+        kind: params.kind,
+        photos: params.photos,
+        note: params.note ?? null,
+        hlcTimestamp: params.hlcTimestamp ?? null,
+        clientEventId: params.clientEventId ?? null,
+      }),
+    },
+    30_000,
+  );
+
+  if (res == null) {
+    throwSyncFailure(syncFailureFromPhotoApiError({ error: 'Network request failed' }));
+  }
+
+  if (!isSuccessfulApiResponse(res.status)) {
+    const body = await res.json().catch(() => ({}));
+    throwSyncFailure(
+      syncFailureFromPhotoApiError({
+        error: messageFromBackendJson(body) ?? `Photo sync error: ${res.status}`,
+      }),
+    );
+  }
+
+  return res.json();
 }
 
 export async function updatePlotMetadataOnBackend(params: {

@@ -9,6 +9,8 @@ const LEGACY_SYNC_AUTH_PASSWORD_KEY = 'tracebudSyncAuthPassword';
 const SECURE_SYNC_AUTH_EMAIL_KEY = 'tracebud.syncAuth.email';
 const SECURE_SYNC_AUTH_PASSWORD_KEY = 'tracebud.syncAuth.password';
 const SECURE_SYNC_AUTH_REFRESH_KEY = 'tracebud.syncAuth.refreshToken';
+const SECURE_SYNC_AUTH_ACCESS_KEY = 'tracebud.syncAuth.accessToken';
+const SECURE_SYNC_AUTH_EXPIRES_AT_KEY = 'tracebud.syncAuth.expiresAt';
 const SECURE_SYNC_AUTH_METHOD_KEY = 'tracebud.syncAuth.method';
 const SYNC_AUTH_SIGNED_OUT_KEY = 'tracebud.syncAuth.signedOut';
 
@@ -22,6 +24,8 @@ export type OAuthSyncAuthCredentials = {
   method: 'oauth';
   email: string;
   refreshToken: string;
+  accessToken?: string;
+  expiresAt?: number | null;
 };
 
 export type SyncAuthCredentials = PasswordSyncAuthCredentials | OAuthSyncAuthCredentials;
@@ -93,8 +97,17 @@ export async function loadSyncAuthCredentials(): Promise<SyncAuthCredentials | n
     const email = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY))?.trim() ?? '';
     if (method === 'oauth') {
       const refreshToken = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY)) ?? '';
+      const accessToken = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY)) ?? '';
+      const expiresRaw = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY)) ?? '';
+      const expiresAt = expiresRaw.trim() ? Number(expiresRaw) : null;
       if (email && refreshToken) {
-        return { method: 'oauth', email, refreshToken };
+        return {
+          method: 'oauth',
+          email,
+          refreshToken,
+          accessToken: accessToken.trim() || undefined,
+          expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+        };
       }
     } else {
       const password = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY)) ?? '';
@@ -138,7 +151,12 @@ export async function saveSyncAuthCredentials(email: string, password: string): 
   await saveLegacyCredentials(normalizedEmail, password);
 }
 
-export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: string): Promise<void> {
+export async function saveOAuthSyncAuthCredentials(
+  email: string,
+  refreshToken: string,
+  accessToken?: string,
+  expiresAt?: number | null,
+): Promise<void> {
   const normalizedEmail = email.trim();
   if (!normalizedEmail || !refreshToken) {
     throw new Error('Email and refresh token are required.');
@@ -158,17 +176,40 @@ export async function saveOAuthSyncAuthCredentials(email: string, refreshToken: 
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'oauth');
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, normalizedEmail);
     await SecureStore.setItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY, refreshToken);
+    if (accessToken?.trim()) {
+      await SecureStore.setItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY, accessToken.trim());
+      if (expiresAt != null && Number.isFinite(expiresAt)) {
+        await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY, String(Math.floor(expiresAt)));
+      }
+    }
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
     await clearLegacyCredentials();
     if (await isSyncAuthDismissedOnDevice()) {
       await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_METHOD_KEY).catch(() => undefined);
       await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
       await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY).catch(() => undefined);
+      await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY).catch(() => undefined);
+      await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY).catch(() => undefined);
     }
     return;
   }
 
   throw new Error('OAuth sync credentials require secure storage on this device.');
+}
+
+export async function saveOAuthAccessTokenCache(
+  accessToken: string,
+  expiresAt?: number | null,
+): Promise<void> {
+  if (!(await supportsSecureStore()) || (await isSyncAuthDismissedOnDevice())) {
+    return;
+  }
+  const token = accessToken.trim();
+  if (!token) return;
+  await SecureStore.setItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY, token);
+  if (expiresAt != null && Number.isFinite(expiresAt)) {
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY, String(Math.floor(expiresAt)));
+  }
 }
 
 export async function clearSyncAuthCredentials(): Promise<void> {
@@ -178,6 +219,8 @@ export async function clearSyncAuthCredentials(): Promise<void> {
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY).catch(() => undefined);
+    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY).catch(() => undefined);
+    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY).catch(() => undefined);
   }
   await clearLegacyCredentials();
 }

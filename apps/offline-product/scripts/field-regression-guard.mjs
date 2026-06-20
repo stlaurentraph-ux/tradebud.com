@@ -77,7 +77,12 @@ function checkSmokeChecklistCoversRegressionLedger() {
     'Mark corners',
     'ground-truth photo',
   ];
-  const maestroFlows = ['land-title-photo.yaml', 'tenure-evidence.yaml', 'mark-three-corners.yaml'];
+  const maestroFlows = [
+    'land-title-photo.yaml',
+    'tenure-evidence.yaml',
+    'mark-three-corners.yaml',
+    'settings-sync-smoke.yaml',
+  ];
   for (const flow of maestroFlows) {
     if (!fs.existsSync(path.join(root, '.maestro', 'flows', flow))) {
       issues.push({

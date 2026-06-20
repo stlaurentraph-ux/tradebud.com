@@ -53,7 +53,6 @@ import {
 } from '@/features/auth/farmerProfileBootstrap';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
-import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
@@ -288,6 +287,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
     const { email: savedEmail } = getAuthCredentials();
     if (savedEmail) setEmail(savedEmail);
+    setIsSignedIn(true);
 
     const access = await verifySyncAccessToken();
     if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
@@ -295,34 +295,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       setEmail('');
       return;
     }
-    if (!access.ok) {
-      setIsSignedIn(access.reason === 'network');
-      if (savedEmail && access.reason !== 'missing_credentials') {
-        setEmail(savedEmail);
-      }
-      return;
-    }
-
-    const res = await testBackendLogin();
-    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+    if (!access.ok && access.reason === 'session_expired') {
       setIsSignedIn(false);
       setEmail('');
       return;
     }
-    if (!res.ok) {
-      setIsSignedIn(isLikelyNetworkError(res.message));
-      if (savedEmail) setEmail(savedEmail);
-      return;
-    }
-    setIsSignedIn(true);
     try {
       await syncLocalFarmerFromAuth();
     } catch {
-      // Auth session is valid; local farmer alignment is best-effort on refresh.
-    }
-    if (!hasSyncAuthSession() || generationAtStart !== getAuthUiGeneration()) {
-      setIsSignedIn(false);
-      setEmail('');
+      // Credentials are on device; farmer alignment is best-effort on refresh.
     }
   }, [syncLocalFarmerFromAuth]);
 

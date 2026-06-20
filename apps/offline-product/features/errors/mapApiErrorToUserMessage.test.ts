@@ -47,10 +47,18 @@ describe('mapPlotUploadErrorMessage', () => {
 });
 
 describe('mapSyncActionErrorMessage', () => {
-  it('maps network failures in settings', () => {
+  it('maps generic transport failures without claiming Tracebud is down', () => {
     expect(mapSyncActionErrorMessage('TypeError: Network request failed', t, 'settings')).toBe(
-      'settings_sync_reach_failed',
+      'settings_sync_transport_failed_settings',
     );
+  });
+
+  it('maps photo queue transport failures to photo-specific copy', () => {
+    expect(
+      mapSyncActionErrorMessage('Network request failed', t, 'settings', {
+        actionType: 'photos_sync',
+      }),
+    ).toBe('sync_photos_upload_failed_settings');
   });
 
   it('maps technical queue errors to farmer copy', () => {

@@ -33,8 +33,11 @@ function uniqueIds(candidates: string[]): string[] {
 export async function fetchMergedServerPlots(farmerIds: string[]): Promise<unknown[]> {
   const seen = new Set<string>();
   const merged: unknown[] = [];
+  let lastError: unknown = null;
+  let attemptCount = 0;
   for (const farmerId of farmerIds) {
     try {
+      attemptCount += 1;
       const rows = (await fetchPlotsForFarmerCached(farmerId)) as { id?: unknown }[];
       for (const row of rows ?? []) {
         const id = String(row?.id ?? '').trim();
@@ -42,9 +45,13 @@ export async function fetchMergedServerPlots(farmerIds: string[]): Promise<unkno
         seen.add(id);
         merged.push(row);
       }
-    } catch {
+    } catch (error) {
+      lastError = error;
       // try next owned profile
     }
+  }
+  if (merged.length === 0 && attemptCount > 0 && lastError != null) {
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
   return merged;
 }

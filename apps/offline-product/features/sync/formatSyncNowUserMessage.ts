@@ -1,5 +1,9 @@
 import type { TranslateFn } from '@/features/i18n/translate';
 import type { PlotSyncBlockInfo } from '@/features/sync/plotSyncPending';
+import type { SyncFailure } from '@/features/sync/syncFailure';
+import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
+import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
+import { formatSyncFailureUserMessage } from '@/features/sync/mapSyncFailureMessage';
 
 export type SyncPendingSnapshot = {
   total: number;
@@ -30,6 +34,8 @@ export type SyncNowUserOutcome = {
   queuePendingCount?: number;
   /** One farmer-facing reason when sync did not finish (plot upload / queue). */
   failureReason?: string;
+  /** Typed failure from the queue or plot fetch — preferred for farmer copy. */
+  syncFailure?: SyncFailure;
   /** Prefilled mailto when overlap looks wrong on the map. */
   supportMailto?: string;
 };
@@ -97,11 +103,15 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
 
   const remainingPending = outcome.remainingPending ?? 0;
 
+  if (outcome.syncFailure && remainingPending > 0) {
+    return formatSyncFailureUserMessage(outcome.syncFailure, t);
+  }
+
   if (outcome.queueFetchFailed || outcome.plotsFetchFailed) {
     if (remainingPending > 0) {
       const reason = outcome.failureReason?.trim();
       if (reason) return reason;
-      return t('sync_reach_failed_short');
+      return resolveSyncReachFailedShortMessage(t, getTracebudApiBaseUrl());
     }
   }
 

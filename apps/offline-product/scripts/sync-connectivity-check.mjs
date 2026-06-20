@@ -24,6 +24,7 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(path.join(root, '.env'));
 loadEnvFile(path.join(root, '.env.local'));
+loadEnvFile(path.join(root, '.env.development.local'));
 
 const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://api.tracebud.com/api').replace(
   /\/$/,

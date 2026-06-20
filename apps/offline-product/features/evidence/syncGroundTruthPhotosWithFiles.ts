@@ -5,6 +5,9 @@ import {
   normalizeEvidenceContentType,
 } from '@/features/evidence/evidenceContentType';
 import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceToStorage';
+import { syncFailureFromEvidenceUpload } from '@/features/sync/syncFailureFromEvidenceUpload';
+import { SyncFailureError } from '@/features/sync/syncFailureError';
+import type { SyncFailure } from '@/features/sync/syncFailure';
 
 export type GroundTruthSyncSummary = {
   uploadedCount: number;
@@ -12,6 +15,7 @@ export type GroundTruthSyncSummary = {
   failedUploadCount: number;
   notSignedIn: boolean;
   firstUploadError?: string;
+  firstSyncFailure?: SyncFailure;
 };
 
 function createGroundTruthSyncSummary(): GroundTruthSyncSummary {
@@ -27,12 +31,25 @@ function assertGroundTruthPhotosUploaded(summary: GroundTruthSyncSummary, photos
   const localPhotos = photos.filter((photo) => isLocalEvidenceUri(photo.uri));
   if (localPhotos.length === 0) return;
   if (summary.notSignedIn) {
-    throw new Error('Sign in to upload field photos.');
+    throw new SyncFailureError(
+      summary.firstSyncFailure ?? {
+        step: 'photo_storage',
+        cause: 'not_signed_in',
+        message: 'Sign in to upload field photos.',
+        actionType: 'photos_sync',
+      },
+    );
   }
   if (summary.uploadedCount === 0) {
-    throw new Error(
-      summary.firstUploadError ??
-        'Could not upload field photos. Check your connection and try Sync now.',
+    throw new SyncFailureError(
+      summary.firstSyncFailure ?? {
+        step: 'photo_storage',
+        cause: 'unknown',
+        message:
+          summary.firstUploadError ??
+          'Could not upload field photos. Check your connection and try Sync now.',
+        actionType: 'photos_sync',
+      },
     );
   }
 }
@@ -91,7 +108,9 @@ export async function syncGroundTruthPhotosWithFiles(params: {
       summary.notSignedIn = true;
     } else {
       summary.failedUploadCount += 1;
-      summary.firstUploadError ??= upload.message ?? upload.reason;
+      const failure = syncFailureFromEvidenceUpload({ upload, actionType: 'photos_sync' });
+      summary.firstSyncFailure ??= failure;
+      summary.firstUploadError ??= failure.message;
     }
   }
 

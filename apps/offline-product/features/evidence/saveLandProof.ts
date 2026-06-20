@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 
 import { pickEvidenceFile } from '@/features/evidence/pickEvidenceFile';
+import { copyEvidenceUriToAppStorage } from '@/features/evidence/readLocalEvidenceFile';
 import {
   loadEvidenceForPlot,
   loadTitlePhotosForPlot,
@@ -29,9 +30,16 @@ export async function pickAndSaveLandProof(params: {
 
   try {
     if (isImageMime(file.mimeType)) {
+      const durableUri = await copyEvidenceUriToAppStorage({
+        sourceUri: file.uri,
+        plotId: params.plotId,
+        kind: 'land_title',
+        mimeType: file.mimeType,
+        name: file.name,
+      });
       await persistPlotTitlePhoto({
         plotId: params.plotId,
-        uri: file.uri,
+        uri: durableUri,
         takenAt,
       });
       const [titlePhotos, evidence] = await Promise.all([
@@ -41,10 +49,17 @@ export async function pickAndSaveLandProof(params: {
       return { kind: 'photo', titlePhotos, evidence };
     }
 
+    const durableUri = await copyEvidenceUriToAppStorage({
+      sourceUri: file.uri,
+      plotId: params.plotId,
+      kind: 'tenure_evidence',
+      mimeType: file.mimeType,
+      name: file.name,
+    });
     await persistPlotEvidenceItem({
       plotId: params.plotId,
       kind: 'tenure_evidence',
-      uri: file.uri,
+      uri: durableUri,
       mimeType: file.mimeType,
       label: file.name ?? 'tenure_doc',
       takenAt,

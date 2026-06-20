@@ -110,4 +110,13 @@ describe('syncAuthSession', () => {
       reason: 'missing_credentials',
     });
   });
+
+  it('reuses a verified access token for the duration of a sync run', async () => {
+    const { saveAndApplyOAuthSyncAuth, getAccessTokenFromSupabase, beginSyncAccessTokenRun, endSyncAccessTokenRun } =
+      await import('./syncAuthSession');
+    await saveAndApplyOAuthSyncAuth('farmer@example.com', 'refresh-token-abc', 'cached-access-token', Math.floor(Date.now() / 1000) + 3600);
+    beginSyncAccessTokenRun('run-token-xyz');
+    await expect(getAccessTokenFromSupabase()).resolves.toBe('run-token-xyz');
+    endSyncAccessTokenRun();
+  });
 });

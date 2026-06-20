@@ -43,6 +43,9 @@ export async function drainPendingSyncQueueForManualSync(params: {
     if (res.firstError && !merged.firstError) {
       merged.firstError = res.firstError;
     }
+    if (res.syncFailure && !merged.syncFailure) {
+      merged.syncFailure = res.syncFailure;
+    }
     if (res.fetchFailed) {
       merged.fetchFailed = res.fetchFailed;
     }

@@ -1,4 +1,5 @@
 import { normalizeEvidenceContentType, isLocalEvidenceUri } from './evidenceContentType';
+import { readLocalEvidenceBytes } from './readLocalEvidenceFile';
 
 import {
   getAuthenticatedSupabaseClient,
@@ -42,10 +43,9 @@ export async function uploadEvidenceFileToStorage(params: {
     return { ok: false, reason: 'not_signed_in', message: 'Sign in to upload evidence files.' };
   }
 
-  let body: Blob | ArrayBuffer;
+  let body: ArrayBuffer;
   try {
-    const response = await fetch(params.localUri);
-    body = await response.blob();
+    body = await readLocalEvidenceBytes(params.localUri);
   } catch (e) {
     return {
       ok: false,

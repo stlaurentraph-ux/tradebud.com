@@ -48,6 +48,43 @@ Prod diagnostic identified copy, auth, and sync gaps. Phased execution plan:
 
 Priority: i18n copy fix → auth unification (Google/Apple/email) → sync reliability → observability → CI/release gates.
 
+## Sync session architecture (2026-06-20)
+
+Systematic hardening to stop whack-a-mole sync debugging:
+
+- **Typed failures** — `features/sync/syncFailure.ts` classifies errors by `{ step, cause, message, actionType }` instead of collapsing to `"Network request failed"`.
+- **Single sync session** — `openFieldSyncSession()` / `withFieldSyncSession()` verify the Supabase token once, open plot-fetch de-duplication, and reuse the access token for all API/storage calls in a run (Settings Sync now, metrics refresh, auto-backup).
+- **Farmer-visible diagnostics** — Settings backup card shows failed step + last queue error; photo/harvest/evidence failures get action-specific copy via `mapSyncFailureMessage.ts`.
+- **Env clarity** — committed `.env` defaults to production API; LAN overrides belong in `.env.local` only; `qa:sync-connectivity` loads `.env.development.local`.
+
+### Phase 2 — photo pipeline + unified manual sync (2026-06-20)
+
+- **Storage vs API failures** — `syncFailureFromEvidenceUpload.ts` maps Supabase Storage outcomes to `photo_storage`; `syncPlotPhotosToBackend` throws `SyncFailureError` with step `photo_api`.
+- **Durable local photos** — evidence files copied to app storage on save; `readLocalEvidenceBytes` uses Expo FileSystem (not `fetch(file://…)`).
+- **Unified manual sync** — `runFieldSyncPipeline()` is the single entry for plot upload + queue drain (Settings Sync now); session token from `openFieldSyncSession()`.
+- **Sentry breadcrumbs** — `reportSyncFailure()` records `{ step, cause, actionType }` on queue failures and plot-upload errors.
+- **Maestro smoke** — `.maestro/flows/settings-sync-smoke.yaml` + `testID="settings-sync-now"`; `npm run test:maestro:sync`.
+
+### Sync failure matrix (farmer-facing)
+
+| Step | Typical cause | User message key |
+|------|---------------|------------------|
+| `token_refresh` | Supabase slow/offline | `sync_auth_refresh_failed` |
+| `api_reachability` | Tracebud API down | `settings_sync_reach_failed` |
+| `plot_list` | GET /v1/plots failed | reachability or transport |
+| `photo_storage` | Supabase Storage RLS/upload | `sync_photos_upload_failed_settings` |
+| `photo_api` | POST photos-sync failed | `sync_photos_upload_failed_settings` |
+| `harvest` | POST /v1/harvest failed | `sync_harvest_upload_failed_settings` |
+| `missing_plot_link` | No server plot id | plot-specific queue copy |
+
+### State transitions
+
+Unchanged canonical queue transitions; `syncFailure` is attached to analytics `sync_action_failed` with `actionType`.
+
+### Tests
+
+- `syncFailure.test.ts`, `runFieldSyncSession.test.ts`
+
 ## Sync reliability hardening (2026-06-19)
 
 Field-sync failure ("12 waiting to upload", "Plot not on server yet", `plot_upload` 429) for a production account was traced to client-side chatter, not server data. Verified directly against the production DB: the auth user owns exactly one farmer profile, which owns exactly one plot — no duplicate/orphaned rows under the auth uid.

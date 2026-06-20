@@ -1,0 +1,17 @@
+appId: com.tracebud.app
+---
+# Settings → Sync now smoke (signed-in or sign-in CTA).
+- launchApp
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    text: ".*Settings.*"
+- assertVisible:
+    id: "settings-sync-now"
+    optional: true
+- tapOn:
+    id: "settings-sync-now"
+    optional: true
+- assertVisible:
+    text: ".*Sync now.*|.*Syncing.*|.*Sign in.*"
+    optional: true

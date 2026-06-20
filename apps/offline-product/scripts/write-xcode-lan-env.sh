@@ -29,12 +29,19 @@ should_skip_lan_api_sync() {
   if [[ -n "$preset" ]] && [[ "$preset" != *":4000/api" ]] && [[ "$preset" != *"localhost"* ]]; then
     return 0
   fi
+  # Never overwrite a production CRM target in .env.local (Hector / device testing).
+  if [[ -f "$ROOT/.env.local" ]] && grep -qE '^EXPO_PUBLIC_API_URL=https://api\.tracebud\.com' "$ROOT/.env.local" 2>/dev/null; then
+    return 0
+  fi
   return 1
 }
 
 sync_api_url_file() {
   local file="$1"
   [[ -f "$file" ]] || return 0
+  if grep -qE '^EXPO_PUBLIC_API_URL=https://api\.tracebud\.com' "$file" 2>/dev/null; then
+    return 0
+  fi
   if grep -q '^EXPO_PUBLIC_API_URL=' "$file"; then
     sed -i '' "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=http://${IP}:4000/api|" "$file"
   fi

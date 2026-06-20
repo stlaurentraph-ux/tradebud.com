@@ -11,6 +11,12 @@ import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQr
 import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
+  classifyQueueSyncFailure,
+  type SyncFailure,
+} from '@/features/sync/syncFailure';
+import { isSyncFailureError } from '@/features/sync/syncFailureError';
+import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
+import {
   deletePendingSyncAction,
   compactDuplicatePendingSyncActions,
   loadEvidenceForPlot,
@@ -37,6 +43,8 @@ export type ProcessPendingSyncQueueResult = {
   droppedInvalid: number;
   fetchFailed: boolean;
   firstError?: string;
+  firstFailedActionType?: PendingSyncAction['actionType'];
+  syncFailure?: SyncFailure;
 };
 
 export type PendingSyncAttemptScope = 'all' | 'retrying_only' | 'first_attempt_only';
@@ -76,17 +84,17 @@ export async function processPendingSyncQueue(params: {
 }): Promise<ProcessPendingSyncQueueResult> {
   await compactDuplicatePendingSyncActions().catch(() => 0);
 
-  const apiReachable = await probeTracebudApiReachable({
-    accessToken: params.accessToken,
-  });
-  if (!apiReachable) {
-    return {
-      completed: 0,
-      failedActions: 0,
-      droppedInvalid: 0,
-      fetchFailed: true,
-      firstError: 'Network request failed',
-    };
+  if (!params.accessToken?.trim()) {
+    const apiReachable = await probeTracebudApiReachable();
+    if (!apiReachable) {
+      return {
+        completed: 0,
+        failedActions: 0,
+        droppedInvalid: 0,
+        fetchFailed: true,
+        firstError: 'Network request failed',
+      };
+    }
   }
 
   let backendRows: unknown[] = [];
@@ -173,6 +181,8 @@ export async function processPendingSyncQueue(params: {
   let failedActions = 0;
   let droppedInvalid = 0;
   let firstError: string | undefined;
+  let firstFailedActionType: PendingSyncAction['actionType'] | undefined;
+  let firstSyncFailure: SyncFailure | undefined;
 
   const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync', 'audit_sync'];
   const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
@@ -445,9 +455,19 @@ export async function processPendingSyncQueue(params: {
       completed += 1;
     } catch (e) {
       const nextAttempts = (a.attempts ?? 0) + 1;
-      const errorText = e instanceof Error ? e.message : String(e);
+      const failure = isSyncFailureError(e)
+        ? { ...e.failure, actionType: e.failure.actionType ?? a.actionType }
+        : classifyQueueSyncFailure({ error: e, actionType: a.actionType });
+      const errorText = failure.message;
       failedActions += 1;
       firstError = firstError ?? errorText;
+      firstFailedActionType = firstFailedActionType ?? a.actionType;
+      firstSyncFailure = firstSyncFailure ?? failure;
+      reportSyncFailure(failure, {
+        pendingSyncId: a.id,
+        source: 'sync_queue',
+        attempts: nextAttempts,
+      });
       await markPendingSyncAttempt(a.id, {
         attempts: nextAttempts,
         lastError: errorText,
@@ -472,12 +492,15 @@ export async function processPendingSyncQueue(params: {
       droppedInvalid,
     });
   }
-  if (failedActions > 0) {
-    trackEvent(ANALYTICS_EVENTS.SYNC_ACTION_FAILED, {
-      failedActions,
-      firstError: firstError ?? null,
-    });
-  }
+
+  const syncFailure =
+    firstSyncFailure ??
+    (firstError != null
+      ? classifyQueueSyncFailure({
+          error: firstError,
+          actionType: firstFailedActionType,
+        })
+      : undefined);
 
   return {
     completed,
@@ -487,5 +510,7 @@ export async function processPendingSyncQueue(params: {
     firstError:
       firstError ??
       (plotListFetchFailed ? 'Plot list could not be refreshed — used saved plot links.' : undefined),
+    firstFailedActionType,
+    syncFailure,
   };
 }

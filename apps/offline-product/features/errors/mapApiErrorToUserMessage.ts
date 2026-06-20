@@ -112,8 +112,39 @@ export function mapSyncActionErrorMessage(
     );
   }
   if (isNetworkFailureMessage(trimmed)) {
+    const actionType = _ctx?.actionType;
+    if (actionType === 'photos_sync') {
+      return t(
+        surface === 'settings'
+          ? 'sync_photos_upload_failed_settings'
+          : 'sync_photos_upload_failed',
+      );
+    }
+    if (actionType === 'evidence_sync') {
+      return t(
+        surface === 'settings'
+          ? 'sync_evidence_upload_failed_settings'
+          : 'sync_evidence_upload_failed',
+      );
+    }
+    if (actionType === 'harvest') {
+      return t(
+        surface === 'settings'
+          ? 'sync_harvest_upload_failed_settings'
+          : 'sync_harvest_upload_failed',
+      );
+    }
+    if (actionType === 'audit_sync') {
+      return t(
+        surface === 'settings'
+          ? 'sync_declaration_upload_failed_settings'
+          : 'sync_declaration_upload_failed',
+      );
+    }
     return t(
-      surface === 'settings' ? 'settings_sync_reach_failed' : surfaceKey('plot_upload_network_error', surface),
+      surface === 'settings'
+        ? 'settings_sync_transport_failed_settings'
+        : surfaceKey('plot_upload_network_error', surface),
     );
   }
   if (!trimmed || isTechnicalApiMessage(trimmed)) {

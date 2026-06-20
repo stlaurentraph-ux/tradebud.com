@@ -10,6 +10,9 @@ import {
 } from '@/features/evidence/evidenceContentType';
 import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceToStorage';
 import type { PlotTitlePhoto } from '@/features/state/persistence';
+import type { SyncFailure } from '@/features/sync/syncFailure';
+import { syncFailureFromEvidenceUpload } from '@/features/sync/syncFailureFromEvidenceUpload';
+import { SyncFailureError } from '@/features/sync/syncFailureError';
 
 export type { LandTitleSyncSummary };
 
@@ -75,7 +78,9 @@ export async function syncLandTitlePhotosWithFiles(params: {
       summary.notSignedIn = true;
     } else {
       summary.failedUploadCount += 1;
-      summary.firstUploadError ??= upload.message ?? upload.reason;
+      const failure = syncFailureFromEvidenceUpload({ upload, actionType: 'photos_sync' });
+      summary.firstSyncFailure ??= failure;
+      summary.firstUploadError ??= failure.message;
     }
   }
 

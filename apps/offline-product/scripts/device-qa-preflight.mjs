@@ -138,4 +138,13 @@ if (placeholderKeys.length > 0) {
 }
 console.log('OK en.json: no placeholder keys');
 
+assertFile('features/sync/runFieldSyncPipeline.ts', 'unified field sync pipeline');
+assertFile('features/sync/reportSyncFailure.ts', 'sync failure Sentry breadcrumbs');
+assertFile('features/sync/syncFailureFromEvidenceUpload.ts', 'storage vs API failure mapping');
+assertIncludes('app/(tabs)/settings.tsx', 'runFieldSyncPipeline', 'Settings Sync now uses pipeline');
+assertIncludes('app/(tabs)/settings.tsx', 'testID="settings-sync-now"', 'Settings sync Maestro testID');
+assertIncludes('features/sync/processPendingSyncQueue.ts', 'reportSyncFailure', 'queue drain reports failures');
+assertIncludes('features/evidence/syncGroundTruthPhotosWithFiles.ts', 'syncFailureFromEvidenceUpload', 'photo storage typed failures');
+assertFile('.maestro/flows/settings-sync-smoke.yaml', 'settings sync Maestro smoke');
+
 console.log('\nStatic wiring OK. Run `npm run qa:full` before `release:production:safe`.');

@@ -30,6 +30,26 @@ describe('backupAttentionSummary', () => {
     ).toBe(true);
   });
 
+  it('prioritizes auth refresh when sign-in token cannot be renewed', () => {
+    expect(
+      pickBackupAttentionPrimaryKind({
+        ...baseSnapshot,
+        syncAccessFailure: 'network',
+      }),
+    ).toBe('auth_refresh');
+  });
+
+  it('queue transport errors show queue_error, not generic connectivity', () => {
+    expect(
+      pickBackupAttentionPrimaryKind({
+        ...baseSnapshot,
+        queuePendingCount: 1,
+        queueLastError: 'Network request failed',
+        queueLastErrorActionType: 'photos_sync',
+      }),
+    ).toBe('queue_error');
+  });
+
   it('prioritizes connectivity when plot list cannot be reached', () => {
     expect(
       pickBackupAttentionPrimaryKind({

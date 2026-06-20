@@ -5,6 +5,8 @@ export const BACKUP_ATTENTION_MAX_COLLAPSED_LINES = 2;
 /** Expanded details: cap technical lines so the card stays scannable. */
 export const BACKUP_ATTENTION_MAX_DETAIL_LINES = 5;
 
+export type SyncAccessFailureReason = 'network' | 'session_expired';
+
 export type BackupAttentionSnapshot = {
   isSignedIn: boolean;
   queueLastError: string | null;
@@ -15,6 +17,7 @@ export type BackupAttentionSnapshot = {
   queueNextRetrySeconds: number | null;
   unsyncedPlotCount: number;
   plotsFetchFailed: boolean;
+  syncAccessFailure?: SyncAccessFailureReason | null;
   queuePendingBreakdown: string | null;
 };
 
@@ -27,6 +30,9 @@ export type BackupAttentionDetailKind =
 
 export function shouldShowBackupAttentionPanel(snapshot: BackupAttentionSnapshot): boolean {
   if (!snapshot.isSignedIn) return false;
+  if (snapshot.syncAccessFailure === 'network' || snapshot.syncAccessFailure === 'session_expired') {
+    return true;
+  }
   if (snapshot.plotsFetchFailed && snapshot.queuePendingCount > 0) return true;
   if (snapshot.queueLastError && snapshot.queuePendingCount > 0) return true;
   if (snapshot.unsyncedPlotCount > 0 && snapshot.plotsFetchFailed) return true;
@@ -35,8 +41,11 @@ export function shouldShowBackupAttentionPanel(snapshot: BackupAttentionSnapshot
 
 export function pickBackupAttentionPrimaryKind(
   snapshot: BackupAttentionSnapshot,
-): 'connectivity' | 'queue_error' | 'unsynced_plots' | 'queue_waiting' | null {
+): 'auth_refresh' | 'connectivity' | 'queue_error' | 'unsynced_plots' | 'queue_waiting' | null {
   if (!shouldShowBackupAttentionPanel(snapshot)) return null;
+  if (snapshot.syncAccessFailure === 'network' || snapshot.syncAccessFailure === 'session_expired') {
+    return 'auth_refresh';
+  }
   if (
     snapshot.plotsFetchFailed &&
     (snapshot.queuePendingCount > 0 || snapshot.unsyncedPlotCount > 0)

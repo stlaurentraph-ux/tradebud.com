@@ -15,6 +15,7 @@ import {
   summarizePlotSyncPending,
   type PlotSyncBlockInfo,
 } from '@/features/sync/plotSyncPending';
+import { isPlotFetchReachabilityFailure } from '@/features/sync/plotFetchFailure';
 
 export type TotalSyncPendingSnapshot = {
   queuePendingCount: number;
@@ -80,8 +81,8 @@ export async function measureTotalSyncPending(params: {
       blockedPlotCount = summary.blockedPlots.length;
       unsyncedPlotNames = summary.unsyncedPlotNames;
       blockedPlots = summary.blockedPlots;
-    } catch {
-      plotsFetchFailed = true;
+    } catch (err) {
+      plotsFetchFailed = isPlotFetchReachabilityFailure(err);
       const classified = classifyLocalPlotSyncPending({
         localPlots: params.plots,
         backendPlots: [],

@@ -1,3 +1,16 @@
+- `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
+
+### 2026-06-20 (offline: sync Phase 2 — photo failures + pipeline + Maestro)
+- **Photo sync** — Supabase Storage vs Tracebud API failures classified separately (`photo_storage` / `photo_api`); `SyncFailureError` propagates through land title + ground truth upload paths.
+- **Pipeline** — `runFieldSyncPipeline()` replaces inline Settings plot upload + queue drain; Sentry breadcrumbs via `reportSyncFailure()`.
+- **Device QA** — Maestro `settings-sync-smoke.yaml`, `test:maestro:sync`, preflight wiring asserts.
+
+### 2026-06-20 (offline: sync session + typed failures — systematic hardening)
+- **Typed `SyncFailure`** — `{ step, cause, message, actionType }` replaces string-only queue errors; photo/harvest/evidence get distinct farmer copy.
+- **`openFieldSyncSession()`** — one token verify + plot-fetch scope for Settings Sync now, metrics refresh, and auto-backup (stops repeated OAuth refresh mid-queue).
+- **Diagnostics** — Settings shows failed step + last queue error; `mapSyncFailureMessage.ts` centralizes user copy.
+- **Env** — `.env` defaults to production API; `qa:sync-connectivity` reads `.env.development.local`.
+
 ### 2026-06-20 (repo hygiene: onboarding docs + focus archive)
 - **Root README** — Added `README.md` with repo layout, app entry points, legacy root-app warning, CI summary, and doc read order.
 - **Dashboard README** — Added `apps/dashboard-product/README.md` with local dev and quality commands.
@@ -6,6 +19,10 @@
 - **Structure doc** — `apps/STRUCTURE.md` now flags non-deployable root `app/` shell.
 - **Focus archive** — Moved ~580 bullets from `current-focus.md` to `current-focus-archive.md`; active focus file now ~55 lines.
 - **v0 prototype** — Added `design/v0-prototype/ARCHIVE.md` (frozen reference; not CI/deploy).
+
+### 2026-06-20 (offline: RN fetch false-abort → “could not reach Tracebud”)
+- **Root cause** — `AbortController` on React Native `fetch` could false-abort health/plot GETs; Sync now also blocked on a redundant reachability probe after a verified Supabase token.
+- **Fix** — `tracebudFetchWithTimeout` (Promise.race, no abort signal); drop pre-sync probe when token verified; plot list fetch + backup status use token-aware error classification.
 
 ### 2026-06-20 (offline: false “couldn’t reach Tracebud” after sign-in)
 - **Root cause** — Reachability probe preferred `/health` and re-fetched tokens; Supabase refresh timeouts and plot-list auth errors were mislabeled as Tracebud connectivity failures.

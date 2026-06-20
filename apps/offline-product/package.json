@@ -39,6 +39,7 @@
     "qa:device:signoff": "node ./scripts/device-smoke-signoff.mjs",
     "qa:device:assert": "node ./scripts/device-smoke-signoff-assert.mjs",
     "test:maestro": "bash ./scripts/maestro-test.sh",
+    "test:maestro:sync": "bash ./scripts/maestro-test.sh settings-sync-smoke.yaml",
     "test:maestro:seed": "node ./scripts/seed-maestro-simulator.mjs",
     "qa:tenant-isolation": "node ./scripts/field-tenant-isolation-smoke.mjs",
     "store:preflight": "node ./scripts/store-ops-preflight.mjs",

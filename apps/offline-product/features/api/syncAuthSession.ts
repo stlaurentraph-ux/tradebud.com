@@ -10,6 +10,7 @@ import {
   loadSyncAuthCredentials,
   saveOAuthSyncAuthCredentials,
   saveSyncAuthCredentials,
+  saveOAuthAccessTokenCache,
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
 import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
@@ -18,8 +19,10 @@ import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import {
   cacheBustUrl,
   isSuccessfulApiResponse,
+  tracebudFetchWithTimeout,
   TRACEBUD_NO_CACHE_HEADERS,
 } from '@/features/network/apiFetchResponse';
+import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
 
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
@@ -47,6 +50,30 @@ let signOutRevision = 0;
 let authUiGeneration = 0;
 
 let authStateChain: Promise<void> = Promise.resolve();
+
+/** Verified access token reused for one Sync now / metrics refresh (avoids repeated OAuth refresh). */
+let syncRunAccessToken: string | null = null;
+let syncRunAccessDepth = 0;
+
+export function beginSyncAccessTokenRun(accessToken: string): void {
+  const token = accessToken.trim();
+  if (!token) return;
+  if (syncRunAccessDepth === 0) {
+    syncRunAccessToken = token;
+  }
+  syncRunAccessDepth += 1;
+}
+
+export function endSyncAccessTokenRun(): void {
+  syncRunAccessDepth = Math.max(0, syncRunAccessDepth - 1);
+  if (syncRunAccessDepth === 0) {
+    syncRunAccessToken = null;
+  }
+}
+
+function getSyncRunAccessToken(): string | null {
+  return syncRunAccessDepth > 0 ? syncRunAccessToken : null;
+}
 
 function syncAuthStillActive(revisionAtStart: number): boolean {
   return revisionAtStart === signOutRevision && !syncAuthDismissedByUser;
@@ -100,6 +127,11 @@ export function getSupabaseAuthClient(): SupabaseClient {
 function applySessionToCache(session: { access_token: string; expires_at?: number | null }) {
   cachedAccessToken = session.access_token;
   cachedExpiresAt = session.expires_at ?? null;
+  if (currentAuthMethod === 'oauth') {
+    void saveOAuthAccessTokenCache(session.access_token, session.expires_at ?? null).catch(
+      () => undefined,
+    );
+  }
 }
 
 function clearSessionCache() {
@@ -152,6 +184,11 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
       return null;
     }
 
+    const runToken = getSyncRunAccessToken();
+    if (runToken) {
+      return runToken;
+    }
+
     const now = Date.now() / 1000;
     if (cachedAccessToken && cachedExpiresAt && cachedExpiresAt - now > 60) {
       return cachedAccessToken;
@@ -196,6 +233,8 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
         await saveOAuthSyncAuthCredentials(
           data.session.user.email ?? currentEmail,
           data.session.refresh_token,
+          data.session.access_token,
+          data.session.expires_at ?? null,
         );
         if (!syncAuthStillActive(revisionAtStart)) {
           return null;
@@ -236,7 +275,7 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
   });
 }
 
-const DEFAULT_ACCESS_TOKEN_TIMEOUT_MS = 12_000;
+const DEFAULT_ACCESS_TOKEN_TIMEOUT_MS = 20_000;
 
 export type VerifySyncAccessTokenResult =
   | { ok: true; token: string }
@@ -262,10 +301,18 @@ export async function verifySyncAccessToken(
         continue;
       }
       if (isLikelyNetworkError(msg)) {
+        const staleToken = cachedAccessToken?.trim() || null;
+        if (staleToken && (await probeTracebudApiReachable({ accessToken: staleToken }))) {
+          return { ok: true, token: staleToken };
+        }
         return { ok: false, reason: 'network' };
       }
       return { ok: false, reason: 'session_expired' };
     }
+  }
+  const staleToken = cachedAccessToken?.trim() || null;
+  if (staleToken && (await probeTracebudApiReachable({ accessToken: staleToken }))) {
+    return { ok: true, token: staleToken };
   }
   return { ok: false, reason: 'network' };
 }
@@ -274,6 +321,10 @@ export async function verifySyncAccessToken(
 export async function getAccessTokenFromSupabaseWithTimeout(
   timeoutMs = DEFAULT_ACCESS_TOKEN_TIMEOUT_MS,
 ): Promise<string | null> {
+  const runToken = getSyncRunAccessToken();
+  if (runToken) {
+    return runToken;
+  }
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -311,23 +362,24 @@ export async function testBackendLogin(options?: {
         message: 'Sign in to sync your plots to Tracebud.',
       };
     }
-    const healthUrl = cacheBustUrl(`${apiBase}/health`);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    let healthRes: Response;
-    try {
-      healthRes = await fetch(healthUrl, {
+    const healthRes = await tracebudFetchWithTimeout(
+      cacheBustUrl(`${apiBase}/health`),
+      {
         method: 'GET',
-        signal: controller.signal,
         headers: TRACEBUD_NO_CACHE_HEADERS,
-      });
-    } finally {
-      clearTimeout(timeout);
+      },
+      timeoutMs,
+    );
+    if (healthRes == null) {
+      return {
+        ok: false,
+        message: 'Network request failed',
+      };
     }
     if (!isSuccessfulApiResponse(healthRes.status)) {
       return {
         ok: false,
-        message: `Tracebud API returned ${healthRes.status} at ${healthUrl}. Check EXPO_PUBLIC_API_URL (currently ${apiBase}).`,
+        message: `Tracebud API returned ${healthRes.status} at ${cacheBustUrl(`${apiBase}/health`)}. Check EXPO_PUBLIC_API_URL (currently ${apiBase}).`,
       };
     }
     return { ok: true };
@@ -381,7 +433,12 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
         return;
       }
       if (credentials.method === 'oauth') {
-        applyOAuthAuth(credentials.email, credentials.refreshToken);
+        applyOAuthAuth(
+          credentials.email,
+          credentials.refreshToken,
+          credentials.accessToken,
+          credentials.expiresAt,
+        );
         return;
       }
       applyPasswordAuth(credentials.email, credentials.password);
@@ -422,7 +479,7 @@ export async function saveAndApplyOAuthSyncAuth(
     await activateSyncAuthOnSignIn();
     authUiGeneration += 1;
     const e = email.trim();
-    await saveOAuthSyncAuthCredentials(e, refreshToken);
+    await saveOAuthSyncAuthCredentials(e, refreshToken, accessToken, expiresAt);
     applyOAuthAuth(e, refreshToken, accessToken, expiresAt);
   });
 }

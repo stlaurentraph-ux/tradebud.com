@@ -73,6 +73,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: t('tab_settings'),
+          tabBarButton: (props) => <HapticTab {...props} testID="tab-settings" />,
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'settings' : 'settings-outline'} size={26} color={color} />
