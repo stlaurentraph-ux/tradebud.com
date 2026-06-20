@@ -45,6 +45,7 @@
     "i18n:queue:verify:clean": "npm run i18n:queue:verify:clean --prefix apps/offline-product",
     "i18n:queue:verify:clean:all": "npm run i18n:queue:verify:clean:all --prefix apps/offline-product",
     "openapi:lint": "npx @redocly/cli lint --config .redocly.yaml docs/openapi/tracebud-v1-draft.yaml",
+    "supabase:migration:naming:assert": "node scripts/supabase-migration-naming-guard.mjs",
     "openapi:baseline:refresh": "node scripts/openapi-refresh-lint-baseline.mjs",
     "openapi:governance:markdown:check": "node scripts/openapi-governance/markdown-reference-check.mjs",
     "openapi:governance:readme:check": "node scripts/openapi-governance/readme-commands-check.mjs",

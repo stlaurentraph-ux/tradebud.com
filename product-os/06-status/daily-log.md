@@ -5,7 +5,10 @@
 - Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
 - **Next** — Create Vercel project (root `apps/founder-os`); set `NEXT_PUBLIC_FOUNDER_OS_URL` on dashboard after deploy.
 
-### 2026-06-20 (automation — 1.5 dashboard regression guard, `chore/automation-dashboard-regression-guard`)
+### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard, `chore/automation-supabase-migration-ci`)
+- **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
+
+### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)
 - **1.5** — `dashboard-regression-guard.mjs` + `qa/automation-baselines/dashboard-api-routes.json` (99 routes, 34 OpenAPI-pinned backend paths).
 - Validates proxy manifest drift, fail-closed backend URL handling on proxy routes, and OpenAPI removal for pinned paths.
 - Wired into dashboard CI, `check:dashboard`, and app `check` script.
