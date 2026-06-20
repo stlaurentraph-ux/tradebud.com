@@ -1,5 +1,8 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (Founder OS GTM — `feature/dashboard-founder-os-gtm`)
+- Dashboard GTM pages + API routes; SQL daily actions; pilot form sync. Migration applied to Supabase.
+
 ### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
 - **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.
 - **Next** — Push PR #124; human **0.H** after merge.

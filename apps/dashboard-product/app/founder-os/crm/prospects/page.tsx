@@ -71,6 +71,7 @@ export default function FounderOsCrmProspectsPage() {
                 <div><span className="font-medium text-foreground">Company:</span> {prospect.company}</div>
                 <div><span className="font-medium text-foreground">Email:</span> {prospect.email ?? 'n/a'}</div>
                 <div><span className="font-medium text-foreground">Source:</span> {prospect.source ?? 'n/a'}</div>
+                {prospect.icp_score != null ? <div><span className="font-medium text-foreground">ICP:</span> {prospect.icp_score}</div> : null}
                 <div className="md:col-span-3"><span className="font-medium text-foreground">Note:</span> {prospect.notes ?? 'n/a'}</div>
                 <div className="space-y-2 md:col-span-3">
                   <p className="font-medium text-foreground">Exchange log</p>

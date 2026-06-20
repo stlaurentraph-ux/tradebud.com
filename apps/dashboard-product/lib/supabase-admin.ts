@@ -73,6 +73,10 @@ function getFounderOrLeadClient(): SupabaseClient {
   return getGtmProjectAdminClient() ?? getSupabaseAdmin();
 }
 
+export function getFounderOsClient(): SupabaseClient {
+  return getFounderOrLeadClient();
+}
+
 /** Founder OS tables (prospects, outreach, content). Not tenant `crm_contacts`. */
 export function getSupabaseCrm() {
   return getFounderOrLeadClient().schema("crm");
