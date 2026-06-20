@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -28,7 +27,6 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { Badge } from '@/components/ui/badge';
 import { Button as UiButton } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ActionButton as Button } from '@/components/ui/action-button';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
@@ -894,7 +892,7 @@ export default function PlotDetailScreen() {
     ],
   );
 
-  const uploadLandProof = async () => {
+  const uploadLandProof = useCallback(async () => {
     if (!plot || uploadingLandProof) return;
     setUploadingLandProof(true);
     try {
@@ -958,7 +956,17 @@ export default function PlotDetailScreen() {
     } finally {
       setUploadingLandProof(false);
     }
-  };
+  }, [
+    applyLandTitleUploadOutcome,
+    backendPlotId,
+    farmer?.id,
+    notifyDocSync,
+    plot,
+    refreshTenureVerification,
+    runLandTitleUpload,
+    t,
+    uploadingLandProof,
+  ]);
 
   const confirmDeleteLandDocument = useCallback(
     (onConfirm: () => void) => {

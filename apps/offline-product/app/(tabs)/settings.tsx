@@ -56,7 +56,7 @@ import {
 import {
   prepareFieldSyncContext,
 } from '@/features/sync/resolveFieldSyncScope';
-import { fetchServerPlotListForUi, invalidateServerPlotListCache, peekServerPlotListCache } from '@/features/sync/serverPlotListCache';
+import { fetchServerPlotListForUi, peekServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
@@ -110,6 +110,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Brand, Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { SetPasswordCard } from '@/components/auth/SetPasswordCard';
+import {
+  footprintBytesToMb,
+  measureTracebudStorageFootprint,
+  type TracebudStorageFootprint,
+} from '@/features/storage/measureTracebudFootprint';
+import { useAppState, type Plot } from '@/features/state/AppStateContext';
+import { roundWgs84Coordinate } from '@/features/geo/coordinates';
+import { Input } from '@/components/ui/input';
+import { useFocusEffect } from '@react-navigation/native';
+import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
 
 const ALL_QUEUE_ACTION_TYPES: PendingSyncAction['actionType'][] = [
   'harvest',
@@ -139,17 +150,6 @@ function isConsentQueueActionType(
 ): boolean {
   return CONSENT_QUEUE_ACTION_TYPES.includes(actionType);
 }
-import { SetPasswordCard } from '@/components/auth/SetPasswordCard';
-import {
-  footprintBytesToMb,
-  measureTracebudStorageFootprint,
-  type TracebudStorageFootprint,
-} from '@/features/storage/measureTracebudFootprint';
-import { useAppState, type Plot } from '@/features/state/AppStateContext';
-import { roundWgs84Coordinate } from '@/features/geo/coordinates';
-import { Input } from '@/components/ui/input';
-import { useFocusEffect } from '@react-navigation/native';
-import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
 
 const RETRY_BACKOFF_BASE_MS = 5000;
 const RETRY_BACKOFF_MAX_MS = 5 * 60 * 1000;
