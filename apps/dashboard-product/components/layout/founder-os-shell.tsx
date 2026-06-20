@@ -7,8 +7,13 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/founder-os', label: 'Today' },
+  { href: '/founder-os/strategy/intelligence', label: 'Intelligence' },
+  { href: '/founder-os/strategy/markets', label: 'Markets' },
+  { href: '/founder-os/crm/pipeline', label: 'Pipeline' },
   { href: '/founder-os/crm/daily-actions', label: 'Outreach Queue' },
   { href: '/founder-os/crm/prospects', label: 'People' },
+  { href: '/founder-os/crm/pilots', label: 'Pilots' },
+  { href: '/founder-os/crm/partnerships', label: 'Partnerships' },
   { href: '/founder-os/content/calendar', label: 'Content Board' },
   { href: '/founder-os/content/tasks', label: 'Task Log' },
 ];

@@ -1,11 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
 ### 2026-06-20 (automation — 1.3 CI path filters, `chore/automation-ci-path-filters`)
-- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
+- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix.
 
-### 2026-06-20 (automation — 1.1 pre-commit, PR #128)
-- **1.1** — husky + lint-staged via `lint-staged.config.mjs`; ESLint on staged workspace app files + root `scripts/`.
-- **Next** — PR merge; Bundle B **1.3** path filters (1.2 blocked on Turbo secrets).
+### 2026-06-20 (Founder OS GTM — `feature/dashboard-founder-os-gtm`)
+- Dashboard GTM pages + API routes; SQL daily actions; pilot form sync. Migration applied to Supabase.
 
 ### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
 - **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.

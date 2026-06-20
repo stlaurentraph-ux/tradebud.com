@@ -236,6 +236,9 @@ export default function FounderOsHomePage() {
                 <Button asChild variant="secondary">
                   <Link href="/founder-os/content/calendar">{getFounderOsCopy('open_content_board', t)}</Link>
                 </Button>
+                <Button asChild variant="outline">
+                  <Link href="/founder-os/strategy/intelligence">GTM Intelligence</Link>
+                </Button>
                 {actionMessage ? <p className="w-full text-sm text-muted-foreground">{actionMessage}</p> : null}
               </CardContent>
             </Card>

@@ -44,7 +44,18 @@ export function useProspects() {
     setProspects((prev) => [body.prospect as Prospect, ...prev]);
   };
 
-  return { prospects, isLoading, error, reload, createProspect };
+  const updateProspect = async (id: string, input: Partial<{ stage: string }>) => {
+    const response = await fetch('/api/crm/prospects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...input }),
+    });
+    const body = (await response.json()) as { prospect?: Prospect; error?: string };
+    if (!response.ok) throw new Error(body.error ?? 'Failed to update prospect.');
+    setProspects((prev) => prev.map((p) => (p.id === id ? (body.prospect as Prospect) : p)));
+  };
+
+  return { prospects, isLoading, error, reload, createProspect, updateProspect };
 }
 
 export function useDailyActions(actionDate?: string) {

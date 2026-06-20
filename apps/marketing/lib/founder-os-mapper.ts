@@ -1,4 +1,4 @@
-type FormType = "exporter" | "importer" | "country" | "farmer" | "cooperative";
+type FormType = "exporter" | "importer" | "country" | "farmer" | "cooperative" | "pilot";
 
 interface MapperInput {
   formType: FormType;
@@ -34,6 +34,8 @@ export function mapToProspect(input: MapperInput) {
     asString(input.payload.cooperativeName) ??
     `${input.name} - ${input.formType}`;
 
+  const isPilot = input.formType === "pilot";
+
   return {
     name: input.name,
     company: defaultCompany,
@@ -42,11 +44,16 @@ export function mapToProspect(input: MapperInput) {
     website: asString(input.payload.website),
     commodity_focus: commodityFromPayload(input.payload),
     company_size: companySizeFromPayload(input.payload),
-    source: "website_form",
-    stage: "identified",
+    source: isPilot ? "website_pilot_form" : "website_form",
+    stage: isPilot ? "pilot" : "identified",
     connection_status: "not_sent",
-    notes: `Captured from website form ${input.sourcePage}`,
-    tags: [`source:${input.formType}`, "source:website_form"],
+    pilot_interest_score: isPilot ? 8 : null,
+    notes: isPilot
+      ? `Pilot interest from ${input.sourcePage}. ${asString(input.payload.successCriteria) ?? ""}`.trim()
+      : `Captured from website form ${input.sourcePage}`,
+    tags: isPilot
+      ? ["source:pilot", "source:website_form", "intent:high"]
+      : [`source:${input.formType}`, "source:website_form"],
   };
 }
 

@@ -559,6 +559,55 @@ export interface Prospect {
   email?: string | null;
   source?: string | null;
   notes?: string | null;
+  icp_score?: number | null;
+  country?: string | null;
+  segment?: string | null;
+  commodity_focus?: string | null;
+  market_registry?: MarketRegistry | null;
+}
+
+export interface MarketRegistry {
+  id: string;
+  country_code: string;
+  country_name: string;
+  commodity: string;
+  segment: string;
+  priority_tier: string;
+  entry_wedge?: string | null;
+  regulatory_notes?: string | null;
+}
+
+export interface Pilot {
+  id: string;
+  name: string;
+  status: string;
+  country?: string | null;
+  commodity?: string | null;
+  notes?: string | null;
+  prospects?: { id: string; name: string; company?: string | null } | null;
+}
+
+export interface Partnership {
+  id: string;
+  organization_name: string;
+  partner_type: string;
+  status: string;
+  country?: string | null;
+  notes?: string | null;
+}
+
+export interface ObjectionLog {
+  id: string;
+  category: string;
+  objection_text: string;
+  response_text?: string | null;
+  prospects?: { id: string; name: string; company?: string | null } | null;
+}
+
+export interface PenetrationMetric {
+  metric_key: string;
+  metric_value: number;
+  metric_label: string;
 }
 
 export interface OutreachTemplate {
