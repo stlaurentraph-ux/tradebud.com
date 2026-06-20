@@ -1,6 +1,9 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard, `chore/automation-supabase-migration-ci`)
+### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
+- **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
+
+### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard merged, PR #142)
 - **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
 
 ### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)

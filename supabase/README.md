@@ -11,6 +11,8 @@ SQL migrations and seeds for the Tracebud Supabase Postgres project.
 
 Keep both tracks in sync when adding schema changes. Mirror filenames by purpose (not always identical timestamps).
 
+**Mirror map (CI):** `migration-mirror-map.json` lists Supabase ↔ `tracebud-backend/sql/tb_v16_*` pairs and documented Supabase-only migrations. CI runs `npm run supabase:migration:mirror:assert` on changes. Refresh with `npm run supabase:migration:mirror:baseline:refresh` after review.
+
 ### Naming convention
 
 Use **`YYYYMMDD` + zero-padded sequence** + descriptive slug:
