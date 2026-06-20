@@ -1000,7 +1000,7 @@ export default function PlotDetailScreen() {
         await refreshTenureVerification();
       }
     },
-    [plot, runLandTitleUpload, refreshTenureVerification, t],
+    [plot, runLandTitleUpload, refreshTenureVerification, notifyDocSync, t],
   );
 
   const replaceLandPaper = useCallback(async () => {
