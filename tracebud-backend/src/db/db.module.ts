@@ -10,19 +10,39 @@ export const PG_POOL = Symbol('PG_POOL');
 // Railway and some hosts cannot reach Supabase direct `db.*` IPv6 endpoints.
 setDefaultResultOrder('ipv4first');
 
+function createPgPool(): Pool {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString?.trim()) {
+    throw new Error('DATABASE_URL is not configured.');
+  }
+
+  const pool = new Pool({
+    connectionString,
+    ssl: connectionString.includes('localhost')
+      ? false
+      : {
+          rejectUnauthorized: false,
+        },
+    max: Number(process.env.PG_POOL_MAX ?? 10),
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    keepAlive: true,
+    options: '-c search_path=public,integrations,commercial,internal,ops,crm,gtm',
+  });
+
+  // Idle clients dropped by Supabase pooler must not take down the process.
+  pool.on('error', (err) => {
+    console.error('[pg] idle client error:', err.message);
+  });
+
+  return pool;
+}
+
 @Module({
   providers: [
     {
       provide: PG_POOL,
-      useFactory: () => {
-        return new Pool({
-          connectionString: process.env.DATABASE_URL,
-          ssl: {
-            rejectUnauthorized: false,
-          },
-          options: '-c search_path=public,integrations,commercial,internal,ops,crm,gtm',
-        });
-      },
+      useFactory: () => createPgPool(),
     },
     {
       provide: DRIZZLE,
