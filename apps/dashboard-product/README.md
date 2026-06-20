@@ -14,8 +14,15 @@ Copy patterns from sibling apps. Typical `.env.local` keys include Supabase URL/
 
 ## Local development
 
+From the **repo root** (npm workspaces — install once with `npm install` at root):
+
 ```bash
-npm install
+npm run dev:dashboard
+```
+
+Or from this directory after root install:
+
+```bash
 npm run dev
 ```
 

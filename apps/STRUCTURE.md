@@ -45,9 +45,10 @@ Tracebud now follows a two-product + multi-demo model:
 
 1. One Vercel project per app folder.
 2. Set each project's Root Directory to its exact app folder (never ambiguous `.`).
-3. Keep product and demo domains attached to different projects.
-4. Keep demo-specific environment variables isolated from product variables.
-5. Enforce tenant-scoped RBAC in `apps/dashboard-product` for all dashboard APIs.
+3. **Install command:** from repo root, `npm ci` (npm workspaces). Enable “Include source files outside of the Root Directory” on Vercel if required.
+4. Keep product and demo domains attached to different projects.
+5. Keep demo-specific environment variables isolated from product variables.
+6. Enforce tenant-scoped RBAC in `apps/dashboard-product` for all dashboard APIs.
 
 ## Migration notes (completed in repo)
 

@@ -29,16 +29,26 @@ product-os/            Features, ADRs, quality gates, status logs
 docs/openapi/          API contract draft + governance artifacts
 ```
 
-This is a **multi-package repo**, not a Turborepo/pnpm workspace. Each app has its own `package.json`; install dependencies in the app directory you are working on (CI does the same).
+This is an **npm workspaces monorepo**. Install once at the repo root:
 
-## Legacy root Next app
+```bash
+npm install
+```
 
-The repo root still contains an early v0 shell:
+Workspace packages: `dashboard-product`, `tracebud-marketing`, `tracebud-offline`, `field-auth`, `tracebud-backend`. Demos and `design/v0-prototype/` are **not** in the workspace.
 
-- `app/page.tsx` — large interactive prototype (~5k lines), **not deployed**
-- Root `package.json` — OpenAPI governance scripts + legacy deps; **not the product dashboard**
+### Root commands
 
-Production apps live under `apps/*`. CI lints the root app only when `app/**` changes (see `.github/workflows/ci.yml`).
+```bash
+npm run dev:backend      # NestJS API
+npm run dev:dashboard    # Unified dashboard
+npm run dev:marketing    # Public site
+npm run dev:offline      # Expo Metro (field app)
+npm run lint:workspaces  # Lint backend + dashboard + marketing + offline
+npm run test:offline     # Offline vitest suite
+```
+
+Legacy root Next app (`app/`) and OpenAPI governance scripts remain at the repo root — not deployed.
 
 ## Product documentation (read order)
 
@@ -66,9 +76,9 @@ npm run openapi:governance:check
 
 Per-app commands are documented in each app's README. Typical local stack:
 
-1. Backend: `cd tracebud-backend && npm install && npm run start:dev`
-2. Field app: `cd apps/offline-product && npm install && npm run dev:metro`
-3. Dashboard: `cd apps/dashboard-product && npm install && npm run dev`
+1. Backend: `npm run dev:backend`
+2. Field app: `npm run dev:offline`
+3. Dashboard: `npm run dev:dashboard`
 
 ## CI
 
