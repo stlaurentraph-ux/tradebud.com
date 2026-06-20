@@ -12,7 +12,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 
 | Slice | Goal | CI mode | Branch |
 |-------|------|---------|--------|
-| **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | `chore/automation-offline-phase1` |
+| **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
 | **1.O.2** | Enable `--strict` on guards in CI | Blocking | `chore/automation-offline-strict` |
 | **1.O.3** | Maestro macOS workflow prep | Maestro optional job | `chore/automation-offline-maestro` |
 
@@ -26,7 +26,7 @@ Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan
 |------|---------|------|
 | 0 — fast | `npm run qa:regression` | Every PR touching offline |
 | 1 — automation | `npm run qa:automation:phase1` | Every PR + CI `app` job |
-| 2 — strict | `npm run qa:automation:phase1:strict` | After 1.O.2 on `main` |
+| 2 — strict | `npm run qa:automation:phase1:strict` | CI `app` job (since 1.O.2) |
 | 3 — device | `npm run qa:device` + sign-off | Preview OTA / release |
 
 ---
@@ -69,7 +69,7 @@ Tracks canonical `ANALYTICS_EVENTS` in `features/observability/analytics.ts` and
 GitHub `app` job (after typecheck):
 
 1. `npm run security:preflight`
-2. `npm run qa:automation:phase1` (report mode until 1.O.2)
+2. `npm run qa:automation:phase1:strict` (blocking since 1.O.2)
 
 Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.mjs`, i18n queue smoke.
 
@@ -88,4 +88,4 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 1. Implement or change guard logic on `chore/automation-offline-phase1`.
 2. Run `npm run qa:automation:write-baselines`.
 3. Commit `qa/automation-baselines/*.json` with the guard PR.
-4. After merge + green on `main`, pick slice **1.O.2** to flip CI to `--strict`.
+4. After merge + green on `main`, slice **1.O.2** flipped CI to `--strict` (PR pending).

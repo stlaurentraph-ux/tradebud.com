@@ -1003,8 +1003,8 @@ jobs:
       - name: Security preflight
         run: npm run security:preflight
 
-      - name: Automation guards (Phase 1.O.1 report mode)
-        run: npm run qa:automation:phase1
+      - name: Automation guards (Phase 1.O.2 strict)
+        run: npm run qa:automation:phase1:strict
 
       - name: Typecheck
         run: npm run typecheck
