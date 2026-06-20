@@ -823,10 +823,10 @@ export default function PlotDetailScreen() {
     }
   }, []);
 
-  const notifyDocSync = (message: string, tone: 'success' | 'error' | 'info' = 'error') => {
+  const notifyDocSync = useCallback((message: string, tone: 'success' | 'error' | 'info' = 'error') => {
     setDocSyncMessage(message);
     setDocSyncTone(tone);
-  };
+  }, []);
 
   const applyLandTitleUploadOutcome = useCallback(
     (outcome: AutoUploadOutcome, photoCount: number, showAlert = false) => {
