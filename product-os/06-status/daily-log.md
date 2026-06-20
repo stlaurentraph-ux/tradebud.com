@@ -1,6 +1,9 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 1.1 pre-commit on `chore/automation-pre-commit-hooks`)
+### 2026-06-20 (automation — 1.3 CI path filters, `chore/automation-ci-path-filters`)
+- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
+
+### 2026-06-20 (automation — 1.1 pre-commit, PR #128)
 - **1.1** — husky + lint-staged via `lint-staged.config.mjs`; ESLint on staged workspace app files + root `scripts/`.
 - **Next** — PR merge; Bundle B **1.3** path filters (1.2 blocked on Turbo secrets).
 
@@ -6432,3 +6435,10 @@ Append-only session log.
 - Decisions: legacy CSV `washing_station` activity column coerced to `processing_facility` + `washing_station` subtype; existing DB rows migrated on apply.
 - Verification: migration applied locally; `contacts.service.spec.ts` and `contact-activity-types.test.ts` pass.
 - Next step: re-import sample suppliers CSV to confirm combined activity labels in `/contacts`.
+
+### 2026-06-20 (execution: Founder OS app extraction)
+- Focus: extract Founder OS from `dashboard-product` into standalone `apps/founder-os`; dashboard redirects legacy paths to ops URL.
+- Files changed: `apps/founder-os/**`, dashboard internal-tools/middleware cleanup, root `package.json`, `.github/workflows/ci.yml`, `docs/vercel-monorepo.md`, `product-os/02-features/FEAT-founder-os-app.md`.
+- Decisions: separate Vercel project; dev redirect to `http://localhost:3004`; production via `NEXT_PUBLIC_FOUNDER_OS_URL`.
+- Verification: `npm run check:founder-os`; dashboard middleware + internal-tools tests.
+- Next step: open PR from `feature/founder-os-app`; create Vercel project + `ops.tracebud.com` domain.

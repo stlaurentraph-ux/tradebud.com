@@ -193,7 +193,7 @@ npm run build -w dashboard-product
 |----|------|-------|
 | 1.1 | husky + lint-staged (affected workspace lint on staged files) | root | **done** (PR pending) |
 | 1.2 | Turbo remote cache in GitHub Actions (`TURBO_TOKEN`, `TURBO_TEAM`) | Parallel agent speed |
-| 1.3 | Path filters: skip unrelated jobs on PRs; full run on `push` to `main` | Per ADR-007 |
+| 1.3 | Path filters: skip unrelated jobs on PRs; full run on `push` to `main` | CI | **done** (PR pending) |
 | 1.4 | `turbo run --filter=...[origin/main]` affected detection | Monorepo scale |
 | 1.5 | `dashboard-regression-guard.mjs` (changed routes vs OpenAPI/proxy list) | Dashboard drift |
 | **1.M.1** | Marketing route/publication guard (site map vs `marketing-publication.ts`) | Stealth leak prevention |
