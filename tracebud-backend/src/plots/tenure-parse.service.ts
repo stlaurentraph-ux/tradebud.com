@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { resolveFarmerIdsForTenant } from '../common/tenant-farmer-scope';
@@ -823,7 +823,7 @@ export class TenureParseService {
 
     const bucket = process.env.EVIDENCE_STORAGE_BUCKET?.trim() || 'plot-evidence';
     const normalized = storagePath.trim().replace(/^\/+/, '');
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const supabase = createSupabaseServerClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 

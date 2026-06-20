@@ -58,7 +58,7 @@ describe('backupAttentionSummary', () => {
         queueLastError: 'Internal Server Error',
         plotsFetchFailed: true,
       }),
-    ).toBe('connectivity');
+    ).toBe('queue_error');
   });
 
   it('uses a single friendly primary line for queue errors', () => {

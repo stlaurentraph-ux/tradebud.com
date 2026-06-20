@@ -1,5 +1,5 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import { Pool } from 'pg';
 import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
@@ -111,7 +111,7 @@ export class LaunchService {
         'SUPABASE_SERVICE_ROLE_KEY must be configured to finalize signup tenant claims.',
       );
     }
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const supabase = createSupabaseServerClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const { error } = await supabase.auth.admin.updateUserById(userId, {

@@ -66,6 +66,11 @@ describe('mapSyncActionErrorMessage', () => {
     expect(mapSyncActionErrorMessage('Internal Server Error', t, 'settings')).toBe(
       'settings_sync_online_server_busy',
     );
+    expect(
+      mapSyncActionErrorMessage('Internal Server Error', t, 'settings', {
+        actionType: 'photos_sync',
+      }),
+    ).toBe('sync_photos_upload_failed_settings');
   });
 
   it('keeps farmer-readable queue errors', () => {

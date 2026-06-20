@@ -46,6 +46,9 @@ export function pickBackupAttentionPrimaryKind(
   if (snapshot.syncAccessFailure === 'network' || snapshot.syncAccessFailure === 'session_expired') {
     return 'auth_refresh';
   }
+  if (snapshot.queueLastError && snapshot.queuePendingCount > 0) {
+    return 'queue_error';
+  }
   if (
     snapshot.plotsFetchFailed &&
     (snapshot.queuePendingCount > 0 || snapshot.unsyncedPlotCount > 0)

@@ -195,7 +195,11 @@ export async function runFieldSyncPipeline(
     if (syncRes.fetchFailed) {
       outcome.plotsFetchFailed = true;
       plotUploadFirstError = syncRes.firstError;
-      skipQueueDrain = true;
+      const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+      const plotsMissingServerLink = syncPlots.filter(
+        (plot) => !plotServerLinks[plot.id]?.trim(),
+      );
+      skipQueueDrain = plotsMissingServerLink.length > 0;
       if (plotUploadFirstError) {
         reportSyncFailure(classifyPlotListFailure(plotUploadFirstError), { source: 'plot_upload' });
       }
@@ -314,6 +318,7 @@ export async function runFieldSyncPipeline(
           (row) => typeof row.lastError === 'string' && row.lastError.trim().length > 0,
         )
       : undefined;
+  const queuePending = pendingAfter.queuePendingCount ?? 0;
   const plotHint = plotUploadFirstError
     ? mapPlotUploadErrorMessage(plotUploadFirstError, t, { surface: 'settings' })
     : undefined;
@@ -325,7 +330,10 @@ export async function runFieldSyncPipeline(
   const queuePassHint = queueFirstError
     ? mapSyncActionErrorMessage(queueFirstError, t, 'settings')
     : undefined;
-  outcome.failureReason = plotHint ?? queueRowHint ?? queuePassHint;
+  outcome.failureReason =
+    queuePending > 0 && (queueRowHint ?? queuePassHint)
+      ? (queueRowHint ?? queuePassHint)
+      : (plotHint ?? queueRowHint ?? queuePassHint);
   if (
     !outcome.failureReason?.trim() &&
     pendingAfter.plotsFetchFailed &&

@@ -4,7 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServerClient } from './supabase-server.client';
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
@@ -25,7 +25,7 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     const token = authHeader.slice('Bearer '.length);
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createSupabaseServerClient(supabaseUrl, supabaseAnonKey);
 
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) {
