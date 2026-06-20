@@ -66,7 +66,9 @@
     "openapi:governance:markdown:report:assert": "node scripts/openapi-governance/markdown-report-assert.mjs",
     "openapi:governance:artifacts:assert": "node scripts/openapi-governance/artifacts-assert.mjs",
     "openapi:governance:snapshot:registry:check": "node scripts/openapi-governance/snapshot-registry-check.mjs",
-    "openapi:governance:snapshot:registry:report:assert": "node scripts/openapi-governance/snapshot-registry-report-assert.mjs"
+    "openapi:governance:snapshot:registry:report:assert": "node scripts/openapi-governance/snapshot-registry-report-assert.mjs",
+    "prepare": "husky",
+    "lint:staged": "lint-staged"
   },
   "dependencies": {
     "yaml": "^2.8.3"
@@ -74,6 +76,8 @@
   "devDependencies": {
     "eslint": "^9.39.3",
     "eslint-config-next": "^16.1.6",
+    "husky": "9.1.7",
+    "lint-staged": "17.0.7",
     "turbo": "^2.5.4",
     "typescript": "5.7.3"
   }

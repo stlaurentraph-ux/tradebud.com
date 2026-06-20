@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation Bundle B slice 1.1 (2026-06-20, branch `chore/automation-pre-commit-hooks`): husky + lint-staged pre-commit ESLint on staged workspace files; README pre-commit section.
 - Automation Phase 0 dashboard + field-auth CI (2026-06-20, branch `chore/automation-phase-0`): slices 0.2–0.5 — build CI, field-auth job, `check:dashboard`; stacks on Bundle A integration on same branch.
 - Automation Bundle A integration (2026-06-20, branch `chore/automation-phase-0`): 0.0.1 agent ops plan + Cursor workflow; 0.M.0 marketing lint fixes.
 - Offline Metro structural isolation (2026-06-20): exclude field app from npm workspaces; remove root RN/Expo deps; app-only Metro resolution + workspaces path shim; independent `apps/offline-product/package-lock.json`; `expo-module-scripts@~4.1.10`; device debug bundle verified on iPhone. guard scripts + baselines, `security:preflight` and report-mode guards in CI, `AGENTS.md`, offline runbook annex, Cursor commands/rules, PR template; wired to ADR-007 agent-queue slice 1.O.1.
