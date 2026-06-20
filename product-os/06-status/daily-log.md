@@ -1,5 +1,7 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+- **CI** — Backend Jest runs with nested install under workspaces to avoid Expo Jest 29 hoist conflict; removed unused root `@jest/globals`.
+
 ### 2026-06-20 (repo: Turborepo Phase 2)
 - **Turbo** — Added `turbo.json` with `lint`, `test`, `build`, `typecheck` pipelines; root `packageManager` field for npm 11.
 - **Root scripts** — `lint:workspaces`, `test:workspaces`, `build:workspaces`, `typecheck:workspaces`, `check:workspaces` orchestrate via `turbo run` (CI-aligned filters).

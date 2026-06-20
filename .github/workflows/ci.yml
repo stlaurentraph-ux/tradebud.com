@@ -634,8 +634,13 @@ jobs:
       - name: Build
         run: npm run build -w tracebud-backend
 
+      - name: Install backend Jest tree (isolated from Expo Jest 29 hoist)
+        working-directory: tracebud-backend
+        run: npm install --install-strategy=nested
+
       - name: Unit tests
-        run: npm test -w tracebud-backend
+        working-directory: tracebud-backend
+        run: npm test
 
       - name: Tenure parse static readiness
         run: npm run check:tenure-parse:static -w tracebud-backend
@@ -658,12 +663,14 @@ jobs:
         run: npm run auth:benchmark-admin:claims:check -w tracebud-backend
 
       - name: Integration tests (PostGIS)
-        run: npm run test:integration -w tracebud-backend
+        working-directory: tracebud-backend
+        run: npm run test:integration
 
       - name: Ownership integration tests (required)
+        working-directory: tracebud-backend
         run: |
           set -euo pipefail
-          npm run test:integration:ownership -w tracebud-backend | tee tracebud-backend/ownership-integration-output.txt
+          npm run test:integration:ownership | tee ownership-integration-output.txt
           if grep -Eq "[1-9][0-9]* skipped" ownership-integration-output.txt; then
             echo "Ownership integration suite must not be skipped in CI."
             exit 1
