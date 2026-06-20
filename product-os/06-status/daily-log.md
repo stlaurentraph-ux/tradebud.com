@@ -3,9 +3,12 @@
 ### 2026-06-20 (Founder OS app extraction — `feature/founder-os-app`, PR #141)
 - Standalone `apps/founder-os` Next.js app (port 3004); dashboard redirects `/founder-os`, `/crm`, `/content` to ops URL.
 - Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
-- **Next** — Create Vercel project (root `apps/founder-os`); set `NEXT_PUBLIC_FOUNDER_OS_URL` on dashboard after deploy.
+- **Next** — Merge PR #141 so Vercel root picker shows `apps/founder-os`; then create ops project.
 
-### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard, `chore/automation-supabase-migration-ci`)
+### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
+- **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
+
+### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard merged, PR #142)
 - **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
 
 ### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)

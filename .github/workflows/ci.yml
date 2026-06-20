@@ -36,8 +36,11 @@ jobs:
               - 'scripts/openapi-refresh-lint-baseline.mjs'
               - 'scripts/openapi-governance/**'
               - 'scripts/supabase-migration-naming-guard.mjs'
+              - 'scripts/supabase-migration-mirror-drift-guard.mjs'
               - 'supabase/migrations/**'
+              - 'supabase/migration-mirror-map.json'
               - 'supabase/README.md'
+              - 'tracebud-backend/sql/**'
               - '.redocly.yaml'
               - 'product-os/**'
               - 'package.json'
@@ -104,6 +107,9 @@ jobs:
 
       - name: Supabase migration naming guard
         run: npm run supabase:migration:naming:assert
+
+      - name: Supabase migration mirror drift guard
+        run: npm run supabase:migration:mirror:assert
 
       - name: Validate OpenAPI governance README commands
         run: |
