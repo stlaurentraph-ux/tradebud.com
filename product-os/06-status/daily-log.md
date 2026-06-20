@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (repo: post-workspaces hygiene)
+- **Vercel** — `apps/dashboard-product/vercel.json` + new `apps/marketing/vercel.json` use `cd ../.. && npm ci`; added `docs/vercel-monorepo.md` checklist.
+- **Docs** — `docs/repo-branches.md` and branch discipline rule updated for workspaces-on-`main` (root install only).
+- **Branches** — Merged `chore/npm-workspaces` / `chore/turborepo` deleted from remote.
+
 - **CI** — Backend Jest runs with nested install under workspaces to avoid Expo Jest 29 hoist conflict; removed unused root `@jest/globals`.
 
 ### 2026-06-20 (repo: Turborepo Phase 2)

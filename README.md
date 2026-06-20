@@ -13,7 +13,8 @@ Multi-tenant EUDR compliance platform: offline field app, unified SaaS dashboard
 | App topology & domains | [`apps/STRUCTURE.md`](apps/STRUCTURE.md) |
 | Product specs & delivery status | [`product-os/README.md`](product-os/README.md) |
 | Database migrations | [`supabase/README.md`](supabase/README.md) |
-| Parallel branches / workspaces | [`docs/repo-branches.md`](docs/repo-branches.md) |
+| Local setup / branches | [`docs/repo-branches.md`](docs/repo-branches.md) |
+| Vercel monorepo deploys | [`docs/vercel-monorepo.md`](docs/vercel-monorepo.md) |
 
 ## Repository layout
 
@@ -94,12 +95,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 
 ## Vercel deploys (workspaces)
 
-Dashboard and marketing projects that use an app subdirectory as root should install from the monorepo root:
+Dashboard and marketing install from the monorepo root. See **[`docs/vercel-monorepo.md`](docs/vercel-monorepo.md)** for the full checklist.
 
-- **Install Command:** `cd ../.. && npm ci`
-- **Build Command:** unchanged (`npm run build` in the project directory)
-
-See [`docs/repo-branches.md`](docs/repo-branches.md) for merge order and rollback tag `pre-workspaces-2026-06-20`.
+- **Install Command:** `cd ../.. && npm ci` (also in each app's `vercel.json`)
+- **Build Command:** `npm run build` (unchanged)
 
 ## Design reference (not production code)
 
