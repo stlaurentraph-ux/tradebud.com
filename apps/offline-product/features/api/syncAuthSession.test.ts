@@ -27,6 +27,7 @@ import {
   saveAndApplySyncAuth,
   saveAndApplyOAuthSyncAuth,
   setAuthCredentials,
+  verifySyncAccessToken,
 } from './syncAuthSession';
 
 describe('syncAuthSession', () => {
@@ -101,5 +102,12 @@ describe('syncAuthSession', () => {
     await saveAndApplyOAuthSyncAuth('farmer@example.com', 'refresh-token-abc');
     await clearPersistedSyncAuth();
     expect(getAuthUiGeneration()).toBeGreaterThan(before);
+  });
+
+  it('verifySyncAccessToken reports missing credentials when signed out', async () => {
+    await expect(verifySyncAccessToken()).resolves.toEqual({
+      ok: false,
+      reason: 'missing_credentials',
+    });
   });
 });

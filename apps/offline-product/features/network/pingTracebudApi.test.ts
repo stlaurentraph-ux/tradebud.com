@@ -48,6 +48,29 @@ describe('pingTracebudApi', () => {
     await expect(pingTracebudApi()).resolves.toBe(false);
   });
 
+  it('probeTracebudApiReachable uses provided access token before health ping', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/health')) {
+          throw new TypeError('Network request failed');
+        }
+        return { ok: true, status: 200 };
+      }),
+    );
+
+    const { probeTracebudApiReachable } = await import('@/features/network/pingTracebudApi');
+    await expect(
+      probeTracebudApiReachable({ accessToken: 'token-abc' }),
+    ).resolves.toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/api\.tracebud\.com\/api\/v1\/me\/field-farmer-ids\?_=\d+$/),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer token-abc' }),
+      }),
+    );
+  });
+
   it('probeTracebudApiReachable falls back to authenticated GET when health fails', async () => {
     const { getAccessTokenFromSupabase } = await import('@/features/api/syncAuthSession');
     vi.mocked(getAccessTokenFromSupabase).mockResolvedValue('token-abc');

@@ -47,6 +47,12 @@ export function mapPlotUploadErrorMessage(
   const surface = ctx?.surface ?? 'default';
 
   if (
+    ctx?.reason === 'no_access_token' ||
+    /sign_in_session_expired/i.test(raw ?? '')
+  ) {
+    return t('sync_session_expired_short');
+  }
+  if (
     ctx?.statusCode === 403 ||
     /tenant claim|forbidden|workspace directory|linked to another account/i.test(raw ?? '')
   ) {

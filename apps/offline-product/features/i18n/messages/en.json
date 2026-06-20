@@ -1001,6 +1001,7 @@
   "sync_result_incomplete_queue": "Couldn't finish — {n} delivery or document item(s) still waiting to upload.",
   "settings_sync_plot_upload_not_attempted": "Plot upload did not start. Tap Sync now again. If it keeps failing, open the plot in My Plots and check the boundary.",
   "settings_sync_plot_not_confirmed_on_server": "{names} could not be confirmed on Tracebud yet. Open the plot in My Plots and tap Sync now again.",
+  "sync_auth_refresh_failed": "Could not refresh your sign-in. Check your internet connection and try again.",
   "sync_reach_failed_short": "Couldn't reach Tracebud",
   "sync_now_syncing": "Syncing…",
   "sync_local_api_warning": "Sync is pointed at a local dev API ({api}). Production account data (e.g. Hector) is on api.tracebud.com — stop Metro and run: npm run dev:metro:production",

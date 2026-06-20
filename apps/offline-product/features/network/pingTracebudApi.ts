@@ -3,26 +3,41 @@ import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import {
   cacheBustUrl,
   isSuccessfulApiResponse,
+  tracebudFetchWithTimeout,
   TRACEBUD_NO_CACHE_HEADERS,
 } from '@/features/network/apiFetchResponse';
 
-const PING_TIMEOUT_MS = 8_000;
+const PING_TIMEOUT_MS = 15_000;
 const PING_ATTEMPTS = 2;
 
 async function pingHealthOnce(): Promise<boolean> {
   const base = getTracebudApiBaseUrl();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
-  try {
-    const res = await fetch(cacheBustUrl(`${base}/health`), {
+  const res = await tracebudFetchWithTimeout(
+    cacheBustUrl(`${base}/health`),
+    {
       method: 'GET',
-      signal: controller.signal,
       headers: TRACEBUD_NO_CACHE_HEADERS,
-    });
-    return isSuccessfulApiResponse(res.status);
-  } finally {
-    clearTimeout(timeout);
-  }
+    },
+    PING_TIMEOUT_MS,
+  );
+  return res != null && isSuccessfulApiResponse(res.status);
+}
+
+/** True when an authenticated Tracebud GET returns any HTTP status (transport reached the API). */
+async function probeAuthenticatedTracebudApi(accessToken: string): Promise<boolean> {
+  const base = getTracebudApiBaseUrl();
+  const res = await tracebudFetchWithTimeout(
+    cacheBustUrl(`${base}/v1/me/field-farmer-ids`),
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
+    },
+    PING_TIMEOUT_MS,
+  );
+  return res != null && res.status > 0;
 }
 
 /** True when the Tracebud API health endpoint responds (no auth required). */
@@ -40,12 +55,23 @@ export async function pingTracebudApi(): Promise<boolean> {
 }
 
 /**
- * Health ping, then an authenticated GET if needed — any HTTP response counts as reachable.
- * Avoids false "couldn't reach Tracebud" when `/health` 304s but the API is up.
+ * Confirms Tracebud API transport is up. When an access token is known, prefer an
+ * authenticated GET (more reliable than `/health` on some mobile networks).
  */
-export async function probeTracebudApiReachable(): Promise<boolean> {
+export async function probeTracebudApiReachable(options?: {
+  accessToken?: string | null;
+}): Promise<boolean> {
+  const providedToken = options?.accessToken?.trim() || null;
+  if (providedToken && (await probeAuthenticatedTracebudApi(providedToken))) {
+    return true;
+  }
+
   if (await pingTracebudApi()) {
     return true;
+  }
+
+  if (providedToken) {
+    return false;
   }
 
   let accessToken: string | null = null;
@@ -58,24 +84,5 @@ export async function probeTracebudApiReachable(): Promise<boolean> {
     return false;
   }
 
-  try {
-    const base = getTracebudApiBaseUrl();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
-    try {
-      await fetch(cacheBustUrl(`${base}/v1/me/field-farmer-ids`), {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          ...TRACEBUD_NO_CACHE_HEADERS,
-        },
-      });
-      return true;
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch {
-    return false;
-  }
+  return probeAuthenticatedTracebudApi(accessToken);
 }

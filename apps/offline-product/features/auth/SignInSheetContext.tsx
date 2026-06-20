@@ -32,6 +32,7 @@ import {
   hydrateSyncAuthFromSettings,
   isSyncAuthSignedOutOnDevice,
   testBackendLogin,
+  verifySyncAccessToken,
 } from '@/features/api/syncAuthSession';
 import { getAuthCredentials } from '@/features/api/postPlot';
 import { BackupConsentModal } from '@/components/auth/BackupConsentModal';
@@ -52,6 +53,7 @@ import {
 } from '@/features/auth/farmerProfileBootstrap';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
+import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
@@ -286,7 +288,21 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
     const { email: savedEmail } = getAuthCredentials();
     if (savedEmail) setEmail(savedEmail);
-    setIsSignedIn(true);
+
+    const access = await verifySyncAccessToken();
+    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+      setIsSignedIn(false);
+      setEmail('');
+      return;
+    }
+    if (!access.ok) {
+      setIsSignedIn(access.reason === 'network');
+      if (savedEmail && access.reason !== 'missing_credentials') {
+        setEmail(savedEmail);
+      }
+      return;
+    }
+
     const res = await testBackendLogin();
     if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
       setIsSignedIn(false);
@@ -294,12 +310,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (!res.ok) {
-      if (!hasSyncAuthSession()) {
-        setIsSignedIn(false);
-        setEmail('');
-      }
+      setIsSignedIn(isLikelyNetworkError(res.message));
+      if (savedEmail) setEmail(savedEmail);
       return;
     }
+    setIsSignedIn(true);
     try {
       await syncLocalFarmerFromAuth();
     } catch {

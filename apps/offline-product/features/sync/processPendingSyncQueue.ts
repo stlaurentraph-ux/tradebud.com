@@ -71,10 +71,14 @@ export async function processPendingSyncQueue(params: {
   maxActions?: number;
   /** Manual Sync now — retry rows even if exponential backoff has not elapsed. */
   ignoreBackoff?: boolean;
+  /** When Sync now already verified auth, skip a redundant token refresh during reachability probe. */
+  accessToken?: string;
 }): Promise<ProcessPendingSyncQueueResult> {
   await compactDuplicatePendingSyncActions().catch(() => 0);
 
-  const apiReachable = await probeTracebudApiReachable();
+  const apiReachable = await probeTracebudApiReachable({
+    accessToken: params.accessToken,
+  });
   if (!apiReachable) {
     return {
       completed: 0,

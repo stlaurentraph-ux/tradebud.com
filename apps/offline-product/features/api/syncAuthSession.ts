@@ -160,16 +160,29 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
     const supabase = getSupabaseAuthClient();
 
     if (currentAuthMethod === 'oauth' && currentRefreshToken) {
-      const { data, error } = await supabase.auth.refreshSession({
-        refresh_token: currentRefreshToken,
-      });
+      let refreshError: { message?: string } | null = null;
+      let data: Awaited<ReturnType<typeof supabase.auth.refreshSession>>['data'] | null = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await supabase.auth.refreshSession({
+          refresh_token: currentRefreshToken,
+        });
+        refreshError = result.error;
+        data = result.data;
+        if (!refreshError) {
+          break;
+        }
+        if (attempt === 0 && isLikelyNetworkError(String(refreshError.message ?? ''))) {
+          continue;
+        }
+        break;
+      }
       if (!syncAuthStillActive(revisionAtStart)) {
         return null;
       }
-      if (error) {
-        throw authRefreshFailureError(error);
+      if (refreshError) {
+        throw authRefreshFailureError(refreshError);
       }
-      if (!data.session) {
+      if (!data?.session) {
         throw new Error('sign_in_session_expired');
       }
       if (
@@ -224,6 +237,38 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
 }
 
 const DEFAULT_ACCESS_TOKEN_TIMEOUT_MS = 12_000;
+
+export type VerifySyncAccessTokenResult =
+  | { ok: true; token: string }
+  | { ok: false; reason: 'missing_credentials' | 'session_expired' | 'network' };
+
+/** Confirms stored sync credentials can produce a live Supabase access token. */
+export async function verifySyncAccessToken(
+  timeoutMs = DEFAULT_ACCESS_TOKEN_TIMEOUT_MS,
+): Promise<VerifySyncAccessTokenResult> {
+  if (!hasSyncAuthSession()) {
+    return { ok: false, reason: 'missing_credentials' };
+  }
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const token = await getAccessTokenFromSupabaseWithTimeout(timeoutMs);
+      if (!token) {
+        return { ok: false, reason: 'session_expired' };
+      }
+      return { ok: true, token };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (isLikelyNetworkError(msg) && attempt === 0) {
+        continue;
+      }
+      if (isLikelyNetworkError(msg)) {
+        return { ok: false, reason: 'network' };
+      }
+      return { ok: false, reason: 'session_expired' };
+    }
+  }
+  return { ok: false, reason: 'network' };
+}
 
 /** Bounds OAuth/password refresh so sync UI cannot spin forever on a hung auth call. */
 export async function getAccessTokenFromSupabaseWithTimeout(

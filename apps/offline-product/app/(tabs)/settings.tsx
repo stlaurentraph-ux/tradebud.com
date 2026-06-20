@@ -37,6 +37,7 @@ import {
   hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
   isSyncAuthSignedOutOnDevice,
+  verifySyncAccessToken,
 } from '@/features/api/syncAuthSession';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -80,6 +81,10 @@ import {
   withSyncOperationTimeout,
 } from '@/features/sync/syncOperationLimits';
 import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
+import {
+  isPlotFetchAuthFailure,
+  isPlotFetchReachabilityFailure,
+} from '@/features/sync/plotFetchFailure';
 import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
 import { mapSyncActionErrorMessage, mapPlotUploadErrorMessage, syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { formatSyncNowUserMessage, formatPendingSyncSummary, resolveSyncOpenPlotId, resolveSyncSupportMailto, type SyncNowUserOutcome } from '@/features/sync/formatSyncNowUserMessage';
@@ -262,6 +267,7 @@ export default function SettingsScreen() {
   }) => {
     await compactDuplicatePendingSyncActions().catch(() => 0);
     const rows = await loadPendingSyncActions().catch(() => []);
+    await hydrateSyncAuthFromSettings().catch(() => undefined);
     const applyDisplay =
       !freezeSyncMetricsDisplayRef.current && !getSyncQueueLockSnapshot().locked;
 
@@ -351,9 +357,23 @@ export default function SettingsScreen() {
           setPlotsFetchState('ok');
         }
       } else if (applyDisplay) {
-        const apiReachable = await probeTracebudApiReachable();
-        setBackendPlots([]);
-        setPlotsFetchState(apiReachable ? 'ok' : 'failed');
+        if (isPlotFetchAuthFailure(err)) {
+          setBackendPlots([]);
+          setPlotsFetchState('idle');
+        } else if (isPlotFetchReachabilityFailure(err)) {
+          const access = await verifySyncAccessToken().catch(() => ({
+            ok: false as const,
+            reason: 'network' as const,
+          }));
+          const reachable = access.ok
+            ? await probeTracebudApiReachable({ accessToken: access.token })
+            : await probeTracebudApiReachable();
+          setBackendPlots([]);
+          setPlotsFetchState(reachable ? 'ok' : 'failed');
+        } else {
+          setBackendPlots([]);
+          setPlotsFetchState('ok');
+        }
       }
     }
 
@@ -963,8 +983,13 @@ export default function SettingsScreen() {
           beginServerPlotFetchRun();
           try {
             await hydrateSyncAuthFromSettings();
-            if (!hasSyncAuthSession()) {
-              setSyncMessage(t('sync_session_expired_short'));
+            const syncAccess = await verifySyncAccessToken();
+            if (!syncAccess.ok) {
+              setSyncMessage(
+                syncAccess.reason === 'network'
+                  ? t('sync_auth_refresh_failed')
+                  : t('sync_session_expired_short'),
+              );
               setSyncMessageKind('error');
               return;
             }
@@ -999,13 +1024,6 @@ export default function SettingsScreen() {
               syncPlots = diskState.plots.length > 0 ? diskState.plots : syncPlots;
             } else if (apiFarmerId !== syncFarmer.id) {
               await adoptOnDeviceFarmerScope(apiFarmerId).catch(() => false);
-            }
-
-            const apiReachable = await probeTracebudApiReachable();
-            if (!apiReachable) {
-              setSyncMessage(t('sync_reach_failed_short'));
-              setSyncMessageKind('error');
-              return;
             }
 
             await warmPlotServerLinksForSync({
@@ -1135,6 +1153,7 @@ export default function SettingsScreen() {
                   attemptScope: 'retrying_only',
                   maxActions: queueSmartSweepCap,
                   ignoreBackoff: true,
+                  accessToken: syncAccess.token,
                 });
                 mergeQueueResult(retryingPass);
                 if (retryingPass.firstError) queueFirstError = retryingPass.firstError;
@@ -1150,6 +1169,7 @@ export default function SettingsScreen() {
                     attemptScope: 'first_attempt_only',
                     maxActions: remainingBudget,
                     ignoreBackoff: true,
+                    accessToken: syncAccess.token,
                   });
                   mergeQueueResult(firstAttemptPass);
                   if (firstAttemptPass.firstError) queueFirstError = firstAttemptPass.firstError;
@@ -1162,6 +1182,7 @@ export default function SettingsScreen() {
                   actionTypes: queueDrainTypes,
                   attemptScope: 'all',
                   maxPasses: 4,
+                  accessToken: syncAccess.token,
                 });
                 mergeQueueResult(queueRes);
                 if (queueRes.firstError) queueFirstError = queueRes.firstError;

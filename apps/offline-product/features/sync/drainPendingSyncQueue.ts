@@ -15,6 +15,7 @@ export async function drainPendingSyncQueueForManualSync(params: {
   attemptScope?: PendingSyncAttemptScope;
   maxPasses?: number;
   maxActionsPerPass?: number;
+  accessToken?: string;
 }): Promise<ProcessPendingSyncQueueResult> {
   const maxPasses = params.maxPasses ?? 4;
   const merged: ProcessPendingSyncQueueResult = {
@@ -33,6 +34,7 @@ export async function drainPendingSyncQueueForManualSync(params: {
       attemptScope: params.attemptScope ?? 'all',
       maxActions: params.maxActionsPerPass,
       ignoreBackoff: true,
+      accessToken: params.accessToken,
     });
 
     merged.completed += res.completed;

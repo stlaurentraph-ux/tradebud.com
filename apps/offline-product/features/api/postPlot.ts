@@ -7,6 +7,7 @@ import { normalizeNetworkError } from '@/features/network/normalizeNetworkError'
 import {
   cacheBustUrl,
   isSuccessfulApiResponse,
+  tracebudFetchWithTimeout,
   TRACEBUD_NO_CACHE_HEADERS,
 } from '@/features/network/apiFetchResponse';
 
@@ -124,7 +125,12 @@ export async function postPlotToBackend(params: {
   cadastralKey?: string | null;
   geometryCapture?: PlotGeometryCaptureMetadata | null;
 }): Promise<PostPlotToBackendResult> {
-  const accessToken = await getAccessTokenFromSupabase();
+  let accessToken: string | null;
+  try {
+    accessToken = await getAccessTokenFromSupabase();
+  } catch {
+    accessToken = null;
+  }
   if (!accessToken) {
     return { ok: false, reason: 'no_access_token' };
   }
@@ -264,38 +270,33 @@ export async function fetchPlotsForFarmer(farmerId: string) {
     throw new Error('No access token available for plot sync');
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), PLOT_FETCH_TIMEOUT_MS);
-  try {
-    const basePlotListUrl = `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}&scope=farmer`;
-    const fetchOptions = {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        ...TRACEBUD_NO_CACHE_HEADERS,
-      },
-      signal: controller.signal,
-    } as const;
+  const basePlotListUrl = `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}&scope=farmer`;
+  const fetchOptions = {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...TRACEBUD_NO_CACHE_HEADERS,
+    },
+  } as const;
 
-    let res = await fetch(cacheBustUrl(basePlotListUrl), fetchOptions);
-    if (res.status === 304) {
-      res = await fetch(cacheBustUrl(basePlotListUrl), fetchOptions);
-    }
-
-    if (!isSuccessfulApiResponse(res.status)) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message ?? `Plot fetch error: ${res.status}`);
-    }
-
-    if (res.status === 304) {
-      throw new Error('Plot fetch error: 304');
-    }
-
-    return res.json();
-  } catch (e) {
-    throw normalizeNetworkError(e);
-  } finally {
-    clearTimeout(timeout);
+  let res = await tracebudFetchWithTimeout(cacheBustUrl(basePlotListUrl), fetchOptions, PLOT_FETCH_TIMEOUT_MS);
+  if (res?.status === 304) {
+    res = await tracebudFetchWithTimeout(cacheBustUrl(basePlotListUrl), fetchOptions, PLOT_FETCH_TIMEOUT_MS);
   }
+
+  if (res == null) {
+    throw new Error('Network request failed');
+  }
+
+  if (!isSuccessfulApiResponse(res.status)) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Plot fetch error: ${res.status}`);
+  }
+
+  if (res.status === 304) {
+    throw new Error('Plot fetch error: 304');
+  }
+
+  return res.json();
 }
 
 export async function postHarvestToBackend(params: {
