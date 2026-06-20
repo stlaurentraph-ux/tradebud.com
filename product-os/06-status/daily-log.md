@@ -1,7 +1,23 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 1.3 CI path filters, `chore/automation-ci-path-filters`)
-- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix.
+### 2026-06-20 (Founder OS app extraction — `feature/founder-os-app`, PR #141)
+- Standalone `apps/founder-os` Next.js app (port 3004); dashboard redirects `/founder-os`, `/crm`, `/content` to ops URL.
+- Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
+- **Next** — Create Vercel project (root `apps/founder-os`); set `NEXT_PUBLIC_FOUNDER_OS_URL` on dashboard after deploy.
+
+### 2026-06-20 (automation — 3.4 Dependabot, `chore/automation-dependabot`)
+- **3.4** — `.github/dependabot.yml`: weekly npm (root + offline-product) and GitHub Actions updates.
+- **Next** — PR #131 merge after rebase onto main.
+
+### 2026-06-20 (automation — 1.M.2 API trace size guard, PR #132)
+- **1.M.2** — `marketing-api-trace-size-guard.mjs` after build; 749MB regression guard.
+- Wired into `check:marketing` and marketing CI (post-build).
+
+### 2026-06-20 (automation — 1.M.1 routes guard merged, PR #130)
+- **1.M.1** — Marketing routes/publication guard in CI and `check:marketing`.
+
+### 2026-06-20 (automation — 1.3 CI path filters, PR #129 merged)
+- **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
 
 ### 2026-06-20 (Founder OS GTM — `feature/dashboard-founder-os-gtm`)
 - Dashboard GTM pages + API routes; SQL daily actions; pilot form sync. Migration applied to Supabase.
