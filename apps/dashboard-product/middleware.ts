@@ -39,6 +39,9 @@ export function middleware(request: NextRequest) {
 
   const internalToolsRedirect = getInternalToolsRedirectPath(pathname);
   if (internalToolsRedirect) {
+    if (/^https?:\/\//.test(internalToolsRedirect)) {
+      return NextResponse.redirect(internalToolsRedirect);
+    }
     const redirectUrl = new URL(request.nextUrl.toString());
     redirectUrl.pathname = internalToolsRedirect;
     redirectUrl.search = '';

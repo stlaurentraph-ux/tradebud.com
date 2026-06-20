@@ -5,6 +5,7 @@
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
 | IF-001 | `chore/automation-offline-phase1` | cursor | Lane 1 slice **1.O.1** — guard scripts, CI, Cursor integration | `offline-automation-runbook.md` | in_progress | — |
+| IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
 

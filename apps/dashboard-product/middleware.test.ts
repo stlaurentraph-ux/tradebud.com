@@ -106,10 +106,11 @@ describe('middleware gate redirect', () => {
   it('middleware redirects internal tools in production', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_INTERNAL_TOOLS', 'false');
+    vi.stubEnv('NEXT_PUBLIC_FOUNDER_OS_URL', 'https://ops.tracebud.com');
     const request = makeMiddlewareRequest('https://tracebud.test/founder-os/crm/daily-actions');
 
     const response = middleware(request);
-    expect(response.headers.get('location')).toContain('https://tracebud.test/');
+    expect(response.headers.get('location')).toBe('https://ops.tracebud.com/crm/daily-actions');
     expect(response.status).toBe(307);
   });
 

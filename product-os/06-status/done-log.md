@@ -2,10 +2,12 @@
 
 Track completed milestones/features/docs updates.
 
+- Founder OS standalone app (2026-06-20, PR #141, branch `feature/founder-os-app`): `apps/founder-os` workspace; dashboard external redirects; bootstrap script; Vercel monorepo install config; CI `founder-os` job.
 - Automation Bundle B slice 1.D.2 (2026-06-20, branch `chore/automation-migration-mirror-drift`): Supabase ↔ backend SQL mirror map drift guard in contracts CI.
 - Automation Bundle B slice 1.D.1 (2026-06-20, PR #142): Supabase migration naming/order guard in contracts CI.
 - Automation Bundle B slice 1.5 (2026-06-20, PR #140): dashboard API proxy manifest regression guard.
 - Automation Bundle B slice 3.4 (2026-06-20, PR #131): Dependabot weekly npm + GitHub Actions updates.
+- Automation Bundle B slice 1.M.1 (2026-06-20, PR #130): marketing routes/publication guard in CI and `check:marketing`.
 - Automation Bundle B slice 1.3 (2026-06-20, PR #129): CI path filters on PRs; step-level skip for branch-protected marketing/field-auth jobs.
 - Automation Bundle B slice 1.1 (2026-06-20, PR #128): husky + lint-staged pre-commit ESLint on staged workspace files; README pre-commit section.
 - Automation Phase 0 dashboard + field-auth CI (2026-06-20, branch `chore/automation-phase-0`): slices 0.2–0.5 — build CI, field-auth job, `check:dashboard`; stacks on Bundle A integration on same branch.
@@ -664,3 +666,4 @@ Track completed milestones/features/docs updates.
 - Supabase RLS remediation evidence automation delivered: backend now includes `db:evidence:rls-remediation` to generate timestamped JSON evidence bundles covering TB-V16-009 and TB-V16-030 verification snapshots.
 - Supabase RLS remediation orchestrator delivered: backend now includes `db:run:rls-remediation-pack` to run apply/verify/evidence steps in deterministic order with fail-fast behavior and step-level logging.
 - Supabase RLS remediation preflight gate delivered: backend now includes `db:preflight:rls-remediation-pack` and `db:run:rls-remediation-pack:safe` to validate env/files/DB connectivity before execution.
+- Guardrails slice 2.8 (synthetic uptime probes): manifest + runner + scheduled workflow for marketing `/en`, dashboard `/login`, backend `/api/health`; CI manifest guard via `npm run uptime:probes:manifest:assert`.

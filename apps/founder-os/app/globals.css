@@ -1,0 +1,267 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Neutral UI Shell ───────────────────────────────────── */
+  --background:          #F4F6F8;   /* Page canvas — cool off-white */
+  --foreground:          #111827;   /* Near-black body text */
+
+  --card:                #FFFFFF;
+  --card-foreground:     #111827;
+
+  --popover:             #FFFFFF;
+  --popover-foreground:  #111827;
+
+  /* ── Brand Actions ──────────────────────────────────────── */
+  --primary:             #064E3B;   /* Forest Canopy — sidebar, headers */
+  --primary-foreground:  #FFFFFF;
+
+  --secondary:           #F0FDF4;   /* Pale emerald surface tint */
+  --secondary-foreground:#064E3B;
+
+  /* ── Muted / Subtle ─────────────────────────────────────── */
+  --muted:               #F3F4F6;
+  --muted-foreground:    #6B7280;
+
+  /* ── Accent (CTAs, badges, links) ───────────────────────── */
+  --accent:              #F0FDF4;
+  --accent-foreground:   #065F46;
+
+  /* ── Destructive ────────────────────────────────────────── */
+  --destructive:         #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  /* ── Forms — explicitly NEUTRAL, never green ────────────── */
+  --border:              #E2E8F0;   /* Slate-200 — subtle, clean */
+  --input:               #FFFFFF;   /* White input backgrounds */
+  --ring:                #64748B;   /* Slate-500 focus ring — neutral */
+
+  /* ── Status / Data Colors ───────────────────────────────── */
+  --chart-1:             #10B981;   /* Emerald — success / compliant */
+  --chart-2:             #3B82F6;   /* Blue — in-progress / review */
+  --chart-3:             #F59E0B;   /* Amber — warning */
+  --chart-4:             #EF4444;   /* Red — error / non-compliant */
+  --chart-5:             #78350F;   /* Mountain Clay — agricultural */
+
+  /* ── Severity Colors (per UX_POLISH_SPECIFICATION) ──────── */
+  --severity-blocking-bg:       #FEE2E2;   /* red-100 */
+  --severity-blocking-text:     #B91C1C;   /* red-700 */
+  --severity-blocking-border:   #DC2626;   /* red-600 */
+  --severity-warning-bg:        #FEF3C7;   /* amber-100 */
+  --severity-warning-text:      #B45309;   /* amber-700 */
+  --severity-warning-border:    #D97706;   /* amber-600 */
+  --severity-info-bg:           #DBEAFE;   /* blue-100 */
+  --severity-info-text:         #1D4ED8;   /* blue-700 */
+  --severity-info-border:       #2563EB;   /* blue-600 */
+  --severity-success-bg:        #D1FAE5;   /* emerald-100 */
+  --severity-success-text:      #047857;   /* emerald-700 */
+  --severity-success-border:    #059669;   /* emerald-600 */
+
+  /* ── SLA Countdown Colors ───────────────────────────────── */
+  --sla-overdue:         #DC2626;   /* red-600 */
+  --sla-urgent:          #D97706;   /* amber-600 */
+  --sla-warning:         #CA8A04;   /* yellow-600 */
+  --sla-healthy:         #059669;   /* emerald-600 */
+
+  --radius:              0.625rem;  /* 10px — slightly softer corners */
+
+  /* ── Sidebar — Forest Canopy (isolated namespace) ───────── */
+  --sidebar:                  #064E3B;
+  --sidebar-foreground:       #FFFFFF;
+  --sidebar-border:           rgba(255,255,255,0.08);
+  --sidebar-accent:           rgba(255,255,255,0.10);
+  --sidebar-accent-foreground:#FFFFFF;
+  --sidebar-ring:             #10B981;
+  --sidebar-primary:          #10B981;
+  --sidebar-primary-foreground:#064E3B;
+  --sidebar-muted:            rgba(255,255,255,0.55);
+}
+
+/* ── Dark Mode Theme ─────────────────────────────────────── */
+.dark {
+  /* ── Neutral UI Shell ───────────────────────────────────── */
+  --background:          #0F1419;   /* Deep charcoal canvas */
+  --foreground:          #E7E9EA;   /* Off-white text */
+
+  --card:                #16181C;
+  --card-foreground:     #E7E9EA;
+
+  --popover:             #16181C;
+  --popover-foreground:  #E7E9EA;
+
+  /* ── Brand Actions ──────────────────────────────────────── */
+  --primary:             #10B981;   /* Emerald — more visible in dark */
+  --primary-foreground:  #0F1419;
+
+  --secondary:           #1A2E26;   /* Dark emerald surface tint */
+  --secondary-foreground:#10B981;
+
+  /* ── Muted / Subtle ─────────────────────────────────────── */
+  --muted:               #1E2328;
+  --muted-foreground:    #71767B;
+
+  /* ── Accent (CTAs, badges, links) ───────────────────────── */
+  --accent:              #1A2E26;
+  --accent-foreground:   #34D399;
+
+  /* ── Destructive ────────────────────────────────────────── */
+  --destructive:         #F87171;
+  --destructive-foreground: #0F1419;
+
+  /* ── Forms ──────────────────────────────────────────────── */
+  --border:              #2F3336;
+  --input:               #1E2328;
+  --ring:                #536471;
+
+  /* ── Status / Data Colors ───────────────────────────────── */
+  --chart-1:             #34D399;   /* Emerald-400 */
+  --chart-2:             #60A5FA;   /* Blue-400 */
+  --chart-3:             #FBBF24;   /* Amber-400 */
+  --chart-4:             #F87171;   /* Red-400 */
+  --chart-5:             #D2A679;   /* Mountain Clay light */
+
+  /* ── Severity Colors (per UX_POLISH_SPECIFICATION) ──────── */
+  --severity-blocking-bg:       #450A0A;   /* red-950 */
+  --severity-blocking-text:     #FCA5A5;   /* red-300 */
+  --severity-blocking-border:   #DC2626;   /* red-600 */
+  --severity-warning-bg:        #451A03;   /* amber-950 */
+  --severity-warning-text:      #FCD34D;   /* amber-300 */
+  --severity-warning-border:    #D97706;   /* amber-600 */
+  --severity-info-bg:           #172554;   /* blue-950 */
+  --severity-info-text:         #93C5FD;   /* blue-300 */
+  --severity-info-border:       #2563EB;   /* blue-600 */
+  --severity-success-bg:        #052E16;   /* emerald-950 */
+  --severity-success-text:      #6EE7B7;   /* emerald-300 */
+  --severity-success-border:    #059669;   /* emerald-600 */
+
+  /* ── SLA Countdown Colors ───────────────────────────────── */
+  --sla-overdue:         #F87171;   /* red-400 */
+  --sla-urgent:          #FBBF24;   /* amber-400 */
+  --sla-warning:         #FACC15;   /* yellow-400 */
+  --sla-healthy:         #34D399;   /* emerald-400 */
+
+  /* ── Sidebar — Darker variant ───────────────────────────── */
+  --sidebar:                  #0A2E23;
+  --sidebar-foreground:       #E7E9EA;
+  --sidebar-border:           rgba(255,255,255,0.06);
+  --sidebar-accent:           rgba(255,255,255,0.08);
+  --sidebar-accent-foreground:#E7E9EA;
+  --sidebar-ring:             #34D399;
+  --sidebar-primary:          #34D399;
+  --sidebar-primary-foreground:#0A2E23;
+  --sidebar-muted:            rgba(255,255,255,0.45);
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+
+  --color-background:            var(--background);
+  --color-foreground:            var(--foreground);
+  --color-card:                  var(--card);
+  --color-card-foreground:       var(--card-foreground);
+  --color-popover:               var(--popover);
+  --color-popover-foreground:    var(--popover-foreground);
+  --color-primary:               var(--primary);
+  --color-primary-foreground:    var(--primary-foreground);
+  --color-secondary:             var(--secondary);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-muted:                 var(--muted);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-accent:                var(--accent);
+  --color-accent-foreground:     var(--accent-foreground);
+  --color-destructive:           var(--destructive);
+  --color-destructive-foreground:var(--destructive-foreground);
+  --color-border:                var(--border);
+  --color-input:                 var(--input);
+  --color-ring:                  var(--ring);
+  --color-chart-1:               var(--chart-1);
+  --color-chart-2:               var(--chart-2);
+  --color-chart-3:               var(--chart-3);
+  --color-chart-4:               var(--chart-4);
+  --color-chart-5:               var(--chart-5);
+  --color-sidebar:               var(--sidebar);
+  --color-sidebar-foreground:    var(--sidebar-foreground);
+  --color-sidebar-border:        var(--sidebar-border);
+  --color-sidebar-accent:        var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-ring:          var(--sidebar-ring);
+  --color-sidebar-primary:       var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --radius-sm:  calc(var(--radius) - 2px);
+  --radius-md:  var(--radius);
+  --radius-lg:  calc(var(--radius) + 2px);
+  --radius-xl:  calc(var(--radius) + 6px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+  }
+
+  /* Ensure form inputs always render with a clean neutral style */
+  input, textarea, select {
+    @apply bg-input text-foreground placeholder:text-muted-foreground;
+  }
+}
+
+/* ── Mobile-First Responsive Utilities ────────────────────── */
+@layer utilities {
+  /* Hide on mobile, show on desktop */
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block lg:hidden;
+  }
+
+  /* Responsive padding for page content */
+  .page-padding {
+    @apply px-4 py-4 sm:px-6 sm:py-6 lg:px-8;
+  }
+
+  /* Responsive card grid */
+  .card-grid {
+    @apply grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Responsive metric grid */
+  .metric-grid {
+    @apply grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  /* Safe area padding for mobile devices with notches */
+  .safe-area-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Touch-friendly tap targets (min 44px) */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+  }
+
+  /* Stack layout on mobile, row on desktop */
+  .stack-to-row {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-center;
+  }
+
+  /* Truncate text with ellipsis for responsive layouts */
+  .truncate-responsive {
+    @apply truncate max-w-[150px] sm:max-w-[200px] lg:max-w-none;
+  }
+}

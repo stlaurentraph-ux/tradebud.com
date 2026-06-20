@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-20T15:38:12.509Z",
+  "generatedAt": "2026-06-20T15:44:45.512Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -182,18 +182,6 @@
       "failClosed": true
     },
     {
-      "dashboardPath": "/api/content/calendar",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/content/tasks",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
       "dashboardPath": "/api/cooperative/audit-log",
       "category": "backend-proxy",
       "backendPaths": [
@@ -220,30 +208,6 @@
         "/v1/plots/geometry-remediation-queue",
         "/v1/requests/campaigns"
       ],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/daily-actions",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/exchanges",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/prospects",
-      "category": "internal-tools",
-      "backendPaths": [],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/crm/templates",
-      "category": "internal-tools",
-      "backendPaths": [],
       "failClosed": true
     },
     {

@@ -1,12 +1,17 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (Founder OS app extraction — `feature/founder-os-app`, PR #141)
+- Standalone `apps/founder-os` Next.js app (port 3004); dashboard redirects `/founder-os`, `/crm`, `/content` to ops URL.
+- Bootstrap script `scripts/bootstrap-founder-os-app.mjs`; Vercel monorepo install in `apps/founder-os/vercel.json`.
+- **Next** — Merge PR #141 so Vercel root picker shows `apps/founder-os`; then create ops project.
+
 ### 2026-06-20 (automation — 2.4 marketing post-deploy smoke, `chore/automation-marketing-deploy-smoke`)
 - **2.4 (in progress)** — `marketing-post-deploy-smoke.mjs` + `marketing-deploy-smoke.yml` workflow on production `deployment_status` and manual dispatch.
 
-### 2026-06-20 (automation — 2.1 Sentry env tags merged, PR #145)
-- **2.1** — Shared `scripts/sentry-env-tags-guard.mjs`; Vercel preview → `staging` resolver; Sentry wiring for marketing + backend; CI guard in dashboard/marketing/backend jobs.
+### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
+- **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
 
-### 2026-06-20 (automation — 1.D.2 migration mirror drift guard merged, PR #144)
+### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard merged, PR #142)
 - **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
 
 ### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)
@@ -26,9 +31,8 @@
 ### 2026-06-20 (automation — 1.3 CI path filters, PR #129 merged)
 - **1.3** — Central `changes` job; PRs skip unrelated jobs; push to `main` runs full matrix. Marketing + field-auth use step-level skip for branch protection.
 
-### 2026-06-20 (automation — 1.1 pre-commit, PR #128)
-- **1.1** — husky + lint-staged via `lint-staged.config.mjs`; ESLint on staged workspace app files + root `scripts/`.
-- **Next** — PR merge; Bundle B **1.3** path filters (1.2 blocked on Turbo secrets).
+### 2026-06-20 (Founder OS GTM — `feature/dashboard-founder-os-gtm`)
+- Dashboard GTM pages + API routes; SQL daily actions; pilot form sync. Migration applied to Supabase.
 
 ### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
 - **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.
@@ -6445,6 +6449,13 @@ Append-only session log.
 - Verification: `npx vitest run components/dashboards/exporter-dashboard.test.tsx lib/en-copy-parity.test.ts` (pass).
 - Blockers: Real-tenant lineage + handoff language still need manual sign-off.
 - Next step: run `exporter-critical-path-qa.md` on staging tenant and check remaining scorecard ★ items.
+
+### 2026-06-20 (execution: guardrails slice 2.8 — synthetic uptime probes)
+- Focus: scheduled HTTP uptime checks for marketing, dashboard, and backend independent of deploy pipeline.
+- Files changed: `scripts/uptime-probes-manifest.json`, `scripts/uptime-probes-run.mjs`, `scripts/uptime-probes-manifest-guard.mjs`, `.github/workflows/uptime-probes.yml`, `package.json`, `.github/workflows/ci.yml`, `product-os/04-quality/ci-secrets-and-fixtures.md`, `README.md`, `product-os/06-status/agent-queue.md`.
+- Decisions: reuse `MARKETING_SMOKE_BASE_URL`; optional `UPTIME_DASHBOARD_BASE_URL` / `UPTIME_BACKEND_BASE_URL` with production fallbacks in manifest; cron every 30 minutes.
+- Verification: `npm run uptime:probes:manifest:assert`; `npm run uptime:probes:run` against production URLs.
+- Next step: open PR `chore/automation-uptime-probes`; merge when field-auth + marketing CI green.
 
 ### 2026-06-16 (execution: dashboard A+ slice 7 — package gate tests + importer inbox north star)
 - Focus: lock assemble readiness gate with page tests; prioritize importer inbound requests in north star; add handoff vs TRACES terminology tests and importer QA checklist.
