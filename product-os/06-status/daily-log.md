@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (repo: Phase 4 — eslint-config package + root dep slimming)
+- **Shared ESLint** — `packages/eslint-config` (`@tracebud/eslint-config/nextjs`); Next apps lint via shared config; root lint scopes to governance scripts only.
+- **Root `package.json`** — Removed legacy v0 Next/Radix deps; root runtime deps reduced to `yaml` (OpenAPI governance scripts).
+- **CI** — Marketing job runs `tsc --noEmit` before build.
+
 ### 2026-06-20 (repo: Phase 3 — shared tsconfig + dashboard typecheck CI)
 - **Shared config** — `packages/tsconfig` (`@tracebud/tsconfig`); dashboard, marketing, field-auth extend `nextjs.json`.
 - **CI** — Dashboard job runs `npm run typecheck -w dashboard-product`.

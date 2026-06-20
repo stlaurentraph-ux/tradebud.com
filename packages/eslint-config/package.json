@@ -1,0 +1,13 @@
+{
+  "name": "@tracebud/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./nextjs": "./nextjs.mjs"
+  },
+  "peerDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "^16"
+  }
+}

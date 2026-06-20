@@ -743,6 +743,9 @@ jobs:
       - name: Lint
         run: npm run lint -w tracebud-marketing
 
+      - name: Typecheck
+        run: npm run typecheck -w tracebud-marketing
+
       - name: Build
         run: npm run build -w tracebud-marketing
 

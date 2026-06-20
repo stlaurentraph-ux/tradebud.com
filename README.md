@@ -37,7 +37,7 @@ This is an **npm workspaces monorepo** with **Turborepo** task orchestration. In
 npm install
 ```
 
-Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tracebud-backend`, `packages/tsconfig`. The offline field app installs separately under `apps/offline-product/` (not hoisted into root workspaces).
+Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tracebud-backend`, `packages/tsconfig`, `packages/eslint-config`. The offline field app installs separately under `apps/offline-product/` (not hoisted into root workspaces).
 
 ### Root commands
 

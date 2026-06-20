@@ -13,7 +13,7 @@ npm run lint:workspaces
 npm run check:workspaces
 ```
 
-Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tracebud-backend`, `packages/tsconfig`.
+Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tracebud-backend`, `packages/tsconfig`, `packages/eslint-config`.
 
 **Offline field app** uses its own install tree (`npm install --prefix apps/offline-product`) — excluded from npm workspaces so Metro resolves React Native 0.81 only (see commit `862ac32`).
 
@@ -25,7 +25,8 @@ Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tr
 | --- | --- | --- |
 | 1 | ✅ merged | npm workspaces + single lockfile |
 | 2 | ✅ merged | Turborepo (`turbo.json`, `*:workspaces` scripts) |
-| 3 | ✅ this branch | Legacy root shell → `legacy/`; shared `@tracebud/tsconfig`; dashboard typecheck in CI |
+| 3 | ✅ PR #119 | Legacy shell → `legacy/`; shared `@tracebud/tsconfig`; dashboard typecheck in CI |
+| 4 | ✅ this branch | `@tracebud/eslint-config`; root deps slimmed to `yaml` + tooling; marketing typecheck in CI |
 
 ## Active branches
 
