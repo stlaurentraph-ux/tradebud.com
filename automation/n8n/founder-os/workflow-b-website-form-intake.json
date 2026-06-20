@@ -1,21 +1,58 @@
 {
   "name": "Founder OS - Website Form Intake",
   "meta": {
-    "description": "Normalize website lead submissions into prospects and outreach activity."
+    "description": "Optional n8n augmentation for website lead notifications. Canonical CRM sync runs in marketing API (syncLeadToProspects).",
+    "slice": "2.O.1",
+    "activationDoc": "automation/n8n/founder-os/workflow-b-activation.md"
+  },
+  "primaryPipeline": {
+    "canonical": "apps/marketing/lib/prospect-sync.ts via POST /api/leads and POST /api/waitlist",
+    "mapper": "apps/marketing/lib/founder-os-mapper.ts",
+    "note": "Do not duplicate prospect inserts in n8n unless using a separate notification-only branch."
   },
   "trigger": {
     "type": "webhook",
-    "path": "/founder-os/website-lead-intake"
+    "path": "/founder-os/website-lead-intake",
+    "method": "POST"
+  },
+  "payloadContract": {
+    "required": ["email", "name", "formType", "sourcePage"],
+    "properties": {
+      "email": { "type": "string", "format": "email" },
+      "name": { "type": "string", "minLength": 1 },
+      "formType": {
+        "enum": ["exporter", "importer", "country", "farmer", "cooperative", "pilot", "waitlist"]
+      },
+      "sourcePage": { "type": "string", "minLength": 1 },
+      "company": { "type": "string" },
+      "country": { "type": "string" }
+    }
+  },
+  "prospectMapping": {
+    "source": ["website_form", "website_pilot_form", "website_waitlist"],
+    "stage": ["identified", "pilot"],
+    "activity_type": "identified",
+    "channel": "website"
   },
   "steps": [
     "Validate payload shape from website lead source.",
-    "Check existing prospect by email.",
-    "Insert or update prospects with source=website_form and stage=identified.",
-    "Insert outreach_activity with activity_type=identified and channel=website.",
-    "Send optional founder notification."
+    "Check existing prospect by email (idempotent upsert — do not create duplicates).",
+    "If using notification-only mode: skip CRM insert and notify founder.",
+    "If using legacy standalone mode: insert or update prospects with source=website_form and stage=identified.",
+    "Insert outreach_activity with activity_type=identified and channel=website when CRM write is enabled.",
+    "Send optional founder notification (email or Slack)."
   ],
   "guardrails": [
     "Do not replace existing website form pipeline.",
-    "Use idempotent matching on email to avoid duplicates."
-  ]
+    "Use idempotent matching on email to avoid duplicates.",
+    "Prefer marketing API prospect-sync as source of truth for CRM rows."
+  ],
+  "samplePayload": {
+    "email": "founder@example.com",
+    "name": "Alex Founder",
+    "formType": "exporter",
+    "sourcePage": "/en/exporters",
+    "company": "Example Exports AS",
+    "country": "NO"
+  }
 }

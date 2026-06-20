@@ -22,6 +22,18 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Vercel Deployment Protection bypass for CI |
 
+### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
+
+| Variable | Phase | Used by | Purpose |
+|----------|-------|---------|---------|
+| `SUPABASE_URL` | 2.O.* | n8n Supabase nodes | CRM read/write |
+| `SUPABASE_SERVICE_ROLE_KEY` | 2.O.* | n8n Supabase nodes | Service role for prospect checks |
+| `FOUNDER_EMAIL_TO` | 2.O.1 | workflow-b notifications | Founder alert inbox |
+| `SLACK_WEBHOOK_URL` | 2.O.* | optional Slack nodes | Ops alerts |
+| `NOTION_DATABASE_ID` | 2.O.* | optional Notion nodes | Task logging |
+
+Human configures these in the n8n instance after importing workflow specs from `automation/n8n/founder-os/`.
+
 ---
 
 ## Vercel-only (not in GitHub)
@@ -82,5 +94,6 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-20 | Slice 2.O.1: n8n Founder OS env vars (n8n host, not GitHub) |
 | 2026-06-20 | Slice 2.8: `UPTIME_DASHBOARD_BASE_URL`, `UPTIME_BACKEND_BASE_URL`; reuse `MARKETING_SMOKE_BASE_URL` |
 | 2026-06-20 | Initial stub for automation rollout |

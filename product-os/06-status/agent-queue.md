@@ -42,8 +42,8 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [x] **2.1** Sentry env tags (marketing, dashboard, backend) — PR #145
 - [x] **2.4** Marketing post-deploy smoke workflow — PR #147
-- [ ] **2.8** Synthetic uptime checks — `chore/automation-uptime-probes` (in progress)
-- [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — human+agent doc slice
+- [x] **2.8** Synthetic uptime checks — PR #150
+- [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — `chore/automation-n8n-workflow-b` (in progress)
 - [ ] **2.O.2** n8n workflow-f missed schedule alert — human+agent doc slice
 
 ### Bundle D — Closed loops
@@ -99,7 +99,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **2.8** Synthetic uptime probes — branch: `chore/automation-uptime-probes`
+- [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
 - [ ] **1.O.1** Offline automation Phase 1 — branch: `chore/automation-offline-phase1`
 
 ---
@@ -129,6 +129,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **3.4** Dependabot config — PR #131
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
+- [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
 - [x] 2026-06-20 — **0.M.0–0.M.3 + 0.H + 0.H.2** — PR #124 merge; Vercel preview protection
 
 ---

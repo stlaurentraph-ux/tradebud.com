@@ -6462,6 +6462,14 @@ Append-only session log.
 - Decisions: reuse `MARKETING_SMOKE_BASE_URL`; optional `UPTIME_DASHBOARD_BASE_URL` / `UPTIME_BACKEND_BASE_URL` with production fallbacks in manifest; cron every 30 minutes.
 - Verification: `npm run uptime:probes:manifest:assert`; `npm run uptime:probes:run` against production URLs.
 - Next step: open PR `chore/automation-uptime-probes`; merge when field-auth + marketing CI green.
+- Merged PR #150 to `main`; next Ready slice: **2.O.1** or **2.O.2** (ops doc slices).
+
+### 2026-06-20 (execution: guardrails slice 2.O.1 — n8n workflow-b form intake)
+- Focus: activation runbook + CI guard aligning n8n workflow-b spec with marketing Founder OS prospect sync.
+- Files changed: `automation/n8n/founder-os/workflow-b-website-form-intake.json`, `workflow-b-activation.md`, `scripts/n8n-workflow-b-guard.mjs`, `package.json`, `.github/workflows/ci.yml`, `product-os/04-quality/ci-secrets-and-fixtures.md`, `automation/n8n/founder-os/README.md`.
+- Decisions: marketing `syncLeadToProspects` remains canonical; n8n is optional notification-only augmentation.
+- Verification: `npm run n8n:workflow-b:assert`.
+- Next step: open PR `chore/automation-n8n-workflow-b`; merge when field-auth + marketing CI green.
 
 ### 2026-06-16 (execution: dashboard A+ slice 7 — package gate tests + importer inbox north star)
 - Focus: lock assemble readiness gate with page tests; prioritize importer inbound requests in north star; add handoff vs TRACES terminology tests and importer QA checklist.

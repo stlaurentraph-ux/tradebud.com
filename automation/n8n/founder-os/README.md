@@ -5,7 +5,7 @@ This folder contains workflow specs for the Tracebud Founder OS automation layer
 ## Workflows
 
 - `workflow-a-daily-outreach-intelligence.json`
-- `workflow-b-website-form-intake.json`
+- `workflow-b-website-form-intake.json` — **activation:** [workflow-b-activation.md](./workflow-b-activation.md) (slice 2.O.1)
 - `workflow-c-weekly-content-planning.json`
 - `workflow-d-content-accountability-check.json`
 - `workflow-e-monthly-performance-review.json`
@@ -40,3 +40,4 @@ This folder contains workflow specs for the Tracebud Founder OS automation layer
   - `generate_daily_actions(current_date)`
   - `generate_content_tasks(current_date)`
 - Confirm summary output format is concise and actionable.
+- **Workflow B (website form intake):** run `npm run n8n:workflow-b:assert` before merge; follow [workflow-b-activation.md](./workflow-b-activation.md) when enabling n8n.
