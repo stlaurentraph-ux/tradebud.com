@@ -64,6 +64,7 @@ import {
   formatSyncFailureStepLabel,
   formatSyncFailureUserMessage,
 } from '@/features/sync/mapSyncFailureMessage';
+import { classifyQueueSyncFailure } from '@/features/sync/syncFailure';
 import {
   getSyncQueueLockSnapshot,
   setSyncQueuePhase,
@@ -615,6 +616,15 @@ export default function SettingsScreen() {
     }
     return parts.join(' · ');
   }, [queueCountByActionType, t]);
+
+  const queueSyncFailure = useMemo(() => {
+    const err = queueLastError?.trim();
+    if (!err) return null;
+    return classifyQueueSyncFailure({
+      error: err,
+      actionType: queueLastErrorActionType ?? undefined,
+    });
+  }, [queueLastError, queueLastErrorActionType]);
 
   const showUploadAttention = useMemo(
     () => shouldShowBackupAttentionPanel({
