@@ -9,7 +9,8 @@
     "lint": "eslint --config ../../packages/eslint-config/nextjs.mjs . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "i18n:parity:assert": "node scripts/i18n-parity-assert.mjs",
-    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run build"
+    "routes:publication:assert": "node scripts/marketing-routes-publication-guard.mjs",
+    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
