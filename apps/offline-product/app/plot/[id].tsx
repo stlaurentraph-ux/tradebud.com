@@ -1049,7 +1049,7 @@ export default function PlotDetailScreen() {
         await refreshTenureVerification();
       }
     },
-    [plot, backendPlotId, farmer?.id, refreshTenureVerification, t],
+    [plot, backendPlotId, farmer?.id, refreshTenureVerification, notifyDocSync, t],
   );
 
   const handleHeaderBack = useCallback(() => {
