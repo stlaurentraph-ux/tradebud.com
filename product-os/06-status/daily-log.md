@@ -1,8 +1,16 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+<<<<<<< HEAD
 ### 2026-06-20 (offline: tenure doc status refresh + auto-backup pipeline)
 - **Documents UI** — tenure verification GET uses cache-bust fetch; plot Documents refreshes on focus and after sync; stub/manual-queue copy when file is saved but AI review is queued.
 - **Auto-backup** — `runAutoBackup` routes through `runFieldSyncPipeline` (same session + queue path as Settings).
+
+### 2026-06-20 (backend + offline: land title AI parse fix)
+- **Root cause** — `getPlotCadastralContext()` queried nonexistent `farmer_profile.full_name`; every tenure parse failed after LLM with retryable `MANUAL_REQUIRED` → misleading “Tap Sync Now” copy.
+- **Backend** — Fixed farmer name SQL, re-queue retryable rows on sync/fetch, kick parse worker on `GET tenure-verification`, mark `not_a_land_document` as `FAILED`, readiness script validates cadastral SQL.
+- **App** — Wrong-document UX (upload again CTA), poll while check delayed, farmer SQLite rekey lock, Documents crash import fix.
+
+### 2026-06-20 (offline: sync Phase 2 — photo failures + pipeline + Maestro)
 - **Photo sync** — Supabase Storage vs Tracebud API failures classified separately (`photo_storage` / `photo_api`); `SyncFailureError` propagates through land title + ground truth upload paths.
 - **Pipeline** — `runFieldSyncPipeline()` replaces inline Settings plot upload + queue drain; Sentry breadcrumbs via `reportSyncFailure()`.
 - **Device QA** — Maestro `settings-sync-smoke.yaml`, `test:maestro:sync`, preflight wiring asserts.

@@ -181,6 +181,20 @@ describe('formatTenureVerificationReviewMessage', () => {
     expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Needs: Witness signatures');
   });
 
+  it('maps automated extraction stub to manual queue copy, not sync-again', () => {
+    const detail = describeTenureVerificationReview(
+      baseRecord({
+        parse_status: 'MANUAL_REQUIRED',
+        parse_result: {
+          parser: 'manual_required_stub',
+          clauses_missing: ['automated_extraction_unavailable'],
+        },
+      }),
+    );
+    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_manual_queue');
+    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Saved — reviewer will finish');
+  });
+
   it('falls back when clause keys are dev-only tokens', () => {
     const detail = describeTenureVerificationReview(
       baseRecord({
@@ -258,7 +272,7 @@ describe('formatTenureVerificationReviewMessage', () => {
         parse_status: 'MANUAL_REQUIRED',
         parse_result: {
           parser: 'llm',
-          error: 'Could not download tenure evidence file.',
+          error: 'column fp.full_name does not exist',
           retryable: true,
           tenure_type: 'UNKNOWN',
           clauses_missing: ['not_a_land_document'],
@@ -271,7 +285,7 @@ describe('formatTenureVerificationReviewMessage', () => {
       parse_status: 'MANUAL_REQUIRED',
       parse_result: {
         parser: 'llm',
-        error: 'Could not download tenure evidence file.',
+        error: 'column fp.full_name does not exist',
         retryable: true,
         tenure_type: 'UNKNOWN',
         clauses_missing: ['not_a_land_document'],

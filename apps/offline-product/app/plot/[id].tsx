@@ -652,9 +652,7 @@ export default function PlotDetailScreen() {
   }, [landChecklistDone]);
 
   useEffect(() => {
-    if (
-      visibleTenureVerifications.some((row) => tenureVerificationRequiresReupload(row))
-    ) {
+    if (visibleTenureVerifications.some((row) => tenureVerificationRequiresReupload(row))) {
       setLandPapersExpanded(true);
     }
   }, [visibleTenureVerifications]);
