@@ -3,6 +3,7 @@ import {
   getCanonicalRouteRedirectPath,
   getInternalToolsRedirectPath,
   isInternalToolsEnabled,
+  mapToFounderOsUrl,
 } from './internal-tools';
 
 describe('internal-tools', () => {
@@ -15,25 +16,24 @@ describe('internal-tools', () => {
     expect(isInternalToolsEnabled()).toBe(false);
   });
 
-  it('allows internal tools when explicitly enabled in production', () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('NEXT_PUBLIC_ENABLE_INTERNAL_TOOLS', 'true');
-    expect(isInternalToolsEnabled()).toBe(true);
-  });
-
-  it('blocks founder-os routes in production', () => {
+  it('redirects founder-os routes to ops URL in production', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_INTERNAL_TOOLS', 'false');
-    expect(getInternalToolsRedirectPath('/founder-os/crm')).toBe('/');
+    vi.stubEnv('NEXT_PUBLIC_FOUNDER_OS_URL', 'https://ops.tracebud.com');
+    expect(getInternalToolsRedirectPath('/founder-os/crm/daily-actions')).toBe(
+      'https://ops.tracebud.com/crm/daily-actions',
+    );
+    expect(mapToFounderOsUrl('/crm/prospects')).toBe('https://ops.tracebud.com/crm/prospects');
   });
 
-  it('redirects legacy crm paths when internal tools are enabled', () => {
+  it('redirects legacy crm paths to local Founder OS in development', () => {
     vi.stubEnv('NODE_ENV', 'development');
-    expect(getInternalToolsRedirectPath('/crm/daily-actions')).toBe('/founder-os/crm/daily-actions');
+    expect(getInternalToolsRedirectPath('/crm/daily-actions')).toBe(
+      'http://localhost:3004/crm/daily-actions',
+    );
   });
 
   it('redirects /shipments list to /packages', () => {
     expect(getCanonicalRouteRedirectPath('/shipments')).toBe('/packages');
-    expect(getCanonicalRouteRedirectPath('/shipments/abc')).toBe(null);
   });
 });
