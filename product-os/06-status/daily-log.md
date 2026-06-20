@@ -1,5 +1,11 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — PR #122 merge onto main, `chore/automation-offline-phase1`)
+- **Merge** — Resolved conflicts with current `main`; Expo app + field-auth + marketing CI green.
+- **Typecheck** — Fixed post-merge sync UI regressions (`queueSyncFailure`, plot sort key, server link cast).
+- **Contracts** — Added `20260620140000_founder_os_gtm_expansion.sql` to migration mirror `supabaseOnly` map.
+- **Next** — Human merge PR #122; slice **1.O.2** strict guards.
+
 ### 2026-06-20 (automation — offline typecheck + CI guard ordering, `chore/automation-offline-phase1`)
 - **Typecheck** — Fixed 58 TS errors (missing imports, test fixtures, persistence export, hook deps); `npm run typecheck` green locally.
 - **CI** — Run `security:preflight` + `qa:automation:phase1` before typecheck so Phase 1.O.1 guards execute even if later steps fail.
