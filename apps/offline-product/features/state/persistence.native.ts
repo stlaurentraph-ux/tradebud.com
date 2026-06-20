@@ -631,6 +631,10 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
   await db.runAsync('DELETE FROM plot_title_photos WHERE id = ?;', [photoId]);
 }
 
+export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
+  return !photo.storagePath?.trim();
+}
+
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM plot_evidence WHERE id = ?;', [evidenceId]);

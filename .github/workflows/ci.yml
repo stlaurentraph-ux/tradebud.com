@@ -822,14 +822,14 @@ jobs:
       - name: Metro / Expo start preflight
         run: npm run check:metro-start
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Security preflight
         run: npm run security:preflight
 
       - name: Automation guards (Phase 1.O.1 report mode)
         run: npm run qa:automation:phase1
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: English i18n placeholder guard
         run: npm run i18n:en:placeholder:assert

@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — offline typecheck + CI guard ordering, `chore/automation-offline-phase1`)
+- **Typecheck** — Fixed 58 TS errors (missing imports, test fixtures, persistence export, hook deps); `npm run typecheck` green locally.
+- **CI** — Run `security:preflight` + `qa:automation:phase1` before typecheck so Phase 1.O.1 guards execute even if later steps fail.
+- **Next** — Green Expo app job on PR #122; merge 1.O.1.
+
 ### 2026-06-20 (automation — PR #122 CI unblock, `chore/automation-offline-phase1`)
 - **1.O.1 fix** — Restored `expo-asset` + `expo-module-scripts ~4.1.10`; local guards + security preflight green.
 - **CI collateral** — Field-auth lazy `useState` auth pages; de-backtick `GET/POST` in release-qa-evidence; `workflow_dispatch` on CI.

@@ -217,7 +217,7 @@ export default function PlotDetailScreen() {
     loadEvidenceForPlot(producerEvidenceScopeId(farmer.id))
       .then((rows) =>
         setProducerEvidenceKinds(
-          rows.map((row) => row.kind).filter((kind): kind is string => Boolean(kind)),
+          rows.map((row) => row.kind).filter((kind) => typeof kind === 'string' && kind.length > 0),
         ),
       )
       .catch(() => setProducerEvidenceKinds([]));

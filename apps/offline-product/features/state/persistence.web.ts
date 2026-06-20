@@ -164,6 +164,10 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
   memTitlePhotos = memTitlePhotos.filter((p) => p.id !== photoId);
 }
 
+export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
+  return !photo.storagePath?.trim();
+}
+
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
   memEvidence = memEvidence.filter((e) => e.id !== evidenceId);
 }

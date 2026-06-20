@@ -65,7 +65,10 @@ export async function measureTotalSyncPending(params: {
       const reconciled = reconcilePlotServerLinks(params.plots, backend ?? [], plotServerLinks);
       if (
         Object.keys(reconciled).length !== Object.keys(plotServerLinks).length ||
-        Object.entries(reconciled).some(([localId, serverId]) => plotServerLinks[localId] !== serverId)
+        Object.entries(reconciled).some(
+          ([localId, serverId]) =>
+            (plotServerLinks as Record<string, string>)[localId] !== serverId,
+        )
       ) {
         plotServerLinks = reconciled;
         await persistPlotServerLinks(reconciled).catch(() => undefined);

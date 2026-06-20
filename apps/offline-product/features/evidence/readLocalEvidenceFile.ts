@@ -28,11 +28,11 @@ export async function readLocalEvidenceBytes(localUri: string): Promise<ArrayBuf
   const fsAny = FileSystem as typeof FileSystem & {
     EncodingType?: { Base64: string };
   };
-  const encoding = fsAny.EncodingType?.Base64 ?? ('base64' as const);
+  const encoding = fsAny.EncodingType?.Base64 ?? 'base64';
 
   try {
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: encoding as FileSystem.EncodingType,
+      encoding: encoding as 'base64',
     });
     return base64ToArrayBuffer(base64);
   } catch (firstError) {

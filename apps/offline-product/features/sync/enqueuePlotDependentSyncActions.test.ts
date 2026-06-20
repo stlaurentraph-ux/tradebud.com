@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const enqueuePendingSync = vi.fn(async () => undefined);
-const loadPhotosForPlot = vi.fn(async () => []);
-const loadTitlePhotosForPlot = vi.fn(async () => []);
-const loadEvidenceForPlot = vi.fn(async () => []);
-const loadPlotCadastralKey = vi.fn(async () => null);
-const loadPlotTenure = vi.fn(async () => ({ informalTenure: false, informalTenureNote: null }));
-const loadLocalDeliveryReceiptsForFarmer = vi.fn(async () => []);
-const loadPendingSyncActions = vi.fn(async () => []);
+import type {
+  LocalDeliveryReceiptRow,
+  PendingSyncAction,
+  PlotEvidenceItem,
+  PlotPhoto,
+  PlotTitlePhoto,
+} from '@/features/state/persistence';
+
+const enqueuePendingSync = vi.fn(async (_action: PendingSyncAction) => undefined);
+const loadPhotosForPlot = vi.fn(async (_plotId: string): Promise<PlotPhoto[]> => []);
+const loadTitlePhotosForPlot = vi.fn(async (_plotId: string): Promise<PlotTitlePhoto[]> => []);
+const loadEvidenceForPlot = vi.fn(async (_plotId: string): Promise<PlotEvidenceItem[]> => []);
+const loadPlotCadastralKey = vi.fn(async (_plotId: string): Promise<string | null> => null);
+const loadPlotTenure = vi.fn(async (_plotId: string) => ({ informalTenure: false, informalTenureNote: null }));
+const loadLocalDeliveryReceiptsForFarmer = vi.fn(
+  async (_farmerId: string): Promise<LocalDeliveryReceiptRow[]> => [],
+);
+const loadPendingSyncActions = vi.fn(async (): Promise<PendingSyncAction[]> => []);
 
 vi.mock('@/features/sync/queueDeclarationAuditSync', () => ({
   enqueuePendingDeclarationAuditsForDevice: vi.fn(async () => ({ producer: false, plots: 0 })),
@@ -77,7 +87,7 @@ describe('enqueuePlotDependentSyncActions', () => {
       harvests: 1,
     });
     expect(enqueuePendingSync).toHaveBeenCalledTimes(4);
-    expect(enqueuePendingSync.mock.calls.map(([row]) => row.actionType)).toEqual([
+    expect(enqueuePendingSync.mock.calls.map((call) => call[0]?.actionType)).toEqual([
       'photos_sync',
       'photos_sync',
       'evidence_sync',

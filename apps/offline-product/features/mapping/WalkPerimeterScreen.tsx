@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { buildGeometryFromLocalPlot, postPlotToBackend, type PostPlotToBackendResult } from '@/features/api/postPlot';
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useAppState } from '@/features/state/AppStateContext';
@@ -757,7 +758,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture: geometryCapture ?? null,
-        }).then((r) => handlePlotUploadResult(r, retry));
+        }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, retry));
       };
       retry();
     },
@@ -1372,7 +1373,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture,
-        }).then((r) => handlePlotUploadResult(r, tryServerUpload));
+        }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
       };
       finishNewPlotSave(name, newPlotId, tryServerUpload);
     } else {
@@ -1538,7 +1539,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             declaredAreaHa: declaredAreaHectares ?? null,
             precisionMeters: precisionMeters ?? null,
             geometryCapture,
-          }).then((r) => handlePlotUploadResult(r, tryServerUpload));
+          }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
         };
         finishNewPlotSave(name, newPlotId, tryServerUpload);
       }

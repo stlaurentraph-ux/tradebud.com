@@ -8,7 +8,7 @@ const polygonPlot: Plot = {
   name: 'North field',
   kind: 'polygon',
   farmerId: 'farmer-1',
-  createdAt: '2026-01-01T00:00:00.000Z',
+  createdAt: 1_735_689_600_000,
   areaHectares: 1.2,
   areaSquareMeters: 12000,
   points: [

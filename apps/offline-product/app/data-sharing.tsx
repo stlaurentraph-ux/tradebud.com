@@ -25,7 +25,8 @@ import {
 } from '@/constants/compactTabHeader';
 import { Brand, Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { fetchMyConsentGrants, postAuditEventToBackend, requestGdprErasure, type ConsentGrant } from '@/features/api/consentGrants';
+import { fetchMyConsentGrants, requestGdprErasure, type ConsentGrant } from '@/features/api/consentGrants';
+import { postAuditEventToBackend } from '@/features/api/audit';
 import { testBackendLogin } from '@/features/api/postPlot';
 import {
   applyOptimisticConsentStatus,

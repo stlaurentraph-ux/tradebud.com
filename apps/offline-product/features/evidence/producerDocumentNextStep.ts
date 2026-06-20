@@ -23,7 +23,7 @@ export function resolveProducerDocumentsNextStep(params: {
   plotReadiness: PlotReadinessLoadResult[];
   plots: { id: string; name: string }[];
 }): ProducerDocumentsNextStep {
-  const attestationsComplete = hasProducerAttestationsComplete(params.farmer);
+  const attestationsComplete = hasProducerAttestationsComplete(params.farmer ?? undefined);
 
   if (!attestationsComplete) {
     return { kind: 'attestations' };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { plotNeedsLocalLandDocumentUpload } from './plotNeedsLocalLandDocumentUpload';
+import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 
 describe('plotNeedsLocalLandDocumentUpload', () => {
   it('returns true when synced plot has local land docs but no server tenure row', () => {
@@ -36,7 +37,13 @@ describe('plotNeedsLocalLandDocumentUpload', () => {
             mime_type: null,
             evidence_label: null,
             parse_status: 'PENDING',
-          },
+            parse_result: null,
+            parse_confidence: null,
+            parse_reviewed_by: null,
+            parse_reviewed_at: null,
+            created_at: '2026-01-01T00:00:00.000Z',
+            updated_at: '2026-01-01T00:00:00.000Z',
+          } satisfies PlotTenureVerificationRecord,
         ],
       }),
     ).toBe(false);
