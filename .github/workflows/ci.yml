@@ -763,7 +763,7 @@ jobs:
         run: npm run build -w field-auth
 
   marketing:
-    name: Marketing site lint and build
+    name: Marketing site lint, typecheck, i18n, and build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -784,6 +784,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck -w tracebud-marketing
+
+      - name: Marketing i18n parity
+        run: npm run i18n:parity:assert -w tracebud-marketing
 
       - name: Build
         run: npm run build -w tracebud-marketing

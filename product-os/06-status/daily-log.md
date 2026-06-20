@@ -1,6 +1,13 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation Phase 0 — branch `chore/automation-phase-0`)
+### 2026-06-20 (automation — 0.M.1–0.M.3 on `chore/automation-bundle-a`)
+- **0.M.1** — Marketing CI typecheck step; removed `ignoreBuildErrors` from `next.config.mjs`.
+- **0.M.2** — `i18n-parity-assert.mjs` + CI step (`marketing.*`, `header.*`).
+- **0.M.3** — `npm run check:marketing` (root + app).
+- **Verified** — `npm run check:marketing` passes locally.
+- **Next** — PR merge; human **0.H** branch protection.
+
+### 2026-06-20 (automation Phase 0 — branch `chore/automation-bundle-a`)
 - **0.2–0.5** — Dashboard CI build (placeholder env); `field-auth` CI job; `check:dashboard` + `build:dashboard`; README CI section.
 - **Note** — 0.1 typecheck already landed on `main` via repo Phase 3; this branch adds build gate + field-auth job.
 - **Next** — Open PR; enable branch protection (**0.H**) after green on `main`.

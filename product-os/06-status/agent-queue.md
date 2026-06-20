@@ -14,9 +14,6 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle A — Stop silent broken deploys (do first)
 
-- [ ] **0.M.1** Marketing `typecheck` + CI; document path to remove `ignoreBuildErrors` — `chore/automation-marketing-typecheck`
-- [ ] **0.M.2** Marketing i18n parity guard (`marketing.*`, `header.*`) — `chore/automation-marketing-i18n-parity`
-- [ ] **0.M.3** Root `check:marketing` script — can ship with 0.M.1–0.M.2
 - [x] **0.1** Dashboard `typecheck` script + CI — `chore/automation-phase-0` (typecheck on `main` Phase 3; verified here)
 - [x] **0.2** Dashboard `build` in CI (placeholder env) — `chore/automation-phase-0`
 - [x] **0.3** `field-auth` CI job — `chore/automation-phase-0`
@@ -123,6 +120,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **0.1–0.5** Dashboard + field-auth Phase 0 CI — `chore/automation-phase-0`
 - [x] 2026-06-20 — **0.0.1** Cursor workflow integration — `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `AGENTS.md` monorepo, `ci-secrets-and-fixtures.md` stub, CODEOWNERS automation paths
 - [x] 2026-06-20 — **0.M.0** Marketing lint fix — branch `chore/automation-bundle-a`
+- [x] 2026-06-20 — **0.M.1–0.M.3** Marketing typecheck CI, removed `ignoreBuildErrors`, i18n parity guard, `check:marketing`
 
 ---
 

@@ -138,7 +138,7 @@ End-state commands (implement via Phase 0–1 slices):
 
 | Gap | Risk | Phase |
 |-----|------|-------|
-| `ignoreBuildErrors: true` in marketing `next.config.mjs` | TS errors ship | 0.M.1 |
+| `ignoreBuildErrors: true` in marketing `next.config.mjs` | TS errors ship | **resolved 0.M.1** |
 | No marketing tests | Runtime/form regressions | 2.M / 4.M |
 | Two migration tracks without CI drift check | Schema prod/staging split | 1.D |
 | No branch protection on required checks | Broken merge to `main` | 0.H |
@@ -166,9 +166,9 @@ End-state commands (implement via Phase 0–1 slices):
 | 0.4 | Root `check:dashboard` script | root | done |
 | 0.5 | `README.md` CI section update | docs | done |
 | **0.M.0** | Fix marketing lint errors (analytics CTA, floating CTA, insights unused var) | marketing | **done** |
-| **0.M.1** | Marketing `typecheck` + CI; plan to remove `ignoreBuildErrors` | marketing | ready |
-| **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | ready |
-| **0.M.3** | Root `check:marketing` script | root | ready |
+| **0.M.1** | Marketing `typecheck` + CI; removed `ignoreBuildErrors` | marketing | **done** |
+| **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | **done** |
+| **0.M.3** | Root `check:marketing` script | root | **done** |
 | **0.H** | GitHub branch protection: required CI jobs per app | human | blocked until 0.1–0.3, 0.M.0–0.M.3 green on `main` |
 | **0.H.2** | Vercel Deployment Protection ↔ GitHub required checks | human | after 0.H |
 | **0.H.3** | GitHub rule: `main` accepts PRs only (block direct v0 push) | human | after 0.H |
