@@ -1,3 +1,20 @@
+### 2026-06-20 (repo hygiene: onboarding docs + focus archive)
+- **Root README** — Added `README.md` with repo layout, app entry points, legacy root-app warning, CI summary, and doc read order.
+- **Dashboard README** — Added `apps/dashboard-product/README.md` with local dev and quality commands.
+- **Supabase README** — Expanded beyond Founder OS: dual migration tracks, naming rules, ADR-006 pointer, historical `202606200004` note (do not rename applied migrations).
+- **Backend SQL mirror** — Added `tb_v16_049z_plot_status_rename_compliant_to_deforestation_clear.sql` (already applied on CRM; idempotent skip on renamed DBs).
+- **Structure doc** — `apps/STRUCTURE.md` now flags non-deployable root `app/` shell.
+- **Focus archive** — Moved ~580 bullets from `current-focus.md` to `current-focus-archive.md`; active focus file now ~55 lines.
+- **v0 prototype** — Added `design/v0-prototype/ARCHIVE.md` (frozen reference; not CI/deploy).
+
+### 2026-06-20 (offline: false “couldn’t reach Tracebud” after sign-in)
+- **Root cause** — Reachability probe preferred `/health` and re-fetched tokens; Supabase refresh timeouts and plot-list auth errors were mislabeled as Tracebud connectivity failures.
+- **Fix** — Authenticated probe runs first when a verified token exists; sync passes that token through queue drain; plot-fetch failures are classified (auth vs network vs server); sign-in refresh retries once and uses a distinct “could not refresh sign-in” message.
+
+### 2026-06-20 (offline: sync “session expired” while profile still shows connected)
+- **Root cause** — Settings showed signed-in from stored OAuth refresh credentials before token refresh was verified; Sync now passed the credential check but failed when Supabase could not mint an access token.
+- **Fix** — `verifySyncAccessToken()` gates Sync now; profile refresh only marks connected after a live token (network blips still allow offline signed-in state); OAuth refresh retries once on network errors; plot upload maps missing token to session-expired copy.
+
 ### 2026-06-20 (offline: sync reachability — plot list 304 + RN cache bust)
 - **Root cause** — Health ping was fixed earlier but **`GET /v1/plots` still failed on 304** (`!res.ok`), which set `plotsFetchFailed` and surfaced “We could not reach Tracebud”. RN fetch also ignores `cache: 'no-store'` on some builds, so conditional GETs persisted.
 - **Fix** — Central `cacheBustUrl` + `TRACEBUD_NO_CACHE_HEADERS`; plot fetch retries once on 304; `probeTracebudApiReachable()` falls back to authenticated `/v1/me/field-farmer-ids` when health fails; Sync now + queue drain use the probe.

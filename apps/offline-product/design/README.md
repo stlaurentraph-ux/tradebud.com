@@ -26,7 +26,7 @@ This folder is the **starting point for v0 by Vercel** design work on the farmer
 |------|---------|
 | `V0_DESIGN_REVIEW.md` | Full UX/design audit — walk plot + all main screens |
 | `V0_WALK_PLOT_PROMPT.md` | Copy-paste v0 prompts (walk plot + whole app) |
-| `v0-prototype/` | Existing interactive web prototype (reference only) |
+| `v0-prototype/` | Frozen v0 web prototype — see [`v0-prototype/ARCHIVE.md`](v0-prototype/ARCHIVE.md) |
 
 ## Design tokens (match production)
 

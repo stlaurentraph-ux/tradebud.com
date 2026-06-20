@@ -34,12 +34,12 @@ If any document conflicts with these, canonical sources win.
 - Workflows: `product-os/03-workflows/`
 - Quality gates: `product-os/04-quality/`
 - Decisions (ADR): `product-os/05-decisions/`
-- Execution status: `product-os/06-status/`
+- Execution status: `product-os/06-status/` (`current-focus.md` for active work; `current-focus-archive.md` for history)
 
 ## Working loop in Cursor
 
 1. Read canonical sources in order above.
-2. Open `product-os/06-status/current-focus.md`.
+2. Open `product-os/06-status/current-focus.md` (archive: `current-focus-archive.md`).
 3. Pick feature from `product-os/01-roadmap/master-roadmap.md`.
 4. Use `.cursor/commands/build-feature.md`.
 5. Review with `.cursor/commands/review-feature.md`.

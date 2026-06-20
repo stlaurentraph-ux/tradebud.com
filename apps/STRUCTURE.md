@@ -56,3 +56,7 @@ Tracebud now follows a two-product + multi-demo model:
 - Importer product folder removed (importer is now a role/segment inside dashboard product)
 - Cooperative and country demo folders scaffolded for future implementation
 
+## Legacy root app (do not deploy)
+
+The repository root still contains an early v0 Next.js shell (`app/`, root `package.json`). It is **not** mapped to any production domain. All deployable web apps live under `apps/*`. See [`../README.md`](../README.md).
+
