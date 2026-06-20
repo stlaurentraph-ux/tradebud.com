@@ -1044,16 +1044,6 @@ export class PlotsService {
           label: typeof photo?.label === 'string' ? photo.label : 'land_title_photo',
         }));
 
-      for (const item of withStorage) {
-        await this.evidenceDocuments.upsertFromEvidenceSync({
-          plotId,
-          tenantId: tenantId ?? null,
-          userId: userId ?? null,
-          kind: 'land_title',
-          item,
-        });
-      }
-
       if (withStorage.length > 0) {
         await this.tenureParse.enqueueFromLandTitleSync(plotId, withStorage, {
           tenantId: tenantId ?? null,

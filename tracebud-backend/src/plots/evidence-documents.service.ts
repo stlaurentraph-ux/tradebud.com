@@ -63,7 +63,7 @@ export class EvidenceDocumentsService {
             source_uploaded_by,
             parse_status
           )
-          VALUES ($1, $2, $3, $4, $5, $6, 'MOBILE_UPLOAD', $7::uuid, 'PENDING')
+          VALUES ($1::uuid, $2::uuid, $3::text, $4::text, $5::text, $6::text, 'MOBILE_UPLOAD', $7::uuid, 'PENDING')
           ON CONFLICT (plot_id, file_storage_key) DO UPDATE SET
             tenant_id = COALESCE(EXCLUDED.tenant_id, evidence_documents.tenant_id),
             mime_type = COALESCE(EXCLUDED.mime_type, evidence_documents.mime_type),
