@@ -229,7 +229,7 @@ export class TenureParseService {
           INSERT INTO plot_tenure_verification (
             plot_id, storage_path, mime_type, evidence_label, parse_status, evidence_document_id
           )
-          VALUES ($1, $2, $3, $4, 'PENDING', $5::uuid)
+          VALUES ($1::uuid, $2::text, $3::text, $4::text, 'PENDING', $5::uuid)
           ON CONFLICT (plot_id, storage_path) DO UPDATE SET
             mime_type = COALESCE(EXCLUDED.mime_type, plot_tenure_verification.mime_type),
             evidence_label = COALESCE(EXCLUDED.evidence_label, plot_tenure_verification.evidence_label),
