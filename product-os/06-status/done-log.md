@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Tenure AI lifecycle slice (2026-06-20): stable evidence storage paths + local `storagePath` persistence; supersede stale verifications on re-upload; skip exporter alerts for wrong-document (`not_a_land_document`); `check:tenure-parse:static` in CI.
 - ADR-006 Phase 3 prep (2026-06-20): dual-project Supabase clients + GTM bootstrap SQL; `crm_contacts` remains on product DB.
 - ADR-006 Phase 2 tighten public (2026-06-20): table comments all schemas; RLS advisor fixes; `plot_ops_summary` security invoker; farmer display name crm schema fix; Drizzle `internal.audit_log`. Migrations `20260620130000`–`30002` / `tb_v16_056`–`058`. Security advisors clean.
 - ADR-006 Phase 1 schema split (2026-06-20): 6 domain schemas live on Tracebud Supabase; public lean (~17 tables). Migrations `20260620120000` + `20260620120001` / `tb_v16_054` + `tb_v16_055`.

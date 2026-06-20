@@ -25,7 +25,6 @@ export type PlotTitlePhoto = {
   plotId: string;
   uri: string;
   takenAt: number;
-  /** Supabase Storage path after first successful upload — prevents duplicate uploads on Sync now. */
   storagePath?: string | null;
 };
 
@@ -43,6 +42,7 @@ export type PlotEvidenceItem = {
   mimeType: string | null;
   label: string | null;
   takenAt: number;
+  storagePath?: string | null;
 };
 
 export type PlotTenure = {
@@ -205,7 +205,7 @@ export async function initDatabase() {
   await ensurePendingSyncSchemaExtras(db);
   await ensurePlotSchemaExtras(db);
   await ensurePlotPhotosSchemaExtras(db);
-  await ensurePlotTitlePhotosSchemaExtras(db);
+  await ensurePlotEvidenceStorageSchemaExtras(db);
   await ensurePlotLegalSchemaExtras(db);
   await ensureLocalDeliveryReceiptsSchema(db);
 }
@@ -266,11 +266,13 @@ async function ensurePlotPhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
 }
 
-async function ensurePlotTitlePhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
-  const rows = await db.getAllAsync<{ name: string }>('PRAGMA table_info(plot_title_photos);');
-  const has = (col: string) => rows.some((r) => r.name === col);
-  if (!has('storagePath')) {
-    await db.execAsync('ALTER TABLE plot_title_photos ADD COLUMN storagePath TEXT;');
+async function ensurePlotEvidenceStorageSchemaExtras(db: SQLite.SQLiteDatabase) {
+  for (const table of ['plot_title_photos', 'plot_evidence'] as const) {
+    const rows = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table});`);
+    const has = (col: string) => rows.some((r) => r.name === col);
+    if (!has('storagePath')) {
+      await db.execAsync(`ALTER TABLE ${table} ADD COLUMN storagePath TEXT;`);
+    }
   }
 }
 
@@ -589,11 +591,23 @@ export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
   }));
 }
 
-export async function persistPlotTitlePhoto(photo: Omit<PlotTitlePhoto, 'id'>) {
+export async function persistPlotTitlePhoto(photo: Omit<PlotTitlePhoto, 'id'>): Promise<number> {
+  const db = await getDb();
+  const result = await db.runAsync(
+    `INSERT INTO plot_title_photos (plotId, uri, takenAt, storagePath) VALUES (?, ?, ?, ?);`,
+    [photo.plotId, photo.uri, photo.takenAt, photo.storagePath ?? null],
+  );
+  return Number(result.lastInsertRowId);
+}
+
+export async function updatePlotTitlePhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO plot_title_photos (plotId, uri, takenAt) VALUES (?, ?, ?);`,
-    [photo.plotId, photo.uri, photo.takenAt],
+    'UPDATE plot_title_photos SET uri = ?, storagePath = ? WHERE id = ?;',
+    [params.uri, params.storagePath, photoId],
   );
 }
 
@@ -608,32 +622,8 @@ export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitleP
     plotId: row.plotId,
     uri: row.uri,
     takenAt: row.takenAt,
-    storagePath: typeof row.storagePath === 'string' ? row.storagePath : null,
+    storagePath: row.storagePath ?? null,
   }));
-}
-
-export async function updatePlotTitlePhotoRemoteRef(
-  photoId: number,
-  params: { storagePath: string; remoteUri?: string },
-): Promise<void> {
-  const db = await getDb();
-  const storagePath = params.storagePath.trim();
-  if (!storagePath) return;
-  if (params.remoteUri?.trim()) {
-    await db.runAsync(
-      'UPDATE plot_title_photos SET storagePath = ?, uri = ? WHERE id = ?;',
-      [storagePath, params.remoteUri.trim(), photoId],
-    );
-    return;
-  }
-  await db.runAsync('UPDATE plot_title_photos SET storagePath = ? WHERE id = ?;', [
-    storagePath,
-    photoId,
-  ]);
-}
-
-export function isPlotTitlePhotoPendingUpload(photo: PlotTitlePhoto): boolean {
-  return !photo.storagePath?.trim();
 }
 
 export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
@@ -649,6 +639,18 @@ export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> 
 export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('UPDATE plot_evidence SET uri = ? WHERE id = ?;', [uri, evidenceId]);
+}
+
+export async function updatePlotEvidenceAfterUpload(
+  evidenceId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE plot_evidence SET uri = ?, storagePath = ? WHERE id = ?;', [
+    params.uri,
+    params.storagePath,
+    evidenceId,
+  ]);
 }
 
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {
@@ -768,6 +770,7 @@ export async function loadEvidenceForPlot(
     mimeType: row.mimeType ?? null,
     label: row.label ?? null,
     takenAt: row.takenAt,
+    storagePath: row.storagePath ?? null,
   }));
 }
 

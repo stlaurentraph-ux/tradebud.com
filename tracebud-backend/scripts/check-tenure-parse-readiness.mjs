@@ -110,6 +110,32 @@ async function smokeGateway() {
 async function main() {
   loadEnv();
   const runSmoke = process.argv.includes('--smoke');
+  const staticOnly = process.argv.includes('--static-only');
+
+  if (staticOnly) {
+    const servicePath = resolve(process.cwd(), 'src/plots/tenure-parse.service.ts');
+    const source = readFileSync(servicePath, 'utf8');
+    const checks = [
+      check(
+        'cadastral SQL avoids farmer_profile.full_name',
+        !source.includes('fp.full_name'),
+        servicePath,
+      ),
+      check(
+        'supersede prior verifications on re-upload',
+        source.includes('supersedePriorLandDocumentVerifications'),
+        'enqueueItems should retire stale land-doc rows',
+      ),
+    ];
+    console.log('Tenure parse static checks\n');
+    let allOk = true;
+    for (const row of checks) {
+      const mark = row.ok ? 'OK' : 'FAIL';
+      if (!row.ok) allOk = false;
+      console.log(`[${mark}] ${row.name}${row.detail ? ` — ${row.detail}` : ''}`);
+    }
+    process.exit(allOk ? 0 : 1);
+  }
 
   const checks = [];
   checks.push(

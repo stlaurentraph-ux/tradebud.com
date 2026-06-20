@@ -1,9 +1,13 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-<<<<<<< HEAD
-### 2026-06-20 (offline: tenure doc status refresh + auto-backup pipeline)
-- **Documents UI** — tenure verification GET uses cache-bust fetch; plot Documents refreshes on focus and after sync; stub/manual-queue copy when file is saved but AI review is queued.
-- **Auto-backup** — `runAutoBackup` routes through `runFieldSyncPipeline` (same session + queue path as Settings).
+### 2026-06-20 (offline: Metro bootstrap hardening)
+- **Crash root causes** — reverted `app.config.js` TypeScript syntax; monorepo root `react-native@0.85` vs field app `0.81.5`; stale Metro after config edits.
+- **Guards** — `check:metro-start` (config load, RN pin, expo config) runs before every `dev:metro*`; CI + field-regression-guard block TS in `app.config.js`.
+
+### 2026-06-20 (tenure AI: upload dedup + lifecycle + CI)
+- **Offline** — Stable evidence storage paths keyed by local SQLite row id; persist `storagePath`; Metro monorepo RN pin.
+- **Backend** — Supersede stale land-doc verifications on re-upload; skip exporter alerts for `not_a_land_document`.
+- **CI** — `check:tenure-parse:static` in backend job.
 
 ### 2026-06-20 (backend + offline: land title AI parse fix)
 - **Root cause** — `getPlotCadastralContext()` queried nonexistent `farmer_profile.full_name`; every tenure parse failed after LLM with retryable `MANUAL_REQUIRED` → misleading “Tap Sync Now” copy.
@@ -20,6 +24,12 @@
 - **`openFieldSyncSession()`** — one token verify + plot-fetch scope for Settings Sync now, metrics refresh, and auto-backup (stops repeated OAuth refresh mid-queue).
 - **Diagnostics** — Settings shows failed step + last queue error; `mapSyncFailureMessage.ts` centralizes user copy.
 - **Env** — `.env` defaults to production API; `qa:sync-connectivity` reads `.env.development.local`.
+
+### 2026-06-20 (repo: npm workspaces Phase 1)
+- **Workspaces** — Root `package.json` adds npm workspaces for `dashboard-product`, `tracebud-marketing`, `tracebud-offline`, `field-auth`, `tracebud-backend`; single root lockfile; per-app lockfiles removed.
+- **Root scripts** — `dev:backend`, `dev:dashboard`, `dev:marketing`, `dev:offline`, `lint:workspaces`, etc.
+- **CI** — Jobs use `npm ci` at repo root + `npm run … -w <package>`.
+- **Branch** — `chore/npm-workspaces` (rollback tag: `pre-workspaces-2026-06-20`).
 
 ### 2026-06-20 (repo hygiene: onboarding docs + focus archive)
 - **Root README** — Added `README.md` with repo layout, app entry points, legacy root-app warning, CI summary, and doc read order.

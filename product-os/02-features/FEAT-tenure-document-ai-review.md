@@ -97,3 +97,18 @@
 - [x] Staff email + push when tenure hits MANUAL_REQUIRED or FAILED
 - [x] Package readiness blocks on open tenure review for linked plots
 - [x] Multi-country cadastral normalization (beyond Honduras)
+
+## Phase 5 — upload dedup + lifecycle (2026-06-20)
+
+### Stable storage paths (offline)
+- Land-title photos and tenure evidence use `{authUserId}/{plotId}/{kind}/{localRowId}-{label}` (not `Date.now()`).
+- SQLite persists `storagePath` on `plot_title_photos` / `plot_evidence`; re-sync upserts the same object (no duplicate parse rows).
+
+### Supersede on replace (backend)
+- New land-doc upload marks prior same-slot `plot_tenure_verification` rows `superseded` and resolves open compliance issues.
+
+### Wrong-document exporter noise
+- `FAILED` + `not_a_land_document` skips compliance issue + staff alert (farmer re-upload only).
+
+### CI
+- `npm run check:tenure-parse:static` in backend CI job (cadastral SQL + supersede guard).

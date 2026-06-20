@@ -112,7 +112,7 @@ module.exports = ({ config }) => {
   }
   const existingFilters = android.intentFilters ?? [];
   const hasAppLinkFilter = existingFilters.some(
-    (filter: { data?: { host?: string }[] }) =>
+    (filter) =>
       filter.data?.some((d) => d.host === 'app.tracebud.com'),
   );
   if (!hasAppLinkFilter) {

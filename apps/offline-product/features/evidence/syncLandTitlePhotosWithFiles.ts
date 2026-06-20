@@ -10,7 +10,7 @@ import {
 } from '@/features/evidence/evidenceContentType';
 import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceToStorage';
 import type { PlotTitlePhoto } from '@/features/state/persistence';
-import { updatePlotTitlePhotoRemoteRef } from '@/features/state/persistence';
+import { updatePlotTitlePhotoAfterUpload } from '@/features/state/persistence';
 import type { SyncFailure } from '@/features/sync/syncFailure';
 import { syncFailureFromEvidenceUpload } from '@/features/sync/syncFailureFromEvidenceUpload';
 import { SyncFailureError } from '@/features/sync/syncFailureError';
@@ -20,6 +20,7 @@ export type { LandTitleSyncSummary };
 /**
  * Upload local land-title photos to storage when signed in, then sync metadata to the API.
  * Only photos with a storage path are sent to the API so the backend can run AI tenure review.
+ * Re-sync reuses persisted storagePath (stable per local photo row) to avoid duplicate parses.
  */
 export async function syncLandTitlePhotosWithFiles(params: {
   serverPlotId: string;
@@ -42,39 +43,40 @@ export async function syncLandTitlePhotosWithFiles(params: {
 
   const resolved: Array<Record<string, unknown>> = [];
   for (const photo of params.photos) {
-    const existingStoragePath = photo.storagePath?.trim() || null;
+    const label = 'land_title_photo';
+    const existingStoragePath =
+      typeof photo.storagePath === 'string' && photo.storagePath.trim().length > 0
+        ? photo.storagePath.trim()
+        : null;
 
-    if (!isLocalEvidenceUri(photo.uri) && !existingStoragePath) {
+    if (!isLocalEvidenceUri(photo.uri)) {
       summary.metadataOnlyCount += 1;
       resolved.push({
         ...baseMeta,
         uri: photo.uri,
+        ...(existingStoragePath ? { storagePath: existingStoragePath } : {}),
         takenAt: photo.takenAt,
-        label: 'land_title_photo',
+        label,
       });
       continue;
     }
 
-    const mimeType = normalizeEvidenceContentType(null, 'land_title_photo', photo.uri);
+    const mimeType = normalizeEvidenceContentType(null, label, photo.uri);
     const upload = await uploadEvidenceFileToStorage({
       localUri: photo.uri,
       mimeType,
-      label: 'land_title_photo',
+      label,
       farmerId: params.farmerId,
       plotId: params.serverPlotId,
       kind: 'land_title',
-      existingStoragePath,
-      stableFileKey: existingStoragePath ? undefined : `title-${photo.id}`,
+      storagePath: existingStoragePath,
+      stableKey: existingStoragePath ? null : photo.id,
     });
     if (upload.ok) {
-      if (!existingStoragePath || existingStoragePath !== upload.storagePath) {
-        summary.uploadedCount += 1;
-      } else {
-        summary.metadataOnlyCount += 1;
-      }
-      await updatePlotTitlePhotoRemoteRef(photo.id, {
+      summary.uploadedCount += 1;
+      await updatePlotTitlePhotoAfterUpload(photo.id, {
+        uri: upload.remoteUrl,
         storagePath: upload.storagePath,
-        remoteUri: upload.remoteUrl,
       }).catch(() => undefined);
       resolved.push({
         ...baseMeta,
@@ -82,7 +84,7 @@ export async function syncLandTitlePhotosWithFiles(params: {
         storagePath: upload.storagePath,
         mimeType,
         takenAt: photo.takenAt,
-        label: 'land_title_photo',
+        label,
       });
       continue;
     }

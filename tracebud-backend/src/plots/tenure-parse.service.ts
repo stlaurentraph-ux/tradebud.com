@@ -214,6 +214,8 @@ export class TenureParseService {
   ): Promise<void> {
     for (const item of withFiles) {
       const storagePath = item.storagePath!.trim();
+      await this.supersedePriorLandDocumentVerifications(plotId, storagePath, evidenceKind);
+
       const evidenceDocumentId = await this.evidenceDocuments.upsertFromEvidenceSync({
         plotId,
         tenantId: context?.tenantId ?? null,
@@ -264,6 +266,48 @@ export class TenureParseService {
     }
   }
 
+  private async supersedePriorLandDocumentVerifications(
+    plotId: string,
+    activeStoragePath: string,
+    evidenceKind: 'tenure_evidence' | 'land_title',
+  ): Promise<void> {
+    const res = await this.pool.query<{ id: string }>(
+      `
+        SELECT id::text
+        FROM plot_tenure_verification
+        WHERE plot_id = $1
+          AND storage_path <> $2
+          AND NOT COALESCE((parse_result->>'superseded')::boolean, false)
+          AND (
+            ($3 = 'land_title' AND (
+              storage_path LIKE '%/land_title/%'
+              OR evidence_label = 'land_title_photo'
+            ))
+            OR ($3 = 'tenure_evidence' AND storage_path LIKE '%/tenure_evidence/%')
+          )
+      `,
+      [plotId, activeStoragePath, evidenceKind],
+    );
+
+    for (const row of res.rows) {
+      await this.pool.query(
+        `
+          UPDATE plot_tenure_verification
+          SET
+            parse_result = COALESCE(parse_result, '{}'::jsonb) || jsonb_build_object(
+              'superseded', true,
+              'superseded_at', to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+              'superseded_by_storage_path', $2
+            ),
+            updated_at = NOW()
+          WHERE id = $1::uuid
+        `,
+        [row.id, activeStoragePath],
+      );
+      await this.evidenceDocuments.resolveSupersededTenureVerification(row.id);
+    }
+  }
+
   async listForPlot(plotId: string): Promise<PlotTenureVerificationRow[]> {
     try {
       return await this.listForPlotQuery(plotId);
@@ -294,6 +338,7 @@ export class TenureParseService {
           updated_at::text
         FROM plot_tenure_verification
         WHERE plot_id = $1
+          AND NOT COALESCE((parse_result->>'superseded')::boolean, false)
         ORDER BY updated_at DESC
       `,
       [plotId],

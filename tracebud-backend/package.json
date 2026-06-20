@@ -41,6 +41,7 @@
     "check:fdp": "node scripts/check-fdp-connectivity.mjs",
     "check:push": "node scripts/check-expo-push-readiness.mjs",
     "check:tenure-parse": "node scripts/check-tenure-parse-readiness.mjs",
+    "check:tenure-parse:static": "node scripts/check-tenure-parse-readiness.mjs --static-only",
     "check:tenure-parse:smoke": "node scripts/check-tenure-parse-readiness.mjs --smoke",
     "db:apply:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs",
     "db:verify:tenure-verification": "node scripts/apply-plot-tenure-verification-migration.mjs --verify-only",

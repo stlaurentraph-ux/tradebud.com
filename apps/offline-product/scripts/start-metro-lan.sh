@@ -18,6 +18,8 @@ if lsof -i :"${METRO_PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
   exit 1
 fi
 
+node ./scripts/validate-metro-start.mjs
+
 echo ""
 echo "Metro (LAN): http://${IP}:${METRO_PORT}"
 if [[ -n "${EXPO_PUBLIC_API_URL:-}" ]]; then

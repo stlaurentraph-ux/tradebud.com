@@ -22,6 +22,7 @@
     "dev:device": "bash ./scripts/run-ios-device-lan.sh",
     "dev:android": "expo run:android",
     "dev:metro": "bash ./scripts/start-metro-lan.sh",
+    "check:metro-start": "node ./scripts/validate-metro-start.mjs",
     "dev:metro:production": "TRACEBUD_SKIP_LAN_API_SYNC=1 EXPO_PUBLIC_API_URL=https://api.tracebud.com/api bash ./scripts/start-metro-lan.sh --clear",
     "dev:oauth:verify": "node ./scripts/verify-local-oauth-dev.mjs",
     "dev:oauth:ios": "EXPO_PUBLIC_API_URL=https://api.tracebud.com/api expo run:ios",

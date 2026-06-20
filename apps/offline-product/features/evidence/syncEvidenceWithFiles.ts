@@ -2,6 +2,7 @@ import { syncPlotEvidenceToBackend } from '@/features/api/postPlot';
 import type { PlotEvidenceItem, PlotEvidenceKind } from '@/features/state/persistence';
 import { isLocalEvidenceUri } from '@/features/evidence/evidenceContentType';
 import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceToStorage';
+import { updatePlotEvidenceAfterUpload } from '@/features/state/persistence';
 
 const EVIDENCE_KINDS: PlotEvidenceKind[] = [
   'fpic_repository',
@@ -40,8 +41,16 @@ async function resolveSyncUri(
   failed?: boolean;
   errorMessage?: string;
 }> {
+  const existingStoragePath =
+    typeof item.storagePath === 'string' && item.storagePath.trim().length > 0
+      ? item.storagePath.trim()
+      : null;
+
   if (!isLocalEvidenceUri(item.uri)) {
-    return { uri: item.uri };
+    return {
+      uri: item.uri,
+      ...(existingStoragePath ? { storagePath: existingStoragePath } : {}),
+    };
   }
 
   const upload = await uploadEvidenceFileToStorage({
@@ -51,8 +60,14 @@ async function resolveSyncUri(
     farmerId,
     plotId: serverPlotId,
     kind: item.kind,
+    storagePath: existingStoragePath,
+    stableKey: existingStoragePath ? null : item.id,
   });
   if (upload.ok) {
+    await updatePlotEvidenceAfterUpload(item.id, {
+      uri: upload.remoteUrl,
+      storagePath: upload.storagePath,
+    }).catch(() => undefined);
     return { uri: upload.remoteUrl, storagePath: upload.storagePath };
   }
   if (upload.reason === 'not_signed_in') {

@@ -104,10 +104,27 @@ function checkSmokeChecklistCoversRegressionLedger() {
   return issues;
 }
 
+function checkAppConfigPlainJavaScript() {
+  const configPath = path.join(root, 'app.config.js');
+  const issues = [];
+  if (!fs.existsSync(configPath)) return issues;
+  const source = fs.readFileSync(configPath, 'utf8');
+  const match = /\(\s*(\w+)\s*:\s*\{/.exec(source);
+  if (match) {
+    issues.push({
+      file: 'app.config.js',
+      rule: 'app-config-typescript-in-js',
+      hint: 'app.config.js is loaded by Node without transpilation — remove TypeScript types from callbacks.',
+    });
+  }
+  return issues;
+}
+
 function main() {
   const files = SOURCE_DIRS.flatMap((d) => listSourceFiles(d));
   const issues = files.flatMap(checkUnawaitedPersist);
   issues.push(...checkSmokeChecklistCoversRegressionLedger());
+  issues.push(...checkAppConfigPlainJavaScript());
 
   if (issues.length === 0) {
     console.log('field-regression-guard: OK');

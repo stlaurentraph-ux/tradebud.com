@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import type { TenureParseResultV1, TenureParseStatus } from './tenure-parse.types';
+import { isFarmerWrongDocumentOutcome } from './tenure-parse.wrong-document';
 import { TenureReviewAlertService } from './tenure-review-alert.service';
 
 export type PlotEvidenceKind =
@@ -180,6 +181,9 @@ export class EvidenceDocumentsService {
       });
 
       if (params.parseStatus === 'MANUAL_REQUIRED' || params.parseStatus === 'FAILED') {
+        if (isFarmerWrongDocumentOutcome(params.parseStatus, params.parseResult)) {
+          return;
+        }
         await this.upsertTenureComplianceIssue({
           tenantId: params.tenantId ?? null,
           verificationId: params.verificationId,
@@ -242,6 +246,27 @@ export class EvidenceDocumentsService {
       });
 
       await this.resolveTenureComplianceIssue(params.verificationId, params.userId);
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  async resolveSupersededTenureVerification(verificationId: string): Promise<void> {
+    try {
+      await this.pool.query(
+        `
+          UPDATE compliance_issues
+          SET status = 'resolved', updated_at = NOW()
+          WHERE linked_entity_type = 'tenure_verification'
+            AND linked_entity_id = $1
+            AND status = 'open'
+        `,
+        [verificationId],
+      );
     } catch (error) {
       const pgError = error as { code?: string } | null;
       if (pgError?.code === '42P01') {

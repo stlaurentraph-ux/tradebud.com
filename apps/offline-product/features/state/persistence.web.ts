@@ -39,6 +39,7 @@ export type PlotEvidenceItem = {
   mimeType: string | null;
   label: string | null;
   takenAt: number;
+  storagePath?: string | null;
 };
 
 export type PlotTenure = {
@@ -140,8 +141,19 @@ export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
   return memPhotos.filter((p) => p.plotId === plotId);
 }
 
-export async function persistPlotTitlePhoto(photo: Omit<PlotTitlePhoto, 'id'>) {
-  memTitlePhotos.unshift({ id: nextId(), ...photo });
+export async function persistPlotTitlePhoto(photo: Omit<PlotTitlePhoto, 'id'>): Promise<number> {
+  const id = nextId();
+  memTitlePhotos.unshift({ id, ...photo });
+  return id;
+}
+
+export async function updatePlotTitlePhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  memTitlePhotos = memTitlePhotos.map((row) =>
+    row.id === photoId ? { ...row, uri: params.uri, storagePath: params.storagePath } : row,
+  );
 }
 
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
@@ -160,23 +172,15 @@ export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Pr
   memEvidence = memEvidence.map((row) => (row.id === evidenceId ? { ...row, uri } : row));
 }
 
-export async function updatePlotTitlePhotoRemoteRef(
-  photoId: number,
-  params: { storagePath: string; remoteUri?: string },
+export async function updatePlotEvidenceAfterUpload(
+  evidenceId: number,
+  params: { uri: string; storagePath: string },
 ): Promise<void> {
-  memTitlePhotos = memTitlePhotos.map((row) =>
-    row.id === photoId
-      ? {
-          ...row,
-          storagePath: params.storagePath,
-          uri: params.remoteUri?.trim() ? params.remoteUri.trim() : row.uri,
-        }
+  memEvidence = memEvidence.map((row) =>
+    row.id === evidenceId
+      ? { ...row, uri: params.uri, storagePath: params.storagePath }
       : row,
   );
-}
-
-export function isPlotTitlePhotoPendingUpload(photo: PlotTitlePhoto): boolean {
-  return !photo.storagePath?.trim();
 }
 
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {
