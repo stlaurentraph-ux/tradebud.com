@@ -64,7 +64,6 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Offline annex (`offline-automation-runbook.md`)
 
-- [ ] **1.O.2** Enable `--strict` on offline guards in CI — after 1.O.1 green on `main`
 - [ ] **1.O.3** Maestro macOS workflow prep — Phase 3.O
 - [ ] **3.O.1** Maestro on `main` — after 1.O.3
 
@@ -100,12 +99,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 ## In progress
 
 - [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
+- [ ] **1.O.2** Offline automation strict guards in CI — branch: `chore/automation-offline-strict`
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [x] **1.O.1** Offline automation Phase 1 — PR [#122](https://github.com/stlaurentraph-ux/tradebud.com/pull/122), branch `chore/automation-offline-phase1` — Expo app CI green (guards + typecheck); merge pending human review
+- [ ] *(none)*
 
 ---
 
@@ -135,6 +135,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-20 — **1.O.1** Offline automation Phase 1 — PR #122 merge; guards + baselines + report-mode CI
 - [x] 2026-06-20 — **0.M.0–0.M.3 + 0.H + 0.H.2** — PR #124 merge; Vercel preview protection
 
 ---

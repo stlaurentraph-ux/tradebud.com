@@ -1,10 +1,16 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 1.O.1 merged + 1.O.2 strict CI, `chore/automation-offline-strict`)
+- **1.O.1** — PR #122 merged to `main`; guard scripts, baselines, report-mode CI, Cursor integration live.
+- **1.O.2** — Expo `app` job now runs `qa:automation:phase1:strict` (blocking on baseline drift); runbook + agent-queue updated.
+- **Verified** — `npm run qa:automation:phase1:strict` green locally.
+- **Next** — PR for 1.O.2; then slice **1.O.3** Maestro prep.
+
 ### 2026-06-20 (automation — PR #122 merge onto main, `chore/automation-offline-phase1`)
 - **Merge** — Resolved conflicts with current `main`; Expo app + field-auth + marketing CI green.
 - **Typecheck** — Fixed post-merge sync UI regressions (`queueSyncFailure`, plot sort key, server link cast).
 - **Contracts** — Added `20260620140000_founder_os_gtm_expansion.sql` to migration mirror `supabaseOnly` map.
-- **Next** — Human merge PR #122; slice **1.O.2** strict guards.
+- **Next** — PR #122 merged; slice **1.O.2** strict guards.
 
 ### 2026-06-20 (automation — offline typecheck + CI guard ordering, `chore/automation-offline-phase1`)
 - **Typecheck** — Fixed 58 TS errors (missing imports, test fixtures, persistence export, hook deps); `npm run typecheck` green locally.
