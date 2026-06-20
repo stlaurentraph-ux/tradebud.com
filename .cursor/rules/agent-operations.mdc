@@ -1,0 +1,92 @@
+---
+description: Agent ops — four loops, three lanes, safe parallel work across apps
+alwaysApply: true
+---
+
+# Agent operations
+
+**Plan:** `product-os/06-status/automation-ops-plan.md` (exhaustive — phases, bundles, annexes)  
+**Queue:** `product-os/06-status/agent-queue.md` (Ready / In progress / Blocked)  
+**ADR:** `product-os/05-decisions/ADR-007-agent-automation-ops.md`  
+**CI safety (Lane 1):** `.cursor/rules/automation-safety.mdc`
+
+## Four loops (what automation closes)
+
+| Loop | Trigger | Agent/human role |
+|------|---------|------------------|
+| **Build** | PR opened | CI + guards must pass before merge |
+| **Deploy** | Merge to `main` | Vercel / Railway / EAS (no agent promote to prod without user) |
+| **Verify** | Deploy + cron | Smoke / Playwright / Sentry window → Lane 2 if red |
+| **Ops** | Forms, schedules | n8n Founder OS; not a substitute for CI |
+
+Implement automation via **Bundles A→E** in the plan §16. Default: pick lowest Ready slice in active bundle from `agent-queue.md`.
+
+## Three lanes (never mix in one PR)
+
+| Lane | Purpose | Branch prefix | Cursor command |
+| --- | --- | --- | --- |
+| **1 Guardrails** | CI, hooks, guards, contract tests | `chore/automation-*` | `implement-automation-slice` |
+| **2 Maintenance** | Sentry / CI / smoke regressions | `fix/*` | `fix-regression` |
+| **3 Features** | Product slices from FEAT docs | `feature/<app>-*` | `start-agent-task` → `build-feature` |
+
+PR title tags: `[guardrails]`, `[fix]`, or `[marketing]` / `[dashboard]` / `[offline]` / `[backend]`.
+
+## Before editing (all lanes)
+
+1. Run `git branch --show-current` (`branch-discipline.mdc`).
+2. Read `agent-queue.md` — Lane 1/3: pick only **Ready**; do not duplicate **In progress**.
+3. Read `current-focus.md` — Lane 3: claim **In-flight** row before coding.
+4. Declare lane in branch name and PR title.
+
+## Parallelism (safe)
+
+- **One writer per app directory:** `apps/marketing`, `apps/dashboard-product`, `apps/offline-product`, `tracebud-backend`, `apps/field-auth`.
+- **Different apps** may run in parallel (e.g. marketing guardrails + dashboard feature).
+- **Same app:** serialize OR use **git worktrees** — one branch per worktree.
+- Lane 3 **waits** if Lane 1 guardrails PR is open for the same app tree.
+- Lane 2 urgent fixes on `main` may bypass queue; still use `fix-regression` and minimal diff.
+- Do **not** mix `chore/npm-workspaces` / root lockfile churn with product features.
+- Lanes 2 and 3 must **not** weaken CI, skip tests, or delete checks to pass.
+
+## Per-app verify (before PR)
+
+| App | Command |
+|-----|---------|
+| offline | `cd apps/offline-product && npm run qa:regression && npm run qa:automation:phase1` |
+| marketing | `npm run lint -w tracebud-marketing && npm run build -w tracebud-marketing` (→ `check:marketing` after 0.M.3) |
+| dashboard | `npm run lint -w dashboard-product && npm test -w dashboard-product` (+ build when 0.2 lands) |
+| backend | `npm run lint -w tracebud-backend && npm test -w tracebud-backend` |
+| field-auth | lint + test + build when 0.3 lands |
+
+CI green on PR is source of truth; do not ask human to re-run if CI passed.
+
+## Lane-specific exit gates
+
+**Guardrails (Lane 1):** `implement-automation-slice` + `automation-safety.mdc`; one slice ID per PR; local proof = exact CI commands; never add required branch checks until green on test PR.
+
+**Maintenance (Lane 2):** max ~200 lines unless escalated; no feature scope; add regression guard if bug class recurs; update `daily-log.md` if user-visible.
+
+**Features (Lane 3):** `quality-gates.mdc` + `build-feature` + `review-feature`; update FEAT doc and status logs.
+
+## Secrets and production
+
+- Never commit `.env.local`, tokens, or CI secrets.
+- CI placeholder env for dashboard build — `automation-ops-plan.md` §5 Phase 0.
+- `NEXT_PUBLIC_SENTRY_ENABLED=0` in CI builds.
+- Do not change Vercel / Railway / Supabase production without explicit user request.
+- Document new CI secrets in `product-os/04-quality/ci-secrets-and-fixtures.md`.
+
+## Session close
+
+Use `session-close` — sync `agent-queue.md`, In-flight row, `automation-ops-plan.md` tracker, `daily-log.md`.
+
+## Quick command map
+
+| Intent | Command |
+|--------|---------|
+| Pick next guardrail slice | `pick-automation-slice` |
+| Implement guardrail | `implement-automation-slice` |
+| Start feature work | `start-agent-task` |
+| Build feature | `build-feature` |
+| Fix regression | `fix-regression` |
+| End session | `session-close` |

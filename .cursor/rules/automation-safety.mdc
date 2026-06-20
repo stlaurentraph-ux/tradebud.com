@@ -1,0 +1,68 @@
+---
+description: Safety gates when editing CI, agent queue, or automation plan — Lane 1 only
+globs:
+  - .github/**
+  - product-os/06-status/agent-queue.md
+  - product-os/06-status/automation-ops-plan.md
+  - package.json
+  - turbo.json
+  - AGENTS.md
+  - .cursor/commands/implement-automation-slice.md
+  - .cursor/rules/agent-operations.mdc
+---
+
+# Automation safety (Lane 1)
+
+Applies when changing CI, root scripts, queue, or automation docs. Full plan: `product-os/06-status/automation-ops-plan.md` §14–16.
+
+## Before editing
+
+1. Confirm **Lane 1** — use `implement-automation-slice`, not `build-feature`.
+2. Read `agent-queue.md` — slice must be **Ready**; follow **Bundle order** (A → B → C → D → E) unless human reprioritized in `current-focus.md`.
+3. Run `git branch --show-current` — must be `chore/automation-*` (not `main`, not `feature/*`).
+4. Check **In progress** — no other agent on the same app tree (e.g. do not open `0.M.*` while `feature/marketing-*` is in flight on marketing).
+
+## One slice per PR
+
+- Exactly one slice ID (e.g. `0.M.0`, `1.D.1`) per PR.
+- No product behavior changes except: guard scripts, baselines, testIDs, Maestro flows, lint fixes required for the slice.
+- No combining CI restructure + unrelated app refactors.
+
+## CI change rules (non-negotiable)
+
+- **Add** steps; do not remove passing checks unless replaced by equivalent stricter step.
+- Do **not** weaken `--max-warnings 0`, skip integration tests, or set `ignoreBuildErrors` without a follow-up slice to remove it.
+- **Path filters:** skip jobs on PRs only; full run on `push` to `main`.
+- **Branch protection:** note in PR body `"enable required check after merge"` — do not assume checks are required until human enables 0.H.
+- **Secrets:** never commit; document new secrets in `product-os/04-quality/ci-secrets-and-fixtures.md` and `automation-ops-plan.md` §12.
+
+## Local proof (before push)
+
+```bash
+npm ci   # repo root only
+# Run exact commands the slice adds or changes — copy from CI YAML
+```
+
+Per-app targets (use when slice touches that app):
+
+| App | Command (when exists) |
+|-----|------------------------|
+| marketing | `npm run lint -w tracebud-marketing` then `npm run build -w tracebud-marketing` |
+| dashboard | placeholder env build — see `implement-automation-slice` |
+| offline | `npm run qa:regression` + `npm run qa:automation:phase1` |
+| backend | `npm run lint -w tracebud-backend` + `npm test -w tracebud-backend` |
+
+## Rollback
+
+Each slice = one revert commit. Prefer small diffs to `.github/workflows/ci.yml` (add job steps, not rewrite entire workflow in one PR).
+
+## Session close
+
+Run `.cursor/commands/session-close.md` — update queue, plan tracker, daily-log. Move slice **Ready → In progress → Done**.
+
+## Forbidden
+
+- Push to `main` or merge without human approval
+- Vercel / Railway / Supabase production config changes without explicit user request
+- Enabling offline guard `--strict` in CI without runbook phase update (1.O.2)
+- Adding GitHub required checks in repo settings (human gate 0.H)

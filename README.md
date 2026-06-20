@@ -90,8 +90,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 
 - OpenAPI lint and governance checks
 - `tracebud-backend` — lint, build, unit + PostGIS integration tests
-- `apps/dashboard-product` — lint + vitest
-- `apps/marketing` — lint + build
+- `apps/dashboard-product` — lint, typecheck, vitest, build
+- `apps/field-auth` — lint, typecheck, vitest, build
+- `apps/marketing` — lint, typecheck, i18n parity, build (`npm run check:marketing`)
 - `apps/offline-product` — lint, typecheck, vitest, i18n/QA guards
 
 ## Vercel deploys (workspaces)

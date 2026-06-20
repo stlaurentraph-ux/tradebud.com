@@ -698,8 +698,13 @@ jobs:
           path: tracebud-backend/ownership-integration-output.txt
 
   dashboard-product:
-    name: Dashboard product lint and tests
+    name: Dashboard product lint, typecheck, tests, and build
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SENTRY_ENABLED: "0"
+      TRACEBUD_BACKEND_URL: https://api.example.test/api
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -723,8 +728,42 @@ jobs:
       - name: Tests
         run: npm test -w dashboard-product
 
+      - name: Build
+        run: npm run build -w dashboard-product
+
+  field-auth:
+    name: Field auth lint, typecheck, tests, and build
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SENTRY_ENABLED: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint -w field-auth
+
+      - name: Typecheck
+        run: npm run typecheck -w field-auth
+
+      - name: Tests
+        run: npm test -w field-auth
+
+      - name: Build
+        run: npm run build -w field-auth
+
   marketing:
-    name: Marketing site lint and build
+    name: Marketing site lint, typecheck, i18n, and build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -745,6 +784,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck -w tracebud-marketing
+
+      - name: Marketing i18n parity
+        run: npm run i18n:parity:assert -w tracebud-marketing
 
       - name: Build
         run: npm run build -w tracebud-marketing

@@ -50,9 +50,6 @@ const nextConfig = {
     apiRouteKeys.map((routeKey) => [routeKey, apiTraceExcludes]),
   ),
   serverExternalPackages: ['@supabase/supabase-js', 'resend'],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
