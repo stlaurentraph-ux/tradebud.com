@@ -95,6 +95,14 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 - `apps/marketing` — lint, typecheck, i18n parity, build (`npm run check:marketing`)
 - `apps/offline-product` — lint, typecheck, vitest, i18n/QA guards
 
+## Pre-commit hooks
+
+After `npm ci` at the repo root, **husky** installs a pre-commit hook that runs **lint-staged** on staged files in workspace apps (`dashboard-product`, `marketing`, `field-auth`, `tracebud-backend`, root `scripts/`). Bypass only when necessary: `git commit --no-verify`.
+
+```bash
+npm run lint:staged   # manual run (same as the hook)
+```
+
 ## Vercel deploys (workspaces)
 
 Dashboard and marketing install from the monorepo root. See **[`docs/vercel-monorepo.md`](docs/vercel-monorepo.md)** for the full checklist.

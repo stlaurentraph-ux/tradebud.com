@@ -1,5 +1,9 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 1.1 pre-commit on `chore/automation-pre-commit-hooks`)
+- **1.1** — husky + lint-staged via `lint-staged.config.mjs`; ESLint on staged workspace app files + root `scripts/`.
+- **Next** — PR merge; Bundle B **1.3** path filters (1.2 blocked on Turbo secrets).
+
 ### 2026-06-20 (automation — field-auth lint fix on `chore/automation-bundle-a`)
 - **0.3.1** — Field-auth auth callback/confirm pages: derive UI state with `useSyncExternalStore` + `useMemo` (no sync setState in effects); `npm run lint/typecheck/test/build -w field-auth` green locally.
 - **Next** — Push PR #124; human **0.H** after merge.

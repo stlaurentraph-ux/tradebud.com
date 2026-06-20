@@ -169,8 +169,8 @@ End-state commands (implement via Phase 0–1 slices):
 | **0.M.1** | Marketing `typecheck` + CI; removed `ignoreBuildErrors` | marketing | **done** |
 | **0.M.2** | Marketing i18n parity guard (`marketing.*`, `header.*` vs all locales) | marketing | **done** |
 | **0.M.3** | Root `check:marketing` script | root | **done** |
-| **0.H** | GitHub branch protection: required CI jobs per app | human | blocked until 0.1–0.3, 0.M.0–0.M.3 green on `main` |
-| **0.H.2** | Vercel Deployment Protection ↔ GitHub required checks | human | after 0.H |
+| **0.H** | GitHub branch protection: required CI jobs per app | human | **partial** — field-auth + marketing (2026-06-20) |
+| **0.H.2** | Vercel Deployment Protection ↔ GitHub required checks | human | **done** 2026-06-20 |
 | **0.H.3** | GitHub rule: `main` accepts PRs only (block direct v0 push) | human | after 0.H |
 
 **Dashboard CI build placeholder env (agents must use locally):**
@@ -191,7 +191,7 @@ npm run build -w dashboard-product
 
 | ID | Task | Notes |
 |----|------|-------|
-| 1.1 | husky + lint-staged (affected workspace lint on staged files) | Agent first-pass green |
+| 1.1 | husky + lint-staged (affected workspace lint on staged files) | root | **done** (PR pending) |
 | 1.2 | Turbo remote cache in GitHub Actions (`TURBO_TOKEN`, `TURBO_TEAM`) | Parallel agent speed |
 | 1.3 | Path filters: skip unrelated jobs on PRs; full run on `push` to `main` | Per ADR-007 |
 | 1.4 | `turbo run --filter=...[origin/main]` affected detection | Monorepo scale |

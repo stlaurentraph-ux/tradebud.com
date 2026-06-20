@@ -22,13 +22,13 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 **Human gate (not an agent PR):**
 
-- [ ] **0.H** GitHub branch protection — required checks after 0.1–0.3 + 0.M.0–0.M.3 green on `main`
-- [ ] **0.H.2** Vercel Deployment Protection ↔ GitHub checks
+- [x] **0.H** GitHub branch protection — field-auth + marketing required on `main` (2026-06-20)
+- [x] **0.H.2** Vercel Deployment Protection — preview SSO + automation bypass (2026-06-20)
 - [ ] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push)
 
 ### Bundle B — Agent speed & hygiene
 
-- [ ] **1.1** husky + lint-staged — `chore/automation-pre-commit-hooks`
+- [ ] **1.1** husky + lint-staged — `chore/automation-pre-commit-hooks` *(in progress)*
 - [ ] **1.2** Turbo remote cache in CI — `chore/automation-turbo-remote-cache`
 - [ ] **1.3** CI path filters (PR only) — `chore/automation-ci-path-filters`
 - [ ] **1.M.1** Marketing route/publication guard — `chore/automation-marketing-routes-guard`
@@ -99,7 +99,8 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **1.O.1** Offline automation Phase 1 integration — branch: `chore/automation-offline-phase1` — scope: `AGENTS.md`, guard scripts, CI, runbook, Cursor commands
+- [ ] **1.1** husky + lint-staged — branch: `chore/automation-pre-commit-hooks`
+- [ ] **1.O.1** Offline automation Phase 1 — branch: `chore/automation-offline-phase1`
 
 ---
 
@@ -109,7 +110,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
 - [ ] **4.4–4.7** Playwright + release health — needs golden staging tenant (2.7) + `ci-secrets-and-fixtures.md`
 - [ ] **1.2** Turbo remote cache — needs `TURBO_TOKEN` / `TURBO_TEAM` in GitHub
-- [ ] **0.H** Branch protection — human; after Bundle A CI green on `main`
+- [ ] **0.H.3** Branch protection PR-only — human
 
 ---
 
@@ -119,8 +120,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — Exhaustive automation-ops-plan rewrite (four loops, Phases 0–5, bundles)
 - [x] 2026-06-20 — **0.1–0.5** Dashboard + field-auth Phase 0 CI — `chore/automation-phase-0`
 - [x] 2026-06-20 — **0.0.1** Cursor workflow integration — `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `AGENTS.md` monorepo, `ci-secrets-and-fixtures.md` stub, CODEOWNERS automation paths
-- [x] 2026-06-20 — **0.M.0** Marketing lint fix — branch `chore/automation-bundle-a`
-- [x] 2026-06-20 — **0.M.1–0.M.3** Marketing typecheck CI, removed `ignoreBuildErrors`, i18n parity guard, `check:marketing`
+- [x] 2026-06-20 — **0.M.0–0.M.3 + 0.H + 0.H.2** — PR #124 merge; Vercel preview protection
 
 ---
 
