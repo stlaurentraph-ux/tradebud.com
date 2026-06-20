@@ -11,6 +11,7 @@
     "i18n:parity:assert": "node scripts/i18n-parity-assert.mjs",
     "routes:publication:assert": "node scripts/marketing-routes-publication-guard.mjs",
     "api:trace:size:assert": "node scripts/marketing-api-trace-size-guard.mjs",
+    "smoke:post-deploy": "node scripts/marketing-post-deploy-smoke.mjs",
     "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run build && npm run api:trace:size:assert",
     "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs"
   },

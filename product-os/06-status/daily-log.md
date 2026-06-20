@@ -1,12 +1,12 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
-### 2026-06-20 (automation — 2.1 Sentry env tags, `chore/automation-sentry-env-tags`)
-- **2.1 (in progress)** — Shared `scripts/sentry-env-tags-guard.mjs`; Vercel preview → `staging` resolver; Sentry wiring for marketing + backend; CI guard in dashboard/marketing/backend jobs.
+### 2026-06-20 (automation — 2.4 marketing post-deploy smoke, `chore/automation-marketing-deploy-smoke`)
+- **2.4 (in progress)** — `marketing-post-deploy-smoke.mjs` + `marketing-deploy-smoke.yml` workflow on production `deployment_status` and manual dispatch.
 
-### 2026-06-20 (automation — 1.D.2 migration mirror drift guard, `chore/automation-migration-mirror-drift`)
-- **1.D.2** — `migration-mirror-map.json` + `supabase-migration-mirror-drift-guard.mjs`; 21 pairs + 5 supabase-only; wired into contracts CI.
+### 2026-06-20 (automation — 2.1 Sentry env tags merged, PR #145)
+- **2.1** — Shared `scripts/sentry-env-tags-guard.mjs`; Vercel preview → `staging` resolver; Sentry wiring for marketing + backend; CI guard in dashboard/marketing/backend jobs.
 
-### 2026-06-20 (automation — 1.D.1 Supabase migration naming guard merged, PR #142)
+### 2026-06-20 (automation — 1.D.2 migration mirror drift guard merged, PR #144)
 - **1.D.1** — `supabase-migration-naming-guard.mjs` validates filename shape, duplicate timestamp prefixes (with historical allowlist), and lex order; wired into contracts CI.
 
 ### 2026-06-20 (automation — 1.5 dashboard regression guard merged, PR #140)
