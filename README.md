@@ -13,6 +13,7 @@ Multi-tenant EUDR compliance platform: offline field app, unified SaaS dashboard
 | App topology & domains | [`apps/STRUCTURE.md`](apps/STRUCTURE.md) |
 | Product specs & delivery status | [`product-os/README.md`](product-os/README.md) |
 | Database migrations | [`supabase/README.md`](supabase/README.md) |
+| Parallel branches / workspaces | [`docs/repo-branches.md`](docs/repo-branches.md) |
 
 ## Repository layout
 
@@ -89,6 +90,15 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 - `apps/dashboard-product` — lint + vitest
 - `apps/marketing` — lint + build
 - `apps/offline-product` — lint, typecheck, vitest, i18n/QA guards
+
+## Vercel deploys (workspaces)
+
+Dashboard and marketing projects that use an app subdirectory as root should install from the monorepo root:
+
+- **Install Command:** `cd ../.. && npm ci`
+- **Build Command:** unchanged (`npm run build` in the project directory)
+
+See [`docs/repo-branches.md`](docs/repo-branches.md) for merge order and rollback tag `pre-workspaces-2026-06-20`.
 
 ## Design reference (not production code)
 

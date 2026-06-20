@@ -1,0 +1,20 @@
+# Archived v0 prototype — UI reference only, not production code
+apps/offline-product/design/v0-prototype/
+
+# Binary store / marketing assets (large, rarely edited in code)
+**/store-assets/**/*.png
+**/store-assets/**/*.jpg
+**/store-assets/**/*.jpeg
+**/store-assets/**/*.webp
+**/store-assets/**/*.gif
+
+# Dependencies and build output
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/.expo/
+**/.turbo/
+
+# Legacy root prototype shell (5k-line page; use apps/* instead)
+app/page.tsx

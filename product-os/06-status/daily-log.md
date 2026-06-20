@@ -1,5 +1,11 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (repo: workspaces branch cleanup + agent hygiene)
+- **Branch cleanup** — Rebased `chore/npm-workspaces` onto `main` (tenure/offline commits merged first).
+- **`.cursorignore`** — Excludes `v0-prototype/`, store-assets binaries, `node_modules`, legacy root `app/page.tsx`.
+- **Branch rule** — `.cursor/rules/branch-discipline.mdc` for parallel offline vs monorepo work.
+- **Docs** — `docs/repo-branches.md` (install by branch, merge conflicts, Vercel install command).
+
 ### 2026-06-20 (offline: Metro bootstrap hardening)
 - **Crash root causes** — reverted `app.config.js` TypeScript syntax; monorepo root `react-native@0.85` vs field app `0.81.5`; stale Metro after config edits.
 - **Guards** — `check:metro-start` (config load, RN pin, expo config) runs before every `dev:metro*`; CI + field-regression-guard block TS in `app.config.js`.
