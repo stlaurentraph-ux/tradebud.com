@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Field app sync UI + tenure jurisdiction (2026-06-20, branch `feature/offline-field-sync-ui`, PR #149): unified sync attention resolver, stable Documents plot order, farmer name merge, Settings backup pill stability, tenure jurisdiction cross-check backend + dashboard copy, plot/harvest spec mock fixes.
 - Founder OS standalone app (2026-06-20, PR #141, branch `feature/founder-os-app`): `apps/founder-os` workspace; dashboard external redirects; bootstrap script; Vercel monorepo install config; CI `founder-os` job.
 - Automation Bundle B slice 1.D.2 (2026-06-20, branch `chore/automation-migration-mirror-drift`): Supabase ↔ backend SQL mirror map drift guard in contracts CI.
 - Automation Bundle B slice 1.D.1 (2026-06-20, PR #142): Supabase migration naming/order guard in contracts CI.

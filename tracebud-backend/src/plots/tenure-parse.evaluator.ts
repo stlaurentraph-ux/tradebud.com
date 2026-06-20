@@ -40,13 +40,20 @@ export function evaluateTenureParseResult(result: TenureParseResultV1): {
     return { parse_status: 'FAILED', parse_confidence };
   }
 
+  if (result.jurisdiction_cross_check?.auto_fail === true) {
+    return { parse_status: 'FAILED', parse_confidence };
+  }
+
   const crossCheckRequiresReview =
     result.cadastral_cross_check?.requires_manual_review === true;
+  const jurisdictionRequiresReview =
+    result.jurisdiction_cross_check?.requires_manual_review === true;
 
   if (
     parse_confidence < MANUAL_CONFIDENCE_THRESHOLD ||
     missingCritical ||
-    crossCheckRequiresReview
+    crossCheckRequiresReview ||
+    jurisdictionRequiresReview
   ) {
     return { parse_status: 'MANUAL_REQUIRED', parse_confidence };
   }

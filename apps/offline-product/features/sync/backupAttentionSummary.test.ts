@@ -20,6 +20,15 @@ const baseSnapshot = {
 };
 
 describe('backupAttentionSummary', () => {
+  it('shows the panel when queue items are waiting', () => {
+    expect(
+      shouldShowBackupAttentionPanel({
+        ...baseSnapshot,
+        queuePendingCount: 2,
+      }),
+    ).toBe(true);
+  });
+
   it('shows the panel when queue items failed', () => {
     expect(
       shouldShowBackupAttentionPanel({

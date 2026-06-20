@@ -112,3 +112,29 @@
 
 ### CI
 - `npm run check:tenure-parse:static` in backend CI job (cadastral SQL + supersede guard).
+
+## Phase 6 — jurisdiction cross-check (2026-06-20)
+
+Deliberately **no** document-address ↔ plot-GPS geocoding (unreliable for global MVP).
+
+### What runs on every parse
+- **`jurisdiction_cross_check`** on `parse_result` (all tenure docs, not only formal).
+- **Country mismatch** — `document country_iso` vs farmer `country_code` → `FAILED` + farmer re-upload copy.
+- **Issuer jurisdiction** — when `country_iso` matches plot but `community_or_issuer` text implies another country → `MANUAL_REQUIRED`.
+- **Clause sanitization** — strip `gps_coordinates` / boundary noise from `clauses_missing` (plot geometry is a separate channel).
+- **LLM prompts** — rights, issuer, parcel id, signatures only; never require map/GPS on paper.
+
+### Exporter-only hints (dashboard)
+- Admin region text on document vs farmer postal address → `exporter_hints` on parse result.
+- Shown under **Compliance hints (staff only)** on plot tenure panel — not farmer-facing auto-fail.
+
+### Explicitly out of scope
+- Geocoding document addresses to plot centroid.
+- Automated FAIL on admin-region text alone.
+
+### Acceptance criteria
+- [x] India doc / Norway plot → `document_country_mismatch` + `FAILED`
+- [x] Issuer text jurisdiction mismatch → manual review queue
+- [x] Geometry/GPS clauses stripped from missing-clause counts
+- [x] Dashboard shows exporter jurisdiction hints
+- [x] Offline farmer copy for wrong-country documents

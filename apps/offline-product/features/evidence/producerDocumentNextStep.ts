@@ -1,6 +1,7 @@
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import type { PlotReadinessLoadResult } from '@/features/compliance/loadPlotReadiness';
 import { countPlotsNeedingValidLandTitle } from '@/features/evidence/plotDocumentSummary';
+import { comparePlotsForDisplay } from '@/features/plots/stablePlotDisplayOrder';
 import type { FarmerProfile } from '@/features/state/AppStateContext';
 
 export type ProducerDocumentsNextStep =
@@ -21,7 +22,7 @@ export function resolveProducerDocumentsNextStep(params: {
   farmer?: FarmerProfile | null;
   profileDocCount: number;
   plotReadiness: PlotReadinessLoadResult[];
-  plots: { id: string; name: string }[];
+  plots: { id: string; name: string; createdAt?: number }[];
 }): ProducerDocumentsNextStep {
   const attestationsComplete = hasProducerAttestationsComplete(params.farmer);
 
@@ -37,7 +38,7 @@ export function resolveProducerDocumentsNextStep(params: {
         const readiness = readinessById[p.id];
         return !readiness || plotNeedsValidLandTitle(readiness);
       })
-      .sort((a, b) => a.name.localeCompare(b.name))[0];
+      .sort(comparePlotsForDisplay)[0];
     if (first) {
       return {
         kind: 'plot_land',

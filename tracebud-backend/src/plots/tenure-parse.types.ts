@@ -26,6 +26,24 @@ export type CadastralCrossCheck = {
   country_label?: string | null;
 };
 
+/** Document jurisdiction vs plot/farmer country — no GPS geocoding. */
+export type TenureJurisdictionCrossCheck = {
+  plot_country_iso: string | null;
+  document_country_iso: string | null;
+  document_country_match: boolean | null;
+  issuer_text: string | null;
+  issuer_inferred_country_iso: string | null;
+  issuer_jurisdiction_match: boolean | null;
+  document_admin_regions: string[];
+  plot_admin_regions: string[];
+  admin_region_match: boolean | null;
+  issues: string[];
+  /** Exporter dashboard hints only — never farmer-facing auto-fail. */
+  exporter_hints: string[];
+  requires_manual_review: boolean;
+  auto_fail: boolean;
+};
+
 export type TenureDocumentSource = 'tenure_evidence' | 'land_title';
 
 export type TenureParseResultV1 = {
@@ -39,6 +57,7 @@ export type TenureParseResultV1 = {
   country_iso: string | null;
   document_source?: TenureDocumentSource | null;
   cadastral_cross_check?: CadastralCrossCheck | null;
+  jurisdiction_cross_check?: TenureJurisdictionCrossCheck | null;
   clauses_found: string[];
   clauses_missing: string[];
   anti_fraud: {

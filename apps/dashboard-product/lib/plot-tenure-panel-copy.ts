@@ -121,6 +121,22 @@ const PLOT_TENURE_PANEL_COPY = {
     key: 'workflow.plot_tenure.panel.cadastral.enter_country',
     fallback: 'Enter {country} to cross-check',
   },
+  jurisdiction_country_mismatch: {
+    key: 'workflow.plot_tenure.panel.jurisdiction.country_mismatch',
+    fallback: 'Document country ({document}) does not match plot country ({plot})',
+  },
+  jurisdiction_issuer_hint: {
+    key: 'workflow.plot_tenure.panel.jurisdiction.issuer_hint',
+    fallback: 'Issuer jurisdiction hint: document suggests {documentCountry}',
+  },
+  jurisdiction_admin_hint: {
+    key: 'workflow.plot_tenure.panel.jurisdiction.admin_hint',
+    fallback: 'Admin region on document ({regions}) — compare with field plot on map',
+  },
+  jurisdiction_exporter_heading: {
+    key: 'workflow.plot_tenure.panel.jurisdiction.exporter_heading',
+    fallback: 'Compliance hints (staff only)',
+  },
 } as const;
 
 export function getPlotTenurePanelCopy(
@@ -158,6 +174,72 @@ export function getPlotTenurePanelCadastralCrossCheckLabel(
     }
   }
   return null;
+}
+
+export function getPlotTenurePanelJurisdictionHints(
+  parseResult: Record<string, unknown> | null | undefined,
+  t?: TranslateFn,
+): string[] {
+  const jurisdiction = parseResult?.jurisdiction_cross_check;
+  if (!jurisdiction || typeof jurisdiction !== 'object') return [];
+
+  const row = jurisdiction as {
+    plot_country_iso?: string | null;
+    document_country_iso?: string | null;
+    document_country_match?: boolean | null;
+    issuer_inferred_country_iso?: string | null;
+    exporter_hints?: unknown;
+    document_admin_regions?: unknown;
+  };
+
+  const hints: string[] = [];
+  if (row.document_country_match === false) {
+    hints.push(
+      getPlotTenurePanelCopy('jurisdiction_country_mismatch', t, {
+        document: row.document_country_iso ?? '?',
+        plot: row.plot_country_iso ?? '?',
+      }),
+    );
+  } else if (
+    row.issuer_inferred_country_iso &&
+    row.plot_country_iso &&
+    row.issuer_inferred_country_iso !== row.plot_country_iso
+  ) {
+    hints.push(
+      getPlotTenurePanelCopy('jurisdiction_issuer_hint', t, {
+        documentCountry: row.issuer_inferred_country_iso,
+      }),
+    );
+  }
+
+  const exporterHints = Array.isArray(row.exporter_hints) ? row.exporter_hints : [];
+  for (const raw of exporterHints) {
+    const hint = typeof raw === 'string' ? raw.trim() : '';
+    if (!hint) continue;
+    if (hint.startsWith('document_admin_regions:') || hint.startsWith('admin_region_hint:')) {
+      hints.push(
+        getPlotTenurePanelCopy('jurisdiction_admin_hint', t, {
+          regions: hint.split(':', 1)[1] ?? hint,
+        }),
+      );
+    }
+  }
+
+  const adminRegions = Array.isArray(row.document_admin_regions)
+    ? row.document_admin_regions.filter((v): v is string => typeof v === 'string')
+    : [];
+  if (
+    adminRegions.length > 0 &&
+    !hints.some((line) => line.includes('Admin region'))
+  ) {
+    hints.push(
+      getPlotTenurePanelCopy('jurisdiction_admin_hint', t, {
+        regions: adminRegions.join(', '),
+      }),
+    );
+  }
+
+  return hints;
 }
 
 export function getPlotTenurePanelCopyManifest(): Record<string, string> {

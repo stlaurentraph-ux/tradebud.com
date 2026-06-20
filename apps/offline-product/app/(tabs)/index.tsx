@@ -39,7 +39,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { farmer, plots } = useAppState();
+  const { farmer, farmerDisplayName, plots } = useAppState();
   const { languageCode, openLanguagePicker, t } = useLanguage();
 
   const [pendingCount, setPendingCount] = useState(0);
@@ -315,7 +315,7 @@ export default function HomeScreen() {
             {t('welcome_back')}
           </ThemedText>
           <ThemedText type="title" style={styles.welcomeName}>
-            {farmer?.name || t('farmer_fallback')}
+            {farmerDisplayName || t('farmer_fallback')}
           </ThemedText>
           {counts.plotsCount > 0 ? (
           <View style={styles.statsRow}>
