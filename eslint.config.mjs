@@ -13,6 +13,8 @@ const eslintConfig = [
       // Package trees run their own ESLint (Next, Expo, Nest configs differ).
       "apps/**",
       "tracebud-backend/**",
+      "legacy/**",
+      "packages/**",
     ],
   },
   ...nextVitals,

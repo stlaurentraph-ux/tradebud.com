@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --config ../../eslint.config.mjs . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
     "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",

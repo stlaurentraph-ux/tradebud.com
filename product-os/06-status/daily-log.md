@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (repo: Phase 3 — shared tsconfig + dashboard typecheck CI)
+- **Shared config** — `packages/tsconfig` (`@tracebud/tsconfig`); dashboard, marketing, field-auth extend `nextjs.json`.
+- **CI** — Dashboard job runs `npm run typecheck -w dashboard-product`.
+- **Docs** — `legacy/root-v0-next-shell/README.md`; repo-branches updated for offline outside workspaces.
+
 ### 2026-06-20 (offline: Metro structural isolation — device debug unblocked)
 - **Root cause** — npm workspaces hoisted a second React Native stack (`0.85` + `webidl-conversions`) into Metro while the field app native build is Expo SDK 54 / RN `0.81.5`.
 - **Structure** — Removed RN/Expo deps from root `package.json`; excluded `apps/offline-product` from npm workspaces; field app owns `apps/offline-product/package-lock.json` + `npm install` in that directory.

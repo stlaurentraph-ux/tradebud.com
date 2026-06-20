@@ -37,7 +37,7 @@ This is an **npm workspaces monorepo** with **Turborepo** task orchestration. In
 npm install
 ```
 
-Workspace packages: `dashboard-product`, `tracebud-marketing`, `tracebud-offline`, `field-auth`, `tracebud-backend`. Demos and `design/v0-prototype/` are **not** in the workspace.
+Workspace packages: `dashboard-product`, `tracebud-marketing`, `field-auth`, `tracebud-backend`, `packages/tsconfig`. The offline field app installs separately under `apps/offline-product/` (not hoisted into root workspaces).
 
 ### Root commands
 
@@ -48,10 +48,11 @@ npm run dev:marketing    # Public site
 npm run dev:offline      # Expo Metro (field app)
 npm run lint:workspaces  # turbo run lint (CI-aligned packages)
 npm run test:workspaces  # turbo run test (offline + field-auth)
+npm run typecheck:dashboard # tsc --noEmit (also in CI)
 npm run check:workspaces # lint + test + typecheck via turbo
 ```
 
-Legacy root Next app (`app/`) and OpenAPI governance scripts remain at the repo root — not deployed.
+Legacy root Next.js shell (`legacy/root-v0-next-shell/`) and OpenAPI governance scripts remain at the repo root — not deployed.
 
 ## Product documentation (read order)
 
