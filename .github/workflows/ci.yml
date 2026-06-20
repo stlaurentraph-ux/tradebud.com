@@ -35,6 +35,9 @@ jobs:
               - 'docs/openapi/**'
               - 'scripts/openapi-refresh-lint-baseline.mjs'
               - 'scripts/openapi-governance/**'
+              - 'scripts/supabase-migration-naming-guard.mjs'
+              - 'supabase/migrations/**'
+              - 'supabase/README.md'
               - '.redocly.yaml'
               - 'product-os/**'
               - 'package.json'
@@ -98,6 +101,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Supabase migration naming guard
+        run: npm run supabase:migration:naming:assert
 
       - name: Validate OpenAPI governance README commands
         run: |
