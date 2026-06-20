@@ -9,6 +9,7 @@ How to run offline product development in parallel with monorepo restructuring.
 | `main` | — | Production baseline; hygiene docs, sync fixes |
 | `feature/offline-tenure` | `main` | Active offline/tenure/evidence work |
 | `chore/npm-workspaces` | `main` | Phase 1 npm workspaces (single root lockfile) |
+| `chore/turborepo` | `chore/npm-workspaces` | Phase 2 Turborepo task orchestration |
 | `backup/pre-workspaces-2026-06-20` | snapshot | Rollback branch |
 | Tag `pre-workspaces-2026-06-20` | `46c44fb` | Last commit before workspaces PR |
 
@@ -30,6 +31,8 @@ npm install   # once at repo root
 npm run dev:backend
 npm run dev:offline
 npm run dev:dashboard
+npm run lint:workspaces   # turbo run lint
+npm run check:workspaces  # lint + test + typecheck
 ```
 
 ## Switching branches safely

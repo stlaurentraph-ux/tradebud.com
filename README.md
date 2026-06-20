@@ -30,7 +30,7 @@ product-os/            Features, ADRs, quality gates, status logs
 docs/openapi/          API contract draft + governance artifacts
 ```
 
-This is an **npm workspaces monorepo**. Install once at the repo root:
+This is an **npm workspaces monorepo** with **Turborepo** task orchestration. Install once at the repo root:
 
 ```bash
 npm install
@@ -45,8 +45,9 @@ npm run dev:backend      # NestJS API
 npm run dev:dashboard    # Unified dashboard
 npm run dev:marketing    # Public site
 npm run dev:offline      # Expo Metro (field app)
-npm run lint:workspaces  # Lint backend + dashboard + marketing + offline
-npm run test:offline     # Offline vitest suite
+npm run lint:workspaces  # turbo run lint (CI-aligned packages)
+npm run test:workspaces  # turbo run test (offline + field-auth)
+npm run check:workspaces # lint + test + typecheck via turbo
 ```
 
 Legacy root Next app (`app/`) and OpenAPI governance scripts remain at the repo root — not deployed.

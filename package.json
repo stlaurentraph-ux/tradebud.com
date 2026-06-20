@@ -2,6 +2,7 @@
   "name": "tracebud",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.9.0",
   "workspaces": [
     "apps/dashboard-product",
     "apps/marketing",
@@ -24,7 +25,11 @@
     "lint:marketing": "npm run lint -w tracebud-marketing",
     "lint:offline": "npm run lint -w tracebud-offline",
     "lint:field-auth": "npm run lint -w field-auth",
-    "lint:workspaces": "npm run lint:backend && npm run lint:dashboard && npm run lint:marketing && npm run lint:offline",
+    "lint:workspaces": "turbo run lint --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=tracebud-offline",
+    "test:workspaces": "turbo run test --filter=tracebud-offline --filter=field-auth",
+    "build:workspaces": "turbo run build --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
+    "typecheck:workspaces": "turbo run typecheck --filter=tracebud-offline",
+    "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",
     "test:offline": "npm test -w tracebud-offline",
@@ -132,6 +137,7 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",
+    "turbo": "^2.5.4",
     "typescript": "5.7.3"
   }
 }
