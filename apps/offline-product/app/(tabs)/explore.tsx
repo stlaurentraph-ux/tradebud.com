@@ -93,15 +93,18 @@ export default function PlotsScreen() {
     [farmer?.id, plots],
   );
 
-  const harvestCountForPlot = (plot: Plot) => {
-    const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
-    const backendId = backend?.id != null ? String(backend.id) : null;
-    return countVouchersForPlot({
-      vouchers,
-      backendPlotId: backendId,
-      localPlotId: plot.id,
-    });
-  };
+  const harvestCountForPlot = useCallback(
+    (plot: Plot) => {
+      const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
+      const backendId = backend?.id != null ? String(backend.id) : null;
+      return countVouchersForPlot({
+        vouchers,
+        backendPlotId: backendId,
+        localPlotId: plot.id,
+      });
+    },
+    [vouchers, backendPlots],
+  );
 
   // Capture Home deep-link intent once, then drop sticky ?focus= from the tab URL.
   useEffect(() => {
@@ -133,7 +136,7 @@ export default function PlotsScreen() {
     const targetId = withVouchers[0]!.id;
     setPickerIntent(null);
     router.replace(`/plot/${encodeURIComponent(targetId)}?sub=deliveries`);
-  }, [pickerIntent, plots, vouchers, backendPlots]);
+  }, [pickerIntent, plots, vouchers, backendPlots, harvestCountForPlot]);
 
   const openPlotDetail = useCallback(
     (plotId: string) => {

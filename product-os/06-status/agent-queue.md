@@ -100,7 +100,12 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 ## In progress
 
 - [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
-- [ ] **1.O.1** Offline automation Phase 1 — branch: `chore/automation-offline-phase1`
+
+---
+
+## Recently completed (awaiting merge)
+
+- [x] **1.O.1** Offline automation Phase 1 — PR [#122](https://github.com/stlaurentraph-ux/tradebud.com/pull/122), branch `chore/automation-offline-phase1` — Expo app CI green (guards + typecheck); merge pending human review
 
 ---
 

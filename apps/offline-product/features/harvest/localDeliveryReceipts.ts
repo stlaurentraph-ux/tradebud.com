@@ -83,7 +83,7 @@ export function normalizeLocalDeliveryReceipts(
         pendingSync: row.pendingSync,
       } satisfies DeliveryReceiptRecord;
     })
-    .filter((row): row is DeliveryReceiptRecord => row != null)
+    .filter((row) => row != null)
     .sort((a, b) => {
       const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;

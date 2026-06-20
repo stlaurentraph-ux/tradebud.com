@@ -193,7 +193,7 @@ Use this checklist for account-creation commercialization slices (`/create-accou
   - launch unit/integration run timestamp and result summary
   - OpenAPI lint run timestamp and result summary
   - applied migration reference (`TB-V16-028`) per environment
-  - onboarding proxy smoke timestamp + `GET/POST` status/payload snapshot
+  - onboarding proxy smoke timestamp + GET and POST status/payload snapshot
 
 ## Snapshot Diff Review Template
 

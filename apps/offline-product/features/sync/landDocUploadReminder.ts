@@ -1,6 +1,7 @@
 import { fetchPlotTenureVerification } from '@/features/api/postPlot';
 import { evaluateTenureParseGate } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import type { PlotEvidenceKind } from '@/features/state/persistence';
 import type { Plot } from '@/features/state/AppStateContext';
 import { loadEvidenceForPlot, loadTitlePhotosForPlot } from '@/features/state/persistence';
 
@@ -14,7 +15,7 @@ export async function listSyncedPlotNamesWithLocalLandDocsOnly(params: {
   const names: string[] = [];
 
   for (const plot of params.plots) {
-    const backendMatch = findBackendPlotForLocal(plot, params.backendPlots);
+    const backendMatch = findBackendPlotForLocal(plot, params.backendPlots) as { id?: unknown } | null;
     const backendPlotId = backendMatch?.id != null ? String(backendMatch.id) : null;
     if (!backendPlotId) continue;
 
@@ -24,7 +25,7 @@ export async function listSyncedPlotNamesWithLocalLandDocsOnly(params: {
     ]);
     const evidenceKinds = evidenceRows
       .map((row) => row.kind)
-      .filter((kind): kind is string => typeof kind === 'string' && kind.length > 0);
+      .filter((kind): kind is PlotEvidenceKind => typeof kind === 'string' && kind.length > 0);
     const hasLandDocuments =
       titleRows.length > 0 || evidenceKinds.includes('tenure_evidence');
     if (!hasLandDocuments) continue;

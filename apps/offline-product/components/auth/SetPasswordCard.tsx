@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -59,7 +59,7 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!signedIn) {
       setOfferSet(false);
       setOfferChange(false);
@@ -95,11 +95,11 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
     } finally {
       setLoading(false);
     }
-  };
+  }, [signedIn]);
 
   useEffect(() => {
     void refresh();
-  }, [signedIn]);
+  }, [refresh]);
 
   const mode = offerSet ? 'set' : offerChange ? 'change' : null;
   const providerLabel = useMemo(() => providerListLabel(oauthProviders, t), [oauthProviders, t]);

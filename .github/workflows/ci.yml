@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main, master ]
   pull_request:
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -998,6 +999,12 @@ jobs:
 
       - name: Metro / Expo start preflight
         run: npm run check:metro-start
+
+      - name: Security preflight
+        run: npm run security:preflight
+
+      - name: Automation guards (Phase 1.O.1 report mode)
+        run: npm run qa:automation:phase1
 
       - name: Typecheck
         run: npm run typecheck

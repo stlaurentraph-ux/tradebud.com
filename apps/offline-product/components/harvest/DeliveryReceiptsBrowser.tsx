@@ -80,9 +80,11 @@ export function DeliveryReceiptsBrowser({
       .filter((group): group is NonNullable<typeof group> => group != null);
   }, [plotGroups, plotFilterIds]);
 
-  const screen: ReceiptsScreen = plotIdFilter
-    ? { kind: 'plot', plotId: plotIdFilter }
-    : { kind: 'plots' };
+  const screen = useMemo(
+    (): ReceiptsScreen =>
+      plotIdFilter ? { kind: 'plot', plotId: plotIdFilter } : { kind: 'plots' },
+    [plotIdFilter],
+  );
 
   const activePlotGroup = useMemo(() => {
     if (screen.kind === 'plots') return null;

@@ -16,6 +16,7 @@ const plot1: Plot = {
   name: 'Plot 1',
   kind: 'polygon',
   areaHectares: 1,
+  areaSquareMeters: 10_000,
   points: [{ latitude: 14.1, longitude: -87.2 }],
   createdAt: 1,
 };
@@ -26,7 +27,8 @@ const plot2: Plot = {
   name: 'Plot 2',
   kind: 'polygon',
   areaHectares: 1,
-  points: [{ latitude: 14.1, longitude: -87.2 }],
+  areaSquareMeters: 10_000,
+  points: [{ latitude: 14.2, longitude: -87.3 }],
   createdAt: 2,
 };
 

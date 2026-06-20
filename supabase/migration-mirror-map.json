@@ -128,6 +128,10 @@
     {
       "file": "202606160001_plot_evidence_heic_mime.sql",
       "reason": "Storage MIME allowlist; CLI track only"
+    },
+    {
+      "file": "20260620140000_founder_os_gtm_expansion.sql",
+      "reason": "Founder OS GTM expansion; CRM schema only, no tb_v16 mirror"
     }
   ]
 }

@@ -141,11 +141,13 @@ export async function ensureFieldProducerBootstrapped(
     return;
   }
   const fullName = options?.fullName?.trim() || undefined;
-  await bootstrapFieldAppProducer({
-    farmerId: scopedFarmerId,
-    fullName,
-    force: options?.force === true,
-  }).catch(() => undefined);
+  await bootstrapFieldAppProducer(
+    {
+      farmerId: scopedFarmerId,
+      fullName,
+    },
+    { force: options?.force === true },
+  ).catch(() => undefined);
 }
 
 /** Lightweight lookup of linked farmer profiles (works without parsing bootstrap POST body). */

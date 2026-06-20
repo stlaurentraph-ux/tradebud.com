@@ -209,7 +209,7 @@ npm run build -w dashboard-product
 
 | ID | Task | Status |
 |----|------|--------|
-| 1.O.1 | Offline Phase 1 integration (guards, CI report mode, docs) | in progress |
+| 1.O.1 | Offline Phase 1 integration (guards, CI report mode, docs) | ready_for_merge (PR #122) |
 | 1.O.2 | Enable `--strict` on offline guards in CI | after 1.O.1 on `main` |
 | 1.O.3 | Maestro macOS workflow prep | Phase 3.O |
 

@@ -120,7 +120,7 @@ export function normalizeDeliveryReceipts(params: {
         buyerLabel: formatVoucherBuyerLabel(voucher, params.t),
       } satisfies DeliveryReceiptRecord;
     })
-    .filter((row): row is DeliveryReceiptRecord => row != null)
+    .filter((row) => row != null)
     .sort((a, b) => {
       const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -201,7 +201,7 @@ export function normalizePendingHarvestReceipts(params: {
         pendingSync: true,
       } satisfies DeliveryReceiptRecord;
     })
-    .filter((row): row is DeliveryReceiptRecord => row != null)
+    .filter((row) => row != null)
     .sort((a, b) => {
       const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;

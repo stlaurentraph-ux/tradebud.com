@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline automation 1.O.1 (2026-06-20): guard scripts (`mobile-api-openapi-parity`, `ota-native-fingerprint`, `analytics-slice-guard`), baselines, CI report mode (`security:preflight` + `qa:automation:phase1`), Cursor integration — PR #122 Expo app job green on `chore/automation-offline-phase1`.
 - Field app sync UI + tenure jurisdiction (2026-06-20, branch `feature/offline-field-sync-ui`, PR #149): unified sync attention resolver, stable Documents plot order, farmer name merge, Settings backup pill stability, tenure jurisdiction cross-check backend + dashboard copy, plot/harvest spec mock fixes.
 - Founder OS standalone app (2026-06-20, PR #141, branch `feature/founder-os-app`): `apps/founder-os` workspace; dashboard external redirects; bootstrap script; Vercel monorepo install config; CI `founder-os` job.
 - Automation Bundle B slice 1.D.2 (2026-06-20, branch `chore/automation-migration-mirror-drift`): Supabase ↔ backend SQL mirror map drift guard in contracts CI.
@@ -13,7 +14,7 @@ Track completed milestones/features/docs updates.
 - Automation Bundle B slice 1.1 (2026-06-20, PR #128): husky + lint-staged pre-commit ESLint on staged workspace files; README pre-commit section.
 - Automation Phase 0 dashboard + field-auth CI (2026-06-20, branch `chore/automation-phase-0`): slices 0.2–0.5 — build CI, field-auth job, `check:dashboard`; stacks on Bundle A integration on same branch.
 - Automation Bundle A integration (2026-06-20, branch `chore/automation-phase-0`): 0.0.1 agent ops plan + Cursor workflow; 0.M.0 marketing lint fixes.
-- Offline Metro structural isolation (2026-06-20): exclude field app from npm workspaces; remove root RN/Expo deps; app-only Metro resolution + workspaces path shim; independent `apps/offline-product/package-lock.json`; `expo-module-scripts@~4.1.10`; device debug bundle verified on iPhone. guard scripts + baselines, `security:preflight` and report-mode guards in CI, `AGENTS.md`, offline runbook annex, Cursor commands/rules, PR template; wired to ADR-007 agent-queue slice 1.O.1.
+- Offline Metro structural isolation (2026-06-20): exclude field app from npm workspaces; remove root RN/Expo deps; app-only Metro resolution + workspaces path shim; independent `apps/offline-product/package-lock.json`; `expo-module-scripts@~4.1.10`; device debug bundle verified on iPhone.
 - Repo org Phase 4 (2026-06-20): `@tracebud/eslint-config`, root dependency slimming, marketing typecheck in CI.
 - Repo org Phase 3 (2026-06-20): legacy root Next shell archived under `legacy/root-v0-next-shell/`; shared `@tracebud/tsconfig`; dashboard typecheck in CI and turbo `typecheck:workspaces`.
 - Repo org post-workspaces (2026-06-20): Vercel monorepo install in app `vercel.json` + `docs/vercel-monorepo.md`; branch docs and Cursor rule updated for root-only install on `main`.

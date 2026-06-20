@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -28,7 +27,6 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { Badge } from '@/components/ui/badge';
 import { Button as UiButton } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ActionButton as Button } from '@/components/ui/action-button';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
@@ -219,7 +217,7 @@ export default function PlotDetailScreen() {
     loadEvidenceForPlot(producerEvidenceScopeId(farmer.id))
       .then((rows) =>
         setProducerEvidenceKinds(
-          rows.map((row) => row.kind).filter((kind): kind is string => Boolean(kind)),
+          rows.map((row) => row.kind).filter((kind) => typeof kind === 'string' && kind.length > 0),
         ),
       )
       .catch(() => setProducerEvidenceKinds([]));
@@ -825,10 +823,10 @@ export default function PlotDetailScreen() {
     }
   }, []);
 
-  const notifyDocSync = (message: string, tone: 'success' | 'error' | 'info' = 'error') => {
+  const notifyDocSync = useCallback((message: string, tone: 'success' | 'error' | 'info' = 'error') => {
     setDocSyncMessage(message);
     setDocSyncTone(tone);
-  };
+  }, []);
 
   const applyLandTitleUploadOutcome = useCallback(
     (outcome: AutoUploadOutcome, photoCount: number, showAlert = false) => {
@@ -894,7 +892,7 @@ export default function PlotDetailScreen() {
     ],
   );
 
-  const uploadLandProof = async () => {
+  const uploadLandProof = useCallback(async () => {
     if (!plot || uploadingLandProof) return;
     setUploadingLandProof(true);
     try {
@@ -958,7 +956,17 @@ export default function PlotDetailScreen() {
     } finally {
       setUploadingLandProof(false);
     }
-  };
+  }, [
+    applyLandTitleUploadOutcome,
+    backendPlotId,
+    farmer?.id,
+    notifyDocSync,
+    plot,
+    refreshTenureVerification,
+    runLandTitleUpload,
+    t,
+    uploadingLandProof,
+  ]);
 
   const confirmDeleteLandDocument = useCallback(
     (onConfirm: () => void) => {
@@ -992,7 +1000,7 @@ export default function PlotDetailScreen() {
         await refreshTenureVerification();
       }
     },
-    [plot, runLandTitleUpload, refreshTenureVerification, t],
+    [plot, runLandTitleUpload, refreshTenureVerification, notifyDocSync, t],
   );
 
   const replaceLandPaper = useCallback(async () => {
@@ -1041,7 +1049,7 @@ export default function PlotDetailScreen() {
         await refreshTenureVerification();
       }
     },
-    [plot, backendPlotId, farmer?.id, refreshTenureVerification, t],
+    [plot, backendPlotId, farmer?.id, refreshTenureVerification, notifyDocSync, t],
   );
 
   const handleHeaderBack = useCallback(() => {

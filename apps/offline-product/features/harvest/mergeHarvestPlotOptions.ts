@@ -5,6 +5,12 @@ import {
 } from '@/features/plots/plotServerLink';
 import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
 
+function optionalNumber(value: unknown): number | undefined {
+  if (value == null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 type PlotForHarvestPicker = {
   id: string;
   areaHectares: number;
@@ -143,11 +149,11 @@ export function buildMergedHarvestPlots(params: {
     const areaHa = effectivePlotAreaHectares({
       kind: plotKind,
       declaredAreaHectares:
-        (row as { declared_area_ha?: unknown }).declared_area_ha ??
+        optionalNumber((row as { declared_area_ha?: unknown }).declared_area_ha) ??
         localMatch?.declaredAreaHectares,
       areaHectares:
-        (row as { area_ha?: unknown }).area_ha ??
-        (row as { areaHa?: unknown }).areaHa ??
+        optionalNumber((row as { area_ha?: unknown }).area_ha) ??
+        optionalNumber((row as { areaHa?: unknown }).areaHa) ??
         localMatch?.areaHectares,
     });
 

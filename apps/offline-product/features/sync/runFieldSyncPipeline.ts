@@ -195,7 +195,7 @@ export async function runFieldSyncPipeline(
     if (syncRes.fetchFailed) {
       outcome.plotsFetchFailed = true;
       plotUploadFirstError = syncRes.firstError;
-      const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+      const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
       const plotsMissingServerLink = syncPlots.filter(
         (plot) => !plotServerLinks[plot.id]?.trim(),
       );
@@ -226,7 +226,7 @@ export async function runFieldSyncPipeline(
   }
 
   if (syncPlots.length > 0) {
-    const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+    const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
     await enqueuePlotDependentSyncForLinkedPlots({
       farmerId: apiFarmerId,
       farmer: syncFarmer,

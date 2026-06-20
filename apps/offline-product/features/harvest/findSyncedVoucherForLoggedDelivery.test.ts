@@ -4,7 +4,16 @@ import { findSyncedVoucherForLoggedDelivery } from './findSyncedVoucherForLogged
 
 describe('findSyncedVoucherForLoggedDelivery', () => {
   const localPlots = [
-    { id: 'local-1', name: 'North', farmerId: 'f1', kind: 'polygon' as const, areaHectares: 1 },
+    {
+      id: 'local-1',
+      name: 'North',
+      farmerId: 'f1',
+      kind: 'polygon' as const,
+      areaHectares: 1,
+      areaSquareMeters: 10_000,
+      points: [{ latitude: 14.1, longitude: -87.2 }],
+      createdAt: 1,
+    },
   ];
 
   it('matches by server plot id after sync', () => {

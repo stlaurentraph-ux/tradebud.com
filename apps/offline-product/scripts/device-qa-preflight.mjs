@@ -97,7 +97,7 @@ const homeTileTitles = {
   register_plot_tile: 'Mapping',
   log_harvest_tile: 'Deliveries',
   documents_tile: 'Documents',
-  my_vouchers_tile: 'Vouchers',
+  my_vouchers_tile: 'Receipts',
 };
 for (const [key, expected] of Object.entries(homeTileTitles)) {
   if (en[key] !== expected) {

@@ -51,14 +51,14 @@ export function FieldPositionMarker({
   followPosition = false,
   trackInitially = true,
 }: FieldPositionMarkerProps) {
-  if (!isValidMapCoordinate(coordinate)) {
-    return null;
-  }
-
   const { tracksViewChanges, onMarkerLayout } = useMarkerViewTracking(
     followPosition,
     trackInitially,
   );
+
+  if (!isValidMapCoordinate(coordinate)) {
+    return null;
+  }
 
   return (
     <Marker

@@ -3,7 +3,7 @@ import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { computePlotReadinessChecklist, type PlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
-import type { Plot } from '@/features/state/AppStateContext';
+import type { Plot, FarmerProfile } from '@/features/state/AppStateContext';
 import {
   loadEvidenceForPlot,
   loadPhotosForPlot,
@@ -60,7 +60,9 @@ export async function loadPlotReadinessForLocalPlot(
     titlePhotoCount: titleRows.length,
     evidenceKinds,
     producerEvidenceKinds,
-    producerAttestationsComplete: hasProducerAttestationsComplete(farmer ?? undefined),
+    producerAttestationsComplete: hasProducerAttestationsComplete(
+      farmer ? ({ ...farmer, role: 'farmer' } as FarmerProfile) : undefined,
+    ),
     isSyncedToServer: Boolean(backendMatch),
     backendFlags: backendMatch,
     tenureVerifications,
