@@ -23,8 +23,6 @@ describe('InboxService signup backfill', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
-
     const result = await service.backfillInboxForSignupContact({
       email: 'importer@example.com',
       recipientTenantId: 'tenant_importer',

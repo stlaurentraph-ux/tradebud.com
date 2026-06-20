@@ -138,6 +138,7 @@ npx @railway/cli up
 | Build fails | Check Railway build logs; root must be `tracebud-backend` |
 | `Cannot find module '@nestjs/config'` | Redeploy after fix: `@nestjs/config` must be in `dependencies` (not `devDependencies`) |
 | Health check fails | Logs → often wrong `DATABASE_URL` or Supabase IP allowlist |
+| `ENETUNREACH` / plot sync 500 | `DATABASE_URL` must use **pooler** host (`aws-0-REGION.pooler.supabase.com`), not `db.PROJECT_REF.supabase.co` (IPv6-only from Railway) |
 | 502 after deploy | Service crashed on boot; verify all three required env vars |
 | `api.tracebud.com` NXDOMAIN | Namecheap CNAME not set or still propagating |
 

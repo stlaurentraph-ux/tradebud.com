@@ -44,7 +44,7 @@ describe('terminology-labels', () => {
   it('exposes cooperative dashboard label bundles', () => {
     const labels = getCooperativeDashboardLabels();
     expect(labels.kpiMembers).toBe('Members');
-    expect(formatCooperativePlotCoverageHint(4, 10)).toBe('4/10 plots compliant');
+    expect(formatCooperativePlotCoverageHint(4, 10)).toBe('4/10 plots with deforestation screening clear');
   });
 
   it('exposes reviewer dashboard label bundles', () => {

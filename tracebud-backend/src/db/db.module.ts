@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { setDefaultResultOrder } from 'node:dns';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
 
 export const DRIZZLE = Symbol('DRIZZLE');
 export const PG_POOL = Symbol('PG_POOL');
+
+// Railway and some hosts cannot reach Supabase direct `db.*` IPv6 endpoints.
+setDefaultResultOrder('ipv4first');
 
 @Module({
   providers: [
@@ -16,6 +20,7 @@ export const PG_POOL = Symbol('PG_POOL');
           ssl: {
             rejectUnauthorized: false,
           },
+          options: '-c search_path=public,integrations,commercial,internal,ops,crm,gtm',
         });
       },
     },

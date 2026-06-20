@@ -55,12 +55,10 @@ export async function fetchBackendPlotsForSyncScope(params: {
   ownedFarmerIds?: string[];
 }): Promise<unknown[]> {
   const scopeIds = uniqueIds([params.farmerId, ...(params.ownedFarmerIds ?? [])]);
-  if (scopeIds.length > 1) {
-    return fetchMergedServerPlots(scopeIds);
-  }
-  const farmerId = params.farmerId.trim();
-  if (!farmerId) return [];
-  return (await fetchPlotsForFarmerCached(farmerId)) ?? [];
+  if (scopeIds.length === 0) return [];
+  // Always merge per-id so a 403 on a stale on-device farmer id does not fail the
+  // whole sync when the linked profile id would succeed.
+  return fetchMergedServerPlots(scopeIds);
 }
 
 /**

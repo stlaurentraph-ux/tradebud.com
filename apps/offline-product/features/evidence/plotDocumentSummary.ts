@@ -28,6 +28,14 @@ export function summarizePlotDocumentsForOverview(
   if (checklist.needsFpic && !checklist.fpicOk) {
     return { priority: 25, chipKey: 'documents_plot_chip_community', chipVariant: 'warning' };
   }
+  if (checklist.tenureParseGate === 'documents_local_only') {
+    return {
+      priority: 35,
+      chipKey: 'documents_plot_chip_awaiting_upload',
+      chipVariant: 'info',
+      chipParams: docCount > 0 ? { n: docCount } : undefined,
+    };
+  }
   if (checklist.tenureParseGate === 'pending') {
     return { priority: 30, chipKey: 'documents_plot_chip_reviewing', chipVariant: 'info' };
   }
@@ -80,6 +88,9 @@ export function formatPlotDocumentsNavSubtitle(
   }
   if (checklist.needsFpic && !checklist.fpicOk) {
     return t('plot_nav_documents_sub_community');
+  }
+  if (checklist.tenureParseGate === 'documents_local_only') {
+    return t('plot_nav_documents_sub_awaiting_upload');
   }
   if (checklist.tenureParseGate === 'pending') {
     return t('plot_nav_documents_sub_reviewing');

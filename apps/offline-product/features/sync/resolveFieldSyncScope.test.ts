@@ -32,10 +32,13 @@ describe('resolveFieldSyncScope', () => {
     getBootstrapOwnedFarmerIds.mockReturnValue([]);
     fetchPlotsForFarmer.mockImplementation(async (id: string) => {
       if (id === 'linked-farmer') return [{ id: 'plot-1' }];
+      if (id === 'device-farmer') throw new Error('Farmer scope violation');
       return [];
     });
 
-    const { resolveFieldSyncScope } = await import('./resolveFieldSyncScope');
+    const { resolveFieldSyncScope, fetchBackendPlotsForSyncScope } = await import(
+      './resolveFieldSyncScope'
+    );
     const scope = await resolveFieldSyncScope({
       profileFarmerId: 'auth-user',
       localPlots: [{ id: 'local-1', farmerId: 'auth-user' } as any],
@@ -44,5 +47,11 @@ describe('resolveFieldSyncScope', () => {
     expect(scope.apiFarmerId).toBe('linked-farmer');
     expect(scope.serverPlotCount).toBe(1);
     expect(scope.ownedFarmerIds).toContain('linked-farmer');
+
+    const rows = await fetchBackendPlotsForSyncScope({
+      farmerId: 'device-farmer',
+      ownedFarmerIds: ['linked-farmer'],
+    });
+    expect(rows).toEqual([{ id: 'plot-1' }]);
   });
 });

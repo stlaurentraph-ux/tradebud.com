@@ -60,8 +60,6 @@ export class LaunchService {
     private readonly inboxService: InboxService,
   ) {}
 
-  private schemaReady = false;
-
   buildDefaultTenantIdFromEmail(email: string): string {
     return `tenant_${email.trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
   }
@@ -159,59 +157,6 @@ export class LaunchService {
     );
   }
 
-  private async ensureSchema() {
-    if (this.schemaReady) return;
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS tenant_trial_state (
-        tenant_id TEXT PRIMARY KEY,
-        lifecycle_status TEXT NOT NULL CHECK (lifecycle_status IN ('trial_active', 'trial_expired', 'paid_active', 'suspended')),
-        trial_started_at TIMESTAMPTZ NULL,
-        trial_expires_at TIMESTAMPTZ NULL,
-        paid_activated_at TIMESTAMPTZ NULL,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS tenant_onboarding_progress (
-        tenant_id TEXT NOT NULL,
-        role TEXT NOT NULL CHECK (role IN ('admin', 'field_operator', 'compliance_manager')),
-        step_key TEXT NOT NULL,
-        completed BOOLEAN NOT NULL DEFAULT FALSE,
-        completed_at TIMESTAMPTZ NULL,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (tenant_id, role, step_key)
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS tenant_feature_entitlements (
-        tenant_id TEXT NOT NULL,
-        feature_key TEXT NOT NULL CHECK (feature_key IN ('dashboard_campaigns', 'dashboard_compliance', 'dashboard_reporting', 'dashboard_exports')),
-        entitlement_status TEXT NOT NULL CHECK (entitlement_status IN ('enabled', 'disabled', 'trial')),
-        effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        effective_to TIMESTAMPTZ NULL,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        PRIMARY KEY (tenant_id, feature_key)
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS tenant_commercial_profiles (
-        tenant_id TEXT PRIMARY KEY,
-        organization_name TEXT NULL,
-        country TEXT NULL,
-        primary_role TEXT NULL CHECK (primary_role IN ('importer', 'exporter', 'compliance_manager', 'admin')),
-        team_size TEXT NULL,
-        main_commodity TEXT NULL,
-        primary_objective TEXT NULL CHECK (primary_objective IN ('prepare_first_due_diligence_package', 'supplier_onboarding', 'risk_screening', 'audit_readiness')),
-        profile_skipped BOOLEAN NOT NULL DEFAULT FALSE,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await this.pool.query(`
-      ALTER TABLE tenant_commercial_profiles
-      ADD COLUMN IF NOT EXISTS supply_chain_roles TEXT[] NOT NULL DEFAULT '{}'
-    `);
-    this.schemaReady = true;
-  }
 
   private listAllFeatures(): LaunchFeatureKey[] {
     return ['dashboard_campaigns', 'dashboard_compliance', 'dashboard_reporting', 'dashboard_exports'];
@@ -234,7 +179,6 @@ export class LaunchService {
     tenantId: string,
     lifecycleStatus: TrialLifecycleStatus,
   ): Promise<void> {
-    await this.ensureSchema();
     const features = this.listAllFeatures();
     for (const feature of features) {
       const defaultStatus = this.defaultEntitlementForState(feature, lifecycleStatus);
@@ -344,7 +288,6 @@ export class LaunchService {
   }
 
   async getOrCreateTrialState(tenantId: string): Promise<TrialRow> {
-    await this.ensureSchema();
     await this.ensureAdoptionPromoForTenant(tenantId);
     await this.ensureBillingSubscriptionForTenant(tenantId);
     const nowIso = new Date().toISOString();
@@ -422,7 +365,6 @@ export class LaunchService {
   }
 
   async getCommercialProfile(tenantId: string): Promise<CommercialProfileRow | null> {
-    await this.ensureSchema();
     const result = await this.pool.query<CommercialProfileRow>(
       `
         SELECT
@@ -446,7 +388,6 @@ export class LaunchService {
   }
 
   async markPaidActive(tenantId: string): Promise<TrialRow> {
-    await this.ensureSchema();
     const updated = await this.pool.query<TrialRow>(
       `
         INSERT INTO tenant_trial_state (
@@ -525,7 +466,6 @@ export class LaunchService {
     entitlementStatus: FeatureEntitlementStatus,
     actorUserId: string | null,
   ): Promise<FeatureEntitlementRow> {
-    await this.ensureSchema();
     const updated = await this.pool.query<FeatureEntitlementRow>(
       `
         INSERT INTO tenant_feature_entitlements (
@@ -568,7 +508,6 @@ export class LaunchService {
   }
 
   async getOnboardingProgress(tenantId: string, role: OnboardingRole) {
-    await this.ensureSchema();
     const stepKeys = this.roleDefaultSteps(role);
     await Promise.all(
       stepKeys.map((stepKey) =>
@@ -601,7 +540,6 @@ export class LaunchService {
   }
 
   async completeOnboardingStep(tenantId: string, role: OnboardingRole, stepKey: string, actorUserId: string | null) {
-    await this.ensureSchema();
     await this.pool.query(
       `
         INSERT INTO tenant_onboarding_progress (
@@ -810,7 +748,6 @@ export class LaunchService {
     actorEmail: string | null;
     actorFullName: string | null;
   }): Promise<CommercialProfileRow> {
-    await this.ensureSchema();
     const result = await this.pool.query<CommercialProfileRow>(
       `
         INSERT INTO tenant_commercial_profiles (
@@ -876,7 +813,6 @@ export class LaunchService {
     primaryObjective: SignupPrimaryObjective | null;
     actorUserId: string | null;
   }): Promise<CommercialProfileRow> {
-    await this.ensureSchema();
     const result = await this.pool.query<CommercialProfileRow>(
       `
         INSERT INTO tenant_commercial_profiles (
@@ -939,7 +875,6 @@ export class LaunchService {
     supplyChainRoles: string[];
     actorUserId: string | null;
   }): Promise<CommercialProfileRow> {
-    await this.ensureSchema();
     const roles = this.normalizeSupplyChainRoles(input.supplyChainRoles);
     if (roles.length === 0) {
       throw new ForbiddenException('At least one supply chain role is required.');

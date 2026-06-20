@@ -7,7 +7,7 @@ import {
 
 const basePlot = {
   kind: 'point' as const,
-  compliance_status: 'compliant' as const,
+  compliance_status: 'deforestation_clear' as const,
   verified: false,
   area_hectares: 2.5,
 };
@@ -43,7 +43,7 @@ describe('assessPlotEudrReadiness', () => {
 
   it('reports ready when all dossier items are satisfied', () => {
     const result = assessPlotEudrReadiness({
-      plot: { ...basePlot, verified: true, kind: 'polygon', compliance_status: 'compliant' },
+      plot: { ...basePlot, verified: true, kind: 'polygon', compliance_status: 'deforestation_clear' },
       tenureBadge: 'formal_documented',
       tenureEvidenceCount: 1,
       plotEvidenceCount: 2,

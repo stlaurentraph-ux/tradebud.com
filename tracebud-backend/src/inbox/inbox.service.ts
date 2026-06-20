@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
@@ -53,29 +53,6 @@ export type InboxRespondAuditPayload = {
 @Injectable()
 export class InboxService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
-  private schemaCheckInFlight: Promise<void> | null = null;
-
-  private isRetriableDdlCollision(error: unknown): boolean {
-    const code = (error as { code?: string } | null)?.code;
-    return code === '23505' || code === '42P07' || code === '42710' || code === '42P01' || code === '40P01';
-  }
-
-  private async waitForTable(
-    client: PoolClient,
-    tableName: 'inbox_requests' | 'inbox_request_events',
-  ): Promise<boolean> {
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const verify = await client.query<{ exists: string | null }>(
-        `SELECT to_regclass($1)::text AS exists`,
-        [tableName],
-      );
-      if (verify.rows[0]?.exists) {
-        return true;
-      }
-      await client.query('SELECT pg_sleep(0.05)');
-    }
-    return false;
-  }
 
   private defaultRequests(nowIso: string): InboxRequestRecord[] {
     return [
@@ -215,222 +192,12 @@ export class InboxService {
     );
   }
 
-  private async ensureSchemaWithClient(client: PoolClient): Promise<void> {
-    try {
-      await client.query(
-      `
-      CREATE TABLE IF NOT EXISTS inbox_requests (
-        id TEXT PRIMARY KEY,
-        campaign_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
-        due_at TIMESTAMPTZ NOT NULL,
-        from_org TEXT NOT NULL,
-        sender_tenant_id TEXT NOT NULL,
-        recipient_tenant_id TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL
-      )
-    `,
-      );
-    } catch (error) {
-      if (!this.isRetriableDdlCollision(error)) {
-        throw error;
-      }
-    }
-    if (!(await this.waitForTable(client, 'inbox_requests'))) {
-      await client.query(
-        `
-        CREATE TABLE IF NOT EXISTS inbox_requests (
-          id TEXT PRIMARY KEY,
-          campaign_id TEXT NOT NULL,
-          title TEXT NOT NULL,
-          request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
-          due_at TIMESTAMPTZ NOT NULL,
-          from_org TEXT NOT NULL,
-          sender_tenant_id TEXT NOT NULL,
-          recipient_tenant_id TEXT NOT NULL,
-          status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
-          created_at TIMESTAMPTZ NOT NULL,
-          updated_at TIMESTAMPTZ NOT NULL
-        )
-      `,
-      );
-      await this.waitForTable(client, 'inbox_requests');
-    }
-
-    try {
-      await client.query(
-      `
-      CREATE TABLE IF NOT EXISTS inbox_request_events (
-        id BIGSERIAL PRIMARY KEY,
-        request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
-        event_type TEXT NOT NULL,
-        actor_tenant_id TEXT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `,
-      );
-    } catch (error) {
-      if (!this.isRetriableDdlCollision(error)) {
-        throw error;
-      }
-    }
-    if (!(await this.waitForTable(client, 'inbox_request_events'))) {
-      try {
-        await client.query(
-          `
-          CREATE TABLE IF NOT EXISTS inbox_request_events (
-            id BIGSERIAL PRIMARY KEY,
-            request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
-            event_type TEXT NOT NULL,
-            actor_tenant_id TEXT NULL,
-            payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          )
-        `,
-        );
-      } catch (error) {
-        // During concurrent create/drop races, the FK target may momentarily be missing.
-        if ((error as { code?: string } | null)?.code === '42P01') {
-          await client.query(
-            `
-            CREATE TABLE IF NOT EXISTS inbox_requests (
-              id TEXT PRIMARY KEY,
-              campaign_id TEXT NOT NULL,
-              title TEXT NOT NULL,
-              request_type TEXT NOT NULL CHECK (request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')),
-              due_at TIMESTAMPTZ NOT NULL,
-              from_org TEXT NOT NULL,
-              sender_tenant_id TEXT NOT NULL,
-              recipient_tenant_id TEXT NOT NULL,
-              status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
-              created_at TIMESTAMPTZ NOT NULL,
-              updated_at TIMESTAMPTZ NOT NULL
-            )
-          `,
-          );
-          await client.query(
-            `
-            CREATE TABLE IF NOT EXISTS inbox_request_events (
-              id BIGSERIAL PRIMARY KEY,
-              request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
-              event_type TEXT NOT NULL,
-              actor_tenant_id TEXT NULL,
-              payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )
-          `,
-          );
-        } else if (!this.isRetriableDdlCollision(error)) {
-          throw error;
-        }
-      }
-      await this.waitForTable(client, 'inbox_request_events');
-    }
-
-    try {
-      await client.query(
-      `
-      CREATE INDEX IF NOT EXISTS idx_inbox_requests_recipient_status_due
-      ON inbox_requests(recipient_tenant_id, status, due_at)
-    `,
-      );
-    } catch (error) {
-      if (!this.isRetriableDdlCollision(error)) {
-        throw error;
-      }
-    }
-    try {
-      await client.query(
-      `
-      CREATE INDEX IF NOT EXISTS idx_inbox_requests_campaign
-      ON inbox_requests(campaign_id)
-    `,
-      );
-    } catch (error) {
-      if (!this.isRetriableDdlCollision(error)) {
-        throw error;
-      }
-    }
-    try {
-      await client.query(
-      `
-      CREATE INDEX IF NOT EXISTS idx_inbox_request_events_request_id
-      ON inbox_request_events(request_id)
-    `,
-      );
-    } catch (error) {
-      if (!this.isRetriableDdlCollision(error)) {
-        throw error;
-      }
-    }
-  }
-
-  private async ensureSchema(): Promise<void> {
-    const client = await this.pool.connect();
-    const advisoryLockKey = 9162401;
-    try {
-      await client.query('SELECT pg_advisory_lock($1)', [advisoryLockKey]);
-      await this.ensureSchemaWithClient(client);
-    } finally {
-      await client.query('SELECT pg_advisory_unlock($1)', [advisoryLockKey]).catch(() => undefined);
-      client.release();
-    }
-  }
-
-  private async ensureSchemaVerified(): Promise<void> {
-    // Collapse concurrent callers to one schema verification pass.
-    if (this.schemaCheckInFlight) {
-      await this.schemaCheckInFlight;
-      return;
-    }
-    this.schemaCheckInFlight = (async () => {
-      await this.ensureSchema();
-      const verify = await this.pool.query<{
-        inbox_requests: string | null;
-        inbox_request_events: string | null;
-      }>(
-        `
-          SELECT
-            to_regclass('inbox_requests')::text AS inbox_requests,
-            to_regclass('inbox_request_events')::text AS inbox_request_events
-        `,
-      );
-      const row = verify.rows[0];
-      if (!row?.inbox_requests || !row?.inbox_request_events) {
-        await this.ensureSchema();
-      }
-    })();
-    try {
-      await this.schemaCheckInFlight;
-    } finally {
-      this.schemaCheckInFlight = null;
-    }
-  }
-
   private async upsertRequests(requests: InboxRequestRecord[], action: BootstrapAction | 'auto_init'): Promise<void> {
-    await this.ensureSchemaVerified();
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      try {
-        await client.query('DELETE FROM inbox_request_events');
-        await client.query('DELETE FROM inbox_requests');
-      } catch (error: any) {
-        // If tests dropped tables between operations, recreate schema and retry once using the same client.
-        if (error?.code === '42P01') {
-          await client.query('ROLLBACK');
-          await client.query('BEGIN');
-          await this.ensureSchemaWithClient(client);
-          await client.query('DELETE FROM inbox_request_events');
-          await client.query('DELETE FROM inbox_requests');
-        } else {
-          throw error;
-        }
-      }
+      await client.query('DELETE FROM inbox_request_events');
+      await client.query('DELETE FROM inbox_requests');
 
       for (const request of requests) {
         await client.query(
@@ -489,18 +256,7 @@ export class InboxService {
   }
 
   private async seedIfEmpty(): Promise<void> {
-    await this.ensureSchemaVerified();
-    let countRes;
-    try {
-      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
-    } catch (error: any) {
-      if (error?.code === '42P01') {
-        await this.ensureSchemaVerified();
-        countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
-      } else {
-        throw error;
-      }
-    }
+    const countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
     if ((Number(countRes.rows[0]?.count ?? '0')) > 0) return;
     const defaults = this.requestsForAction('reset');
     await this.upsertRequests(defaults, 'auto_init');
@@ -552,7 +308,6 @@ export class InboxService {
       );
     } catch (error: any) {
       if (error?.code === '42P01') {
-        await this.ensureSchemaVerified();
         rowsRes = await this.pool.query<{
           id: string;
           campaign_id: string;
@@ -643,7 +398,6 @@ export class InboxService {
       );
     } catch (error: any) {
       if (error?.code === '42P01') {
-        await this.ensureSchemaVerified();
         updatedRes = await this.pool.query<{
           id: string;
           campaign_id: string;
@@ -695,7 +449,6 @@ export class InboxService {
       } catch (error: any) {
         if (error?.code === '42P01') {
           // Table may have been dropped between list/respond in integration tests; self-heal once.
-          await this.ensureSchemaVerified();
           await this.pool.query(
             `
               INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
@@ -755,7 +508,6 @@ export class InboxService {
       );
     } catch (error: any) {
       if (error?.code === '42P01') {
-        await this.ensureSchemaVerified();
         existingRes = await this.pool.query<{
           id: string;
           campaign_id: string;
@@ -1059,8 +811,6 @@ export class InboxService {
     campaign: CampaignInboxFanOutInput;
     fromOrg: string;
   }): Promise<CampaignInboxFanOutResult> {
-    await this.ensureSchemaVerified();
-
     const emails = Array.from(
       new Set(
         (input.campaign.target_contact_emails ?? [])
@@ -1171,8 +921,6 @@ export class InboxService {
     email: string;
     recipientTenantId: string;
   }): Promise<CampaignInboxFanOutResult> {
-    await this.ensureSchemaVerified();
-
     const normalizedEmail = input.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return { created: 0, skippedUnresolved: 0, skippedSelfTenant: 0 };
@@ -1289,8 +1037,6 @@ export class InboxService {
     campaignId: string;
     recipientEmail: string;
   }): Promise<CampaignInboxFanOutResult> {
-    await this.ensureSchemaVerified();
-
     const normalizedEmail = input.recipientEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return { created: 0, skippedUnresolved: 1, skippedSelfTenant: 0 };

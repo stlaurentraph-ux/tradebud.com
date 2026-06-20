@@ -4,6 +4,7 @@ import {
   assessPlotGeometryQuality,
   findLocalPlotOverlaps,
   MIN_POINT_PLOT_SEPARATION_M,
+  resolvePlotUploadBlockMessage,
 } from './plotGeometryQuality';
 
 const square = [
@@ -108,5 +109,29 @@ describe('assessPlotGeometryQuality', () => {
     });
 
     expect(quality.blockingIssues.some((issue) => issue.code === 'GEO-105')).toBe(true);
+  });
+});
+
+describe('resolvePlotUploadBlockMessage', () => {
+  const t = (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key;
+
+  it('names the plot for micro-area upload blocks', () => {
+    const block = resolvePlotUploadBlockMessage({
+      plotName: 'Plot 3',
+      issues: [
+        {
+          code: 'GEO-106',
+          severity: 'error',
+          message: 'ignored',
+          details: { areaHa: 0.005, minAreaHa: 0.01, kind: 'micro_area' },
+        },
+      ],
+      t,
+    });
+
+    expect(block?.message).toBe(
+      'geo_quality_micro_area_upload:{"plotName":"Plot 3"}',
+    );
   });
 });

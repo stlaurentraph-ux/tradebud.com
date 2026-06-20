@@ -6,7 +6,7 @@ import {
   sendWaitlistConfirmation,
 } from '@/lib/marketing-email';
 import { syncWaitlistToProspects } from '@/lib/prospect-sync';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseGtm } from '@/lib/supabase-admin';
 
 const waitlistSchema = z.object({
   email: z.string().email(),
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const data = parsed.data;
     const sourcePage = data.source_page?.trim() || '/';
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseGtm();
 
     const { error: insertError } = await supabase.from('waitlist_signups').insert({
       email: data.email.trim().toLowerCase(),
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     if (isNewSignup) {
-      await syncWaitlistToProspects(supabase, {
+      await syncWaitlistToProspects({
         firstName: data.first_name.trim(),
         lastName: data.last_name.trim(),
         email: data.email.trim().toLowerCase(),

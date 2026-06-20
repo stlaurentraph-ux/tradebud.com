@@ -29,7 +29,7 @@ function mockPlotDetailFetch() {
           name: 'Plot One',
           kind: 'polygon',
           area_ha: 1.2,
-          status: 'compliant',
+          status: 'deforestation_clear',
           geometry: {
             type: 'Polygon',
             coordinates: [[[30.06, -1.94], [30.061, -1.94], [30.061, -1.939], [30.06, -1.94]]],

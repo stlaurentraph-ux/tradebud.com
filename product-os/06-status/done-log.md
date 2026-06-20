@@ -2,6 +2,13 @@
 
 Track completed milestones/features/docs updates.
 
+- ADR-006 Phase 3 prep (2026-06-20): dual-project Supabase clients + GTM bootstrap SQL; `crm_contacts` remains on product DB.
+- ADR-006 Phase 2 tighten public (2026-06-20): table comments all schemas; RLS advisor fixes; `plot_ops_summary` security invoker; farmer display name crm schema fix; Drizzle `internal.audit_log`. Migrations `20260620130000`–`30002` / `tb_v16_056`–`058`. Security advisors clean.
+- ADR-006 Phase 1 schema split (2026-06-20): 6 domain schemas live on Tracebud Supabase; public lean (~17 tables). Migrations `20260620120000` + `20260620120001` / `tb_v16_054` + `tb_v16_055`.
+- ADR-006 Phase 0 database hygiene (2026-06-20): RLS on 15 exposed tables; formalized inbox/chat/agent_assignment/farmer_push_devices migrations; removed NestJS runtime DDL. Migrations `20260620110000` + `20260620110001` / `tb_v16_052` + `tb_v16_053`. Phase 1 schema split pending.
+- Field app geometry UX P0+P1 (2026-06-20): save-time micro/sliver warnings, Sync **Open plot** CTA, **Needs boundary fix** badges on My Plots + plot detail, Settings Help plot mapping & backup rules.
+- Field app geometry UX P2+P3 (2026-06-20): sync **Why?** for geometry blocks, richer capture instructions, one-time second-plot overlap tip on registration.
+- Supabase plot ops browse surface (2026-06-20): `plot_ops_summary` VIEW with aggregated counts, human-readable deforestation/tenure labels, and column comments clarifying `plot.status` is GFW screening only; `plot` kept lean for engineering. Applied on Tracebud CRM; migration `202606200005` + `tb_v16_051_plot_ops_summary_view.sql`.
 - Field app sync hardening (2026-06-19): per-run `serverPlotFetchCache` collapses the ~16 redundant `GET /v1/plots` per "Sync now" into ~1 fetch/farmer id (production 429 root cause); deterministic farmer-scope alignment (no auth-uid flip-flop when a linked producer profile exists); verified prod DB shows healthy single profile/plot for the reported account. Tests: `serverPlotFetchCache.test.ts`, `alignFarmerWithAuthUser.test.ts`.
 - Field app delivery saved screen (2026-06-16): `DeliveryLoggedPanel` on harvests tab — receipt summary, PNG share, queued Sync now, plot receipt deep link; shared `shareDeliveryReceipt` with plot receipt tab.
 - Field app documents + auth slice (2026-06-16): producer/plot document scope, producer declarations on `/documents`, Google OAuth fast completion, sign-out race fixes, Documents navigation + back stack, declaration card layout.

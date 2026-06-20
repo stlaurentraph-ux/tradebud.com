@@ -1,4 +1,5 @@
 import type { Plot } from '@/features/state/AppStateContext';
+import { loadPlotServerLinks } from '@/features/state/persistence';
 import { processPendingConsentQueue } from '@/features/sync/processPendingConsentQueue';
 import { drainPendingSyncQueueForManualSync } from '@/features/sync/drainPendingSyncQueue';
 import {
@@ -7,8 +8,10 @@ import {
 import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import {
   uploadUnsyncedPlotsForFarmer,
+  warmPlotServerLinksForSync,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
+import { enqueuePlotDependentSyncForLinkedPlots } from '@/features/sync/enqueuePlotDependentSyncActions';
 import {
   beginServerPlotFetchRun,
   endServerPlotFetchRun,
@@ -27,7 +30,7 @@ import {
 } from '@/features/sync/syncOperationLimits';
 import { emitSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
 
-const QUEUE_ACTION_TYPES = ['harvest', 'photos_sync', 'evidence_sync'] as const;
+const QUEUE_ACTION_TYPES = ['harvest', 'photos_sync', 'evidence_sync', 'audit_sync'] as const;
 
 export type RunAutoBackupResult = {
   plotResult: UploadUnsyncedPlotsResult | null;
@@ -38,6 +41,7 @@ export type RunAutoBackupResult = {
 export async function runAutoBackup(params: {
   farmerId: string;
   localPlots: Plot[];
+  farmerDisplayName?: string;
   /** When true, uploads plots + consent only — skips harvest/photo/evidence queue drain. */
   skipQueueDrain?: boolean;
 }): Promise<RunAutoBackupResult> {
@@ -61,7 +65,20 @@ export async function runAutoBackup(params: {
           plotResult = await uploadUnsyncedPlotsForFarmer({
             farmerId,
             localPlots: params.localPlots,
+            farmerDisplayName: params.farmerDisplayName,
           });
+
+          await warmPlotServerLinksForSync({
+            farmerId,
+            ownedFarmerIds: syncContext.ownedFarmerIds,
+            localPlots: params.localPlots,
+          });
+          const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+          await enqueuePlotDependentSyncForLinkedPlots({
+            farmerId,
+            plots: params.localPlots,
+            plotServerLinks,
+          }).catch(() => undefined);
         }
         setSyncQueuePhase('processing_consent');
         await processPendingConsentQueue();

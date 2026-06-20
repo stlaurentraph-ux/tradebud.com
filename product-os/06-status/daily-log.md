@@ -1,3 +1,97 @@
+### 2026-06-20 (offline: sync false “couldn't reach Tracebud” on 304 health)
+- **Root cause** — After the first successful `/api/health` check, React Native fetch could receive **304 Not Modified**; `response.ok` is false for 304, so Sync now aborted even though the server was up (confirmed in Railway HTTP logs).
+- **Fix** — Health ping treats 304 as reachable and uses `cache: 'no-store'`; plot list GET also skips HTTP cache to avoid empty 304 bodies.
+
+### 2026-06-20 (backend: field-app audit POST without tenant claim)
+- **403 fix** — `POST /v1/audit` now uses `assertTenantClaimOrFieldActor` (same as plots/harvest) instead of requiring `app_metadata.tenant_id`.
+- **Payload tenantId** — Field farmers without a JWT tenant claim get a stable fallback (`tenant_{email}` or `field_{userId}`) embedded in `audit_log.payload`.
+- **Tests** — `audit.controller.spec` covers linked farmer `producer_attestations_updated` without tenant claim; dashboard exporter without claim still rejected.
+
+### 2026-06-20 (database: ADR-006 Phase 3 prep)
+- **Dual-project clients** — Marketing + dashboard `getSupabaseCrm()` / `getSupabaseGtm()` use optional `SUPABASE_GTM_URL` when set; fallback to product project until GTM project exists.
+- **Prospect sync** — Uses `getSupabaseCrm()` directly (no product admin client).
+- **Bootstrap** — `supabase/gtm-project/bootstrap.sql` for new Tracebud GTM project (founder crm + gtm tables; `crm_contacts` stays on product).
+- **Next** — Create GTM Supabase project (~$10/mo), migrate data, set Vercel env vars.
+
+### 2026-06-20 (database: ADR-006 PostgREST expose crm + gtm)
+- **Data API config** — PATCH Management API `db_schema=public,graphql_public,crm,gtm` on project `uzsktajlnofosxeqwdwl`. Founder OS and marketing `.schema('crm'|'gtm')` calls now return HTTP 200 (were PGRST106 before).
+- **ADR-006** — Phases 0–2 complete; acceptance criteria met except backend integration test pass.
+
+### 2026-06-20 (database: ADR-006 Phase 2 tighten public)
+- **Table comments** — `COMMENT ON TABLE` for all domain tables across 6 schemas + core `public` (Table Editor hygiene).
+- **Security advisors** — RLS deny policies on crm Founder OS, gtm lead tables, integrations yield benchmarks, and geo overlays; `plot_ops_summary` recreated with `security_invoker = true`; farmer display name functions fixed for `crm.crm_contacts`.
+- **Drizzle** — `audit_log` model moved to `internal` schema in `schema.ts`.
+- **Migrations** — `20260620130000` (comments), `20260620130001` (RLS), `20260620130002` (view + functions) / `tb_v16_056`–`058`.
+
+### 2026-06-20 (database: ADR-006 Phase 1 schema split)
+- **Domain schemas** — Moved 45 tables out of `public` into `commercial` (9), `crm` (9), `gtm` (7), `integrations` (7), `ops` (6), `internal` (7). `public` now ~17 core product tables + `plot_ops_summary` view.
+- **Backend** — NestJS pool `search_path` includes all domain schemas; marketing/dashboard clients use `.schema('crm'|'gtm')`.
+- **Manual step** — Add `crm` + `gtm` to Supabase API exposed schemas (Dashboard → Settings → API).
+
+### 2026-06-20 (database: ADR-006 Phase 0)
+- **RLS hardening** — Enabled tenant/farmer-scoped RLS on 15 previously exposed `public` tables (billing, evidence, consent, signup captures, etc.); applied on Tracebud Supabase (`phase0_rls_hardening`).
+- **Schema formalization** — Migrated `agent_plot_assignment`, `farmer_push_devices`, `inbox_requests`, `inbox_request_events`, `chat_threads`, `chat_messages` via `phase0_pending_tables`; removed runtime `CREATE TABLE` from NestJS admin/launch/inbox/chat/onboarding services.
+- **ADR** — `product-os/05-decisions/ADR-006-database-schema-organization.md` Phase 0 complete; Phase 1 schema split next.
+
+### 2026-06-20 (offline: declaration audit_sync queue)
+- **Self-declarations in queue** — Producer + plot declaration saves enqueue `audit_sync` rows (`producer_attestations_updated`, `plot_compliance_declared`) with retry on Sync now.
+- **Offline save** — Ticks persist locally; audit POST retries when signed in instead of fire-and-forget loss.
+- **Backfill** — Sync now re-queues completed local declarations missing a server audit marker (once per declaration version).
+- **Settings filter** — Queue breakdown includes **Declarations** count/chip.
+
+### 2026-06-20 (offline: auto-queue plot attachments on upload)
+- **Plot upload hook** — When a plot links to the server, the app now enqueues pending sync for field photos, land title photos, plot evidence (FPIC/permit/tenure), and unsynced harvest receipts for that plot.
+- **Sync now backfill** — Before queue drain, Sync now re-runs the same enqueue pass for every server-linked plot so older local-only attachments (e.g. Hector Plot 1 & 3 land papers) enter the queue without a separate Upload proof tap.
+- **Ground truth queue fix** — Pending `photos_sync` ground-truth rows now load photos from SQLite and upload files to storage before calling the API (same pattern as land title).
+
+### 2026-06-20 (offline: Sync now auto-uploads land papers)
+- **One-tap land proof** — Sync now uploads local land title photos and tenure evidence for plots already on the server (`documents_local_only`), before queue drain — same path as **Upload proof** on plot detail.
+- **Progress copy** — Settings sync shows **Uploading land papers** while tenure files upload.
+- **Auto-backup** — Background backup runs the same land-doc upload after plot boundaries.
+
+### 2026-06-20 (offline: land papers awaiting-upload UX)
+- **No false “Checking…”** — Synced plot + local land photo + no server tenure row → **Saved on phone — tap Upload proof** (not “under review”).
+- **Backup complete clarity** — Sync success may append a reminder when land papers for named plots are still on the phone only.
+- **Poll fix** — Plot detail stops polling tenure API when no server check row exists yet.
+
+### 2026-06-20 (offline: geometry UX P2+P3)
+- **Sync “Why?”** — Settings sync error shows inline **Why?** for single-plot geometry blocks (overlap, self-cross, micro/sliver) with farmer-facing reason + next step.
+- **Capture instructions** — Walk/draw/pin instruction alerts include boundary tips (no overlap, GPS pin for small fields, re-walk thin lines); method steps mention staying outside existing plots.
+- **Second-plot tip** — One-time dismissible banner when registering Plot 2 warns to stay outside Plot 1’s line (overlap prevention).
+
+### 2026-06-20 (offline: Documents declaration checkboxes + audit sync)
+- **Checkbox reset** — Documents screen `reloadFromDisk` refreshed the farmer object and re-ran draft sync, wiping ticks mid-edit; draft now loads only on farmer change or explicit edit open.
+- **Supabase audit** — Saving producer/plot declarations now also POSTs `producer_attestations_updated` / `plot_compliance_declared` to server `audit_log` when signed in (local SQLite was the only store before).
+
+### 2026-06-20 (offline: geometry UX P0+P1)
+- **Save-time warnings** — Walk/draw save shows micro/sliver alert before local save (`Save on this phone` vs `Fix boundary`); avoids surprise at Sync.
+- **Sync CTA** — Settings sync result adds **Open plot** when one plot is geometry-blocked; overlap still offers support email.
+- **Plot badges** — My Plots list + plot detail show **Needs boundary fix** when local geometry would block upload.
+- **Help** — Settings Help expands with **Plot mapping rules** + **Backup & sync** sections (farmer copy, no GEO codes).
+
+### 2026-06-20 (Supabase: plot_ops_summary ops view)
+- **`plot_ops_summary` VIEW** — Applied on Tracebud CRM (`uzsktajlnofosxeqwdwl`). Default Table Editor browse surface for ops/support: identity, upload source, human-readable deforestation screening + tenure labels, overlap flags, evidence/delivery/photo counts, `eudr_dossier_ready_hint`. Canonical writes stay on `plot` + child tables.
+- **Column comments** — Full `COMMENT ON` for `plot` (especially `status` = GFW screening only, not EUDR) and key `plot_ops_summary` columns. Migration `202606200005_plot_ops_summary_view.sql` + mirror `tracebud-backend/sql/tb_v16_051_plot_ops_summary_view.sql`.
+
+### 2026-06-20 (offline: sync pending + overlap messages)
+- **False “still need upload”** — `plotSyncPending` classifies each local plot as synced / needs upload / geometry-blocked; persisted device links trusted when server row exists; fetch failures no longer mark linked plots unsynced.
+- **Overlap copy** — upload block names both plots (`Plot 2 overlaps Plot 1…`); Settings shows **Email support about this overlap** with prefilled `mailto:support@tracebud.com`.
+
+### 2026-06-20 (Supabase: plot_status enum rename)
+- **`compliant` → `deforestation_clear`** — Renamed `plot_status` enum value so Supabase Table Editor no longer reads “compliant” as full EUDR/tenure compliance. Migration `202606200004_plot_status_rename_compliant_to_deforestation_clear.sql` applied on Tracebud CRM; Hector Plot 1 & 3 now show `deforestation_clear`.
+- **Backend / CRM / mobile** — Writers use `deforestation_clear`; readers accept legacy `compliant` during rollout. Harvest SQL accepts both.
+
+### 2026-06-20 (Supabase: plot duplicate prevention)
+- **Cleanup** — Renamed CRM demo `39d548f9…` back to **Carl kjelsens**; removed orphan duplicate rows (e.g. test-plot-1 pair).
+- **Constraints** — `plot_farmer_orphan_name_kind_key` (one orphan name+kind per farmer) + existing `plot_farmer_client_plot_id_key`; backend reconciles orphan rows before INSERT.
+
+### 2026-06-20 (Supabase: plot.farmer_display_name)
+- **`plot.farmer_display_name`** — denormalized farmer label (CRM contact name → `user_account.name` → id prefix); backfilled + triggers on plot insert and name changes. Migration `202606200003_plot_farmer_display_name.sql` applied on Tracebud CRM.
+
+### 2026-06-20 (CRM + Supabase: plot.status labeling)
+- **Supabase** — `COMMENT ON COLUMN plot.status` documents deforestation screening only (GFW), not tenure/full EUDR; migration `202606200002_plot_status_column_documentation.sql` applied on Tracebud CRM.
+- **CRM dashboard** — `plot-deforestation-screening-status.ts`; badges/stats say “Deforestation clear” not “Compliant”; plot detail facts + package breakdown hint; cooperative KPI copy updated.
+
 ### 2026-06-19 (offline: unified deliveries & receipt routes)
 - **Receipt detail route** — `/receipt/[id]` replaces nested `DeliveryReceiptsBrowser` detail state; share + Sync now for queued receipts live on the dedicated screen.
 - **Post-log flow** — single-plot harvest submit navigates straight to `/receipt/{id}?fresh=1` instead of plot voucher sub-view.

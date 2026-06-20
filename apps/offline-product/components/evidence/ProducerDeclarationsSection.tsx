@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
@@ -13,6 +13,7 @@ import {
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { logAuditEvent } from '@/features/state/persistence';
+import { queueProducerAttestationAuditSync } from '@/features/sync/queueDeclarationAuditSync';
 
 type ProducerDeclarationsSectionProps = {
   sectionRef?: RefObject<View | null>;
@@ -43,22 +44,32 @@ export function ProducerDeclarationsSection({
   const [laborNoForcedLabor, setLaborNoForcedLabor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const lastOpenEditingRequestRef = useRef(0);
 
-  const syncDraftFromFarmer = useCallback(() => {
-    setFpicConsent(farmer?.fpicConsent ?? false);
-    setLaborNoChildLabor(farmer?.laborNoChildLabor ?? false);
-    setLaborNoForcedLabor(farmer?.laborNoForcedLabor ?? false);
-  }, [farmer]);
+  const farmerId = farmer?.id;
+  const persistedFpic = farmer?.fpicConsent === true;
+  const persistedLaborChild = farmer?.laborNoChildLabor === true;
+  const persistedLaborForced = farmer?.laborNoForcedLabor === true;
+
+  const loadDraftFromPersisted = useCallback(() => {
+    setFpicConsent(persistedFpic);
+    setLaborNoChildLabor(persistedLaborChild);
+    setLaborNoForcedLabor(persistedLaborForced);
+  }, [persistedFpic, persistedLaborChild, persistedLaborForced]);
+
+  // New farmer only — do not re-sync on every reloadFromDisk object refresh.
+  useEffect(() => {
+    loadDraftFromPersisted();
+    setEditing(false);
+  }, [farmerId, loadDraftFromPersisted]);
 
   useEffect(() => {
-    syncDraftFromFarmer();
-  }, [syncDraftFromFarmer]);
-
-  useEffect(() => {
-    if (!openEditingRequest || !farmer?.id) return;
-    syncDraftFromFarmer();
+    if (!openEditingRequest || openEditingRequest === lastOpenEditingRequestRef.current) return;
+    if (!farmerId) return;
+    lastOpenEditingRequestRef.current = openEditingRequest;
+    loadDraftFromPersisted();
     setEditing(true);
-  }, [openEditingRequest, farmer?.id, syncDraftFromFarmer]);
+  }, [openEditingRequest, farmerId, loadDraftFromPersisted]);
 
   if (!farmer?.id) return null;
 
@@ -94,6 +105,7 @@ export function ProducerDeclarationsSection({
           selfDeclared: true,
         },
       });
+      void queueProducerAttestationAuditSync(next);
       setEditing(false);
     } catch {
       setSaveError(t('documents_declarations_save_failed'));
@@ -118,33 +130,23 @@ export function ProducerDeclarationsSection({
 
       {showForm ? (
         <>
-          <Pressable style={styles.declarationItem} onPress={() => setFpicConsent(!fpicConsent)}>
-            <Checkbox checked={fpicConsent} onChange={setFpicConsent} />
-            <View style={styles.declarationContent}>
-              <ThemedText type="defaultSemiBold">{t('documents_declaration_community_consent')}</ThemedText>
-              <ThemedText type="caption">{t('documents_declaration_community_consent_hint')}</ThemedText>
-            </View>
-          </Pressable>
-          <Pressable
+          <Checkbox
+            checked={fpicConsent}
+            onChange={setFpicConsent}
+            label={t('documents_declaration_community_consent')}
+            description={t('documents_declaration_community_consent_hint')}
             style={styles.declarationItem}
-            onPress={() => {
-              const next = !(laborNoChildLabor && laborNoForcedLabor);
-              setLaborNoChildLabor(next);
-              setLaborNoForcedLabor(next);
+          />
+          <Checkbox
+            checked={laborNoChildLabor && laborNoForcedLabor}
+            onChange={(checked) => {
+              setLaborNoChildLabor(checked);
+              setLaborNoForcedLabor(checked);
             }}
-          >
-            <Checkbox
-              checked={laborNoChildLabor && laborNoForcedLabor}
-              onChange={(checked) => {
-                setLaborNoChildLabor(checked);
-                setLaborNoForcedLabor(checked);
-              }}
-            />
-            <View style={styles.declarationContent}>
-              <ThemedText type="defaultSemiBold">{t('documents_declaration_labor')}</ThemedText>
-              <ThemedText type="caption">{t('documents_declaration_labor_hint')}</ThemedText>
-            </View>
-          </Pressable>
+            label={t('documents_declaration_labor')}
+            description={t('documents_declaration_labor_hint')}
+            style={styles.declarationItem}
+          />
           {saveError ? (
             <ThemedText type="caption" style={styles.error}>
               {saveError}
@@ -157,7 +159,7 @@ export function ProducerDeclarationsSection({
                 variant="outline"
                 fullWidth={false}
                 onPress={() => {
-                  syncDraftFromFarmer();
+                  loadDraftFromPersisted();
                   setEditing(false);
                   setSaveError(null);
                 }}
@@ -187,7 +189,7 @@ export function ProducerDeclarationsSection({
               title={t('documents_declarations_update')}
               variant="secondary"
               onPress={() => {
-                syncDraftFromFarmer();
+                loadDraftFromPersisted();
                 setEditing(true);
                 setSaveError(null);
               }}
@@ -224,14 +226,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   declarationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
     paddingVertical: 6,
-  },
-  declarationContent: {
-    flex: 1,
-    gap: 4,
   },
   savedBlock: {
     gap: 8,

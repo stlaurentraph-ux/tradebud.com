@@ -424,7 +424,7 @@ export class HarvestService {
           (
             dpv.dds_package_id IS NULL
             AND tx.plot_id IS NOT NULL
-            AND COALESCE(p.status, '') IN ('verified', 'compliant')
+            AND COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
           ) AS eligible_for_package
         FROM voucher v
         JOIN harvest_transaction tx ON tx.id = v.transaction_id
@@ -525,7 +525,7 @@ export class HarvestService {
           (
             dpv.dds_package_id IS NULL
             AND tx.plot_id IS NOT NULL
-            AND COALESCE(p.status, '') IN ('verified', 'compliant')
+            AND COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
           ) AS eligible_for_package
         FROM voucher v
         JOIN harvest_transaction tx ON tx.id = v.transaction_id
@@ -823,7 +823,7 @@ export class HarvestService {
             SELECT
               COUNT(DISTINCT p.id) AS plot_count,
               COUNT(DISTINCT p.id) FILTER (
-                WHERE COALESCE(p.status, '') IN ('verified', 'compliant')
+                WHERE COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
                   OR p.sinaph_overlap IS FALSE
               ) AS compliant_plot_count
             FROM dds_package_voucher dpv
@@ -875,7 +875,7 @@ export class HarvestService {
           SELECT
             COUNT(DISTINCT p.id) AS plot_count,
             COUNT(DISTINCT p.id) FILTER (
-              WHERE COALESCE(p.status, '') IN ('verified', 'compliant')
+              WHERE COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
                 OR p.sinaph_overlap IS FALSE
             ) AS compliant_plot_count
           FROM dds_package_voucher dpv

@@ -573,3 +573,87 @@ export function localPolygonQualityMessage(
     .map((issue) => (t ? resolveLocalGeometryQualityMessage(t, issue) : issue.message))
     .join('\n\n');
 }
+
+export const TRACEBUD_SUPPORT_EMAIL = 'support@tracebud.com';
+
+export type PlotUploadBlockDetails = {
+  message: string;
+  code?: string;
+  overlapPlotName?: string;
+};
+
+export function buildPlotOverlapSupportMailto(params: {
+  plotName: string;
+  otherPlotName: string;
+  plotId: string;
+  farmerEmail?: string;
+}): string {
+  const subject = encodeURIComponent(
+    `Plot boundary overlap — ${params.plotName} / ${params.otherPlotName}`,
+  );
+  const body = encodeURIComponent(
+    [
+      'Hi Tracebud support,',
+      '',
+      `The app blocked uploading "${params.plotName}" because it overlaps "${params.otherPlotName}", but I believe these boundaries do not overlap on the ground.`,
+      '',
+      `Plot id: ${params.plotId}`,
+      params.farmerEmail ? `Account: ${params.farmerEmail}` : null,
+      '',
+      'Please review my plot geometry.',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  );
+  return `mailto:${TRACEBUD_SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+/** Farmer-facing upload block copy — overlap messages name both plots. */
+export function resolvePlotUploadBlockMessage(params: {
+  plotName: string;
+  issues: LocalGeometryQualityIssue[];
+  t: TranslateFn;
+}): PlotUploadBlockDetails | null {
+  const blocking = params.issues.filter((issue) => issue.severity === 'error');
+  if (blocking.length === 0) return null;
+
+  const overlap = blocking.find((issue) => issue.code === 'GEO-105');
+  if (overlap) {
+    const otherPlotName = String(
+      overlap.details?.overlapPlotName ?? params.t('geo_quality_overlap_unknown'),
+    );
+    return {
+      code: 'GEO-105',
+      overlapPlotName: otherPlotName,
+      message: params.t('geo_quality_overlap_upload', {
+        plotName: params.plotName,
+        otherPlotName,
+      }),
+    };
+  }
+
+  const first = blocking[0];
+  const plotName = params.plotName;
+
+  if (first.code === 'GEO-104') {
+    return {
+      code: 'GEO-104',
+      message: params.t('geo_quality_self_intersect_upload', { plotName }),
+    };
+  }
+
+  if (first.code === 'GEO-106') {
+    return {
+      code: 'GEO-106',
+      message:
+        first.details?.areaHa != null
+          ? params.t('geo_quality_micro_area_upload', { plotName })
+          : params.t('geo_quality_sliver_upload', { plotName }),
+    };
+  }
+
+  return {
+    code: first.code,
+    message: resolveLocalGeometryQualityMessage(params.t, first),
+  };
+}

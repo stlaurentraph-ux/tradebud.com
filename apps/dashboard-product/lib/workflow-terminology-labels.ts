@@ -168,7 +168,7 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.plots.stat.low.cooperative': 'Mapped & Low Risk',
   'workflow.plots.stat.low.default': 'Low Risk',
   'workflow.plots.stat.low_hint.cooperative': 'Ready for batch lineage inclusion',
-  'workflow.plots.stat.low_hint.default': 'Ready for compliance',
+  'workflow.plots.stat.low_hint.default': 'Deforestation screening clear',
   'workflow.plots.stat.medium.cooperative': 'Needs Field Review',
   'workflow.plots.stat.medium.default': 'Medium Risk',
   'workflow.plots.stat.medium_hint.cooperative': 'Geometry/legal checks pending',
@@ -202,8 +202,10 @@ const WORKFLOW_LABELS: Record<string, string> = {
   'workflow.plots.detail.map.attribution': 'Esri World Imagery',
   'workflow.plots.detail.map.area_label': 'Area',
   'workflow.plots.detail.map.kind_label': 'Capture type',
-  'workflow.plots.detail.map.status_label': 'Compliance status',
+  'workflow.plots.detail.map.status_label': 'Deforestation screening status',
   'workflow.plots.detail.map.screening_label': 'Deforestation screening',
+  'workflow.plots.detail.map.screening_hint':
+    'Database column plot.status — satellite result only, not tenure or full EUDR readiness.',
   'workflow.plots.detail.map.verified_label': 'Field verified',
   'workflow.plots.detail.map.verified_yes': 'Yes',
   'workflow.plots.detail.map.verified_no': 'No',
@@ -3437,8 +3439,12 @@ const PLOT_DETAIL_MAP_COPY: Record<string, { key: string; fallback: string }> = 
   attribution: { key: 'workflow.plots.detail.map.attribution', fallback: 'Esri World Imagery' },
   area_label: { key: 'workflow.plots.detail.map.area_label', fallback: 'Area' },
   kind_label: { key: 'workflow.plots.detail.map.kind_label', fallback: 'Capture type' },
-  status_label: { key: 'workflow.plots.detail.map.status_label', fallback: 'Compliance status' },
+  status_label: { key: 'workflow.plots.detail.map.status_label', fallback: 'Deforestation screening status' },
   screening_label: { key: 'workflow.plots.detail.map.screening_label', fallback: 'Deforestation screening' },
+  screening_hint: {
+    key: 'workflow.plots.detail.map.screening_hint',
+    fallback: 'Database column plot.status — satellite result only, not tenure or full EUDR readiness.',
+  },
   verified_label: { key: 'workflow.plots.detail.map.verified_label', fallback: 'Field verified' },
   verified_yes: { key: 'workflow.plots.detail.map.verified_yes', fallback: 'Yes' },
   verified_no: { key: 'workflow.plots.detail.map.verified_no', fallback: 'No' },
@@ -7048,11 +7054,19 @@ export function getPlotBreakdownStatTotalLabel(role?: SupplyChainRole, t?: Trans
 }
 
 export function getPlotBreakdownStatCompliantLabel(t?: TranslateFn): string {
-  return wf('workflow.compliance.plot.stat.compliant', 'Compliant', t);
+  return wf('workflow.compliance.plot.stat.compliant', 'Deforestation clear', t);
 }
 
 export function getPlotBreakdownStatNonCompliantLabel(t?: TranslateFn): string {
-  return wf('workflow.compliance.plot.stat.non_compliant', 'Non-Compliant', t);
+  return wf('workflow.compliance.plot.stat.non_compliant', 'Screening flagged', t);
+}
+
+export function getPlotBreakdownStatCompliantHint(t?: TranslateFn): string {
+  return wf(
+    'workflow.compliance.plot.stat.compliant_hint',
+    'No deforestation signal from satellite screening — not tenure or full EUDR dossier.',
+    t,
+  );
 }
 
 export function getPlotBreakdownDetailsSectionTitle(role?: SupplyChainRole, t?: TranslateFn): string {
@@ -7805,7 +7819,7 @@ export function getReportsQuickStatLabel(
     compliance_rate: 'Compliance Rate',
     declaration_readiness: 'Compliance Rate',
     member_data_completeness: 'Compliance Rate',
-    compliant_plots: 'Compliant Plots',
+    compliant_plots: 'Deforestation-clear plots',
     compliant_evidence: 'Compliant Plots',
     active_members: 'Compliant Plots',
     packages_ytd: 'Packages (YTD)',

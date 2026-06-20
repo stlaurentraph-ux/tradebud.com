@@ -220,23 +220,7 @@ export function defaultGroundTruthPhotoSummary(): PlotGroundTruthPhotoSummary {
   };
 }
 
-export function formatDeforestationScreeningStatus(status: string): string {
-  const normalized = normalizeComplianceStatus(status);
-  switch (normalized) {
-    case 'compliant':
-      return 'Clear — no deforestation signal';
-    case 'pending_check':
-      return 'Screening pending';
-    case 'under_review':
-      return 'Under review';
-    case 'degradation_risk':
-      return 'Degradation risk';
-    case 'deforestation_detected':
-      return 'Deforestation signal';
-    default:
-      return 'Unknown';
-  }
-}
+export { formatDeforestationScreeningStatus } from '@/lib/plot-deforestation-screening-status';
 
 /** @internal for tests */
 export function isPlotFieldVerifiedForReadiness(

@@ -1,6 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 import { mapToOutreachActivity, mapToProspect } from '@/lib/founder-os-mapper';
+import { getSupabaseCrm } from '@/lib/supabase-admin';
 
 type ProspectFormType = 'exporter' | 'importer' | 'country' | 'farmer' | 'cooperative';
 
@@ -14,14 +13,12 @@ type SyncInput = {
   payload: Record<string, unknown>;
 };
 
-export async function syncLeadToProspects(
-  supabase: SupabaseClient,
-  input: SyncInput,
-): Promise<void> {
+export async function syncLeadToProspects(input: SyncInput): Promise<void> {
+  const crm = getSupabaseCrm();
   const prospect = mapToProspect(input);
   const activity = mapToOutreachActivity(input);
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await crm
     .from('prospects')
     .insert(prospect)
     .select('id')
@@ -32,7 +29,7 @@ export async function syncLeadToProspects(
     return;
   }
 
-  const { error: activityError } = await supabase.from('outreach_activity').insert({
+  const { error: activityError } = await crm.from('outreach_activity').insert({
     ...activity,
     prospect_id: inserted.id,
   });
@@ -42,21 +39,19 @@ export async function syncLeadToProspects(
   }
 }
 
-export async function syncWaitlistToProspects(
-  supabase: SupabaseClient,
-  input: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    organisation: string;
-    role: string;
-    commodity: string;
-    producerRange: string;
-    sourcePage: string;
-  },
-): Promise<void> {
+export async function syncWaitlistToProspects(input: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organisation: string;
+  role: string;
+  commodity: string;
+  producerRange: string;
+  sourcePage: string;
+}): Promise<void> {
+  const crm = getSupabaseCrm();
   const name = `${input.firstName} ${input.lastName}`.trim();
-  const { data: inserted, error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await crm
     .from('prospects')
     .insert({
       name,
@@ -78,7 +73,7 @@ export async function syncWaitlistToProspects(
     return;
   }
 
-  const { error: activityError } = await supabase.from('outreach_activity').insert({
+  const { error: activityError } = await crm.from('outreach_activity').insert({
     prospect_id: inserted.id,
     activity_type: 'identified',
     channel: 'website',

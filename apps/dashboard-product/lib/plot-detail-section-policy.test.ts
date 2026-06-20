@@ -27,7 +27,7 @@ describe('plot-detail-section-policy', () => {
   });
 
   it('treats compliant status as screening clear', () => {
-    expect(isPlotScreeningClear('compliant')).toBe(true);
+    expect(isPlotScreeningClear('deforestation_clear')).toBe(true);
     expect(isPlotScreeningClear('under_review')).toBe(false);
   });
 

@@ -1,7 +1,7 @@
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseCrm } from "@/lib/supabase-admin";
 
 export async function listProspects(limit = 100) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("prospects")
     .select("*")
@@ -19,7 +19,7 @@ export async function createProspect(input: {
   source?: string;
   stage?: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("prospects")
     .insert({
@@ -38,7 +38,7 @@ export async function createProspect(input: {
 }
 
 export async function listDailyActions(actionDate?: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const date = actionDate ?? new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("daily_actions")
@@ -51,7 +51,7 @@ export async function listDailyActions(actionDate?: string) {
 }
 
 export async function listDailyActionsHistory(days = 30) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const start = new Date();
   start.setDate(start.getDate() - Math.max(1, days));
   const fromDate = start.toISOString().slice(0, 10);
@@ -65,7 +65,7 @@ export async function listDailyActionsHistory(days = 30) {
 }
 
 export async function ensureDailyOutreachActions(actionDate?: string, target = 3) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const date = actionDate ?? new Date().toISOString().slice(0, 10);
   const weekday = new Date(`${date}T00:00:00`).getDay();
   if (weekday === 0 || weekday === 6) {
@@ -114,7 +114,7 @@ export async function ensureDailyOutreachActions(actionDate?: string, target = 3
 }
 
 export async function markDailyActionComplete(id: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("daily_actions")
     .update({ completed: true, completed_at: new Date().toISOString() })
@@ -126,7 +126,7 @@ export async function markDailyActionComplete(id: string) {
 }
 
 export async function listOutreachTemplates() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("outreach_templates")
     .select("*")
@@ -142,7 +142,7 @@ export async function createOutreachTemplate(input: {
   channel: string;
   content: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("outreach_templates")
     .insert({
@@ -159,7 +159,7 @@ export async function createOutreachTemplate(input: {
 }
 
 export async function listOutreachActivity(limit = 200) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("outreach_activity")
     .select("*, prospects(id, name, company)")
@@ -175,7 +175,7 @@ export async function createOutreachActivity(input: {
   channel?: string;
   content: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("outreach_activity")
     .insert({

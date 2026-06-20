@@ -105,7 +105,7 @@ const EN_TERMINOLOGY_LABELS: Record<string, string> = {
   'dashboard.cooperative.kpi.members': 'Members',
   'dashboard.cooperative.kpi.members_hint': 'Profiles managed by cooperative',
   'dashboard.cooperative.kpi.plot_coverage': 'Mapped Plot Coverage',
-  'dashboard.cooperative.kpi.plot_coverage_hint': '{{compliant}}/{{total}} plots compliant',
+  'dashboard.cooperative.kpi.plot_coverage_hint': '{{compliant}}/{{total}} plots with deforestation screening clear',
   'dashboard.cooperative.kpi.blocked_batches': 'Blocked Batch Alerts',
   'dashboard.cooperative.kpi.blocked_batches_hint': 'Yield appeal and evidence follow-up',
   'dashboard.cooperative.kpi.premium_governance': 'Premium Governance',

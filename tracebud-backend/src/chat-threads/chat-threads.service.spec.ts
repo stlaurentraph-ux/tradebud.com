@@ -4,16 +4,10 @@ import { ChatThreadsService } from './chat-threads.service';
 describe('ChatThreadsService idempotent message semantics', () => {
   it('replays create-thread response for existing idempotency key', async () => {
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({}) // ensureSchema chat_threads
-        .mockResolvedValueOnce({}) // ensureSchema chat_messages
-        .mockResolvedValueOnce({}) // ensureSchema idx unique
-        .mockResolvedValueOnce({}) // ensureSchema idx threads
-        .mockResolvedValueOnce({
-          rowCount: 1,
-          rows: [{ id: 'msg_1', thread_id: 'thread_1', body: 'hello', idempotency_key: 'idem-thread-1' }],
-        }),
+      query: jest.fn().mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: 'msg_1', thread_id: 'thread_1', body: 'hello', idempotency_key: 'idem-thread-1' }],
+      }),
     };
     const service = new ChatThreadsService(pool as any);
     const result = await service.createThread(
@@ -26,13 +20,7 @@ describe('ChatThreadsService idempotent message semantics', () => {
 
   it('rejects posting to archived thread', async () => {
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'thread_1', status: 'archived' }] }),
+      query: jest.fn().mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'thread_1', status: 'archived' }] }),
     };
     const service = new ChatThreadsService(pool as any);
     await expect(
@@ -48,10 +36,6 @@ describe('ChatThreadsService idempotent message semantics', () => {
     const pool = {
       query: jest
         .fn()
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'thread_1', status: 'active', record_id: 'record_1' }] })
         .mockResolvedValueOnce({})
         .mockResolvedValueOnce({}),
@@ -67,13 +51,7 @@ describe('ChatThreadsService idempotent message semantics', () => {
 
   it('rejects reopening archived thread', async () => {
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'thread_1', status: 'archived', record_id: 'record_1' }] }),
+      query: jest.fn().mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'thread_1', status: 'archived', record_id: 'record_1' }] }),
     };
     const service = new ChatThreadsService(pool as any);
     await expect(

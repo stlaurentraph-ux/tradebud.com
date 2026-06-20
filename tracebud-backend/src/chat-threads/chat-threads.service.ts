@@ -23,55 +23,6 @@ type ChatLifecycleEvent =
 @Injectable()
 export class ChatThreadsService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
-  private schemaCheckInFlight: Promise<void> | null = null;
-
-  private async ensureSchema(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS public.chat_threads (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL,
-        record_id TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('active', 'resolved', 'archived')),
-        created_by TEXT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        resolved_at TIMESTAMPTZ NULL
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS public.chat_messages (
-        id TEXT PRIMARY KEY,
-        thread_id TEXT NOT NULL REFERENCES public.chat_threads(id) ON DELETE CASCADE,
-        tenant_id TEXT NOT NULL,
-        author_user_id TEXT NULL,
-        author_role TEXT NOT NULL CHECK (author_role IN ('farmer', 'agent', 'exporter', 'admin', 'compliance_manager')),
-        body TEXT NOT NULL,
-        idempotency_key TEXT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await this.pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_messages_tenant_idempotency
-      ON public.chat_messages (tenant_id, idempotency_key)
-      WHERE idempotency_key IS NOT NULL
-    `);
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chat_threads_tenant_record_created
-      ON public.chat_threads (tenant_id, record_id, created_at DESC)
-    `);
-  }
-
-  private async ensureSchemaVerified(): Promise<void> {
-    if (this.schemaCheckInFlight) {
-      await this.schemaCheckInFlight;
-      return;
-    }
-    this.schemaCheckInFlight = this.ensureSchema();
-    try {
-      await this.schemaCheckInFlight;
-    } finally {
-      this.schemaCheckInFlight = null;
-    }
-  }
 
   private async appendChatAuditEvent(
     eventType: ChatLifecycleEvent,
@@ -112,7 +63,6 @@ export class ChatThreadsService {
   }
 
   async listThreads(tenantId: string, recordId?: string) {
-    await this.ensureSchemaVerified();
     const hasRecord = typeof recordId === 'string' && recordId.trim().length > 0;
     const params: Array<string> = [tenantId];
     let recordClause = '';
@@ -132,8 +82,8 @@ export class ChatThreadsService {
           t.resolved_at,
           COUNT(m.id)::int AS message_count,
           MAX(m.created_at) AS last_message_at
-        FROM public.chat_threads t
-        LEFT JOIN public.chat_messages m ON m.thread_id = t.id
+        FROM chat_threads t
+        LEFT JOIN chat_messages m ON m.thread_id = t.id
         WHERE t.tenant_id = $1
           ${recordClause}
         GROUP BY t.id, t.tenant_id, t.record_id, t.status, t.created_by, t.created_at, t.resolved_at
@@ -146,11 +96,10 @@ export class ChatThreadsService {
   }
 
   async listMessages(threadId: string, tenantId: string) {
-    await this.ensureSchemaVerified();
     const res = await this.pool.query(
       `
         SELECT id, thread_id, tenant_id, author_user_id, author_role, body, idempotency_key, created_at
-        FROM public.chat_messages
+        FROM chat_messages
         WHERE thread_id = $1
           AND tenant_id = $2
         ORDER BY created_at ASC
@@ -162,7 +111,6 @@ export class ChatThreadsService {
   }
 
   async createThread(dto: CreateChatThreadDto, context: ChatContext) {
-    await this.ensureSchemaVerified();
     const recordId = dto.recordId.trim();
     const body = dto.message.trim();
     const idempotencyKey = dto.idempotencyKey?.trim() || null;
@@ -189,14 +137,14 @@ export class ChatThreadsService {
     const messageId = `msg_${randomUUID()}`;
     await this.pool.query(
       `
-        INSERT INTO public.chat_threads (id, tenant_id, record_id, status, created_by)
+        INSERT INTO chat_threads (id, tenant_id, record_id, status, created_by)
         VALUES ($1, $2, $3, 'active', $4)
       `,
       [threadId, context.tenantId, recordId, context.userId ?? null],
     );
     await this.pool.query(
       `
-        INSERT INTO public.chat_messages (id, thread_id, tenant_id, author_user_id, author_role, body, idempotency_key)
+        INSERT INTO chat_messages (id, thread_id, tenant_id, author_user_id, author_role, body, idempotency_key)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
       [messageId, threadId, context.tenantId, context.userId ?? null, context.actorRole, body, idempotencyKey],
@@ -224,7 +172,6 @@ export class ChatThreadsService {
   }
 
   async postMessage(threadId: string, dto: PostChatMessageDto, context: ChatContext) {
-    await this.ensureSchemaVerified();
     const body = dto.message.trim();
     const idempotencyKey = dto.idempotencyKey?.trim() || null;
     if (!body) {
@@ -233,7 +180,7 @@ export class ChatThreadsService {
     const threadRes = await this.pool.query<{ id: string; status: string }>(
       `
         SELECT id, status
-        FROM public.chat_threads
+        FROM chat_threads
         WHERE id = $1
           AND tenant_id = $2
         LIMIT 1
@@ -263,7 +210,7 @@ export class ChatThreadsService {
     const messageId = `msg_${randomUUID()}`;
     await this.pool.query(
       `
-        INSERT INTO public.chat_messages (id, thread_id, tenant_id, author_user_id, author_role, body, idempotency_key)
+        INSERT INTO chat_messages (id, thread_id, tenant_id, author_user_id, author_role, body, idempotency_key)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
       `,
       [messageId, threadId, context.tenantId, context.userId ?? null, context.actorRole, body, idempotencyKey],
@@ -289,7 +236,6 @@ export class ChatThreadsService {
   }
 
   async resolveThread(threadId: string, context: ChatContext) {
-    await this.ensureSchemaVerified();
     const thread = await this.getThreadForTransition(threadId, context.tenantId);
     if (thread.status === 'archived') {
       throw new BadRequestException('Archived thread cannot be resolved');
@@ -303,7 +249,7 @@ export class ChatThreadsService {
     }
     await this.pool.query(
       `
-        UPDATE public.chat_threads
+        UPDATE chat_threads
         SET status = 'resolved', resolved_at = NOW()
         WHERE id = $1
           AND tenant_id = $2
@@ -326,7 +272,6 @@ export class ChatThreadsService {
   }
 
   async reopenThread(threadId: string, context: ChatContext) {
-    await this.ensureSchemaVerified();
     const thread = await this.getThreadForTransition(threadId, context.tenantId);
     if (thread.status === 'archived') {
       throw new BadRequestException('Archived thread cannot be reopened');
@@ -340,7 +285,7 @@ export class ChatThreadsService {
     }
     await this.pool.query(
       `
-        UPDATE public.chat_threads
+        UPDATE chat_threads
         SET status = 'active', resolved_at = NULL
         WHERE id = $1
           AND tenant_id = $2
@@ -363,7 +308,6 @@ export class ChatThreadsService {
   }
 
   async archiveThread(threadId: string, context: ChatContext) {
-    await this.ensureSchemaVerified();
     const thread = await this.getThreadForTransition(threadId, context.tenantId);
     if (thread.status === 'archived') {
       return {
@@ -374,7 +318,7 @@ export class ChatThreadsService {
     }
     await this.pool.query(
       `
-        UPDATE public.chat_threads
+        UPDATE chat_threads
         SET status = 'archived'
         WHERE id = $1
           AND tenant_id = $2
@@ -400,7 +344,7 @@ export class ChatThreadsService {
     const replayRes = await this.pool.query<{ id: string; thread_id: string; body: string; idempotency_key: string }>(
       `
         SELECT id, thread_id, body, idempotency_key
-        FROM public.chat_messages
+        FROM chat_messages
         WHERE tenant_id = $1
           AND idempotency_key = $2
         LIMIT 1
@@ -425,7 +369,7 @@ export class ChatThreadsService {
     const threadRes = await this.pool.query<{ id: string; status: 'active' | 'resolved' | 'archived'; record_id: string }>(
       `
         SELECT id, status, record_id
-        FROM public.chat_threads
+        FROM chat_threads
         WHERE id = $1
           AND tenant_id = $2
         LIMIT 1

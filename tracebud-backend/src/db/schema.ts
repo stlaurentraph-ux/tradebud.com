@@ -1,13 +1,21 @@
+/**
+ * Drizzle models core EUDR product tables in `public` only (ADR-006).
+ * Commercial, crm, gtm, integrations, ops, and internal domains use raw SQL
+ * with search_path configured in db.module.ts.
+ */
 import {
   boolean,
   jsonb,
   numeric,
   pgEnum,
+  pgSchema,
   pgTable,
   text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
+
+export const internalSchema = pgSchema('internal');
 
 export const roleEnum = pgEnum('user_role', ['farmer', 'agent', 'exporter', 'viewer']);
 
@@ -35,7 +43,7 @@ export const farmerProfile = pgTable('farmer_profile', {
 
 export const plotStatusEnum = pgEnum('plot_status', [
   'pending_check',
-  'compliant',
+  'deforestation_clear',
   'under_review',
   'degradation_risk',
   'deforestation_detected',
@@ -64,7 +72,7 @@ export const plot = pgTable('plot', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-export const auditLog = pgTable('audit_log', {
+export const auditLog = internalSchema.table('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   userId: uuid('user_id'),

@@ -17,9 +17,53 @@ export const MIN_GROUND_TRUTH_PHOTOS = 4;
 export type TenureParseGateStatus =
   | 'not_applicable'
   | 'not_synced'
+  /** Plot on server; land papers saved on phone but not uploaded for AI review yet. */
+  | 'documents_local_only'
   | 'pending'
   | 'blocked'
   | 'cleared';
+
+export type LandDocumentsUiStatus =
+  | 'missing'
+  | 'local_only'
+  /** Synced plot; photo/file on phone but no server tenure check row yet. */
+  | 'awaiting_upload'
+  | 'reviewing'
+  | 'blocked'
+  | 'verified';
+
+/** Farmer-facing land-papers state — do not equate upload with “verified”. */
+export function resolveLandDocumentsUiStatus(params: {
+  titlePhotoCount: number;
+  evidenceKinds: readonly string[];
+  tenureParseGate: TenureParseGateStatus;
+}): LandDocumentsUiStatus {
+  const hasLandDocuments =
+    params.titlePhotoCount > 0 || evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
+  if (!hasLandDocuments) return 'missing';
+  if (params.tenureParseGate === 'blocked') return 'blocked';
+  if (params.tenureParseGate === 'pending') return 'reviewing';
+  if (params.tenureParseGate === 'documents_local_only') return 'awaiting_upload';
+  if (params.tenureParseGate === 'not_synced') return 'local_only';
+  if (params.tenureParseGate === 'cleared') return 'verified';
+  return 'missing';
+}
+
+export function evaluateTenureParseGate(params: {
+  /** Land title photos and/or tenure evidence documents uploaded for this plot. */
+  hasLandDocuments: boolean;
+  isSyncedToServer: boolean;
+  tenureVerifications?: PlotTenureVerificationRecord[];
+}): TenureParseGateStatus {
+  if (!params.hasLandDocuments) return 'not_applicable';
+  if (!params.isSyncedToServer) return 'not_synced';
+  const verifications = params.tenureVerifications ?? [];
+  if (verifications.length === 0) return 'documents_local_only';
+  const status = summarizeTenureAiParseStatus(verifications);
+  if (!status || status === 'PENDING' || status === 'IN_PROGRESS') return 'pending';
+  if (status === 'FAILED' || status === 'MANUAL_REQUIRED') return 'blocked';
+  return 'cleared';
+}
 
 export type BackendOverlapFlags = {
   sinaph_overlap?: boolean;
@@ -38,43 +82,6 @@ export type PlotReadinessChecklist = {
   /** All required items satisfied for this plot. */
   done: boolean;
 };
-
-export type LandDocumentsUiStatus =
-  | 'missing'
-  | 'local_only'
-  | 'reviewing'
-  | 'blocked'
-  | 'verified';
-
-/** Farmer-facing land-papers state — do not equate upload with “verified”. */
-export function resolveLandDocumentsUiStatus(params: {
-  titlePhotoCount: number;
-  evidenceKinds: readonly string[];
-  tenureParseGate: TenureParseGateStatus;
-}): LandDocumentsUiStatus {
-  const hasLandDocuments =
-    params.titlePhotoCount > 0 || evidenceHasKind(params.evidenceKinds, 'tenure_evidence');
-  if (!hasLandDocuments) return 'missing';
-  if (params.tenureParseGate === 'blocked') return 'blocked';
-  if (params.tenureParseGate === 'pending') return 'reviewing';
-  if (params.tenureParseGate === 'not_synced') return 'local_only';
-  if (params.tenureParseGate === 'cleared') return 'verified';
-  return 'missing';
-}
-
-export function evaluateTenureParseGate(params: {
-  /** Land title photos and/or tenure evidence documents uploaded for this plot. */
-  hasLandDocuments: boolean;
-  isSyncedToServer: boolean;
-  tenureVerifications?: PlotTenureVerificationRecord[];
-}): TenureParseGateStatus {
-  if (!params.hasLandDocuments) return 'not_applicable';
-  if (!params.isSyncedToServer) return 'not_synced';
-  const status = summarizeTenureAiParseStatus(params.tenureVerifications ?? []);
-  if (!status || status === 'PENDING' || status === 'IN_PROGRESS') return 'pending';
-  if (status === 'FAILED' || status === 'MANUAL_REQUIRED') return 'blocked';
-  return 'cleared';
-}
 
 function evidenceHasKind(kinds: readonly string[], kind: string): boolean {
   return kinds.some((k) => k === kind);

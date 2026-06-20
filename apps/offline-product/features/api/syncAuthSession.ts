@@ -266,11 +266,15 @@ export async function testBackendLogin(options?: {
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let healthRes: Response;
     try {
-      healthRes = await fetch(healthUrl, { method: 'GET', signal: controller.signal });
+      healthRes = await fetch(healthUrl, {
+        method: 'GET',
+        signal: controller.signal,
+        cache: 'no-store',
+      });
     } finally {
       clearTimeout(timeout);
     }
-    if (!healthRes.ok) {
+    if (!healthRes.ok && healthRes.status !== 304) {
       return {
         ok: false,
         message: `Tracebud API returned ${healthRes.status} at ${healthUrl}. Check EXPO_PUBLIC_API_URL (currently ${apiBase}).`,

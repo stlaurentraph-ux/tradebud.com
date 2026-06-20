@@ -38,40 +38,12 @@ export class OnboardingEmailService {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  async ensureEmailSchema(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS tenant_signup_contacts (
-        tenant_id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        email TEXT NOT NULL,
-        full_name TEXT NULL,
-        signup_completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        welcome_email_sent_at TIMESTAMPTZ NULL,
-        resume_nudge_sent_at TIMESTAMPTZ NULL,
-        resume_nudge_count INTEGER NOT NULL DEFAULT 0 CHECK (resume_nudge_count >= 0),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS field_app_signup_contacts (
-        user_id TEXT PRIMARY KEY,
-        farmer_id UUID NULL,
-        email TEXT NOT NULL,
-        full_name TEXT NULL,
-        welcome_email_sent_at TIMESTAMPTZ NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-  }
-
   async recordSignupContact(input: {
     tenantId: string;
     userId: string;
     email: string;
     fullName: string | null;
   }): Promise<void> {
-    await this.ensureEmailSchema();
     const normalizedEmail = input.email.trim().toLowerCase();
     await this.pool.query(
       `
@@ -115,7 +87,6 @@ export class OnboardingEmailService {
     country: string;
     primaryRole: SignupPrimaryRole;
   }): Promise<boolean> {
-    await this.ensureEmailSchema();
     const alreadySent = await this.pool.query<{ welcome_email_sent_at: string | null }>(
       `
         SELECT welcome_email_sent_at
@@ -194,7 +165,6 @@ export class OnboardingEmailService {
     email: string;
     fullName: string | null;
   }): Promise<boolean> {
-    await this.ensureEmailSchema();
     const userId = input.userId.trim();
     const farmerId = input.farmerId.trim();
     const recipient = input.email.trim().toLowerCase();
@@ -273,7 +243,6 @@ export class OnboardingEmailService {
   }
 
   async remindIncompleteSignups(): Promise<RemindIncompleteResult> {
-    await this.ensureEmailSchema();
     const result: RemindIncompleteResult = {
       scanned: 0,
       sent: 0,

@@ -55,7 +55,7 @@ describeIfDb('API integration: package/report access policy', () => {
         declared_area_ha NUMERIC NULL,
         sinaph_overlap BOOLEAN NOT NULL DEFAULT false,
         indigenous_overlap BOOLEAN NOT NULL DEFAULT false,
-        status TEXT NOT NULL DEFAULT 'compliant',
+        status TEXT NOT NULL DEFAULT 'deforestation_clear',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);

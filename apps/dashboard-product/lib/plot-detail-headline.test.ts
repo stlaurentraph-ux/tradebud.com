@@ -5,7 +5,7 @@ describe('buildPlotDetailHeadline', () => {
   it('returns ready headline when assessment has no gaps', () => {
     const result = buildPlotDetailHeadline({
       assessment: { ready: true, gaps: [] },
-      screeningStatus: 'compliant',
+      screeningStatus: 'deforestation_clear',
       tenureBadge: 'formal_documented',
     });
     expect(result.headline).toBe('Ready for EUDR dossier');
@@ -21,7 +21,7 @@ describe('buildPlotDetailHeadline', () => {
           { id: 'evidence', severity: 'warning', label: 'Evidence', detail: 'y' },
         ],
       },
-      screeningStatus: 'compliant',
+      screeningStatus: 'deforestation_clear',
       tenureBadge: 'missing',
     });
     expect(result.headline).toBe('1 blocker before shipment use');

@@ -859,7 +859,7 @@ describe('PlotsService.runGfwCheck', () => {
     expect(result).toEqual(
       expect.objectContaining({
         ok: true,
-        plotStatus: 'compliant',
+        plotStatus: 'deforestation_clear',
         cutoffDate: '2020-12-31',
       }),
     );
@@ -867,7 +867,7 @@ describe('PlotsService.runGfwCheck', () => {
       String(call[0]).includes('UPDATE plot'),
     );
     expect(updateCall?.[1]?.[0]).toBe('plot_1');
-    expect(updateCall?.[1]?.[1]).toBe('compliant');
+    expect(updateCall?.[1]?.[1]).toBe('deforestation_clear');
     expect(typeof updateCall?.[1]?.[2]).toBe('string');
   });
 
@@ -914,7 +914,7 @@ describe('PlotsService.runGfwCheck', () => {
     expect(result).toEqual(
       expect.objectContaining({
         ok: true,
-        plotStatus: 'compliant',
+        plotStatus: 'deforestation_clear',
         contextAdjusted: true,
         contextSignal: 'canopy_stable',
       }),
@@ -985,7 +985,7 @@ describe('PlotsService.runGfwCheck', () => {
     expect(result).toEqual(
       expect.objectContaining({
         ok: true,
-        plotStatus: 'compliant',
+        plotStatus: 'deforestation_clear',
         commodityAdjusted: true,
         fdpSignal: 'legitimate',
       }),

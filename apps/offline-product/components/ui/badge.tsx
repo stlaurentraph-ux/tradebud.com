@@ -91,6 +91,7 @@ export function ComplianceBadge({
   size = 'md',
 }: {
   status:
+    | 'deforestation_clear'
     | 'compliant'
     | 'under_review'
     | 'degradation_risk'
@@ -105,6 +106,7 @@ export function ComplianceBadge({
 
   const getVariant = (): BadgeVariant => {
     switch (normalized) {
+      case 'deforestation_clear':
       case 'compliant':
         return 'success';
       case 'under_review':
@@ -120,8 +122,10 @@ export function ComplianceBadge({
 
   const getLabel = () => {
     switch (normalized) {
+      case 'deforestation_clear':
+        return 'Deforestation clear';
       case 'compliant':
-        return 'Compliant';
+        return 'Deforestation clear';
       case 'under_review':
         return 'Review';
       case 'degradation_risk':

@@ -121,7 +121,7 @@ export type BackendPackageDetail = {
 
 function isVoucherPlotCompliant(status?: string | null): boolean {
   const normalized = (status ?? '').trim().toLowerCase();
-  return normalized === 'verified' || normalized === 'compliant';
+  return normalized === 'verified' || normalized === 'deforestation_clear' || normalized === 'compliant';
 }
 
 export function mapBackendPackageDetailToDdsPackage(

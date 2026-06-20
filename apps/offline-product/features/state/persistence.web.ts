@@ -50,7 +50,14 @@ export type PendingSyncAction = {
   id: number;
   createdAt: number;
   hlcTimestamp: string;
-  actionType: 'harvest' | 'photos_sync' | 'evidence_sync';
+  actionType:
+    | 'harvest'
+    | 'photos_sync'
+    | 'evidence_sync'
+    | 'audit_sync'
+    | 'consent_approve'
+    | 'consent_deny'
+    | 'consent_revoke';
   payloadJson: string;
   attempts: number;
   lastError: string | null;

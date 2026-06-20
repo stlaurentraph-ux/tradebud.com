@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
 
@@ -20,6 +20,29 @@ function readFromEnvFiles(key: string): string | undefined {
     }
   }
   return undefined;
+}
+
+/** ADR-006 Phase 3: optional dedicated GTM Supabase project (founder OS + lead forms). */
+function getGtmProjectAdminClient(): SupabaseClient | null {
+  const supabaseUrl =
+    process.env.SUPABASE_GTM_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_GTM_URL ??
+    readFromEnvFiles("SUPABASE_GTM_URL") ??
+    readFromEnvFiles("NEXT_PUBLIC_SUPABASE_GTM_URL");
+  const serviceRoleKey =
+    process.env.SUPABASE_GTM_SERVICE_ROLE_KEY ??
+    readFromEnvFiles("SUPABASE_GTM_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 export function getSupabaseAdmin() {
@@ -44,4 +67,18 @@ export function getSupabaseAdmin() {
       autoRefreshToken: false,
     },
   });
+}
+
+function getFounderOrLeadClient(): SupabaseClient {
+  return getGtmProjectAdminClient() ?? getSupabaseAdmin();
+}
+
+/** Founder OS tables (prospects, outreach, content). Not tenant `crm_contacts`. */
+export function getSupabaseCrm() {
+  return getFounderOrLeadClient().schema("crm");
+}
+
+/** Marketing lead capture tables. */
+export function getSupabaseGtm() {
+  return getFounderOrLeadClient().schema("gtm");
 }

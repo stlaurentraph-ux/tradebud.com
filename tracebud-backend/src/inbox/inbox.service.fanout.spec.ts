@@ -14,8 +14,6 @@ describe('InboxService campaign fan-out', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
-
     const result = await service.fanOutFromCampaignSend({
       campaign: {
         id: 'camp_1',
@@ -42,8 +40,6 @@ describe('InboxService campaign fan-out', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
-
     const result = await service.fanOutFromCampaignSend({
       campaign: {
         id: 'camp_self',

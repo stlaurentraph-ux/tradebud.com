@@ -40,6 +40,17 @@ Use entity model in `MVP_PRD.md` and `PRODUCT_PRD.md`.
 
 Use journey and JTBD constraints from `JTBD_PRD.md` and `BUILD_READINESS_ARTIFACTS.md`.
 
+### Supabase ops browse (`plot_ops_summary`)
+
+- **Default Table Editor surface** for support/CRM plot triage — bookmark `plot_ops_summary`, not raw `plot`.
+- **`plot` table** stays lean: identity, geometry, GFW screening (`status`), overlap flags, capture metadata.
+- **`plot_ops_summary` view** joins aggregates from `evidence_documents`, `plot_tenure_verification`, `harvest_transaction`, and `audit_log` (legal + ground-truth photos).
+- **Naming guardrails** (documented in Postgres column comments):
+  - `deforestation_screening_status` / `deforestation_screening_label` — GFW satellite screening only; **not** land tenure, **not** full EUDR/shipment compliance.
+  - `land_tenure_status` / `land_tenure_label` — derived tenure path from legal sync + evidence counts.
+  - `eudr_dossier_ready_hint` — approximate sort key for ops; **FALSE does not enumerate gaps** — open CRM plot detail for filing authority.
+- Migration: `supabase/migrations/202606200005_plot_ops_summary_view.sql`, mirror `tracebud-backend/sql/tb_v16_051_plot_ops_summary_view.sql`.
+
 ### Importer IA baseline (validate, complete, declare, retain, report)
 
 - Importer dashboard navigation is now modeled as a compliance execution workspace, not a generic package list:

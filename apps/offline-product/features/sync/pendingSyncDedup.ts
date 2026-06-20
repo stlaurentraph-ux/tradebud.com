@@ -38,6 +38,20 @@ export function pendingSyncDedupKey(
     return plotId ? `photos_sync:${plotId}:${kind}` : null;
   }
 
+  if (actionType === 'audit_sync') {
+    const eventType = String(payload.eventType ?? '');
+    const inner = (payload.payload ?? {}) as Record<string, unknown>;
+    const farmerId = String(inner.farmerId ?? '').trim();
+    const plotId = String(inner.plotId ?? '').trim();
+    if (eventType === 'producer_attestations_updated' && farmerId) {
+      return `audit_sync:producer:${farmerId}`;
+    }
+    if (eventType === 'plot_compliance_declared' && plotId) {
+      return `audit_sync:plot:${plotId}`;
+    }
+    return eventType ? `audit_sync:${eventType}:${plotId || farmerId || 'unknown'}` : null;
+  }
+
   if (
     actionType === 'consent_approve' ||
     actionType === 'consent_deny' ||

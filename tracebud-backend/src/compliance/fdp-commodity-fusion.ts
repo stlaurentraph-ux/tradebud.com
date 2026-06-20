@@ -165,13 +165,13 @@ export function applyFdpCommodityToPlotStatus(params: {
   }
 
   if (params.fdpSignal === 'mismatch' || params.fdpSignal === 'emerging') {
-    if (base === 'compliant') return 'under_review';
+    if (base === 'deforestation_clear') return 'under_review';
     return base === 'pending_check' ? 'under_review' : base;
   }
 
   if (params.fdpSignal === 'legitimate' && base === 'under_review') {
     if (isAgroforestryProductionSystem(params.productionSystem)) {
-      return 'compliant';
+      return 'deforestation_clear';
     }
   }
 
@@ -184,7 +184,7 @@ export function fdpSupportsAutoReviewClear(params: {
   proposedStatus: PlotComplianceStatus;
 }): boolean {
   return (
-    params.proposedStatus === 'compliant' &&
+    params.proposedStatus === 'deforestation_clear' &&
     params.fdpSignal === 'legitimate' &&
     isAgroforestryProductionSystem(params.productionSystem)
   );
@@ -196,7 +196,7 @@ export function screeningSupportsAutoReviewClear(params: {
   productionSystem?: string | null;
   proposedStatus: PlotComplianceStatus;
 }): boolean {
-  if (params.proposedStatus !== 'compliant') return false;
+  if (params.proposedStatus !== 'deforestation_clear') return false;
   if (!isAgroforestryProductionSystem(params.productionSystem)) return false;
 
   const gfwOk = params.gfwContextSignal === 'canopy_stable';

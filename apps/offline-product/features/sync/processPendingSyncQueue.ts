@@ -1,12 +1,11 @@
 import { pingTracebudApi } from '@/features/network/pingTracebudApi';
-import {
-  postHarvestToBackend,
-  syncPlotLegalToBackend,
-  syncPlotPhotosToBackend,
-} from '@/features/api/postPlot';
+import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
+import { postAuditEventToBackend } from '@/features/api/audit';
+import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
+import { syncGroundTruthPhotosWithFiles } from '@/features/evidence/syncGroundTruthPhotosWithFiles';
 import { syncPlotEvidenceWithFiles } from '@/features/evidence/syncEvidenceWithFiles';
 import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
 import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
@@ -16,6 +15,7 @@ import {
   compactDuplicatePendingSyncActions,
   loadEvidenceForPlot,
   loadPendingSyncActions,
+  loadPhotosForPlot,
   loadPlotServerLinks,
   loadTitlePhotosForPlot,
   logAuditEvent,
@@ -170,7 +170,7 @@ export async function processPendingSyncQueue(params: {
   let droppedInvalid = 0;
   let firstError: string | undefined;
 
-  const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync'];
+  const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync', 'audit_sync'];
   const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
   const attemptScope = params.attemptScope ?? 'all';
   const ignoreBackoff = params.ignoreBackoff === true;
@@ -316,11 +316,15 @@ export async function processPendingSyncQueue(params: {
             clientEventId: `pending-sync-${a.id}`,
           });
         } else {
-          await syncPlotPhotosToBackend({
-            plotId: sid,
-            kind: 'ground_truth',
-            photos: Array.isArray(payload.photos) ? payload.photos : [],
-            note: typeof payload?.note === 'string' ? payload.note : undefined,
+          const groundPhotos = await loadPhotosForPlot(localId);
+          await syncGroundTruthPhotosWithFiles({
+            serverPlotId: sid,
+            farmerId: params.farmerId,
+            photos: groundPhotos,
+            note:
+              typeof payload?.note === 'string'
+                ? payload.note
+                : 'Ground truth photos sync from pending queue',
             hlcTimestamp: a.hlcTimestamp,
             clientEventId: `pending-sync-${a.id}`,
           });
@@ -387,6 +391,30 @@ export async function processPendingSyncQueue(params: {
           onUriResolved: async (item, remoteUri) => {
             await updatePlotEvidenceUri(item.id, remoteUri);
           },
+        });
+      } else if (a.actionType === 'audit_sync') {
+        const eventType = String(payload?.eventType ?? '').trim();
+        const auditPayload = payload?.payload;
+        if (
+          !eventType ||
+          !auditPayload ||
+          typeof auditPayload !== 'object' ||
+          Array.isArray(auditPayload)
+        ) {
+          await deletePendingSyncAction(a.id);
+          droppedInvalid += 1;
+          continue;
+        }
+        const result = await postAuditEventToBackend({
+          eventType,
+          payload: auditPayload as Record<string, unknown>,
+        });
+        if (!result.ok) {
+          throw new Error(result.message ?? result.reason ?? 'Declaration audit sync failed');
+        }
+        await markDeclarationAuditSynced({
+          eventType,
+          payload: auditPayload as Record<string, unknown>,
         });
       } else {
         await deletePendingSyncAction(a.id);

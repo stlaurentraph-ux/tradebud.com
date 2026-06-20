@@ -41,7 +41,6 @@ describe('InboxService respond fulfillment', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
     jest.spyOn(service as any, 'seedIfEmpty').mockResolvedValue(undefined);
 
     const result = await service.respond(

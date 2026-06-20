@@ -1,4 +1,14 @@
 import type { TranslateFn } from '@/features/i18n/translate';
+import type { PlotSyncBlockInfo } from '@/features/sync/plotSyncPending';
+
+export type SyncPendingSnapshot = {
+  total: number;
+  unsyncedPlotCount: number;
+  blockedPlotCount?: number;
+  queuePendingCount: number;
+  unsyncedPlotNames: string[];
+  blockedPlots?: PlotSyncBlockInfo[];
+};
 
 export type SyncNowUserOutcome = {
   sessionExpired?: boolean;
@@ -11,11 +21,74 @@ export type SyncNowUserOutcome = {
   queueFailed?: number;
   queueFetchFailed?: boolean;
   plotsFetchFailed?: boolean;
-  /** Measured after the run — queue + unsynced plots still on device. */
+  /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
+  unsyncedPlotCount?: number;
+  blockedPlotCount?: number;
+  unsyncedPlotNames?: string[];
+  blockedPlots?: PlotSyncBlockInfo[];
+  queuePendingCount?: number;
   /** One farmer-facing reason when sync did not finish (plot upload / queue). */
   failureReason?: string;
+  /** Prefilled mailto when overlap looks wrong on the map. */
+  supportMailto?: string;
 };
+
+function formatBlockedPlotMessage(block: PlotSyncBlockInfo, t: TranslateFn): string {
+  if (block.code === 'GEO-105' && block.overlapPlotName) {
+    return t('geo_quality_overlap_upload', {
+      plotName: block.plotName,
+      otherPlotName: block.overlapPlotName,
+    });
+  }
+  return block.message;
+}
+
+/** Farmer-facing line for anything still waiting after sync or on Settings refresh. */
+export function formatPendingSyncSummary(
+  pending: SyncPendingSnapshot,
+  t: TranslateFn,
+  failureReason?: string,
+): string {
+  const reason = failureReason?.trim();
+  if (reason) return reason;
+
+  if (pending.total <= 0) {
+    return t('sync_result_complete');
+  }
+
+  const blocked = pending.blockedPlots ?? [];
+  if (blocked.length === 1) {
+    const block = blocked[0];
+    const blockedMessage = formatBlockedPlotMessage(block, t);
+    if (block.code === 'GEO-105') {
+      return `${blockedMessage} ${t('geo_quality_overlap_upload_support')}`;
+    }
+    return blockedMessage;
+  }
+
+  const plotNames = pending.unsyncedPlotNames.filter(Boolean);
+  if (plotNames.length > 0) {
+    return t('sync_result_incomplete_plots', {
+      n: pending.unsyncedPlotCount || plotNames.length,
+      names: plotNames.join(', '),
+    });
+  }
+
+  if ((pending.blockedPlotCount ?? 0) > 0) {
+    return t('sync_result_incomplete_plot_count', { n: pending.blockedPlotCount ?? blocked.length });
+  }
+
+  if (pending.unsyncedPlotCount > 0) {
+    return t('sync_result_incomplete_plot_count', { n: pending.unsyncedPlotCount });
+  }
+
+  if (pending.queuePendingCount > 0) {
+    return t('sync_result_incomplete_queue', { n: pending.queuePendingCount });
+  }
+
+  return t('sync_result_incomplete', { n: pending.total });
+}
 
 /** One short line after Sync now — success or failure, no debug stats. */
 export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: TranslateFn): string {
@@ -36,10 +109,33 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     return t('sync_result_complete');
   }
 
-  const reason = outcome.failureReason?.trim();
-  if (reason) {
-    return reason;
-  }
+  return formatPendingSyncSummary(
+    {
+      total: remainingPending,
+      unsyncedPlotCount: outcome.unsyncedPlotCount ?? 0,
+      blockedPlotCount: outcome.blockedPlotCount ?? 0,
+      queuePendingCount: outcome.queuePendingCount ?? 0,
+      unsyncedPlotNames: outcome.unsyncedPlotNames ?? [],
+      blockedPlots: outcome.blockedPlots ?? [],
+    },
+    t,
+    outcome.failureReason,
+  );
+}
 
-  return t('sync_result_incomplete', { n: remainingPending });
+export function resolveSyncSupportMailto(outcome: SyncNowUserOutcome): string | undefined {
+  if (outcome.supportMailto?.trim()) return outcome.supportMailto.trim();
+  const blocked = outcome.blockedPlots ?? [];
+  if (blocked.length === 1 && blocked[0]?.code === 'GEO-105') {
+    return blocked[0].supportMailto;
+  }
+  return undefined;
+}
+
+/** When sync is blocked by one plot's boundary, open that plot from Settings. */
+export function resolveSyncOpenPlotId(outcome: SyncNowUserOutcome): string | undefined {
+  const blocked = outcome.blockedPlots ?? [];
+  if (blocked.length !== 1) return undefined;
+  const plotId = blocked[0]?.plotId?.trim();
+  return plotId || undefined;
 }

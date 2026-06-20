@@ -49,8 +49,8 @@ describe('buildDashboardSummaryMetrics', () => {
       inboxRequests: [],
       operationalIssues: [],
       tenantPlots: [
-        { id: 'plot-1', kind: 'point', status: 'compliant', area_ha: 2.5 },
-        { id: 'plot-2', kind: 'point', status: 'compliant', declared_area_ha: 3 },
+        { id: 'plot-1', kind: 'point', status: 'deforestation_clear', area_ha: 2.5 },
+        { id: 'plot-2', kind: 'point', status: 'deforestation_clear', declared_area_ha: 3 },
       ],
     });
 

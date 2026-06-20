@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -32,6 +32,7 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
+import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotTenureVerification,
@@ -115,6 +116,7 @@ export default function PlotDetailScreen() {
   const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
+  const receiptRedirectRef = useRef(false);
   const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
 
   const [active, setActive] = useState<Sub | null>((sub as Sub) ?? null);
@@ -302,10 +304,10 @@ export default function PlotDetailScreen() {
       evidence.some((e) => e.kind === 'tenure_evidence') || titlePhotos.length > 0;
     const needsPoll =
       hasUploaded &&
-      (tenureVerifications.length === 0 ||
-        tenureVerifications.some(
-          (v) => v.parse_status === 'PENDING' || v.parse_status === 'IN_PROGRESS',
-        ));
+      tenureVerifications.length > 0 &&
+      tenureVerifications.some(
+        (v) => v.parse_status === 'PENDING' || v.parse_status === 'IN_PROGRESS',
+      );
     if (!needsPoll) return;
     const timer = setInterval(() => {
       void refreshTenureVerification();
@@ -399,21 +401,20 @@ export default function PlotDetailScreen() {
   useEffect(() => {
     const receiptIdParam = typeof receiptId === 'string' ? receiptId.trim() : '';
     if (receiptIdParam) {
-      router.replace(deliveryReceiptHref(receiptIdParam, from === 'harvests' ? { from: 'harvests' } : undefined));
+      if (receiptRedirectRef.current) return;
+      receiptRedirectRef.current = true;
+      router.replace(
+        deliveryReceiptHref(receiptIdParam, from === 'harvests' ? { from: 'harvests' } : undefined),
+      );
       return;
     }
+    receiptRedirectRef.current = false;
 
-    if (typeof sub !== 'string') {
-      setActive(null);
-      return;
-    }
+    if (typeof sub !== 'string') return;
 
-    if (sub === 'harvests' || sub === 'voucher') {
-      setActive('deliveries');
-      return;
-    }
-
-    setActive(sub as Sub);
+    const nextActive: Sub =
+      sub === 'harvests' || sub === 'voucher' ? 'deliveries' : (sub as Sub);
+    setActive((prev) => (prev === nextActive ? prev : nextActive));
   }, [sub, plotId, receiptId, from]);
 
   useEffect(() => {
@@ -555,6 +556,8 @@ export default function PlotDetailScreen() {
             ? landBlockedHint
             : landDocumentsUiStatus === 'reviewing'
               ? t('plot_status_land_parse_pending')
+              : landDocumentsUiStatus === 'awaiting_upload'
+                ? t('plot_status_land_awaiting_upload')
               : landDocumentsUiStatus === 'local_only'
                 ? t('plot_nav_documents_sub_on_phone', { n: landDocCount })
                 : t('plot_status_land_hint'),
@@ -607,6 +610,11 @@ export default function PlotDetailScreen() {
     [plotStatusRows],
   );
   const checklistComplete = checklistOpenCount === 0;
+  const uploadGeometryBlock = useMemo(
+    () => (plot ? getPlotUploadGeometryBlock(plot, plots, t) : null),
+    [plot, plots, t],
+  );
+  const needsBoundaryFix = uploadGeometryBlock != null;
 
   /** Status card lists only incomplete items — what still needs doing. */
   const plotStatusRemainingRows = useMemo(
@@ -1179,8 +1187,15 @@ export default function PlotDetailScreen() {
             ) : null}
           </View>
           <View style={styles.plotStatusBadgeRow}>
-            <Badge variant={checklistComplete ? 'success' : 'warning'} size="sm">
-              {checklistComplete ? t('status_compliant') : t('finish_setup_chip')}
+            <Badge
+              variant={needsBoundaryFix ? 'error' : checklistComplete ? 'success' : 'warning'}
+              size="sm"
+            >
+              {needsBoundaryFix
+                ? t('plot_needs_boundary_fix')
+                : checklistComplete
+                  ? t('status_compliant')
+                  : t('finish_setup_chip')}
             </Badge>
           </View>
           {plot ? (

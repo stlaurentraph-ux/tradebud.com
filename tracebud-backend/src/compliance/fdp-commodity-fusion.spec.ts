@@ -66,7 +66,7 @@ describe('fdp-commodity-fusion', () => {
       applyFdpCommodityToPlotStatus({
         fdpSignal: 'mismatch',
         productionSystem: 'monoculture',
-        baseStatus: 'compliant',
+        baseStatus: 'deforestation_clear',
       }),
     ).toBe('under_review');
   });
@@ -78,7 +78,7 @@ describe('fdp-commodity-fusion', () => {
         productionSystem: 'shade_grown',
         baseStatus: 'under_review',
       }),
-    ).toBe('compliant');
+    ).toBe('deforestation_clear');
   });
 
   it('never weakens deforestation_detected outcomes', () => {
@@ -96,7 +96,7 @@ describe('fdp-commodity-fusion', () => {
       fdpSupportsAutoReviewClear({
         fdpSignal: 'legitimate',
         productionSystem: 'agroforestry',
-        proposedStatus: 'compliant',
+        proposedStatus: 'deforestation_clear',
       }),
     ).toBe(true);
     expect(
@@ -104,7 +104,7 @@ describe('fdp-commodity-fusion', () => {
         gfwContextSignal: 'unknown',
         fdpSignal: 'legitimate',
         productionSystem: 'agroforestry',
-        proposedStatus: 'compliant',
+        proposedStatus: 'deforestation_clear',
       }),
     ).toBe(true);
   });

@@ -522,7 +522,7 @@ describe('HarvestService.createDdsPackage', () => {
               dds_package_id: null,
               plot_id: 'plot_1',
               plot_name: 'Plot A',
-              plot_status: 'compliant',
+              plot_status: 'deforestation_clear',
             },
             {
               id: 'v_2',

@@ -26,8 +26,6 @@ describe('InboxService email CTA accept inbox ensure', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
-
     const result = await service.ensureInboxFromEmailCtaAccept({
       campaignId: 'campaign_1',
       recipientEmail: 'exporter@tracebud.test',
@@ -64,8 +62,6 @@ describe('InboxService email CTA accept inbox ensure', () => {
 
     const pool = { query };
     const service = new InboxService(pool as any);
-    jest.spyOn(service as any, 'ensureSchemaVerified').mockResolvedValue(undefined);
-
     const result = await service.ensureInboxFromEmailCtaAccept({
       campaignId: 'campaign_1',
       recipientEmail: 'unknown@tracebud.test',

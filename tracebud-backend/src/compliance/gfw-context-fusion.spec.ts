@@ -40,7 +40,7 @@ describe('gfw-context-fusion', () => {
         contextSignal: 'canopy_stable',
         productionSystem: 'shade_grown',
       }),
-    ).toBe('compliant');
+    ).toBe('deforestation_clear');
   });
 
   it('does not downgrade amber alerts for monoculture plots', () => {
@@ -64,14 +64,14 @@ describe('gfw-context-fusion', () => {
       contextSupportsAutoReviewClear({
         contextSignal: 'canopy_stable',
         productionSystem: 'agroforestry',
-        proposedStatus: 'compliant',
+        proposedStatus: 'deforestation_clear',
       }),
     ).toBe(true);
     expect(
       contextSupportsAutoReviewClear({
         contextSignal: 'canopy_stable',
         productionSystem: 'monoculture',
-        proposedStatus: 'compliant',
+        proposedStatus: 'deforestation_clear',
       }),
     ).toBe(false);
   });

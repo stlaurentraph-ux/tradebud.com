@@ -2,16 +2,63 @@ import { ForbiddenException } from '@nestjs/common';
 import { AuditController } from './audit.controller';
 
 describe('AuditController tenant-claim and role checks', () => {
-  it('rejects create when tenant claim is missing', async () => {
-    const pool = { query: jest.fn() };
+  it('rejects create for dashboard users without tenant claim or field-app actor', async () => {
+    const pool = {
+      query: jest.fn(async () => ({ rows: [] })),
+    };
     const controller = new AuditController(pool as any);
 
     await expect(
       controller.create(
         { eventType: 'test_event', payload: { ok: true } } as any,
-        { user: { id: 'user_1', email: 'farmer@example.com' } },
+        {
+          user: {
+            id: 'user_1',
+            email: 'ops@example.com',
+            app_metadata: { role: 'exporter' },
+          },
+        },
       ),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('allows create for linked field-app farmer without tenant claim', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
+      }),
+    };
+    const controller = new AuditController(pool as any);
+
+    await expect(
+      controller.create(
+        {
+          eventType: 'producer_attestations_updated',
+          payload: {
+            farmerId: 'dcdd88e5-13e6-45d6-8e09-e6f1968e7e17',
+            fpicConsent: true,
+            laborNoChildLabor: true,
+            laborNoForcedLabor: true,
+            selfDeclared: true,
+          },
+        } as any,
+        {
+          user: {
+            id: '66b5dafa-30be-4acb-a9c5-4e5c1ea22455',
+            email: 'hector@example.com',
+          },
+        },
+      ),
+    ).resolves.toEqual({ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' });
+
+    expect(pool.query).toHaveBeenLastCalledWith(
+      expect.stringContaining('INSERT INTO audit_log'),
+      expect.arrayContaining([
+        '66b5dafa-30be-4acb-a9c5-4e5c1ea22455',
+        'producer_attestations_updated',
+        expect.stringContaining('"tenantId":"tenant_hector_example_com"'),
+      ]),
+    );
   });
 
   it('rejects list when tenant claim is missing', async () => {

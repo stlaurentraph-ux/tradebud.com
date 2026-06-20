@@ -70,6 +70,7 @@ export default function HarvestsScreen() {
   const [multiPlotHeaderTitle, setMultiPlotHeaderTitle] = useState('');
   const multiPlotBackRef = useRef<(() => void) | null>(null);
   const deliveryDeepLinkHandled = useRef(false);
+  const clearingFocusRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const receiptsSectionY = useRef(0);
   const [pendingReceiptsScroll, setPendingReceiptsScroll] = useState(false);
@@ -167,26 +168,32 @@ export default function HarvestsScreen() {
     deliveryDeepLinkHandled.current = false;
   }, [params.plotId, params.record]);
 
+  // One-shot deep links (?focus=receipts|select); guard setParams to avoid update loops.
   useEffect(() => {
-    if (params.focus !== 'receipts') return;
-    setShowNewHarvestLog(false);
-    setShowRecordWeight(false);
-    setShowMultiPlotDelivery(false);
-    setMultiPlotRestrictedIds(null);
-    setDeliveryPlotSelection(new Set());
-    setPendingReceiptsScroll(true);
-    router.setParams({ focus: undefined });
-  }, [params.focus]);
+    if (clearingFocusRef.current) return;
+    const focus = params.focus;
+    if (focus !== 'receipts' && focus !== 'select') return;
 
-  useEffect(() => {
-    if (params.focus !== 'select') return;
-    setShowNewHarvestLog(true);
-    setShowRecordWeight(false);
-    setShowMultiPlotDelivery(false);
-    setMultiPlotRestrictedIds(null);
-    setDeliveryPlotSelection(new Set());
-    setMessage(null);
+    clearingFocusRef.current = true;
+    if (focus === 'receipts') {
+      setShowNewHarvestLog(false);
+      setShowRecordWeight(false);
+      setShowMultiPlotDelivery(false);
+      setMultiPlotRestrictedIds(null);
+      setDeliveryPlotSelection(new Set());
+      setPendingReceiptsScroll(true);
+    } else {
+      setShowNewHarvestLog(true);
+      setShowRecordWeight(false);
+      setShowMultiPlotDelivery(false);
+      setMultiPlotRestrictedIds(null);
+      setDeliveryPlotSelection(new Set());
+      setMessage(null);
+    }
     router.setParams({ focus: undefined });
+    queueMicrotask(() => {
+      clearingFocusRef.current = false;
+    });
   }, [params.focus]);
 
   const syncedHarvestPlots = useMemo(

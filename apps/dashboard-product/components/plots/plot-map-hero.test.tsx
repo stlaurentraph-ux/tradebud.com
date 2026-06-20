@@ -23,7 +23,7 @@ function mockFetchRouter() {
           name: 'Highland plot',
           kind: 'point',
           area_ha: 2.5,
-          status: 'compliant',
+          status: 'deforestation_clear',
           geometry: { type: 'Point', coordinates: [30.06, -1.94] },
           ground_truth_photos: {
             clearance_verified_count: 0,

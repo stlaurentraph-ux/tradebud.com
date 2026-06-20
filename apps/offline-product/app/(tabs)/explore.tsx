@@ -14,6 +14,7 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import { fetchVouchersForFarmer } from '@/features/api/postPlot';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
+import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
@@ -241,8 +242,14 @@ export default function PlotsScreen() {
         {plots.map((plot) => {
           const status = statusForPlot(plot);
           const isComplete = status === 'Compliant';
-          const statusLabel = isComplete ? t('status_compliant') : t('finish_setup_chip');
-          const badgeVariant = isComplete ? 'success' : 'warning';
+          const uploadBlock = getPlotUploadGeometryBlock(plot, plots, t);
+          const needsBoundaryFix = uploadBlock != null;
+          const statusLabel = needsBoundaryFix
+            ? t('plot_needs_boundary_fix')
+            : isComplete
+              ? t('status_compliant')
+              : t('finish_setup_chip');
+          const badgeVariant = needsBoundaryFix ? 'error' : isComplete ? 'success' : 'warning';
           const photosCount = photoCountByPlotId[plot.id] ?? 0;
           const harvestCount = harvestCountForPlot(plot);
           return (

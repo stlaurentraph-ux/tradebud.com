@@ -62,6 +62,9 @@ export function computePlotTenureStatus(params: {
       case 'pending':
         badge = 'documentation_reviewing';
         break;
+      case 'documents_local_only':
+        badge = 'documentation_local_only';
+        break;
       case 'not_synced':
         badge = 'documentation_local_only';
         break;

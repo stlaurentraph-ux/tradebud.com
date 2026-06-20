@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseCrm } from "@/lib/supabase-admin";
 
 function weekStartIso(baseDate: Date) {
   const result = new Date(baseDate);
@@ -10,7 +10,7 @@ function weekStartIso(baseDate: Date) {
 }
 
 export async function listContentCalendar(limit = 120) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("content_calendar")
     .select("*, content_ideas(id, title)")
@@ -28,7 +28,7 @@ export async function createContentCalendarItem(input: {
   status?: string;
   review_status?: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("content_calendar")
     .insert({
@@ -47,7 +47,7 @@ export async function createContentCalendarItem(input: {
 }
 
 export async function listContentTasks(limit = 200) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("content_tasks")
     .select("*, content_calendar(id, channel, pillar, scheduled_at)")
@@ -59,7 +59,7 @@ export async function listContentTasks(limit = 200) {
 }
 
 export async function updateContentTaskStatus(id: string, status: "open" | "in_progress" | "done" | "missed") {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("content_tasks")
     .update({ status })
@@ -76,7 +76,7 @@ export async function createContentTask(input: {
   notes?: string | null;
   status?: "open" | "in_progress" | "done" | "missed";
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const { data, error } = await supabase
     .from("content_tasks")
     .insert({
@@ -92,7 +92,7 @@ export async function createContentTask(input: {
 }
 
 export async function ensureWeeklyPostPlan(referenceDate?: string, targetPosts = 2) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseCrm();
   const base = referenceDate ? new Date(`${referenceDate}T00:00:00`) : new Date();
   const weekStart = weekStartIso(base);
   const weekEndDate = new Date(`${weekStart}T00:00:00`);

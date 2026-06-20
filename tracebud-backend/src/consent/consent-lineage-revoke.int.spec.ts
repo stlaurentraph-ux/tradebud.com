@@ -88,7 +88,7 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
         indigenous_overlap BOOLEAN NULL,
         production_system TEXT NULL,
         deforestation_screening JSONB NULL,
-        status TEXT NOT NULL DEFAULT 'compliant',
+        status TEXT NOT NULL DEFAULT 'deforestation_clear',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE harvest_transaction (

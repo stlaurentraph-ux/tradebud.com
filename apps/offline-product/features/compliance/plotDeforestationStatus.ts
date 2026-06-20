@@ -1,10 +1,13 @@
 export type BackendPlotComplianceStatus =
   | 'pending_check'
-  | 'compliant'
+  | 'deforestation_clear'
   | 'under_review'
   | 'degradation_risk'
   | 'deforestation_detected'
   | string;
+
+/** Legacy plot_status enum value before 2026-06-20 rename. */
+const LEGACY_PLOT_STATUS_COMPLIANT = 'compliant';
 
 export type DeforestationUiState = 'passed' | 'under_review' | 'at_risk' | 'alert' | 'pending';
 
@@ -31,8 +34,9 @@ export type DeforestationScreeningSummary = {
 
 export function normalizeBackendPlotStatus(status: unknown): BackendPlotComplianceStatus {
   const raw = String(status ?? 'pending_check');
+  if (raw === LEGACY_PLOT_STATUS_COMPLIANT) return 'deforestation_clear';
   if (
-    raw === 'compliant' ||
+    raw === 'deforestation_clear' ||
     raw === 'under_review' ||
     raw === 'degradation_risk' ||
     raw === 'deforestation_detected' ||
@@ -81,7 +85,7 @@ export function parseDeforestationScreening(raw: unknown): DeforestationScreenin
 
 export function deforestationUiStateFromBackendStatus(status: unknown): DeforestationUiState {
   const normalized = normalizeBackendPlotStatus(status);
-  if (normalized === 'compliant') return 'passed';
+  if (normalized === 'deforestation_clear') return 'passed';
   if (normalized === 'under_review') return 'under_review';
   if (normalized === 'degradation_risk') return 'at_risk';
   if (normalized === 'deforestation_detected') return 'alert';

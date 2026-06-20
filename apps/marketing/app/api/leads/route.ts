@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { sendLeadConfirmation, sendTeamFormNotification } from "@/lib/marketing-email";
 import { syncLeadToProspects } from "@/lib/prospect-sync";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseGtm } from "@/lib/supabase-admin";
 
 const leadSchema = z.object({
   formType: z.enum([
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseGtm();
     const payload = parsed.data.payload;
     let error: { message: string } | null = null;
 
@@ -210,7 +210,7 @@ export async function POST(request: Request) {
     const formLabel = FORM_LABELS[parsed.data.formType] ?? "website form";
 
     if (parsed.data.formType !== "pilot") {
-      await syncLeadToProspects(supabase, {
+      await syncLeadToProspects({
         formType: parsed.data.formType,
         name: parsed.data.name,
         email: parsed.data.email,

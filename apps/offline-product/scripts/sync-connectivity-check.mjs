@@ -44,8 +44,11 @@ const hint = (msg) => console.log(`    → ${msg}`);
 console.log('\nTracebud sync connectivity\n');
 
 try {
-  const health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(8000) });
-  if (health.ok) ok(`App API health: ${API_URL}/health`);
+  const health = await fetch(`${API_URL}/health`, {
+    signal: AbortSignal.timeout(8000),
+    cache: 'no-store',
+  });
+  if (health.ok || health.status === 304) ok(`App API health: ${API_URL}/health`);
   else fail(`App API health returned ${health.status} (${API_URL})`);
 } catch (e) {
   fail(`App API unreachable: ${API_URL} (${e instanceof Error ? e.message : e})`);
@@ -57,8 +60,11 @@ try {
 }
 
 try {
-  const prod = await fetch(`${PROD_API}/health`, { signal: AbortSignal.timeout(8000) });
-  if (prod.ok) ok(`Production API health: ${PROD_API}/health`);
+  const prod = await fetch(`${PROD_API}/health`, {
+    signal: AbortSignal.timeout(8000),
+    cache: 'no-store',
+  });
+  if (prod.ok || prod.status === 304) ok(`Production API health: ${PROD_API}/health`);
   else fail(`Production API health returned ${prod.status}`);
 } catch (e) {
   fail(`Production API unreachable (${e instanceof Error ? e.message : e})`);

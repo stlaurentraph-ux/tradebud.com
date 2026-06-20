@@ -16,6 +16,7 @@ import { Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { assertTenantClaimOrFieldActor } from '../auth/field-app-auth';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreateAuditEventDto } from './dto/create-audit-event.dto';
 
@@ -100,6 +101,37 @@ export class AuditController {
     this.getTenantClaim(req);
   }
 
+  /** JWT tenant claim, payload override, or field-app fallback for audit_log payload.tenantId. */
+  private resolveCreateTenantId(req: any, dto: CreateAuditEventDto): string {
+    const fromJwt = deriveTenantIdFromSupabaseUser(req?.user);
+    if (fromJwt) {
+      return fromJwt;
+    }
+
+    const fromPayload =
+      typeof dto.payload?.tenantId === 'string' ? dto.payload.tenantId.trim() : '';
+    if (fromPayload) {
+      return fromPayload;
+    }
+
+    const fromUserMeta = req?.user?.user_metadata?.tenant_id;
+    if (typeof fromUserMeta === 'string' && fromUserMeta.trim()) {
+      return fromUserMeta.trim();
+    }
+
+    const email = typeof req.user?.email === 'string' ? req.user.email.trim() : '';
+    if (email) {
+      return `tenant_${email.toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
+    }
+
+    const userId = typeof req.user?.id === 'string' ? req.user.id.trim() : '';
+    if (userId) {
+      return `field_${userId}`;
+    }
+
+    throw new ForbiddenException('Missing tenant claim in app_metadata');
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Append immutable audit event',
@@ -107,7 +139,8 @@ export class AuditController {
       'Field app and agents can record declaration snapshots, device metadata, and other events into the central audit_log.',
   })
   async create(@Body() dto: CreateAuditEventDto, @Req() req: any) {
-    const tenantId = this.getTenantClaim(req);
+    await assertTenantClaimOrFieldActor(this.pool, req.user);
+    const tenantId = this.resolveCreateTenantId(req, dto);
     const role = deriveRoleFromSupabaseUser(req.user);
     const eventType = dto.eventType?.trim() ?? '';
     const isDashboardEvent = eventType.startsWith('dashboard_');

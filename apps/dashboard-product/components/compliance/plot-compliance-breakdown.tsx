@@ -14,6 +14,7 @@ import {
   getPlotBreakdownDetailsSectionTitle,
   getPlotBreakdownRiskPrefix,
   getPlotBreakdownStatCompliantLabel,
+  getPlotBreakdownStatCompliantHint,
   getPlotBreakdownStatNonCompliantLabel,
   getPlotBreakdownStatTotalLabel,
   getPlotBreakdownSubtitle,
@@ -62,6 +63,9 @@ export function PlotComplianceBreakdown({ plots }: PlotComplianceBreakdownProps)
               {getPlotBreakdownStatCompliantLabel(t)}
             </p>
             <p className="text-2xl font-bold text-green-400 mt-1">{compliantPlots.length}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+              {getPlotBreakdownStatCompliantHint(t)}
+            </p>
           </div>
           <div className="border rounded-lg p-4 border-red-500/30 bg-red-500/10">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">

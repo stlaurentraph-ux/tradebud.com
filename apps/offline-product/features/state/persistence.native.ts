@@ -57,6 +57,7 @@ export type PendingSyncAction = {
     | 'harvest'
     | 'photos_sync'
     | 'evidence_sync'
+    | 'audit_sync'
     | 'consent_approve'
     | 'consent_deny'
     | 'consent_revoke';

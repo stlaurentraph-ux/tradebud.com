@@ -35,7 +35,7 @@ describe('plot map preview proxy route', () => {
         name: 'Test plot',
         kind: 'point',
         area_ha: 2.5,
-        status: 'compliant',
+        status: 'deforestation_clear',
         geometry: { type: 'Point', coordinates: [30.06, -1.94] },
       }),
     } as Response);

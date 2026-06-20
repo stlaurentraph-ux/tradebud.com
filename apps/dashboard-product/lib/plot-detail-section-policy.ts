@@ -6,7 +6,7 @@ export type PlotDetailSectionId = 'documents' | 'screening' | 'field_ops';
 
 export function isPlotScreeningClear(status: string | null | undefined): boolean {
   const normalized = normalizeComplianceStatus(status ?? '');
-  return normalized === 'compliant';
+  return normalized === 'deforestation_clear';
 }
 
 export function getDefaultPlotDetailSectionOpen(input: {

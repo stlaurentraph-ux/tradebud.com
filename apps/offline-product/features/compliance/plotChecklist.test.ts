@@ -6,12 +6,47 @@ import {
 } from './plotChecklist';
 
 describe('plotChecklist tenure parse gating', () => {
-  it('waits for AI when only title photos exist on a synced plot', () => {
+  it('treats synced plot with local title photo but no server check as awaiting upload', () => {
     const checklist = computePlotReadinessChecklist({
       groundTruthPhotoCount: 4,
       titlePhotoCount: 1,
       evidenceKinds: [],
       isSyncedToServer: true,
+      tenureVerifications: [],
+    });
+    expect(checklist.tenureParseGate).toBe('documents_local_only');
+    expect(checklist.landOk).toBe(true);
+    expect(
+      resolveLandDocumentsUiStatus({
+        titlePhotoCount: 1,
+        evidenceKinds: [],
+        tenureParseGate: checklist.tenureParseGate,
+      }),
+    ).toBe('awaiting_upload');
+  });
+
+  it('waits for AI when tenure verification rows exist on a synced plot', () => {
+    const checklist = computePlotReadinessChecklist({
+      groundTruthPhotoCount: 4,
+      titlePhotoCount: 1,
+      evidenceKinds: [],
+      isSyncedToServer: true,
+      tenureVerifications: [
+        {
+          id: 'v1',
+          plot_id: 'p1',
+          storage_path: 'farmer/p1/land_title/title.jpg',
+          mime_type: 'image/jpeg',
+          evidence_label: 'land_title_photo',
+          parse_status: 'PENDING',
+          parse_result: null,
+          parse_confidence: null,
+          parse_reviewed_by: null,
+          parse_reviewed_at: null,
+          created_at: '2026-06-11T00:00:00.000Z',
+          updated_at: '2026-06-11T00:00:00.000Z',
+        },
+      ],
     });
     expect(checklist.landOk).toBe(true);
     expect(checklist.tenureParseGate).toBe('pending');

@@ -28,6 +28,9 @@ import {
   screeningSupportsAutoReviewClear,
   type FdpCommodityScreening,
 } from '../compliance/fdp-commodity-fusion';
+
+/** CRM-seeded plots — never absorb a field-app upload reconcile. */
+const CRM_DEMO_PLOT_IDS = ['39d548f9-1ef4-449b-9ebd-fd244ae5d69e'];
 import { GfwService } from '../compliance/gfw.service';
 import {
   buildGroundTruthPhotoVerification,
@@ -125,6 +128,7 @@ export interface PlotAssignmentExportAuditEvent {
 @Injectable()
 export class PlotsService {
   private geometryCaptureColumnAvailable: boolean | null = null;
+  private clientPlotIdColumnAvailable: boolean | null = null;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
@@ -154,6 +158,158 @@ export class PlotsService {
     );
     this.geometryCaptureColumnAvailable = (res.rowCount ?? 0) > 0;
     return this.geometryCaptureColumnAvailable;
+  }
+
+  private async plotHasClientPlotIdColumn(): Promise<boolean> {
+    if (this.clientPlotIdColumnAvailable !== null) {
+      return this.clientPlotIdColumnAvailable;
+    }
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'plot'
+          AND column_name = 'client_plot_id'
+        LIMIT 1
+      `,
+    );
+    this.clientPlotIdColumnAvailable = (res.rowCount ?? 0) > 0;
+    return this.clientPlotIdColumnAvailable;
+  }
+
+  private async findExistingPlotByClientPlotId(
+    farmerId: string,
+    clientPlotId: string,
+  ): Promise<{ id: string; name: string; client_plot_id: string | null } | null> {
+    const hasClientPlotId = await this.plotHasClientPlotIdColumn();
+    if (hasClientPlotId) {
+      const byClient = await this.pool.query<{
+        id: string;
+        name: string;
+        client_plot_id: string | null;
+      }>(
+        `
+          SELECT id, name, client_plot_id
+          FROM plot
+          WHERE farmer_id = $1
+            AND client_plot_id = $2
+          LIMIT 1
+        `,
+        [farmerId, clientPlotId],
+      );
+      if ((byClient.rowCount ?? 0) > 0) {
+        return byClient.rows[0];
+      }
+    }
+
+    const legacy = await this.pool.query<{
+      id: string;
+      name: string;
+      client_plot_id: string | null;
+    }>(
+      `
+        SELECT id, name, client_plot_id
+        FROM plot
+        WHERE farmer_id = $1
+          AND name = $2
+        LIMIT 1
+      `,
+      [farmerId, clientPlotId],
+    );
+    if ((legacy.rowCount ?? 0) > 0) {
+      return legacy.rows[0];
+    }
+    return null;
+  }
+
+  /** Orphan server row (no client_plot_id) from a prior upload retry — reconcile instead of INSERT. */
+  private async findExistingOrphanPlotForReconcile(
+    farmerId: string,
+    displayName: string,
+    kind: (typeof plotKindEnum.enumValues)[number],
+  ): Promise<{ id: string; name: string; client_plot_id: string | null } | null> {
+    const trimmed = displayName.trim();
+    if (!trimmed) return null;
+
+    const res = await this.pool.query<{
+      id: string;
+      name: string;
+      client_plot_id: string | null;
+    }>(
+      `
+        SELECT id, name, client_plot_id
+        FROM plot
+        WHERE farmer_id = $1
+          AND lower(btrim(name)) = lower(btrim($2))
+          AND kind = $3::plot_kind
+          AND client_plot_id IS NULL
+          AND NOT (id = ANY($4::uuid[]))
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+      `,
+      [farmerId, trimmed, kind, CRM_DEMO_PLOT_IDS],
+    );
+    return (res.rowCount ?? 0) > 0 ? res.rows[0] : null;
+  }
+
+  private async returnReconciledExistingPlot(params: {
+    existingPlot: { id: string; name: string; client_plot_id: string | null };
+    clientPlotId: string;
+    displayName: string | null;
+  }) {
+    const nextName = await this.reconcileExistingPlotClientIdentity({
+      plotId: params.existingPlot.id,
+      clientPlotId: params.clientPlotId,
+      displayName: params.displayName,
+      existingName: params.existingPlot.name,
+      existingClientPlotId: params.existingPlot.client_plot_id,
+    });
+    return {
+      ...params.existingPlot,
+      name: nextName,
+      client_plot_id: params.clientPlotId.trim(),
+    };
+  }
+
+  private async reconcileExistingPlotClientIdentity(params: {
+    plotId: string;
+    clientPlotId: string;
+    displayName: string | null;
+    existingName: string;
+    existingClientPlotId: string | null;
+  }): Promise<string> {
+    const hasClientPlotId = await this.plotHasClientPlotIdColumn();
+    let nextName = params.existingName;
+
+    if (hasClientPlotId && !params.existingClientPlotId?.trim()) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET client_plot_id = $2,
+              updated_at = NOW()
+          WHERE id = $1
+            AND client_plot_id IS NULL
+        `,
+        [params.plotId, params.clientPlotId],
+      );
+    }
+
+    if (params.displayName && params.displayName !== params.existingName) {
+      const updateRes = await this.pool.query<{ name: string }>(
+        `
+          UPDATE plot
+          SET name = $2,
+              updated_at = NOW()
+          WHERE id = $1
+          RETURNING name
+        `,
+        [params.plotId, params.displayName],
+      );
+      nextName = updateRes.rows[0]?.name ?? params.displayName;
+    }
+
+    return nextName;
   }
 
   private static parseNumeric(value: unknown): number | null {
@@ -337,14 +493,14 @@ export class PlotsService {
       params.farmerId,
       params.userId,
     );
-    if (params.fullName) {
+    if (params.fullName?.trim()) {
       await this.pool.query(
         `
-          INSERT INTO user_account (id, role, name)
-          VALUES ($1::uuid, 'farmer', $2)
-          ON CONFLICT (id) DO UPDATE SET name = COALESCE(user_account.name, EXCLUDED.name)
+          UPDATE user_account
+          SET name = $2
+          WHERE id = $1::uuid
         `,
-        [params.userId, params.fullName],
+        [params.userId, params.fullName.trim()],
       );
     }
     return { created };
@@ -508,7 +664,8 @@ export class PlotsService {
       producerContactId,
       geometryCapture,
     } = createDto;
-    const plotName = createDto.name?.trim() || clientPlotId;
+    const displayName = createDto.name?.trim() || null;
+    const plotName = displayName || clientPlotId;
     const geometryCapturePayload = normalizePlotGeometryCaptureInput(geometryCapture);
 
     let producerDisplayName: string | null = null;
@@ -539,6 +696,15 @@ export class PlotsService {
         farmerId,
         email: actorContact?.email,
         fullName: actorContact?.fullName,
+      });
+    }
+
+    const existingPlot = await this.findExistingPlotByClientPlotId(farmerId, clientPlotId);
+    if (existingPlot) {
+      return this.returnReconciledExistingPlot({
+        existingPlot,
+        clientPlotId,
+        displayName,
       });
     }
 
@@ -586,16 +752,28 @@ export class PlotsService {
       throw new BadRequestException('Unsupported geometry type');
     }
 
+    if (clientPlotId?.trim() && displayName) {
+      const orphanPlot = await this.findExistingOrphanPlotForReconcile(
+        farmerId,
+        displayName,
+        kind,
+      );
+      if (orphanPlot) {
+        return this.returnReconciledExistingPlot({
+          existingPlot: orphanPlot,
+          clientPlotId,
+          displayName,
+        });
+      }
+    }
+
     // Insert using raw SQL to leverage PostGIS functions for area and centroid.
     // For polygons, auto-correct invalid geometry via ST_MakeValid and reject if
     // correction changes area by more than 5%.
     const hasGeometryCapture = await this.plotHasGeometryCaptureColumn();
-    const geometryCaptureInsertSql = hasGeometryCapture
-      ? `,
-          geometry_capture`
-      : '';
-    const geometryCaptureValueSql = hasGeometryCapture ? `,
-          $9::jsonb` : '';
+    const hasClientPlotId = await this.plotHasClientPlotIdColumn();
+    let optionalInsertCols = '';
+    let optionalSelectValues = '';
     const insertParams: unknown[] = [
       farmerId,
       plotName,
@@ -606,8 +784,22 @@ export class PlotsService {
       kind,
       productionSystem ?? null,
     ];
+    let paramIndex = 9;
     if (hasGeometryCapture) {
+      optionalInsertCols += `,
+          geometry_capture`;
+      optionalSelectValues += `,
+          $${paramIndex}::jsonb`;
       insertParams.push(geometryCapturePayload ? JSON.stringify(geometryCapturePayload) : null);
+      paramIndex += 1;
+    }
+    if (hasClientPlotId) {
+      optionalInsertCols += `,
+          client_plot_id`;
+      optionalSelectValues += `,
+          $${paramIndex}`;
+      insertParams.push(clientPlotId);
+      paramIndex += 1;
     }
 
     const text = `
@@ -653,7 +845,7 @@ export class PlotsService {
           declared_area_ha,
           precision_m_at_capture,
           hdop_at_capture,
-          production_system${geometryCaptureInsertSql}
+          production_system${optionalInsertCols}
         )
         SELECT
           $1,
@@ -666,7 +858,7 @@ export class PlotsService {
           $4,
           $5,
           $6,
-          $8${geometryCaptureValueSql}
+          $8${optionalSelectValues}
         FROM validated v
         WHERE (
           $7::text <> 'polygon'
@@ -764,6 +956,20 @@ export class PlotsService {
     );
 
     void this.scheduleDeforestationScreening(row.id, userId);
+
+    if (hasClientPlotId && clientPlotId?.trim() && !String(row.client_plot_id ?? '').trim()) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET client_plot_id = $2,
+              updated_at = NOW()
+          WHERE id = $1
+            AND client_plot_id IS NULL
+        `,
+        [row.id, clientPlotId.trim()],
+      );
+      row.client_plot_id = clientPlotId.trim();
+    }
 
     return row;
   }
@@ -1223,7 +1429,7 @@ export class PlotsService {
     });
     return {
       status,
-      reviewClearanceBlocked: status === 'under_review' && params.proposedStatus === 'compliant',
+      reviewClearanceBlocked: status === 'under_review' && params.proposedStatus === 'deforestation_clear',
       groundTruthPhotos,
     };
   }
@@ -1761,7 +1967,7 @@ export class PlotsService {
             AND event_type = 'plot_deforestation_decision_recorded'
           UNION
           SELECT id, timestamp, user_id, device_id, event_type, payload
-          FROM public.audit_log
+          FROM audit_log
           WHERE payload ->> 'plotId' = $1
             AND event_type = 'plot_deforestation_decision_recorded'
         ) decision_rows
@@ -1880,12 +2086,14 @@ export class PlotsService {
   }
 
   async listByFarmer(farmerId: string) {
+    const hasClientPlotId = await this.plotHasClientPlotIdColumn();
     const result = await this.pool.query(
       `
         SELECT
           id,
           farmer_id,
           name,
+          ${hasClientPlotId ? 'client_plot_id,' : ''}
           kind,
           area_ha,
           declared_area_ha,
@@ -2202,7 +2410,7 @@ export class PlotsService {
     await this.pool.query(
       `
         UPDATE plot
-        SET status = 'compliant',
+        SET status = 'deforestation_clear',
             updated_at = NOW()
         WHERE id = $1
       `,
@@ -2220,7 +2428,7 @@ export class PlotsService {
         JSON.stringify({
           plotId,
           previousStatus: currentStatus,
-          newStatus: 'compliant',
+          newStatus: 'deforestation_clear',
           reason: params.reason,
           note: params.note ?? null,
           clearedAt: new Date().toISOString(),
@@ -2228,7 +2436,7 @@ export class PlotsService {
       ],
     );
 
-    return { ok: true, plotId, plotStatus: 'compliant' as const, previousStatus: currentStatus };
+    return { ok: true, plotId, plotStatus: 'deforestation_clear' as const, previousStatus: currentStatus };
   }
 
   async upholdPlotReview(
@@ -2681,9 +2889,14 @@ export class PlotsService {
   }
 
   async updateMetadata(plotId: string, dto: UpdatePlotDto, userId: string | undefined) {
-    const existingRes = await this.pool.query(
+    const hasClientPlotId = await this.plotHasClientPlotIdColumn();
+    const existingRes = await this.pool.query<{
+      id: string;
+      name: string;
+      client_plot_id: string | null;
+    }>(
       `
-        SELECT id, name
+        SELECT id, name${hasClientPlotId ? ', client_plot_id' : ''}
         FROM plot
         WHERE id = $1
       `,
@@ -2694,9 +2907,22 @@ export class PlotsService {
       throw new BadRequestException('Plot not found');
     }
 
-    const existing = existingRes.rows[0] as { id: string; name: string };
+    const existing = existingRes.rows[0];
 
     let updatedName = existing.name;
+
+    if (hasClientPlotId && dto.clientPlotId?.trim() && !existing.client_plot_id?.trim()) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET client_plot_id = $2,
+              updated_at = NOW()
+          WHERE id = $1
+            AND client_plot_id IS NULL
+        `,
+        [plotId, dto.clientPlotId.trim()],
+      );
+    }
 
     if (dto.name && dto.name !== existing.name) {
       const updateRes = await this.pool.query(

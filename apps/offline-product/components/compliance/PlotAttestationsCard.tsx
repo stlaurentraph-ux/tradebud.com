@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { buildPlotAttestationFields } from '@/features/compliance/farmerDeclarations';
+import { queuePlotComplianceAuditSync } from '@/features/sync/queueDeclarationAuditSync';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { logAuditEvent } from '@/features/state/persistence';
@@ -48,6 +49,11 @@ export function PlotAttestationsCard({ plot }: PlotAttestationsCardProps) {
           source: 'plot_detail',
         },
       });
+      void queuePlotComplianceAuditSync({
+        plot: { ...plot, ...fields },
+        farmerId: farmer.id,
+        source: 'plot_detail',
+      });
       setEditing(false);
     } finally {
       setSaving(false);
@@ -87,20 +93,20 @@ export function PlotAttestationsCard({ plot }: PlotAttestationsCardProps) {
         </>
       ) : (
         <>
-          <Pressable style={styles.declarationItem} onPress={() => setLandTenure(!landTenure)}>
-            <Checkbox checked={landTenure} onChange={setLandTenure} />
-            <View style={styles.declarationContent}>
-              <ThemedText type="defaultSemiBold">{t('declarations_land_tenure_title')}</ThemedText>
-              <ThemedText type="caption">{t('declarations_land_tenure_body')}</ThemedText>
-            </View>
-          </Pressable>
-          <Pressable style={styles.declarationItem} onPress={() => setNoDeforestation(!noDeforestation)}>
-            <Checkbox checked={noDeforestation} onChange={setNoDeforestation} />
-            <View style={styles.declarationContent}>
-              <ThemedText type="defaultSemiBold">{t('declarations_no_deforestation_title')}</ThemedText>
-              <ThemedText type="caption">{t('declarations_no_deforestation_body')}</ThemedText>
-            </View>
-          </Pressable>
+          <Checkbox
+            checked={landTenure}
+            onChange={setLandTenure}
+            label={t('declarations_land_tenure_title')}
+            description={t('declarations_land_tenure_body')}
+            style={styles.declarationItem}
+          />
+          <Checkbox
+            checked={noDeforestation}
+            onChange={setNoDeforestation}
+            label={t('declarations_no_deforestation_title')}
+            description={t('declarations_no_deforestation_body')}
+            style={styles.declarationItem}
+          />
           <View style={styles.actions}>
             <Button variant="outline" size="md" onPress={() => setEditing(false)}>
               {t('cancel')}
@@ -137,12 +143,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   declarationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
     paddingVertical: 8,
   },
-  declarationContent: { flex: 1, gap: 4 },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

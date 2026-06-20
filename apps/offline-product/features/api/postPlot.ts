@@ -112,6 +112,7 @@ function messageFromBackendJson(body: unknown): string | undefined {
 export async function postPlotToBackend(params: {
   farmerId: string;
   clientPlotId: string;
+  name?: string;
   geometry: GeoJSONPoint | GeoJSONPolygon;
   declaredAreaHa: number | null;
   precisionMeters: number | null;
@@ -133,6 +134,7 @@ export async function postPlotToBackend(params: {
       body: JSON.stringify({
         farmerId: params.farmerId,
         clientPlotId: params.clientPlotId,
+        ...(params.name ? { name: params.name } : {}),
         geometry: params.geometry,
         declaredAreaHa: params.declaredAreaHa,
         precisionMeters: params.precisionMeters,
@@ -215,6 +217,7 @@ export async function syncPlotPhotosToBackend(params: {
 export async function updatePlotMetadataOnBackend(params: {
   plotId: string;
   name?: string;
+  clientPlotId?: string;
   reason: string;
   deviceId?: string;
 }) {
@@ -233,6 +236,7 @@ export async function updatePlotMetadataOnBackend(params: {
       },
       body: JSON.stringify({
         name: params.name,
+        clientPlotId: params.clientPlotId,
         reason: params.reason,
         deviceId: params.deviceId ?? null,
       }),
@@ -259,12 +263,13 @@ export async function fetchPlotsForFarmer(farmerId: string) {
   const timeout = setTimeout(() => controller.abort(), PLOT_FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(
-      `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}`,
+      `${API_BASE_URL}/v1/plots?farmerId=${encodeURIComponent(farmerId)}&scope=farmer`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
         signal: controller.signal,
+        cache: 'no-store',
       },
     );
 

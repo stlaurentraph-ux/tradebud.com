@@ -111,6 +111,9 @@ export function PlotMapHero({ plotId }: PlotMapHeroProps) {
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2">
+              <p className="mb-2 text-[11px] leading-snug text-muted-foreground">
+                {getPlotDetailMapCopy('screening_hint', t)}
+              </p>
               <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <div>
                   <dt className="text-muted-foreground">{getPlotDetailMapCopy('area_label', t)}</dt>

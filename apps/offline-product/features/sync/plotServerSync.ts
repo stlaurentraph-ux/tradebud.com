@@ -3,28 +3,103 @@ import { ensureFieldProducerBootstrapped } from '@/features/api/fieldAppBootstra
 import {
   buildGeometryFromLocalPlot,
   postPlotToBackend,
+  updatePlotMetadataOnBackend,
 } from '@/features/api/postPlot';
+import { enqueuePlotDependentSyncActions, enqueueProducerSupportingEvidenceSync } from '@/features/sync/enqueuePlotDependentSyncActions';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import { invalidateServerPlotFetchCache } from '@/features/sync/serverPlotFetchCache';
 import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import {
   assessPlotGeometryQuality,
   localPlotRefsForGeometry,
-  localPolygonQualityMessage,
+  resolvePlotUploadBlockMessage,
 } from '@/features/compliance/plotGeometryQuality';
 import { createTranslator, type TranslateFn } from '@/features/i18n/translate';
 import { defaultLocale, isSupportedLanguage } from '@/features/i18n/config';
 import { getSetting } from '@/features/state/persistence';
 import { loadPlotCadastralKey, loadPlotServerLinks, persistPlotServerLinks, savePlotServerLink } from '@/features/state/persistence';
-import { resolveServerPlotIdForLocal, reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
+import {
+  resolveConfirmedServerPlotIdForLocal,
+  reconcilePlotServerLinks,
+  serverPlotRowOwnedByLocalDevice,
+} from '@/features/plots/plotServerLink';
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
+import { backendRowMatchesLocalClientId, findServerPlotForSyncConfirmation } from '@/features/plots/backendPlotMatch';
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
+import { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
+
+export { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
+export { isLocalPlotConfirmedOnServer } from '@/features/sync/plotSyncPending';
 
 const PLOT_UPLOAD_GAP_MS = 400;
 const LANG_STORAGE_KEY = 'tracebudAppLanguage';
 
+async function queuePlotDependentSyncAfterUpload(localPlotId: string, farmerId: string): Promise<void> {
+  await enqueuePlotDependentSyncActions({ localPlotId, farmerId }).catch(() => undefined);
+  await enqueueProducerSupportingEvidenceSync({ farmerId }).catch(() => undefined);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function reconcileOrphanServerPlotLink(params: {
+  plot: Plot;
+  backendPlots: unknown[];
+  plotServerLinks: Record<string, string>;
+  localPlotIds: ReadonlySet<string>;
+}): Promise<{ linked: boolean; serverPlotId?: string; plotServerLinks: Record<string, string> }> {
+  const match = findServerPlotForSyncConfirmation(
+    {
+      id: params.plot.id,
+      name: params.plot.name,
+      areaHectares: params.plot.areaHectares,
+      kind: params.plot.kind,
+    },
+    params.backendPlots,
+    params.localPlotIds,
+  );
+  if (match?.id == null) {
+    return { linked: false, plotServerLinks: params.plotServerLinks };
+  }
+
+  const serverPlotId = String(match.id);
+  if (params.plotServerLinks[params.plot.id]?.trim() === serverPlotId) {
+    return { linked: false, plotServerLinks: params.plotServerLinks };
+  }
+  const clientPlotId = resolveClientPlotId(params.plot);
+  try {
+    await updatePlotMetadataOnBackend({
+      plotId: serverPlotId,
+      name: params.plot.name?.trim() || undefined,
+      clientPlotId,
+      reason: 'field_sync_reconcile_client_plot_id',
+    });
+  } catch {
+    // Link locally even when metadata PATCH fails — avoids duplicate POST storms.
+  }
+  await savePlotServerLink(params.plot.id, serverPlotId);
+  return {
+    linked: true,
+    serverPlotId,
+    plotServerLinks: { ...params.plotServerLinks, [params.plot.id]: serverPlotId },
+  };
+}
+
+async function ensureServerPlotClientIdentity(params: {
+  plot: Plot;
+  serverPlotId: string;
+}): Promise<void> {
+  try {
+    await updatePlotMetadataOnBackend({
+      plotId: params.serverPlotId,
+      name: params.plot.name?.trim() || undefined,
+      clientPlotId: resolveClientPlotId(params.plot),
+      reason: 'field_sync_after_upload',
+    });
+  } catch {
+    // Upload succeeded; identity backfill is best-effort for idempotency on later syncs.
+  }
 }
 
 function uploadGeometryQualityError(
@@ -41,11 +116,15 @@ function uploadGeometryQualityError(
     excludePlotId: plot.id,
     phase: 'upload',
   });
-  if (quality.allIssues.length === 0) return null;
-  return t('sync_plot_geometry_block', {
-    name: plot.name,
-    message: localPolygonQualityMessage(quality.allIssues, t),
+  if (quality.blockingIssues.length === 0) return null;
+
+  const block = resolvePlotUploadBlockMessage({
+    plotName: plot.name?.trim() || plot.id,
+    issues: quality.blockingIssues,
+    t,
   });
+  if (!block) return null;
+  return block.message;
 }
 
 async function resolveTranslator(t?: TranslateFn): Promise<TranslateFn> {
@@ -68,7 +147,7 @@ export function backendHasMatchingPlot(
   plotServerLinks?: Record<string, string> | null,
 ): boolean {
   return (
-    resolveServerPlotIdForLocal(
+    resolveConfirmedServerPlotIdForLocal(
       {
         id: localPlot.id,
         name: localPlot.name,
@@ -81,15 +160,20 @@ export function backendHasMatchingPlot(
   );
 }
 
-export function listUnsyncedLocalPlots(
-  localPlots: Plot[],
-  backendPlots: unknown[],
-  plotServerLinks?: Record<string, string> | null,
-): Plot[] {
-  return localPlots.filter((p) => !backendHasMatchingPlot(p, backendPlots, plotServerLinks));
-}
-
 const syncListeners = new Set<() => void>();
+
+export type UploadUnsyncedPlotsResult = {
+  uploaded: number;
+  /** Local plots that had no server row before this run (attempt set). */
+  unsyncedBefore: number;
+  failed: number;
+  /** First backend/network failure message for easier debugging in Settings. */
+  firstError?: string;
+  fetchFailed: boolean;
+  stoppedForAuth: boolean;
+  /** Display names pushed to server for already-synced plots. */
+  namesUpdated?: number;
+};
 
 /** Subscribe to be notified after server plot list may have changed (e.g. auto-upload). */
 export function subscribeServerPlotSyncChanged(listener: () => void): () => void {
@@ -140,16 +224,56 @@ export async function warmPlotServerLinksForSync(params: {
   }
 }
 
-export type UploadUnsyncedPlotsResult = {
-  uploaded: number;
-  /** Local plots that had no server row before this run (attempt set). */
-  unsyncedBefore: number;
-  failed: number;
-  /** First backend/network failure message for easier debugging in Settings. */
-  firstError?: string;
-  fetchFailed: boolean;
-  stoppedForAuth: boolean;
-};
+async function syncPlotDisplayNamesOnServer(params: {
+  localPlots: Plot[];
+  backendPlots: unknown[];
+  plotServerLinks: Record<string, string>;
+}): Promise<number> {
+  let updated = 0;
+  for (const plot of params.localPlots) {
+    const displayName = plot.name?.trim();
+    if (!displayName) continue;
+
+    const serverId =
+      params.plotServerLinks[plot.id]?.trim() ??
+      resolveConfirmedServerPlotIdForLocal(
+        {
+          id: plot.id,
+          name: plot.name,
+          areaHectares: plot.areaHectares,
+          kind: plot.kind,
+        },
+        params.backendPlots,
+        params.plotServerLinks,
+      );
+    if (!serverId) continue;
+
+    const row = (params.backendPlots as { id?: unknown; name?: string; client_plot_id?: string | null }[]).find(
+      (entry) => String(entry?.id ?? '') === serverId,
+    );
+    if (!row) continue;
+    if (!serverPlotRowOwnedByLocalDevice(row, plot.id)) continue;
+
+    const serverName = String(row.name ?? '').trim();
+    const needsNameUpdate = serverName !== displayName;
+    const needsClientIdBackfill =
+      !String(row.client_plot_id ?? '').trim() && serverName === plot.id;
+    if (!needsNameUpdate && !needsClientIdBackfill) continue;
+
+    try {
+      await updatePlotMetadataOnBackend({
+        plotId: serverId,
+        name: needsNameUpdate ? displayName : undefined,
+        clientPlotId: needsClientIdBackfill ? plot.id : undefined,
+        reason: 'sync_display_name',
+      });
+      updated += 1;
+    } catch {
+      // Best-effort; upload path remains primary for missing plots.
+    }
+  }
+  return updated;
+}
 
 /**
  * Fetches server plots, uploads any local plots that are missing on the server.
@@ -158,6 +282,8 @@ export type UploadUnsyncedPlotsResult = {
 export async function uploadUnsyncedPlotsForFarmer(params: {
   farmerId: string;
   localPlots: Plot[];
+  /** Device profile name — pushed to user_account on the server during sync. */
+  farmerDisplayName?: string;
   /** Merges server plots from every owned profile (auth uid vs linked farmer id). */
   ownedFarmerIds?: string[];
   /** When provided (e.g. Settings sync), uses active UI language for error strings. */
@@ -173,12 +299,15 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
   }
 
-  await ensureFieldProducerBootstrapped(farmerId);
+  await ensureFieldProducerBootstrapped(farmerId, {
+    fullName: params.farmerDisplayName,
+  });
 
   let backendPlots: unknown[];
   let plotServerLinks: Record<string, string>;
   try {
     plotServerLinks = await loadPlotServerLinks();
+    invalidateServerPlotFetchCache();
     backendPlots = await fetchBackendPlotsForSyncScope({
       farmerId,
       ownedFarmerIds: params.ownedFarmerIds,
@@ -187,23 +316,64 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     await persistPlotServerLinks(reconciled);
     plotServerLinks = reconciled;
   } catch (e) {
-    plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
-    backendPlots = [];
-    if (Object.keys(plotServerLinks).length === 0) {
-      return {
-        uploaded: 0,
-        unsyncedBefore: 0,
-        failed: 0,
-        fetchFailed: true,
-        stoppedForAuth: false,
-        firstError: e instanceof Error ? e.message : String(e),
-      };
+    return {
+      uploaded: 0,
+      unsyncedBefore: 0,
+      failed: 0,
+      fetchFailed: true,
+      stoppedForAuth: false,
+      firstError: e instanceof Error ? e.message : String(e),
+    };
+  }
+
+  const namesUpdated = await syncPlotDisplayNamesOnServer({
+    localPlots,
+    backendPlots: backendPlots ?? [],
+    plotServerLinks,
+  });
+  if (namesUpdated > 0) {
+    invalidateServerPlotFetchCache();
+    invalidateServerPlotListCache();
+    try {
+      backendPlots = await fetchBackendPlotsForSyncScope({
+        farmerId,
+        ownedFarmerIds: params.ownedFarmerIds,
+      });
+    } catch {
+      // UI refresh is best-effort.
     }
+    emitServerPlotSyncChanged();
+  }
+
+  const localPlotIds = new Set(localPlots.map((plot) => plot.id));
+  let orphanLinksSaved = false;
+  for (const plot of localPlots) {
+    const orphanLink = await reconcileOrphanServerPlotLink({
+      plot,
+      backendPlots: backendPlots ?? [],
+      plotServerLinks,
+      localPlotIds,
+    });
+    if (orphanLink.linked) {
+      orphanLinksSaved = true;
+      plotServerLinks = orphanLink.plotServerLinks;
+    }
+  }
+  if (orphanLinksSaved) {
+    await persistPlotServerLinks(plotServerLinks).catch(() => undefined);
+    invalidateServerPlotListCache();
   }
 
   const unsynced = listUnsyncedLocalPlots(localPlots, backendPlots ?? [], plotServerLinks);
   if (unsynced.length === 0) {
-    return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
+    return {
+      uploaded: 0,
+      unsyncedBefore: 0,
+      failed: 0,
+      fetchFailed: false,
+      stoppedForAuth: false,
+      namesUpdated,
+    };
   }
 
   let uploaded = 0;
@@ -227,6 +397,22 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       continue;
     }
 
+    const orphanLink = await reconcileOrphanServerPlotLink({
+      plot,
+      backendPlots: backendPlots ?? [],
+      plotServerLinks,
+      localPlotIds,
+    });
+    if (orphanLink.linked) {
+      uploaded += 1;
+      plotServerLinks = orphanLink.plotServerLinks;
+      await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+      if (uploaded < unsynced.length) {
+        await sleep(PLOT_UPLOAD_GAP_MS);
+      }
+      continue;
+    }
+
     let geometry;
     try {
       geometry = buildGeometryFromLocalPlot(plot, {
@@ -241,6 +427,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     const r = await postPlotToBackend({
       farmerId,
       clientPlotId: resolveClientPlotId(plot),
+      name: plot.name?.trim() || undefined,
       geometry,
       declaredAreaHa: plot.declaredAreaHectares ?? plot.areaHectares ?? null,
       precisionMeters: plot.precisionMetersAtSave ?? null,
@@ -251,13 +438,59 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     if (r.ok) {
       uploaded += 1;
       if (r.serverPlotId) {
+        await ensureServerPlotClientIdentity({ plot, serverPlotId: r.serverPlotId });
         await savePlotServerLink(plot.id, r.serverPlotId);
         plotServerLinks = { ...plotServerLinks, [plot.id]: r.serverPlotId };
+        await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+      } else {
+        try {
+          const refreshed = await fetchBackendPlotsForSyncScope({
+            farmerId,
+            ownedFarmerIds: params.ownedFarmerIds,
+          });
+          const existing = (refreshed as { id?: unknown; client_plot_id?: string | null; name?: string }[]).find(
+            (row) => backendRowMatchesLocalClientId(row, plot.id),
+          );
+          if (existing?.id != null) {
+            const serverPlotId = String(existing.id);
+            await ensureServerPlotClientIdentity({ plot, serverPlotId });
+            await savePlotServerLink(plot.id, serverPlotId);
+            plotServerLinks = { ...plotServerLinks, [plot.id]: serverPlotId };
+            await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+          }
+        } catch {
+          // Response omitted id; next sync pass will reconcile orphans.
+        }
       }
       if (uploaded < unsynced.length) {
         await sleep(PLOT_UPLOAD_GAP_MS);
       }
       continue;
+    }
+
+    if (r.statusCode === 409 || r.statusCode === 500) {
+      try {
+        const refreshed = await fetchBackendPlotsForSyncScope({
+          farmerId,
+          ownedFarmerIds: params.ownedFarmerIds,
+        });
+        const existing = (refreshed as { id?: unknown; client_plot_id?: string | null; name?: string }[]).find(
+          (row) => backendRowMatchesLocalClientId(row, plot.id),
+        );
+        if (existing?.id != null) {
+          const serverPlotId = String(existing.id);
+          uploaded += 1;
+          await savePlotServerLink(plot.id, serverPlotId);
+          plotServerLinks = { ...plotServerLinks, [plot.id]: serverPlotId };
+          await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+          if (uploaded < unsynced.length) {
+            await sleep(PLOT_UPLOAD_GAP_MS);
+          }
+          continue;
+        }
+      } catch {
+        // fall through to error handling
+      }
     }
     if (r.reason === 'no_access_token') {
       stoppedForAuth = true;
@@ -300,5 +533,6 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     firstError,
     fetchFailed: false,
     stoppedForAuth,
+    namesUpdated,
   };
 }

@@ -16,21 +16,21 @@ import {
 
 describe('plot-inventory', () => {
   it('does not treat compliant point plots as low risk or field-verified', () => {
-    expect(deriveInventoryDeforestationRisk('point', 'compliant')).toBe('unknown');
-    expect(isPlotFieldVerified('point', 'compliant')).toBe(false);
-    expect(derivePlotFieldCaptureLabel('point', 'compliant', 2.5)).toContain('under 4 ha');
+    expect(deriveInventoryDeforestationRisk('point', 'deforestation_clear')).toBe('unknown');
+    expect(isPlotFieldVerified('point', 'deforestation_clear')).toBe(false);
+    expect(derivePlotFieldCaptureLabel('point', 'deforestation_clear', 2.5)).toContain('under 4 ha');
   });
 
   it('treats compliant polygon plots as low risk and mapped', () => {
-    expect(deriveInventoryDeforestationRisk('polygon', 'compliant')).toBe('low');
-    expect(isPlotFieldVerified('polygon', 'compliant')).toBe(true);
-    expect(derivePlotFieldCaptureLabel('polygon', 'compliant')).toBe('Mapped boundary');
+    expect(deriveInventoryDeforestationRisk('polygon', 'deforestation_clear')).toBe('low');
+    expect(isPlotFieldVerified('polygon', 'deforestation_clear')).toBe(true);
+    expect(derivePlotFieldCaptureLabel('polygon', 'deforestation_clear')).toBe('Mapped boundary');
   });
 
   it('treats sub-4ha point plots as geometry-complete without a perimeter', () => {
     const rows = normalizePlotInventoryPayload([
-      { id: 'plot-1', kind: 'point', status: 'compliant', area_ha: 2.5 },
-      { id: 'plot-2', kind: 'point', status: 'compliant', declared_area_ha: 3.2 },
+      { id: 'plot-1', kind: 'point', status: 'deforestation_clear', area_ha: 2.5 },
+      { id: 'plot-2', kind: 'point', status: 'deforestation_clear', declared_area_ha: 3.2 },
     ]);
     expect(summarizePlotInventory(rows)).toEqual({
       total: 2,
@@ -44,7 +44,7 @@ describe('plot-inventory', () => {
 
   it('still flags point plots at 4 ha or above as needing a perimeter', () => {
     const row = normalizePlotInventoryPayload([
-      { id: 'plot-big', kind: 'point', status: 'compliant', area_ha: 4.5 },
+      { id: 'plot-big', kind: 'point', status: 'deforestation_clear', area_ha: 4.5 },
     ])[0]!;
     expect(isPlotInventoryActionNeeded(row)).toBe(true);
     expect(resolvePlotInventoryFieldCaptureShort(row)).toBe('pin');
@@ -53,7 +53,7 @@ describe('plot-inventory', () => {
   it('shows short risk and field labels with assessment detail for point plots', () => {
     const row = {
       kind: 'point' as const,
-      compliance_status: 'compliant' as const,
+      compliance_status: 'deforestation_clear' as const,
       deforestation_risk: 'unknown' as const,
       verified: false,
       area_hectares: 2.5,
@@ -76,7 +76,7 @@ describe('plot-inventory', () => {
         farmer_name: 'Maria Lopez',
         kind: 'point',
         area_ha: 2.5,
-        status: 'compliant',
+        status: 'deforestation_clear',
       },
     ]);
 
@@ -88,7 +88,7 @@ describe('plot-inventory', () => {
         farmer_name: 'Maria Lopez',
         area_hectares: 2.5,
         kind: 'point',
-        compliance_status: 'compliant',
+        compliance_status: 'deforestation_clear',
         deforestation_risk: 'unknown',
         verified: false,
         field_capture_label: 'Pin location — sufficient for plots under 4 ha',

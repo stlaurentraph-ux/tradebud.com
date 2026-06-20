@@ -112,7 +112,7 @@ export function applyGfwContextToPlotStatus(params: {
   if (params.contextSignal !== 'canopy_stable') {
     return baseStatus;
   }
-  return 'compliant';
+  return 'deforestation_clear';
 }
 
 export function contextSupportsAutoReviewClear(params: {
@@ -121,7 +121,7 @@ export function contextSupportsAutoReviewClear(params: {
   proposedStatus: PlotComplianceStatus;
 }): boolean {
   return (
-    params.proposedStatus === 'compliant' &&
+    params.proposedStatus === 'deforestation_clear' &&
     params.contextSignal === 'canopy_stable' &&
     isAgroforestryProductionSystem(params.productionSystem)
   );

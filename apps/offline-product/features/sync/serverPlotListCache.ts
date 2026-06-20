@@ -61,19 +61,27 @@ export async function fetchServerPlotListForUi(params: {
   localPlots?: Plot[];
   ownedFarmerIds?: string[];
   force?: boolean;
+  /** When Sync now already resolved scope — avoid re-prepare flipping farmer id. */
+  resolvedFarmerId?: string;
 }): Promise<unknown[]> {
   const profileFarmerId = params.profileFarmerId.trim();
   if (!profileFarmerId) return [];
 
-  let farmerId = profileFarmerId;
+  let farmerId = params.resolvedFarmerId?.trim() || profileFarmerId;
   let ownedFarmerIds = params.ownedFarmerIds ?? [];
-  if (params.localPlots != null) {
-    const syncContext = await prepareFieldSyncContext({
-      profileFarmerId,
-      localPlots: params.localPlots,
-    });
-    farmerId = syncContext.farmerId;
-    ownedFarmerIds = syncContext.ownedFarmerIds;
+  if (!params.resolvedFarmerId && params.localPlots != null) {
+    try {
+      const syncContext = await prepareFieldSyncContext({
+        profileFarmerId,
+        localPlots: params.localPlots,
+      });
+      farmerId = syncContext.farmerId;
+      ownedFarmerIds = syncContext.ownedFarmerIds;
+    } catch {
+      // Scope resolution must not block plot list reads (Settings status / Home counts).
+      farmerId = profileFarmerId;
+      ownedFarmerIds = params.ownedFarmerIds ?? [];
+    }
   }
 
   const key = scopeCacheKey(farmerId, ownedFarmerIds);

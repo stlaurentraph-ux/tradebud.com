@@ -23,5 +23,13 @@ export class UpdatePlotDto {
   @IsOptional()
   @IsString()
   deviceId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Stable offline client plot id to backfill when legacy rows used name as id.',
+  })
+  @IsOptional()
+  @IsString()
+  clientPlotId?: string;
 }
 

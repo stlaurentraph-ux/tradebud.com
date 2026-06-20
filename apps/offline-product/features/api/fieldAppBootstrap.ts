@@ -127,12 +127,20 @@ export async function bootstrapFieldAppProducer(
 }
 
 /** Best-effort server link before plot sync (creates farmer_profile when missing). */
-export async function ensureFieldProducerBootstrapped(farmerId: string): Promise<void> {
+export async function ensureFieldProducerBootstrapped(
+  farmerId: string,
+  options?: { fullName?: string; force?: boolean },
+): Promise<void> {
   const scopedFarmerId = farmerId.trim();
   if (!scopedFarmerId || !hasSyncAuthSession()) {
     return;
   }
-  await bootstrapFieldAppProducer({ farmerId: scopedFarmerId }).catch(() => undefined);
+  const fullName = options?.fullName?.trim() || undefined;
+  await bootstrapFieldAppProducer({
+    farmerId: scopedFarmerId,
+    fullName,
+    force: options?.force === true,
+  }).catch(() => undefined);
 }
 
 /** Lightweight lookup of linked farmer profiles (works without parsing bootstrap POST body). */

@@ -29,39 +29,7 @@ export interface AdminUser {
 export class AdminService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  private schemaReady = false;
-
-  private async ensureSchema() {
-    if (this.schemaReady) return;
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS admin_organizations (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL CHECK (type IN ('COOPERATIVE', 'EXPORTER', 'IMPORTER')),
-        country TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'PENDING', 'SUSPENDED')),
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS admin_users (
-        id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        organisation_id TEXT NOT NULL,
-        roles TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
-        status TEXT NOT NULL CHECK (status IN ('ACTIVE', 'PENDING', 'SUSPENDED')),
-        invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        last_login_at TIMESTAMPTZ NULL
-      )
-    `);
-    this.schemaReady = true;
-  }
-
   async listOrganizations(tenantId: string): Promise<AdminOrganization[]> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminOrganization>(
       `
         SELECT id, name, type, country, status, created_at
@@ -75,7 +43,6 @@ export class AdminService {
   }
 
   async listUsers(tenantId: string): Promise<AdminUser[]> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminUser>(
       `
         SELECT id, name, email, organisation_id, roles, status, invited_at, last_login_at
@@ -92,7 +59,6 @@ export class AdminService {
     tenantId: string,
     input: { name: string; type: AdminOrgType; country: string },
   ): Promise<AdminOrganization> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminOrganization>(
       `
         INSERT INTO admin_organizations (id, tenant_id, name, type, country, status, created_at)
@@ -108,7 +74,6 @@ export class AdminService {
     tenantId: string,
     input: { name: string; email: string; organisation_id: string; role: string },
   ): Promise<AdminUser> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminUser>(
       `
         INSERT INTO admin_users (
@@ -130,7 +95,6 @@ export class AdminService {
   }
 
   async updateUserRole(tenantId: string, userId: string, role: string): Promise<AdminUser> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminUser>(
       `
         UPDATE admin_users
@@ -147,7 +111,6 @@ export class AdminService {
   }
 
   async updateUserStatus(tenantId: string, userId: string, status: AdminStatus): Promise<AdminUser> {
-    await this.ensureSchema();
     const result = await this.pool.query<AdminUser>(
       `
         UPDATE admin_users

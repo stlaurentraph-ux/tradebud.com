@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,7 +72,7 @@ export default function HomeScreen() {
       ? t('home_action_plot_photos', { name: plot.name })
       : t('home_action_plot_setup', { name: plot.name });
     setActionRequired({ message, plotId: plot.id });
-  }, [plots, backendPlots, t]);
+  }, [plots, backendPlots, farmer, t]);
 
   const refreshBackendPlots = useCallback(
     async (force = false) => {
@@ -98,6 +98,11 @@ export default function HomeScreen() {
     [farmer?.id, isSignedIn, plots],
   );
 
+  const refreshBackendPlotsRef = useRef(refreshBackendPlots);
+  refreshBackendPlotsRef.current = refreshBackendPlots;
+  const refreshPlotReadinessRef = useRef(refreshPlotReadiness);
+  refreshPlotReadinessRef.current = refreshPlotReadiness;
+
   useFocusEffect(
     useCallback(() => {
       void refreshAuth();
@@ -107,9 +112,9 @@ export default function HomeScreen() {
       loadPlotServerLinks()
         .then((links) => setPlotServerLinks(links))
         .catch(() => undefined);
-      void refreshBackendPlots(false);
-      void refreshPlotReadiness();
-    }, [refreshAuth, refreshBackendPlots, refreshPlotReadiness]),
+      void refreshBackendPlotsRef.current(false);
+      void refreshPlotReadinessRef.current();
+    }, [refreshAuth]),
   );
 
   const unsyncedPlotCount = useMemo(() => {
@@ -136,11 +141,11 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void refreshBackendPlots(false);
-  }, [farmer?.id, isSignedIn, refreshBackendPlots]);
+  }, [farmer?.id, isSignedIn, plots.length, refreshBackendPlots]);
 
   useEffect(() => {
     void refreshPlotReadiness();
-  }, [refreshPlotReadiness]);
+  }, [plots.length, backendPlots.length, refreshPlotReadiness]);
 
   const counts = useMemo(() => {
     const plotsCount = plots.length;

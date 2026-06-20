@@ -35,6 +35,11 @@ import { GeometryConfidenceBanner } from '@/components/mapping/GeometryConfidenc
 import { CornerMapOverlay } from '@/components/mapping/CornerMapOverlay';
 import { CaptureInstructionsLink } from '@/components/mapping/CaptureInstructionsLink';
 import { PlotContiguityRuleCard } from '@/components/mapping/PlotContiguityRuleCard';
+import { SecondPlotOverlapTip } from '@/components/mapping/SecondPlotOverlapTip';
+import {
+  SECOND_PLOT_OVERLAP_TIP_DISMISSED_KEY,
+  shouldShowSecondPlotOverlapTip,
+} from '@/features/mapping/secondPlotOverlapTip';
 import { isGroundTruthPhotoSetComplete, countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { assessGeometryConfidence } from '@/features/compliance/plotGeometryConfidence';
 import {
@@ -165,8 +170,42 @@ export function WalkPerimeterScreen() {
   const previewWatchRef = useRef<Location.LocationSubscription | null>(null);
   const [previewPosition, setPreviewPosition] = useState<MapCoordinate | null>(null);
   const [previewPrecisionMeters, setPreviewPrecisionMeters] = useState<number | null>(null);
+  const [secondPlotOverlapTipDismissed, setSecondPlotOverlapTipDismissed] = useState(true);
 
   const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getSetting(SECOND_PLOT_OVERLAP_TIP_DISMISSED_KEY)
+      .then((value) => {
+        if (!cancelled) {
+          setSecondPlotOverlapTipDismissed(value === '1');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSecondPlotOverlapTipDismissed(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissSecondPlotOverlapTip = useCallback(() => {
+    setSecondPlotOverlapTipDismissed(true);
+    void setSetting(SECOND_PLOT_OVERLAP_TIP_DISMISSED_KEY, '1');
+  }, []);
+
+  const showSecondPlotOverlapTip = useMemo(
+    () =>
+      shouldShowSecondPlotOverlapTip({
+        existingPlotCount: plots.length,
+        isEditingPlot: Boolean(editPlotId),
+        dismissed: secondPlotOverlapTipDismissed,
+      }),
+    [editPlotId, plots.length, secondPlotOverlapTipDismissed],
+  );
+
+  const firstExistingPlotName = plots[0]?.name?.trim() || t('geo_quality_overlap_unknown');
 
   useEffect(() => {
     if (!farmer?.id) return;
@@ -703,6 +742,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   const tryBackgroundPlotUpload = useCallback(
     (
       plotId: string,
+      displayName: string,
       geometry: ReturnType<typeof buildGeometryFromLocalPlot>,
       declaredAreaHectares?: number | null,
       geometryCapture?: PlotGeometryCaptureMetadata | null,
@@ -712,6 +752,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         postPlotToBackend({
           farmerId: farmer.id,
           clientPlotId: resolveClientPlotId({ id: plotId }),
+          name: displayName.trim() || undefined,
           geometry,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
@@ -975,7 +1016,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       centroid: t('walk_corner_instructions_alert'),
       pin: t('walk_pin_instructions_alert'),
     };
-    Alert.alert(titleByMethod[captureMethod], bodyByMethod[captureMethod]);
+    const geometryFooter = t('walk_capture_geometry_rules_footer');
+    Alert.alert(titleByMethod[captureMethod], `${bodyByMethod[captureMethod]}${geometryFooter}`);
   }, [captureMethod, t]);
 
   const walkCaptureHint = useMemo(() => {
@@ -1314,7 +1356,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     if (options?.shortPath) {
       openShortPathCompletion();
       if (newPlotId) {
-        tryBackgroundPlotUpload(newPlotId, pointGeometryForUpload, declaredAreaHectares, geometryCapture);
+        tryBackgroundPlotUpload(newPlotId, name, pointGeometryForUpload, declaredAreaHectares, geometryCapture);
       }
       return;
     }
@@ -1325,6 +1367,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         postPlotToBackend({
           farmerId: farmer.id,
           clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
+          name: name.trim() || undefined,
           geometry: pointGeometryForUpload,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
@@ -1362,61 +1405,78 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    recordGeometrySaveTelemetry();
-    const geometryCapture = resolveGeometryCaptureForSave();
+    const completePolygonSave = () => {
+      recordGeometrySaveTelemetry();
+      const geometryCapture = resolveGeometryCaptureForSave();
 
-    // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
-    // This path always has a walked perimeter (≥3 vertices) — store as polygon even if area <4 ha.
-    const kind: 'polygon' = 'polygon';
-    const name = (plotName || defaultPlotName).trim() || defaultPlotName;
+      // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
+      // This path always has a walked perimeter (≥3 vertices) — store as polygon even if area <4 ha.
+      const kind: 'polygon' = 'polygon';
+      const name = (plotName || defaultPlotName).trim() || defaultPlotName;
 
-    let declaredAreaHectares: number | undefined;
-    let discrepancyPercent: number | undefined;
+      let declaredAreaHectares: number | undefined;
+      let discrepancyPercent: number | undefined;
 
-    if (declaredAreaHaInput.trim().length > 0) {
-      const parsed = Number(declaredAreaHaInput.trim().replace(',', '.'));
-      if (Number.isNaN(parsed) || parsed <= 0) {
-        Alert.alert(t('walk_invalid_declared_title'), t('walk_invalid_declared_body'));
-        return;
+      if (declaredAreaHaInput.trim().length > 0) {
+        const parsed = Number(declaredAreaHaInput.trim().replace(',', '.'));
+        if (Number.isNaN(parsed) || parsed <= 0) {
+          Alert.alert(t('walk_invalid_declared_title'), t('walk_invalid_declared_body'));
+          return;
+        }
+        declaredAreaHectares = parsed;
+
+        const diff = Math.abs(area.hectares - declaredAreaHectares);
+        const pct = (diff / declaredAreaHectares) * 100;
+
+        if (pct > 5) {
+          Alert.alert(
+            t('walk_area_discrepancy_title'),
+            t('walk_area_discrepancy_body', {
+              gps: area.hectares.toFixed(4),
+              declared: declaredAreaHectares.toFixed(4),
+              pct: pct.toFixed(1),
+            }),
+          );
+          return;
+        }
+
+        discrepancyPercent = pct;
       }
-      declaredAreaHectares = parsed;
 
-      const diff = Math.abs(area.hectares - declaredAreaHectares);
-      const pct = (diff / declaredAreaHectares) * 100;
+      const pointsPayload = points.map((p) => ({
+        latitude: p.latitude,
+        longitude: p.longitude,
+      }));
 
-      if (pct > 5) {
+      let geometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
+      try {
+        geometryForUpload = buildGeometryFromLocalPlot({ kind, points: pointsPayload });
+      } catch (e) {
         Alert.alert(
-          t('walk_area_discrepancy_title'),
-          t('walk_area_discrepancy_body', {
-            gps: area.hectares.toFixed(4),
-            declared: declaredAreaHectares.toFixed(4),
-            pct: pct.toFixed(1),
-          }),
+          t('plot_geometry_error_title'),
+          e instanceof Error ? e.message : t('plot_geometry_error_body'),
         );
         return;
       }
 
-      discrepancyPercent = pct;
-    }
+      if (editingPlot) {
+        updatePlot(editingPlot.id, {
+          name,
+          areaSquareMeters: area.squareMeters,
+          areaHectares: area.hectares,
+          kind,
+          points: pointsPayload,
+          declaredAreaHectares,
+          discrepancyPercent,
+          precisionMetersAtSave: precisionMeters ?? null,
+          geometryCapture,
+        });
+        Alert.alert(t('walk_plot_updated_title'), t('walk_plot_updated_polygon_body'));
+        router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
+        return;
+      }
 
-    const pointsPayload = points.map((p) => ({
-      latitude: p.latitude,
-      longitude: p.longitude,
-    }));
-
-    let geometryForUpload: ReturnType<typeof buildGeometryFromLocalPlot>;
-    try {
-      geometryForUpload = buildGeometryFromLocalPlot({ kind, points: pointsPayload });
-    } catch (e) {
-      Alert.alert(
-        t('plot_geometry_error_title'),
-        e instanceof Error ? e.message : t('plot_geometry_error_body'),
-      );
-      return;
-    }
-
-    if (editingPlot) {
-      updatePlot(editingPlot.id, {
+      const newPlotId = addPlot({
         name,
         areaSquareMeters: area.squareMeters,
         areaHectares: area.hectares,
@@ -1427,76 +1487,80 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         precisionMetersAtSave: precisionMeters ?? null,
         geometryCapture,
       });
-      Alert.alert(t('walk_plot_updated_title'), t('walk_plot_updated_polygon_body'));
-      router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
-      return;
-    }
-
-    const newPlotId = addPlot({
-      name,
-      areaSquareMeters: area.squareMeters,
-      areaHectares: area.hectares,
-      kind,
-      points: pointsPayload,
-      declaredAreaHectares,
-      discrepancyPercent,
-      precisionMetersAtSave: precisionMeters ?? null,
-      geometryCapture,
-    });
-    if (newPlotId) {
-      lastRegisteredPlotIdRef.current = newPlotId;
-    }
-
-    // Log raw GNSS capture metadata
-    try {
-      const acc = samples
-        .map((s) => s.accuracyMeters)
-        .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
-      const minAcc = acc.length > 0 ? Math.min(...acc) : null;
-      const maxAcc = acc.length > 0 ? Math.max(...acc) : null;
-      const avgAcc = acc.length > 0 ? acc.reduce((a, b) => a + b, 0) / acc.length : null;
-      const firstTs = samples[0]?.timestamp ?? null;
-      const lastTs = samples.length > 0 ? samples[samples.length - 1].timestamp : null;
-
-      logAuditEvent({
-        userId: farmer?.id,
-        eventType: 'plot_gnss_capture_meta',
-        payload: {
-          clientPlotId: newPlotId ?? name,
-          mode,
-          sampleCount: samples.length,
-          timeWindowMs:
-            firstTs != null && lastTs != null ? Math.max(0, lastTs - firstTs) : null,
-          accuracyMeters: { min: minAcc, max: maxAcc, avg: avgAcc },
-          lastFix: samples.length > 0 ? samples[samples.length - 1] : null,
-        },
-      }).catch(() => undefined);
-    } catch {
-      // ignore
-    }
-
-    if (options?.shortPath) {
-      openShortPathCompletion();
       if (newPlotId) {
-        tryBackgroundPlotUpload(newPlotId, geometryForUpload, declaredAreaHectares, geometryCapture);
+        lastRegisteredPlotIdRef.current = newPlotId;
       }
+
+      // Log raw GNSS capture metadata
+      try {
+        const acc = samples
+          .map((s) => s.accuracyMeters)
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+        const minAcc = acc.length > 0 ? Math.min(...acc) : null;
+        const maxAcc = acc.length > 0 ? Math.max(...acc) : null;
+        const avgAcc = acc.length > 0 ? acc.reduce((a, b) => a + b, 0) / acc.length : null;
+        const firstTs = samples[0]?.timestamp ?? null;
+        const lastTs = samples.length > 0 ? samples[samples.length - 1].timestamp : null;
+
+        logAuditEvent({
+          userId: farmer?.id,
+          eventType: 'plot_gnss_capture_meta',
+          payload: {
+            clientPlotId: newPlotId ?? name,
+            mode,
+            sampleCount: samples.length,
+            timeWindowMs:
+              firstTs != null && lastTs != null ? Math.max(0, lastTs - firstTs) : null,
+            accuracyMeters: { min: minAcc, max: maxAcc, avg: avgAcc },
+            lastFix: samples.length > 0 ? samples[samples.length - 1] : null,
+          },
+        }).catch(() => undefined);
+      } catch {
+        // ignore
+      }
+
+      if (options?.shortPath) {
+        openShortPathCompletion();
+        if (newPlotId) {
+          tryBackgroundPlotUpload(newPlotId, name, geometryForUpload, declaredAreaHectares, geometryCapture);
+        }
+        return;
+      }
+
+      if (farmer && points.length > 0 && !editingPlot && newPlotId) {
+        const plotIdForUpload = newPlotId;
+        const tryServerUpload = () => {
+          postPlotToBackend({
+            farmerId: farmer.id,
+            clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
+            name: name.trim() || undefined,
+            geometry: geometryForUpload,
+            declaredAreaHa: declaredAreaHectares ?? null,
+            precisionMeters: precisionMeters ?? null,
+            geometryCapture,
+          }).then((r) => handlePlotUploadResult(r, tryServerUpload));
+        };
+        finishNewPlotSave(name, newPlotId, tryServerUpload);
+      }
+    };
+
+    if (polygonGeometryQuality.warnings.length > 0) {
+      const nameForAlert = (plotName || defaultPlotName).trim() || defaultPlotName;
+      Alert.alert(
+        t('geo_quality_save_upload_warning_title'),
+        t('geo_quality_save_upload_warning_body', {
+          plotName: nameForAlert,
+          detail: localPolygonQualityMessage(polygonGeometryQuality.warnings, t),
+        }),
+        [
+          { text: t('geo_quality_fix_boundary'), style: 'cancel' },
+          { text: t('geo_quality_save_on_phone'), onPress: completePolygonSave },
+        ],
+      );
       return;
     }
 
-    if (farmer && points.length > 0 && !editingPlot && newPlotId) {
-      const plotIdForUpload = newPlotId;
-      const tryServerUpload = () => {
-        postPlotToBackend({
-          farmerId: farmer.id,
-          clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
-          geometry: geometryForUpload,
-          declaredAreaHa: declaredAreaHectares ?? null,
-          precisionMeters: precisionMeters ?? null,
-          geometryCapture,
-        }).then((r) => handlePlotUploadResult(r, tryServerUpload));
-      };
-      finishNewPlotSave(name, newPlotId, tryServerUpload);
-    }
+    completePolygonSave();
   };
 
   const handleWalkStopAndSave = () => {
@@ -2027,6 +2091,15 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                 </Button>
               </View>
             </Card>
+
+            {showSecondPlotOverlapTip ? (
+              <SecondPlotOverlapTip
+                t={t}
+                firstPlotName={firstExistingPlotName}
+                nextPlotNumber={plots.length + 1}
+                onDismiss={dismissSecondPlotOverlapTip}
+              />
+            ) : null}
 
             <PlotContiguityRuleCard t={t} />
           </>

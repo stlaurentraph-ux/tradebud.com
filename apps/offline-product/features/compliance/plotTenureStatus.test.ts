@@ -45,4 +45,15 @@ describe('computePlotTenureStatus', () => {
     });
     expect(status.badge).toBe('documentation_local_only');
   });
+
+  it('shows on-phone badge when plot is synced but land papers are not uploaded', () => {
+    const status = computePlotTenureStatus({
+      informalTenure: false,
+      cadastralKey: null,
+      titlePhotoCount: 1,
+      tenureEvidenceCount: 0,
+      tenureParseGate: 'documents_local_only',
+    });
+    expect(status.badge).toBe('documentation_local_only');
+  });
 });

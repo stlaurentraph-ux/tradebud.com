@@ -2,11 +2,14 @@ export type PlotInventoryRisk = 'low' | 'medium' | 'high' | 'unknown';
 export type PlotKind = 'point' | 'polygon' | 'unknown';
 export type PlotComplianceStatus =
   | 'pending_check'
-  | 'compliant'
+  | 'deforestation_clear'
   | 'under_review'
   | 'degradation_risk'
   | 'deforestation_detected'
   | 'unknown';
+
+/** Legacy plot_status enum value before 2026-06-20 rename. */
+const LEGACY_PLOT_STATUS_COMPLIANT = 'compliant';
 
 /** EUDR / Tracebud: polygon required at or above this declared area (see plot-geometry-policy). */
 export const POLYGON_REQUIRED_MIN_AREA_HA = 4;
@@ -32,9 +35,10 @@ export function normalizePlotKind(value: unknown): PlotKind {
 }
 
 export function normalizeComplianceStatus(value: unknown): PlotComplianceStatus {
+  if (value === LEGACY_PLOT_STATUS_COMPLIANT) return 'deforestation_clear';
   if (
     value === 'pending_check' ||
-    value === 'compliant' ||
+    value === 'deforestation_clear' ||
     value === 'under_review' ||
     value === 'degradation_risk' ||
     value === 'deforestation_detected'
@@ -52,7 +56,7 @@ export function deriveInventoryDeforestationRisk(
   if (status === 'deforestation_detected') return 'high';
   if (status === 'degradation_risk' || status === 'under_review') return 'medium';
   if (kind === 'point') return 'unknown';
-  if (status === 'compliant') return 'low';
+  if (status === 'deforestation_clear') return 'low';
   return 'unknown';
 }
 
@@ -62,7 +66,7 @@ export function derivePlotFieldCaptureLabel(
   areaHectares = 0,
 ): string {
   if (kind === 'polygon') {
-    return status === 'compliant' ? 'Mapped boundary' : 'Boundary pending review';
+    return status === 'deforestation_clear' ? 'Mapped boundary' : 'Boundary pending review';
   }
   if (kind === 'point') {
     if (status === 'pending_check') return 'Pin location — screening pending';
@@ -75,7 +79,7 @@ export function derivePlotFieldCaptureLabel(
 }
 
 export function isPlotFieldVerified(kind: PlotKind, status: PlotComplianceStatus): boolean {
-  return kind === 'polygon' && status === 'compliant';
+  return kind === 'polygon' && status === 'deforestation_clear';
 }
 
 /** Geometry capture meets EUDR rules (polygon, or point when plot is under 4 ha). */
@@ -131,7 +135,7 @@ export function resolvePlotInventoryDisplayRisk(
   if (row.compliance_status === 'degradation_risk' || row.compliance_status === 'under_review') {
     return 'medium';
   }
-  if (row.kind === 'point' && row.compliance_status === 'compliant') return 'low';
+  if (row.kind === 'point' && row.compliance_status === 'deforestation_clear') return 'low';
   if (row.deforestation_risk === 'low') return 'low';
   if (row.deforestation_risk === 'medium') return 'medium';
   if (row.deforestation_risk === 'high') return 'high';
@@ -166,14 +170,14 @@ export function getPlotInventoryRiskDetail(
   if (row.compliance_status === 'under_review') {
     return 'Screening result under review.';
   }
-  if (row.kind === 'point' && row.compliance_status === 'compliant') {
+  if (row.kind === 'point' && row.compliance_status === 'deforestation_clear') {
     if (row.area_hectares > 0 && row.area_hectares < POLYGON_REQUIRED_MIN_AREA_HA) {
-      return 'Low risk from satellite screening around the pin. Point capture is allowed for plots under 4 ha.';
+      return 'Deforestation screening clear at the pin. Point capture is allowed for plots under 4 ha. Tenure is tracked separately.';
     }
-    return 'Low risk from satellite check at the pin location. Plots of 4 ha or more need a walked perimeter.';
+    return 'Deforestation screening clear at the pin. Plots of 4 ha or more need a walked perimeter. Tenure is tracked separately.';
   }
-  if (row.kind === 'polygon' && row.compliance_status === 'compliant') {
-    return 'Low risk from satellite screening on mapped boundary.';
+  if (row.kind === 'polygon' && row.compliance_status === 'deforestation_clear') {
+    return 'Deforestation screening clear on mapped boundary. Tenure and evidence are separate checks.';
   }
   if (row.kind === 'polygon') {
     return 'Mapped boundary on file; screening outcome still pending or under review.';
@@ -290,7 +294,7 @@ export function getPlotInventoryStatusChip(
     }
     return { label: 'Coords only', title, tone: 'warning' };
   }
-  if (row.kind === 'polygon' && row.compliance_status === 'compliant') {
+  if (row.kind === 'polygon' && row.compliance_status === 'deforestation_clear') {
     return { label: 'Mapped · clear', title, tone: 'success' };
   }
   if (row.kind === 'polygon') {
