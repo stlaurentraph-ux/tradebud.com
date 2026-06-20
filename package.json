@@ -5,6 +5,7 @@
   "packageManager": "npm@11.9.0",
   "workspaces": [
     "apps/dashboard-product",
+    "apps/founder-os",
     "apps/marketing",
     "apps/field-auth",
     "tracebud-backend",
@@ -25,13 +26,13 @@
     "lint:field-auth": "npm run lint -w field-auth",
     "lint:workspaces": "turbo run lint --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=./apps/offline-product",
     "test:workspaces": "turbo run test --filter=./apps/offline-product --filter=field-auth",
-    "build:workspaces": "turbo run build --filter=tracebud-backend --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
-    "typecheck:workspaces": "turbo run typecheck --filter=./apps/offline-product --filter=dashboard-product --filter=tracebud-marketing --filter=field-auth",
+    "build:workspaces": "turbo run build --filter=tracebud-backend --filter=dashboard-product --filter=founder-os --filter=tracebud-marketing --filter=field-auth",
+    "typecheck:workspaces": "turbo run typecheck --filter=./apps/offline-product --filter=dashboard-product --filter=founder-os --filter=tracebud-marketing --filter=field-auth",
     "typecheck:dashboard": "npm run typecheck -w dashboard-product",
     "typecheck:marketing": "npm run typecheck -w tracebud-marketing",
     "build:dashboard": "npm run build -w dashboard-product",
     "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run build:dashboard",
-    "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run build:marketing",
+    "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run routes:publication:assert -w tracebud-marketing && npm run build:marketing",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",
@@ -68,7 +69,10 @@
     "openapi:governance:snapshot:registry:check": "node scripts/openapi-governance/snapshot-registry-check.mjs",
     "openapi:governance:snapshot:registry:report:assert": "node scripts/openapi-governance/snapshot-registry-report-assert.mjs",
     "prepare": "husky",
-    "lint:staged": "lint-staged"
+    "lint:staged": "lint-staged",
+    "dev:founder-os": "npm run dev -w founder-os",
+    "lint:founder-os": "npm run lint -w founder-os",
+    "check:founder-os": "npm run lint:founder-os && npm run typecheck -w founder-os && npm run build -w founder-os"
   },
   "dependencies": {
     "yaml": "^2.8.3"
