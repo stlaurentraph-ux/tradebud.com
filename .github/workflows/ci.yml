@@ -717,6 +717,9 @@ jobs:
       - name: Lint
         run: npm run lint -w dashboard-product
 
+      - name: Typecheck
+        run: npm run typecheck -w dashboard-product
+
       - name: Tests
         run: npm test -w dashboard-product
 
@@ -740,6 +743,9 @@ jobs:
       - name: Lint
         run: npm run lint -w tracebud-marketing
 
+      - name: Typecheck
+        run: npm run typecheck -w tracebud-marketing
+
       - name: Build
         run: npm run build -w tracebud-marketing
 
@@ -758,10 +764,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
 
-      - name: Install dependencies
+      - name: Install root dependencies
         working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        working-directory: apps/offline-product
         run: npm ci
 
       - name: Lint

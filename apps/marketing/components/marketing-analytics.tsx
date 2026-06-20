@@ -1,22 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import { hasAnalyticsConsent } from '@/lib/marketing-analytics';
 
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
+function subscribeToConsentChanges(onStoreChange: () => void) {
+  window.addEventListener('cookie-consent-changed', onStoreChange);
+  return () => window.removeEventListener('cookie-consent-changed', onStoreChange);
+}
+
 export function MarketingAnalytics() {
-  const [consented, setConsented] = useState(false);
-
-  useEffect(() => {
-    setConsented(hasAnalyticsConsent());
-
-    const sync = () => setConsented(hasAnalyticsConsent());
-    window.addEventListener('cookie-consent-changed', sync);
-    return () => window.removeEventListener('cookie-consent-changed', sync);
-  }, []);
+  const consented = useSyncExternalStore(
+    subscribeToConsentChanges,
+    () => hasAnalyticsConsent(),
+    () => false,
+  );
 
   if (!consented) return null;
 

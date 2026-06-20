@@ -58,15 +58,25 @@ function checkReactNativeAlignment() {
     return;
   }
   ok(`Field app react-native ${appRn}`);
-  if (!rootRn) return;
-  if (rootRn !== appRn) {
-    warn(`Monorepo root react-native ${rootRn} ≠ field app ${appRn}`);
-    const metroConfig = fs.readFileSync(path.join(root, 'metro.config.js'), 'utf8');
-    if (!metroConfig.includes("extraNodeModules") || !metroConfig.includes("'react-native'")) {
-      fail('metro.config.js must pin react-native to apps/offline-product/node_modules when root differs');
-    } else {
-      ok('metro.config.js pins field-app react-native (monorepo isolation)');
-    }
+
+  const metroConfig = fs.readFileSync(path.join(root, 'metro.config.js'), 'utf8');
+  if (!metroConfig.includes('nodeModulesPaths = [appNodeModules]')) {
+    fail('metro.config.js must resolve modules only from apps/offline-product/node_modules');
+  } else {
+    ok('metro.config.js uses app-only node_modules (no root RN leakage)');
+  }
+  if (!metroConfig.includes('WORKSPACE_MODULE_PREFIX')) {
+    fail('metro.config.js must rewrite npm workspaces entry paths for device debug builds');
+  } else {
+    ok('metro.config.js rewrites workspaces bundle paths');
+  }
+
+  if (rootRn) {
+    fail(
+      `Monorepo root still has react-native ${rootRn} — remove RN/Expo from root package.json and run npm install at repo root`,
+    );
+  } else {
+    ok('Root package.json has no react-native (workspaces-safe)');
   }
 }
 

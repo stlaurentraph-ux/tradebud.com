@@ -16,28 +16,27 @@ function isHomePath(pathname: string) {
 }
 
 export function FloatingMobileCTA() {
-  const [isVisible, setIsVisible] = useState(false);
   const waitlist = useWaitlistDialog();
   const t = useTranslations('common');
   const pathname = usePathname();
   const onHomepage = isHomePath(pathname);
+  const [scrollPastThreshold, setScrollPastThreshold] = useState(false);
 
   useEffect(() => {
-    if (!onHomepage) {
-      setIsVisible(false);
-      return;
-    }
+    if (!onHomepage) return;
 
     const handleScroll = () => {
-      setIsVisible(window.scrollY > 200);
+      setScrollPastThreshold(window.scrollY > 200);
     };
 
-    handleScroll();
+    queueMicrotask(handleScroll);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [onHomepage]);
 
   if (!onHomepage) return null;
+
+  const isVisible = scrollPastThreshold;
 
   return (
     <AnimatePresence>
