@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "i18n:parity:assert": "node scripts/i18n-parity-assert.mjs",
     "routes:publication:assert": "node scripts/marketing-routes-publication-guard.mjs",
-    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run build"
+    "api:trace:size:assert": "node scripts/marketing-api-trace-size-guard.mjs",
+    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run build && npm run api:trace:size:assert"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

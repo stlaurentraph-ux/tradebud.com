@@ -30,13 +30,13 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [x] **1.1** husky + lint-staged — PR #128
 - [ ] **1.2** Turbo remote cache in CI — `chore/automation-turbo-remote-cache`
-- [x] **1.3** CI path filters (PR only) — PR pending
-- [ ] **1.M.1** Marketing route/publication guard — `chore/automation-marketing-routes-guard`
-- [ ] **1.M.2** Marketing API trace size ceiling — `chore/automation-marketing-api-bundle-guard`
+- [x] **1.3** CI path filters (PR only) — PR #129
+- [x] **1.M.1** Marketing route/publication guard — PR #130
+- [ ] **1.M.2** Marketing API trace size ceiling — `chore/automation-marketing-api-bundle-guard` (in progress)
 - [ ] **1.5** Dashboard regression guard — `chore/automation-dashboard-regression-guard`
 - [ ] **1.D.1** Supabase migration naming/order CI — `chore/automation-supabase-migration-ci`
 - [ ] **1.D.2** Backend ↔ Supabase migration mirror drift check — `chore/automation-migration-mirror-drift`
-- [ ] **3.4** Dependabot config — `chore/automation-dependabot`
+- [ ] **3.4** Dependabot config — PR #131 (pending merge)
 
 ### Bundle C — Verify without manual staging
 
@@ -99,6 +99,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
+- [ ] **1.M.2** Marketing API trace size ceiling — branch: `chore/automation-marketing-api-bundle-guard`
 - [ ] **1.O.1** Offline automation Phase 1 — branch: `chore/automation-offline-phase1`
 
 ---
@@ -120,6 +121,8 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **0.1–0.5** Dashboard + field-auth Phase 0 CI — `chore/automation-phase-0`
 - [x] 2026-06-20 — **0.0.1** Cursor workflow integration — `automation-safety.mdc`, `pick-automation-slice`, PR template lanes, `AGENTS.md` monorepo, `ci-secrets-and-fixtures.md` stub, CODEOWNERS automation paths
 - [x] 2026-06-20 — **1.1** husky + lint-staged — PR #128
+- [x] 2026-06-20 — **1.3** CI path filters — PR #129
+- [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **0.M.0–0.M.3 + 0.H + 0.H.2** — PR #124 merge; Vercel preview protection
 
 ---

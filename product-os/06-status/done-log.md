@@ -2,7 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
-- Automation Bundle B slice 1.3 (2026-06-20, branch `chore/automation-ci-path-filters`): CI path filters on PRs; step-level skip for branch-protected marketing/field-auth jobs.
+- Automation Bundle B slice 1.M.1 (2026-06-20, PR #130): marketing routes/publication guard in CI and `check:marketing`.
+- Automation Bundle B slice 1.3 (2026-06-20, PR #129): CI path filters on PRs; step-level skip for branch-protected marketing/field-auth jobs.
 - Automation Bundle B slice 1.1 (2026-06-20, PR #128): husky + lint-staged pre-commit ESLint on staged workspace files; README pre-commit section.
 - Automation Phase 0 dashboard + field-auth CI (2026-06-20, branch `chore/automation-phase-0`): slices 0.2–0.5 — build CI, field-auth job, `check:dashboard`; stacks on Bundle A integration on same branch.
 - Automation Bundle A integration (2026-06-20, branch `chore/automation-phase-0`): 0.0.1 agent ops plan + Cursor workflow; 0.M.0 marketing lint fixes.
