@@ -2,6 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline automation 1.O.1 (2026-06-20): guard scripts (`mobile-api-openapi-parity`, `ota-native-fingerprint`, `analytics-slice-guard`), baselines, CI report mode (`security:preflight` + `qa:automation:phase1`), Cursor integration — PR #122 Expo app job green on `chore/automation-offline-phase1`.
+
 - Repo org post-workspaces (2026-06-20): Vercel monorepo install in app `vercel.json` + `docs/vercel-monorepo.md`; branch docs and Cursor rule updated for root-only install on `main`.
 - Tenure AI lifecycle slice (2026-06-20): stable evidence storage paths + local `storagePath` persistence; supersede stale verifications on re-upload; skip exporter alerts for wrong-document (`not_a_land_document`); `check:tenure-parse:static` in CI.
 - ADR-006 Phase 3 prep (2026-06-20): dual-project Supabase clients + GTM bootstrap SQL; `crm_contacts` remains on product DB.

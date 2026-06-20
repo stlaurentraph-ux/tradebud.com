@@ -4,7 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
-| IF-001 | `chore/automation-offline-phase1` | cursor | Lane 1 slice **1.O.1** — guard scripts, CI, Cursor integration | `offline-automation-runbook.md` | in_progress | — |
+| IF-001 | `chore/automation-offline-phase1` | cursor | Lane 1 slice **1.O.1** — guard scripts, CI, Cursor integration | `offline-automation-runbook.md` | ready_for_merge | — |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
 

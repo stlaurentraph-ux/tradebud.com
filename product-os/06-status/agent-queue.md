@@ -102,7 +102,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **1.O.1** Offline automation Phase 1 integration — branch: `chore/automation-offline-phase1` — scope: `AGENTS.md`, guard scripts, CI, runbook, Cursor commands
+- [ ] *(none — claim next Ready slice from agent-queue.md)*
+
+---
+
+## Recently completed (awaiting merge)
+
+- [x] **1.O.1** Offline automation Phase 1 — PR [#122](https://github.com/stlaurentraph-ux/tradebud.com/pull/122), branch `chore/automation-offline-phase1` — Expo app CI green (guards + typecheck); merge pending human review
 
 ---
 
