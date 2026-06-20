@@ -13,7 +13,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 | Slice | Goal | CI mode | Branch |
 |-------|------|---------|--------|
 | **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
-| **1.O.2** | Enable `--strict` on guards in CI | Blocking | `chore/automation-offline-strict` |
+| **1.O.2** | Enable `--strict` on guards in CI | Blocking | **done** — PR #153 |
 | **1.O.3** | Maestro macOS workflow prep | Maestro optional job | `chore/automation-offline-maestro` |
 
 Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan §7.
@@ -88,4 +88,4 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 1. Implement or change guard logic on `chore/automation-offline-phase1`.
 2. Run `npm run qa:automation:write-baselines`.
 3. Commit `qa/automation-baselines/*.json` with the guard PR.
-4. After merge + green on `main`, slice **1.O.2** flipped CI to `--strict` (PR pending).
+4. After merge + green on `main`, slice **1.O.2** flipped CI to `--strict` (PR #153 merged).
