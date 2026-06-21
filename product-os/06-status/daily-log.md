@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.8 merged, PR #175)
+- **Maestro nightly** — two-flow simulator subset; 03:00 UTC schedule; shared bootstrap with golden path.
+- **Verified** — Expo app + Contracts CI green on PR #175.
+
 ### 2026-06-21 (automation — 4.8 Maestro nightly smoke, `chore/automation-maestro-nightly-offline-4-8`)
 - **Nightly** — manifest for settings-sync + land-title flows; shared simulator bootstrap; scheduled macOS workflow (03:00 UTC).
 - **CI** — `qa:maestro:nightly:assert` in Expo job.

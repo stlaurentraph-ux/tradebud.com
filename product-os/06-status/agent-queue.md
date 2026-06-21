@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails 4.1–4.7 + 4.2–4.3 + 4.6 complete — next parked: 4.8 Maestro nightly, 4.9+)*
+- *(Phase 4 guardrails complete through 4.8 — next parked: 4.9 dashboard mock guard, 4.10 Stripe webhook)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -78,7 +78,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.3** Weekly health Cursor Automation
 - [ ] **3.5** Dependabot babysit automation
 - [ ] **3.7–3.10** CODEOWNERS enforce, stale PR, PR templates, auto-merge fixes
-- [ ] **4.8–4.10, 4.M.1–4.M.2** — see automation-ops-plan §Phase 4
+- [ ] **4.9–4.10, 4.M.1–4.M.2** — see automation-ops-plan §Phase 4
 - [ ] **5.1–5.10** — see automation-ops-plan §Phase 5
 
 ---
@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.8** Maestro nightly offline smoke — `chore/automation-maestro-nightly-offline-4-8`
+- *(none — Phase 4 guardrail slices complete through 4.8; next: human secrets 2.5/Sentry/EXPO_TOKEN, parked 4.9+, or Cursor Automations 3.1–3.2)*
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] **4.8** Maestro nightly offline smoke — PR pending
+- [ ] *(none)*
 
 ---
 
@@ -128,6 +128,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **4.8** Maestro nightly offline smoke — PR #175
 - [x] 2026-06-21 — **4.6** Marketing Playwright preview on PR — PR #174
 - [x] 2026-06-21 — **4.2** Offline OpenAPI client codegen — PR #173
 - [x] 2026-06-21 — **4.3** Dashboard proxy contract suite — PR #172
