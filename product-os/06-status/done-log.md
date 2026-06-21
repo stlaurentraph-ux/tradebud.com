@@ -2,7 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
-- Offline automation 3.O.1 (2026-06-20, PR #157): Maestro golden path E2E on `main` push (`settings-sync-smoke.yaml`); optional `EXPO_TOKEN` for EAS simulator install.
+- Automation 1.2 (2026-06-21, PR #158): Turbo remote cache wiring in CI (`turbo run` for workspace jobs; optional Vercel remote cache secrets).
 - Offline automation 1.O.3 (2026-06-20, PR #155): Maestro CI preflight, flow manifest baseline, `offline-maestro.yml` macOS workflow prep.
 - Offline automation 1.O.2 (2026-06-20, PR #153): CI strict mode (`qa:automation:phase1:strict`) blocking on guard baseline drift.
 - Offline automation 1.O.1 (2026-06-20, PR #122): guard scripts (`mobile-api-openapi-parity`, `ota-native-fingerprint`, `analytics-slice-guard`), baselines, CI report mode (`security:preflight` + `qa:automation:phase1`), Cursor integration — merged to `main`.
