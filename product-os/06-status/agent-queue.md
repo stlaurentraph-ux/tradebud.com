@@ -50,7 +50,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [ ] **3.1** Cursor Automation: CI failed → fix agent — human creates in Automations editor
 - [ ] **3.2** Cursor Automation: Sentry staging → triage agent — human creates in Automations editor
-- [ ] **3.6** PR labeler (`lane:*`, `app:*`) — `chore/automation-pr-labeler`
+- [ ] **3.6** PR labeler (`lane:*`, `app:*`) — `chore/automation-pr-labeler` (in progress)
 - [ ] **1.M.3** Marketing analytics slice guard — `chore/automation-marketing-analytics-guard`
 - [ ] **1.M.4** Insights markdown linter — `chore/automation-marketing-insights-lint`
 - [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget`

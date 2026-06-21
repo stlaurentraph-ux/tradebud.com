@@ -1,5 +1,11 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+
+### 2026-06-21 (automation — 3.6 PR labeler, `chore/automation-pr-labeler`)
+- **Labels** — `.github/labeler.yml` for `app:*`, `risk:spatial`, `lane:guardrails` paths; branch prefix → `lane:*` in `pr-labeler.yml`.
+- **Guard** — `npm run pr:labeler:assert` in Contracts CI job.
+- **Next** — PR merge; labels auto-created on first PR via `sync-labels`.
+
 ### 2026-06-21 (automation — 1.2 merged, PR #158)
 - **Turbo remote cache** — workspace CI jobs use `turbo run`; `turbo:cache:report` in Contracts job; optional `TURBO_TOKEN`/`TURBO_TEAM` for remote hits.
 - **Verified** — field-auth, marketing, expo, founder-os, contracts green on PR #158 (dashboard/backend pre-existing red on `main`).

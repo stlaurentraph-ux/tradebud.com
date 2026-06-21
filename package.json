@@ -38,6 +38,7 @@
     "smoke:marketing:post-deploy": "npm run smoke:post-deploy -w tracebud-marketing",
     "uptime:probes:manifest:assert": "node scripts/uptime-probes-manifest-guard.mjs",
     "uptime:probes:run": "node scripts/uptime-probes-run.mjs",
+    "pr:labeler:assert": "node scripts/pr-labeler-guard.mjs",
     "n8n:workflow-b:assert": "node scripts/n8n-workflow-b-guard.mjs",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",

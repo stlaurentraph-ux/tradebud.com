@@ -44,6 +44,7 @@ jobs:
               - 'scripts/uptime-probes-manifest-guard.mjs'
               - 'scripts/uptime-probes-run.mjs'
               - 'scripts/n8n-workflow-b-guard.mjs'
+              - 'scripts/pr-labeler-guard.mjs'
               - 'automation/n8n/founder-os/**'
               - 'supabase/migrations/**'
               - 'supabase/migration-mirror-map.json'
@@ -54,6 +55,8 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             workspace_root:
               - 'app/**'
               - 'eslint.config.mjs'
@@ -63,6 +66,8 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             backend:
               - 'tracebud-backend/**'
               - 'scripts/sentry-env-tags-guard.mjs'
@@ -72,6 +77,8 @@ jobs:
               - 'package-lock.json'
               - 'packages/**'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             dashboard:
               - 'apps/dashboard-product/**'
               - 'scripts/sentry-env-tags-guard.mjs'
@@ -80,12 +87,16 @@ jobs:
               - 'package-lock.json'
               - 'packages/**'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             field_auth:
               - 'apps/field-auth/**'
               - 'package.json'
               - 'package-lock.json'
               - 'packages/**'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             marketing:
               - 'apps/marketing/**'
               - 'scripts/sentry-env-tags-guard.mjs'
@@ -94,11 +105,15 @@ jobs:
               - 'package-lock.json'
               - 'packages/**'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
             offline:
               - 'apps/offline-product/**'
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
+              - '.github/labeler.yml'
+              - '.github/workflows/pr-labeler.yml'
 
   contracts:
     name: Contracts (OpenAPI lint)
@@ -133,6 +148,9 @@ jobs:
 
       - name: n8n workflow-b guard
         run: npm run n8n:workflow-b:assert
+
+      - name: PR labeler guard
+        run: npm run pr:labeler:assert
 
       - name: Validate OpenAPI governance README commands
         run: |
