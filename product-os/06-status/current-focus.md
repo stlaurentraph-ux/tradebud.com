@@ -4,6 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
+| IF-001 | `chore/automation-offline-maestro` | cursor | Lane 1 slice **1.O.3** — Maestro CI preflight + macOS workflow | `offline-automation-runbook.md` | in_progress | — |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
@@ -11,7 +12,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 ## Work now
 
 - **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
-- **Automation ops** — **1.O.1** + **1.O.2** merged (PRs #122, #153). Expo CI runs strict guards. **Next ready:** **1.O.3** Maestro prep or Bundle B **1.2** turbo cache.
+- **Automation ops** — **1.O.1** + **1.O.2** merged (PRs #122, #153). **1.O.3** in progress: Maestro preflight + macOS workflow.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

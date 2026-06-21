@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "appId": "com.tracebud.app",
+  "flows": [
+    "land-title-photo.yaml",
+    "tenure-evidence.yaml",
+    "mark-three-corners.yaml",
+    "settings-sync-smoke.yaml"
+  ]
+}

@@ -91,6 +91,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `land-title-photo.yaml` | §7 land title thumbnail | Photo library; may need media on simulator |
 | `tenure-evidence.yaml` | §7 tenure doc row | Same |
 | `mark-three-corners.yaml` | §2 mark corners | Needs location; best on device or simulator with mocked GPS |
+| `settings-sync-smoke.yaml` | Settings → Sync now | Signed-in or sign-in CTA |
 
 ## testID map
 
@@ -106,3 +107,10 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `walk-save-corner` | Save corner (after hold timer on device) |
 
 Human smoke (GPS, camera, sync) remains mandatory — see `DEVICE_SMOKE_CHECKLIST.md` and `npm run qa:device:signoff`.
+
+## CI (GitHub Actions)
+
+- **Linux (blocking):** `npm run qa:maestro:preflight` in the Expo `app` CI job — validates flow manifest, `appId`, and testID wiring without a simulator.
+- **macOS (optional):** workflow **Offline Maestro (macOS)** — runs on Maestro-related PR paths; use **Run workflow** with `run_flows=true` for full CLI tests when a simulator build is installed.
+
+See `product-os/04-quality/offline-automation-runbook.md` § Maestro CI.

@@ -14,7 +14,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 |-------|------|---------|--------|
 | **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
 | **1.O.2** | Enable `--strict` on guards in CI | Blocking | **done** — PR #153 |
-| **1.O.3** | Maestro macOS workflow prep | Maestro optional job | `chore/automation-offline-maestro` |
+| **1.O.3** | Maestro macOS workflow prep | Maestro optional job | **in progress** — `chore/automation-offline-maestro` |
 
 Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan §7.
 
@@ -71,7 +71,27 @@ GitHub `app` job (after typecheck):
 1. `npm run security:preflight`
 2. `npm run qa:automation:phase1:strict` (blocking since 1.O.2)
 
-Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.mjs`, i18n queue smoke.
+Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.mjs`, `qa:maestro:preflight`, i18n queue smoke.
+
+---
+
+## Maestro CI (1.O.3+)
+
+| Job | Platform | When | Command |
+|-----|----------|------|---------|
+| Expo `app` (Linux) | ubuntu | Every offline PR / push | `npm run qa:maestro:preflight` |
+| `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; optional E2E on macOS |
+
+**Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_flows=true`. Requires `com.tracebud.app` on a booted iOS simulator (see `.maestro/README.md`).
+
+**Refresh flow manifest baseline:**
+
+```bash
+cd apps/offline-product
+npm run qa:maestro:write-baseline
+```
+
+Blocking E2E on `main` is slice **3.O.1** (after 1.O.3 prep is stable).
 
 ---
 
