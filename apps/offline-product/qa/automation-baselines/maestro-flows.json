@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "appId": "com.tracebud.app",
+  "goldenPathFlow": "settings-sync-smoke.yaml",
   "flows": [
     "land-title-photo.yaml",
     "tenure-evidence.yaml",

@@ -111,6 +111,6 @@ Human smoke (GPS, camera, sync) remains mandatory — see `DEVICE_SMOKE_CHECKLIS
 ## CI (GitHub Actions)
 
 - **Linux (blocking):** `npm run qa:maestro:preflight` in the Expo `app` CI job — validates flow manifest, `appId`, and testID wiring without a simulator.
-- **macOS (optional):** workflow **Offline Maestro (macOS)** — runs on Maestro-related PR paths; use **Run workflow** with `run_flows=true` for full CLI tests when a simulator build is installed.
+- **macOS (optional):** workflow **Offline Maestro (macOS)** — PR preflight; **`main` push** runs golden path (`settings-sync-smoke.yaml`); manual dispatch for full flows.
 
 See `product-os/04-quality/offline-automation-runbook.md` § Maestro CI.

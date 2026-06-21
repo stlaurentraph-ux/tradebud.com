@@ -107,6 +107,7 @@ function main() {
     const next = {
       schemaVersion: 1,
       appId: bundleId ?? baseline.appId,
+      goldenPathFlow: baseline.goldenPathFlow ?? 'settings-sync-smoke.yaml',
       flows: discoverFlowsOnDisk(),
     };
     writeBaselineFile(next);
@@ -118,6 +119,17 @@ function main() {
     process.exit(1);
   }
   console.log(`OK appId: ${baseline.appId}`);
+
+  const golden = baseline.goldenPathFlow;
+  if (!golden || typeof golden !== 'string') {
+    console.error('FAIL baseline: missing goldenPathFlow');
+    process.exit(1);
+  }
+  if (!baseline.flows.includes(golden)) {
+    console.error(`FAIL baseline: goldenPathFlow ${golden} not in flows list`);
+    process.exit(1);
+  }
+  console.log(`OK goldenPathFlow: ${golden}`);
 
   const config = read('.maestro/config.yaml');
   if (!config.includes(`APP_ID: ${baseline.appId}`)) {

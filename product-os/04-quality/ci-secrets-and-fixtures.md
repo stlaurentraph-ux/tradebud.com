@@ -21,6 +21,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `UPTIME_BACKEND_BASE_URL` | 2.8 | synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Vercel Deployment Protection bypass for CI |
+| `EXPO_TOKEN` | 3.O.1 | offline Maestro golden path | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
 
@@ -94,6 +95,7 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-20 | Slice 3.O.1: optional `EXPO_TOKEN` for Maestro golden-path CI |
 | 2026-06-20 | Slice 2.O.1: n8n Founder OS env vars (n8n host, not GitHub) |
 | 2026-06-20 | Slice 2.8: `UPTIME_DASHBOARD_BASE_URL`, `UPTIME_BACKEND_BASE_URL`; reuse `MARKETING_SMOKE_BASE_URL` |
 | 2026-06-20 | Initial stub for automation rollout |

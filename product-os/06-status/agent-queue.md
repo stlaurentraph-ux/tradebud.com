@@ -64,7 +64,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Offline annex (`offline-automation-runbook.md`)
 
-- [ ] **3.O.1** Maestro on `main` — after 1.O.3
+- [ ] **3.O.1** Maestro golden path on `main` — `chore/automation-maestro-main-3o1` (in progress)
 
 ### Later phases (parked — do not start until Bundle D merged)
 
@@ -98,6 +98,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 ## In progress
 
 - [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
+- [ ] **3.O.1** Maestro golden path on `main` — branch: `chore/automation-maestro-main-3o1`
 
 ---
 
