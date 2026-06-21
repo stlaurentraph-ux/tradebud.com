@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.7 merged, PR #170)
+- **Release health gate** — collect CI/smoke/uptime/Sentry signals; GO/NO-GO evaluator; Contracts guard; weekly + manual workflow.
+- **Verified** — Contracts CI green on PR #170.
+
 ### 2026-06-21 (automation — 4.7 release health gate, `chore/automation-release-health-gate-4-7`)
 - **Gate** — `release-health-collect.mjs` + `release-health-gate.mjs` (CI required jobs, optional smoke/uptime/Sentry); manifest guard in Contracts CI.
 - **Workflow** — `.github/workflows/release-health-gate.yml` (manual + weekly schedule).

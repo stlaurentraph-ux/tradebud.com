@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation 4.7 (2026-06-21, PR #170): composite release health gate (CI required jobs + optional smoke/uptime/Sentry) with GO/NO-GO script and workflow.
 - Automation 4.5 (2026-06-21, PR #168): dashboard Playwright golden paths (login shell, login stub, onboarding read/write) + CI guard; dashboard build split from lint for Playwright gate.
 - Automation 4.4 (2026-06-21, PR #167): marketing Playwright golden paths (home, pricing, waitlist mocked API) + CI guard.
 - Automation 2.7 (2026-06-21, PR #166): golden staging tenant manifest, runbook, backend constants, CI guard, bootstrap helper.
