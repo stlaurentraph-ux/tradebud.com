@@ -1,16 +1,65 @@
 {
   "name": "Founder OS - Missed Schedule Alert",
   "meta": {
-    "description": "Daily check for missed scheduled content at 17:00."
+    "description": "Daily 17:00 Europe/Oslo alert when scheduled content is overdue or open tasks are high urgency.",
+    "slice": "2.O.2",
+    "activationDoc": "automation/n8n/founder-os/workflow-f-activation.md"
+  },
+  "primaryPipeline": {
+    "canonical": "crm.content_calendar + crm.content_tasks via Supabase RPC content_tasks_due(current_date)",
+    "sqlSource": "supabase/migrations/20260413_002_founder_os_functions.sql",
+    "note": "Missed schedule detection is already modeled in content_tasks_due() missed_content CTE — n8n should query, not reimplement business rules."
   },
   "trigger": {
     "type": "cron",
     "timezone": "Europe/Oslo",
     "schedule": "0 17 * * *"
   },
+  "supabaseQueries": {
+    "missedCalendarItems": {
+      "table": "crm.content_calendar",
+      "filter": "scheduled_at IS NOT NULL AND scheduled_at <= now() AND status <> 'published'",
+      "select": ["id", "channel", "hook", "scheduled_at", "status", "owner"]
+    },
+    "dueTasksRpc": {
+      "function": "content_tasks_due",
+      "args": { "target_date": "current_date" },
+      "urgencyFilter": ["high"]
+    },
+    "optionalTaskGeneration": {
+      "function": "generate_content_tasks",
+      "args": { "target_date": "current_date" },
+      "note": "Run once before alert if daily task rows may be stale."
+    }
+  },
+  "alertContract": {
+    "requiredWhenNonEmpty": ["summaryLine", "itemCount"],
+    "itemFields": ["task_type", "due_date", "urgency", "note", "related_content_id"]
+  },
   "steps": [
-    "Query content where scheduled_at < now and status != published.",
-    "Create or update missed content_tasks records.",
-    "Send concise missed-item alert to founder."
+    "Optionally call generate_content_tasks(current_date) to refresh open tasks from cadence.",
+    "Call content_tasks_due(current_date) and filter urgency=high.",
+    "Query crm.content_calendar for scheduled_at <= now() and status != published.",
+    "Merge and de-duplicate by related_content_id where present.",
+    "If zero items: exit silently (no alert spam).",
+    "Upsert or append crm.content_tasks for missed schedule_post rows when not already open.",
+    "Send concise founder alert (email or Slack) listing channel, hook, scheduled_at, owner."
+  ],
+  "guardrails": [
+    "Use Europe/Oslo timezone on cron trigger.",
+    "Do not alert when there are zero missed or high-urgency items.",
+    "Prefer content_tasks_due() over ad-hoc SQL so rules stay aligned with Founder OS functions.",
+    "Idempotent daily alert — track last_alerted_at on content_calendar.notes or external dedupe key to avoid duplicate pings."
+  ],
+  "sampleAlertItems": [
+    {
+      "task_type": "schedule_post",
+      "due_date": "2026-06-21T09:00:00Z",
+      "urgency": "high",
+      "note": "Content item passed schedule time without being published.",
+      "related_content_id": "00000000-0000-4000-8000-000000000001",
+      "channel": "linkedin_post",
+      "hook": "EUDR plot capture under canopy"
+    }
   ]
 }

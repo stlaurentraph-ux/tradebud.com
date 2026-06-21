@@ -4,7 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
-| IF-001 | — | — | — | — | — | Pick next Ready slice (2.O.2 or 4.4+) |
+| IF-001 | `chore/automation-n8n-workflow-f` | cursor | Lane 1 slice **2.O.2** — n8n missed schedule alert | `workflow-f-activation.md` | in_progress | — |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
@@ -12,7 +12,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 ## Work now
 
 - **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
-- **Automation ops** — Marketing guard bundle **1.M.1–1.M.5** complete. **Next:** **2.O.2** n8n schedule alert or Bundle E Playwright (blocked on 2.7).
+- **Automation ops** — **2.O.2** in progress: n8n workflow-f missed schedule alert guard + activation runbook.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

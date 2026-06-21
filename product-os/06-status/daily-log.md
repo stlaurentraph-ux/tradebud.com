@@ -8,6 +8,11 @@
 
 
 
+
+### 2026-06-21 (automation — 2.O.2 n8n workflow-f, `chore/automation-n8n-workflow-f`)
+- **Spec + runbook** — expanded workflow-f JSON, `workflow-f-activation.md`, `n8n:workflow-f:assert` in Contracts CI.
+- **Next** — PR merge; human activates cron in n8n host.
+
 ### 2026-06-21 (automation — 1.M.5 merged, PR #164)
 - **Guard** — PNG baseline (55 files, ~174MB); 11MB/file hard cap; strict regression in marketing CI.
 - **Verified** — marketing job green on PR #164.

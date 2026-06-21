@@ -9,7 +9,7 @@ This folder contains workflow specs for the Tracebud Founder OS automation layer
 - `workflow-c-weekly-content-planning.json`
 - `workflow-d-content-accountability-check.json`
 - `workflow-e-monthly-performance-review.json`
-- `workflow-f-missed-schedule-alert.json`
+- `workflow-f-missed-schedule-alert.json` — **activation:** [workflow-f-activation.md](./workflow-f-activation.md) (slice 2.O.2)
 
 ## Setup
 
@@ -41,3 +41,4 @@ This folder contains workflow specs for the Tracebud Founder OS automation layer
   - `generate_content_tasks(current_date)`
 - Confirm summary output format is concise and actionable.
 - **Workflow B (website form intake):** run `npm run n8n:workflow-b:assert` before merge; follow [workflow-b-activation.md](./workflow-b-activation.md) when enabling n8n.
+- **Workflow F (missed schedule alert):** run `npm run n8n:workflow-f:assert` before merge; follow [workflow-f-activation.md](./workflow-f-activation.md) when enabling n8n.
