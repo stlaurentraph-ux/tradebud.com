@@ -51,7 +51,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.1** Cursor Automation: CI failed → fix agent — human creates in Automations editor
 - [ ] **3.2** Cursor Automation: Sentry staging → triage agent — human creates in Automations editor
 - [x] **3.6** PR labeler (`lane:*`, `app:*`) — PR #159 (in progress)
-- [ ] **1.M.3** Marketing analytics slice guard — `chore/automation-marketing-analytics-guard` (in progress)
+- [x] **1.M.3** Marketing analytics slice guard — PR #161
 - [ ] **1.M.4** Insights markdown linter — `chore/automation-marketing-insights-lint`
 - [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget`
 
@@ -97,7 +97,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **1.M.3** Marketing analytics slice guard — branch: `chore/automation-marketing-analytics-guard`
+- *(none — pick next Ready slice from Bundle D)*
 
 ---
 
@@ -133,6 +133,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **1.M.3** Marketing analytics slice guard — PR #161
 - [x] 2026-06-21 — **3.6** PR path and lane labeler — PR #159
 - [x] 2026-06-21 — **1.2** Turbo remote cache in CI — PR #158
 - [x] 2026-06-20 — **1.O.3** Maestro CI preflight + macOS workflow — PR #155
