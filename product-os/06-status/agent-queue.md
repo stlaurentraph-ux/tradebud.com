@@ -29,7 +29,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 ### Bundle B — Agent speed & hygiene
 
 - [x] **1.1** husky + lint-staged — PR #128
-- [ ] **1.2** Turbo remote cache in CI — `chore/automation-turbo-remote-cache` (in progress)
+- [x] **1.2** Turbo remote cache in CI — PR #158
 - [x] **1.3** CI path filters (PR only) — PR #129
 - [x] **1.M.1** Marketing route/publication guard — PR #130
 - [x] **1.M.2** Marketing API trace size ceiling — PR #132
@@ -43,14 +43,14 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [x] **2.1** Sentry env tags (marketing, dashboard, backend) — PR #145
 - [x] **2.4** Marketing post-deploy smoke workflow — PR #147
 - [x] **2.8** Synthetic uptime checks — PR #150
-- [ ] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — `chore/automation-n8n-workflow-b` (in progress)
+- [x] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — on `main`; human n8n activation per `workflow-b-activation.md`
 - [ ] **2.O.2** n8n workflow-f missed schedule alert — human+agent doc slice
 
 ### Bundle D — Closed loops
 
 - [ ] **3.1** Cursor Automation: CI failed → fix agent — human creates in Automations editor
 - [ ] **3.2** Cursor Automation: Sentry staging → triage agent — human creates in Automations editor
-- [ ] **3.6** PR labeler (`lane:*`, `app:*`) — `chore/automation-pr-labeler`
+- [ ] **3.6** PR labeler (`lane:*`, `app:*`) — `chore/automation-pr-labeler` (in progress)
 - [ ] **1.M.3** Marketing analytics slice guard — `chore/automation-marketing-analytics-guard`
 - [ ] **1.M.4** Insights markdown linter — `chore/automation-marketing-insights-lint`
 - [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget`
@@ -97,8 +97,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **1.2** Turbo remote cache in CI — branch: `chore/automation-turbo-remote-cache`
-- [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
+- [ ] **3.6** PR labeler — branch: `chore/automation-pr-labeler`
 
 ---
 
@@ -113,7 +112,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [ ] **2.5** Onboarding proxy smoke in CI — needs `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub secrets
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
 - [ ] **4.4–4.7** Playwright + release health — needs golden staging tenant (2.7) + `ci-secrets-and-fixtures.md`
-- [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired in PR pending)
+- [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired PR #158)
 - [ ] **0.H.3** Branch protection PR-only — human
 
 ---
@@ -134,7 +133,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
-- [x] 2026-06-20 — **3.O.1** Maestro golden path on `main` — PR #157
+- [x] 2026-06-21 — **1.2** Turbo remote cache in CI — PR #158
 - [x] 2026-06-20 — **1.O.3** Maestro CI preflight + macOS workflow — PR #155
 - [x] 2026-06-20 — **1.O.2** Offline automation strict guards in CI — PR #153
 - [x] 2026-06-20 — **1.O.1** Offline automation Phase 1 — PR #122 merge; guards + baselines + report-mode CI

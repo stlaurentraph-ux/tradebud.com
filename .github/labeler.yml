@@ -1,0 +1,60 @@
+# Slice 3.6 — path-based PR labels (actions/labeler)
+# Lane labels from branch prefix are applied in pr-labeler.yml.
+
+'lane:guardrails':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - '.github/dependabot.yml'
+          - '.github/labeler.yml'
+          - 'scripts/**'
+          - 'product-os/04-quality/**'
+          - 'product-os/06-status/agent-queue.md'
+          - 'product-os/06-status/automation-ops-plan.md'
+          - 'apps/offline-product/scripts/*guard*.mjs'
+          - 'apps/offline-product/scripts/run-automation-guards.mjs'
+          - 'apps/offline-product/scripts/maestro*.**'
+          - 'apps/offline-product/qa/automation-baselines/**'
+
+'app:marketing':
+  - changed-files:
+      - any-glob-to-any-file: 'apps/marketing/**'
+
+'app:dashboard':
+  - changed-files:
+      - any-glob-to-any-file: 'apps/dashboard-product/**'
+
+'app:offline':
+  - changed-files:
+      - any-glob-to-any-file: 'apps/offline-product/**'
+
+'app:backend':
+  - changed-files:
+      - any-glob-to-any-file: 'tracebud-backend/**'
+
+'app:field-auth':
+  - changed-files:
+      - any-glob-to-any-file: 'apps/field-auth/**'
+
+'app:founder-os':
+  - changed-files:
+      - any-glob-to-any-file: 'apps/founder-os/**'
+
+'app:contracts':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/openapi/**'
+          - 'supabase/migrations/**'
+          - 'supabase/migration-mirror-map.json'
+          - 'tracebud-backend/sql/**'
+
+'risk:spatial':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'supabase/migrations/**'
+          - 'tracebud-backend/sql/**'
+          - 'tracebud-backend/src/plots/**'
+          - 'tracebud-backend/src/**/geo*.ts'
+          - 'apps/offline-product/features/mapping/**'
+          - 'apps/offline-product/features/**/plot*.ts'
+          - 'apps/offline-product/features/**/plot*.tsx'
