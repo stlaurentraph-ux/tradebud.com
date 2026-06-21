@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-21T12:32:34.193Z",
+  "hardMaxSingleBytes": 11534336,
+  "fileCount": 55,
+  "totalBytes": 182400902,
+  "files": {
+    "public/favicon-16x16-v2.png": {
+      "maxBytes": 406
+    },
+    "public/favicon-16x16-v3.png": {
+      "maxBytes": 533
+    },
+    "public/favicon-16x16-v4.png": {
+      "maxBytes": 400
+    },
+    "public/favicon-16x16-v5.png": {
+      "maxBytes": 778
+    },
+    "public/favicon-16x16-v6.png": {
+      "maxBytes": 619
+    },
+    "public/favicon-16x16.png": {
+      "maxBytes": 32094
+    },
+    "public/favicon-32x32-v2.png": {
+      "maxBytes": 1074
+    },
+    "public/favicon-32x32-v3.png": {
+      "maxBytes": 1271
+    },
+    "public/favicon-32x32-v4.png": {
+      "maxBytes": 985
+    },
+    "public/favicon-32x32-v5.png": {
+      "maxBytes": 2218
+    },
+    "public/favicon-32x32-v6.png": {
+      "maxBytes": 1524
+    },
+    "public/favicon-32x32.png": {
+      "maxBytes": 31890
+    },
+    "public/images/6018a2df-1dff-4d33-9cf3-abfff17cd32e.png": {
+      "maxBytes": 4635364
+    },
+    "public/images/Aerial view farming fields.png": {
+      "maxBytes": 6083007
+    },
+    "public/images/aerial-farm-jungle.png": {
+      "maxBytes": 875039
+    },
+    "public/images/African farmer manipulating plants on field.png": {
+      "maxBytes": 3437697
+    },
+    "public/images/Asiatic farmer on field.png": {
+      "maxBytes": 5407387
+    },
+    "public/images/barista.png": {
+      "maxBytes": 5329205
+    },
+    "public/images/Coffe roaster with smiling face.png": {
+      "maxBytes": 6608544
+    },
+    "public/images/Coffee roasting mixing.png": {
+      "maxBytes": 5043492
+    },
+    "public/images/Containers piled up + blue sky.png": {
+      "maxBytes": 4148370
+    },
+    "public/images/european countries flag + massive building.png": {
+      "maxBytes": 4693690
+    },
+    "public/images/european flag in the middle of trees.png": {
+      "maxBytes": 6597598
+    },
+    "public/images/European flag on old monument.png": {
+      "maxBytes": 8711851
+    },
+    "public/images/european flag on the wind.png": {
+      "maxBytes": 5098654
+    },
+    "public/images/farm-fields-jungle.png": {
+      "maxBytes": 782782
+    },
+    "public/images/Farmer middle in the field, back view.png": {
+      "maxBytes": 7801088
+    },
+    "public/images/Farmer on bike smiling lightly.png": {
+      "maxBytes": 10022738
+    },
+    "public/images/farmer-app-homepage.png": {
+      "maxBytes": 210227
+    },
+    "public/images/Farmers in the field harvesting.png": {
+      "maxBytes": 3234155
+    },
+    "public/images/Farming family smiling on field.png": {
+      "maxBytes": 4154543
+    },
+    "public/images/Farming field very green.png": {
+      "maxBytes": 6062142
+    },
+    "public/images/Field and caucassian.png": {
+      "maxBytes": 4565830
+    },
+    "public/images/Field and tractor.png": {
+      "maxBytes": 7074360
+    },
+    "public/images/Indian farmer in a tractor.png": {
+      "maxBytes": 5887469
+    },
+    "public/images/mosaic of containers.png": {
+      "maxBytes": 5485661
+    },
+    "public/images/Mountainous farming field + nature.png": {
+      "maxBytes": 4961921
+    },
+    "public/images/multiple european flag with building back.png": {
+      "maxBytes": 3563001
+    },
+    "public/images/multiple flags on a wall.png": {
+      "maxBytes": 10396137
+    },
+    "public/images/multiple flags.png": {
+      "maxBytes": 3424901
+    },
+    "public/images/One ship filled with containers.png": {
+      "maxBytes": 3836186
+    },
+    "public/images/port + ships + containers.png": {
+      "maxBytes": 6412021
+    },
+    "public/images/Roasted coffee bag.png": {
+      "maxBytes": 7075393
+    },
+    "public/images/roaster without face.png": {
+      "maxBytes": 2878244
+    },
+    "public/images/tracebud-logo-email.png": {
+      "maxBytes": 12683
+    },
+    "public/images/tracebud-logo.png": {
+      "maxBytes": 702548
+    },
+    "public/images/Untitled project (4).png": {
+      "maxBytes": 8521281
+    },
+    "public/images/Women farming on field.png": {
+      "maxBytes": 5103396
+    },
+    "public/og-image.png": {
+      "maxBytes": 549600
+    },
+    "public/tracebud-logo-v2.png": {
+      "maxBytes": 93024
+    },
+    "public/tracebud-logo-v3.png": {
+      "maxBytes": 157452
+    },
+    "public/tracebud-logo-v4.png": {
+      "maxBytes": 702548
+    },
+    "public/tracebud-logo-v5.png": {
+      "maxBytes": 647086
+    },
+    "public/tracebud-logo-v6.png": {
+      "maxBytes": 636247
+    },
+    "public/tracebud-logo.png": {
+      "maxBytes": 702548
+    }
+  }
+}

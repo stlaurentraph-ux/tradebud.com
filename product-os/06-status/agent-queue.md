@@ -53,7 +53,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [x] **3.6** PR labeler (`lane:*`, `app:*`) — PR #159 (in progress)
 - [x] **1.M.3** Marketing analytics slice guard — PR #161
 - [x] **1.M.4** Insights markdown linter — PR #163
-- [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget`
+- [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget` (in progress)
 
 ### Bundle E — Confidence to auto-promote
 
@@ -97,7 +97,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — next ready: 1.M.5 PNG budget or 2.O.2 n8n schedule alert)*
+- [ ] **1.M.5** Marketing PNG size budget — branch: `chore/automation-marketing-png-budget`
 
 ---
 

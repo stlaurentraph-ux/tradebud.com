@@ -200,7 +200,7 @@ npm run build -w dashboard-product
 | **1.M.2** | Marketing API trace size ceiling in CI (regression for 749MB Vercel bug) | Serverless bundle |
 | **1.M.3** | Marketing analytics slice guard | Event discipline | **done** — PR #161 |
 | **1.M.4** | Insights markdown linter | Content CI | **done** — PR #163 |
-| **1.M.5** | PNG size budget check (`optimize-public-pngs.mjs` or threshold script) | Asset regression |
+| **1.M.5** | PNG size budget check | Asset regression | in progress — `chore/automation-marketing-png-budget` |
 | **1.D.1** | Supabase migration naming/order CI (no duplicate prefixes, lex order) | `supabase/README.md` rules |
 | **1.D.2** | Backend ↔ Supabase migration mirror drift check (filename/purpose map) | Two-track safety |
 | **1.D.3** | Document mirror map in `supabase/README.md` or `ci-secrets-and-fixtures.md` | Agent discoverability |

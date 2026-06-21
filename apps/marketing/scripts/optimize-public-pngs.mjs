@@ -5,6 +5,9 @@
  *
  * Pass 1: max width 2560, png level 9.
  * Pass 2: files still > 5MB get max width 1920.
+ *
+ * After intentional size changes, refresh CI baseline:
+ *   npm run png:size:write-baseline -w tracebud-marketing
  */
 import fs from 'node:fs';
 import path from 'node:path';

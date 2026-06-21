@@ -14,8 +14,10 @@
     "analytics:slice:assert": "node scripts/marketing-analytics-slice-guard.mjs",
     "analytics:slice:write-baseline": "node scripts/marketing-analytics-slice-guard.mjs --write-baseline",
     "insights:lint:assert": "node scripts/marketing-insights-lint-guard.mjs",
+    "png:size:assert": "node scripts/marketing-png-size-guard.mjs --strict",
+    "png:size:write-baseline": "node scripts/marketing-png-size-guard.mjs --write-baseline",
     "smoke:post-deploy": "node scripts/marketing-post-deploy-smoke.mjs",
-    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run build && npm run api:trace:size:assert",
+    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run png:size:assert && npm run build && npm run api:trace:size:assert",
     "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs"
   },
   "dependencies": {

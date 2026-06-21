@@ -6,6 +6,11 @@
 
 
 
+
+### 2026-06-21 (automation — 1.M.5 marketing PNG size budget, `chore/automation-marketing-png-budget`)
+- **Guard** — `marketing-png-size-guard.mjs` + baseline (55 PNGs, ~174MB); hard max 11MB/file; strict regression in CI.
+- **Docs** — cross-ref in `optimize-public-pngs.mjs`.
+
 ### 2026-06-21 (automation — 1.M.4 merged, PR #163)
 - **Guard** — insights frontmatter + internal link lint; 8 articles validated; marketing CI + `check:marketing`.
 - **Verified** — marketing job green on PR #163.
