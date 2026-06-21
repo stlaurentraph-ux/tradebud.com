@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.M.1 merged, PR #178)
+- **Marketing a11y** — axe-core WCAG scans on home + pricing with regression-ceiling baseline; golden-path Playwright scoped to golden-paths.spec.ts.
+- **Verified** — Marketing CI green on PR #178.
+
 ### 2026-06-21 (automation — 4.M.1 marketing a11y routes, `chore/automation-marketing-a11y-4-m-1`)
 - **axe-core** — Playwright scans on `/en` + `/en/pricing` with WCAG tags; violations baseline locks known debt; `a11y:routes:assert` in marketing CI.
 - **Next** — PR merge when marketing CI green.

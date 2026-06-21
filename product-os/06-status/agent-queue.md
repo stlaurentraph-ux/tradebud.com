@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails complete through 4.10 — next: 4.M.1 a11y in PR, then 4.M.2 Lighthouse)*
+- *(Phase 4 guardrails complete through 4.M.1 — next: 4.M.2 Lighthouse budgets)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.M.1** Marketing axe-core a11y routes — `chore/automation-marketing-a11y-4-m-1` (PR pending)
+- *(none — Phase 4 guardrail slices complete through 4.M.1; next: 4.M.2 Lighthouse, human secrets 2.5, or Cursor Automations 3.1–3.2)*
 
 ---
 
