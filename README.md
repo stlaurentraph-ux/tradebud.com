@@ -97,6 +97,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR to `main`:
 
 On **pull requests**, CI uses path filters (`dorny/paths-filter`) to skip unrelated jobs. **Push to `main` always runs the full matrix.** Branch-protected checks (marketing, field-auth) still report success when skipped (fast no-op) so PRs can merge.
 
+**Turbo remote cache (slice 1.2):** workspace lint/typecheck/test/build jobs run via `turbo run`. Add `TURBO_TOKEN` and `TURBO_TEAM` GitHub secrets to share cache across CI runs (see `product-os/04-quality/ci-secrets-and-fixtures.md`). Without secrets, CI still passes with local-only cache.
+
 Post-deploy and scheduled probes (see `product-os/04-quality/ci-secrets-and-fixtures.md` for secrets):
 
 - `.github/workflows/marketing-deploy-smoke.yml` — runs after successful **Production** marketing deploy when `MARKETING_SMOKE_BASE_URL` is set
