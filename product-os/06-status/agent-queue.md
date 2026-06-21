@@ -52,7 +52,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.2** Cursor Automation: Sentry staging → triage agent — human creates in Automations editor
 - [x] **3.6** PR labeler (`lane:*`, `app:*`) — PR #159 (in progress)
 - [x] **1.M.3** Marketing analytics slice guard — PR #161
-- [ ] **1.M.4** Insights markdown linter — `chore/automation-marketing-insights-lint`
+- [ ] **1.M.4** Insights markdown linter — `chore/automation-marketing-insights-lint` (in progress)
 - [ ] **1.M.5** Marketing PNG size budget — `chore/automation-marketing-png-budget`
 
 ### Bundle E — Confidence to auto-promote
@@ -97,7 +97,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice from Bundle D)*
+- [ ] **1.M.4** Insights markdown linter — branch: `chore/automation-marketing-insights-lint`
 
 ---
 
