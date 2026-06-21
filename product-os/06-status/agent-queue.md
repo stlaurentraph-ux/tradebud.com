@@ -95,7 +95,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- [ ] **4.4** Playwright marketing golden paths — branch `chore/automation-marketing-playwright-4-4`
+- *(none — next: 4.5 dashboard Playwright, human secrets for 2.5, or Cursor Automations 3.1–3.2)*
 
 ---
 
@@ -130,6 +130,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **4.4** Marketing Playwright golden paths — PR #167
 - [x] 2026-06-21 — **2.7** Golden staging tenant manifest + guard — PR #166
 - [x] 2026-06-21 — **2.O.2** n8n workflow-f missed schedule alert — PR #165
 - [x] 2026-06-21 — **1.M.5** Marketing PNG size budget — PR #164

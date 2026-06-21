@@ -2,7 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
-- Automation 4.4 (2026-06-21, PR pending): marketing Playwright golden paths (home, pricing, waitlist mocked API) + CI guard.
+- Automation 4.4 (2026-06-21, PR #167): marketing Playwright golden paths (home, pricing, waitlist mocked API) + CI guard.
 - Automation 2.7 (2026-06-21, PR #166): golden staging tenant manifest, runbook, backend constants, CI guard, bootstrap helper.
 - Automation 2.O.2 (2026-06-21, PR #165): n8n workflow-f missed schedule alert guard + activation runbook.
 - Offline automation 1.O.3 (2026-06-20, PR #155): Maestro CI preflight, flow manifest baseline, `offline-maestro.yml` macOS workflow prep.

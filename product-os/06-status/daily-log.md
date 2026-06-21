@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 4.4 merged, PR #167)
+- **Playwright** — home, pricing, waitlist (mocked API) golden paths; manifest guard + marketing CI job.
+- **Fix** — removed duplicate home pricing `WaitlistDialog` (provider owns global dialog).
+- **Verified** — marketing CI green on PR #167.
+
 ### 2026-06-21 (automation — 4.4 marketing Playwright, `chore/automation-marketing-playwright-4-4`)
 - **E2E** — Playwright golden paths (home, pricing, waitlist w/ mocked `/api/waitlist`); manifest guard; marketing CI job.
 - **Fix** — removed duplicate `WaitlistDialog` mount from home pricing section (provider already renders global dialog).
