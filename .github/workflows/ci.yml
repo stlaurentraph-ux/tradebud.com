@@ -954,6 +954,10 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run insights:lint:assert -w tracebud-marketing
 
+      - name: Marketing PNG size budget
+        if: env.CI_RUN == 'true'
+        run: npm run png:size:assert -w tracebud-marketing
+
       - name: Marketing API trace size guard
         if: env.CI_RUN == 'true'
         run: npm run api:trace:size:assert -w tracebud-marketing
