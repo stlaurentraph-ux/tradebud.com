@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWaitlistDialog, WaitlistDialog } from "@/components/waitlist-dialog";
+import { useWaitlistDialog } from "@/components/waitlist-dialog";
 
 const plans = [
   {
@@ -155,8 +155,6 @@ export function Pricing() {
           {t("pricingSection.footerNote")}
         </motion.p>
       </div>
-
-      <WaitlistDialog open={waitlist.open} onOpenChange={waitlist.onOpenChange} />
     </section>
   );
 }

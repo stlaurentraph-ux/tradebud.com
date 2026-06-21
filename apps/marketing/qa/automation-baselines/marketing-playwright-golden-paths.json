@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.4",
+  "locale": "en",
+  "paths": [
+    {
+      "id": "home",
+      "route": "/en",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "home page renders hero and primary navigation"
+    },
+    {
+      "id": "pricing",
+      "route": "/en/pricing",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "pricing page renders tier messaging"
+    },
+    {
+      "id": "waitlist",
+      "route": "/en",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "waitlist flow submits with mocked API",
+      "mockedApi": "/api/waitlist"
+    }
+  ]
+}

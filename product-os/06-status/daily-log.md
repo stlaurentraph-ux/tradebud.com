@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 4.4 marketing Playwright, `chore/automation-marketing-playwright-4-4`)
+- **E2E** — Playwright golden paths (home, pricing, waitlist w/ mocked `/api/waitlist`); manifest guard; marketing CI job.
+- **Fix** — removed duplicate `WaitlistDialog` mount from home pricing section (provider already renders global dialog).
+- **Next** — PR merge; slice 4.5 dashboard Playwright.
+
 ### 2026-06-21 (automation — 2.7 merged, PR #166)
 - **Golden staging tenant** — manifest, runbook, `GOLDEN_STAGING_TENANT` constants, `golden:staging:assert` in Contracts CI.
 - **Verified** — Contracts + marketing + field-auth green; dashboard/backend failures pre-existing on `main`.

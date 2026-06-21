@@ -969,6 +969,21 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run api:trace:size:assert -w tracebud-marketing
 
+      - name: Marketing Playwright manifest guard
+        if: env.CI_RUN == 'true'
+        run: npm run e2e:golden-paths:assert -w tracebud-marketing
+
+      - name: Install Playwright Chromium
+        if: env.CI_RUN == 'true'
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/marketing
+
+      - name: Marketing Playwright golden paths
+        if: env.CI_RUN == 'true'
+        run: npm run e2e:golden-paths -w tracebud-marketing
+        env:
+          CI: true
+
   app:
     name: Expo app lint
     needs: changes
