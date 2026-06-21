@@ -7,6 +7,11 @@
 
 
 
+
+### 2026-06-21 (automation — 1.M.5 merged, PR #164)
+- **Guard** — PNG baseline (55 files, ~174MB); 11MB/file hard cap; strict regression in marketing CI.
+- **Verified** — marketing job green on PR #164.
+
 ### 2026-06-21 (automation — 1.M.5 marketing PNG size budget, `chore/automation-marketing-png-budget`)
 - **Guard** — `marketing-png-size-guard.mjs` + baseline (55 PNGs, ~174MB); hard max 11MB/file; strict regression in CI.
 - **Docs** — cross-ref in `optimize-public-pngs.mjs`.
