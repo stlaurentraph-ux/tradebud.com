@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.1 merged, PR #171)
+- **OpenAPI codegen** — launch onboarding paths in draft spec; `openapi-typescript` output + proxy type re-exports; dashboard CI guard.
+- **Verified** — Contracts + dashboard CI green on PR #171.
+
 ### 2026-06-21 (automation — 4.1 OpenAPI dashboard codegen, `chore/automation-openapi-codegen-dashboard-4-1`)
 - **OpenAPI** — launch onboarding GET/complete paths added to draft spec.
 - **Codegen** — `openapi-typescript` → `lib/generated/openapi-v1.d.ts`; `openapi-proxy-types` re-exports; `CommercialProfile` uses generated schema.
