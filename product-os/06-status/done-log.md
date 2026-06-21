@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation 4.3 (2026-06-21, PR #172): dashboard launch proxy contract manifest + guard; expanded route tests for commercial-profile GET, launch state, supply-chain-roles.
 - Automation 4.1 (2026-06-21, PR #171): OpenAPI → TS codegen for dashboard proxy consumers; launch onboarding paths in draft spec; CI freshness guard.
 - Automation 4.7 (2026-06-21, PR #170): composite release health gate (CI required jobs + optional smoke/uptime/Sentry) with GO/NO-GO script and workflow.
 - Automation 4.5 (2026-06-21, PR #168): dashboard Playwright golden paths (login shell, login stub, onboarding read/write) + CI guard; dashboard build split from lint for Playwright gate.

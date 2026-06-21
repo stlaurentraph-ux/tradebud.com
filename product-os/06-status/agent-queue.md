@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.3** Dashboard proxy contract suite — `chore/automation-dashboard-proxy-contracts-4-3`
+- *(none — Bundle E guardrails complete; next: human secrets 2.5/Sentry, parked 4.2+, or Cursor Automations 3.1–3.2)*
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] **4.3** Dashboard proxy contract suite — PR pending
+- [ ] *(none)*
 
 ---
 
@@ -128,6 +128,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **4.3** Dashboard proxy contract suite — PR #172
 - [x] 2026-06-21 — **4.1** Dashboard OpenAPI proxy codegen — PR #171
 - [x] 2026-06-21 — **4.7** Release health gate — PR #170
 - [x] 2026-06-21 — **4.5** Dashboard Playwright golden paths — PR #168
