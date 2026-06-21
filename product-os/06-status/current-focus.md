@@ -4,7 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
-| IF-001 | `chore/automation-n8n-workflow-f` | cursor | Lane 1 slice **2.O.2** — n8n missed schedule alert | `workflow-f-activation.md` | in_progress | — |
+| IF-001 | — | — | — | — | — | Bundle C 2.O complete; next Playwright (2.7 blocked) or human 3.1–3.2 |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
@@ -12,7 +12,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 ## Work now
 
 - **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
-- **Automation ops** — **2.O.2** in progress: n8n workflow-f missed schedule alert guard + activation runbook.
+- **Automation ops** — Bundle C **2.O.1 + 2.O.2** done (PRs on main). **Next:** Playwright slices blocked on golden staging tenant (2.7); or human Cursor Automations (3.1–3.2).
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

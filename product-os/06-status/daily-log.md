@@ -9,6 +9,11 @@
 
 
 
+
+### 2026-06-21 (automation — 2.O.2 merged, PR #165)
+- **Workflow-f** — expanded spec, activation runbook, `n8n:workflow-f:assert` in Contracts CI.
+- **Verified** — Contracts + marketing + field-auth green on PR #165.
+
 ### 2026-06-21 (automation — 2.O.2 n8n workflow-f, `chore/automation-n8n-workflow-f`)
 - **Spec + runbook** — expanded workflow-f JSON, `workflow-f-activation.md`, `n8n:workflow-f:assert` in Contracts CI.
 - **Next** — PR merge; human activates cron in n8n host.
