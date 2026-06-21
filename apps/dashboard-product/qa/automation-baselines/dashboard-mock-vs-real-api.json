@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.9",
+  "mockImportPrefixes": [
+    "@/lib/mocks",
+    "@/lib/mock-data"
+  ],
+  "demoDataModeModule": "lib/demo-data-mode.ts",
+  "productionEnvExample": ".env.production.example",
+  "productionEnvForbiddenPatterns": [
+    "NEXT_PUBLIC_ENABLE_DEMO_DATA_TOGGLE=true",
+    "NEXT_PUBLIC_ENABLE_DEMO_DATA_TOGGLE=1",
+    "NEXT_PUBLIC_DEV_ROLE_SWITCHER=true"
+  ],
+  "demoGatedConsumers": [
+    {
+      "module": "lib/use-tenant-plots.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "lib/use-package-detail.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "lib/use-shipment-headers.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "lib/use-harvest-packages.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "lib/use-requests.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "lib/use-plot-map-preview.ts",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "components/requests/wizard/new-request-wizard-dialog.tsx",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "app/harvests/page.tsx",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "app/harvests/[id]/page.tsx",
+      "requiredGate": "demoDataEnabled"
+    },
+    {
+      "module": "app/shipments/[id]/page.tsx",
+      "requiredGate": "demoDataEnabled"
+    }
+  ],
+  "devOnlyInlineMockPages": [
+    "app/fpic/page.tsx",
+    "app/audit-log/page.tsx"
+  ],
+  "demoSeedOnlyModules": [
+    "lib/package-service.ts",
+    "lib/integrations-mock-data.ts"
+  ],
+  "demoWorkspaceModules": [
+    "lib/demo-bootstrap.ts"
+  ],
+  "devBypassRouteModules": [
+    {
+      "module": "app/api/auth/signup/route.ts",
+      "requiredGuardSnippets": [
+        "TRACEBUD_DEV_SIGNUP_BYPASS",
+        "NODE_ENV !== 'production'"
+      ]
+    },
+    {
+      "module": "app/api/launch/commercial-profile/route.ts",
+      "requiredGuardSnippets": [
+        "TRACEBUD_DEV_SIGNUP_BYPASS",
+        "NODE_ENV !== 'production'"
+      ]
+    }
+  ],
+  "scanExcludedSuffixes": [
+    ".test.ts",
+    ".test.tsx",
+    ".spec.ts"
+  ],
+  "scanExcludedPrefixes": [
+    "e2e/",
+    "lib/mocks/",
+    "scripts/"
+  ]
+}

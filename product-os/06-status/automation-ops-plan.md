@@ -276,7 +276,7 @@ npm run build -w dashboard-product
 | 4.6 | Playwright against Vercel preview URL on PR (`apps/marketing/**` paths) | marketing | **done** — PR #174 |
 | 4.7 | **Release health gate** — composite: CI + smoke + Sentry 15m clean → GO/NO-GO | all | **done** — PR #170 |
 | 4.8 | Maestro nightly offline (device smoke subset) | offline | **done** — PR #175 |
-| 4.9 | Mock-vs-real API guard for dashboard (no silent mock in prod paths) | dashboard |
+| 4.9 | Mock-vs-real API guard for dashboard (no silent mock in prod paths) | dashboard | **in PR** — `chore/automation-dashboard-mock-vs-real-4-9` |
 | 4.10 | Stripe webhook replay test in CI (billing regression) | backend |
 | **4.M.1** | axe-core a11y on marketing key routes | marketing |
 | **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing |

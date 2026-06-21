@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.9 dashboard mock-vs-real guard, `chore/automation-dashboard-mock-vs-real-4-9`)
+- **Guard** — manifest for demo-gated mock consumers, dev-only inline pages, API route mock ban, dev signup bypass checks; `mock:prod:assert` in dashboard CI.
+- **Next** — PR merge when dashboard + Contracts CI green.
+
 ### 2026-06-21 (automation — 4.8 merged, PR #175)
 - **Maestro nightly** — two-flow simulator subset; 03:00 UTC schedule; shared bootstrap with golden path.
 - **Verified** — Expo app + Contracts CI green on PR #175.
