@@ -946,6 +946,10 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run routes:publication:assert -w tracebud-marketing
 
+      - name: Marketing analytics slice guard
+        if: env.CI_RUN == 'true'
+        run: npm run analytics:slice:assert -w tracebud-marketing
+
       - name: Marketing API trace size guard
         if: env.CI_RUN == 'true'
         run: npm run api:trace:size:assert -w tracebud-marketing

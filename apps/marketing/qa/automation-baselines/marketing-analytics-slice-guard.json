@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-21T12:21:46.939Z",
+  "canonicalEventCount": 5,
+  "canonicalEvents": [
+    "marketing_cta_clicked",
+    "marketing_lead_submitted",
+    "marketing_thank_you_viewed",
+    "marketing_waitlist_opened",
+    "marketing_waitlist_submitted"
+  ],
+  "trackUsageEvents": [
+    "marketing_thank_you_viewed",
+    "marketing_waitlist_opened",
+    "marketing_waitlist_submitted"
+  ]
+}
