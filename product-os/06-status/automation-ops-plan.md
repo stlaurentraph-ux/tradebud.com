@@ -1,7 +1,7 @@
 # Automation & agent operations plan (exhaustive)
 
-Last updated: 2026-06-20  
-Status: **Rolling out — Phase 0**  
+Last updated: 2026-06-21  
+Status: **Rolling out — Phase 4 complete; Phase 5 parked**  
 Canonical ADR: `product-os/05-decisions/ADR-007-agent-automation-ops.md`  
 Work intake: `product-os/06-status/agent-queue.md`  
 Cursor: `.cursor/rules/agent-operations.mdc`  
@@ -279,7 +279,7 @@ npm run build -w dashboard-product
 | 4.9 | Mock-vs-real API guard for dashboard (no silent mock in prod paths) | dashboard | **done** — PR #176 |
 | 4.10 | Stripe webhook replay test in CI (billing regression) | backend | **done** — PR #177 |
 | **4.M.1** | axe-core a11y on marketing key routes | marketing | **done** — PR #178 |
-| **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing | **in PR** — `chore/automation-marketing-lighthouse-budgets-4-m-2` |
+| **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing | **done** — PR #179 |
 
 **Blocked until:** GitHub smoke secrets for live proxy runs (2.5). Golden tenant manifest documented in slice 2.7.
 

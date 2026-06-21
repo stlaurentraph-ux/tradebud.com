@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.M.2 merged, PR #179)
+- **Lighthouse** — LCP/CLS budgets on `/en` + `/en/pricing` via Playwright Chromium + manifest guard in marketing CI; CI hang fixed (shared Chrome session + per-route timeout).
+- **Verified** — Marketing CI green on PR #179. **Phase 4 guardrails complete.**
+
 ### 2026-06-21 (automation — 4.M.2 Lighthouse budgets, `chore/automation-marketing-lighthouse-budgets-4-m-2`)
 - **Lighthouse** — LCP/CLS budgets on `/en` + `/en/pricing` via Playwright Chromium + manifest guard in marketing CI.
 - **Next** — PR merge when marketing CI green.

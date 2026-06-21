@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails complete through 4.M.1 — next: 4.M.2 Lighthouse in PR)*
+- *(Phase 4 guardrails complete — next parked: 2.5 secrets, 3.1–3.2 Cursor Automations, Phase 5)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -78,7 +78,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.3** Weekly health Cursor Automation
 - [ ] **3.5** Dependabot babysit automation
 - [ ] **3.7–3.10** CODEOWNERS enforce, stale PR, PR templates, auto-merge fixes
-- [ ] **4.9–4.10, 4.M.1–4.M.2** — see automation-ops-plan §Phase 4
+- [x] **4.9–4.10, 4.M.1–4.M.2** — Phase 4 complete (PRs #176–#179)
 - [ ] **5.1–5.10** — see automation-ops-plan §Phase 5
 
 ---
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.M.2** Marketing Lighthouse LCP/CLS budgets — `chore/automation-marketing-lighthouse-budgets-4-m-2` (PR pending)
+- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
 
 ---
 
@@ -128,6 +128,10 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **4.M.2** Marketing Lighthouse LCP/CLS budgets — PR #179
+- [x] 2026-06-21 — **4.M.1** Marketing axe-core a11y routes — PR #178
+- [x] 2026-06-21 — **4.10** Stripe webhook replay guard — PR #177
+- [x] 2026-06-21 — **4.9** Dashboard mock-vs-real API guard — PR #176
 - [x] 2026-06-21 — **4.8** Maestro nightly offline smoke — PR #175
 - [x] 2026-06-21 — **4.6** Marketing Playwright preview on PR — PR #174
 - [x] 2026-06-21 — **4.2** Offline OpenAPI client codegen — PR #173
