@@ -1008,6 +1008,10 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run e2e:golden-paths:assert -w tracebud-marketing
 
+      - name: Marketing a11y routes manifest guard
+        if: env.CI_RUN == 'true'
+        run: npm run a11y:routes:assert -w tracebud-marketing
+
       - name: Install Playwright Chromium
         if: env.CI_RUN == 'true'
         run: npx playwright install --with-deps chromium
@@ -1016,6 +1020,12 @@ jobs:
       - name: Marketing Playwright golden paths
         if: env.CI_RUN == 'true'
         run: npm run e2e:golden-paths -w tracebud-marketing
+        env:
+          CI: true
+
+      - name: Marketing axe-core a11y routes
+        if: env.CI_RUN == 'true'
+        run: npm run a11y:routes -w tracebud-marketing
         env:
           CI: true
 

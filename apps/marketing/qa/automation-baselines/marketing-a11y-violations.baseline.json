@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "routes": {
+    "home": {
+      "violations": [
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".has-\\[\\>svg\\]\\:px-4.px-8.hover\\:bg-emerald-400"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".has-\\[\\>svg\\]\\:px-4.px-8[href$=\"#how-it-works\"]"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".last\\:flex-none.flex-1.items-center:nth-child(1) > .w-8.h-8.bg-\\[var\\(--data-emerald\\)\\] > .text-\\[10px\\].text-\\[var\\(--forest-canopy\\)\\].font-bold"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".last\\:flex-none.flex-1.items-center:nth-child(2) > .w-8.h-8.bg-\\[var\\(--data-emerald\\)\\] > .text-\\[10px\\].text-\\[var\\(--forest-canopy\\)\\].font-bold"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".last\\:flex-none.flex-1.items-center:nth-child(3) > .w-8.h-8.bg-\\[var\\(--data-emerald\\)\\] > .text-\\[10px\\].text-\\[var\\(--forest-canopy\\)\\].font-bold"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".last\\:flex-none.flex-1.items-center:nth-child(4) > .w-8.h-8.bg-\\[var\\(--data-emerald\\)\\] > .text-\\[10px\\].text-\\[var\\(--forest-canopy\\)\\].font-bold"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".pt-8 > .text-gray-500.text-center"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".px-8.hover\\:bg-emerald-400.has-\\[\\>svg\\]\\:px-3"
+        },
+        {
+          "ruleId": "label",
+          "impact": "critical",
+          "target": ".gap-1\\.5.items-center.flex > input"
+        },
+        {
+          "ruleId": "label",
+          "impact": "critical",
+          "target": ".py-2.px-3.justify-between:nth-child(1) > .gap-2.items-center.flex > input"
+        },
+        {
+          "ruleId": "label",
+          "impact": "critical",
+          "target": ".py-2.px-3.justify-between:nth-child(2) > .gap-2.items-center.flex > input"
+        },
+        {
+          "ruleId": "meta-viewport",
+          "impact": "moderate",
+          "target": "meta[name=\"viewport\"]"
+        }
+      ]
+    },
+    "pricing": {
+      "violations": [
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".bg-\\[var\\(--data-emerald\\)\\]"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-\\[var\\(--data-emerald\\)\\]\\/30"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > .h-\\[128px\\].overflow-hidden > .leading-tight"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > .h-\\[128px\\].overflow-hidden > .mt-1"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > .h-\\[168px\\].mt-4 > div > .text-5xl.font-bold"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > ul > li:nth-child(1) > .text-foreground\\/80.text-sm"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > ul > li:nth-child(2) > .text-foreground\\/80.text-sm"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".border-white\\/10.p-6.h-full:nth-child(1) > .h-full.flex-col.flex > ul > li:nth-child(3) > .text-foreground\\/80.text-sm"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".gap-2.flex-col.flex > .w-full[target=\"_blank\"][rel=\"noopener noreferrer\"]:nth-child(1) > .hover\\:bg-\\[var\\(--forest-light\\)\\].text-base.py-6"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".grid-cols-3 > div:nth-child(1) > .text-xs.text-muted-foreground"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".grid-cols-3 > div:nth-child(2) > .text-xs.text-muted-foreground"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".max-w-4xl.mx-auto > .mt-4"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".md\\:text-left > p"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".shadow-xs"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": ".text-gray-500"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": "div:nth-child(2) > .text-2xl.font-bold.text-\\[var\\(--data-emerald\\)\\]"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": "div:nth-child(3) > .text-2xl.font-bold.text-\\[var\\(--data-emerald\\)\\]"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": "div:nth-child(3) > .text-xs.text-muted-foreground"
+        },
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "target": "h1"
+        },
+        {
+          "ruleId": "meta-viewport",
+          "impact": "moderate",
+          "target": "meta[name=\"viewport\"]"
+        }
+      ]
+    }
+  }
+}

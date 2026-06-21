@@ -10,6 +10,14 @@
 
 
 
+### 2026-06-21 (automation — 4.M.1 marketing a11y routes, `chore/automation-marketing-a11y-4-m-1`)
+- **axe-core** — Playwright scans on `/en` + `/en/pricing` with WCAG tags; violations baseline locks known debt; `a11y:routes:assert` in marketing CI.
+- **Next** — PR merge when marketing CI green.
+
+### 2026-06-21 (automation — 4.10 merged, PR #177)
+- **Stripe webhook replay** — signed `invoice.paid` / `invoice.payment_failed` idempotency tests + manifest guard in backend CI.
+- **Verified** — backend unit tests + guard green on PR #177 (integration failures pre-existing).
+
 ### 2026-06-21 (automation — 4.10 Stripe webhook replay guard, `chore/automation-stripe-webhook-replay-4-10`)
 - **Replay tests** — signed `invoice.paid` / `invoice.payment_failed` idempotency + paid-invoice downgrade guard; manifest + CI guard.
 - **Next** — PR merge when backend unit tests + guard green.

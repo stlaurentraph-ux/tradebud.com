@@ -22,6 +22,9 @@
     "e2e:golden-paths:install": "playwright install chromium",
     "e2e:preview": "node scripts/run-marketing-preview-playwright.mjs",
     "e2e:preview:assert": "node scripts/marketing-playwright-preview-guard.mjs",
+    "a11y:routes": "playwright test e2e/accessibility.spec.ts",
+    "a11y:routes:assert": "node scripts/marketing-a11y-routes-guard.mjs",
+    "a11y:routes:baseline:refresh": "A11Y_BASELINE_REFRESH=1 playwright test e2e/accessibility.spec.ts",
     "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run png:size:assert && npm run e2e:golden-paths:assert && npm run build && npm run api:trace:size:assert",
     "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs"
   },
@@ -83,11 +86,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "axe-core": "^4.11.4",
     "postcss": "^8.5",
     "shadcn": "^4.0.0",
     "sharp": "^0.34.5",
