@@ -1013,6 +1013,20 @@ jobs:
         env:
           CI: true
 
+      - name: Marketing Playwright preview manifest guard
+        if: env.CI_RUN == 'true' && github.event_name == 'pull_request'
+        run: npm run e2e:preview:assert -w tracebud-marketing
+
+      - name: Marketing Playwright against Vercel preview
+        if: env.CI_RUN == 'true' && github.event_name == 'pull_request'
+        run: npm run e2e:preview -w tracebud-marketing
+        env:
+          CI: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
   app:
     name: Expo app lint
     needs: changes

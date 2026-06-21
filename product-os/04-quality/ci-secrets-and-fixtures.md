@@ -25,8 +25,9 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
 | `UPTIME_DASHBOARD_BASE_URL` | 2.8 | synthetic uptime probes | Dashboard base URL (`https://dashboard.tracebud.com`); optional — manifest fallback when unset |
 | `UPTIME_BACKEND_BASE_URL` | 2.8 | synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
+| `MARKETING_PREVIEW_BASE_URL` | 4.6 | marketing preview Playwright on PR | Optional override when Vercel PR previews are disabled |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Vercel Deployment Protection bypass for CI |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
 | `EXPO_TOKEN` | 3.O.1 | offline Maestro golden path | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
