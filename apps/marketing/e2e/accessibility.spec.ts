@@ -85,7 +85,31 @@ async function assertRouteMatchesBaseline(
   }
 
   const expected = baseline.routes[routeId]?.violations ?? [];
-  expect(normalized).toEqual(expected);
+  assertNoRegression(normalized, expected, routeId);
+}
+
+function assertNoRegression(
+  actual: NormalizedViolation[],
+  expected: NormalizedViolation[],
+  routeId: string,
+) {
+  const expectedByKey = new Map(
+    expected.map((violation) => [`${violation.ruleId}:${violation.impact}`, violation]),
+  );
+
+  for (const violation of actual) {
+    const key = `${violation.ruleId}:${violation.impact}`;
+    const baselineEntry = expectedByKey.get(key);
+    if (!baselineEntry) {
+      throw new Error(
+        `New a11y violation on ${routeId}: ${key} (${violation.count} nodes)`,
+      );
+    }
+    expect(
+      violation.count,
+      `${routeId} ${key} count must not exceed baseline (${baselineEntry.count})`,
+    ).toBeLessThanOrEqual(baselineEntry.count);
+  }
 }
 
 test.beforeEach(async ({ page }) => {

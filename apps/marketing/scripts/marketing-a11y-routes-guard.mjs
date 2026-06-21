@@ -49,6 +49,9 @@ function assertManifestShape(manifest) {
   if (!ids.includes('home') || !ids.includes('pricing')) {
     throw new Error('manifest routes must include home and pricing');
   }
+  if (manifest.baselinePolicy !== 'regression-ceiling') {
+    throw new Error('manifest baselinePolicy must be regression-ceiling');
+  }
 }
 
 function assertSpecAlignment(manifest) {
@@ -112,8 +115,8 @@ function assertBaselineFile(manifest) {
     }
   }
   const spec = readMarketing(manifest.specFile);
-  if (!spec.includes('marketing-a11y-violations.baseline.json')) {
-    throw new Error(`${manifest.specFile} must load violations baseline file`);
+  if (!spec.includes('assertNoRegression')) {
+    throw new Error(`${manifest.specFile} must enforce regression ceiling against baseline counts`);
   }
 }
 

@@ -21,5 +21,6 @@
       "testName": "pricing route has no axe violations"
     }
   ],
-  "violationsBaseline": "qa/automation-baselines/marketing-a11y-violations.baseline.json"
+  "violationsBaseline": "qa/automation-baselines/marketing-a11y-violations.baseline.json",
+  "baselinePolicy": "regression-ceiling"
 }
