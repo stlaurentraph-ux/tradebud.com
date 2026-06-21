@@ -70,9 +70,8 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
-- [ ] **2.5** Wire onboarding proxy smoke — blocked: secrets
+- [ ] **2.5** Wire onboarding proxy smoke — blocked: GitHub secrets (`DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN`) — see `golden-staging-tenant.md`
 - [ ] **2.6** Backend Railway post-deploy health
-- [ ] **2.7** Golden staging tenant doc + seed extension
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
 - [ ] **2.11** Scheduled RLS evidence
@@ -97,7 +96,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — next: Bundle E Playwright blocked on 2.7, or 3.1–3.2 Cursor Automations human setup)*
+- [ ] **2.7** Golden staging tenant — branch `chore/automation-golden-staging-tenant-2-7`
 
 ---
 
@@ -109,9 +108,8 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## Blocked
 
-- [ ] **2.5** Onboarding proxy smoke in CI — needs `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub secrets
+- [ ] **2.5** Onboarding proxy smoke in CI — needs `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub secrets (runbook: `golden-staging-tenant.md`)
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
-- [ ] **4.4–4.7** Playwright + release health — needs golden staging tenant (2.7) + `ci-secrets-and-fixtures.md`
 - [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired PR #158)
 - [ ] **0.H.3** Branch protection PR-only — human
 

@@ -13,7 +13,10 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 |--------|-------|---------|---------|
 | `TEST_DATABASE_URL` | live | backend CI | PostGIS integration tests |
 | `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Staging dashboard URL |
-| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5 | onboarding proxy smoke | Authenticated smoke bearer |
+| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5, 2.7 | onboarding proxy smoke, golden bootstrap | Supabase JWT for golden recipient tenant |
+| `TRACEBUD_SMOKE_TENANT_ID` | 2.7, 4.4–4.7 | Playwright / smoke assertions | Optional — default `tenant_rwanda_001` per manifest |
+| `TRACEBUD_SMOKE_ROLE` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `compliance_manager` |
+| `TRACEBUD_SMOKE_STEP_KEY` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `create_first_campaign` |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | Vercel Remote Cache token ([create](https://vercel.com/account/tokens) or `npx turbo login`) |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
@@ -76,9 +79,21 @@ Marketing build: no secrets required for static build; forms need env only at ru
 
 ## Golden staging tenant (Phase 2.7)
 
-**Status:** not yet documented — blocked slice 2.7.
+**Status:** documented — see `golden-staging-tenant.md` + `golden-staging-tenant.json`.
 
-Target: bearer token + tenant id for Playwright and proxy smoke. Document here when 2.7 completes.
+| Fixture | Value |
+|---------|-------|
+| Recipient tenant | `tenant_rwanda_001` |
+| Sender tenant | `tenant_brazil_001` |
+| Bootstrap action | `seed_golden_path` (exporter/admin JWT) |
+| Onboarding smoke role | `compliance_manager` |
+| Onboarding step key | `create_first_campaign` |
+
+**Bootstrap (staging):** `node apps/dashboard-product/scripts/golden-staging-bootstrap.mjs`  
+**Onboarding smoke:** `node apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs`  
+**CI guard:** `npm run golden:staging:assert`
+
+Slice **2.5** remains blocked until `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` are set in GitHub.
 
 ---
 
@@ -96,6 +111,7 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-21 | Slice 2.7: golden staging tenant manifest, runbook, bootstrap helper, CI guard |
 | 2026-06-21 | Slice 2.O.2: workflow-f missed schedule alert guard + activation runbook |
 | 2026-06-20 | Slice 1.2: Turbo remote cache env in CI; `turbo:cache:report` guard |
 | 2026-06-20 | Slice 3.O.1: optional `EXPO_TOKEN` for Maestro golden-path CI |

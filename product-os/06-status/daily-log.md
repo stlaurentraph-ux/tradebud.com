@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 2.7 golden staging tenant, `chore/automation-golden-staging-tenant-2-7`)
+- **Manifest + runbook** — `golden-staging-tenant.json` / `.md`; `GOLDEN_STAGING_TENANT` constants; inbox `seed_golden_path` aligned.
+- **Guard** — `golden:staging:assert` in Contracts CI; bootstrap + onboarding smoke scripts documented.
+- **Next** — PR merge; human adds smoke secrets for 2.5; Bundle E Playwright.
+
 ### 2026-06-21 (automation — 2.O.2 merged, PR #165)
 - **Workflow-f** — expanded spec, activation runbook, `n8n:workflow-f:assert` in Contracts CI.
 - **Verified** — Contracts + marketing + field-auth green on PR #165.

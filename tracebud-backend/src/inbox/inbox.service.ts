@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { GOLDEN_STAGING_TENANT } from '../testing/golden-staging-tenant.constants';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
 type RequestType = 'MISSING_PLOT_GEOMETRY' | 'GENERAL_EVIDENCE' | 'CONSENT_GRANT';
@@ -117,29 +118,31 @@ export class InboxService {
   }
 
   private goldenPathRequests(nowIso: string): InboxRequestRecord[] {
+    const { recipientTenantId, senderTenantId, goldenInboxRequestIds, goldenCampaignIds } =
+      GOLDEN_STAGING_TENANT;
     return [
       {
-        id: 'req_inbox_gp_001',
-        campaign_id: 'campaign_gp_001',
+        id: goldenInboxRequestIds[0],
+        campaign_id: goldenCampaignIds[0],
         title: 'Upload updated FPIC packet',
         request_type: 'CONSENT_GRANT',
         due_at: '2026-04-15T23:59:59Z',
         from_org: 'Great Lakes Exporters',
-        sender_tenant_id: 'tenant_brazil_001',
-        recipient_tenant_id: 'tenant_rwanda_001',
+        sender_tenant_id: senderTenantId,
+        recipient_tenant_id: recipientTenantId,
         status: 'RESPONDED',
         created_at: nowIso,
         updated_at: nowIso,
       },
       {
-        id: 'req_inbox_gp_002',
-        campaign_id: 'campaign_gp_002',
+        id: goldenInboxRequestIds[1],
+        campaign_id: goldenCampaignIds[1],
         title: 'Confirm missing plot geometry evidence',
         request_type: 'MISSING_PLOT_GEOMETRY',
         due_at: '2026-04-12T23:59:59Z',
         from_org: 'Great Lakes Exporters',
-        sender_tenant_id: 'tenant_brazil_001',
-        recipient_tenant_id: 'tenant_rwanda_001',
+        sender_tenant_id: senderTenantId,
+        recipient_tenant_id: recipientTenantId,
         status: 'PENDING',
         created_at: nowIso,
         updated_at: nowIso,
