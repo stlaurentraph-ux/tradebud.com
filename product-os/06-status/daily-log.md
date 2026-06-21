@@ -10,6 +10,12 @@
 
 
 
+### 2026-06-21 (automation — 4.7 release health gate, `chore/automation-release-health-gate-4-7`)
+- **Gate** — `release-health-collect.mjs` + `release-health-gate.mjs` (CI required jobs, optional smoke/uptime/Sentry); manifest guard in Contracts CI.
+- **Workflow** — `.github/workflows/release-health-gate.yml` (manual + weekly schedule).
+- **Verified** — `npm run release:health:assert` green locally.
+- **Next** — PR merge.
+
 ### 2026-06-21 (automation — 4.5 merged, PR #168)
 - **Playwright** — login shell, login stub (mocked Supabase grant), onboarding proxy read/write; manifest guard + dashboard CI job.
 - **CI** — split dashboard build from lint (`continue-on-error`) so golden-path tests run despite pre-existing lint debt.

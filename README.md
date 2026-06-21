@@ -103,6 +103,7 @@ Post-deploy and scheduled probes (see `product-os/04-quality/ci-secrets-and-fixt
 
 - `.github/workflows/marketing-deploy-smoke.yml` — runs after successful **Production** marketing deploy when `MARKETING_SMOKE_BASE_URL` is set
 - `.github/workflows/uptime-probes.yml` — synthetic uptime every 30 minutes (`npm run uptime:probes:run`); manifest validated in CI via `npm run uptime:probes:manifest:assert`
+- `.github/workflows/release-health-gate.yml` — composite GO/NO-GO (`npm run release:health:collect` + `npm run release:health:gate`); wiring guard in Contracts via `npm run release:health:assert`
 
 ## Pre-commit hooks
 

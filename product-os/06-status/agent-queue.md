@@ -57,7 +57,6 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- [ ] **4.7** Release health gate script + workflow — `chore/automation-release-health-gate`
 - [ ] **4.1** OpenAPI → TS codegen (dashboard proxy) — `chore/automation-openapi-codegen-dashboard`
 
 ### Offline annex (`offline-automation-runbook.md`)
@@ -94,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — next: 4.7 release health gate, human secrets for 2.5, or Cursor Automations 3.1–3.2)*
+- **4.7** Release health gate — branch `chore/automation-release-health-gate-4-7` (PR pending)
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.7** Release health gate (CI + smoke + Sentry window → GO/NO-GO) — `chore/automation-release-health-gate-4-7`
 
 ---
 

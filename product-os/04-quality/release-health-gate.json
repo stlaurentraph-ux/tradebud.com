@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.7",
+  "verdicts": ["GO", "NO-GO"],
+  "thresholds": {
+    "sentryWindowMinutes": 15,
+    "sentryMaxNewIssues": 0
+  },
+  "ci": {
+    "workflowFile": "ci.yml",
+    "branch": "main",
+    "requiredJobNames": [
+      "Contracts (OpenAPI lint)",
+      "Marketing site lint, typecheck, i18n, and build",
+      "Dashboard product lint, typecheck, tests, and build",
+      "Field auth lint, typecheck, tests, and build"
+    ]
+  },
+  "signals": [
+    {
+      "id": "ci_main",
+      "required": true,
+      "description": "Latest completed main CI run has green required jobs"
+    },
+    {
+      "id": "marketing_post_deploy_smoke",
+      "required": false,
+      "skipWhenEnvMissing": "MARKETING_SMOKE_BASE_URL",
+      "description": "Marketing post-deploy smoke against production URL"
+    },
+    {
+      "id": "uptime_probes",
+      "required": false,
+      "skipWhenEnvMissing": "MARKETING_SMOKE_BASE_URL",
+      "description": "Synthetic uptime probes for marketing, dashboard, and backend"
+    },
+    {
+      "id": "sentry_clean_window",
+      "required": false,
+      "skipWhenEnvMissing": "SENTRY_RELEASE_HEALTH_AUTH_TOKEN",
+      "description": "No unresolved Sentry issues in the post-release observation window"
+    }
+  ],
+  "workflowFile": ".github/workflows/release-health-gate.yml",
+  "exampleReport": "product-os/04-quality/release-health-report.example.json"
+}

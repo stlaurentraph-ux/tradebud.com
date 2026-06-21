@@ -1,0 +1,76 @@
+name: Release health gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly promote-readiness snapshot (Monday 09:00 UTC)
+    - cron: '0 9 * * 1'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  gate:
+    name: Release health gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release health manifest guard
+        run: npm run release:health:assert
+
+      - name: Collect release health signals
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_HEALTH_RELEASE_REF: main@${{ github.sha }}
+          MARKETING_SMOKE_BASE_URL: ${{ secrets.MARKETING_SMOKE_BASE_URL }}
+          UPTIME_DASHBOARD_BASE_URL: ${{ secrets.UPTIME_DASHBOARD_BASE_URL }}
+          UPTIME_BACKEND_BASE_URL: ${{ secrets.UPTIME_BACKEND_BASE_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SENTRY_RELEASE_HEALTH_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_HEALTH_AUTH_TOKEN }}
+          SENTRY_RELEASE_HEALTH_ORG: ${{ secrets.SENTRY_RELEASE_HEALTH_ORG }}
+          SENTRY_RELEASE_HEALTH_PROJECT: ${{ secrets.SENTRY_RELEASE_HEALTH_PROJECT }}
+        run: npm run release:health:collect -- --report=release-health-report.json
+
+      - name: Evaluate release health gate
+        run: npm run release:health:gate -- --report=release-health-report.json
+
+      - name: Publish release health summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'release-health-report.json';
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          if (!fs.existsSync(reportPath)) {
+            fs.appendFileSync(summaryPath, '## Release health gate\n\nReport artifact missing.\n');
+            process.exit(0);
+          }
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          const lines = ['## Release health gate', '', `- Release ref: ${report.releaseRef ?? 'unknown'}`, `- Generated at: ${report.generatedAt ?? 'unknown'}`, ''];
+          for (const [id, entry] of Object.entries(report.signals ?? {})) {
+            lines.push(`- **${id}**: ${entry.status} — ${entry.detail ?? ''}`);
+          }
+          fs.appendFileSync(summaryPath, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Upload release health report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: release-health-report
+          path: release-health-report.json
+          if-no-files-found: ignore
