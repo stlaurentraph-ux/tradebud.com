@@ -37,6 +37,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "check:deploy-health": "node scripts/check-deploy-health.mjs",
+    "deploy:smoke": "node scripts/run-backend-deploy-smoke.mjs",
+    "deploy:smoke:assert": "node scripts/backend-deploy-smoke-guard.mjs",
     "check:gfw": "node scripts/check-gfw-connectivity.mjs",
     "check:fdp": "node scripts/check-fdp-connectivity.mjs",
     "check:push": "node scripts/check-expo-push-readiness.mjs",

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "slice": "2.6",
+  "runnerModule": "scripts/run-backend-deploy-smoke.mjs",
+  "workflowFile": ".github/workflows/backend-deploy-smoke.yml",
+  "envBaseUrl": "UPTIME_BACKEND_BASE_URL",
+  "fallbackBaseUrl": "https://api.tracebud.com",
+  "healthPath": "/api/health",
+  "healthExpectJson": {
+    "status": "ok"
+  },
+  "authProbe": {
+    "path": "/api/v1/launch/onboarding",
+    "method": "GET",
+    "query": {
+      "role": "compliance_manager"
+    },
+    "bearerEnv": "TRACEBUD_SMOKE_BEARER_TOKEN",
+    "expectStatus": [200],
+    "requiredItemKeys": ["step_key", "completed"]
+  },
+  "deployWait": {
+    "maxWaitMs": 600000,
+    "pollIntervalMs": 30000
+  },
+  "requestTimeoutMs": 15000
+}

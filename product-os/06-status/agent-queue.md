@@ -68,7 +68,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
 - [ ] **2.5** Wire onboarding proxy smoke — blocked: GitHub secrets (`DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN`) — see `golden-staging-tenant.md`
-- [ ] **2.6** Backend Railway post-deploy health
+- [ ] **2.6** Backend Railway post-deploy health — in PR
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
 - [ ] **2.11** Scheduled RLS evidence
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
+- **2.6** Backend Railway post-deploy smoke — `chore/automation-backend-deploy-smoke-2-6` (PR pending)
 
 ---
 
