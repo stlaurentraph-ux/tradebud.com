@@ -15,6 +15,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 | **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
 | **1.O.2** | Enable `--strict` on guards in CI | Blocking | **done** — PR #153 |
 | **1.O.3** | Maestro macOS workflow prep | Maestro optional job | **done** — PR #155 |
+| **3.O.1** | Maestro golden path on `main` | Blocking E2E (one flow) | `chore/automation-maestro-main-3o1` |
 
 Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan §7.
 
@@ -81,8 +82,11 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 |-----|----------|------|---------|
 | Expo `app` (Linux) | ubuntu | Every offline PR / push | `npm run qa:maestro:preflight` |
 | `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; optional E2E on macOS |
+| `offline-maestro.yml` → **golden path** | macos | **Push to `main`** (offline paths) | `settings-sync-smoke.yaml` via `qa:maestro:golden-path` |
 
-**Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_flows=true`. Requires `com.tracebud.app` on a booted iOS simulator (see `.maestro/README.md`).
+**Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_golden_path=true` or `run_flows=true`.
+
+**Golden path on `main` (3.O.1):** pushes touching offline Maestro paths run `settings-sync-smoke.yaml` on `macos-latest`. Uses `EXPO_TOKEN` + latest EAS simulator build when set; otherwise `expo run:ios` (slower).
 
 **Refresh flow manifest baseline:**
 
@@ -91,7 +95,7 @@ cd apps/offline-product
 npm run qa:maestro:write-baseline
 ```
 
-Blocking E2E on `main` is slice **3.O.1** (after 1.O.3 prep is stable).
+Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestro.yml` (PR #155+ prep merged; 3.O.1 adds push trigger).
 
 ---
 

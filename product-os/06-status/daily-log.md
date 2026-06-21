@@ -1,5 +1,11 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 3.O.1 Maestro golden path on main, `chore/automation-maestro-main-3o1`)
+- **Golden path** — `maestro-ci-golden-path.sh` runs `settings-sync-smoke.yaml` on macOS; triggered on `main` push (offline Maestro paths).
+- **CI** — `offline-maestro.yml` golden-path job; optional `EXPO_TOKEN` for EAS simulator install.
+- **Baseline** — `goldenPathFlow` in `maestro-flows.json`; preflight validates it.
+- **Next** — PR merge; human may add `EXPO_TOKEN` for faster CI installs.
+
 ### 2026-06-20 (automation — 1.O.3 merged, PR #155)
 - **Maestro CI** — `maestro-ci-preflight.mjs` + baseline in Expo app job; `offline-maestro.yml` for PR path + macOS dispatch.
 - **Verified** — Expo app lint + Maestro preflight green before merge.
