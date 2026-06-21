@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation **2.5** (2026-06-21): dashboard post-deploy onboarding proxy smoke; `deploy:smoke:assert` in dashboard CI + `dashboard-deploy-smoke.yml` workflow (Vercel production deploy, push, dispatch).
 - Automation 2.6 (2026-06-21, PR #184): backend post-deploy smoke for `/api/health` and optional authenticated `GET /api/v1/launch/onboarding`; `deploy:smoke:assert` in backend CI + `backend-deploy-smoke.yml` workflow.
 - Automation 2.M.1 (2026-06-21, PR #183): marketing waitlist email template render smoke (HTML/text merge tags, escape probe, subject constant); `email:templates:smoke:assert` in marketing CI.
 - Automation 2.M.2 (2026-06-21, PR #181): marketing SEO smoke for robots.txt, sitemap.xml URLs, and canonical tags on home + pricing; `seo:smoke:assert` in marketing CI.

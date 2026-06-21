@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails complete — next parked: 2.5 secrets, 3.1–3.2 Cursor Automations, Phase 5)*
+- *(Phase 4 guardrails complete — next parked: 3.1–3.2 Cursor Automations, Phase 5)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -67,7 +67,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
-- [ ] **2.5** Wire onboarding proxy smoke — blocked: GitHub secrets (`DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN`) — see `golden-staging-tenant.md`
+- [x] **2.5** Wire onboarding proxy smoke — `dashboard-deploy-smoke.yml` + manifest guard (secrets set 2026-06-21)
 - [x] **2.6** Backend Railway post-deploy health — PR #184
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
+- *(none — pick next Ready slice or human-blocked 3.1–3.2 / 0.H.3)*
 
 ---
 
@@ -105,7 +105,6 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## Blocked
 
-- [ ] **2.5** Onboarding proxy smoke in CI — needs `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub secrets (runbook: `golden-staging-tenant.md`)
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
 - [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired PR #158)
 - [ ] **0.H.3** Branch protection PR-only — human

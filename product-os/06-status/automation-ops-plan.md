@@ -225,7 +225,7 @@ npm run build -w dashboard-product
 | 2.2 | Sentry alert rules → Slack or email | All |
 | 2.3 | GitHub workflow: `deployment_status` (Vercel) → curl smoke | marketing, dashboard |
 | 2.4 | Marketing post-deploy smoke (live pages 200, stealth 404, API method sanity) | marketing |
-| 2.5 | Wire `launch-onboarding-proxy-smoke.mjs` post-deploy | dashboard |
+| 2.5 | Wire `launch-onboarding-proxy-smoke.mjs` post-deploy | dashboard | **done** — secrets set 2026-06-21; workflow + guard in PR |
 | 2.6 | Backend Railway health + one authenticated probe post-deploy | backend | **done** — PR #184 |
 | 2.7 | Golden staging tenant doc + bootstrap (`seed_golden_path` extended) | backend + dashboard | **done** — PR #166 |
 | 2.8 | Synthetic uptime (Checkly / Better Stack) independent of deploy pipeline | marketing, dashboard |
@@ -238,7 +238,7 @@ npm run build -w dashboard-product
 | **2.O.2** | Activate n8n workflow-f (missed schedule alert) | ops | **done** — PR #165 (repo guard); human n8n activation |
 | **2.O.3** | Activate n8n workflow-a (daily outreach intelligence) | ops |
 
-**Blocked until secrets:** 2.5 needs `DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub.
+**Blocked until secrets:** ~~2.5 needs `DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub.~~ **Resolved 2026-06-21** — rotate `TRACEBUD_SMOKE_BEARER_TOKEN` before Supabase JWT expiry (~1h session tokens).
 
 ---
 

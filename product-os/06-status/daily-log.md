@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 2.5 dashboard post-deploy smoke)
+- **Dashboard post-deploy** — onboarding proxy GET/POST smoke via `run-dashboard-onboarding-smoke.mjs`; workflow on Vercel production `deployment_status`, push, dispatch.
+- **Secrets** — `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` set in GitHub (2026-06-21).
+- **Next** — PR merge; rotate smoke JWT before expiry; Cursor Automations 3.1–3.2.
+
 ### 2026-06-21 (automation — 2.6 merged, PR #184)
 - **Backend post-deploy** — `/api/health` + optional authenticated onboarding probe; workflow on push/dispatch/Railway webhook.
 - **Verified** — Backend deploy smoke manifest guard green on PR #184.

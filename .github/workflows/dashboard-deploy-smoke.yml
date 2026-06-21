@@ -1,0 +1,64 @@
+name: Dashboard post-deploy smoke
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Override DASHBOARD_BASE_URL for manual run
+        required: false
+        type: string
+      wait_for_deploy:
+        description: Poll /login until ready before smoke (use after Vercel deploy)
+        required: false
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [dashboard-deploy-success]
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dashboard-product/**'
+      - '.github/workflows/dashboard-deploy-smoke.yml'
+
+jobs:
+  smoke:
+    name: Dashboard post-deploy smoke
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      github.event_name == 'repository_dispatch' ||
+      (
+        github.event.deployment_status.state == 'success' &&
+        (
+          github.event.deployment.environment == 'Production' ||
+          github.event.deployment.environment == 'production'
+        )
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Run dashboard post-deploy smoke
+        env:
+          DASHBOARD_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.DASHBOARD_BASE_URL }}
+          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DASHBOARD_BASE_URL:-}" ] || [ -z "${TRACEBUD_SMOKE_BEARER_TOKEN:-}" ]; then
+            echo "DASHBOARD_BASE_URL or TRACEBUD_SMOKE_BEARER_TOKEN is not configured — skipping dashboard post-deploy smoke."
+            echo "Add secrets in GitHub Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            export DASHBOARD_SMOKE_WAIT_FOR_DEPLOY=1
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.wait_for_deploy }}" = "true" ]; then
+            export DASHBOARD_SMOKE_WAIT_FOR_DEPLOY=1
+          fi
+          node apps/dashboard-product/scripts/run-dashboard-onboarding-smoke.mjs

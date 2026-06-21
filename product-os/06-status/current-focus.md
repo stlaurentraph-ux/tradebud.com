@@ -4,7 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
-| IF-001 | — | — | — | — | — | Human smoke/Sentry secrets (2.5) or parked Phase 4 slices |
+| IF-001 | — | — | — | — | — | Cursor Automations 3.1–3.2 or Sentry release-health secrets |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
@@ -12,7 +12,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 ## Work now
 
 - **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
-- **Automation ops** — **Phase 4 complete**; **2.M.1–2.M.2**, **2.6** on `main`. **Next:** human secrets **2.5** / Sentry / optional **EXPO_TOKEN**; Cursor Automations **3.1–3.2**; parked Phase 5 when reprioritized.
+- **Automation ops** — **Phase 4 complete**; **2.5**, **2.M.1–2.M.2**, **2.6** on `main` (2.5 PR pending merge). **Next:** rotate smoke JWT; Cursor Automations **3.1–3.2**; Sentry release-health secrets; parked Phase 5 when reprioritized.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.
