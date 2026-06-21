@@ -10,7 +10,10 @@
 
 
 
-### 2026-06-21 (automation — 2.M.2 merged, PR #181)
+### 2026-06-21 (automation — 2.M.1 email template smoke, `chore/automation-marketing-email-templates-smoke-2-m-1`)
+- **Email templates** — waitlist HTML/text render smoke with placeholder + escape checks; manifest guard in marketing CI.
+- **Next** — PR merge when marketing CI green.
+
 - **SEO smoke** — robots.txt + sitemap.xml + canonical on `/en` + `/en/pricing`; manifest guard + CI runtime after Lighthouse.
 - **Verified** — Marketing CI green on PR #181.
 
