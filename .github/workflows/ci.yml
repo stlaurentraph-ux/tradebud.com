@@ -8,6 +8,8 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
   changes:
@@ -116,6 +118,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Turbo remote cache status
+        run: npm run turbo:cache:report
 
       - name: Supabase migration naming guard
         run: npm run supabase:migration:naming:assert
@@ -718,14 +723,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint -w tracebud-backend
+      - name: Lint and build
+        run: npx turbo run lint build --filter=tracebud-backend
 
       - name: Sentry environment tag guard
         run: npm run sentry:env:assert
-
-      - name: Build
-        run: npm run build -w tracebud-backend
 
       - name: Install backend Jest tree (isolated from Expo Jest 29 hoist)
         working-directory: tracebud-backend
@@ -814,23 +816,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint -w dashboard-product
-
-      - name: Typecheck
-        run: npm run typecheck -w dashboard-product
-
-      - name: Tests
-        run: npm test -w dashboard-product
+      - name: Lint, typecheck, test, and build
+        run: npx turbo run lint typecheck test build --filter=dashboard-product
 
       - name: Sentry environment tag guard
         run: npm run sentry:env:assert
 
       - name: Dashboard API regression guard
         run: npm run regression:routes:assert -w dashboard-product
-
-      - name: Build
-        run: npm run build -w dashboard-product
 
   founder-os:
     name: Founder OS lint, typecheck, and build
@@ -852,14 +845,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint -w founder-os
-
-      - name: Typecheck
-        run: npm run typecheck -w founder-os
-
-      - name: Build
-        run: npm run build -w founder-os
+      - name: Lint, typecheck, and build
+        run: npx turbo run lint typecheck build --filter=founder-os
 
   field-auth:
     name: Field auth lint, typecheck, tests, and build
@@ -891,21 +878,9 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm ci
 
-      - name: Lint
+      - name: Lint, typecheck, test, and build
         if: env.CI_RUN == 'true'
-        run: npm run lint -w field-auth
-
-      - name: Typecheck
-        if: env.CI_RUN == 'true'
-        run: npm run typecheck -w field-auth
-
-      - name: Tests
-        if: env.CI_RUN == 'true'
-        run: npm test -w field-auth
-
-      - name: Build
-        if: env.CI_RUN == 'true'
-        run: npm run build -w field-auth
+        run: npx turbo run lint typecheck test build --filter=field-auth
 
   marketing:
     name: Marketing site lint, typecheck, i18n, and build
@@ -937,17 +912,13 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm ci
 
-      - name: Lint
+      - name: Lint, typecheck, and build
         if: env.CI_RUN == 'true'
-        run: npm run lint -w tracebud-marketing
+        run: npx turbo run lint typecheck build --filter=tracebud-marketing
 
       - name: Sentry environment tag guard
         if: env.CI_RUN == 'true'
         run: npm run sentry:env:assert
-
-      - name: Typecheck
-        if: env.CI_RUN == 'true'
-        run: npm run typecheck -w tracebud-marketing
 
       - name: Marketing i18n parity
         if: env.CI_RUN == 'true'
@@ -956,10 +927,6 @@ jobs:
       - name: Marketing routes publication guard
         if: env.CI_RUN == 'true'
         run: npm run routes:publication:assert -w tracebud-marketing
-
-      - name: Build
-        if: env.CI_RUN == 'true'
-        run: npm run build -w tracebud-marketing
 
       - name: Marketing API trace size guard
         if: env.CI_RUN == 'true'
@@ -994,8 +961,9 @@ jobs:
         working-directory: apps/offline-product
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint, typecheck, and unit tests
+        working-directory: .
+        run: npx turbo run lint typecheck test --filter=./apps/offline-product
 
       - name: Metro / Expo start preflight
         run: npm run check:metro-start
@@ -1006,14 +974,8 @@ jobs:
       - name: Automation guards (Phase 1.O.2 strict)
         run: npm run qa:automation:phase1:strict
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: English i18n placeholder guard
         run: npm run i18n:en:placeholder:assert
-
-      - name: Unit tests
-        run: npm run test
 
       - name: Field regression guard
         run: node ./scripts/field-regression-guard.mjs

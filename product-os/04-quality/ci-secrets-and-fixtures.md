@@ -14,8 +14,8 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TEST_DATABASE_URL` | live | backend CI | PostGIS integration tests |
 | `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Staging dashboard URL |
 | `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5 | onboarding proxy smoke | Authenticated smoke bearer |
-| `TURBO_TOKEN` | 1.2 | Turbo remote cache | CI cache auth |
-| `TURBO_TEAM` | 1.2 | Turbo remote cache | Team slug |
+| `TURBO_TOKEN` | 1.2 | Turbo remote cache | Vercel Remote Cache token ([create](https://vercel.com/account/tokens) or `npx turbo login`) |
+| `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
 | `UPTIME_DASHBOARD_BASE_URL` | 2.8 | synthetic uptime probes | Dashboard base URL (`https://dashboard.tracebud.com`); optional — manifest fallback when unset |
 | `UPTIME_BACKEND_BASE_URL` | 2.8 | synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
@@ -85,6 +85,7 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 ## Human setup checklist
 
 - [ ] Add secrets in GitHub → Settings → Secrets and variables → Actions
+- [ ] **Turbo remote cache (1.2):** `TURBO_TOKEN` + `TURBO_TEAM` — CI uses local cache until set; `npm run turbo:cache:report` logs status in Contracts job
 - [ ] Never paste values into PRs or `daily-log.md`
 - [ ] After adding secret, move slice from **Blocked** → **Ready** in `agent-queue.md`
 - [ ] Enable branch protection (0.H) only after CI jobs green on `main`
@@ -95,6 +96,7 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-20 | Slice 1.2: Turbo remote cache env in CI; `turbo:cache:report` guard |
 | 2026-06-20 | Slice 3.O.1: optional `EXPO_TOKEN` for Maestro golden-path CI |
 | 2026-06-20 | Slice 2.O.1: n8n Founder OS env vars (n8n host, not GitHub) |
 | 2026-06-20 | Slice 2.8: `UPTIME_DASHBOARD_BASE_URL`, `UPTIME_BACKEND_BASE_URL`; reuse `MARKETING_SMOKE_BASE_URL` |

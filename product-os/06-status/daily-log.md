@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 1.2 Turbo remote cache in CI, `chore/automation-turbo-remote-cache`)
+- **CI** — `TURBO_TOKEN` / `TURBO_TEAM` env; workspace jobs use `turbo run`; `turbo:cache:report` in Contracts job.
+- **Docs** — `ci-secrets-and-fixtures.md`, README CI section.
+- **Next** — human adds Vercel Turbo secrets for cross-run cache hits; merge PR when green.
+
 ### 2026-06-20 (automation — 3.O.1 merged, PR #157)
 - **Golden path** — `settings-sync-smoke.yaml` on macOS after qualifying `main` pushes; `EXPO_TOKEN` optional for EAS install.
 - **Verified** — Expo app + Maestro preflight green on PR #157 before merge.
