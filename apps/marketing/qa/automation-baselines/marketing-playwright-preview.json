@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.6",
+  "goldenPathsManifest": "qa/automation-baselines/marketing-playwright-golden-paths.json",
+  "specFile": "e2e/golden-paths.spec.ts",
+  "readinessPath": "/en",
+  "previewUrlEnvVars": [
+    "MARKETING_PREVIEW_BASE_URL",
+    "PLAYWRIGHT_BASE_URL"
+  ],
+  "vercelProjectHints": [
+    "tradebud-com",
+    "tracebud-marketing",
+    "tracebud.com"
+  ],
+  "requiredPreviewTests": [
+    "home page renders hero and primary navigation",
+    "pricing page renders tier messaging"
+  ],
+  "optionalPreviewTests": [
+    "waitlist flow submits with mocked API"
+  ],
+  "skipWhenPreviewMissing": true
+}

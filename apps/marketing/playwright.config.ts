@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const port = process.env.PLAYWRIGHT_PORT ?? '3000';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const vercelBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
 
 export default defineConfig({
   testDir: './e2e',
@@ -14,6 +15,9 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    extraHTTPHeaders: vercelBypass
+      ? { 'x-vercel-protection-bypass': vercelBypass }
+      : undefined,
   },
   projects: [
     {

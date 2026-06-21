@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — Phase 4 guardrail slices through 4.3/4.2 complete; next: human secrets 2.5/Sentry, parked 4.6+, or Cursor Automations 3.1–3.2)*
+- **4.6** Marketing Playwright preview — `chore/automation-marketing-playwright-preview-4-6`
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.6** Marketing Playwright preview — PR pending
 
 ---
 
