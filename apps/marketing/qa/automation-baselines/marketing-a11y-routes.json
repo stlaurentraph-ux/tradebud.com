@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.M.1",
+  "locale": "en",
+  "specFile": "e2e/accessibility.spec.ts",
+  "axeTags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa"
+  ],
+  "routes": [
+    {
+      "id": "home",
+      "path": "/en",
+      "testName": "home route has no axe violations"
+    },
+    {
+      "id": "pricing",
+      "path": "/en/pricing",
+      "testName": "pricing route has no axe violations"
+    }
+  ],
+  "violationsBaseline": "qa/automation-baselines/marketing-a11y-violations.baseline.json",
+  "baselinePolicy": "regression-ceiling"
+}

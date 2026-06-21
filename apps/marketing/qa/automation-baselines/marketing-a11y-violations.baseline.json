@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "routes": {
+    "home": {
+      "violations": [
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "count": 11
+        },
+        {
+          "ruleId": "label",
+          "impact": "critical",
+          "count": 3
+        },
+        {
+          "ruleId": "meta-viewport",
+          "impact": "moderate",
+          "count": 1
+        }
+      ]
+    },
+    "pricing": {
+      "violations": [
+        {
+          "ruleId": "color-contrast",
+          "impact": "serious",
+          "count": 40
+        },
+        {
+          "ruleId": "meta-viewport",
+          "impact": "moderate",
+          "count": 1
+        }
+      ]
+    }
+  }
+}

@@ -90,8 +90,8 @@ function assertPlaywrightConfig(manifest) {
 
 function assertPackageScripts() {
   const pkg = JSON.parse(readMarketing('package.json'));
-  if (!pkg.scripts?.['e2e:golden-paths']) {
-    throw new Error('package.json must define e2e:golden-paths script');
+  if (!pkg.scripts?.['e2e:golden-paths']?.includes('golden-paths.spec.ts')) {
+    throw new Error('package.json e2e:golden-paths must target e2e/golden-paths.spec.ts');
   }
   if (!pkg.scripts?.['e2e:golden-paths:assert']) {
     throw new Error('package.json must define e2e:golden-paths:assert script');
