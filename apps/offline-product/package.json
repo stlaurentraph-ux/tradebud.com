@@ -41,6 +41,8 @@
     "qa:automation:phase1": "node ./scripts/run-automation-guards.mjs",
     "qa:automation:phase1:strict": "node ./scripts/run-automation-guards.mjs --strict",
     "qa:automation:write-baselines": "node ./scripts/run-automation-guards.mjs --write-baseline",
+    "openapi:codegen": "node ./scripts/generate-openapi-client-types.mjs",
+    "openapi:codegen:assert": "node ./scripts/mobile-openapi-codegen-guard.mjs",
     "qa:device": "node ./scripts/device-qa-smoke.mjs",
     "qa:sync-connectivity": "node ./scripts/sync-connectivity-check.mjs",
     "qa:device:signoff": "node ./scripts/device-smoke-signoff.mjs",
@@ -139,6 +141,7 @@
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "expo-module-scripts": "~4.1.10",
+    "openapi-typescript": "^7.8.0",
     "typescript": "~5.9.2",
     "vitest": "^3.2.6"
   },

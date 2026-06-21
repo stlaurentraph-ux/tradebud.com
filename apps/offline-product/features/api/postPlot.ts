@@ -1,3 +1,4 @@
+import type { SyncPlotPhotosRequest } from './openapi-client-types';
 import { normalizeWgs84Point, isValidWgs84LatLng } from '@/features/geo/coordinates';
 import type { PlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { getAccessTokenFromSupabase, getAccessTokenFromSupabaseWithTimeout } from './syncAuthSession';
@@ -199,6 +200,14 @@ export async function syncPlotPhotosToBackend(params: {
     );
   }
 
+  const body: SyncPlotPhotosRequest = {
+    kind: params.kind,
+    photos: params.photos,
+    note: params.note,
+    hlcTimestamp: params.hlcTimestamp,
+    clientEventId: params.clientEventId,
+  };
+
   const url = `${API_BASE_URL}/v1/plots/${encodeURIComponent(params.plotId)}/photos-sync`;
   const res = await tracebudFetchWithTimeout(
     url,
@@ -209,13 +218,7 @@ export async function syncPlotPhotosToBackend(params: {
         'Content-Type': 'application/json',
         ...TRACEBUD_NO_CACHE_HEADERS,
       },
-      body: JSON.stringify({
-        kind: params.kind,
-        photos: params.photos,
-        note: params.note ?? null,
-        hlcTimestamp: params.hlcTimestamp ?? null,
-        clientEventId: params.clientEventId ?? null,
-      }),
+      body: JSON.stringify(body),
     },
     30_000,
   );
