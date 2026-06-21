@@ -1,6 +1,8 @@
 apis:
   tracebud:
     root: docs/openapi/tracebud-v1-draft.yaml
+    x-openapi-ts:
+      output: apps/dashboard-product/lib/generated/openapi-v1.d.ts
 
 extends:
   - recommended

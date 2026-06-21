@@ -1,22 +1,14 @@
 import type { TenantRole } from '@/types';
+import type { LaunchCommercialProfile as OpenApiLaunchCommercialProfile } from '@/lib/openapi-proxy-types';
 import {
   normalizeSupplyChainRoles,
   primaryTenantRoleFromSupplyChainRoles,
   resolveTenantRolesFromProfile,
 } from '@/lib/org-supply-chain-roles';
 
-export interface CommercialProfile {
-  tenant_id: string;
-  organization_name: string | null;
-  country: string | null;
-  primary_role: string | null;
+export type CommercialProfile = OpenApiLaunchCommercialProfile & {
   supply_chain_roles?: string[] | null;
-  team_size: string | null;
-  main_commodity: string | null;
-  primary_objective: string | null;
-  profile_skipped: boolean;
-  updated_at: string;
-}
+};
 
 export function isWorkspaceSetupComplete(profile: CommercialProfile | null | undefined): boolean {
   if (!profile) return false;

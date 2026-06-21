@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-20T15:44:45.512Z",
+  "generatedAt": "2026-06-21T13:52:45.589Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -24,6 +24,8 @@
     "/v1/integrations/eudr/dds",
     "/v1/integrations/eudr/dds/status",
     "/v1/launch/commercial-profile",
+    "/v1/launch/onboarding",
+    "/v1/launch/onboarding/complete",
     "/v1/launch/signup",
     "/v1/plots",
     "/v1/plots/assignments/{assignmentId}/cancel",

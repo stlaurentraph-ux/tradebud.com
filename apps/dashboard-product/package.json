@@ -16,6 +16,8 @@
     "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
     "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",
     "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs",
+    "openapi:codegen": "node scripts/generate-openapi-proxy-types.mjs",
+    "openapi:codegen:assert": "node scripts/dashboard-openapi-codegen-guard.mjs",
     "e2e:golden-paths": "playwright test",
     "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
     "e2e:golden-paths:install": "playwright install chromium"
@@ -83,6 +85,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "jsdom": "^27.0.1",
+    "openapi-typescript": "^7.8.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",

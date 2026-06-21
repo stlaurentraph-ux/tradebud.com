@@ -4292,6 +4292,57 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           description: Missing tenant claim or role policy violation
+  /v1/launch/onboarding:
+    get:
+      tags: [Launch]
+      operationId: getLaunchOnboardingProgress
+      summary: Get onboarding checklist progress for a tenant role
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [admin, field_operator, compliance_manager]
+      responses:
+        "200":
+          description: Onboarding progress items for the role
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaunchOnboardingProgressItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
+  /v1/launch/onboarding/complete:
+    post:
+      tags: [Launch]
+      operationId: completeLaunchOnboardingStep
+      summary: Mark an onboarding checklist step complete for a tenant role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchOnboardingCompleteRequest"
+      responses:
+        "200":
+          description: Updated onboarding progress items for the role
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaunchOnboardingProgressItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Missing tenant claim or role policy violation
 components:
   securitySchemes:
     bearerAuth:
@@ -4449,6 +4500,27 @@ components:
           type: boolean
         profile:
           $ref: "#/components/schemas/LaunchCommercialProfile"
+    LaunchOnboardingProgressItem:
+      type: object
+      required: [step_key, completed]
+      properties:
+        step_key:
+          type: string
+        completed:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    LaunchOnboardingCompleteRequest:
+      type: object
+      required: [stepKey]
+      properties:
+        role:
+          type: string
+          enum: [admin, field_operator, compliance_manager]
+        stepKey:
+          type: string
     GatedEntryTelemetryListResponse:
       type: object
       properties:

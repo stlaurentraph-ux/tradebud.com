@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- [ ] **4.1** OpenAPI → TS codegen (dashboard proxy) — `chore/automation-openapi-codegen-dashboard`
+- *(4.1–4.7 complete — next parked: 4.2 offline mobile codegen, 4.3 dashboard proxy contract expansion)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — next: 4.1 OpenAPI codegen, human secrets for 2.5/Sentry release health, or Cursor Automations 3.1–3.2)*
+- **4.1** OpenAPI dashboard proxy codegen — branch `chore/automation-openapi-codegen-dashboard-4-1` (PR pending)
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.1** OpenAPI → TS codegen for dashboard proxy consumers — `chore/automation-openapi-codegen-dashboard-4-1`
 
 ---
 

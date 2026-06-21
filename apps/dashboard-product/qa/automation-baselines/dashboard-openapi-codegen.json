@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.1",
+  "openapiSpec": "docs/openapi/tracebud-v1-draft.yaml",
+  "generatedTypesFile": "lib/generated/openapi-v1.d.ts",
+  "reexportModule": "lib/openapi-proxy-types.ts",
+  "goldenProxyPaths": [
+    "/v1/launch/onboarding",
+    "/v1/launch/onboarding/complete",
+    "/v1/launch/commercial-profile",
+    "/v1/launch/signup"
+  ],
+  "consumerTypeExports": [
+    {
+      "exportName": "LaunchCommercialProfile",
+      "schemaName": "LaunchCommercialProfile"
+    },
+    {
+      "exportName": "LaunchOnboardingProgressItem",
+      "schemaName": "LaunchOnboardingProgressItem"
+    },
+    {
+      "exportName": "LaunchOnboardingCompleteRequest",
+      "schemaName": "LaunchOnboardingCompleteRequest"
+    },
+    {
+      "exportName": "LaunchSignupResponse",
+      "schemaName": "LaunchSignupResponse"
+    }
+  ]
+}
