@@ -1,0 +1,52 @@
+name: Backend post-deploy smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Override UPTIME_BACKEND_BASE_URL for manual run
+        required: false
+        type: string
+      wait_for_deploy:
+        description: Poll /api/health until ready (use after Railway deploy)
+        required: false
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [backend-deploy-success]
+  push:
+    branches: [main]
+    paths:
+      - 'tracebud-backend/**'
+      - '.github/workflows/backend-deploy-smoke.yml'
+
+jobs:
+  smoke:
+    name: Backend post-deploy smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Run backend post-deploy smoke
+        env:
+          UPTIME_BACKEND_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.UPTIME_BACKEND_BASE_URL }}
+          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${UPTIME_BACKEND_BASE_URL:-}" ]; then
+            echo "UPTIME_BACKEND_BASE_URL is not configured — skipping backend post-deploy smoke."
+            echo "Add the secret in GitHub Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            export BACKEND_SMOKE_WAIT_FOR_DEPLOY=1
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.wait_for_deploy }}" = "true" ]; then
+            export BACKEND_SMOKE_WAIT_FOR_DEPLOY=1
+          fi
+          node tracebud-backend/scripts/run-backend-deploy-smoke.mjs

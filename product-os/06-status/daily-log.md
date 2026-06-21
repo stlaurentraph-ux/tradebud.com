@@ -10,7 +10,10 @@
 
 
 
-### 2026-06-21 (automation — 2.M.1 merged, PR #183)
+### 2026-06-21 (automation — 2.6 backend deploy smoke, `chore/automation-backend-deploy-smoke-2-6`)
+- **Backend post-deploy** — `/api/health` + optional authenticated `GET /api/v1/launch/onboarding`; workflow on push/dispatch/Railway webhook.
+- **Next** — PR merge when backend CI green.
+
 - **Email templates** — waitlist HTML/text render smoke with placeholder + escape checks; manifest guard in marketing CI.
 - **Verified** — Marketing CI green on PR #183.
 

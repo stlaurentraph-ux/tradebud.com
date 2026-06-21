@@ -13,7 +13,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 |--------|-------|---------|---------|
 | `TEST_DATABASE_URL` | live | backend CI | PostGIS integration tests |
 | `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Staging dashboard URL |
-| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5, 2.7 | onboarding proxy smoke, golden bootstrap | Supabase JWT for golden recipient tenant |
+| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5, 2.6, 2.7 | onboarding proxy smoke, backend deploy auth probe, golden bootstrap | Supabase JWT for golden recipient tenant |
 | `TRACEBUD_SMOKE_TENANT_ID` | 2.7, 4.4–4.7 | Playwright / smoke assertions | Optional — default `tenant_rwanda_001` per manifest |
 | `TRACEBUD_SMOKE_ROLE` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `compliance_manager` |
 | `TRACEBUD_SMOKE_STEP_KEY` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `create_first_campaign` |
@@ -24,7 +24,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
 | `UPTIME_DASHBOARD_BASE_URL` | 2.8 | synthetic uptime probes | Dashboard base URL (`https://dashboard.tracebud.com`); optional — manifest fallback when unset |
-| `UPTIME_BACKEND_BASE_URL` | 2.8 | synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
+| `UPTIME_BACKEND_BASE_URL` | 2.6, 2.8 | backend deploy smoke, synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
 | `MARKETING_PREVIEW_BASE_URL` | 4.6 | marketing preview Playwright on PR | Optional override when Vercel PR previews are disabled |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
@@ -129,7 +129,7 @@ Slice **2.5** remains blocked until `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARE
 
 | Date | Change |
 |------|--------|
-| 2026-06-21 | Slice 4.7: release health gate manifest, collect/gate scripts, workflow, Contracts guard |
+| 2026-06-21 | Slice 2.6: backend deploy smoke manifest, runner, workflow; reuses `UPTIME_BACKEND_BASE_URL` + optional `TRACEBUD_SMOKE_BEARER_TOKEN` |
 | 2026-06-21 | Slice 2.7: golden staging tenant manifest, runbook, bootstrap helper, CI guard |
 | 2026-06-21 | Slice 2.O.2: workflow-f missed schedule alert guard + activation runbook |
 | 2026-06-20 | Slice 1.2: Turbo remote cache env in CI; `turbo:cache:report` guard |
