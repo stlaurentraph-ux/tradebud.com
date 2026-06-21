@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.M.2 Lighthouse budgets, `chore/automation-marketing-lighthouse-budgets-4-m-2`)
+- **Lighthouse** — LCP/CLS budgets on `/en` + `/en/pricing` via Playwright Chromium + manifest guard in marketing CI.
+- **Next** — PR merge when marketing CI green.
+
 ### 2026-06-21 (automation — 4.M.1 merged, PR #178)
 - **Marketing a11y** — axe-core WCAG scans on home + pricing with regression-ceiling baseline; golden-path Playwright scoped to golden-paths.spec.ts.
 - **Verified** — Marketing CI green on PR #178.

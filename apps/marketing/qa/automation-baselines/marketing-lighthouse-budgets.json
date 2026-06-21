@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.M.2",
+  "locale": "en",
+  "runnerModule": "scripts/run-marketing-lighthouse-budgets.mjs",
+  "serverProbePath": "/en",
+  "routes": [
+    {
+      "id": "home",
+      "path": "/en",
+      "budgets": {
+        "lcpMsMax": 17000,
+        "clsMax": 0.15
+      }
+    },
+    {
+      "id": "pricing",
+      "path": "/en/pricing",
+      "budgets": {
+        "lcpMsMax": 15000,
+        "clsMax": 0.15
+      }
+    }
+  ]
+}

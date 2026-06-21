@@ -279,7 +279,7 @@ npm run build -w dashboard-product
 | 4.9 | Mock-vs-real API guard for dashboard (no silent mock in prod paths) | dashboard | **done** — PR #176 |
 | 4.10 | Stripe webhook replay test in CI (billing regression) | backend | **done** — PR #177 |
 | **4.M.1** | axe-core a11y on marketing key routes | marketing | **done** — PR #178 |
-| **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing |
+| **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing | **in PR** — `chore/automation-marketing-lighthouse-budgets-4-m-2` |
 
 **Blocked until:** GitHub smoke secrets for live proxy runs (2.5). Golden tenant manifest documented in slice 2.7.
 
