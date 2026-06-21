@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 4.5 merged, PR #168)
+- **Playwright** — login shell, login stub (mocked Supabase grant), onboarding proxy read/write; manifest guard + dashboard CI job.
+- **CI** — split dashboard build from lint (`continue-on-error`) so golden-path tests run despite pre-existing lint debt.
+- **Verified** — dashboard CI 3/3 Playwright tests green on PR #168.
+
 ### 2026-06-21 (automation — 4.5 dashboard Playwright, `chore/automation-dashboard-playwright-4-5`)
 - **E2E** — Playwright golden paths: login shell, login stub (mocked Supabase grant), onboarding proxy read/write (golden smoke role/step).
 - **Guard** — `dashboard-playwright-guard.mjs` + manifest; dashboard CI job after build.
