@@ -57,7 +57,6 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- [ ] **4.5** Playwright dashboard 3-path smoke — `chore/automation-dashboard-playwright`
 - [ ] **4.7** Release health gate script + workflow — `chore/automation-release-health-gate`
 - [ ] **4.1** OpenAPI → TS codegen (dashboard proxy) — `chore/automation-openapi-codegen-dashboard`
 
@@ -95,13 +94,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — next: 4.5 dashboard Playwright, human secrets for 2.5, or Cursor Automations 3.1–3.2)*
+- **4.5** Dashboard Playwright golden paths — branch `chore/automation-dashboard-playwright-4-5` (PR pending)
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.5** Playwright dashboard 3-path smoke (login shell, login stub, onboarding read/write) — `chore/automation-dashboard-playwright-4-5`
 
 ---
 

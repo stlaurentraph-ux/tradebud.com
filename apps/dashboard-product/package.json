@@ -15,7 +15,10 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run regression:routes:assert",
     "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
     "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",
-    "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs"
+    "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs",
+    "e2e:golden-paths": "playwright test",
+    "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
+    "e2e:golden-paths:install": "playwright install chromium"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -74,6 +77,7 @@
     "@tailwindcss/postcss": "^4.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@playwright/test": "^1.51.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
     "@types/react": "19.2.14",

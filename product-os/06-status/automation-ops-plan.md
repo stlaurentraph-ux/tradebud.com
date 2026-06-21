@@ -272,7 +272,7 @@ npm run build -w dashboard-product
 | 4.2 | OpenAPI → client codegen for offline mobile API parity | offline |
 | 4.3 | Dashboard proxy contract test suite (expand beyond onboarding smoke) | dashboard |
 | 4.4 | Playwright: marketing 3-path (home, pricing, waitlist flow w/ mocked API) | marketing | **done** — PR #167 |
-| 4.5 | Playwright: dashboard 3-path (login stub, onboarding read/write) | dashboard |
+| 4.5 | Playwright: dashboard 3-path (login stub, onboarding read/write) | dashboard | **in PR** — `chore/automation-dashboard-playwright-4-5` |
 | 4.6 | Playwright against Vercel preview URL on PR (`apps/marketing/**` paths) | marketing |
 | 4.7 | **Release health gate** — composite: CI + smoke + Sentry 15m clean → GO/NO-GO | all |
 | 4.8 | Maestro nightly offline (device smoke subset) | offline |
