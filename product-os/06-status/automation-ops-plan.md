@@ -253,7 +253,7 @@ npm run build -w dashboard-product
 | 3.3 | Cursor Automation: weekly health cron → smoke summary → `daily-log.md` | Cursor |
 | 3.4 | Dependabot (`/.github/dependabot.yml`) npm + GitHub Actions | GitHub | **done** (PR pending) |
 | 3.5 | Cursor Automation: Dependabot PR → run affected `check:*`, fix breakages | Cursor |
-| 3.6 | Auto PR labels: `lane:*`, `app:*`, `risk:spatial` via `labeler.yml` | GitHub | in progress — `chore/automation-pr-labeler` |
+| 3.6 | Auto PR labels: `lane:*`, `app:*`, `risk:spatial` via `labeler.yml` | GitHub | **done** — PR #159 |
 | 3.7 | CODEOWNERS required review on sensitive paths (enforce in branch protection) | GitHub |
 | 3.8 | Stale PR bot (7-day nudge / auto-close draft) | GitHub Action |
 | 3.9 | Per-lane PR templates or conditional sections (marketing/dashboard/offline) | docs |

@@ -4,7 +4,7 @@
 
 | ID | Branch | Owner | Scope | Feature doc | Status | Blocked by |
 |----|--------|-------|-------|-------------|--------|------------|
-| IF-001 | `chore/automation-pr-labeler` | cursor | Lane 1 slice **3.6** — PR path/branch labeler | `automation-ops-plan.md` | in_progress | — |
+| IF-001 | `chore/automation-marketing-analytics-guard` | cursor | Lane 1 slice **1.M.3** — marketing analytics guard | `automation-ops-plan.md` | in_progress | — |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
@@ -12,7 +12,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 ## Work now
 
 - **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
-- **Automation ops** — Bundle B **1.2** done (PR #158). **3.6** in progress: PR labeler (`lane:*`, `app:*`, `risk:spatial`).
+- **Automation ops** — **3.6** done (PR #159). **1.M.3** in progress: marketing analytics slice guard.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.
 - **ADR-006 database reorg (2026-06-20)** — Phases 0–2 live on single Supabase project. Phase 3 (second GTM project) deferred; founder + lead tables stay in `crm` / `gtm` schemas on product DB.

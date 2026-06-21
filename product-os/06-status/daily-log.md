@@ -1,6 +1,12 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
 
+
+### 2026-06-21 (automation — 3.6 merged, PR #159)
+- **PR labeler** — path labels (`app:*`, `risk:spatial`) + branch lane labels; `pr:labeler:assert` in Contracts CI.
+- **Verified** — labeler workflow applied `lane:guardrails` on PR #159; Contracts green.
+- **Next** — slice **1.M.3** marketing analytics guard.
+
 ### 2026-06-21 (automation — 3.6 PR labeler, `chore/automation-pr-labeler`)
 - **Labels** — `.github/labeler.yml` for `app:*`, `risk:spatial`, `lane:guardrails` paths; branch prefix → `lane:*` in `pr-labeler.yml`.
 - **Guard** — `npm run pr:labeler:assert` in Contracts CI job.
