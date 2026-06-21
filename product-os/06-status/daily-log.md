@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.9 merged, PR #176)
+- **Mock-vs-real guard** — demo-gated consumers, dev-only inline pages, API route mock ban, dev signup bypass checks; `mock:prod:assert` in dashboard CI.
+- **Verified** — Dashboard + Contracts CI green on PR #176.
+
 ### 2026-06-21 (automation — 4.9 dashboard mock-vs-real guard, `chore/automation-dashboard-mock-vs-real-4-9`)
 - **Guard** — manifest for demo-gated mock consumers, dev-only inline pages, API route mock ban, dev signup bypass checks; `mock:prod:assert` in dashboard CI.
 - **Next** — PR merge when dashboard + Contracts CI green.

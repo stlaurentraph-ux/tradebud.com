@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.9** Dashboard mock-vs-real guard — `chore/automation-dashboard-mock-vs-real-4-9` (PR pending)
+- *(none — Phase 4 guardrail slices complete through 4.9; next: human secrets 2.5/Sentry/EXPO_TOKEN, parked 4.10+, or Cursor Automations 3.1–3.2)*
 
 ---
 

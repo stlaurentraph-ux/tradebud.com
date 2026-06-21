@@ -2,7 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
-- Automation 4.8 (2026-06-21, PR #175): Maestro nightly offline smoke (settings-sync + land-title flows); scheduled macOS workflow + CI guard.
+- Automation 4.9 (2026-06-21, PR #176): dashboard mock-vs-real API guard — demo-gated consumers, API route mock ban, dev bypass checks; `mock:prod:assert` in CI.
 - Automation 4.6 (2026-06-21, PR #174): marketing Playwright preview runner on PR (home + pricing against Vercel preview URL; skip when unavailable).
 - Automation 4.2 (2026-06-21, PR #173): OpenAPI → TS client codegen for offline mobile; golden path manifest + CI guard; photo sync typed via `SyncPlotPhotosRequest`.
 - Automation 4.3 (2026-06-21, PR #172): dashboard launch proxy contract manifest + guard; expanded route tests for commercial-profile GET, launch state, supply-chain-roles.
