@@ -2,6 +2,12 @@
 
 
 
+
+### 2026-06-21 (automation — 1.M.3 marketing analytics guard, `chore/automation-marketing-analytics-guard`)
+- **Guard** — `marketing-analytics-slice-guard.mjs` + baseline for `MarketingAnalyticsEvent` union vs `trackMarketingEvent` call sites.
+- **CI** — `analytics:slice:assert` in marketing job and `check:marketing`.
+- **Next** — PR merge.
+
 ### 2026-06-21 (automation — 3.6 merged, PR #159)
 - **PR labeler** — path labels (`app:*`, `risk:spatial`) + branch lane labels; `pr:labeler:assert` in Contracts CI.
 - **Verified** — labeler workflow applied `lane:guardrails` on PR #159; Contracts green.
