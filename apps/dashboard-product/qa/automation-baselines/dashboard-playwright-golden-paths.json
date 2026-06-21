@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.5",
+  "goldenTenantId": "tenant_rwanda_001",
+  "smoke": {
+    "role": "compliance_manager",
+    "onboardingStepKey": "create_first_campaign"
+  },
+  "paths": [
+    {
+      "id": "login_shell",
+      "route": "/login",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "login page renders sign-in shell"
+    },
+    {
+      "id": "login_stub",
+      "route": "/login",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "login stub signs in with mocked Supabase grant and lands on dashboard",
+      "mockedApi": "/auth/v1/token?grant_type=password"
+    },
+    {
+      "id": "onboarding_read_write",
+      "route": "/",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "onboarding proxy read/write uses golden smoke role and step key",
+      "mockedApi": "/api/launch/onboarding"
+    }
+  ]
+}

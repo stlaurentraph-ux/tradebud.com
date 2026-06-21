@@ -850,6 +850,18 @@ jobs:
       - name: Dashboard API regression guard
         run: npm run regression:routes:assert -w dashboard-product
 
+      - name: Dashboard Playwright manifest guard
+        run: npm run e2e:golden-paths:assert -w dashboard-product
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/dashboard-product
+
+      - name: Dashboard Playwright golden paths
+        run: npm run e2e:golden-paths -w dashboard-product
+        env:
+          CI: true
+
   founder-os:
     name: Founder OS lint, typecheck, and build
     runs-on: ubuntu-latest

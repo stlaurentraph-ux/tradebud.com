@@ -10,6 +10,12 @@
 
 
 
+### 2026-06-21 (automation — 4.5 dashboard Playwright, `chore/automation-dashboard-playwright-4-5`)
+- **E2E** — Playwright golden paths: login shell, login stub (mocked Supabase grant), onboarding proxy read/write (golden smoke role/step).
+- **Guard** — `dashboard-playwright-guard.mjs` + manifest; dashboard CI job after build.
+- **Verified** — local `e2e:golden-paths:assert` + `CI=true npm run e2e:golden-paths` green.
+- **Next** — PR merge; slice 4.7 release health gate.
+
 ### 2026-06-21 (automation — 4.4 merged, PR #167)
 - **Playwright** — home, pricing, waitlist (mocked API) golden paths; manifest guard + marketing CI job.
 - **Fix** — removed duplicate home pricing `WaitlistDialog` (provider owns global dialog).
