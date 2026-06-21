@@ -64,7 +64,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Offline annex (`offline-automation-runbook.md`)
 
-- [ ] **3.O.1** Maestro golden path on `main` — `chore/automation-maestro-main-3o1` (in progress)
+- *(1.O + 3.O.1 complete — next offline slice parked under Phase 4 / nightly)*
 
 ### Later phases (parked — do not start until Bundle D merged)
 
@@ -98,7 +98,6 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 ## In progress
 
 - [ ] **2.O.1** n8n workflow-b website form intake — branch: `chore/automation-n8n-workflow-b`
-- [ ] **3.O.1** Maestro golden path on `main` — branch: `chore/automation-maestro-main-3o1`
 
 ---
 
@@ -134,6 +133,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-20 — **3.O.1** Maestro golden path on `main` — PR #157
 - [x] 2026-06-20 — **1.O.3** Maestro CI preflight + macOS workflow — PR #155
 - [x] 2026-06-20 — **1.O.2** Offline automation strict guards in CI — PR #153
 - [x] 2026-06-20 — **1.O.1** Offline automation Phase 1 — PR #122 merge; guards + baselines + report-mode CI

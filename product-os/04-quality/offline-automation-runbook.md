@@ -15,7 +15,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 | **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
 | **1.O.2** | Enable `--strict` on guards in CI | Blocking | **done** — PR #153 |
 | **1.O.3** | Maestro macOS workflow prep | Maestro optional job | **done** — PR #155 |
-| **3.O.1** | Maestro golden path on `main` | Blocking E2E (one flow) | `chore/automation-maestro-main-3o1` |
+| **3.O.1** | Maestro golden path on `main` | Blocking E2E (one flow) | **done** — PR #157 |
 
 Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan §7.
 
@@ -95,7 +95,7 @@ cd apps/offline-product
 npm run qa:maestro:write-baseline
 ```
 
-Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestro.yml` (PR #155+ prep merged; 3.O.1 adds push trigger).
+Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestro.yml` (PR #157 merged).
 
 ---
 
