@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.3",
+  "openapiCodegenBaseline": "qa/automation-baselines/dashboard-openapi-codegen.json",
+  "contractSuites": [
+    {
+      "id": "launch_onboarding",
+      "dashboardPath": "/api/launch/onboarding",
+      "routeModule": "app/api/launch/onboarding/route.ts",
+      "testModule": "app/api/launch/onboarding/route.test.ts",
+      "operations": [
+        {
+          "method": "GET",
+          "backendPath": "/v1/launch/onboarding",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing (GET)",
+            "forwards role query + auth header for GET",
+            "returns explicit 503 when GET backend request throws"
+          ]
+        },
+        {
+          "method": "POST",
+          "backendPath": "/v1/launch/onboarding/complete",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing (POST)",
+            "forwards completion payload + auth header for POST",
+            "returns explicit 503 when POST backend request throws"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "launch_commercial_profile",
+      "dashboardPath": "/api/launch/commercial-profile",
+      "routeModule": "app/api/launch/commercial-profile/route.ts",
+      "testModule": "app/api/launch/commercial-profile/route.test.ts",
+      "operations": [
+        {
+          "method": "GET",
+          "backendPath": "/v1/launch/commercial-profile",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing (GET)",
+            "fails with 401 when authorization is missing (GET)",
+            "forwards auth header for GET"
+          ]
+        },
+        {
+          "method": "POST",
+          "backendPath": "/v1/launch/commercial-profile",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing",
+            "fails with 401 when authorization is missing",
+            "forwards payload and auth header to backend"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "auth_signup",
+      "dashboardPath": "/api/auth/signup",
+      "routeModule": "app/api/auth/signup/route.ts",
+      "testModule": "app/api/auth/signup/route.test.ts",
+      "operations": [
+        {
+          "method": "POST",
+          "backendPath": "/v1/launch/signup",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing",
+            "forwards create-account stage to backend",
+            "forwards workspace-setup stage with authorization header",
+            "returns explicit 503 when backend request throws"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "launch_state",
+      "dashboardPath": "/api/launch/state",
+      "routeModule": "app/api/launch/state/route.ts",
+      "testModule": "app/api/launch/state/route.test.ts",
+      "operations": [
+        {
+          "method": "GET",
+          "backendPath": "/v1/launch/state",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing",
+            "forwards optional auth header for GET",
+            "returns backend error payload when launch state fetch fails"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "launch_supply_chain_roles",
+      "dashboardPath": "/api/launch/supply-chain-roles",
+      "routeModule": "app/api/launch/supply-chain-roles/route.ts",
+      "testModule": "app/api/launch/supply-chain-roles/route.test.ts",
+      "operations": [
+        {
+          "method": "PATCH",
+          "backendPath": "/v1/launch/supply-chain-roles",
+          "requiredTests": [
+            "fails with 503 when backend URL is missing",
+            "fails with 401 when authorization is missing",
+            "forwards payload and auth header to backend"
+          ]
+        }
+      ]
+    }
+  ]
+}

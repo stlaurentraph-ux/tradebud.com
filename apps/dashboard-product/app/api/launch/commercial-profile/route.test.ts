@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { POST } from './route';
+import { GET, POST } from './route';
 
 describe('commercial profile proxy route', () => {
   const originalBackendUrl = process.env.TRACEBUD_BACKEND_URL;
@@ -16,6 +16,56 @@ describe('commercial profile proxy route', () => {
     else delete process.env.TRACEBUD_BACKEND_URL;
     if (originalDevBypass) process.env.TRACEBUD_DEV_SIGNUP_BYPASS = originalDevBypass;
     else delete process.env.TRACEBUD_DEV_SIGNUP_BYPASS;
+  });
+
+  it('fails with 503 when backend URL is missing (GET)', async () => {
+    const response = await GET(new Request('http://localhost/api/launch/commercial-profile'));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'TRACEBUD_BACKEND_URL is required.' });
+  });
+
+  it('fails with 401 when authorization is missing (GET)', async () => {
+    process.env.TRACEBUD_BACKEND_URL = 'https://backend.tracebud.test';
+    const response = await GET(new Request('http://localhost/api/launch/commercial-profile'));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Authorization header is required.' });
+  });
+
+  it('forwards auth header for GET', async () => {
+    process.env.TRACEBUD_BACKEND_URL = 'https://backend.tracebud.test';
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        profile: {
+          tenant_id: 'tenant_1',
+          primary_role: 'importer',
+          profile_skipped: false,
+        },
+      }),
+    } as Response);
+
+    const response = await GET(
+      new Request('http://localhost/api/launch/commercial-profile', {
+        headers: { Authorization: 'Bearer demo_token' },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      profile: {
+        tenant_id: 'tenant_1',
+        primary_role: 'importer',
+        profile_skipped: false,
+      },
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://backend.tracebud.test/api/v1/launch/commercial-profile',
+      expect.objectContaining({
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer demo_token' },
+      }),
+    );
   });
 
   it('fails with 503 when backend URL is missing', async () => {
