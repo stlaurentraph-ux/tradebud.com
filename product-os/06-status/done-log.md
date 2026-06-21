@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation 2.7 (2026-06-21, PR pending): golden staging tenant manifest, runbook, backend constants, CI guard, bootstrap helper.
 - Automation 2.O.2 (2026-06-21, PR #165): n8n workflow-f missed schedule alert guard + activation runbook.
 - Offline automation 1.O.3 (2026-06-20, PR #155): Maestro CI preflight, flow manifest baseline, `offline-maestro.yml` macOS workflow prep.
 - Offline automation 1.O.2 (2026-06-20, PR #153): CI strict mode (`qa:automation:phase1:strict`) blocking on guard baseline drift.

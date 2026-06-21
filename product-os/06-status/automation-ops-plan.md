@@ -227,7 +227,7 @@ npm run build -w dashboard-product
 | 2.4 | Marketing post-deploy smoke (live pages 200, stealth 404, API method sanity) | marketing |
 | 2.5 | Wire `launch-onboarding-proxy-smoke.mjs` post-deploy | dashboard |
 | 2.6 | Backend Railway health + one authenticated probe post-deploy | backend |
-| 2.7 | Golden staging tenant doc + bootstrap (`seed_golden_path` extended) | backend + dashboard |
+| 2.7 | Golden staging tenant doc + bootstrap (`seed_golden_path` extended) | backend + dashboard | **done** — PR pending; manifest + guard + runbook |
 | 2.8 | Synthetic uptime (Checkly / Better Stack) independent of deploy pipeline | marketing, dashboard |
 | 2.9 | Env parity checklist script (required vars present in Vercel/Railway preview) | deploy |
 | 2.10 | Weekly Supabase advisors job (security/performance summary → daily-log) | data |
@@ -281,7 +281,7 @@ npm run build -w dashboard-product
 | **4.M.1** | axe-core a11y on marketing key routes | marketing |
 | **4.M.2** | Lighthouse CI budget (LCP/CLS) on `/`, `/pricing` | marketing |
 
-**Blocked until:** golden staging tenant (2.7), secrets doc `product-os/04-quality/ci-secrets-and-fixtures.md`.
+**Blocked until:** GitHub smoke secrets for live proxy runs (2.5). Golden tenant manifest documented in slice 2.7.
 
 ---
 

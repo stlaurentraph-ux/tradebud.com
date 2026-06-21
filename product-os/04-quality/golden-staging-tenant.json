@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slice": "2.7",
+  "recipientTenantId": "tenant_rwanda_001",
+  "senderTenantId": "tenant_brazil_001",
+  "bootstrapAction": "seed_golden_path",
+  "bootstrapRoles": ["exporter", "admin"],
+  "smoke": {
+    "role": "compliance_manager",
+    "onboardingStepKey": "create_first_campaign",
+    "demoExporterEmail": "exporter+demo@tracebud.com"
+  },
+  "goldenInboxRequests": [
+    {
+      "id": "req_inbox_gp_001",
+      "campaignId": "campaign_gp_001",
+      "status": "RESPONDED"
+    },
+    {
+      "id": "req_inbox_gp_002",
+      "campaignId": "campaign_gp_002",
+      "status": "PENDING"
+    }
+  ],
+  "bootstrapEndpoints": {
+    "backend": "POST /v1/inbox-requests/bootstrap",
+    "dashboardProxy": "POST /api/inbox-requests/bootstrap"
+  },
+  "githubSecretsForSmoke": [
+    "DASHBOARD_BASE_URL",
+    "TRACEBUD_SMOKE_BEARER_TOKEN"
+  ],
+  "optionalGithubSecrets": [
+    "TRACEBUD_SMOKE_ROLE",
+    "TRACEBUD_SMOKE_STEP_KEY",
+    "TRACEBUD_SMOKE_TENANT_ID"
+  ]
+}

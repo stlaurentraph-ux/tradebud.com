@@ -153,6 +153,9 @@ jobs:
       - name: n8n workflow-f guard
         run: npm run n8n:workflow-f:assert
 
+      - name: Golden staging tenant guard
+        run: npm run golden:staging:assert
+
       - name: PR labeler guard
         run: npm run pr:labeler:assert
 
