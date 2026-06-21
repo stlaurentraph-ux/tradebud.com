@@ -1,0 +1,110 @@
+name: Offline Maestro (macOS)
+
+on:
+  pull_request:
+    paths:
+      - 'apps/offline-product/.maestro/**'
+      - 'apps/offline-product/scripts/maestro*.**'
+      - 'apps/offline-product/scripts/*maestro*'
+      - 'apps/offline-product/qa/automation-baselines/maestro-flows.json'
+      - '.github/workflows/offline-maestro.yml'
+  workflow_dispatch:
+    inputs:
+      run_flows:
+        description: Run Maestro flows (requires Tracebud app on booted iOS simulator)
+        type: boolean
+        default: false
+      flow:
+        description: Optional single flow filename under .maestro/flows/
+        required: false
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  maestro-preflight:
+    name: Maestro wiring preflight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        run: npm ci
+
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
+  maestro-macos:
+    name: Maestro macOS CLI smoke
+    needs: maestro-preflight
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Maestro CLI
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Maestro CLI version
+        run: maestro --version
+
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
+      - name: Run Maestro flows (optional)
+        if: inputs.run_flows == true
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if ! xcrun simctl list devices booted 2>/dev/null | grep -q Booted; then
+            echo "No booted iOS simulator — install com.tracebud.app and boot Simulator, then re-run with run_flows=true."
+            exit 1
+          fi
+          FLOW="${{ inputs.flow }}"
+          if [ -n "${FLOW}" ]; then
+            npm run test:maestro -- --include "${FLOW}"
+          else
+            npm run test:maestro
+          fi
+
+      - name: Maestro E2E skipped
+        if: inputs.run_flows != true
+        run: |
+          echo "E2E flows skipped (run_flows=false)."
+          echo "Install a debug/preview build on a booted simulator, then re-dispatch with run_flows=true."

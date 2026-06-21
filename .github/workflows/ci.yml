@@ -1021,6 +1021,9 @@ jobs:
       - name: Device QA wiring preflight
         run: npm run qa:preflight
 
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
       - name: Queue i18n smoke
         run: npm run i18n:queue:smoke
 
