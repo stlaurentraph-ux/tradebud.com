@@ -44,7 +44,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [x] **2.4** Marketing post-deploy smoke workflow — PR #147
 - [x] **2.8** Synthetic uptime checks — PR #150
 - [x] **2.O.1** n8n workflow-b website form intake (ops doc + validation) — on `main`; human n8n activation per `workflow-b-activation.md`
-- [ ] **2.O.2** n8n workflow-f missed schedule alert — human+agent doc slice
+- [ ] **2.O.2** n8n workflow-f missed schedule alert — `chore/automation-n8n-workflow-f` (in progress)
 
 ### Bundle D — Closed loops
 
@@ -97,7 +97,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — Bundle D marketing guards complete; next: 2.O.2 or Playwright slices)*
+- [ ] **2.O.2** n8n workflow-f missed schedule alert — branch: `chore/automation-n8n-workflow-f`
 
 ---
 

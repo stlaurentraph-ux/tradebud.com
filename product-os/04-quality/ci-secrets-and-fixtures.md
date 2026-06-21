@@ -96,6 +96,7 @@ Target: bearer token + tenant id for Playwright and proxy smoke. Document here w
 
 | Date | Change |
 |------|--------|
+| 2026-06-21 | Slice 2.O.2: workflow-f missed schedule alert guard + activation runbook |
 | 2026-06-20 | Slice 1.2: Turbo remote cache env in CI; `turbo:cache:report` guard |
 | 2026-06-20 | Slice 3.O.1: optional `EXPO_TOKEN` for Maestro golden-path CI |
 | 2026-06-20 | Slice 2.O.1: n8n Founder OS env vars (n8n host, not GitHub) |

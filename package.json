@@ -40,6 +40,7 @@
     "uptime:probes:run": "node scripts/uptime-probes-run.mjs",
     "pr:labeler:assert": "node scripts/pr-labeler-guard.mjs",
     "n8n:workflow-b:assert": "node scripts/n8n-workflow-b-guard.mjs",
+    "n8n:workflow-f:assert": "node scripts/n8n-workflow-f-guard.mjs",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",

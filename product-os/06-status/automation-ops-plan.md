@@ -235,7 +235,7 @@ npm run build -w dashboard-product
 | **2.M.1** | Email template render smoke (`waitlist-confirmation.html`) | marketing |
 | **2.M.2** | SEO smoke: `sitemap.xml`, robots, canonical on key routes | marketing |
 | **2.O.1** | Activate n8n workflow-b (website form intake) | ops |
-| **2.O.2** | Activate n8n workflow-f (missed schedule alert) | ops |
+| **2.O.2** | Activate n8n workflow-f (missed schedule alert) | ops | in progress — `chore/automation-n8n-workflow-f` |
 | **2.O.3** | Activate n8n workflow-a (daily outreach intelligence) | ops |
 
 **Blocked until secrets:** 2.5 needs `DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub.
