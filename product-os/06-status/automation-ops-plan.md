@@ -199,7 +199,7 @@ npm run build -w dashboard-product
 | **1.M.1** | Marketing route/publication guard (site map vs `marketing-publication.ts`) | Stealth leak prevention |
 | **1.M.2** | Marketing API trace size ceiling in CI (regression for 749MB Vercel bug) | Serverless bundle |
 | **1.M.3** | Marketing analytics slice guard | Event discipline | **done** — PR #161 |
-| **1.M.4** | Insights markdown linter | Content CI | in progress — `chore/automation-marketing-insights-lint` |
+| **1.M.4** | Insights markdown linter | Content CI | **done** — PR #163 |
 | **1.M.5** | PNG size budget check (`optimize-public-pngs.mjs` or threshold script) | Asset regression |
 | **1.D.1** | Supabase migration naming/order CI (no duplicate prefixes, lex order) | `supabase/README.md` rules |
 | **1.D.2** | Backend ↔ Supabase migration mirror drift check (filename/purpose map) | Two-track safety |
