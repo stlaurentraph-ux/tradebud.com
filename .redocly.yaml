@@ -3,6 +3,10 @@ apis:
     root: docs/openapi/tracebud-v1-draft.yaml
     x-openapi-ts:
       output: apps/dashboard-product/lib/generated/openapi-v1.d.ts
+  tracebud-offline:
+    root: docs/openapi/tracebud-v1-draft.yaml
+    x-openapi-ts:
+      output: apps/offline-product/features/api/generated/openapi-v1.d.ts
 
 extends:
   - recommended

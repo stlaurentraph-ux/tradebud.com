@@ -85,7 +85,7 @@ function assertGeneratedTypesFresh() {
   const redoclyConfig = path.join(repoRoot, '.redocly.yaml');
   const result = spawnSync(
     process.platform === 'win32' ? 'npx.cmd' : 'npx',
-    ['openapi-typescript', '--redocly', redoclyConfig, '--check'],
+    ['openapi-typescript', 'tracebud', '--redocly', redoclyConfig, '--check'],
     {
       cwd: repoRoot,
       encoding: 'utf8',

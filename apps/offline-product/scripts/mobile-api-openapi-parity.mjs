@@ -29,7 +29,11 @@ function listSourceFiles(dir) {
       continue;
     }
     if (/\.(tsx|ts)$/.test(entry.name) && !entry.name.endsWith('.test.ts')) {
-      out.push(path.join(root, rel));
+      const relPath = path.join(dir, entry.name);
+      if (relPath.includes(`${path.sep}generated${path.sep}`)) {
+        continue;
+      }
+      out.push(path.join(root, relPath));
     }
   }
   return out;

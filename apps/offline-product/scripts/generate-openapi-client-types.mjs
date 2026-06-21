@@ -1,21 +1,17 @@
 #!/usr/bin/env node
 /**
- * Generate dashboard proxy consumer types from canonical OpenAPI draft (slice 4.1).
+ * Generate offline mobile API client types from canonical OpenAPI draft (slice 4.2).
  *
- * Run: npm run openapi:codegen -w dashboard-product
+ * Run: npm run openapi:codegen
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const dashboardRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const repoRoot = path.join(dashboardRoot, '../..');
-const manifestPath = path.join(
-  dashboardRoot,
-  'qa/automation-baselines/dashboard-openapi-codegen.json',
-);
-const redoclyConfig = path.join(repoRoot, '.redocly.yaml');
+const offlineRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot = path.join(offlineRoot, '../..');
+const manifestPath = path.join(offlineRoot, 'qa/automation-baselines/mobile-openapi-codegen.json');
 
 function loadManifest() {
   return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -23,8 +19,14 @@ function loadManifest() {
 
 function main() {
   const manifest = loadManifest();
-  const outputPath = path.join(dashboardRoot, manifest.generatedTypesFile);
+  const specPath = path.join(repoRoot, manifest.openapiSpec);
+  const outputPath = path.join(offlineRoot, manifest.generatedTypesFile);
 
+  if (!fs.existsSync(specPath)) {
+    throw new Error(`Missing OpenAPI spec at ${manifest.openapiSpec}`);
+  }
+
+  const redoclyConfig = path.join(repoRoot, '.redocly.yaml');
   if (!fs.existsSync(redoclyConfig)) {
     throw new Error('Missing .redocly.yaml at repo root');
   }
@@ -33,7 +35,7 @@ function main() {
 
   const result = spawnSync(
     process.platform === 'win32' ? 'npx.cmd' : 'npx',
-    ['openapi-typescript', 'tracebud', '--redocly', redoclyConfig],
+    ['openapi-typescript', 'tracebud-offline', '--redocly', redoclyConfig],
     {
       cwd: repoRoot,
       stdio: 'inherit',
@@ -49,7 +51,7 @@ function main() {
     throw new Error(`Expected generated types at ${manifest.generatedTypesFile}`);
   }
 
-  console.log(`Generated OpenAPI proxy types → ${path.relative(dashboardRoot, outputPath)}`);
+  console.log(`Generated OpenAPI client types → ${path.relative(offlineRoot, outputPath)}`);
 }
 
 main();
