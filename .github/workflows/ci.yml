@@ -867,6 +867,9 @@ jobs:
       - name: Dashboard proxy contract guard
         run: npm run proxy:contracts:assert -w dashboard-product
 
+      - name: Dashboard mock-vs-real guard
+        run: npm run mock:prod:assert -w dashboard-product
+
       - name: Dashboard Playwright manifest guard
         run: npm run e2e:golden-paths:assert -w dashboard-product
 
