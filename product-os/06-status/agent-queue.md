@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(4.1–4.7 complete — next parked: 4.6+ marketing preview Playwright)*
+- *(Phase 4 guardrails 4.1–4.7 + 4.2–4.3 complete — next parked: 4.6+ marketing preview Playwright)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **4.2** Offline OpenAPI client codegen — `chore/automation-openapi-codegen-offline-4-2`
+- *(none — Phase 4 guardrail slices through 4.3/4.2 complete; next: human secrets 2.5/Sentry, parked 4.6+, or Cursor Automations 3.1–3.2)*
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] **4.2** Offline OpenAPI client codegen — PR pending
+- [ ] *(none)*
 
 ---
 
@@ -128,6 +128,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **4.2** Offline OpenAPI client codegen — PR #173
 - [x] 2026-06-21 — **4.3** Dashboard proxy contract suite — PR #172
 - [x] 2026-06-21 — **4.1** Dashboard OpenAPI proxy codegen — PR #171
 - [x] 2026-06-21 — **4.7** Release health gate — PR #170

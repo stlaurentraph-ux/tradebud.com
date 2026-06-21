@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.2 merged, PR #173)
+- **Offline codegen** — Redocly `tracebud-offline` target; plot sync schema re-exports; Expo CI guard; parity scan excludes generated types.
+- **Verified** — Contracts + Expo + dashboard CI green on PR #173.
+
 ### 2026-06-21 (automation — 4.2 offline OpenAPI codegen, `chore/automation-openapi-codegen-offline-4-2`)
 - **Codegen** — `openapi-typescript` output for seven golden mobile paths; re-exports for plot sync schemas; photo sync body typed via `SyncPlotPhotosRequest`.
 - **Guard** — `openapi:codegen:assert` in Expo CI job; aligns with mobile-api-openapi-parity baseline.
