@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation 2.6 (2026-06-21, PR #184): backend post-deploy smoke for `/api/health` and optional authenticated `GET /api/v1/launch/onboarding`; `deploy:smoke:assert` in backend CI + `backend-deploy-smoke.yml` workflow.
 - Automation 2.M.1 (2026-06-21, PR #183): marketing waitlist email template render smoke (HTML/text merge tags, escape probe, subject constant); `email:templates:smoke:assert` in marketing CI.
 - Automation 2.M.2 (2026-06-21, PR #181): marketing SEO smoke for robots.txt, sitemap.xml URLs, and canonical tags on home + pricing; `seo:smoke:assert` in marketing CI.
 - Automation 4.M.2 (2026-06-21, PR #179): marketing Lighthouse LCP/CLS budgets on `/en` + `/en/pricing`; `lighthouse:budgets:assert` in marketing CI. Phase 4 guardrails complete.

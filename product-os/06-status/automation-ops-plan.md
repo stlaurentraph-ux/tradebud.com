@@ -226,7 +226,7 @@ npm run build -w dashboard-product
 | 2.3 | GitHub workflow: `deployment_status` (Vercel) → curl smoke | marketing, dashboard |
 | 2.4 | Marketing post-deploy smoke (live pages 200, stealth 404, API method sanity) | marketing |
 | 2.5 | Wire `launch-onboarding-proxy-smoke.mjs` post-deploy | dashboard |
-| 2.6 | Backend Railway health + one authenticated probe post-deploy | backend | **in PR** — `chore/automation-backend-deploy-smoke-2-6` |
+| 2.6 | Backend Railway health + one authenticated probe post-deploy | backend | **done** — PR #184 |
 | 2.7 | Golden staging tenant doc + bootstrap (`seed_golden_path` extended) | backend + dashboard | **done** — PR #166 |
 | 2.8 | Synthetic uptime (Checkly / Better Stack) independent of deploy pipeline | marketing, dashboard |
 | 2.9 | Env parity checklist script (required vars present in Vercel/Railway preview) | deploy |

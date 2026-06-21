@@ -68,7 +68,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
 - [ ] **2.5** Wire onboarding proxy smoke — blocked: GitHub secrets (`DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN`) — see `golden-staging-tenant.md`
-- [ ] **2.6** Backend Railway post-deploy health — in PR
+- [x] **2.6** Backend Railway post-deploy health — PR #184
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
 - [ ] **2.11** Scheduled RLS evidence
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **2.6** Backend Railway post-deploy smoke — `chore/automation-backend-deploy-smoke-2-6` (PR pending)
+- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
 
 ---
 
@@ -128,6 +128,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **2.6** Backend Railway post-deploy smoke — PR #184
 - [x] 2026-06-21 — **2.M.1** Marketing email template render smoke — PR #183
 - [x] 2026-06-21 — **2.M.2** Marketing SEO smoke — PR #181
 - [x] 2026-06-21 — **4.M.2** Marketing Lighthouse LCP/CLS budgets — PR #179

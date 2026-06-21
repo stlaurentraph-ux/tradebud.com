@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 2.6 merged, PR #184)
+- **Backend post-deploy** — `/api/health` + optional authenticated onboarding probe; workflow on push/dispatch/Railway webhook.
+- **Verified** — Backend deploy smoke manifest guard green on PR #184.
+
 ### 2026-06-21 (automation — 2.6 backend deploy smoke, `chore/automation-backend-deploy-smoke-2-6`)
 - **Backend post-deploy** — `/api/health` + optional authenticated `GET /api/v1/launch/onboarding`; workflow on push/dispatch/Railway webhook.
 - **Next** — PR merge when backend CI green.
