@@ -996,6 +996,14 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run insights:lint:assert -w tracebud-marketing
 
+      - name: Marketing email template render smoke manifest guard
+        if: env.CI_RUN == 'true'
+        run: npm run email:templates:smoke:assert -w tracebud-marketing
+
+      - name: Marketing email template render smoke
+        if: env.CI_RUN == 'true'
+        run: npm run email:templates:smoke -w tracebud-marketing
+
       - name: Marketing PNG size budget
         if: env.CI_RUN == 'true'
         run: npm run png:size:assert -w tracebud-marketing

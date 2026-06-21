@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "slice": "2.M.1",
+  "templateId": "waitlist-confirmation",
+  "runnerModule": "scripts/run-marketing-email-templates-smoke.mjs",
+  "templatesModule": "lib/marketing-email-templates.ts",
+  "htmlTemplate": "email-templates/html/waitlist-confirmation.html",
+  "textTemplate": "email-templates/text/waitlist-confirmation.txt",
+  "subjectConstant": "WAITLIST_CONFIRMATION_SUBJECT",
+  "expectedSubject": "You're on the Tracebud waitlist",
+  "placeholders": [
+    "firstName",
+    "organisationName",
+    "roleLabel",
+    "commodity",
+    "websiteUrl",
+    "year"
+  ],
+  "sampleVars": {
+    "firstName": "Alex",
+    "organisationName": "Highland Cooperative",
+    "roleLabel": "Exporter",
+    "commodity": "Coffee",
+    "websiteUrl": "https://www.tracebud.com/en",
+    "year": "2026"
+  },
+  "escapeProbe": {
+    "firstName": "<img src=x onerror=alert(1)>",
+    "organisationName": "Test & Co"
+  },
+  "htmlRequiredSnippets": [
+    "WAITLIST CONFIRMED",
+    "You&apos;re on the Tracebud waitlist.",
+    "hello@tracebud.com",
+    "https://www.tracebud.com/en"
+  ],
+  "textRequiredSnippets": [
+    "You're on the Tracebud waitlist.",
+    "Organisation : Highland Cooperative",
+    "hello@tracebud.com"
+  ]
+}
