@@ -861,6 +861,9 @@ jobs:
       - name: Dashboard API regression guard
         run: npm run regression:routes:assert -w dashboard-product
 
+      - name: Dashboard OpenAPI codegen guard
+        run: npm run openapi:codegen:assert -w dashboard-product
+
       - name: Dashboard Playwright manifest guard
         run: npm run e2e:golden-paths:assert -w dashboard-product
 

@@ -268,7 +268,7 @@ npm run build -w dashboard-product
 
 | ID | Task | Scope |
 |----|------|-------|
-| 4.1 | OpenAPI → TypeScript codegen for dashboard proxy consumers | dashboard + backend |
+| 4.1 | OpenAPI → TypeScript codegen for dashboard proxy consumers | dashboard + backend | **in PR** — `chore/automation-openapi-codegen-dashboard-4-1` |
 | 4.2 | OpenAPI → client codegen for offline mobile API parity | offline |
 | 4.3 | Dashboard proxy contract test suite (expand beyond onboarding smoke) | dashboard |
 | 4.4 | Playwright: marketing 3-path (home, pricing, waitlist flow w/ mocked API) | marketing | **done** — PR #167 |

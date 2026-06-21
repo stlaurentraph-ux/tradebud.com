@@ -10,6 +10,12 @@
 
 
 
+### 2026-06-21 (automation — 4.1 OpenAPI dashboard codegen, `chore/automation-openapi-codegen-dashboard-4-1`)
+- **OpenAPI** — launch onboarding GET/complete paths added to draft spec.
+- **Codegen** — `openapi-typescript` → `lib/generated/openapi-v1.d.ts`; `openapi-proxy-types` re-exports; `CommercialProfile` uses generated schema.
+- **Guard** — `openapi:codegen:assert` in dashboard CI; regression baseline refreshed (+2 pinned paths).
+- **Next** — PR merge.
+
 ### 2026-06-21 (automation — 4.7 merged, PR #170)
 - **Release health gate** — collect CI/smoke/uptime/Sentry signals; GO/NO-GO evaluator; Contracts guard; weekly + manual workflow.
 - **Verified** — Contracts CI green on PR #170.
