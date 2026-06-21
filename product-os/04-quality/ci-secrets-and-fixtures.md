@@ -95,6 +95,7 @@ Marketing build: no secrets required for static build; forms need env only at ru
 
 **Bootstrap (staging):** `node apps/dashboard-product/scripts/golden-staging-bootstrap.mjs`  
 **Onboarding smoke:** `node apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs`  
+**Token mint (rotate bearer):** `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret`  
 **CI guard:** `npm run golden:staging:assert`
 
 Slice **2.5** is wired — `dashboard-deploy-smoke.yml` runs after Vercel production deploy when `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` are set. Rotate the bearer token before Supabase JWT expiry.

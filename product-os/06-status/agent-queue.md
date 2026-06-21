@@ -24,7 +24,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [x] **0.H** GitHub branch protection — field-auth + marketing required on `main` (2026-06-20)
 - [x] **0.H.2** Vercel Deployment Protection — preview SSO + automation bypass (2026-06-20)
-- [ ] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push)
+- [x] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push) — enabled 2026-06-21
 
 ### Bundle B — Agent speed & hygiene
 
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice or human-blocked 3.1–3.2 / 0.H.3)*
+- *(none — pick next Ready slice or human-blocked 3.1–3.2)*
 
 ---
 
@@ -107,8 +107,6 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 - [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
 - [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired PR #158)
-- [ ] **0.H.3** Branch protection PR-only — human
-
 ---
 
 ## Done (automation rollout)

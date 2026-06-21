@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 0.H.3 PR-only main + smoke token mint helper)
+- **Branch protection** — `main` now requires a pull request before merge (0 approvals); existing field-auth + marketing required checks preserved.
+- **Ops** — `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret` rotates `TRACEBUD_SMOKE_BEARER_TOKEN`.
+
 ### 2026-06-21 (automation — 2.5 dashboard post-deploy smoke)
 - **Dashboard post-deploy** — onboarding proxy GET/POST smoke via `run-dashboard-onboarding-smoke.mjs`; workflow on Vercel production `deployment_status`, push, dispatch.
 - **Secrets** — `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` set in GitHub (2026-06-21).
