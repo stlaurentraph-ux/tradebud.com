@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.10",
+  "webhookPath": "/api/v1/billing/stripe/webhook",
+  "controllerModule": "src/billing/billing-stripe-webhook.controller.ts",
+  "signatureModule": "src/billing/stripe-billing.service.ts",
+  "billingServiceModule": "src/billing/billing.service.ts",
+  "supportedEventTypes": [
+    "invoice.paid",
+    "invoice.payment_failed"
+  ],
+  "replayFixtures": [
+    {
+      "id": "invoice_paid",
+      "eventType": "invoice.paid",
+      "stripeInvoiceId": "in_replay_paid_001",
+      "stripeEventId": "evt_replay_paid_001"
+    },
+    {
+      "id": "invoice_payment_failed",
+      "eventType": "invoice.payment_failed",
+      "stripeInvoiceId": "in_replay_failed_001",
+      "stripeEventId": "evt_replay_failed_001"
+    }
+  ],
+  "testSuites": [
+    {
+      "module": "src/billing/billing-stripe-webhook.replay.spec.ts",
+      "requiredTests": [
+        "replays signed invoice.paid webhook idempotently",
+        "replays signed invoice.payment_failed webhook idempotently",
+        "does not downgrade a paid invoice on payment_failed replay",
+        "returns handled=false for unsupported Stripe event types"
+      ]
+    },
+    {
+      "module": "src/billing/stripe-billing.service.spec.ts",
+      "requiredTests": [
+        "verifies a signed webhook payload",
+        "rejects invalid signatures"
+      ]
+    }
+  ]
+}

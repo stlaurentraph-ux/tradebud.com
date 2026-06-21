@@ -58,6 +58,7 @@
     "railway:preflight:local": "node scripts/railway-local-preflight.mjs",
     "railway:sync:gfw": "node scripts/railway-sync-gfw-vars.mjs",
     "billing:finalize-period-cron": "node scripts/billing-finalize-period-cron.mjs",
+    "billing:stripe:webhook:assert": "node scripts/stripe-webhook-replay-guard.mjs",
     "sentry:env:assert": "node ../scripts/sentry-env-tags-guard.mjs"
   },
   "dependencies": {

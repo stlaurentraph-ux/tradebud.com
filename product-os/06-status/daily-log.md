@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 4.10 Stripe webhook replay guard, `chore/automation-stripe-webhook-replay-4-10`)
+- **Replay tests** — signed `invoice.paid` / `invoice.payment_failed` idempotency + paid-invoice downgrade guard; manifest + CI guard.
+- **Next** — PR merge when backend unit tests + guard green.
+
 ### 2026-06-21 (automation — 4.9 merged, PR #176)
 - **Mock-vs-real guard** — demo-gated consumers, dev-only inline pages, API route mock ban, dev signup bypass checks; `mock:prod:assert` in dashboard CI.
 - **Verified** — Dashboard + Contracts CI green on PR #176.
