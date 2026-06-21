@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation 2.M.2 (2026-06-21, PR #181): marketing SEO smoke for robots.txt, sitemap.xml URLs, and canonical tags on home + pricing; `seo:smoke:assert` in marketing CI.
 - Automation 4.M.2 (2026-06-21, PR #179): marketing Lighthouse LCP/CLS budgets on `/en` + `/en/pricing`; `lighthouse:budgets:assert` in marketing CI. Phase 4 guardrails complete.
 - Automation 4.M.1 (2026-06-21, PR #178): marketing axe-core a11y scans on `/en` + `/en/pricing` with regression-ceiling baseline; `a11y:routes:assert` in marketing CI.
 - Automation 4.6 (2026-06-21, PR #174): marketing Playwright preview runner on PR (home + pricing against Vercel preview URL; skip when unavailable).

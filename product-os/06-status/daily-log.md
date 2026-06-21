@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 2.M.2 merged, PR #181)
+- **SEO smoke** — robots.txt + sitemap.xml + canonical on `/en` + `/en/pricing`; manifest guard + CI runtime after Lighthouse.
+- **Verified** — Marketing CI green on PR #181.
+
 ### 2026-06-21 (automation — 2.M.2 SEO smoke, `chore/automation-marketing-seo-smoke-2-m-2`)
 - **SEO** — robots.txt + sitemap.xml + canonical on `/en` and `/en/pricing` with manifest guard in marketing CI.
 - **Next** — PR merge when marketing CI green.
