@@ -73,9 +73,9 @@ export function SiteNavPreview({ locale }: { locale: string }) {
       sections: [
         {
           items: [
-            { label: t('platformMenu.overview'), href: p('/draft/platform'), description: '' },
-            { label: t('platformMenu.fieldApp'), href: p('/draft/platform/field-app'), description: t('platformMenu.fieldAppDescription') },
-            { label: t('platformMenu.dashboard'), href: p('/draft/platform/dashboard'), description: t('platformMenu.dashboardDescription') },
+            { label: t('platformMenu.overview'), href: p('/platform'), description: '' },
+            { label: t('platformMenu.fieldApp'), href: p('/platform/field-app'), description: t('platformMenu.fieldAppDescription') },
+            { label: t('platformMenu.dashboard'), href: p('/platform/dashboard'), description: t('platformMenu.dashboardDescription') },
           ],
         },
       ],
@@ -102,10 +102,10 @@ export function SiteNavPreview({ locale }: { locale: string }) {
       sections: [
         {
           items: [
-            { label: t('outcomesMenu.hub'), href: p('/draft/outcomes') },
-            { label: t('outcomesMenu.supplyChains'), href: p('/draft/outcomes/resilient-supply-chains') },
-            { label: t('outcomesMenu.livelihoods'), href: p('/draft/outcomes/farmer-livelihoods') },
-            { label: t('outcomesMenu.climate'), href: p('/draft/outcomes/nature-positive-climate') },
+            { label: t('outcomesMenu.hub'), href: p('/impact') },
+            { label: t('outcomesMenu.supplyChains'), href: p('/impact/supply-chains') },
+            { label: t('outcomesMenu.livelihoods'), href: p('/impact/farmer-livelihood') },
+            { label: t('outcomesMenu.climate'), href: p('/impact/climate-biodiversity') },
           ],
         },
       ],
