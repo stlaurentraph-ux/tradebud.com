@@ -10,10 +10,14 @@
 
 
 
+### 2026-06-21 (automation — 4.6 merged, PR #174)
+- **Preview Playwright** — resolve Vercel preview URL; run home/pricing golden paths remotely; skip when deploy disabled.
+- **Verified** — Marketing + Contracts CI green on PR #174.
+
 ### 2026-06-21 (automation — 4.6 marketing preview Playwright, `chore/automation-marketing-playwright-preview-4-6`)
 - **Preview runner** — resolve Vercel preview URL from secret/PR comments; run home+pricing golden paths remotely; skip when preview unavailable (deploy disabled).
 - **CI** — PR-only preview guard + runner after local Playwright; Vercel bypass header support in Playwright config.
-- **Next** — PR merge.
+- **Next** — merged PR #174.
 
 ### 2026-06-21 (automation — 4.2 merged, PR #173)
 - **Offline codegen** — Redocly `tracebud-offline` target; plot sync schema re-exports; Expo CI guard; parity scan excludes generated types.

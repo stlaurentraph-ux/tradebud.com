@@ -273,7 +273,7 @@ npm run build -w dashboard-product
 | 4.3 | Dashboard proxy contract test suite (expand beyond onboarding smoke) | dashboard | **done** — PR #172 |
 | 4.4 | Playwright: marketing 3-path (home, pricing, waitlist flow w/ mocked API) | marketing | **done** — PR #167 |
 | 4.5 | Playwright: dashboard 3-path (login stub, onboarding read/write) | dashboard | **done** — PR #168 |
-| 4.6 | Playwright against Vercel preview URL on PR (`apps/marketing/**` paths) | marketing | in PR |
+| 4.6 | Playwright against Vercel preview URL on PR (`apps/marketing/**` paths) | marketing | **done** — PR #174 |
 | 4.7 | **Release health gate** — composite: CI + smoke + Sentry 15m clean → GO/NO-GO | all | **done** — PR #170 |
 | 4.8 | Maestro nightly offline (device smoke subset) | offline |
 | 4.9 | Mock-vs-real API guard for dashboard (no silent mock in prod paths) | dashboard |
