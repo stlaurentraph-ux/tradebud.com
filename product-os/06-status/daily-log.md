@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 2.7 merged, PR #166)
+- **Golden staging tenant** — manifest, runbook, `GOLDEN_STAGING_TENANT` constants, `golden:staging:assert` in Contracts CI.
+- **Verified** — Contracts + marketing + field-auth green; dashboard/backend failures pre-existing on `main`.
+- **Next** — Bundle E Playwright (4.4+); human smoke secrets for 2.5.
+
 ### 2026-06-21 (automation — 2.7 golden staging tenant, `chore/automation-golden-staging-tenant-2-7`)
 - **Manifest + runbook** — `golden-staging-tenant.json` / `.md`; `GOLDEN_STAGING_TENANT` constants; inbox `seed_golden_path` aligned.
 - **Guard** — `golden:staging:assert` in Contracts CI; bootstrap + onboarding smoke scripts documented.
