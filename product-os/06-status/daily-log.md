@@ -10,6 +10,12 @@
 
 
 
+### 2026-06-21 (automation — 4.3 dashboard proxy contracts, `chore/automation-dashboard-proxy-contracts-4-3`)
+- **Contracts** — manifest for five launch proxy suites (onboarding, commercial-profile, signup, state, supply-chain-roles); guard aligns with OpenAPI golden paths + dashboard-api-routes baseline.
+- **Tests** — GET coverage for commercial-profile; new route tests for launch state + supply-chain-roles.
+- **CI** — `proxy:contracts:assert` in dashboard job.
+- **Next** — PR merge.
+
 ### 2026-06-21 (automation — 4.1 merged, PR #171)
 - **OpenAPI codegen** — launch onboarding paths in draft spec; `openapi-typescript` output + proxy type re-exports; dashboard CI guard.
 - **Verified** — Contracts + dashboard CI green on PR #171.

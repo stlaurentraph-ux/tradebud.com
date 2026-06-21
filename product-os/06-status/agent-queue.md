@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(4.1–4.7 complete — next parked: 4.2 offline mobile codegen, 4.3 dashboard proxy contract expansion)*
+- *(4.1–4.7 complete — next parked: 4.2 offline mobile codegen)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -78,7 +78,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.3** Weekly health Cursor Automation
 - [ ] **3.5** Dependabot babysit automation
 - [ ] **3.7–3.10** CODEOWNERS enforce, stale PR, PR templates, auto-merge fixes
-- [ ] **4.2–4.3, 4.6, 4.8–4.10, 4.M.1–4.M.2** — see automation-ops-plan §Phase 4
+- [ ] **4.2, 4.6, 4.8–4.10, 4.M.1–4.M.2** — see automation-ops-plan §Phase 4
 - [ ] **5.1–5.10** — see automation-ops-plan §Phase 5
 
 ---
@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — Bundle E guardrails complete; next: human secrets 2.5/Sentry, parked 4.2+, or Cursor Automations 3.1–3.2)*
+- **4.3** Dashboard proxy contract suite — `chore/automation-dashboard-proxy-contracts-4-3`
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.3** Dashboard proxy contract suite — PR pending
 
 ---
 

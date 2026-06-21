@@ -18,6 +18,7 @@
     "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs",
     "openapi:codegen": "node scripts/generate-openapi-proxy-types.mjs",
     "openapi:codegen:assert": "node scripts/dashboard-openapi-codegen-guard.mjs",
+    "proxy:contracts:assert": "node scripts/dashboard-proxy-contract-guard.mjs",
     "e2e:golden-paths": "playwright test",
     "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
     "e2e:golden-paths:install": "playwright install chromium"
