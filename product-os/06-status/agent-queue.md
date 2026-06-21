@@ -72,7 +72,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
 - [ ] **2.11** Scheduled RLS evidence
-- [ ] **2.M.1** Email template render smoke — in PR
+- [x] **2.M.1** Email template render smoke — PR #183
 - [x] **2.M.2** SEO smoke (sitemap, robots) — PR #181
 - [ ] **2.O.3** n8n daily outreach intelligence
 - [ ] **3.3** Weekly health Cursor Automation
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- **2.M.1** Marketing email template render smoke — `chore/automation-marketing-email-templates-smoke-2-m-1` (PR pending)
+- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
 
 ---
 
@@ -128,6 +128,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **2.M.1** Marketing email template render smoke — PR #183
 - [x] 2026-06-21 — **2.M.2** Marketing SEO smoke — PR #181
 - [x] 2026-06-21 — **4.M.2** Marketing Lighthouse LCP/CLS budgets — PR #179
 - [x] 2026-06-21 — **4.M.1** Marketing axe-core a11y routes — PR #178
