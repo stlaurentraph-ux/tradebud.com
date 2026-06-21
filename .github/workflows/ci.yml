@@ -45,6 +45,9 @@ jobs:
               - 'scripts/uptime-probes-run.mjs'
               - 'scripts/n8n-workflow-b-guard.mjs'
               - 'scripts/n8n-workflow-f-guard.mjs'
+              - 'scripts/release-health-gate.mjs'
+              - 'scripts/release-health-collect.mjs'
+              - 'scripts/release-health-gate-guard.mjs'
               - 'scripts/pr-labeler-guard.mjs'
               - 'automation/n8n/founder-os/**'
               - 'supabase/migrations/**'
@@ -56,6 +59,7 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
+              - '.github/workflows/release-health-gate.yml'
               - '.github/labeler.yml'
               - '.github/workflows/pr-labeler.yml'
             workspace_root:
@@ -155,6 +159,9 @@ jobs:
 
       - name: Golden staging tenant guard
         run: npm run golden:staging:assert
+
+      - name: Release health gate guard
+        run: npm run release:health:assert
 
       - name: PR labeler guard
         run: npm run pr:labeler:assert

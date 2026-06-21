@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-06-21T14:00:00.000Z",
+  "releaseRef": "main@f21de703",
+  "signals": {
+    "ci_main": {
+      "status": "pass",
+      "detail": "required CI jobs green on latest main run"
+    },
+    "marketing_post_deploy_smoke": {
+      "status": "pass",
+      "detail": "marketing post-deploy smoke returned 2xx"
+    },
+    "uptime_probes": {
+      "status": "pass",
+      "detail": "3/3 uptime probes passed"
+    },
+    "sentry_clean_window": {
+      "status": "pass",
+      "detail": "0 unresolved issues in 15m window"
+    }
+  }
+}

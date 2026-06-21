@@ -17,6 +17,9 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TRACEBUD_SMOKE_TENANT_ID` | 2.7, 4.4–4.7 | Playwright / smoke assertions | Optional — default `tenant_rwanda_001` per manifest |
 | `TRACEBUD_SMOKE_ROLE` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `compliance_manager` |
 | `TRACEBUD_SMOKE_STEP_KEY` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `create_first_campaign` |
+| `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7 | release health gate | Sentry API token with `project:read` |
+| `SENTRY_RELEASE_HEALTH_ORG` | 4.7 | release health gate | Sentry org slug |
+| `SENTRY_RELEASE_HEALTH_PROJECT` | 4.7 | release health gate | Sentry project slug (e.g. dashboard or backend) |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | Vercel Remote Cache token ([create](https://vercel.com/account/tokens) or `npx turbo login`) |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
@@ -97,6 +100,20 @@ Slice **2.5** remains blocked until `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARE
 
 ---
 
+## Release health gate (Phase 4.7)
+
+**Status:** documented — see `release-health-gate.md` + `release-health-gate.json`.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run release:health:assert` | Manifest / wiring guard (Contracts CI) |
+| `npm run release:health:collect` | Gather CI + smoke + Sentry signals into report JSON |
+| `npm run release:health:gate` | Evaluate report → GO/NO-GO exit code |
+
+**Workflow:** `.github/workflows/release-health-gate.yml` (manual + weekly schedule). Optional live signals reuse `MARKETING_SMOKE_BASE_URL`, uptime URLs, and Sentry secrets above.
+
+---
+
 ## Human setup checklist
 
 - [ ] Add secrets in GitHub → Settings → Secrets and variables → Actions
@@ -111,6 +128,7 @@ Slice **2.5** remains blocked until `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARE
 
 | Date | Change |
 |------|--------|
+| 2026-06-21 | Slice 4.7: release health gate manifest, collect/gate scripts, workflow, Contracts guard |
 | 2026-06-21 | Slice 2.7: golden staging tenant manifest, runbook, bootstrap helper, CI guard |
 | 2026-06-21 | Slice 2.O.2: workflow-f missed schedule alert guard + activation runbook |
 | 2026-06-20 | Slice 1.2: Turbo remote cache env in CI; `turbo:cache:report` guard |
