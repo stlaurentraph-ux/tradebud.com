@@ -25,24 +25,24 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 async function waitForServer(probeUrl, timeoutMs = 120_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      const response = await fetch(probeUrl);
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // Server still starting.
+    if (await isServerReady(probeUrl)) {
+      return;
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   throw new Error(`Marketing server not ready at ${probeUrl}`);
 }
 
-function startServer() {
-  if (process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1') {
-    return null;
+async function isServerReady(probeUrl) {
+  try {
+    const response = await fetch(probeUrl);
+    return response.ok;
+  } catch {
+    return false;
   }
+}
 
+function startServer() {
   const child = spawn('npm', ['run', 'start', '--', '-p', port], {
     cwd: marketingRoot,
     env: {
@@ -59,7 +59,21 @@ function startServer() {
   return child;
 }
 
-async function stopServer(server, probePath) {
+async function ensureServer(probeUrl) {
+  if (process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1') {
+    return null;
+  }
+  if (await isServerReady(probeUrl)) {
+    console.log(`Reusing existing marketing server at ${baseURL}`);
+    return null;
+  }
+
+  const server = startServer();
+  await waitForServer(probeUrl);
+  return server;
+}
+
+async function stopOwnedServer(server, probePath) {
   if (!server?.pid) {
     return;
   }
@@ -92,20 +106,9 @@ async function stopServer(server, probePath) {
   }
 
   const probeUrl = `${baseURL}${probePath}`;
-  const deadline = Date.now() + 15_000;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(probeUrl);
-      if (!response.ok) {
-        return;
-      }
-    } catch {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  if (await isServerReady(probeUrl)) {
+    console.warn(`Warning: ${baseURL} still responding after owned server shutdown`);
   }
-
-  throw new Error(`Marketing server still responding on ${baseURL} after shutdown`);
 }
 
 async function fetchText(urlPath) {
@@ -158,11 +161,11 @@ function assertRouteCanonical(route, html) {
 
 async function main() {
   const manifest = loadManifest();
-  const server = startServer();
+  const probeUrl = `${baseURL}${manifest.serverProbePath}`;
+  const server = await ensureServer(probeUrl);
 
   try {
-    console.log(`Waiting for marketing server at ${baseURL}${manifest.serverProbePath}...`);
-    await waitForServer(`${baseURL}${manifest.serverProbePath}`);
+    console.log(`Checking SEO smoke at ${baseURL}...`);
 
     const robotsText = await fetchText(manifest.robotsPath);
     assertRobots(manifest, robotsText);
@@ -178,7 +181,7 @@ async function main() {
       console.log(`${route.id}: canonical=${route.canonical}`);
     }
   } finally {
-    await stopServer(server, manifest.serverProbePath);
+    await stopOwnedServer(server, manifest.serverProbePath);
   }
 }
 

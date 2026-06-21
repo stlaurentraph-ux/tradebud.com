@@ -89,6 +89,9 @@ function assertRunnerAlignment(manifest) {
   if (!runner.includes('route.canonical')) {
     throw new Error(`${manifest.runnerModule} must enforce route.canonical`);
   }
+  if (!runner.includes('ensureServer')) {
+    throw new Error(`${manifest.runnerModule} must reuse or start server via ensureServer`);
+  }
 }
 
 function assertPackageScripts() {
