@@ -12,7 +12,7 @@ const baselinePath = path.join(
 type NormalizedViolation = {
   ruleId: string;
   impact: string;
-  target: string;
+  count: number;
 };
 
 type RouteBaseline = {
@@ -27,17 +27,25 @@ type A11yBaseline = {
 function normalizeViolations(
   violations: Awaited<ReturnType<AxeBuilder['analyze']>>['violations'],
 ): NormalizedViolation[] {
-  return violations
-    .flatMap((violation) =>
-      violation.nodes.map((node) => ({
-        ruleId: violation.id,
-        impact: violation.impact ?? 'unknown',
-        target: node.target.join(' '),
-      })),
-    )
-    .sort((left, right) =>
-      `${left.ruleId}:${left.target}`.localeCompare(`${right.ruleId}:${right.target}`),
-    );
+  const counts = new Map<string, NormalizedViolation>();
+
+  for (const violation of violations) {
+    const key = `${violation.id}:${violation.impact ?? 'unknown'}`;
+    const current = counts.get(key);
+    if (current) {
+      current.count += violation.nodes.length;
+      continue;
+    }
+    counts.set(key, {
+      ruleId: violation.id,
+      impact: violation.impact ?? 'unknown',
+      count: violation.nodes.length,
+    });
+  }
+
+  return [...counts.values()].sort((left, right) =>
+    `${left.ruleId}:${left.impact}`.localeCompare(`${right.ruleId}:${right.impact}`),
+  );
 }
 
 function loadBaseline(): A11yBaseline {

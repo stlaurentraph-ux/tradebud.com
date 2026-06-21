@@ -17,7 +17,7 @@
     "png:size:assert": "node scripts/marketing-png-size-guard.mjs --strict",
     "png:size:write-baseline": "node scripts/marketing-png-size-guard.mjs --write-baseline",
     "smoke:post-deploy": "node scripts/marketing-post-deploy-smoke.mjs",
-    "e2e:golden-paths": "playwright test",
+    "e2e:golden-paths": "playwright test e2e/golden-paths.spec.ts",
     "e2e:golden-paths:assert": "node scripts/marketing-playwright-guard.mjs",
     "e2e:golden-paths:install": "playwright install chromium",
     "e2e:preview": "node scripts/run-marketing-preview-playwright.mjs",
