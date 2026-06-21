@@ -28,7 +28,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `MARKETING_PREVIEW_BASE_URL` | 4.6 | marketing preview Playwright on PR | Optional override when Vercel PR previews are disabled |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
-| `EXPO_TOKEN` | 3.O.1 | offline Maestro golden path | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
+| `EXPO_TOKEN` | 3.O.1, 4.8 | offline Maestro golden path + nightly smoke | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
 

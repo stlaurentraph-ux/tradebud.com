@@ -35,6 +35,8 @@
     "qa:maestro:preflight": "node ./scripts/maestro-ci-preflight.mjs",
     "qa:maestro:write-baseline": "node ./scripts/maestro-ci-preflight.mjs --write-baseline",
     "qa:maestro:golden-path": "bash ./scripts/maestro-ci-golden-path.sh",
+    "qa:maestro:nightly": "bash ./scripts/maestro-ci-nightly-smoke.sh",
+    "qa:maestro:nightly:assert": "node ./scripts/maestro-nightly-smoke-guard.mjs",
     "security:preflight": "node ./scripts/security-preflight.mjs",
     "qa:full": "npm run lint && npm run typecheck && npm run security:preflight && npm run i18n:en:placeholder:assert && npm run test && npm run i18n:queue:smoke && npm run qa:preflight",
     "qa:regression": "npm run lint && npm run typecheck && npm run test && node ./scripts/field-regression-guard.mjs",

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.8",
+  "flowsBaseline": "qa/automation-baselines/maestro-flows.json",
+  "scheduleUtcCron": "0 3 * * *",
+  "nightlyFlows": [
+    {
+      "id": "settings_sync",
+      "flowFile": "settings-sync-smoke.yaml",
+      "description": "Settings tab sync CTA smoke (golden path parity)"
+    },
+    {
+      "id": "land_title_photo",
+      "flowFile": "land-title-photo.yaml",
+      "description": "Plot documents land-title upload entry smoke"
+    }
+  ]
+}

@@ -93,13 +93,13 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — Phase 4 guardrail slices complete through 4.6; next: human secrets 2.5/Sentry, parked 4.8+, or Cursor Automations 3.1–3.2)*
+- **4.8** Maestro nightly offline smoke — `chore/automation-maestro-nightly-offline-4-8`
 
 ---
 
 ## Recently completed (awaiting merge)
 
-- [ ] *(none)*
+- [ ] **4.8** Maestro nightly offline smoke — PR pending
 
 ---
 
