@@ -1,5 +1,10 @@
 - `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
 
+### 2026-06-20 (automation — 1.O.3 merged, PR #155)
+- **Maestro CI** — `maestro-ci-preflight.mjs` + baseline in Expo app job; `offline-maestro.yml` for PR path + macOS dispatch.
+- **Verified** — Expo app lint + Maestro preflight green before merge.
+- **Next** — Slice **3.O.1** blocking Maestro E2E on `main`.
+
 ### 2026-06-20 (automation — 1.O.3 Maestro CI prep, `chore/automation-offline-maestro`)
 - **Preflight** — `maestro-ci-preflight.mjs` + `maestro-flows.json` baseline; validates flows, appId, testID wiring.
 - **CI** — Expo `app` job + new `offline-maestro.yml` (Linux preflight; macOS manual dispatch for optional E2E).

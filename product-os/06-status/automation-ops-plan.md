@@ -211,7 +211,7 @@ npm run build -w dashboard-product
 |----|------|--------|
 | 1.O.1 | Offline Phase 1 integration (guards, CI report mode, docs) | **done** (PR #122) |
 | 1.O.2 | Enable `--strict` on offline guards in CI | **done** (PR #153) |
-| 1.O.3 | Maestro macOS workflow prep | Phase 3.O |
+| 1.O.3 | Maestro macOS workflow prep | **done** (PR #155) |
 
 ---
 
@@ -577,7 +577,7 @@ Concise tracker for field-app guardrails (full detail: `product-os/04-quality/of
 |-------|-------------|-----|--------|
 | **1.O.1** | Guard scripts + baselines + report-mode CI + Cursor integration | `security:preflight`, `qa:automation:phase1` (non-blocking) | **done** — PR #122 |
 | **1.O.2** | Flip guards to `--strict` in CI | blocking on drift | **done** — PR #153 |
-| **1.O.3** | Maestro macOS workflow prep | optional Maestro job | in progress — `chore/automation-offline-maestro` |
+| **1.O.3** | Maestro macOS workflow prep | optional Maestro job | **done** — PR #155 |
 
 **Scripts:** `mobile-api-openapi-parity.mjs`, `ota-native-fingerprint-gate.mjs`, `analytics-slice-guard.mjs`, orchestrated by `run-automation-guards.mjs`.
 

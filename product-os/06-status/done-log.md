@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline automation 1.O.3 (2026-06-20, PR #155): Maestro CI preflight, flow manifest baseline, `offline-maestro.yml` macOS workflow prep.
 - Offline automation 1.O.2 (2026-06-20, PR #153): CI strict mode (`qa:automation:phase1:strict`) blocking on guard baseline drift.
 - Offline automation 1.O.1 (2026-06-20, PR #122): guard scripts (`mobile-api-openapi-parity`, `ota-native-fingerprint`, `analytics-slice-guard`), baselines, CI report mode (`security:preflight` + `qa:automation:phase1`), Cursor integration — merged to `main`.
 - Field app sync UI + tenure jurisdiction (2026-06-20, branch `feature/offline-field-sync-ui`, PR #149): unified sync attention resolver, stable Documents plot order, farmer name merge, Settings backup pill stability, tenure jurisdiction cross-check backend + dashboard copy, plot/harvest spec mock fixes.

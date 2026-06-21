@@ -14,7 +14,7 @@ Annex to `product-os/06-status/automation-ops-plan.md` — field app (`apps/offl
 |-------|------|---------|--------|
 | **1.O.1** | Guard scripts + baselines + report-mode CI | Report (non-blocking deltas) | **done** — PR #122 |
 | **1.O.2** | Enable `--strict` on guards in CI | Blocking | **done** — PR #153 |
-| **1.O.3** | Maestro macOS workflow prep | Maestro optional job | **in progress** — `chore/automation-offline-maestro` |
+| **1.O.3** | Maestro macOS workflow prep | Maestro optional job | **done** — PR #155 |
 
 Later phases (3.O Maestro on `main`, release health) — see automation-ops-plan §7.
 
