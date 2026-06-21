@@ -43,7 +43,7 @@ function startServer() {
     return null;
   }
 
-  return spawn('npm', ['run', 'start', '--', '-p', port], {
+  const child = spawn('npm', ['run', 'start', '--', '-p', port], {
     cwd: marketingRoot,
     env: {
       ...process.env,
@@ -51,7 +51,61 @@ function startServer() {
       PORT: port,
     },
     stdio: process.env.CI ? 'inherit' : 'pipe',
+    detached: process.platform !== 'win32',
   });
+  child.on('error', (error) => {
+    console.error(`Failed to start marketing server: ${error.message}`);
+  });
+  return child;
+}
+
+async function stopServer(server, probePath) {
+  if (!server?.pid) {
+    return;
+  }
+
+  const signalProcess = (signal) => {
+    try {
+      if (process.platform !== 'win32') {
+        process.kill(-server.pid, signal);
+      } else {
+        server.kill(signal);
+      }
+    } catch {
+      server.kill(signal);
+    }
+  };
+
+  signalProcess('SIGTERM');
+
+  await new Promise((resolve) => {
+    const timer = setTimeout(resolve, 5_000);
+    server.once('exit', () => {
+      clearTimeout(timer);
+      resolve(undefined);
+    });
+  });
+
+  if (!server.killed) {
+    signalProcess('SIGKILL');
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+
+  const probeUrl = `${baseURL}${probePath}`;
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(probeUrl);
+      if (!response.ok) {
+        return;
+      }
+    } catch {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error(`Marketing server still responding on ${baseURL} after shutdown`);
 }
 
 async function fetchText(urlPath) {
@@ -124,7 +178,7 @@ async function main() {
       console.log(`${route.id}: canonical=${route.canonical}`);
     }
   } finally {
-    server?.kill('SIGTERM');
+    await stopServer(server, manifest.serverProbePath);
   }
 }
 
