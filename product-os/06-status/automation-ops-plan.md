@@ -233,7 +233,7 @@ npm run build -w dashboard-product
 | 2.10 | Weekly Supabase advisors job (security/performance summary → daily-log) | data |
 | 2.11 | Scheduled `db:evidence:rls-remediation` (weekly, staging) | backend |
 | **2.M.1** | Email template render smoke (`waitlist-confirmation.html`) | marketing |
-| **2.M.2** | SEO smoke: `sitemap.xml`, robots, canonical on key routes | marketing |
+| **2.M.2** | SEO smoke: `sitemap.xml`, robots, canonical on key routes | marketing | **in PR** — `chore/automation-marketing-seo-smoke-2-m-2` |
 | **2.O.1** | Activate n8n workflow-b (website form intake) | ops |
 | **2.O.2** | Activate n8n workflow-f (missed schedule alert) | ops | **done** — PR #165 (repo guard); human n8n activation |
 | **2.O.3** | Activate n8n workflow-a (daily outreach intelligence) | ops |

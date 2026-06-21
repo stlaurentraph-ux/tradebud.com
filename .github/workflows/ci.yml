@@ -1016,6 +1016,10 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run lighthouse:budgets:assert -w tracebud-marketing
 
+      - name: Marketing SEO smoke manifest guard
+        if: env.CI_RUN == 'true'
+        run: npm run seo:smoke:assert -w tracebud-marketing
+
       - name: Install Playwright Chromium
         if: env.CI_RUN == 'true'
         run: npx playwright install --with-deps chromium
@@ -1036,6 +1040,12 @@ jobs:
       - name: Marketing Lighthouse LCP/CLS budgets
         if: env.CI_RUN == 'true'
         run: npm run lighthouse:budgets -w tracebud-marketing
+        env:
+          CI: true
+
+      - name: Marketing SEO smoke (sitemap, robots, canonical)
+        if: env.CI_RUN == 'true'
+        run: npm run seo:smoke -w tracebud-marketing
         env:
           CI: true
 

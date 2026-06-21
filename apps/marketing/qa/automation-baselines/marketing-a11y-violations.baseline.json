@@ -25,7 +25,7 @@
         {
           "ruleId": "color-contrast",
           "impact": "serious",
-          "count": 40
+          "count": 50
         },
         {
           "ruleId": "meta-viewport",

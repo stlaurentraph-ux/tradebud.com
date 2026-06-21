@@ -10,7 +10,10 @@
 
 
 
-### 2026-06-21 (automation — 4.M.2 merged, PR #179)
+### 2026-06-21 (automation — 2.M.2 SEO smoke, `chore/automation-marketing-seo-smoke-2-m-2`)
+- **SEO** — robots.txt + sitemap.xml + canonical on `/en` and `/en/pricing` with manifest guard in marketing CI.
+- **Next** — PR merge when marketing CI green.
+
 - **Lighthouse** — LCP/CLS budgets on `/en` + `/en/pricing` via Playwright Chromium + manifest guard in marketing CI; CI hang fixed (shared Chrome session + per-route timeout).
 - **Verified** — Marketing CI green on PR #179. **Phase 4 guardrails complete.**
 
