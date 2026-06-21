@@ -950,6 +950,10 @@ jobs:
         if: env.CI_RUN == 'true'
         run: npm run analytics:slice:assert -w tracebud-marketing
 
+      - name: Marketing insights markdown lint
+        if: env.CI_RUN == 'true'
+        run: npm run insights:lint:assert -w tracebud-marketing
+
       - name: Marketing API trace size guard
         if: env.CI_RUN == 'true'
         run: npm run api:trace:size:assert -w tracebud-marketing

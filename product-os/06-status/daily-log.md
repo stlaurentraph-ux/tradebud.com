@@ -4,6 +4,11 @@
 
 
 
+
+### 2026-06-21 (automation — 1.M.4 insights markdown linter, `chore/automation-marketing-insights-lint`)
+- **Guard** — `marketing-insights-lint-guard.mjs`: frontmatter, slug shape, internal links vs site map + insight slugs.
+- **CI** — `insights:lint:assert` in marketing job and `check:marketing`.
+
 ### 2026-06-21 (automation — 1.M.3 merged, PR #161)
 - **Guard** — `marketing-analytics-slice-guard.mjs`; baseline 5 canonical / 3 wired events; marketing CI + `check:marketing`.
 - **Verified** — marketing job green on PR #161.
