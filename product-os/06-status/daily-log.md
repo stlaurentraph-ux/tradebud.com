@@ -10,6 +10,11 @@
 
 
 
+### 2026-06-21 (automation — 4.8 Maestro nightly smoke, `chore/automation-maestro-nightly-offline-4-8`)
+- **Nightly** — manifest for settings-sync + land-title flows; shared simulator bootstrap; scheduled macOS workflow (03:00 UTC).
+- **CI** — `qa:maestro:nightly:assert` in Expo job.
+- **Next** — PR merge.
+
 ### 2026-06-21 (automation — 4.6 merged, PR #174)
 - **Preview Playwright** — resolve Vercel preview URL; run home/pricing golden paths remotely; skip when deploy disabled.
 - **Verified** — Marketing + Contracts CI green on PR #174.

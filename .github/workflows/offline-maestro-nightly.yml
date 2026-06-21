@@ -1,0 +1,120 @@
+name: Offline Maestro nightly smoke
+
+on:
+  schedule:
+    # Device smoke subset — 03:00 UTC daily (slice 4.8)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_bootstrap:
+        description: Skip simulator bootstrap (app already installed on booted simulator)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  maestro-nightly-preflight:
+    name: Maestro nightly manifest guard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        run: npm ci
+
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
+      - name: Maestro nightly smoke guard
+        run: npm run qa:maestro:nightly:assert
+
+  maestro-nightly-smoke:
+    name: Maestro nightly smoke (macOS)
+    needs: maestro-nightly-preflight
+    runs-on: macos-latest
+    timeout-minutes: 120
+    env:
+      IPHONE_DEVICE: iPhone 16
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        run: npm ci
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Maestro CLI
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
+      - name: Run Maestro nightly smoke subset
+        if: github.event_name != 'workflow_dispatch' || inputs.skip_bootstrap != true
+        run: npm run qa:maestro:nightly
+
+      - name: Run Maestro nightly flows only (bootstrap skipped)
+        if: github.event_name == 'workflow_dispatch' && inputs.skip_bootstrap == true
+        run: |
+          set -euo pipefail
+          export MAESTRO_DEVICE_ID="$(xcrun simctl list devices booted | sed -n 's/.*(\([A-F0-9-]\{36\}\)).*/\1/p' | head -1)"
+          if [[ -z "$MAESTRO_DEVICE_ID" ]]; then
+            echo "No booted simulator — cannot skip bootstrap."
+            exit 1
+          fi
+          export MAESTRO_APP_ID="com.tracebud.app"
+          FLOWS="$(node -e "
+          const manifest = require('./qa/automation-baselines/maestro-nightly-smoke.json');
+          for (const item of manifest.nightlyFlows) console.log(item.flowFile);
+          ")"
+          while IFS= read -r flow; do
+            xcrun simctl terminate "$MAESTRO_DEVICE_ID" "$MAESTRO_APP_ID" 2>/dev/null || true
+            maestro test ".maestro/flows/$flow"
+          done <<< "$FLOWS"

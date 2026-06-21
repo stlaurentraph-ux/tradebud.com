@@ -1084,6 +1084,9 @@ jobs:
       - name: Maestro wiring preflight
         run: npm run qa:maestro:preflight
 
+      - name: Maestro nightly smoke guard
+        run: npm run qa:maestro:nightly:assert
+
       - name: Queue i18n smoke
         run: npm run i18n:queue:smoke
 
