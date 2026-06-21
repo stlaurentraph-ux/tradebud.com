@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "slice": "2.M.2",
+  "locale": "en",
+  "metadataBase": "https://tracebud.com",
+  "runnerModule": "scripts/run-marketing-seo-smoke.mjs",
+  "serverProbePath": "/en",
+  "robotsPath": "/robots.txt",
+  "sitemapPath": "/sitemap.xml",
+  "robotsRequiredLines": [
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /api/",
+    "Sitemap: https://tracebud.com/sitemap.xml"
+  ],
+  "sitemapRequiredUrls": [
+    "https://tracebud.com",
+    "https://tracebud.com/privacy",
+    "https://tracebud.com/terms"
+  ],
+  "routes": [
+    {
+      "id": "home",
+      "path": "/en",
+      "canonical": "https://tracebud.com"
+    },
+    {
+      "id": "pricing",
+      "path": "/en/pricing",
+      "canonical": "https://tracebud.com"
+    }
+  ]
+}

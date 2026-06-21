@@ -73,7 +73,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **2.10** Weekly Supabase advisors job
 - [ ] **2.11** Scheduled RLS evidence
 - [ ] **2.M.1** Email template render smoke
-- [ ] **2.M.2** SEO smoke (sitemap, robots)
+- [ ] **2.M.2** SEO smoke (sitemap, robots) — in PR
 - [ ] **2.O.3** n8n daily outreach intelligence
 - [ ] **3.3** Weekly health Cursor Automation
 - [ ] **3.5** Dependabot babysit automation
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
+- **2.M.2** Marketing SEO smoke (sitemap, robots, canonical) — `chore/automation-marketing-seo-smoke-2-m-2` (PR pending)
 
 ---
 
