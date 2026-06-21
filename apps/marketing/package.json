@@ -25,6 +25,8 @@
     "a11y:routes": "playwright test e2e/accessibility.spec.ts",
     "a11y:routes:assert": "node scripts/marketing-a11y-routes-guard.mjs",
     "a11y:routes:baseline:refresh": "A11Y_BASELINE_REFRESH=1 playwright test e2e/accessibility.spec.ts",
+    "lighthouse:budgets": "node scripts/run-marketing-lighthouse-budgets.mjs",
+    "lighthouse:budgets:assert": "node scripts/marketing-lighthouse-budget-guard.mjs",
     "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run png:size:assert && npm run e2e:golden-paths:assert && npm run build && npm run api:trace:size:assert",
     "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs"
   },
@@ -93,6 +95,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "axe-core": "^4.11.4",
+    "lighthouse": "^13.4.0",
     "postcss": "^8.5",
     "shadcn": "^4.0.0",
     "sharp": "^0.34.5",
