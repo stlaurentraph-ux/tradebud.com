@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails complete through 4.9 — next parked: 4.10 Stripe webhook, 4.M.1–4.M.2 marketing a11y/Lighthouse)*
+- *(Phase 4 guardrails complete through 4.10 — next parked: 4.M.1–4.M.2 marketing a11y/Lighthouse)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — Phase 4 guardrail slices complete through 4.9; next: human secrets 2.5/Sentry/EXPO_TOKEN, parked 4.10+, or Cursor Automations 3.1–3.2)*
+- **4.10** Stripe webhook replay guard — `chore/automation-stripe-webhook-replay-4-10` (PR pending)
 
 ---
 

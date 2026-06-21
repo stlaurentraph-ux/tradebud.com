@@ -769,6 +769,9 @@ jobs:
         working-directory: tracebud-backend
         run: npm test
 
+      - name: Stripe webhook replay guard
+        run: npm run billing:stripe:webhook:assert -w tracebud-backend
+
       - name: Tenure parse static readiness
         run: npm run check:tenure-parse:static -w tracebud-backend
 
