@@ -18,6 +18,11 @@
       "id": "tenure_evidence",
       "flowFile": "tenure-evidence.yaml",
       "description": "Plot documents tenure evidence section entry smoke"
+    },
+    {
+      "id": "mark_three_corners",
+      "flowFile": "mark-three-corners.yaml",
+      "description": "Mapping mark-corners entry smoke (optional plot seeding)"
     }
   ]
 }

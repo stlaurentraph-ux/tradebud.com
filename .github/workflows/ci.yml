@@ -1143,6 +1143,9 @@ jobs:
       - name: Mobile rollout SLO wiring guard
         run: npm run mobile:slo:assert
 
+      - name: OTA production gate wiring guard
+        run: npm run ota:production:assert
+
       - name: Tenant isolation smoke (optional)
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}

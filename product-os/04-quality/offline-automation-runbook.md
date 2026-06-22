@@ -113,7 +113,26 @@ Weekly field-app health without Vercel/marketing smoke. Uses Sentry `tracebud/re
 
 **Manifest:** `product-os/04-quality/mobile-rollout-slo.json`
 
-**Nightly Maestro:** `tenure-evidence.yaml` added to slice 4.8 manifest (3 flows nightly).
+**Nightly Maestro:** `tenure-evidence.yaml` + `mark-three-corners.yaml` in slice 4.8 manifest (4 flows nightly).
+
+---
+
+## Production OTA gate (5.10)
+
+EAS skew protection + strict Maestro gate before production OTA.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run ota:skew:assert` | runtimeVersion + channel wiring + native fingerprint (+ optional EAS probe) |
+| `npm run ota:production:preflight` | Full local gate before production OTA (sign-off required) |
+| `npm run update:production:safe` | Preflight + `eas update` to production channel |
+| `npm run ota:production:assert` | CI wiring guard |
+
+**Workflow:** `.github/workflows/offline-ota-production-gate.yml` — manual dispatch; Linux guards + macOS Maestro.
+
+**Manifest:** `product-os/04-quality/ota-production-gate.json`
+
+**Nightly Maestro:** `mark-three-corners.yaml` added (4 flows).
 
 ---
 

@@ -10,6 +10,13 @@
 
 
 
+### 2026-06-22 (offline automation — 5.10 production OTA gate)
+
+- **Skew** — `eas-ota-skew-guard.mjs` (runtimeVersion appVersion, channel wiring, native fingerprint; optional EAS probe with `EXPO_TOKEN`).
+- **Production OTA** — `ota:production:preflight`, `update:production:safe`, workflow `offline-ota-production-gate.yml` (Linux guards + macOS Maestro).
+- **Nightly** — `mark-three-corners.yaml` added to Maestro nightly manifest (4 flows).
+- **app.json** — `updates.checkAutomatically=ON_LOAD`, `fallbackToCacheTimeout=0`.
+
 ### 2026-06-22 (offline automation — Maestro tenure + mobile SLO gate 4.O.1)
 
 - **Maestro nightly** — Added `tenure-evidence.yaml` to slice 4.8 manifest (3 flows nightly).

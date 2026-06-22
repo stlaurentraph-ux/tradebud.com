@@ -28,6 +28,7 @@ console.log('Regression:      npm run qa:regression');
 console.log('Maestro flows:   npm run test:maestro  (requires Maestro CLI + preview build)');
 console.log('After device QA: npm run qa:device:signoff -- --tester "You" --device "Phone" --os "iOS 18" --build preview');
 console.log('Preview OTA:     npm run update:preview:safe  (requires sign-off JSON at HEAD)');
+console.log('Production OTA:  npm run update:production:safe  (preflight + sign-off + skew guard)');
 console.log('Simulator:       npm run run:simulator');
 console.log('Expo dev client: npm start');
 console.log('Field prep:       FIELD_TEST_PREP.md');

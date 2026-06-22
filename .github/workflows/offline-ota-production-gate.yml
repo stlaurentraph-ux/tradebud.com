@@ -1,0 +1,104 @@
+name: Offline OTA production gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_maestro:
+        description: Skip macOS Maestro flows (skew + guards only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  ota-gate-preflight:
+    name: OTA production wiring guard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        run: npm ci
+
+      - name: OTA production gate guard
+        run: npm run ota:production:assert
+
+      - name: OTA production preflight (CI mode)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npm run ota:production:preflight -- --ci
+
+  ota-gate-maestro:
+    name: OTA production Maestro (macOS)
+    needs: ota-gate-preflight
+    if: github.event_name != 'workflow_dispatch' || inputs.skip_maestro != true
+    runs-on: macos-latest
+    timeout-minutes: 120
+    env:
+      IPHONE_DEVICE: iPhone 16
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      OTA_PRODUCTION_SKIP_MAESTRO: '0'
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install offline app dependencies
+        run: npm ci
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Maestro CLI
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Maestro wiring preflight
+        run: npm run qa:maestro:preflight
+
+      - name: Maestro production golden path
+        run: npm run qa:maestro:golden-path
+
+      - name: Maestro optional production flows
+        run: bash ./scripts/ota-production-maestro-optional.sh
