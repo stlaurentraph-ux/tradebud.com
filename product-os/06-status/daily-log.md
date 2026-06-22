@@ -1,3 +1,8 @@
+### 2026-06-22 (fix — Dependabot Expo CI: skip live tenant smoke for dependabot[bot])
+
+- **Root cause** — PR #213 (commit `dee3559`) made `Field tenant isolation smoke` blocking with `FIELD_TENANT_SMOKE_STRICT=1`. GitHub does not expose repository secrets to Dependabot-triggered workflows; all `FIELD_TENANT_SMOKE_*` and Supabase secrets were empty, causing exit 1 on every offline Dependabot PR.
+- **Fix** — Added `if: github.actor != 'dependabot[bot]'` to the smoke step in `.github/workflows/ci.yml` (1-line change). Static wiring guard (`qa:tenant-isolation:assert`) still runs for Dependabot. No security regression for human PRs.
+
 ### 2026-06-22 (offline automation — 4.O.2 blocking field tenant smoke)
 
 - **Manifest** — `golden-field-tenant-smoke.json` + runbook for dedicated farmer pair (`field+tenant-smoke-a/b@tracebud.com`).
