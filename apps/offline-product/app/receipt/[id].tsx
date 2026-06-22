@@ -100,6 +100,7 @@ export default function DeliveryReceiptScreen() {
         farmerId: farmer.id,
         localPlots,
         t,
+        isSignedIn,
         forcePlotFetch: justLogged && !options?.silent,
       });
       setBackendPlots(catalog.backendPlots);
@@ -124,7 +125,7 @@ export default function DeliveryReceiptScreen() {
     } finally {
       setLoading(false);
     }
-  }, [applyReceipt, farmer?.id, justLogged, localPlots, receiptId, t]);
+  }, [applyReceipt, farmer?.id, isSignedIn, justLogged, localPlots, receiptId, t]);
 
   useFocusEffect(
     useCallback(() => {

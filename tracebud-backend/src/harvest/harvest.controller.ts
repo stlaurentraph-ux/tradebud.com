@@ -19,6 +19,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
+import { BackfillHarvestDeliveryDateDto } from './dto/backfill-harvest-delivery-date.dto';
 import { ClaimVoucherDto } from './dto/claim-voucher.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
@@ -117,6 +118,59 @@ export class HarvestController {
     return this.harvestService.create(dto, userId);
   }
 
+  @Get('vouchers/mine')
+  @ApiOperation({
+    summary: 'List all harvest vouchers for every farmer profile owned by the signed-in user',
+    description:
+      'Field-app cross-device sync: returns vouchers across all linked farmer_profile ids without guessing farmerId on the client.',
+  })
+  async listMyFieldVouchers(@Req() req: any) {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+
+    await assertTenantClaimOrFieldActor(this.pool, req.user);
+    const fieldRole = await resolveFieldActorRole(this.pool, req.user);
+    const jwtRole = deriveRoleFromSupabaseUser(req.user);
+    const isDashboardOperator =
+      jwtRole === 'admin' || DASHBOARD_HARVEST_ROLES.has(jwtRole);
+    if (fieldRole !== 'farmer' && !isDashboardOperator) {
+      throw new ForbiddenException('Field farmers only');
+    }
+
+    const vouchers = await this.harvestService.listFieldVouchersForAuthUser(userId);
+    return { vouchers };
+  }
+
+  @Patch('vouchers/:voucherId/delivery-date')
+  @ApiOperation({
+    summary: 'Backfill farmer-logged delivery date for a voucher missing harvest_date',
+  })
+  async backfillVoucherDeliveryDate(
+    @Param('voucherId') voucherId: string,
+    @Body() dto: BackfillHarvestDeliveryDateDto,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+
+    await assertTenantClaimOrFieldActor(this.pool, req.user);
+    const fieldRole = await resolveFieldActorRole(this.pool, req.user);
+    if (fieldRole !== 'farmer') {
+      throw new ForbiddenException('Field farmers only');
+    }
+
+    return this.harvestService.backfillVoucherDeliveryDate({
+      userId,
+      voucherId,
+      harvestDate: dto.harvestDate,
+      clientEventId: dto.clientEventId,
+    });
+  }
+
   @Get('vouchers')
   @ApiQuery({ name: 'farmerId', required: false })
   @ApiQuery({ name: 'scope', required: false, enum: ['tenant', 'farmer'] })
@@ -173,7 +227,7 @@ export class HarvestController {
       return { vouchers: scoped };
     }
 
-    return this.harvestService.listVouchersForFarmer(scopedFarmerId);
+    return { vouchers: await this.harvestService.listVouchersForFarmer(scopedFarmerId) };
   }
 
   @Get('vouchers/by-qr')

@@ -298,12 +298,21 @@ export class HarvestService {
           plot_id,
           kg,
           harvest_date,
-          created_by
+          created_by,
+          client_event_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `,
-      [transactionId, effectiveFarmerId, plotId, kg, harvestDate ?? null, userId ?? null],
+      [
+        transactionId,
+        effectiveFarmerId,
+        plotId,
+        kg,
+        harvestDate ?? null,
+        userId ?? null,
+        clientEventId?.trim() || null,
+      ],
     );
 
     const tx = insertRes.rows[0];
@@ -371,7 +380,75 @@ export class HarvestService {
     return result;
   }
 
+  /** Field-app cross-device sync: set farmer-logged delivery date when upload omitted it. */
+  async backfillVoucherDeliveryDate(params: {
+    userId: string;
+    voucherId: string;
+    harvestDate: string;
+    clientEventId?: string;
+  }): Promise<{ updated: boolean }> {
+    const authUserId = params.userId.trim();
+    const voucherId = params.voucherId.trim();
+    const harvestDate = params.harvestDate.trim();
+    if (!authUserId || !voucherId || !harvestDate) {
+      throw new BadRequestException('Missing voucher delivery date backfill fields');
+    }
+
+    const scoped = await this.pool.query<{
+      tx_id: string;
+      harvest_date: string | null;
+    }>(
+      `
+        SELECT tx.id AS tx_id, tx.harvest_date
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        WHERE v.id = $1::uuid
+          AND (
+            tx.created_by = $2::uuid
+            OR tx.farmer_id IN (
+              SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $2::uuid
+            )
+          )
+        LIMIT 1
+      `,
+      [voucherId, authUserId],
+    );
+
+    if (scoped.rowCount === 0) {
+      throw new ForbiddenException('Voucher scope violation');
+    }
+
+    const row = scoped.rows[0];
+    if (row.harvest_date != null) {
+      return { updated: false };
+    }
+
+    await this.pool.query(
+      `
+        UPDATE harvest_transaction
+        SET harvest_date = $1::date,
+            client_event_id = COALESCE(NULLIF(client_event_id, ''), $2)
+        WHERE id = $3::uuid
+      `,
+      [harvestDate, params.clientEventId?.trim() || null, row.tx_id],
+    );
+
+    return { updated: true };
+  }
+
   async listVouchersForFarmer(farmerId: string) {
+    return this.listVouchersForFarmerIds([farmerId]);
+  }
+
+  /** All vouchers for one or more farmer profiles (field-app cross-device sync). */
+  async listVouchersForFarmerIds(farmerIds: readonly string[]) {
+    const scopedIds = [
+      ...new Set(farmerIds.map((id) => id.trim()).filter(Boolean)),
+    ];
+    if (scopedIds.length === 0) {
+      return [];
+    }
+
     const res = await this.pool.query(
       `
         SELECT
@@ -385,17 +462,70 @@ export class HarvestService {
           v.intended_recipient_tenant_id,
           tx.plot_id,
           tx.kg,
+          tx.harvest_date,
+          tx.client_event_id,
           p.name AS plot_name
         FROM voucher v
         LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
         LEFT JOIN plot p ON p.id = tx.plot_id
-        WHERE v.farmer_id = $1
+        WHERE v.farmer_id = ANY($1::uuid[])
         ORDER BY v.created_at DESC
       `,
-      [farmerId],
+      [scopedIds],
     );
 
     return res.rows;
+  }
+
+  /**
+   * Field-app cross-device sync: every voucher the signed-in auth user recorded or owns
+   * via any linked farmer profile (no client-side farmerId guessing).
+   */
+  async listFieldVouchersForAuthUser(userId: string) {
+    const authUserId = userId.trim();
+    if (!authUserId) {
+      return [];
+    }
+
+    const res = await this.pool.query(
+      `
+        SELECT DISTINCT ON (v.id)
+          v.id,
+          v.farmer_id,
+          v.transaction_id,
+          v.qr_code_ref,
+          v.status,
+          v.created_at,
+          v.intended_recipient_email,
+          v.intended_recipient_tenant_id,
+          tx.plot_id,
+          tx.kg,
+          tx.harvest_date,
+          tx.client_event_id,
+          p.name AS plot_name
+        FROM voucher v
+        LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        WHERE tx.created_by = $1::uuid
+           OR v.farmer_id IN (
+                SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $1::uuid
+              )
+           OR tx.farmer_id IN (
+                SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $1::uuid
+              )
+           OR p.farmer_id IN (
+                SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $1::uuid
+              )
+        ORDER BY v.id, v.created_at DESC
+      `,
+      [authUserId],
+    );
+
+    return res.rows.sort(
+      (a, b) =>
+        new Date(String(b.created_at ?? 0)).getTime() -
+        new Date(String(a.created_at ?? 0)).getTime(),
+    );
   }
 
   async listVouchersForTenant(tenantId: string): Promise<TenantHarvestVoucherRow[]> {

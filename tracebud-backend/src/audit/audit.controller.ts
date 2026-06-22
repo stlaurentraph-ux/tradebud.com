@@ -17,6 +17,7 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { assertTenantClaimOrFieldActor } from '../auth/field-app-auth';
+import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreateAuditEventDto } from './dto/create-audit-event.dto';
 
@@ -211,15 +212,23 @@ export class AuditController {
     @Query('limit') limitRaw: string | undefined,
     @Req() req: any,
   ) {
-    const tenantId = this.getTenantClaim(req);
-    const scopedTenantId = tenantIdQuery?.trim() || tenantId;
     const limit = limitRaw ? Number(limitRaw) : 100;
     if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
       throw new BadRequestException('limit must be between 1 and 200.');
     }
 
     try {
-      if (farmerId) {
+      if (farmerId?.trim()) {
+        await assertTenantClaimOrFieldActor(this.pool, req.user);
+        const userId = req.user?.id as string | undefined;
+        if (!userId) {
+          throw new ForbiddenException('Missing authenticated user');
+        }
+        const scopedFarmerId = farmerId.trim();
+        const owned = await isFarmerProfileOwnedByUser(this.pool, scopedFarmerId, userId);
+        if (!owned) {
+          throw new ForbiddenException('Farmer scope violation');
+        }
         const res = await this.pool.query(
           `
             SELECT id, timestamp, user_id, device_id, event_type, payload
@@ -228,11 +237,13 @@ export class AuditController {
             ORDER BY timestamp DESC
             LIMIT $2
           `,
-          [farmerId, limit],
+          [scopedFarmerId, limit],
         );
         return res.rows;
       }
 
+      const tenantId = this.getTenantClaim(req);
+      const scopedTenantId = tenantIdQuery?.trim() || tenantId;
       if (eventType?.trim()) {
         const res = await this.pool.query(
           `

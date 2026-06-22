@@ -31,6 +31,21 @@ describe('receiptMatchesPlotFilter', () => {
     expect(receiptMatchesPlotFilter({ plotId: 'server-1' }, filter)).toBe(true);
     expect(receiptMatchesPlotFilter({ plotId: 'other' }, filter)).toBe(false);
   });
+
+  it('matches server receipt plot ids against linked local plot filters', () => {
+    const filter = new Set(['local-1', 'server-1']);
+    expect(
+      receiptMatchesPlotFilter(
+        { plotId: 'server-1' },
+        filter,
+        {
+          plotServerLinks: { 'local-1': 'server-1' },
+          backendPlots: [{ id: 'server-1', client_plot_id: 'local-1' }],
+          localPlot: { id: 'local-1' },
+        },
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('normalizeLocalDeliveryReceipts', () => {
@@ -118,13 +133,58 @@ describe('enrichAndDedupeDeliveryReceipts', () => {
     expect(rows[0]?.pendingSync).toBe(false);
     expect(rows[0]?.buyerLabel).toBe('buyer@coop.org');
   });
+
+  it('keeps distinct synced vouchers even when plot, weight, and minute match', () => {
+    const rows = enrichAndDedupeDeliveryReceipts({
+      synced: [
+        {
+          id: 'voucher-1',
+          plotId: 'server-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: 'QR-1',
+          buyerLabel: 'buyer',
+        },
+        {
+          id: 'voucher-2',
+          plotId: 'server-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: 'QR-2',
+          buyerLabel: 'buyer',
+        },
+        {
+          id: 'voucher-3',
+          plotId: 'server-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: 'QR-3',
+          buyerLabel: 'buyer',
+        },
+        {
+          id: 'voucher-4',
+          plotId: 'server-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: 'QR-4',
+          buyerLabel: 'buyer',
+        },
+      ],
+      plotServerLinks: { 'local-1': 'server-1' },
+    });
+    expect(rows).toHaveLength(4);
+  });
 });
 
 describe('dedupeDeliveryReceipts', () => {
-  it('prefers synced receipt over pending duplicate', () => {
+  it('prefers synced offline duplicate over pending twin', () => {
     const rows = dedupeDeliveryReceipts([
       {
-        id: 'pending-1',
+        id: 'harvest-local-1',
         plotId: 'server-1',
         plotName: 'North',
         kg: 120,
@@ -134,7 +194,7 @@ describe('dedupeDeliveryReceipts', () => {
         pendingSync: true,
       },
       {
-        id: 'voucher-1',
+        id: 'harvest-local-2',
         plotId: 'server-1',
         plotName: 'North',
         kg: 120,
@@ -144,8 +204,31 @@ describe('dedupeDeliveryReceipts', () => {
       },
     ]);
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.id).toBe('voucher-1');
     expect(rows[0]?.qrCodeRef).toBe('QR-123');
+  });
+
+  it('keeps distinct server voucher ids separate', () => {
+    const rows = dedupeDeliveryReceipts([
+      {
+        id: 'voucher-1',
+        plotId: 'server-1',
+        plotName: 'North',
+        kg: 120,
+        createdAt: '2026-06-16T12:00:00.000Z',
+        qrCodeRef: 'QR-1',
+        buyerLabel: 'buyer',
+      },
+      {
+        id: 'voucher-2',
+        plotId: 'server-1',
+        plotName: 'North',
+        kg: 120,
+        createdAt: '2026-06-16T12:00:00.000Z',
+        qrCodeRef: 'QR-2',
+        buyerLabel: 'buyer',
+      },
+    ]);
+    expect(rows).toHaveLength(2);
   });
 });
 

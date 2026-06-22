@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline **Phase 1b cloud delivery receipt restore** (2026-06-19): server harvest vouchers → local SQLite on Sync now / post-sign-in; scope-aware merged fetch; My Plots delivery counts + Harvests browser hydrate on iPad.
 - Offline **Phase 1 cloud plot restore** (2026-06-19): server → local plot hydration on Sync now; backend list includes geometry; plot server link reconciliation.
 - Offline automation **4.O.2** (2026-06-22): golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets documented.
 - Offline automation **Maestro seed + asserts** (2026-06-22): CI bootstrap seeds simulator SQLite; tighter plot/settings nightly flows; guard asserts seed wiring.

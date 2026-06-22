@@ -13,6 +13,7 @@ import {
   type LocalPlotForBackendMatch,
 } from '@/features/plots/backendPlotMatch';
 import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { voucherPlotId } from '@/features/harvest/voucherRowFields';
 
 function plotForBackendMatch(plot: { id: string }): LocalPlotForBackendMatch {
   return { id: plot.id, areaHectares: 0, kind: 'polygon' };
@@ -54,9 +55,66 @@ export function resolvePlotReceiptFilterIds(params: {
 export function receiptMatchesPlotFilter(
   receipt: Pick<DeliveryReceiptRecord, 'plotId'>,
   filterIds: ReadonlySet<string>,
+  options?: {
+    plotServerLinks?: PlotServerLinks;
+    backendPlots?: readonly unknown[];
+    localPlot?: { id: string } | null;
+  },
 ): boolean {
   if (filterIds.size === 0) return true;
-  return filterIds.has(String(receipt.plotId));
+  const receiptPlotId = String(receipt.plotId).trim();
+  if (!receiptPlotId) return false;
+  if (filterIds.has(receiptPlotId)) return true;
+
+  const plotServerLinks = options?.plotServerLinks ?? {};
+  const backendPlots = options?.backendPlots ?? [];
+
+  if (options?.localPlot) {
+    if (
+      receiptBelongsToLocalPlot(receipt, options.localPlot, {
+        backendPlots,
+        plotServerLinks,
+      })
+    ) {
+      return true;
+    }
+  }
+
+  for (const filterId of filterIds) {
+    if (
+      receiptBelongsToLocalPlot(receipt, { id: filterId }, {
+        backendPlots,
+        plotServerLinks,
+      })
+    ) {
+      return true;
+    }
+  }
+
+  const canonicalPlotIds = buildPlotIdCanonicalMap(plotServerLinks, [...filterIds, receiptPlotId]);
+  const receiptCanonical = canonicalPlotIds.get(receiptPlotId) ?? receiptPlotId;
+  for (const filterId of filterIds) {
+    const filterCanonical = canonicalPlotIds.get(filterId) ?? filterId;
+    if (filterCanonical === receiptCanonical) return true;
+    if (plotClientIdsShareCreationSuffix(filterId, receiptPlotId)) return true;
+  }
+
+  return false;
+}
+
+/** Match a raw voucher API row against plot filter ids (local + server aliases). */
+export function voucherMatchesPlotFilter(
+  voucher: unknown,
+  filterIds: ReadonlySet<string>,
+  options?: {
+    plotServerLinks?: PlotServerLinks;
+    backendPlots?: readonly unknown[];
+    localPlot?: { id: string } | null;
+  },
+): boolean {
+  const plotId = voucherPlotId(voucher);
+  if (!plotId) return false;
+  return receiptMatchesPlotFilter({ plotId }, filterIds, options);
 }
 
 function resolveServerPlotIdForReceiptPlot(
@@ -169,6 +227,20 @@ export function buildAllPlotReceiptFilterIds(params: {
       ids.add(id);
     }
   }
+
+  for (const row of params.backendPlots) {
+    const backend = row as BackendPlotRow;
+    const serverId = String(backend.id ?? '').trim();
+    if (serverId) ids.add(serverId);
+    const clientPlotId = String(backend.client_plot_id ?? backend.clientPlotId ?? '').trim();
+    if (clientPlotId) ids.add(clientPlotId);
+  }
+
+  for (const serverId of Object.values(params.plotServerLinks)) {
+    const trimmed = String(serverId ?? '').trim();
+    if (trimmed) ids.add(trimmed);
+  }
+
   return ids;
 }
 
@@ -263,6 +335,11 @@ export function mergeDeliveryReceiptLists(
 }
 
 function receiptDedupeKey(row: DeliveryReceiptRecord, canonicalPlotIds?: Map<string, string>): string {
+  const id = row.id.trim();
+  // Offline client event ids use fuzzy matching; server voucher ids stay distinct.
+  if (id && !id.startsWith('harvest-')) {
+    return `id:${id}`;
+  }
   const plotId = canonicalPlotIds
     ? canonicalPlotId(row.plotId, canonicalPlotIds)
     : row.plotId.trim();
@@ -384,9 +461,19 @@ export function enrichAndDedupeDeliveryReceipts(params: {
     merged.map((row) => row.plotId),
   );
   const enriched = enrichDeliveryReceiptsWithSynced(merged, params.synced, canonicalPlotIds);
+  const absorbedQrRefs = new Set(
+    enriched
+      .filter((row) => row.id.startsWith('harvest-') && row.qrCodeRef?.trim())
+      .map((row) => row.qrCodeRef!.trim()),
+  );
+  const forDedupe = enriched.filter((row) => {
+    if (row.id.startsWith('harvest-')) return true;
+    const qr = row.qrCodeRef?.trim();
+    return !(qr && absorbedQrRefs.has(qr));
+  });
 
   const seen = new Map<string, DeliveryReceiptRecord>();
-  for (const row of enriched) {
+  for (const row of forDedupe) {
     const key = receiptDedupeKey(row, canonicalPlotIds);
     const existing = seen.get(key);
     if (!existing) {

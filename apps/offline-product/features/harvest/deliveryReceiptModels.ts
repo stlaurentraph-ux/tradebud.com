@@ -1,4 +1,12 @@
 import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
+import { parseRecordedAtFromClientEventId } from '@/features/harvest/harvestDeliveryDate';
+import {
+  voucherDeliveredAtMs,
+  voucherId,
+  voucherKg,
+  voucherPlotId,
+  voucherQrRef,
+} from '@/features/harvest/voucherRowFields';
 import type { TranslateFn } from '@/features/i18n/translate';
 
 export type DeliveryReceiptRecord = {
@@ -20,42 +28,8 @@ export type PlotReceiptGroup = {
   receipts: DeliveryReceiptRecord[];
 };
 
-function voucherPlotId(voucher: unknown): string {
-  if (!voucher || typeof voucher !== 'object') return '';
-  const row = voucher as { plot_id?: unknown; plotId?: unknown };
-  return String(row.plot_id ?? row.plotId ?? '').trim();
-}
-
-function voucherQrRef(voucher: unknown): string | null {
-  if (!voucher || typeof voucher !== 'object') return null;
-  const row = voucher as { qr_code_ref?: unknown; qrCodeRef?: unknown };
-  const ref = row.qr_code_ref ?? row.qrCodeRef;
-  if (ref == null) return null;
-  const trimmed = String(ref).trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
 function voucherCreatedAt(voucher: unknown): string | null {
-  if (!voucher || typeof voucher !== 'object') return null;
-  const row = voucher as { created_at?: unknown; createdAt?: unknown };
-  const raw = row.created_at ?? row.createdAt;
-  return raw != null ? String(raw) : null;
-}
-
-function voucherKg(voucher: unknown): number {
-  if (!voucher || typeof voucher !== 'object') return 0;
-  const row = voucher as {
-    kg?: unknown;
-    kg_delivered?: unknown;
-    weight_kg?: unknown;
-  };
-  const value = Number(row.kg ?? row.kg_delivered ?? row.weight_kg ?? 0);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function voucherId(voucher: unknown): string {
-  if (!voucher || typeof voucher !== 'object') return '';
-  return String((voucher as { id?: unknown }).id ?? '').trim();
+  return new Date(voucherDeliveredAtMs(voucher)).toISOString();
 }
 
 export function formatVoucherBuyerLabel(voucher: unknown, t: TranslateFn): string {
@@ -233,6 +207,8 @@ export function formatReceiptDeliverToLabel(
 type PendingHarvestPayload = {
   plotId?: string;
   kg?: number;
+  harvestDate?: string;
+  clientEventId?: string;
   intended_recipient_email?: string;
   intended_recipient_org_name?: string;
 };
@@ -271,12 +247,23 @@ export function normalizePendingHarvestReceipts(params: {
         ? params.plotName
         : localPlotName || params.plotName;
 
+      const payloadRecordedAt =
+        typeof payload.harvestDate === 'string' && payload.harvestDate.trim()
+          ? Date.parse(payload.harvestDate)
+          : payload.clientEventId
+            ? parseRecordedAtFromClientEventId(payload.clientEventId)
+            : null;
+      const createdAtMs =
+        payloadRecordedAt != null && Number.isFinite(payloadRecordedAt)
+          ? payloadRecordedAt
+          : action.createdAt;
+
       return {
         id: `pending-${action.id}`,
         plotId,
         plotName,
         kg,
-        createdAt: new Date(action.createdAt).toISOString(),
+        createdAt: new Date(createdAtMs).toISOString(),
         qrCodeRef: null,
         buyerLabel,
         pendingSync: true,

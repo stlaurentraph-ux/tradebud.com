@@ -320,14 +320,54 @@ export async function persistLocalDeliveryReceipt(row: LocalDeliveryReceiptRow):
 
 export async function loadLocalDeliveryReceiptsForFarmer(
   farmerId: string,
+  options?: { alsoFarmerIds?: readonly string[] },
 ): Promise<LocalDeliveryReceiptRow[]> {
-  const scoped = memLocalDeliveryReceipts
-    .filter((row) => row.farmerId === farmerId)
-    .sort((a, b) => b.recordedAt - a.recordedAt);
-  if (scoped.length > 0) {
-    return scoped;
+  const farmerIds: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [farmerId, ...(options?.alsoFarmerIds ?? [])]) {
+    const id = String(raw ?? '').trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    farmerIds.push(id);
   }
-  return [...memLocalDeliveryReceipts].sort((a, b) => b.recordedAt - a.recordedAt);
+  if (farmerIds.length === 0) return [];
+
+  const idSet = new Set(farmerIds);
+  const scoped = memLocalDeliveryReceipts
+    .filter((row) => idSet.has(row.farmerId))
+    .sort((a, b) => b.recordedAt - a.recordedAt);
+  const scopedRows = dedupeLocalDeliveryReceiptRows(scoped);
+  if (farmerIds.length > 1) {
+    return scopedRows;
+  }
+  const allRows = dedupeLocalDeliveryReceiptRows(
+    [...memLocalDeliveryReceipts].sort((a, b) => b.recordedAt - a.recordedAt),
+  );
+  return allRows.length > scopedRows.length ? allRows : scopedRows;
+}
+
+function dedupeLocalDeliveryReceiptRows(
+  rows: LocalDeliveryReceiptRow[],
+): LocalDeliveryReceiptRow[] {
+  const seen = new Set<string>();
+  const merged: LocalDeliveryReceiptRow[] = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  return merged;
+}
+
+export async function loadAllLocalDeliveryReceipts(): Promise<LocalDeliveryReceiptRow[]> {
+  return dedupeLocalDeliveryReceiptRows(
+    [...memLocalDeliveryReceipts].sort((a, b) => b.recordedAt - a.recordedAt),
+  );
+}
+
+export async function listLocalDeliveryReceiptFarmerIds(): Promise<string[]> {
+  const rows = await loadAllLocalDeliveryReceipts();
+  return [...new Set(rows.map((row) => row.farmerId.trim()).filter(Boolean))];
 }
 
 export async function deleteLocalDeliveryReceipt(id: string): Promise<boolean> {
@@ -436,7 +476,9 @@ export async function deletePendingHarvestSyncForReceipt(params: {
 
 export async function updateLocalDeliveryReceipt(
   id: string,
-  patch: Partial<Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId'>>,
+  patch: Partial<
+    Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId' | 'recordedAt'>
+  >,
 ): Promise<void> {
   memLocalDeliveryReceipts = memLocalDeliveryReceipts.map((row) =>
     row.id === id
@@ -445,6 +487,7 @@ export async function updateLocalDeliveryReceipt(
           qrCodeRef: patch.qrCodeRef !== undefined ? patch.qrCodeRef : row.qrCodeRef,
           pendingSync: patch.pendingSync !== undefined ? patch.pendingSync : row.pendingSync,
           serverPlotId: patch.serverPlotId !== undefined ? patch.serverPlotId : row.serverPlotId,
+          recordedAt: patch.recordedAt !== undefined ? patch.recordedAt : row.recordedAt,
         }
       : row,
   );

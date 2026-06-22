@@ -25,7 +25,7 @@ type PickMessages = {
 
 const defaultMessages: PickMessages = {
   pick_source_title: 'Add document',
-  pick_source_body: 'Attach a PDF, Word file, or photo from your phone.',
+  pick_source_body: 'Attach a PDF, Word file, or photo from your device.',
   pick_browse_files: 'Browse files',
   pick_photo_library: 'Photo library',
   pick_take_photo: 'Take photo',

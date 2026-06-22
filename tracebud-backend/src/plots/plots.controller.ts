@@ -628,6 +628,29 @@ export class PlotsController {
     return this.plotsService.listTenureVerification(id);
   }
 
+  @Get(':id/synced-evidence')
+  @ApiOperation({
+    summary: 'List synced evidence files for a plot (mobile cross-device restore)',
+    description:
+      'Returns storage keys and metadata for documents uploaded from the field app.',
+  })
+  @ApiParam({ name: 'id', description: 'Plot ID' })
+  async syncedEvidence(@Param('id') id: string, @Req() req: any) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    }
+    return this.plotsService.listSyncedEvidence(id);
+  }
+
   @Get(':id/deforestation-decision-history')
   @ApiOperation({
     summary: 'Get historical deforestation decision history for a plot (audit trail)',

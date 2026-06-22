@@ -183,6 +183,16 @@ export default function HomeScreen() {
         showWhenEmpty: true,
       },
       {
+        key: 'vouchers',
+        title: t('my_vouchers_tile'),
+        subtitle: t('compliance_qr_sub'),
+        icon: 'qr-code-outline' as const,
+        tint: '#F0E3FF',
+        iconColor: '#7A1FD1',
+        onPress: openReceipts,
+        showWhenEmpty: true,
+      },
+      {
         key: 'documents',
         title: t('documents_tile'),
         subtitle: t('land_permits_sub'),
@@ -191,16 +201,6 @@ export default function HomeScreen() {
         iconColor: '#2454D7',
         onPress: () => openPlotSection('documents'),
         showWhenEmpty: true,
-      },
-      {
-        key: 'vouchers',
-        title: t('my_vouchers_tile'),
-        subtitle: t('compliance_qr_sub'),
-        icon: 'qr-code-outline' as const,
-        tint: '#F0E3FF',
-        iconColor: '#7A1FD1',
-        onPress: openReceipts,
-        showWhenEmpty: false,
       },
     ];
     if (plots.length === 0) {

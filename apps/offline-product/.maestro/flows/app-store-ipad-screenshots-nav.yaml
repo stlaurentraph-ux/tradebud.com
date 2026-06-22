@@ -1,0 +1,26 @@
+appId: com.tracebud.app
+---
+# Navigate via tab-bar / tile coordinates (accessibility labels not exposed on iPad sim).
+- launchApp
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Mapping.*|.*Deliveries.*|.*Receipts.*|.*Welcome.*"
+    timeout: 20000
+
+# 02 — Mapping tile (top-left on home grid)
+- tapOn:
+    point: "28%,42%"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*Register plot.*|.*Walk.*|.*Start.*|.*GPS.*"
+    timeout: 15000
+- takeScreenshot: 02-map-plot
+
+# 03 — My Plots tab (2nd tab)
+- tapOn:
+    point: "38%,96%"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ".*plot.*|.*My Plots.*|.*Register.*|.*ha.*"
+    timeout: 15000
+- takeScreenshot: 03-my-plots

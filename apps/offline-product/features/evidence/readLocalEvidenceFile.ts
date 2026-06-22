@@ -46,7 +46,7 @@ export async function readLocalEvidenceBytes(localUri: string): Promise<ArrayBuf
       const message = firstError instanceof Error ? firstError.message : String(firstError);
       throw new Error(
         message.includes('does not exist') || message.includes('No such file')
-          ? 'Photo file missing on this phone — open the plot and add the photo again.'
+          ? 'Photo file missing on this device — open the plot and add the photo again.'
           : `Could not read photo file: ${message}`,
       );
     }

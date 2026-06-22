@@ -53,6 +53,9 @@ export type RunAutoBackupResult = {
   plotResult: UploadUnsyncedPlotsResult | null;
   queueResult: ProcessPendingSyncQueueResult;
   plotsRestored?: number;
+  receiptsRestored?: number;
+  evidenceRestored?: number;
+  declarationsRestored?: number;
   syncResultMessage?: string;
 };
 
@@ -122,6 +125,9 @@ export async function runAutoBackup(params: {
             plotResult: pipeline.lastPlotUploadResult,
             queueResult,
             plotsRestored: pipeline.plotsRestored,
+            receiptsRestored: pipeline.outcome.receiptsRestored,
+            evidenceRestored: pipeline.outcome.evidenceRestored,
+            declarationsRestored: pipeline.outcome.declarationsRestored,
             syncResultMessage: pipeline.syncResultMessage,
           };
         } finally {

@@ -105,7 +105,29 @@ Upload-only sync left My Plots empty on a second signed-in device when plots alr
 - **Analytics** — Restore uses existing `sync:plot_list:start` breadcrumb with `phase: restore`.
 - **Acceptance** — Sign in on fresh device → Sync now → My Plots shows server plots with boundaries; local-only plots still upload on sync.
 - **Tests:** `localPlotFromServerGeometry.test.ts`, `restoreLocalPlotsFromServer.test.ts`.
-- **Later phases** — Delivery receipt metadata, evidence files, HLC conflict rules (not in Phase 1).
+- **Later phases** — Evidence file download, HLC conflict rules (not in Phase 1).
+
+## Cross-device delivery receipt restore — Phase 1b (2026-06-19)
+
+Harvest vouchers synced from the phone were visible in the catalog merge at runtime but were not persisted locally, so a fresh iPad stayed empty after sign-in.
+
+- **Restore step** — `restoreLocalDeliveryReceiptsFromServer` immediately after plot restore in `runFieldSyncPipeline`.
+- **Merge rules** — Pull merged vouchers for all owned farmer ids; insert missing rows into `local_delivery_receipts` when server plot maps to a local plot; skip duplicates by voucher id, QR ref, or plot+kg+time heuristic; never overwrite `pendingSync` receipts.
+- **Scope** — `fetchMergedServerVouchers` + `resolveFieldSyncScope` (same as plots); post-sign-in auto-backup when local receipts empty but server has vouchers.
+- **UI refresh** — `emitServerPlotSyncChanged` after restore; Explore reloads plots + delivery counts; Harvests reloads device receipts + voucher list.
+- **Acceptance** — Sign in on iPad → Sync now (or post-sign-in backup) → My Plots delivery counts and Harvests receipt browser match phone.
+- **Tests:** `restoreLocalDeliveryReceiptsFromServer.test.ts`, `resolveLocalPlotIdForServerPlot.test.ts`, `postAuthSyncOffer.test.ts`.
+- **Not in Phase 1b** — Land title / evidence file bytes (still device-local URIs until storage pull slice).
+
+## Cross-device evidence + declaration restore — Phase 1c (2026-06-19)
+
+Land papers, producer declarations, and plot compliance flags now restore after plot linking on a second device.
+
+- **Evidence restore** — `restoreLocalEvidenceFromServer` after receipt restore; lists server `evidence_documents` + tenure verification rows; downloads Supabase storage into app evidence dir; persists `plot_title_photos` / `plot_evidence` with `storagePath`.
+- **Declaration restore** — `restoreLocalDeclarationsFromServer` merges audit rows for producer attestations, plot compliance, cadastral/tenure legal metadata.
+- **Backend** — `GET /v1/plots/:id/synced-evidence`; field farmers may `GET /v1/audit?farmerId=…` without dashboard tenant claim.
+- **Acceptance** — Sign in on iPad → Sync now → Documents/Declarations match phone; land papers open offline when downloaded.
+- **Tests:** `restoreLocalEvidenceFromServer.test.ts`, `restoreLocalDeclarationsFromServer.test.ts`.
 
 ## Tasks checklist
 

@@ -94,6 +94,7 @@
     "run:simulator": "bash ./scripts/run-ios-simulator.sh",
     "open:simulator": "bash ./scripts/open-tracebud-simulator.sh",
     "capture:screenshot": "bash ./scripts/capture-simulator-screenshot.sh",
+    "capture:ipad-screenshots": "bash ./scripts/capture-ipad-store-screenshots.sh",
     "oauth:verify": "node ./scripts/verify-oauth-providers.mjs",
     "oauth:sync-google-ids": "node ./scripts/sync-supabase-google-client-ids.mjs",
     "oauth:redirects:merge": "node ./scripts/merge-supabase-redirect-urls.mjs",
