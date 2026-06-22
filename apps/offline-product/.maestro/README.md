@@ -52,11 +52,14 @@ sudo ln -sfn /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/Java
 
 ## 4. Seed app state (before document / plot flows)
 
-Most flows expect:
+**CI (golden path, nightly, OTA gate):** `maestro-ci-bootstrap-simulator.sh` launches Tracebud once, runs `scripts/seed-maestro-simulator.mjs` (farmer **Maria Santos**, plot **Finca Norte**, English locale), then terminates the app. Set `MAESTRO_SEED_SKIP=1` to skip seeding.
 
-1. **Farmer profile** created on Home (name saved).
-2. At least **one local plot** registered.
-3. For document flows: open **My Plots** → first plot → **Documents** works manually.
+**Local manual runs** — same seed after one app launch:
+
+```bash
+node scripts/seed-maestro-simulator.mjs
+# or: npm run test:maestro:seed
+```
 
 `mark-three-corners.yaml` only needs the app installed (starts from Home → Walk my plot).
 
@@ -91,12 +94,15 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `land-title-photo.yaml` | §7 land title thumbnail | Photo library; may need media on simulator |
 | `tenure-evidence.yaml` | §7 tenure doc row | Same |
 | `mark-three-corners.yaml` | §2 mark corners | Needs location; best on device or simulator with mocked GPS |
-| `settings-sync-smoke.yaml` | Settings → Sync now | Signed-in or sign-in CTA |
+| `settings-sync-smoke.yaml` | Settings → Backup | Requires Backup section; Sync now or sign-in CTA |
 
 ## testID map
 
 | testID | Screen |
 |--------|--------|
+| `tab-my-plots` | Bottom tab → My Plots |
+| `tab-settings` | Bottom tab → Settings |
+| `settings-sync-now` | Settings → Sync now (signed in) |
 | `plot-card` | My Plots list |
 | `plot-nav-documents` | Plot detail → Documents tab |
 | `plot-upload-land-proof` | Upload land proof (photo, file, or camera) |

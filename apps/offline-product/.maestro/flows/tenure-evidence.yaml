@@ -1,41 +1,27 @@
 appId: com.tracebud.app
 ---
+# Prerequisite: CI bootstrap seeds Finca Norte via seed-maestro-simulator.mjs
 - launchApp
 - tapOn:
-    text: ".*My Plots.*"
+    id: "tab-my-plots"
+- assertVisible:
+    text: "Finca Norte"
 - tapOn:
     id: "plot-card"
     index: 0
-    optional: true
-- tapOn:
-    text: ".*Finca Norte.*|.*El Roble.*|.*La Colina.*"
-    optional: true
+- assertVisible:
+    id: "plot-nav-documents"
 - tapOn:
     id: "plot-nav-documents"
-    optional: true
-- tapOn:
-    text: ".*Documents.*"
-    optional: true
 - scrollUntilVisible:
     element:
       id: "plot-add-tenure-evidence"
     direction: DOWN
-    optional: true
-- scrollUntilVisible:
-    element:
-      text: ".*tenure.*|.*Tenure.*"
-    direction: DOWN
-    optional: true
 - tapOn:
     id: "plot-add-tenure-evidence"
-    optional: true
-- tapOn:
-    text: ".*Browse files.*|.*Photo library.*|.*Take photo.*|.*Cancel.*"
-    optional: true
 - tapOn:
     text: ".*Cancel.*"
     optional: true
 - back
 - assertVisible:
     id: "plot-tenure-evidence-section"
-    optional: true

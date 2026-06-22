@@ -1,35 +1,23 @@
 appId: com.tracebud.app
 ---
-# Prerequisite: at least one plot exists. From plot detail, open Documents.
+# Prerequisite: CI bootstrap seeds Finca Norte via seed-maestro-simulator.mjs
 - launchApp
 - tapOn:
-    text: ".*My Plots.*"
+    id: "tab-my-plots"
+- assertVisible:
+    text: "Finca Norte"
 - tapOn:
     id: "plot-card"
     index: 0
-    optional: true
-- tapOn:
-    text: ".*Finca Norte.*|.*El Roble.*|.*La Colina.*"
-    optional: true
+- assertVisible:
+    id: "plot-nav-documents"
 - tapOn:
     id: "plot-nav-documents"
-    optional: true
-- tapOn:
-    text: ".*Documents.*"
-    optional: true
 - assertVisible:
     id: "plot-upload-land-proof"
-    optional: true
 - tapOn:
     id: "plot-upload-land-proof"
-    optional: true
-- tapOn:
-    text: ".*Photo Library.*|.*Choose Photo.*|.*Browse.*"
-    optional: true
 - tapOn:
     text: ".*Cancel.*"
     optional: true
 - back
-- assertVisible:
-    text: ".*land title.*|.*Land title.*"
-    optional: true

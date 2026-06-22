@@ -2,20 +2,34 @@
 /**
  * Seeds the booted iOS simulator Tracebud SQLite DB for Maestro flows.
  * Usage: node scripts/seed-maestro-simulator.mjs
+ *
+ * Requires Tracebud installed and booted once (creates tracebud_offline.db).
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+export const MAESTRO_SEED_FARMER_NAME = 'Maria Santos';
+export const MAESTRO_SEED_PLOT_NAME = 'Finca Norte';
+
 const FARMER_ID = 'a0000000-0000-4000-8000-000000000001';
 const PLOT_ID = 'a0000000-0000-4000-8000-000000000011';
 const NOW = Date.now();
+const DB_WAIT_MS = Number(process.env.MAESTRO_SEED_DB_WAIT_MS ?? 45_000);
+const DB_POLL_MS = 500;
 
 function sh(cmd) {
   return execSync(cmd, { encoding: 'utf8' }).trim();
 }
 
+function sleep(ms) {
+  execSync(`sleep ${Math.ceil(ms / 1000)}`);
+}
+
 function findBootedDeviceId() {
+  const deviceId = process.env.MAESTRO_DEVICE_ID?.trim();
+  if (deviceId) return deviceId;
+
   const out = sh('xcrun simctl list devices booted');
   const match = out.match(/\(([0-9A-F-]{36})\) \(Booted\)/i);
   if (!match) throw new Error('No booted iOS simulator. Open Simulator first.');
@@ -29,11 +43,25 @@ function findTracebudDb(deviceId) {
     deviceId,
     'data/Containers/Data/Application',
   );
+  if (!fs.existsSync(root)) return null;
+
   for (const appId of fs.readdirSync(root)) {
     const dbPath = path.join(root, appId, 'Documents/SQLite/tracebud_offline.db');
     if (fs.existsSync(dbPath)) return dbPath;
   }
-  throw new Error('tracebud_offline.db not found. Install and open Tracebud on the simulator once.');
+  return null;
+}
+
+function waitForTracebudDb(deviceId) {
+  const started = Date.now();
+  while (Date.now() - started < DB_WAIT_MS) {
+    const dbPath = findTracebudDb(deviceId);
+    if (dbPath) return dbPath;
+    sleep(DB_POLL_MS);
+  }
+  throw new Error(
+    'tracebud_offline.db not found. Install Tracebud, launch once on the simulator, then retry.',
+  );
 }
 
 function sql(dbPath, statement) {
@@ -43,7 +71,7 @@ function sql(dbPath, statement) {
 
 function main() {
   const deviceId = findBootedDeviceId();
-  const dbPath = findTracebudDb(deviceId);
+  const dbPath = waitForTracebudDb(deviceId);
   const pointsJson = JSON.stringify([
     { latitude: 14.0818, longitude: -87.2068 },
     { latitude: 14.0828, longitude: -87.2068 },
@@ -54,11 +82,11 @@ function main() {
   sql(dbPath, 'PRAGMA journal_mode = WAL;');
   sql(
     dbPath,
-    `INSERT OR REPLACE INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor) VALUES ('${FARMER_ID}', 'Maria Santos', 'farmer', 1, ${NOW}, 1, 1, 1)`,
+    `INSERT OR REPLACE INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor) VALUES ('${FARMER_ID}', '${MAESTRO_SEED_FARMER_NAME}', 'farmer', 1, ${NOW}, 1, 1, 1)`,
   );
   sql(
     dbPath,
-    `INSERT OR REPLACE INTO plots (id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson) VALUES ('${PLOT_ID}', '${FARMER_ID}', 'Finca Norte', ${NOW}, 10000, 1.0, 'polygon', '${pointsJson.replace(/'/g, "''")}')`,
+    `INSERT OR REPLACE INTO plots (id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson) VALUES ('${PLOT_ID}', '${FARMER_ID}', '${MAESTRO_SEED_PLOT_NAME}', ${NOW}, 10000, 1.0, 'polygon', '${pointsJson.replace(/'/g, "''")}')`,
   );
   sql(dbPath, `INSERT OR REPLACE INTO settings (key, value) VALUES ('tracebudAppLanguage', 'en')`);
 
@@ -67,7 +95,6 @@ function main() {
   console.log(`Seeded ${dbPath}`);
   console.log(`  farmer: ${farmer}`);
   console.log(`  plots: ${plots}`);
-  console.log('Force-quit Tracebud on the simulator, then re-open before running Maestro.');
 }
 
 main();
