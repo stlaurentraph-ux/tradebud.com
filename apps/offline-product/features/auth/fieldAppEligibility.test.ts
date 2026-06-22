@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  fieldAppBlocksDashboardOAuthSignIn,
   getAppRoleFromSession,
   isDashboardWorkspaceRole,
   isDashboardWorkspaceSession,
@@ -49,6 +50,44 @@ describe('fieldAppEligibility', () => {
     expect(
       isDashboardWorkspaceSession({
         user: { app_metadata: { role: 'farmer' } },
+      } as never),
+    ).toBe(false);
+  });
+
+  it('blocks merged dashboard + Google farmer OAuth sessions', () => {
+    expect(
+      fieldAppBlocksDashboardOAuthSignIn({
+        user: {
+          email: 'exporter+demo@tracebud.com',
+          app_metadata: { role: 'compliance_manager' },
+          identities: [
+            {
+              provider: 'google',
+              identity_data: { email: 'hector@tracebud.com' },
+            },
+            {
+              provider: 'email',
+              identity_data: { email: 'exporter+demo@tracebud.com' },
+            },
+          ],
+        },
+      } as never),
+    ).toBe(true);
+  });
+
+  it('allows farmer sessions with matching Google identity', () => {
+    expect(
+      fieldAppBlocksDashboardOAuthSignIn({
+        user: {
+          email: 'hector@tracebud.com',
+          app_metadata: { role: 'farmer' },
+          identities: [
+            {
+              provider: 'google',
+              identity_data: { email: 'hector@tracebud.com' },
+            },
+          ],
+        },
       } as never),
     ).toBe(false);
   });

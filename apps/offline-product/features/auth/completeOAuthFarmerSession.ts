@@ -5,7 +5,8 @@ import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
-import { ensureFarmerOAuthProfile, getEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
+import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
+import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
@@ -73,7 +74,11 @@ export async function completeOAuthFarmerSession(params: {
   farmerId?: string;
   localPlots?: Plot[];
 }): Promise<SignInSyncResult> {
-  const email = getEmailFromSession(params.session);
+  if (fieldAppBlocksDashboardOAuthSignIn(params.session)) {
+    return { ok: false, message: 'sign_in_dashboard_account' };
+  }
+
+  const email = getFieldAppEmailFromSession(params.session);
   const refreshToken = params.session.refresh_token ?? '';
 
   if (!refreshToken) {

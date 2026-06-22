@@ -46,6 +46,18 @@ export function getEmailFromSession(session: Session): string {
   return '';
 }
 
+/** Prefer Google/Apple identity email for field-app display and sync credentials. */
+export function getFieldAppEmailFromSession(session: Session): string {
+  for (const provider of ['google', 'apple'] as const) {
+    const identity = session.user.identities?.find((row) => row.provider === provider);
+    const email = identity?.identity_data?.email;
+    if (typeof email === 'string' && email.trim()) {
+      return email.trim();
+    }
+  }
+  return getEmailFromSession(session);
+}
+
 export async function ensureFarmerOAuthProfile(fullName?: string, session?: Session): Promise<void> {
   const name = fullName?.trim() ?? '';
   const dashboardRole = session ? getAppRoleFromSession(session) : null;

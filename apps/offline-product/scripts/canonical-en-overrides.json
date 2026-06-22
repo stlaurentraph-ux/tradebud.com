@@ -516,6 +516,8 @@
   "warning": "Warning",
   "weight_kg_title": "Weight (kg)",
   "welcome_back": "Welcome back,",
+  "home_welcome_hello": "Hello",
+  "home_welcome_add_name": "Add your name",
   "your_profile": "Your profile",
   "sign_in_backup_done": "{n} plot(s) backed up to Tracebud.",
   "sign_in_backup_partial": "{uploaded} backed up, {failed} could not upload. Try Back up in Settings when you are online.",

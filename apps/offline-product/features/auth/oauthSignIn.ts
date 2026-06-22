@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
@@ -104,7 +105,7 @@ export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<
         if (message === 'sign_in_oauth_cancelled') {
           throw error;
         }
-        if (__DEV__) {
+        if (__DEV__ && Constants.isDevice === false) {
           console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
           return signInWithOAuthBrowser(provider);
         }
