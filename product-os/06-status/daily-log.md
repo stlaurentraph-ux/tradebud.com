@@ -10,6 +10,9 @@
 
 
 
+### 2026-06-22 (automation — 3.3 runbook merged, PR #194)
+- **Weekly health summary** — manifest + `weekly-health-summary` command + CI guard; human: create Cursor Automation Mon 09:30 UTC per `weekly-health-automation.md`.
+
 ### 2026-06-21 (automation — smoke bearer CI mint, option 1)
 - **Deploy smokes** — mint fresh `TRACEBUD_SMOKE_BEARER_TOKEN` per workflow run via Supabase admin secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`); legacy static bearer optional fallback.
 
