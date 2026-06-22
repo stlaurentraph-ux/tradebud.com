@@ -13,9 +13,6 @@ appId: com.tracebud.app
 
 # 02 Mapping / register plot entry
 - tapOn:
-    id: "home-tile-register-plot"
-    optional: true
-- tapOn:
     text: "Mapping"
     optional: true
 - tapOn:
