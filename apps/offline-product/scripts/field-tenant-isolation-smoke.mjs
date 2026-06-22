@@ -2,13 +2,15 @@
 /**
  * Smoke: farmer A cannot read or sync farmer B's plots on production API.
  *
- * Requires in apps/offline-product/.env.local (or env):
- *   EXPO_PUBLIC_API_URL=https://api.tracebud.com/api
- *   EXPO_PUBLIC_SUPABASE_URL
- *   EXPO_PUBLIC_SUPABASE_ANON_KEY
+ * Manifest: product-os/04-quality/golden-field-tenant-smoke.json
+ *
+ * Requires:
+ *   EXPO_PUBLIC_SUPABASE_URL + EXPO_PUBLIC_SUPABASE_ANON_KEY (or shared SUPABASE_* in CI)
  *   FIELD_TENANT_SMOKE_FARMER_A_EMAIL / FIELD_TENANT_SMOKE_FARMER_A_PASSWORD
- *   FIELD_TENANT_SMOKE_FARMER_B_ID
- *   FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID
+ *   FIELD_TENANT_SMOKE_FARMER_B_ID / FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID
+ *
+ * CI: FIELD_TENANT_SMOKE_STRICT=1 — missing credentials fail the job.
+ * Local: skips when unset (use --strict to fail locally).
  *
  * Run: npm run qa:tenant-isolation
  */
@@ -18,6 +20,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
+const repoRoot = path.join(projectRoot, '../..');
+const manifestPath = path.join(repoRoot, 'product-os/04-quality/golden-field-tenant-smoke.json');
 
 function loadEnvFileIfPresent(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -35,14 +39,32 @@ function loadEnvFileIfPresent(filePath) {
 for (const envPath of [
   path.join(projectRoot, '.env.local'),
   path.join(projectRoot, '.env'),
-  path.join(projectRoot, '../..', '.env.local'),
+  path.join(repoRoot, '.env.local'),
 ]) {
   loadEnvFileIfPresent(envPath);
 }
 
-const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://api.tracebud.com/api').replace(/\/$/, '');
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+function loadManifest() {
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error('Missing product-os/04-quality/golden-field-tenant-smoke.json');
+  }
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+const manifest = loadManifest();
+const strict =
+  process.argv.includes('--strict') ||
+  process.env[manifest.ciEnv?.strictFlag ?? 'FIELD_TENANT_SMOKE_STRICT'] === '1';
+
+const API_URL = (
+  process.env.FIELD_TENANT_SMOKE_API_URL?.trim() ||
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  manifest.apiUrlDefault
+).replace(/\/$/, '');
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() || process.env.SUPABASE_URL?.trim();
+const SUPABASE_ANON =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() || process.env.SUPABASE_ANON_KEY?.trim();
 const farmerAEmail = process.env.FIELD_TENANT_SMOKE_FARMER_A_EMAIL?.trim();
 const farmerAPassword = process.env.FIELD_TENANT_SMOKE_FARMER_A_PASSWORD?.trim();
 const farmerBId = process.env.FIELD_TENANT_SMOKE_FARMER_B_ID?.trim();
@@ -50,6 +72,18 @@ const farmerBPlotId = process.env.FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID?.trim();
 
 function missingCredentials() {
   return !(SUPABASE_URL && SUPABASE_ANON && farmerAEmail && farmerAPassword && farmerBId && farmerBPlotId);
+}
+
+function failOrSkip(message) {
+  if (strict) {
+    console.error(`FAIL ${message}`);
+    console.error(`See ${manifest.runbookFile ?? 'product-os/04-quality/golden-field-tenant-smoke.md'}`);
+    process.exit(1);
+  }
+  console.log(`SKIP tenant isolation smoke — ${message}`);
+  console.log('Required secrets: FIELD_TENANT_SMOKE_FARMER_A_EMAIL, _PASSWORD, FARMER_B_ID, FARMER_B_PLOT_ID');
+  console.log('Also: SUPABASE_URL + SUPABASE_ANON_KEY (or EXPO_PUBLIC_SUPABASE_* locally)');
+  process.exit(0);
 }
 
 async function supabaseToken(email, password) {
@@ -89,9 +123,13 @@ async function apiRequest(token, pathname, init = {}) {
 
 async function main() {
   if (missingCredentials()) {
-    console.log('SKIP tenant isolation smoke — set FIELD_TENANT_SMOKE_* vars in .env.local');
-    console.log('Required: FIELD_TENANT_SMOKE_FARMER_A_EMAIL, _PASSWORD, FARMER_B_ID, FARMER_B_PLOT_ID');
-    process.exit(0);
+    failOrSkip('missing FIELD_TENANT_SMOKE_* or Supabase credentials');
+  }
+
+  const listProbe = manifest.probes.find((item) => item.id === 'foreign_farmer_list');
+  const patchProbe = manifest.probes.find((item) => item.id === 'foreign_plot_patch');
+  if (!listProbe || !patchProbe) {
+    throw new Error('manifest must define foreign_farmer_list and foreign_plot_patch probes');
   }
 
   const tokenA = await supabaseToken(farmerAEmail, farmerAPassword);
@@ -104,19 +142,24 @@ async function main() {
     console.error('FAIL farmer A listed farmer B plots', foreignList.body);
     process.exit(1);
   }
-  if (foreignList.status !== 403) {
-    console.error('FAIL expected 403 on foreign farmer list, got', foreignList.status, foreignList.body);
+  if (foreignList.status !== listProbe.expectStatus) {
+    console.error(
+      `FAIL expected ${listProbe.expectStatus} on foreign farmer list, got`,
+      foreignList.status,
+      foreignList.body,
+    );
     process.exit(1);
   }
-  console.log('PASS farmer A cannot list farmer B plots (403)');
+  console.log(`PASS farmer A cannot list farmer B plots (${listProbe.expectStatus})`);
 
   const foreignSync = await apiRequest(tokenA, `/v1/plots/${encodeURIComponent(farmerBPlotId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Tenant probe' }),
+    body: JSON.stringify(patchProbe.body ?? { name: 'Tenant probe' }),
   });
-  if (foreignSync.status < 400) {
-    console.error('FAIL farmer A sync to farmer B plot should be denied, got', foreignSync.status);
+  const minStatus = patchProbe.expectStatusMin ?? 400;
+  if (foreignSync.status < minStatus) {
+    console.error(`FAIL farmer A sync to farmer B plot should be denied (>=${minStatus}), got`, foreignSync.status);
     process.exit(1);
   }
   console.log(`PASS farmer A foreign plot update denied (${foreignSync.status})`);

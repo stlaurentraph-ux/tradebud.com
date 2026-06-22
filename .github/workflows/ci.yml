@@ -1146,11 +1146,18 @@ jobs:
       - name: OTA production gate wiring guard
         run: npm run ota:production:assert
 
-      - name: Tenant isolation smoke (optional)
+      - name: Field tenant isolation wiring guard
+        run: npm run qa:tenant-isolation:assert
+
+      - name: Field tenant isolation smoke (blocking)
         env:
+          FIELD_TENANT_SMOKE_STRICT: "1"
+          FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           FIELD_TENANT_SMOKE_FARMER_A_EMAIL: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_EMAIL }}
           FIELD_TENANT_SMOKE_FARMER_A_PASSWORD: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_PASSWORD }}
           FIELD_TENANT_SMOKE_FARMER_B_ID: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_B_ID }}

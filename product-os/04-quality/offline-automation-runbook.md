@@ -119,6 +119,22 @@ Weekly field-app health without Vercel/marketing smoke. Uses Sentry `tracebud/re
 
 ---
 
+## Field tenant isolation smoke (4.O.2)
+
+Blocking cross-farmer API probe in Expo CI (production API).
+
+| Command | Purpose |
+|---------|---------|
+| `npm run qa:tenant-isolation` | Live probe — farmer A must not list/patch farmer B's plots |
+| `npm run qa:tenant-isolation:assert` | CI wiring guard |
+
+**Manifest:** `product-os/04-quality/golden-field-tenant-smoke.json`  
+**Runbook:** `product-os/04-quality/golden-field-tenant-smoke.md`
+
+**CI:** Expo `app` job sets `FIELD_TENANT_SMOKE_STRICT=1` — missing `FIELD_TENANT_SMOKE_*` secrets fail the job (no silent skip). Reuses `SUPABASE_URL` + `SUPABASE_ANON_KEY` from deploy smoke.
+
+---
+
 ## Production OTA gate (5.10)
 
 EAS skew protection + strict Maestro gate before production OTA.

@@ -170,6 +170,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const [backupPlotCount, setBackupPlotCount] = useState(0);
   const onSuccessRef = useRef<(() => void | Promise<void>) | undefined>(undefined);
   const backupConfirmedCallbackRef = useRef<(() => void | Promise<void>) | undefined>(undefined);
+  const oauthSignInInFlightRef = useRef(false);
+  const refreshAuthInFlightRef = useRef<Promise<void> | null>(null);
 
   const countUnsyncedPlots = useCallback(async (): Promise<number> => {
     if (!farmer?.id || plots.length === 0) return 0;
@@ -280,35 +282,87 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     [farmer, plots, setFarmer, reloadFromDisk],
   );
 
-  const refreshAuth = useCallback(async () => {
-    const generationAtStart = getAuthUiGeneration();
+  const adoptHydratedAuthSession = useCallback(async (): Promise<boolean> => {
     await hydrateSyncAuthFromSettings();
-    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+    if (!hasSyncAuthSession()) {
       setIsSignedIn(false);
       setEmail('');
-      return;
+      return false;
     }
     const { email: savedEmail } = getAuthCredentials();
     if (savedEmail) setEmail(savedEmail);
     setIsSignedIn(true);
-
-    const access = await verifySyncAccessToken();
-    if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
-      setIsSignedIn(false);
-      setEmail('');
-      return;
-    }
-    if (!access.ok && access.reason === 'session_expired') {
-      setIsSignedIn(false);
-      setEmail('');
-      return;
-    }
     try {
       await syncLocalFarmerFromAuth();
     } catch {
       // Credentials are on device; farmer alignment is best-effort on refresh.
     }
+    return true;
   }, [syncLocalFarmerFromAuth]);
+
+  const refreshAuth = useCallback(async () => {
+    if (oauthSignInInFlightRef.current) {
+      return;
+    }
+    if (refreshAuthInFlightRef.current) {
+      await refreshAuthInFlightRef.current;
+      return;
+    }
+
+    const run = (async () => {
+      const generationAtStart = getAuthUiGeneration();
+      await hydrateSyncAuthFromSettings();
+      if (oauthSignInInFlightRef.current) {
+        return;
+      }
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+        return;
+      }
+      if (generationAtStart !== getAuthUiGeneration()) {
+        await adoptHydratedAuthSession();
+        return;
+      }
+
+      const { email: savedEmail } = getAuthCredentials();
+      if (savedEmail) setEmail(savedEmail);
+      setIsSignedIn(true);
+
+      const access = await verifySyncAccessToken();
+      if (oauthSignInInFlightRef.current) {
+        return;
+      }
+      if (generationAtStart !== getAuthUiGeneration()) {
+        await adoptHydratedAuthSession();
+        return;
+      }
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+        return;
+      }
+      if (!access.ok && access.reason === 'session_expired') {
+        setIsSignedIn(false);
+        setEmail('');
+        return;
+      }
+      try {
+        await syncLocalFarmerFromAuth();
+      } catch {
+        // Credentials are on device; farmer alignment is best-effort on refresh.
+      }
+    })();
+
+    refreshAuthInFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      if (refreshAuthInFlightRef.current === run) {
+        refreshAuthInFlightRef.current = null;
+      }
+    }
+  }, [adoptHydratedAuthSession, syncLocalFarmerFromAuth]);
 
   useEffect(() => {
     const sub = Linking.addEventListener('url', (event) => {
@@ -401,18 +455,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     await clearPersistedSyncAuth();
   }, []);
 
-  const openSignIn = useCallback(
-    (options?: OpenSignInOptions) => {
-      setVariant(options?.variant ?? 'general');
-      onSuccessRef.current = options?.onSuccess;
-      setHint(null);
-      setPassword('');
-      setEmailMode(false);
-      void refreshAuth();
-      setVisible(true);
-    },
-    [refreshAuth],
-  );
+  const openSignIn = useCallback((options?: OpenSignInOptions) => {
+    setVariant(options?.variant ?? 'general');
+    onSuccessRef.current = options?.onSuccess;
+    setHint(null);
+    setPassword('');
+    setEmailMode(false);
+    setVisible(true);
+  }, []);
 
   const titleKey =
     variant === 'after_plot'
@@ -445,6 +495,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
+    oauthSignInInFlightRef.current = true;
     setOauthLoading(provider);
     setHint(null);
     trackEvent(ANALYTICS_EVENTS.OAUTH_SIGN_IN_STARTED, { provider, source: 'in_app' });
@@ -455,10 +506,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots: plots,
       });
       if (!result.ok) {
-        await hydrateSyncAuthFromSettings();
-        if (hasSyncAuthSession()) {
-          const { email: signedInEmail } = getAuthCredentials();
-          if (signedInEmail) setEmail(signedInEmail);
+        if (await adoptHydratedAuthSession()) {
           trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, {
             method: provider,
             source: 'in_app_recovered',
@@ -475,13 +523,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           result.message === 'sign_in_oauth_failed' ||
           result.message === 'sign_in_oauth_provider_disabled' ||
           result.message === 'sign_in_field_bootstrap_failed' ||
-          result.message === 'sign_in_api_unreachable'
+          result.message === 'sign_in_api_unreachable' ||
+          result.message === 'sign_in_dashboard_account'
         ) {
           closeSignIn();
           showOAuthSignInFailureAlert(t, result.message, () => {
             if (
               result.message !== 'sign_in_field_bootstrap_failed' &&
-              result.message !== 'sign_in_api_unreachable'
+              result.message !== 'sign_in_api_unreachable' &&
+              result.message !== 'sign_in_dashboard_account'
             ) {
               void openCreateAccount();
             }
@@ -491,7 +541,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         const message =
           result.message === 'sign_in_oauth_cancelled'
             ? t('sign_in_oauth_cancelled')
-            : result.message;
+            : formatSignInErrorMessage(t, result.message);
         setHint(message);
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: provider,
@@ -501,8 +551,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: provider, source: 'in_app' });
-      if (!hasSyncAuthSession()) {
-        setIsSignedIn(false);
+      if (!(await adoptHydratedAuthSession())) {
         setHint(t('sign_in_oauth_failed'));
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: provider,
@@ -511,14 +560,20 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      const { email: signedInEmail } = getAuthCredentials();
-      if (signedInEmail) setEmail(signedInEmail);
       setOauthLoading(null);
       await finishSuccessfulSignIn();
       if (result.apiUnreachable) {
         Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
       }
     } catch (e) {
+      if (await adoptHydratedAuthSession()) {
+        trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, {
+          method: provider,
+          source: 'in_app_recovered',
+        });
+        await finishSuccessfulSignIn();
+        return;
+      }
       const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
       setHint(message);
       setIsSignedIn(false);
@@ -529,6 +584,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         message,
       });
     } finally {
+      oauthSignInInFlightRef.current = false;
       setOauthLoading(null);
     }
   };

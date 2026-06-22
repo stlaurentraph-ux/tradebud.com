@@ -33,11 +33,11 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
 | `EXPO_TOKEN` | 3.O.1, 4.8 | offline Maestro golden path + nightly smoke | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
 | `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7, 4.O.1 | release health gate + offline mobile SLO gate | Also reused by `offline-mobile-slo-gate.yml` for `tracebud/react-native` |
-| `FIELD_TENANT_SMOKE_API_URL` | 4.O.1 | Expo CI tenant isolation smoke | Optional — defaults to production API when unset |
-| `FIELD_TENANT_SMOKE_FARMER_A_EMAIL` | 4.O.1 | Expo CI tenant isolation smoke | Farmer A credentials for cross-tenant probe |
-| `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD` | 4.O.1 | Expo CI tenant isolation smoke | Farmer A password |
-| `FIELD_TENANT_SMOKE_FARMER_B_ID` | 4.O.1 | Expo CI tenant isolation smoke | Farmer B uuid (must not be readable by farmer A) |
-| `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` | 4.O.1 | Expo CI tenant isolation smoke | Farmer B plot uuid for PATCH denial probe |
+| `FIELD_TENANT_SMOKE_FARMER_A_EMAIL` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer A login — see `golden-field-tenant-smoke.md` |
+| `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer A password |
+| `FIELD_TENANT_SMOKE_FARMER_B_ID` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer B profile uuid (foreign target) |
+| `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer B plot uuid for PATCH denial probe |
+| `FIELD_TENANT_SMOKE_API_URL` | 4.O.2 | Expo CI tenant isolation smoke | Optional — defaults to `https://api.tracebud.com/api` |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
 
@@ -122,6 +122,22 @@ Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly sec
 
 ---
 
+## Golden field tenant smoke (Phase 4.O.2)
+
+**Status:** documented — see `golden-field-tenant-smoke.md` + `golden-field-tenant-smoke.json`.
+
+| Fixture | Value |
+|---------|-------|
+| Farmer A (probe) | `field+tenant-smoke-a@tracebud.com` (recommended) |
+| Farmer B (victim) | `field+tenant-smoke-b@tracebud.com` (recommended) |
+| Probes | `GET /v1/plots?farmerId=B` → 403; `PATCH /v1/plots/:plotBId` → ≥400 |
+
+**Local smoke:** `cd apps/offline-product && npm run qa:tenant-isolation`  
+**CI guard:** `npm run qa:tenant-isolation:assert` (Expo `app` job)  
+**Blocking smoke:** requires all four `FIELD_TENANT_SMOKE_*` secrets + shared Supabase secrets above.
+
+---
+
 ## Release health gate (Phase 4.7)
 
 **Status:** documented — see `release-health-gate.md` + `release-health-gate.json`.
@@ -139,6 +155,7 @@ Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly sec
 ## Human setup checklist
 
 - [ ] Add secrets in GitHub → Settings → Secrets and variables → Actions
+- [ ] **Field tenant smoke (4.O.2):** create golden farmer pair per `golden-field-tenant-smoke.md`; set `FIELD_TENANT_SMOKE_*` + verify `SUPABASE_URL` / `SUPABASE_ANON_KEY`
 - [ ] **Turbo remote cache (1.2):** `TURBO_TOKEN` + `TURBO_TEAM` — CI uses local cache until set; `npm run turbo:cache:report` logs status in Contracts job
 - [ ] Never paste values into PRs or `daily-log.md`
 - [ ] After adding secret, move slice from **Blocked** → **Ready** in `agent-queue.md`
@@ -150,6 +167,7 @@ Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly sec
 
 | Date | Change |
 |------|--------|
+| 2026-06-22 | Slice 4.O.2: golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets required |
 | 2026-06-21 | Slice 2.6: backend deploy smoke manifest, runner, workflow; reuses `UPTIME_BACKEND_BASE_URL` + optional `TRACEBUD_SMOKE_BEARER_TOKEN` |
 | 2026-06-21 | Slice 2.7: golden staging tenant manifest, runbook, bootstrap helper, CI guard |
 | 2026-06-21 | Slice 2.O.2: workflow-f missed schedule alert guard + activation runbook |

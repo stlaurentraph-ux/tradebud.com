@@ -153,6 +153,7 @@ export default function HomeScreen() {
   }, [refreshPlotReadiness]);
 
   const plotsCount = plots.length;
+  const homeWelcomeName = farmerDisplayName?.trim() || null;
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
@@ -337,12 +338,20 @@ export default function HomeScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.welcomeCard}
         >
-          <ThemedText type="caption" style={styles.welcomeBack}>
-            {t('welcome_back')}
-          </ThemedText>
-          <ThemedText type="title" style={styles.welcomeName}>
-            {farmerDisplayName || t('farmer_fallback')}
-          </ThemedText>
+          {homeWelcomeName ? (
+            <>
+              <ThemedText type="caption" style={styles.welcomeBack}>
+                {t('welcome_back')}
+              </ThemedText>
+              <ThemedText type="title" style={styles.welcomeName}>
+                {homeWelcomeName}
+              </ThemedText>
+            </>
+          ) : (
+            <ThemedText type="title" style={styles.welcomeName}>
+              {t('home_welcome_hello')}
+            </ThemedText>
+          )}
           {plotsCount > 0 ? (
           <View style={styles.statsRow}>
             <View style={styles.statBox}>

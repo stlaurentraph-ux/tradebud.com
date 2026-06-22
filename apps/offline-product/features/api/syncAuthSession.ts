@@ -15,6 +15,7 @@ import {
 } from '@/features/security/syncAuthStorage';
 import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
 import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
+import { getFieldAppEmailFromSession } from '@/features/auth/oauthSession';
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import {
   cacheBustUrl,
@@ -231,7 +232,7 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
           return null;
         }
         await saveOAuthSyncAuthCredentials(
-          data.session.user.email ?? currentEmail,
+          getFieldAppEmailFromSession(data.session) || currentEmail,
           data.session.refresh_token,
           data.session.access_token,
           data.session.expires_at ?? null,
@@ -246,7 +247,10 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
       if (!syncAuthStillActive(revisionAtStart)) {
         return null;
       }
-      if (data.session.user.email) {
+      const refreshedEmail = getFieldAppEmailFromSession(data.session);
+      if (refreshedEmail) {
+        currentEmail = refreshedEmail;
+      } else if (data.session.user.email) {
         currentEmail = data.session.user.email;
       }
       applySessionToCache(data.session);

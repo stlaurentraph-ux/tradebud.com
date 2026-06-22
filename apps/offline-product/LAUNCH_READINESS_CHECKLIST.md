@@ -65,7 +65,7 @@ This checklist is the minimum bar before publishing the Tracebud farmer field ap
 - [x] Full type-check gate in CI (`npm run typecheck` in `app` job and `qa:full`).
 - [ ] Rollout SLO gate passes: `npm run release:slo:gate -- --report=release-health-report.example.json` (use real Sentry window report before prod promotion)
 - [ ] Device E2E manual soak documented (`npm run qa:device` → `DEVICE_SMOKE_CHECKLIST.md` — OAuth, permissions, tenant, flaky network)
-- [ ] Tenant isolation API smoke: `npm run qa:tenant-isolation` (set `FIELD_TENANT_SMOKE_*` in `.env.local`)
+- [ ] Tenant isolation API smoke: `npm run qa:tenant-isolation` — golden pair per `product-os/04-quality/golden-field-tenant-smoke.md`; CI blocking when `FIELD_TENANT_SMOKE_*` secrets set
 - [ ] Device E2E executed and sign-off row completed in checklist:
   - [ ] farmer onboarding
   - [ ] plot capture
