@@ -106,6 +106,8 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
         transaction_id UUID NOT NULL,
         qr_code_ref TEXT NULL,
         status TEXT NOT NULL DEFAULT 'issued',
+        intended_recipient_email TEXT NULL,
+        intended_recipient_tenant_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE dds_package (

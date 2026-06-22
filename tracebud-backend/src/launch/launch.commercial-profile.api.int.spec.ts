@@ -5,6 +5,8 @@ import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { LaunchPublicController } from './launch.public.controller';
 import { LaunchService } from './launch.service';
+import { OnboardingEmailService } from './onboarding-email.service';
+import { InboxService } from '../inbox/inbox.service';
 import { PG_POOL } from '../db/db.module';
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -69,7 +71,12 @@ describeIfDb('Launch commercial-profile API integration', () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [LaunchPublicController],
-      providers: [LaunchService, { provide: PG_POOL, useValue: pool }],
+      providers: [
+        LaunchService,
+        { provide: PG_POOL, useValue: pool },
+        { provide: OnboardingEmailService, useValue: {} },
+        { provide: InboxService, useValue: {} },
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();

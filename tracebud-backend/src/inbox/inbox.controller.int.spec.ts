@@ -57,7 +57,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     );
 
     await expect(
-      controller.respond('req_inbox_001', { user: { email: 'exporter+demo@tracebud.com' } }),
+      controller.respond('req_inbox_001', {}, { user: { email: 'exporter+demo@tracebud.com' } }),
     ).rejects.toThrow(ForbiddenException);
 
     await expect(
@@ -99,7 +99,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     expect(pending).toBeDefined();
     const requestId = pending!.id;
     await expect(
-      controller.respond(requestId, {
+      controller.respond(requestId, {}, {
         user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).resolves.toMatchObject({
@@ -107,7 +107,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     });
 
     await expect(
-      controller.respond(requestId, {
+      controller.respond(requestId, {}, {
         user: { app_metadata: { tenant_id: 'tenant_brazil_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).rejects.toThrow(NotFoundException);
@@ -130,7 +130,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
     const pending = listed.requests.find((item) => item.status === 'PENDING');
     expect(pending).toBeDefined();
     await expect(
-      controller.respond(pending!.id, {
+      controller.respond(pending!.id, {}, {
         user: { app_metadata: { tenant_id: 'tenant_rwanda_001', role: 'exporter' }, email: 'exporter+demo@tracebud.com' },
       }),
     ).resolves.toMatchObject({

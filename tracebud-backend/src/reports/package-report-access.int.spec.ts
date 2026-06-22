@@ -44,6 +44,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+    await pool.query(`SET search_path TO ${schema},public`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS plot (

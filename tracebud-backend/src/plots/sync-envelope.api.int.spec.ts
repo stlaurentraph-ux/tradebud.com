@@ -46,7 +46,7 @@ class TestAuthGuard implements CanActivate {
     req.user = {
       id: userId,
       email,
-      app_metadata: tenantId ? { tenant_id: tenantId, role } : undefined,
+      app_metadata: tenantId ? { tenant_id: tenantId, role } : { role },
     };
     return true;
   }
@@ -187,7 +187,7 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
   it('returns 403 for missing tenant claim before sync writes', async () => {
     const res = await request(app.getHttpServer())
       .post(`/v1/plots/${plotId}/photos-sync`)
-      .set('x-user-email', 'farmer@example.com')
+      .set('x-user-email', 'exporter+scope@example.com')
       .send({
         kind: 'ground_truth',
         photos: [],

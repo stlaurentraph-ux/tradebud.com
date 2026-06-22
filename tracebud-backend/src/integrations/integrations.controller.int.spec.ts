@@ -70,7 +70,7 @@ describeIfDb('IntegrationsController integration', () => {
       `,
     );
     const result = await controller.listWebhooks('20', '0', {
-      user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } },
     });
     expect(result.total).toBe(1);
     expect(result.items[0]).toEqual(
@@ -97,7 +97,7 @@ describeIfDb('IntegrationsController integration', () => {
       `,
     );
     const result = await controller.listWebhookDeliveries('11111111-1111-1111-1111-111111111111', '20', '0', {
-      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     });
     expect(result.total).toBe(1);
     expect(result.items[0]).toEqual(

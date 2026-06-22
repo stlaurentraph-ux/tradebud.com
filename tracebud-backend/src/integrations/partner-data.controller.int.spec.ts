@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { createLaunchServiceMock } from '../testing/launch-service.mock';
 
 let PartnerDataController: any;
 try {
@@ -70,7 +71,7 @@ describeIfDb('PartnerDataController integration', () => {
         ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ NULL,
         ADD COLUMN IF NOT EXISTS retry_exhausted_at TIMESTAMPTZ NULL
     `);
-    controller = new PartnerDataController(pool as any);
+    controller = new PartnerDataController(pool as any, createLaunchServiceMock());
   }, 25_000);
 
   afterAll(async () => {
