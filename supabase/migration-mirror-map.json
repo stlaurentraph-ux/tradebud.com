@@ -132,6 +132,10 @@
     {
       "file": "20260620140000_founder_os_gtm_expansion.sql",
       "reason": "Founder OS GTM expansion; CRM schema only, no tb_v16 mirror"
+    },
+    {
+      "file": "202606221200_split_hector_farmer_from_exporter_demo_auth.sql",
+      "reason": "Auth user split (Hector farmer vs exporter+demo dashboard); Supabase auth schema only, no tb_v16 mirror"
     }
   ]
 }

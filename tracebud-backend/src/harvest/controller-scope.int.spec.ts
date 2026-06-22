@@ -119,8 +119,8 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     harvestService = new HarvestService(pool, createBillingServiceMock());
     plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
     const consentService = makeConsentPassthrough(pool);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
-    plotsController = new PlotsController(plotsService, consentService);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService, pool);
+    plotsController = new PlotsController(plotsService, consentService, pool);
   }, 20_000);
 
   afterAll(async () => {

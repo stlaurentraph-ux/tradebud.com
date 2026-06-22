@@ -150,8 +150,8 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
     consentService = new ConsentService(pool, push as any);
     const harvestService = new HarvestService(pool, createBillingServiceMock());
     const plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
-    plotsController = new PlotsController(plotsService, consentService);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService, pool);
+    plotsController = new PlotsController(plotsService, consentService, pool);
   }, 30_000);
 
   afterAll(async () => {
