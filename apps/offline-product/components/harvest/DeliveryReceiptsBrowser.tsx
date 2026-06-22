@@ -39,6 +39,11 @@ type DeliveryReceiptsBrowserProps = {
   pendingReceipts?: DeliveryReceiptRecord[];
   deviceReceipts?: DeliveryReceiptRecord[];
   plotServerLinks?: PlotServerLinks;
+  backendPlots?: readonly unknown[];
+  /** On-device plot row for alias-aware plot filtering. */
+  filterLocalPlot?: { id: string } | null;
+  /** Pre-merged receipt list (skips internal merge when provided). */
+  mergedReceipts?: DeliveryReceiptRecord[];
   /** Passed to receipt detail for back navigation. */
   receiptFrom?: string;
 };
@@ -53,6 +58,9 @@ export function DeliveryReceiptsBrowser({
   pendingReceipts = [],
   deviceReceipts = [],
   plotServerLinks = {},
+  backendPlots = [],
+  filterLocalPlot = null,
+  mergedReceipts,
   receiptFrom,
 }: DeliveryReceiptsBrowserProps) {
   const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
@@ -71,17 +79,25 @@ export function DeliveryReceiptsBrowser({
   }, [vouchers, deviceReceipts, pendingReceipts]);
 
   const receipts = useMemo(() => {
-    const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t });
-    return filterDismissedDeliveryReceipts(
+    const merged =
+      mergedReceipts ??
       enrichAndDedupeDeliveryReceipts({
         deviceReceipts,
         pendingReceipts,
-        synced,
+        synced: normalizeDeliveryReceipts({ vouchers, mergedPlots, t }),
         plotServerLinks,
-      }),
-      dismissedReceiptIds,
-    );
-  }, [vouchers, mergedPlots, pendingReceipts, deviceReceipts, plotServerLinks, t, dismissedReceiptIds]);
+      });
+    return filterDismissedDeliveryReceipts(merged, dismissedReceiptIds);
+  }, [
+    mergedReceipts,
+    vouchers,
+    mergedPlots,
+    pendingReceipts,
+    deviceReceipts,
+    plotServerLinks,
+    t,
+    dismissedReceiptIds,
+  ]);
 
   const plotFilterIds = useMemo(() => {
     const ids = new Set<string>();
@@ -94,8 +110,14 @@ export function DeliveryReceiptsBrowser({
 
   const displayReceipts = useMemo(() => {
     if (plotFilterIds.size === 0) return receipts;
-    return receipts.filter((receipt) => receiptMatchesPlotFilter(receipt, plotFilterIds));
-  }, [receipts, plotFilterIds]);
+    return receipts.filter((receipt) =>
+      receiptMatchesPlotFilter(receipt, plotFilterIds, {
+        plotServerLinks,
+        backendPlots,
+        localPlot: filterLocalPlot,
+      }),
+    );
+  }, [receipts, plotFilterIds, plotServerLinks, backendPlots, filterLocalPlot]);
 
   const showPlotColumn = plotFilterIds.size === 0;
 

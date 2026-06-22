@@ -1,3 +1,4 @@
+import { harvestDateIsoFromMs } from '@/features/harvest/harvestDeliveryDate';
 import { postHarvestToBackend } from '@/features/api/postPlot';
 import { logError, getUserMessage } from '@/features/errors/ErrorLogger';
 import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
@@ -96,6 +97,7 @@ export async function submitHarvestRecord(params: {
         farmerId: params.farmerId,
         plotId: serverPlotId,
         kg: params.kg,
+        harvestDate: harvestDateIsoFromMs(createdAt),
         clientEventId,
         ...deliveryPayload,
       });
@@ -139,6 +141,7 @@ export async function submitHarvestRecord(params: {
       plotId: localPlot.id,
       kg: params.kg,
       clientEventId,
+      harvestDate: harvestDateIsoFromMs(createdAt),
       ...deliveryPayload,
     }),
     lastError: null,

@@ -1,0 +1,49 @@
+appId: com.tracebud.app
+---
+# App Store iPad screenshots (13" / 2064×2752). Run from apps/offline-product:
+#   maestro test --device "iPad Pro 13-inch (M5)" .maestro/flows/app-store-ipad-screenshots.yaml
+- launchApp
+- waitForAnimationToEnd
+
+# 01 Home
+- extendedWaitUntil:
+    visible: ".*Mapping.*|.*Deliveries.*|.*Receipts.*|.*Welcome.*"
+    timeout: 20000
+- takeScreenshot: 01-home
+
+# 02 Mapping / register plot entry
+- tapOn:
+    id: "home-tile-register-plot"
+    optional: true
+- tapOn:
+    text: "Mapping"
+    optional: true
+- tapOn:
+    text: "Register plot"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Register plot.*|.*Walk.*|.*plot.*|.*Continue.*|.*Mapping.*"
+    timeout: 15000
+- takeScreenshot: 02-map-plot
+
+# 03 My Plots
+- tapOn:
+    text: "My Plots"
+- extendedWaitUntil:
+    visible: ".*My Plots.*|.*ha.*"
+    timeout: 15000
+- takeScreenshot: 03-my-plots
+
+# 04 Home (offline-first / backup status on tiles)
+- tapOn:
+    text: "Home"
+- waitForAnimationToEnd
+- takeScreenshot: 04-offline
+
+# 05 Settings / backup
+- tapOn:
+    text: "Settings"
+- extendedWaitUntil:
+    visible: ".*Backup.*|.*Sync.*|.*Sign in.*"
+    timeout: 15000
+- takeScreenshot: 05-backup-settings

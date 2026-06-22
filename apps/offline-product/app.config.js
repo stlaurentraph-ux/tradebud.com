@@ -82,7 +82,10 @@ module.exports = ({ config }) => {
   }
   // Universal links require Associated Domains on the provisioning profile (production).
   // Preview/ad-hoc profiles use EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1 instead.
-  if (profile === 'production' || profile === 'simulator') {
+  const useUniversalLinksOAuth =
+    (profile === 'production' || profile === 'simulator') &&
+    process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME !== '1';
+  if (useUniversalLinksOAuth) {
     ios.associatedDomains = [
       ...(ios.associatedDomains ?? []),
       'applinks:app.tracebud.com',

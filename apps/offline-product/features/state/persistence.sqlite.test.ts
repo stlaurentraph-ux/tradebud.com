@@ -115,6 +115,48 @@ describe('persistence.native sqlite integration', () => {
     expect(remaining[0]?.id).toBe('harvest-keep');
   });
 
+  it('loadLocalDeliveryReceiptsForFarmer merges rows across linked farmer ids', async () => {
+    const { persistLocalDeliveryReceipt, loadLocalDeliveryReceiptsForFarmer } = await import(
+      './persistence.native'
+    );
+    const profileFarmerId = 'profile-farmer';
+    const serverFarmerId = 'server-farmer';
+    const plotId = 'plot-1';
+
+    await persistLocalDeliveryReceipt({
+      id: 'receipt-profile',
+      farmerId: profileFarmerId,
+      localPlotId: plotId,
+      serverPlotId: null,
+      plotName: 'North',
+      kg: 100,
+      recordedAt: Date.now(),
+      qrCodeRef: null,
+      pendingSync: false,
+      buyerLabel: 'buyer',
+    });
+    await persistLocalDeliveryReceipt({
+      id: 'receipt-server',
+      farmerId: serverFarmerId,
+      localPlotId: plotId,
+      serverPlotId: 'server-plot',
+      plotName: 'North',
+      kg: 200,
+      recordedAt: Date.now() - 1000,
+      qrCodeRef: 'V-ABC123',
+      pendingSync: false,
+      buyerLabel: 'buyer',
+    });
+
+    const profileOnly = await loadLocalDeliveryReceiptsForFarmer(profileFarmerId);
+    expect(profileOnly.map((row) => row.id).sort()).toEqual(['receipt-profile', 'receipt-server']);
+
+    const merged = await loadLocalDeliveryReceiptsForFarmer(profileFarmerId, {
+      alsoFarmerIds: [serverFarmerId],
+    });
+    expect(merged.map((row) => row.id).sort()).toEqual(['receipt-profile', 'receipt-server']);
+  });
+
   it('rekeyFarmerIdInDatabase preserves producer attestations when farmer id changes', async () => {
     const { persistFarmer, rekeyFarmerIdInDatabase, loadAppState } = await import(
       './persistence.native'

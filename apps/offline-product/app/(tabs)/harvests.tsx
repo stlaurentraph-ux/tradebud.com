@@ -17,10 +17,8 @@ import { createHarvestScreenStyles } from '@/app/(tabs)/harvestScreenStyles';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
-import {
-  fetchVouchersForFarmer,
-} from '@/features/api/postPlot';
-import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
+import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import {
   buyerLabelForDeliveryRecipient,
@@ -43,15 +41,12 @@ import {
 import { resolveServerPlotIdForLocal } from '@/features/plots/plotServerLink';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
+import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
-import { reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
-import {
-  loadLocalDeliveryReceiptsForFarmer,
-  loadPlotServerLinks,
-  persistPlotServerLinks,
-} from '@/features/state/persistence';
+import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
@@ -82,6 +77,7 @@ export default function HarvestsScreen() {
   const receiptsSectionY = useRef(0);
   const [pendingReceiptsScroll, setPendingReceiptsScroll] = useState(false);
   const [deviceReceipts, setDeviceReceipts] = useState<DeliveryReceiptRecord[]>([]);
+  const [mergedReceipts, setMergedReceipts] = useState<DeliveryReceiptRecord[]>([]);
   const [receiptsPlotId, setReceiptsPlotId] = useState<string | null>(null);
 
   const refreshHarvestData = useCallback(async (options?: { forcePlotFetch?: boolean }) => {
@@ -93,10 +89,24 @@ export default function HarvestsScreen() {
       return;
     }
 
-    const localRows = await loadLocalDeliveryReceiptsForFarmer(farmer.id);
-    setDeviceReceipts(normalizeLocalDeliveryReceipts(localRows, t));
+    if (!farmer) {
+      setBackendPlots([]);
+      setPlotServerLinks({});
+      setVouchers([]);
+      setDeviceReceipts([]);
+      setMergedReceipts([]);
+      return;
+    }
 
     if (!isSignedIn) {
+      const receiptScope = await loadFieldScopedDeliveryReceipts({
+        profileFarmerId: farmer.id,
+        localPlots,
+        isSignedIn: false,
+      });
+      const localReceipts = normalizeLocalDeliveryReceipts(receiptScope.rows, t);
+      setDeviceReceipts(localReceipts);
+      setMergedReceipts(localReceipts);
       const existingLinks = await loadPlotServerLinks();
       setBackendPlots([]);
       setPlotServerLinks(existingLinks);
@@ -104,22 +114,29 @@ export default function HarvestsScreen() {
       return;
     }
 
-    const existingLinks = await loadPlotServerLinks();
     try {
-      const [plotsRows, voucherPayload] = await Promise.all([
-        fetchServerPlotListForUi({
-          profileFarmerId: farmer.id,
-          localPlots,
-          force: options?.forcePlotFetch === true,
-        }),
-        fetchVouchersForFarmer(farmer.id),
-      ]);
-      const reconciled = reconcilePlotServerLinks(localPlots, plotsRows ?? [], existingLinks);
-      await persistPlotServerLinks(reconciled);
-      setPlotServerLinks(reconciled);
-      setBackendPlots(plotsRows ?? []);
-      setVouchers(normalizeVoucherRows(voucherPayload));
+      const catalog = await buildDeliveryReceiptCatalog({
+        farmerId: farmer.id,
+        localPlots,
+        t,
+        isSignedIn: true,
+        forcePlotFetch: options?.forcePlotFetch === true,
+      });
+      setDeviceReceipts(catalog.deviceReceipts);
+      setBackendPlots(catalog.backendPlots);
+      setPlotServerLinks(catalog.plotServerLinks);
+      setVouchers(catalog.vouchers);
+      setMergedReceipts(catalog.receipts);
     } catch {
+      const receiptScope = await loadFieldScopedDeliveryReceipts({
+        profileFarmerId: farmer.id,
+        localPlots,
+        isSignedIn: true,
+      });
+      const localReceipts = normalizeLocalDeliveryReceipts(receiptScope.rows, t);
+      setDeviceReceipts(localReceipts);
+      setMergedReceipts(localReceipts);
+      const existingLinks = await loadPlotServerLinks();
       setBackendPlots([]);
       setPlotServerLinks(existingLinks);
       setVouchers([]);
@@ -186,6 +203,15 @@ export default function HarvestsScreen() {
       aliasIds,
     };
   }, [receiptsPlotId, mergedHarvestPlots, localPlots, backendPlots, plotServerLinks]);
+
+  const receiptsFilterPlot = useMemo(() => {
+    if (!receiptsPlotId) return null;
+    return (
+      localPlots.find((row) => row.id === receiptsPlotId) ?? {
+        id: receiptsPlotId,
+      }
+    );
+  }, [localPlots, receiptsPlotId]);
 
   const clearReceiptsPlotFilter = useCallback(() => {
     setReceiptsPlotId(null);
@@ -379,8 +405,17 @@ export default function HarvestsScreen() {
 
   const refreshVouchers = async () => {
     if (!farmer) return;
-    const voucherPayload = await fetchVouchersForFarmer(farmer.id).catch(() => []);
-    setVouchers(normalizeVoucherRows(voucherPayload));
+    try {
+      const receiptScope = await loadFieldScopedDeliveryReceipts({
+        profileFarmerId: farmer.id,
+        localPlots,
+        isSignedIn,
+      });
+      const voucherPayload = await fetchMergedServerVouchers(receiptScope.voucherFarmerIds);
+      setVouchers(normalizeVoucherRows(voucherPayload));
+    } catch {
+      setVouchers([]);
+    }
   };
 
   return (
@@ -609,7 +644,14 @@ export default function HarvestsScreen() {
                     return;
                   }
 
-                  const voucherPayload = await fetchVouchersForFarmer(farmer.id);
+                  const receiptScope = await loadFieldScopedDeliveryReceipts({
+                    profileFarmerId: farmer.id,
+                    localPlots,
+                    isSignedIn: true,
+                  });
+                  const voucherPayload = await fetchMergedServerVouchers(
+                    receiptScope.voucherFarmerIds,
+                  );
                   const refreshedVouchers = normalizeVoucherRows(voucherPayload);
                   setVouchers(refreshedVouchers);
                   void refreshHarvestData();
@@ -789,7 +831,10 @@ export default function HarvestsScreen() {
             t={t}
             vouchers={vouchers}
             mergedPlots={mergedHarvestPlots}
+            mergedReceipts={mergedReceipts}
             deviceReceipts={deviceReceipts}
+            backendPlots={backendPlots}
+            filterLocalPlot={receiptsFilterPlot}
             plotIdFilter={receiptsPlotScope?.filterId ?? null}
             plotIdAliases={receiptsPlotScope?.aliasIds ?? []}
             plotNameFilter={receiptsPlotScope?.plotName ?? null}

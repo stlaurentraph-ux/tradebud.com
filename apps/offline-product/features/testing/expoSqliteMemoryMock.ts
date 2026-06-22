@@ -209,10 +209,21 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
         return [] as T[];
       }
       if (sql.includes('FROM local_delivery_receipts')) {
-        const farmerId = String(params[0]);
-        const rows = tables.deliveryReceipts
-          .filter((row) => row.farmerId === farmerId)
-          .sort((a, b) => b.recordedAt - a.recordedAt);
+        if (sql.includes('WHERE farmerId IN')) {
+          const allowed = new Set(params.map((value) => String(value)));
+          const rows = tables.deliveryReceipts
+            .filter((row) => allowed.has(row.farmerId))
+            .sort((a, b) => b.recordedAt - a.recordedAt);
+          return rows as T[];
+        }
+        if (sql.includes('WHERE farmerId = ?')) {
+          const farmerId = String(params[0]);
+          const rows = tables.deliveryReceipts
+            .filter((row) => row.farmerId === farmerId)
+            .sort((a, b) => b.recordedAt - a.recordedAt);
+          return rows as T[];
+        }
+        const rows = [...tables.deliveryReceipts].sort((a, b) => b.recordedAt - a.recordedAt);
         return rows as T[];
       }
       if (sql.includes('FROM plot_legal')) {

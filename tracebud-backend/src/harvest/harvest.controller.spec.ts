@@ -127,7 +127,7 @@ describe('HarvestController scope and role boundaries', () => {
           app_metadata: { tenant_id: 'tenant_1', role: 'admin' },
         },
       }),
-    ).resolves.toEqual([{ id: 'v_1', qr_code_ref: 'V-LINKED01' }]);
+    ).resolves.toEqual({ vouchers: [{ id: 'v_1', qr_code_ref: 'V-LINKED01' }] });
 
     expect(service.isFarmerOwnedByUser).toHaveBeenCalledWith('farmer_self', 'user_1');
     expect(service.listVouchersForFarmer).toHaveBeenCalledWith('farmer_self');

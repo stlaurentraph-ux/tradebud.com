@@ -100,6 +100,7 @@ export default function DeliveryReceiptScreen() {
         farmerId: farmer.id,
         localPlots,
         t,
+        isSignedIn,
         forcePlotFetch: justLogged && !options?.silent,
       });
       setBackendPlots(catalog.backendPlots);

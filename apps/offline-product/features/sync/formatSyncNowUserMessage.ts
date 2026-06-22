@@ -26,6 +26,12 @@ export type SyncNowUserOutcome = {
   queueFetchFailed?: boolean;
   plotsFetchFailed?: boolean;
   plotsRestored?: number;
+  receiptsRestored?: number;
+  receiptsRequeued?: number;
+  evidenceRestored?: number;
+  declarationsRestored?: number;
+  evidenceFetchFailed?: boolean;
+  declarationsFetchFailed?: boolean;
   /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
   unsyncedPlotCount?: number;
@@ -117,9 +123,27 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
   }
 
   if (remainingPending === 0) {
-    const restored = outcome.plotsRestored ?? 0;
-    if (restored > 0) {
-      return t('sync_result_plots_restored', { n: restored });
+    const restoredPlots = outcome.plotsRestored ?? 0;
+    const restoredReceipts = outcome.receiptsRestored ?? 0;
+    const restoredEvidence = outcome.evidenceRestored ?? 0;
+    const restoredDeclarations = outcome.declarationsRestored ?? 0;
+    if (restoredEvidence > 0) {
+      return t('sync_result_evidence_restored', { n: restoredEvidence });
+    }
+    if (restoredDeclarations > 0) {
+      return t('sync_result_declarations_restored', { n: restoredDeclarations });
+    }
+    if (restoredPlots > 0 && restoredReceipts > 0) {
+      return t('sync_result_plots_and_receipts_restored', {
+        plots: restoredPlots,
+        receipts: restoredReceipts,
+      });
+    }
+    if (restoredPlots > 0) {
+      return t('sync_result_plots_restored', { n: restoredPlots });
+    }
+    if (restoredReceipts > 0) {
+      return t('sync_result_receipts_restored', { n: restoredReceipts });
     }
     return t('sync_result_complete');
   }

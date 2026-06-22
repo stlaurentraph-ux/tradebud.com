@@ -64,6 +64,7 @@ import {
 } from '@/features/sync/plotServerSync';
 import {
   countServerPlotsForPostAuthRestore,
+  countServerVouchersForPostAuthRestore,
   postAuthSyncPlotCountHint,
   shouldOfferPostAuthSync,
 } from '@/features/sync/postAuthSyncOffer';
@@ -71,7 +72,7 @@ import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { getSetting, loadAppState, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
+import { getSetting, loadAppState, loadLocalDeliveryReceiptsForFarmer, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
@@ -82,10 +83,33 @@ function buildBackupOutcomeMessage(backup: RunAutoBackupResult | null, t: (key: 
   }
 
   const parts: string[] = [];
-  const { plotResult, queueResult, plotsRestored } = backup;
+  const { plotResult, queueResult, plotsRestored, receiptsRestored, evidenceRestored, declarationsRestored } = backup;
+  const restoredPlots = plotsRestored ?? 0;
+  const restoredReceipts = receiptsRestored ?? 0;
+  const restoredEvidence = evidenceRestored ?? 0;
+  const restoredDeclarations = declarationsRestored ?? 0;
 
-  if ((plotsRestored ?? 0) > 0) {
-    parts.push(t('sync_result_plots_restored', { n: plotsRestored ?? 0 }));
+  if (restoredEvidence > 0) {
+    parts.push(t('sync_result_evidence_restored', { n: restoredEvidence }));
+  }
+  if (restoredDeclarations > 0) {
+    parts.push(t('sync_result_declarations_restored', { n: restoredDeclarations }));
+  }
+
+  if (restoredPlots > 0 && restoredReceipts > 0) {
+    parts.push(
+      t('sync_result_plots_and_receipts_restored', {
+        plots: restoredPlots,
+        receipts: restoredReceipts,
+      }),
+    );
+  } else {
+    if (restoredReceipts > 0) {
+      parts.push(t('sync_result_receipts_restored', { n: restoredReceipts }));
+    }
+    if (restoredPlots > 0) {
+      parts.push(t('sync_result_plots_restored', { n: restoredPlots }));
+    }
   }
 
   if (plotResult?.fetchFailed) {
@@ -225,9 +249,19 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
 
     const pendingQueue = await loadPendingSyncActions().catch(() => []);
+    const localReceiptRows = await loadLocalDeliveryReceiptsForFarmer(activeFarmer.id).catch(
+      () => [],
+    );
     const serverPlotCount =
       activePlots.length === 0
         ? await countServerPlotsForPostAuthRestore({
+            profileFarmerId: activeFarmer.id,
+            localPlots: activePlots,
+          })
+        : null;
+    const serverVoucherCount =
+      localReceiptRows.length === 0
+        ? await countServerVouchersForPostAuthRestore({
             profileFarmerId: activeFarmer.id,
             localPlots: activePlots,
           })
@@ -238,6 +272,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       unsyncedPlotCount: unsynced,
       pendingQueueCount: pendingQueue.length,
       serverPlotCount,
+      localReceiptCount: localReceiptRows.length,
+      serverVoucherCount,
     };
     if (!shouldOfferPostAuthSync(offerInput)) return;
 

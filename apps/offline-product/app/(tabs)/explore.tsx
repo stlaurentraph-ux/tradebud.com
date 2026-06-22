@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
@@ -19,7 +20,7 @@ import {
   countDeliveryReceiptsForPlots,
   normalizeLocalDeliveryReceipts,
 } from '@/features/harvest/localDeliveryReceipts';
-import { loadLocalDeliveryReceiptsForFarmer, loadPlotServerLinks } from '@/features/state/persistence';
+import { loadAllLocalDeliveryReceipts, loadPlotServerLinks, getSetting } from '@/features/state/persistence';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -66,12 +67,15 @@ export default function PlotsScreen() {
   const params = useLocalSearchParams<{ plotId?: string; focus?: string }>();
   const { plots, farmer, reloadFromDisk } = useAppState();
   const { t, languageCode, openLanguagePicker } = useLanguage();
+  const { isSignedIn } = useSignInSheet();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [, setVouchers] = useState<any[]>([]);
   const [deliveryCountByPlotId, setDeliveryCountByPlotId] = useState<Record<string, number>>({});
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
+  const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
+  const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
   /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
@@ -89,6 +93,7 @@ export default function PlotsScreen() {
         farmerId: farmer.id,
         localPlots: plots,
         t,
+        isSignedIn,
         forcePlotFetch: force,
       })
         .then((catalog) => {
@@ -108,7 +113,7 @@ export default function PlotsScreen() {
           setVouchers([]);
           try {
             const [localRows, plotServerLinks] = await Promise.all([
-              loadLocalDeliveryReceiptsForFarmer(farmer.id),
+              loadAllLocalDeliveryReceipts(),
               loadPlotServerLinks(),
             ]);
             const deviceReceipts = normalizeLocalDeliveryReceipts(localRows, t);
@@ -125,7 +130,7 @@ export default function PlotsScreen() {
           }
         });
     },
-    [farmer?.id, plots, t],
+    [farmer?.id, plots, t, isSignedIn],
   );
 
   const deliveryCountForPlot = useCallback(
@@ -155,15 +160,36 @@ export default function PlotsScreen() {
     }
   }, [params.plotId, params.focus]);
 
-  // Home → receipts with multiple plots: skip list when only one plot has deliveries.
   useEffect(() => {
-    if (pickerIntent !== 'receipts' || plots.length === 0) return;
-    const withVouchers = plots.filter((plot) => deliveryCountForPlot(plot) > 0);
-    if (withVouchers.length !== 1) return;
-    const targetId = withVouchers[0]!.id;
-    setPickerIntent(null);
-    router.replace(`/plot/${encodeURIComponent(targetId)}?sub=deliveries`);
-  }, [pickerIntent, plots, deliveryCountForPlot]);
+    if (plots.length === 0) {
+      setSelectedPlotId(undefined);
+      return;
+    }
+    setSelectedPlotId((current) =>
+      current && plots.some((plot) => plot.id === current) ? current : plots[0]?.id,
+    );
+  }, [plots]);
+
+  const refreshOfflineTileSettings = useCallback(() => {
+    void getSetting('offlineTilesEnabled')
+      .then((value) => setOfflineTilesEnabled(value === '1'))
+      .catch(() => setOfflineTilesEnabled(false));
+    void getSetting('offlineTilesPackId')
+      .then((value) => setOfflineTilesPackId(value?.trim() || null))
+      .catch(() => setOfflineTilesPackId(null));
+  }, []);
+
+  useEffect(() => {
+    refreshOfflineTileSettings();
+  }, [refreshOfflineTileSettings]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshOfflineTileSettings();
+    }, [refreshOfflineTileSettings]),
+  );
+
+  // Home → receipts: stay on My Plots so the farmer can pick a plot or see counts on each card.
 
   const openPlotDetail = useCallback(
     (plotId: string) => {
@@ -213,9 +239,9 @@ export default function PlotsScreen() {
 
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
-      void reloadFromDisk();
+      void reloadFromDisk().then(() => refreshPlotDeliveryData(true));
     });
-  }, [reloadFromDisk]);
+  }, [reloadFromDisk, refreshPlotDeliveryData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -290,6 +316,7 @@ export default function PlotsScreen() {
               key={plot.id}
               testID="plot-card"
               onPress={() => openPlotDetail(plot.id)}
+              onPressIn={() => setSelectedPlotId(plot.id)}
             >
               <Card
                 variant="outlined"
@@ -299,7 +326,11 @@ export default function PlotsScreen() {
                 ]}
               >
                 <View style={styles.plotCardRow}>
-                  <PlotListThumbnail plot={plot} />
+                  <PlotListThumbnail
+                    plot={plot}
+                    offlineTilesEnabled={offlineTilesEnabled}
+                    offlineTilesPackId={offlineTilesPackId}
+                  />
                   <View style={styles.plotCardBody}>
                     <View style={styles.rowHeader}>
                       <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>

@@ -1,3 +1,17 @@
+### 2026-06-19 (offline — Phase 1c evidence + declaration restore)
+
+- **Gap** — Land papers and producer/plot declarations stayed on the first device after sign-in on iPad.
+- **Fix** — `restoreLocalEvidenceFromServer` pulls `synced-evidence` + tenure verification metadata, downloads Supabase `plot-evidence` bytes locally, persists SQLite rows. `restoreLocalDeclarationsFromServer` reads audit_log (`producer_attestations_updated`, `plot_compliance_declared`, `plot_legal_synced`).
+- **Backend** — `GET /v1/plots/:id/synced-evidence`; audit `GET ?farmerId=` works for field farmers without tenant claim.
+- **Tests** — `restoreLocalEvidenceFromServer.test.ts`, `restoreLocalDeclarationsFromServer.test.ts`.
+
+### 2026-06-19 (offline — Phase 1b cloud delivery receipt restore)
+
+- **Gap** — Harvest vouchers lived on the server only; iPad showed empty delivery receipts / harvest counts after sign-in even when phone had synced deliveries.
+- **Fix** — `restoreLocalDeliveryReceiptsFromServer` runs after plot restore in `runFieldSyncPipeline`: merges vouchers across owned farmer ids, maps server plot → local plot via links, persists rows in `local_delivery_receipts` (never overwrites pending upload receipts). Post-sign-in auto-backup also triggers when server has vouchers but local receipts are empty.
+- **UI** — Harvests + Explore refresh on `emitServerPlotSyncChanged`; voucher fetch uses `fetchMergedServerVouchers` + `resolveFieldSyncScope` (same scope as plots).
+- **Tests** — `restoreLocalDeliveryReceiptsFromServer.test.ts`, `resolveLocalPlotIdForServerPlot.test.ts`, post-auth sync offer receipt case.
+
 ### 2026-06-19 (offline — Phase 1 cloud plot restore)
 
 - **Gap** — Sync was upload-only; signing in on a second device (e.g. iPad) showed empty My Plots even when server had Hector's plots.

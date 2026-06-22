@@ -1,5 +1,4 @@
-import { fetchVouchersForFarmer } from '@/features/api/postPlot';
-import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
 import {
   normalizeDeliveryReceipts,
   normalizePendingHarvestReceipts,
@@ -15,9 +14,13 @@ import { buildMergedHarvestPlots } from '@/features/harvest/mergeHarvestPlotOpti
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { getAccessTokenFromSupabaseWithTimeout } from '@/features/api/syncAuthSession';
 import type { Plot } from '@/features/state/AppStateContext';
+import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
+import { persistServerVouchersAsLocalReceipts } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
+import { enrichVouchersWithLocalDeliveryDates } from '@/features/harvest/supplementVoucherHarvestDates';
 import {
-  loadLocalDeliveryReceiptsForFarmer,
+  loadAllLocalDeliveryReceipts,
   loadPendingSyncActions,
   loadPlotServerLinks,
   persistPlotServerLinks,
@@ -40,40 +43,86 @@ export async function buildDeliveryReceiptCatalog(params: {
   farmerId: string;
   localPlots: Plot[];
   t: TranslateFn;
+  /** UI signed-in state — fetch server vouchers when true even if token refresh is slow. */
+  isSignedIn?: boolean;
   plotIdFilter?: string | null;
   localPlotId?: string | null;
   serverPlotId?: string | null;
   forcePlotFetch?: boolean;
 }): Promise<DeliveryReceiptCatalog> {
-  const localRows = await loadLocalDeliveryReceiptsForFarmer(params.farmerId);
-  const deviceReceipts = normalizeLocalDeliveryReceipts(localRows, params.t);
-
   const existingLinks = await loadPlotServerLinks();
   let backendPlots: unknown[] = [];
   let plotServerLinks = existingLinks;
   let vouchers: unknown[] = [];
+  let deviceReceipts: DeliveryReceiptRecord[] = [];
   const pendingActions = await loadPendingSyncActions().catch(() => []);
 
-  if (hasSyncAuthSession()) {
+  let receiptScope = {
+    rows: [] as Awaited<ReturnType<typeof loadFieldScopedDeliveryReceipts>>['rows'],
+    apiFarmerId: params.farmerId,
+    ownedFarmerIds: [] as string[],
+    voucherFarmerIds: [] as string[],
+  };
+
+  const shouldUseServer = params.isSignedIn === true;
+
+  if (shouldUseServer) {
+    receiptScope = await loadFieldScopedDeliveryReceipts({
+      profileFarmerId: params.farmerId,
+      localPlots: params.localPlots,
+      isSignedIn: true,
+    });
+    deviceReceipts = normalizeLocalDeliveryReceipts(receiptScope.rows, params.t);
+
+    let plotsRows: unknown[] = [];
     try {
-      const [plotsRows, voucherPayload] = await Promise.all([
-        fetchServerPlotListForUi({
-          profileFarmerId: params.farmerId,
-          localPlots: params.localPlots,
-          force: params.forcePlotFetch === true,
-        }),
-        fetchVouchersForFarmer(params.farmerId),
-      ]);
+      plotsRows = await fetchServerPlotListForUi({
+        profileFarmerId: params.farmerId,
+        localPlots: params.localPlots,
+        ownedFarmerIds: receiptScope.ownedFarmerIds,
+        resolvedFarmerId: receiptScope.apiFarmerId,
+        force: params.forcePlotFetch === true,
+      });
       const reconciled = reconcilePlotServerLinks(params.localPlots, plotsRows ?? [], existingLinks);
       await persistPlotServerLinks(reconciled);
       backendPlots = plotsRows ?? [];
       plotServerLinks = reconciled;
-      vouchers = normalizeVoucherRows(voucherPayload);
     } catch {
       backendPlots = [];
       plotServerLinks = existingLinks;
+    }
+
+    // fetchMergedServerVouchers resolves its own token; do not gate on a slow first read.
+    try {
+      await getAccessTokenFromSupabaseWithTimeout().catch(() => null);
+      const voucherPayload = await fetchMergedServerVouchers(receiptScope.voucherFarmerIds);
+      vouchers = enrichVouchersWithLocalDeliveryDates({
+        vouchers: normalizeVoucherRows(voucherPayload),
+        localRows: receiptScope.rows,
+        localPlots: params.localPlots,
+        backendPlots,
+        plotServerLinks,
+      });
+      await persistServerVouchersAsLocalReceipts({
+        vouchers,
+        storageFarmerId: params.farmerId,
+        localPlots: params.localPlots,
+        backendPlots,
+        plotServerLinks,
+      });
+      const refreshedRows = await loadAllLocalDeliveryReceipts();
+      receiptScope = { ...receiptScope, rows: refreshedRows };
+      deviceReceipts = normalizeLocalDeliveryReceipts(refreshedRows, params.t);
+    } catch {
       vouchers = [];
     }
+  } else {
+    receiptScope = await loadFieldScopedDeliveryReceipts({
+      profileFarmerId: params.farmerId,
+      localPlots: params.localPlots,
+      isSignedIn: false,
+    });
+    deviceReceipts = normalizeLocalDeliveryReceipts(receiptScope.rows, params.t);
   }
 
   const scopedPlotIds =

@@ -1169,6 +1169,10 @@ export class PlotsService {
     return this.tenureParse.listForPlot(plotId);
   }
 
+  async listSyncedEvidence(plotId: string) {
+    return this.evidenceDocuments.listSyncedDocumentsForPlot(plotId);
+  }
+
   async listTenureReviewQueue(
     tenantId: string,
     canAccessPlot?: (plotId: string) => Promise<boolean>,

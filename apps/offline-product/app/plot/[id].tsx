@@ -24,9 +24,10 @@ import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotTenureVerification,
-  fetchVouchersForFarmer,
   type PlotTenureVerificationRecord,
 } from '@/features/api/postPlot';
+import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
+import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import {
   loadPhotosForPlot,
   loadPlotCadastralKey,
@@ -38,7 +39,6 @@ import {
   getSetting,
   loadPlotServerLinks,
   loadPendingSyncActions,
-  loadLocalDeliveryReceiptsForFarmer,
   persistPlotServerLinks,
   type PlotPhoto,
   type PlotTitlePhoto,
@@ -83,6 +83,7 @@ import {
 import {
   normalizeLocalDeliveryReceipts,
   receiptMatchesPlotFilter,
+  voucherMatchesPlotFilter,
   resolvePlotReceiptFilterIds,
 } from '@/features/harvest/localDeliveryReceipts';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
@@ -381,26 +382,22 @@ export default function PlotDetailScreen() {
         plotIds.add(routePlotId);
       }
 
-      const [voucherPayload, pendingActions, localRows] = await Promise.all([
-        fetchVouchersForFarmer(farmer.id).catch(() => []),
+      const receiptScope = await loadFieldScopedDeliveryReceipts({
+        profileFarmerId: farmer.id,
+        localPlots: plots,
+        isSignedIn: true,
+      });
+
+      const [voucherPayload, pendingActions] = await Promise.all([
+        fetchMergedServerVouchers(receiptScope.voucherFarmerIds).catch(() => []),
         loadPendingSyncActions(),
-        loadLocalDeliveryReceiptsForFarmer(farmer.id),
       ]);
       setVouchers(normalizeVoucherRows(voucherPayload));
 
       const plotName = String(resolvedPlot?.name ?? t('plot_fallback'));
       const groupPlotId = serverPlotId ?? resolvedPlot?.id ?? routePlotId ?? 'unknown';
 
-      setDeviceHarvestReceipts(
-        normalizeLocalDeliveryReceipts(
-          localRows.filter(
-            (row) =>
-              plotIds.has(row.localPlotId) ||
-              (row.serverPlotId != null && plotIds.has(row.serverPlotId)),
-          ),
-          t,
-        ),
-      );
+      setDeviceHarvestReceipts(normalizeLocalDeliveryReceipts(receiptScope.rows, t));
       setPendingHarvestReceipts(
         normalizePendingHarvestReceipts({
           actions: pendingActions.filter((action) => action.actionType === 'harvest'),
@@ -748,21 +745,28 @@ export default function PlotDetailScreen() {
   const plotDeliveryCount = useMemo(() => {
     if (plotReceiptFilterIds.length === 0) return 0;
     const filterIds = new Set(plotReceiptFilterIds);
+    const filterOptions = {
+      plotServerLinks,
+      backendPlots,
+      localPlot: plot ?? null,
+    };
     const localCount = deviceHarvestReceipts.filter((row) =>
-      receiptMatchesPlotFilter(row, filterIds),
+      receiptMatchesPlotFilter(row, filterIds, filterOptions),
     ).length;
     const pendingCount = pendingHarvestReceipts.filter((row) =>
-      receiptMatchesPlotFilter(row, filterIds),
+      receiptMatchesPlotFilter(row, filterIds, filterOptions),
     ).length;
-    const voucherCount = harvestPlotId
-      ? vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId).length
-      : 0;
+    const voucherCount = vouchers.filter((v) =>
+      voucherMatchesPlotFilter(v, filterIds, filterOptions),
+    ).length;
     return Math.max(localCount + pendingCount, voucherCount);
   }, [
+    backendPlots,
     deviceHarvestReceipts,
-    harvestPlotId,
     pendingHarvestReceipts,
+    plot,
     plotReceiptFilterIds,
+    plotServerLinks,
     vouchers,
   ]);
 
@@ -804,9 +808,13 @@ export default function PlotDetailScreen() {
         rows: [] as { id: string; kg: number; dateLabel: string }[],
       };
     }
-    const scoped = harvestPlotId
-      ? vouchers.filter((v) => String(v?.plot_id ?? v?.plotId ?? '') === harvestPlotId)
-      : [];
+    const filterIds = new Set(plotReceiptFilterIds);
+    const filterOptions = {
+      plotServerLinks,
+      backendPlots,
+      localPlot: plot,
+    };
+    const scoped = vouchers.filter((v) => voucherMatchesPlotFilter(v, filterIds, filterOptions));
     const sorted = [...scoped].sort((a, b) => {
       const at = new Date(String(a?.created_at ?? a?.createdAt ?? 0)).getTime();
       const bt = new Date(String(b?.created_at ?? b?.createdAt ?? 0)).getTime();
@@ -829,7 +837,7 @@ export default function PlotDetailScreen() {
       };
     });
     return { seasonTotalKg, rows };
-  }, [harvestPlotId, plot, vouchers]);
+  }, [backendPlots, plot, plotReceiptFilterIds, plotServerLinks, vouchers]);
 
   const openRecordDeliveryForPlot = useCallback(() => {
     if (!harvestPickerPlotId) return;
@@ -1601,6 +1609,8 @@ export default function PlotDetailScreen() {
               vouchers={vouchers}
               mergedPlots={harvestPlotOptions}
               plotServerLinks={plotServerLinks}
+              backendPlots={backendPlots}
+              filterLocalPlot={plot}
               plotIdFilter={harvestPlotId ?? plot?.id ?? null}
               plotIdAliases={plotReceiptFilterIds}
               plotNameFilter={String(plot.name ?? t('plot_fallback'))}

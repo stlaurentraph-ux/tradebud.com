@@ -39,6 +39,48 @@ export class EvidenceDocumentsService {
     return KIND_TO_DOCUMENT_TYPE[kind as PlotEvidenceKind] ?? 'OTHER';
   }
 
+  async listSyncedDocumentsForPlot(plotId: string): Promise<
+    Array<{
+      id: string;
+      evidence_kind: string;
+      file_storage_key: string;
+      mime_type: string | null;
+      updated_at: string;
+    }>
+  > {
+    try {
+      const res = await this.pool.query<{
+        id: string;
+        evidence_kind: string;
+        file_storage_key: string;
+        mime_type: string | null;
+        updated_at: string;
+      }>(
+        `
+          SELECT
+            id::text AS id,
+            evidence_kind,
+            file_storage_key,
+            mime_type,
+            updated_at::text AS updated_at
+          FROM evidence_documents
+          WHERE plot_id = $1::uuid
+            AND file_storage_key IS NOT NULL
+            AND trim(file_storage_key) <> ''
+          ORDER BY updated_at DESC
+        `,
+        [plotId],
+      );
+      return res.rows ?? [];
+    } catch (error) {
+      const pgError = error as { code?: string } | null;
+      if (pgError?.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
   async upsertFromEvidenceSync(params: {
     plotId: string;
     tenantId?: string | null;

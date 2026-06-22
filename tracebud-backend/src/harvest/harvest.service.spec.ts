@@ -622,3 +622,29 @@ describe('HarvestService.validateShipmentDeclaredWeight', () => {
     expect(result.covered_quantity_kg).toBe(1000);
   });
 });
+
+describe('HarvestService.listFieldVouchersForAuthUser', () => {
+  it('scopes vouchers to the signed-in auth user and linked farmer profiles', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rows: [
+          { id: 'v_1', plot_id: 'plot_a', kg: 100, created_at: '2026-06-20T10:00:00.000Z' },
+          { id: 'v_2', plot_id: 'plot_b', kg: 50, created_at: '2026-06-19T10:00:00.000Z' },
+        ],
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const rows = await service.listFieldVouchersForAuthUser('auth-user');
+
+    expect(rows).toHaveLength(2);
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('tx.created_by = $1::uuid'),
+      ['auth-user'],
+    );
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $1::uuid'),
+      ['auth-user'],
+    );
+  });
+});

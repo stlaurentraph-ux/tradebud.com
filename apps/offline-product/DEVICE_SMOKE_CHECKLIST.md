@@ -26,7 +26,7 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 - [ ] **Mark corners:** instructions visible; stand at corner → hold timer → Save corner → count increases; map shows markers
 - [ ] **Draw on map:** pan/zoom works before first corner; Start tracing → taps add corners; undo/clear work; save creates polygon
 - [ ] Draw on map: tap adds vertices; undo/clear work; save creates polygon
-- [ ] Plot card shows Esri satellite thumbnail with boundary
+- [ ] Each plot list square shows Esri satellite map with boundary overlay (88×88 thumbnail)
 - [ ] Plot detail shows full-width map hero with polygon (tap opens boundary editor)
 
 ## 3. Backup & sign-in (email)

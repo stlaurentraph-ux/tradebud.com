@@ -924,21 +924,62 @@ function mapLocalDeliveryReceiptRows(rows: any[] | null | undefined): LocalDeliv
 
 export async function loadLocalDeliveryReceiptsForFarmer(
   farmerId: string,
+  options?: { alsoFarmerIds?: readonly string[] },
 ): Promise<LocalDeliveryReceiptRow[]> {
   const db = await getDb();
+  const farmerIds: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [farmerId, ...(options?.alsoFarmerIds ?? [])]) {
+    const id = String(raw ?? '').trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    farmerIds.push(id);
+  }
+  if (farmerIds.length === 0) return [];
+
+  const placeholders = farmerIds.map(() => '?').join(', ');
   const scoped = await db.getAllAsync<any>(
-    'SELECT * FROM local_delivery_receipts WHERE farmerId = ? ORDER BY recordedAt DESC;',
-    [farmerId],
+    `SELECT * FROM local_delivery_receipts WHERE farmerId IN (${placeholders}) ORDER BY recordedAt DESC;`,
+    farmerIds,
   );
-  const scopedRows = mapLocalDeliveryReceiptRows(scoped);
-  if (scopedRows.length > 0) {
+  const scopedRows = dedupeLocalDeliveryReceiptRows(mapLocalDeliveryReceiptRows(scoped));
+  if (farmerIds.length > 1) {
     return scopedRows;
   }
 
   const all = await db.getAllAsync<any>(
     'SELECT * FROM local_delivery_receipts ORDER BY recordedAt DESC;',
   );
-  return mapLocalDeliveryReceiptRows(all);
+  const allRows = dedupeLocalDeliveryReceiptRows(mapLocalDeliveryReceiptRows(all));
+  // Single-user field app: legacy farmerId columns may differ after cross-device restore.
+  return allRows.length > scopedRows.length ? allRows : scopedRows;
+}
+
+function dedupeLocalDeliveryReceiptRows(
+  rows: LocalDeliveryReceiptRow[],
+): LocalDeliveryReceiptRow[] {
+  const seen = new Set<string>();
+  const merged: LocalDeliveryReceiptRow[] = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  return merged;
+}
+
+/** Single-user device: all stored delivery receipts regardless of legacy farmerId columns. */
+export async function loadAllLocalDeliveryReceipts(): Promise<LocalDeliveryReceiptRow[]> {
+  const db = await getDb();
+  const all = await db.getAllAsync<any>(
+    'SELECT * FROM local_delivery_receipts ORDER BY recordedAt DESC;',
+  );
+  return dedupeLocalDeliveryReceiptRows(mapLocalDeliveryReceiptRows(all));
+}
+
+export async function listLocalDeliveryReceiptFarmerIds(): Promise<string[]> {
+  const rows = await loadAllLocalDeliveryReceipts();
+  return [...new Set(rows.map((row) => row.farmerId.trim()).filter(Boolean))];
 }
 
 export async function deleteLocalDeliveryReceipt(id: string): Promise<boolean> {
@@ -1047,7 +1088,9 @@ export async function deletePendingHarvestSyncForReceipt(params: {
 
 export async function updateLocalDeliveryReceipt(
   id: string,
-  patch: Partial<Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId'>>,
+  patch: Partial<
+    Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId' | 'recordedAt'>
+  >,
 ): Promise<void> {
   const db = await getDb();
   const existing = await db.getFirstAsync<any>(
@@ -1057,12 +1100,13 @@ export async function updateLocalDeliveryReceipt(
   if (!existing) return;
   await db.runAsync(
     `UPDATE local_delivery_receipts
-     SET qrCodeRef = ?, pendingSync = ?, serverPlotId = ?
+     SET qrCodeRef = ?, pendingSync = ?, serverPlotId = ?, recordedAt = ?
      WHERE id = ?;`,
     [
       patch.qrCodeRef !== undefined ? patch.qrCodeRef : existing.qrCodeRef,
       patch.pendingSync !== undefined ? (patch.pendingSync ? 1 : 0) : existing.pendingSync,
       patch.serverPlotId !== undefined ? patch.serverPlotId : existing.serverPlotId,
+      patch.recordedAt !== undefined ? patch.recordedAt : existing.recordedAt,
       id,
     ],
   );

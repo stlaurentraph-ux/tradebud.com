@@ -72,6 +72,22 @@ describe('AuditController tenant-claim and role checks', () => {
     ).rejects.toThrow(ForbiddenException);
   });
 
+  it('allows list by farmerId for linked field-app farmer without tenant claim', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'farmer_1' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'evt_decl_1' }] }),
+    };
+    const controller = new AuditController(pool as any);
+
+    await expect(
+      controller.list('dcdd88e5-13e6-45d6-8e09-e6f1968e7e17', undefined, undefined, '50', {
+        user: { id: '66b5dafa-30be-4acb-a9c5-4e5c1ea22455', email: 'hector@example.com' },
+      }),
+    ).resolves.toEqual([{ id: 'evt_decl_1' }]);
+  });
+
   it('allows list when tenant claim is present', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [{ id: 'evt_1' }] }) };
     const controller = new AuditController(pool as any);

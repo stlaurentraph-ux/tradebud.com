@@ -360,6 +360,47 @@ export async function postHarvestToBackend(params: {
   }
 }
 
+export async function patchHarvestDeliveryDate(params: {
+  voucherId: string;
+  harvestDate: string;
+  clientEventId?: string;
+}): Promise<{ updated: boolean }> {
+  const accessToken = await getAccessTokenFromSupabaseWithTimeout();
+  if (!accessToken) {
+    throw new Error('No access token available for harvest date backfill');
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/harvest/vouchers/${encodeURIComponent(params.voucherId)}/delivery-date`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          harvestDate: params.harvestDate,
+          clientEventId: params.clientEventId ?? null,
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(
+        typeof body?.message === 'string'
+          ? body.message
+          : `Harvest date backfill error: ${res.status}`,
+      );
+    }
+
+    return res.json().catch(() => ({ updated: false }));
+  } catch (e) {
+    throw normalizeNetworkError(e);
+  }
+}
+
 export async function fetchVouchersForFarmer(farmerId: string) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -674,6 +715,55 @@ export async function fetchPlotTenureVerification(
     .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object')
     .map((row) => normalizePlotTenureVerificationRecord(row))
     .filter((row): row is PlotTenureVerificationRecord => row != null);
+}
+
+export type PlotSyncedEvidenceRecord = {
+  id: string;
+  evidence_kind: string;
+  file_storage_key: string;
+  mime_type: string | null;
+  updated_at: string;
+};
+
+export async function fetchPlotSyncedEvidence(
+  plotId: string,
+): Promise<PlotSyncedEvidenceRecord[]> {
+  const accessToken = await getAccessTokenFromSupabase();
+  if (!accessToken) {
+    return [];
+  }
+
+  const baseUrl = `${API_BASE_URL}/v1/plots/${encodeURIComponent(plotId)}/synced-evidence`;
+  const res = await tracebudFetchWithTimeout(
+    cacheBustUrl(baseUrl),
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
+    },
+    15_000,
+  );
+  if (res == null || !isSuccessfulApiResponse(res.status)) {
+    return [];
+  }
+  const body = await res.json().catch(() => []);
+  if (!Array.isArray(body)) return [];
+  return body
+    .filter((row): row is Record<string, unknown> => Boolean(row) && typeof row === 'object')
+    .map((row) => ({
+      id: String(row.id ?? '').trim(),
+      evidence_kind: String(row.evidence_kind ?? row.evidenceKind ?? '').trim(),
+      file_storage_key: String(row.file_storage_key ?? row.fileStorageKey ?? '').trim(),
+      mime_type:
+        row.mime_type != null
+          ? String(row.mime_type)
+          : row.mimeType != null
+            ? String(row.mimeType)
+            : null,
+      updated_at: String(row.updated_at ?? row.updatedAt ?? ''),
+    }))
+    .filter((row) => row.id && row.file_storage_key);
 }
 
 const PARSE_STATUSES: PlotTenureParseStatus[] = [
