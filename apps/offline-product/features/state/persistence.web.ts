@@ -211,7 +211,19 @@ export async function loadPlotServerLinks(): Promise<Record<string, string>> {
   return links;
 }
 
+export async function clearPlotServerLink(localPlotId: string): Promise<void> {
+  if (memLegal[localPlotId]) {
+    memLegal[localPlotId] = { ...memLegal[localPlotId], serverPlotId: undefined };
+  }
+}
+
 export async function persistPlotServerLinks(links: Record<string, string>): Promise<void> {
+  const existing = await loadPlotServerLinks().catch(() => ({}));
+  for (const localPlotId of Object.keys(existing)) {
+    if (!(localPlotId in links)) {
+      await clearPlotServerLink(localPlotId).catch(() => undefined);
+    }
+  }
   for (const [localPlotId, serverPlotId] of Object.entries(links)) {
     await savePlotServerLink(localPlotId, serverPlotId);
   }

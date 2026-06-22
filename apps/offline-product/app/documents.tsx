@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { router, useFocusEffect } from 'expo-router';
 
 import { ProducerDeclarationsSection } from '@/components/evidence/ProducerDeclarationsSection';
@@ -14,7 +13,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
-import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
@@ -54,7 +52,6 @@ function chipBadgeVariant(
 
 export default function DocumentsScreen() {
   const styles = useThemedStyles(createDocumentsScreenStyles);
-  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { farmer, plots, reloadFromDisk } = useAppState();
@@ -405,40 +402,14 @@ export default function DocumentsScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <LinearGradient
-        colors={[...HEADER_GRADIENT_COLORS]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top }]}
-      >
-        <View style={styles.headerRowCompact}>
-          <Pressable onPress={() => router.back()} style={styles.backPill}>
-            <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
-            <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              {t('back')}
-            </ThemedText>
-          </Pressable>
-          <View style={styles.headerTitleWrap}>
-            <ThemedText
-              numberOfLines={1}
-              type="defaultSemiBold"
-              style={{ color: colors.textInverse, textAlign: 'center' }}
-            >
-              {t('documents_my_docs')}
-            </ThemedText>
-          </View>
-          <Pressable
-            onPress={openLanguagePicker}
-            accessibilityRole="button"
-            accessibilityLabel={t('language_picker_title')}
-            style={styles.langPillCompact}
-          >
-            <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              {String(lang).toUpperCase()}
-            </ThemedText>
-          </Pressable>
-        </View>
-      </LinearGradient>
+      <StackGradientHeader
+        title={t('documents_my_docs')}
+        onBack={() => router.back()}
+        backLabel={t('back')}
+        langLabel={String(lang).toUpperCase()}
+        onLangPress={openLanguagePicker}
+        langAccessibilityLabel={t('language_picker_title')}
+      />
 
       <ThemedScrollView
         ref={scrollRef}

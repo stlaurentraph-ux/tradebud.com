@@ -12,6 +12,7 @@ import {
   deforestationTitleKey,
   deforestationUiStateFromBackendStatus,
   parseDeforestationScreening,
+  resolveBackendPlotComplianceStatus,
   type DeforestationUiState,
 } from '@/features/compliance/plotDeforestationStatus';
 
@@ -68,7 +69,12 @@ export function PlotComplianceStatusCards({
   const synced = Boolean(backendPlotId);
 
   const deforestationState: DeforestationUiState = synced
-    ? deforestationUiStateFromBackendStatus(backendStatus)
+    ? deforestationUiStateFromBackendStatus(
+        resolveBackendPlotComplianceStatus({
+          status: backendStatus,
+          deforestation_screening: deforestationScreening,
+        }),
+      )
     : 'pending';
 
   const deforestationIconStyle = deforestationIcon(colors, deforestationState);

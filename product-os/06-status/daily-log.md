@@ -1,11 +1,8 @@
-- `syncFailure.test.ts`, `runFieldSyncSession.test.ts`, `syncFailureFromEvidenceUpload.test.ts`
+### 2026-06-22 (offline — restore morning UX after PR #208)
 
-
-
-
-
-
-
+- **Root cause** — Most field-app UX from 2026-06-22 morning lived in git stash `stash@{1}` and was not included in PR #208 (receipts-only merge).
+- **Restored** — `SplashGate` + `isAppReady` (no home stat flash), Why Tracebud screen + home teaser, settings sync/backup pill stability, walk/draw footer hints (map overlays removed), readability style extractions, plot name validation, welcome-email idempotency fix, receipt detail “Deliver to” human labels.
+- **Preserved from main** — Flat receipts table, `receiptNavigationCache`, plot id reconciliation for list status.
 
 
 

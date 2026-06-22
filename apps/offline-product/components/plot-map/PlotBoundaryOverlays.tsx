@@ -89,6 +89,7 @@ export function PlotBoundaryOverlays({
 
       {strokeOnlyBoundary && strokeCoordinates.length >= 2 ? (
         <Polyline
+          key={`stroke-${strokeCoordinates.length}-${strokeCoordinates[0]?.latitude ?? 0}-${strokeCoordinates[0]?.longitude ?? 0}`}
           coordinates={strokeCoordinates}
           strokeColor={BOUNDARY_GREEN}
           strokeWidth={4}

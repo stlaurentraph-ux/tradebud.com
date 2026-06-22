@@ -40,3 +40,42 @@ export function cornerMapOverlayMessageKey(phase: CornerCapturePhase): string {
   if (phase === 'settle') return 'walk_corner_tap_settling';
   return 'walk_corner_tap_ready';
 }
+
+export type CornerCaptureLiveMessage = {
+  key: string;
+  params?: Record<string, string | number>;
+};
+
+/** Shared live guidance for mark-corners map banner and footer hint. */
+export function resolveCornerCaptureLiveMessage(params: {
+  isRecording: boolean;
+  holdPercent: number;
+  savedCornerCount: number;
+  secondsRemaining: number;
+  poorGps: boolean;
+}): CornerCaptureLiveMessage {
+  const progress = cornerProgressNumbers(params.savedCornerCount);
+
+  if (params.isRecording) {
+    if (params.holdPercent >= 100) {
+      return { key: 'walk_corner_tap_ready' };
+    }
+    if (params.poorGps) {
+      return { key: 'walk_tip_recording_phone' };
+    }
+    return { key: 'walk_corner_hold_progress', params: { seconds: params.secondsRemaining } };
+  }
+
+  if (progress.shapeReady) {
+    return { key: 'walk_corner_progress_ready', params: { n: params.savedCornerCount } };
+  }
+
+  if (params.savedCornerCount > 0) {
+    return {
+      key: 'walk_corner_progress_chip',
+      params: { n: params.savedCornerCount, remaining: progress.remainingToClose },
+    };
+  }
+
+  return { key: 'walk_corner_map_empty' };
+}

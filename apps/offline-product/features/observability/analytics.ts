@@ -40,6 +40,8 @@ export const ANALYTICS_EVENTS = {
   CONSENT_GRANT_DENIED: 'consent_grant_denied',
   CONSENT_GRANT_REVOKED: 'consent_grant_revoked',
   PUSH_PERMISSION_DENIED: 'push_permission_denied',
+  WHY_TRACEBUD_VIEWED: 'why_tracebud_viewed',
+  WHY_TRACEBUD_HOME_TEASER_CLICKED: 'why_tracebud_home_teaser_clicked',
 } as const;
 
 export type OAuthAnalyticsSource = 'in_app' | 'cold_start';

@@ -4,6 +4,7 @@ import {
   canConfirmCornerSave,
   cornerMapOverlayMessageKey,
   cornerProgressNumbers,
+  resolveCornerCaptureLiveMessage,
   resolveCornerCapturePhase,
 } from './cornerCaptureUx';
 
@@ -37,5 +38,37 @@ describe('cornerCaptureUx', () => {
   it('picks overlay copy per phase', () => {
     expect(cornerMapOverlayMessageKey('settle')).toBe('walk_corner_tap_settling');
     expect(cornerMapOverlayMessageKey('save')).toBe('walk_corner_tap_ready');
+  });
+
+  it('resolves live guidance for map banner and footer hint', () => {
+    expect(
+      resolveCornerCaptureLiveMessage({
+        isRecording: false,
+        holdPercent: 0,
+        savedCornerCount: 0,
+        secondsRemaining: 30,
+        poorGps: false,
+      }),
+    ).toEqual({ key: 'walk_corner_map_empty' });
+
+    expect(
+      resolveCornerCaptureLiveMessage({
+        isRecording: true,
+        holdPercent: 40,
+        savedCornerCount: 1,
+        secondsRemaining: 18,
+        poorGps: false,
+      }),
+    ).toEqual({ key: 'walk_corner_hold_progress', params: { seconds: 18 } });
+
+    expect(
+      resolveCornerCaptureLiveMessage({
+        isRecording: true,
+        holdPercent: 100,
+        savedCornerCount: 2,
+        secondsRemaining: 0,
+        poorGps: false,
+      }),
+    ).toEqual({ key: 'walk_corner_tap_ready' });
   });
 });

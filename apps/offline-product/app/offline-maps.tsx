@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { setSetting } from '@/features/state/persistence';
-import {
-  bboxAroundCoordinate,
-} from '@/features/offlineTiles/manualTraceImagery';
+import { bboxAroundCoordinate } from '@/features/offlineTiles/manualTraceImagery';
 import {
   downloadOfflineTilePack,
   listOfflineTilePacks,
@@ -23,10 +21,12 @@ import {
   type OfflineTilesProgress,
 } from '@/features/offlineTiles/offlineTiles';
 import { goBackOrHome } from '@/features/navigation/routes';
-import { Brand } from '@/constants/theme';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createOfflineMapsScreenStyles } from '@/app/offlineMapsScreenStyles';
 
 export default function OfflineMapsScreen() {
-  const insets = useSafeAreaInsets();
+  const colors = useAppColors();
+  const styles = useThemedStyles(createOfflineMapsScreenStyles);
   const { t } = useLanguage();
   const [packs, setPacks] = useState<OfflineTilesPackMeta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,22 +121,14 @@ export default function OfflineMapsScreen() {
     progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
-    <ThemedView style={[styles.screen, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.header}>
-        <Button variant="ghost" onPress={() => goBackOrHome(router)}>
-          {t('back')}
-        </Button>
-        <ThemedText type="subtitle" style={styles.headerTitle}>
-          {t('offline_maps_title')}
-        </ThemedText>
-        <View style={{ width: 64 }} />
-      </View>
+    <ThemedView style={styles.screen}>
+      <StackGradientHeader title={t('offline_maps_title')} onBack={() => goBackOrHome(router)} backLabel={t('back')} />
 
-      <ThemedScrollView contentContainerStyle={styles.content}>
+      <ThemedScrollView contentContainerStyle={[styles.content, { paddingTop: 8 }]}>
         <Card variant="outlined">
           <CardContent>
             <View style={styles.introRow}>
-              <Ionicons name="map-outline" size={22} color={Brand.primary} />
+              <Ionicons name="map-outline" size={22} color={colors.link} />
               <ThemedText type="defaultSemiBold" style={{ flex: 1 }}>
                 {t('offline_maps_intro')}
               </ThemedText>
@@ -171,7 +163,7 @@ export default function OfflineMapsScreen() {
 
         {downloading ? (
           <View style={styles.progressBox}>
-            <ActivityIndicator color={Brand.primary} />
+            <ActivityIndicator color={colors.link} />
             <ThemedText type="caption">
               {t('offline_maps_downloading', { pct: progressPct })}
             </ThemedText>
@@ -182,9 +174,9 @@ export default function OfflineMapsScreen() {
           <CardContent>
             <ThemedText type="defaultSemiBold">{t('offline_maps_installed_title')}</ThemedText>
             {loading ? (
-              <ActivityIndicator style={{ marginTop: 12 }} color={Brand.primary} />
+              <ActivityIndicator style={{ marginTop: 12 }} color={colors.link} />
             ) : packs.length === 0 ? (
-              <ThemedText type="caption" style={{ marginTop: 8 }}>
+              <ThemedText type="caption" style={styles.emptyCaption}>
                 {t('offline_maps_installed_empty')}
               </ThemedText>
             ) : (
@@ -209,43 +201,3 @@ export default function OfflineMapsScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  introRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  introBody: {
-    marginTop: 8,
-    opacity: 0.85,
-    lineHeight: 18,
-  },
-  progressBox: {
-    marginTop: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  packRow: {
-    marginTop: 12,
-    gap: 4,
-  },
-});

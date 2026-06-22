@@ -25,6 +25,7 @@ import type { TranslateFn } from '@/features/i18n/translate';
 
 export type DeliveryReceiptCatalog = {
   receipts: DeliveryReceiptRecord[];
+  deviceReceipts: DeliveryReceiptRecord[];
   backendPlots: unknown[];
   plotServerLinks: PlotServerLinks;
   vouchers: unknown[];
@@ -81,6 +82,7 @@ export async function buildDeliveryReceiptCatalog(params: {
         groupPlotId,
         plotName,
         t: params.t,
+        localPlots: params.localPlots,
       });
     } catch {
       backendPlots = [];
@@ -105,14 +107,5 @@ export async function buildDeliveryReceiptCatalog(params: {
     plotServerLinks,
   });
 
-  return { receipts, backendPlots, plotServerLinks, vouchers };
-}
-
-export function findDeliveryReceiptById(
-  receipts: readonly DeliveryReceiptRecord[],
-  receiptId: string,
-): DeliveryReceiptRecord | null {
-  const id = receiptId.trim();
-  if (!id) return null;
-  return receipts.find((row) => row.id === id) ?? null;
+  return { receipts, deviceReceipts, backendPlots, plotServerLinks, vouchers };
 }

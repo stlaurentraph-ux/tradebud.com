@@ -2,15 +2,15 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Radius, Spacing } from '@/constants/theme';
 import { localeCodes, localeNames, locales, type SupportedLanguage } from '@/features/i18n/config';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createLanguagePickerSheetStyles } from '@/components/languagePickerSheetStyles';
 
 type LanguagePickerSheetProps = {
   visible: boolean;
@@ -19,6 +19,8 @@ type LanguagePickerSheetProps = {
 
 export function LanguagePickerSheet({ visible, onClose }: LanguagePickerSheetProps) {
   const { lang, setLang, t } = useLanguage();
+  const colors = useAppColors();
+  const styles = useThemedStyles(createLanguagePickerSheetStyles);
 
   const pick = (code: SupportedLanguage) => {
     setLang(code);
@@ -34,7 +36,7 @@ export function LanguagePickerSheet({ visible, onClose }: LanguagePickerSheetPro
               {t('language_picker_title')}
             </ThemedText>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Ionicons name="close" size={22} color="#6B7280" />
+              <Ionicons name="close" size={22} color={colors.iconMuted} />
             </Pressable>
           </View>
           <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
@@ -53,7 +55,7 @@ export function LanguagePickerSheet({ visible, onClose }: LanguagePickerSheetPro
                     </ThemedText>
                   </View>
                   {selected ? (
-                    <Ionicons name="checkmark-circle" size={22} color={Brand.primary} />
+                    <Ionicons name="checkmark-circle" size={22} color={colors.link} />
                   ) : null}
                 </Pressable>
               );
@@ -64,54 +66,3 @@ export function LanguagePickerSheet({ visible, onClose }: LanguagePickerSheetPro
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'flex-end',
-    padding: 16,
-    paddingBottom: 28,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.xl,
-    maxHeight: '78%',
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  title: {
-    fontSize: 20,
-    lineHeight: 26,
-    color: '#0B4F3B',
-  },
-  list: {
-    paddingHorizontal: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: Radius.lg,
-    marginBottom: 4,
-  },
-  rowSelected: {
-    backgroundColor: '#E6F7EF',
-  },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
-  code: {
-    color: '#6B7280',
-  },
-});

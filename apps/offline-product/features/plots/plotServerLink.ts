@@ -7,8 +7,20 @@ import {
   isServerOnlyDemoPlot,
   type LocalPlotForBackendMatch,
 } from '@/features/plots/backendPlotMatch';
+import {
+  resolveBackendPlotComplianceStatus,
+  type BackendPlotComplianceStatus,
+} from '@/features/compliance/plotDeforestationStatus';
 
 export type PlotServerLinks = Record<string, string>;
+
+export type BackendPlotMeta = {
+  id: string | null;
+  status: BackendPlotComplianceStatus;
+  deforestationScreening: unknown;
+  sinaph: boolean;
+  indigenous: boolean;
+};
 
 /** True when this server row was created from the given local plot id. */
 export function serverPlotRowOwnedByLocalDevice(
@@ -36,6 +48,56 @@ export function resolveServerPlotIdForLocal(
   return hit != null && (hit as { id?: unknown }).id != null
     ? String((hit as { id: unknown }).id)
     : null;
+}
+
+/** Compliance cards need a server row in the current fetch — not just a stale local link. */
+export function resolveBackendPlotMetaForLocal(
+  localPlot: LocalPlotForBackendMatch,
+  backendRows: unknown[],
+  links?: PlotServerLinks | null,
+): BackendPlotMeta {
+  const empty: BackendPlotMeta = {
+    id: null,
+    status: 'pending_check',
+    deforestationScreening: null,
+    sinaph: false,
+    indigenous: false,
+  };
+  if (backendRows.length === 0) return empty;
+
+  let serverId: string | null = null;
+  const persisted = links?.[localPlot.id]?.trim();
+  if (persisted) {
+    const row = (backendRows as { id?: unknown }[]).find(
+      (entry) => String(entry?.id ?? '') === persisted,
+    );
+    if (row) serverId = persisted;
+  }
+  if (!serverId) {
+    const hit = findBackendPlotForLocal(localPlot, backendRows);
+    serverId =
+      hit != null && (hit as { id?: unknown }).id != null
+        ? String((hit as { id: unknown }).id)
+        : null;
+  }
+  if (!serverId) return empty;
+
+  const match = (backendRows as {
+    id?: unknown;
+    status?: unknown;
+    deforestation_screening?: unknown;
+    sinaph_overlap?: boolean;
+    indigenous_overlap?: boolean;
+  }[]).find((row) => String(row?.id ?? '') === serverId);
+  if (!match) return empty;
+
+  return {
+    id: serverId,
+    status: resolveBackendPlotComplianceStatus(match),
+    deforestationScreening: match.deforestation_screening ?? null,
+    sinaph: match.sinaph_overlap === true,
+    indigenous: match.indigenous_overlap === true,
+  };
 }
 
 /**

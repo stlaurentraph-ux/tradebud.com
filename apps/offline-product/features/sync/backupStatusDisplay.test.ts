@@ -21,9 +21,9 @@ describe('resolveBackupStatusDisplay', () => {
     syncApiBaseUrl: 'https://api.tracebud.com/api',
   };
 
-  it('shows up to date when metrics are settled and nothing pending', () => {
+  it('shows short ok pill when metrics are settled and nothing pending', () => {
     expect(resolveBackupStatusDisplay(base, t)).toEqual({
-      label: 'backup_up_to_date',
+      label: 'backup_pill_ok',
       needsAttention: false,
     });
   });
@@ -39,7 +39,7 @@ describe('resolveBackupStatusDisplay', () => {
         t,
       ),
     ).toEqual({
-      label: 'backup_waiting:{"n":2}',
+      label: 'backup_pill_pending',
       needsAttention: true,
     });
   });
@@ -55,7 +55,7 @@ describe('resolveBackupStatusDisplay', () => {
         t,
       ),
     ).toEqual({
-      label: 'settings_backup_status_checking',
+      label: 'backup_pill_checking',
       needsAttention: true,
     });
   });

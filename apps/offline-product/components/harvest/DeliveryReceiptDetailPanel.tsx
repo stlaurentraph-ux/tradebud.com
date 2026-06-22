@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import {
   formatReceiptDateLabel,
+  formatReceiptDeliverToLabel,
   type DeliveryReceiptRecord,
 } from '@/features/harvest/deliveryReceiptModels';
 import { shareDeliveryReceipt } from '@/features/harvest/shareDeliveryReceipt';
@@ -113,7 +114,7 @@ export function DeliveryReceiptDetailPanel({
               {t('harvest_receipt_deliver_to')}
             </ThemedText>
             <ThemedText type="defaultSemiBold" style={styles.buyerValue}>
-              {receipt.buyerLabel}
+              {formatReceiptDeliverToLabel(receipt, t)}
             </ThemedText>
           </View>
         </View>

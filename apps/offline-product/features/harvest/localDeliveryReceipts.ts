@@ -79,7 +79,7 @@ export function normalizeLocalDeliveryReceipts(
         kg,
         createdAt: new Date(row.recordedAt).toISOString(),
         qrCodeRef: row.qrCodeRef,
-        buyerLabel: row.buyerLabel?.trim() || t('harvest_receipt_pending_sync'),
+        buyerLabel: row.buyerLabel?.trim() || t('harvest_receipt_buyer_unspecified'),
         pendingSync: row.pendingSync,
       } satisfies DeliveryReceiptRecord;
     })

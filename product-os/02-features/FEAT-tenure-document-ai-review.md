@@ -59,7 +59,13 @@
 - Compare declared `cadastralKey` (from `plot_legal_synced`) vs extracted reference
 - Fuzzy holder name vs farmer profile
 - Flag `informalTenure` + formal document conflict
-- Mismatch → `MANUAL_REQUIRED` (same review queue as Phase 2)
+- **Country mismatch**: when LLM `country_iso` and farmer `country_code` both known and differ → `document_country_mismatch` (parse `FAILED`, farmer re-upload copy)
+- Mismatch → `MANUAL_REQUIRED` (same review queue as Phase 2) except country mismatch → `FAILED`
+
+### Tenure clause allowlist (v1.6 hardening)
+- Tenure papers: rights, issuer, parcel/title ref, dates, signatures/stamps only
+- GPS / boundary / mapping geometry stripped from `clauses_missing` (plot mapping is separate checklist)
+- LLM prompts forbid geometry clauses; backend + offline filter as defense in depth
 
 ### Offline
 - `syncLandTitlePhotosWithFiles` uploads title photos to `plot-evidence` before `photos-sync`; only rows with `storagePath` are sent so AI tenure parse can run
@@ -112,29 +118,3 @@
 
 ### CI
 - `npm run check:tenure-parse:static` in backend CI job (cadastral SQL + supersede guard).
-
-## Phase 6 — jurisdiction cross-check (2026-06-20)
-
-Deliberately **no** document-address ↔ plot-GPS geocoding (unreliable for global MVP).
-
-### What runs on every parse
-- **`jurisdiction_cross_check`** on `parse_result` (all tenure docs, not only formal).
-- **Country mismatch** — `document country_iso` vs farmer `country_code` → `FAILED` + farmer re-upload copy.
-- **Issuer jurisdiction** — when `country_iso` matches plot but `community_or_issuer` text implies another country → `MANUAL_REQUIRED`.
-- **Clause sanitization** — strip `gps_coordinates` / boundary noise from `clauses_missing` (plot geometry is a separate channel).
-- **LLM prompts** — rights, issuer, parcel id, signatures only; never require map/GPS on paper.
-
-### Exporter-only hints (dashboard)
-- Admin region text on document vs farmer postal address → `exporter_hints` on parse result.
-- Shown under **Compliance hints (staff only)** on plot tenure panel — not farmer-facing auto-fail.
-
-### Explicitly out of scope
-- Geocoding document addresses to plot centroid.
-- Automated FAIL on admin-region text alone.
-
-### Acceptance criteria
-- [x] India doc / Norway plot → `document_country_mismatch` + `FAILED`
-- [x] Issuer text jurisdiction mismatch → manual review queue
-- [x] Geometry/GPS clauses stripped from missing-clause counts
-- [x] Dashboard shows exporter jurisdiction hints
-- [x] Offline farmer copy for wrong-country documents

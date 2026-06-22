@@ -197,9 +197,17 @@ export function createHomeScreenStyles(c: AppColors) {
       gap: 8,
     },
     pendingPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
       borderRadius: Radius.full,
+    },
+    pendingPillText: {
+      color: Brand.warning,
+      fontSize: scaleText(10),
+      lineHeight: scaleText(13),
+      fontWeight: '600',
+      letterSpacing: 0.2,
+      textTransform: 'uppercase',
     },
     progressBarTrack: {
       height: 8,
@@ -272,6 +280,43 @@ export function createHomeScreenStyles(c: AppColors) {
     },
     onboardingCtaText: {
       color: '#FFFFFF',
+    },
+    whyTracebudTeaser: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.surfaceAccentBorder,
+      backgroundColor: c.surfaceAccent,
+    },
+    whyTracebudTeaserPressed: {
+      opacity: 0.9,
+    },
+    whyTracebudTeaserIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.avatarBackground,
+    },
+    whyTracebudTeaserText: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    whyTracebudTeaserLink: {
+      color: c.text,
+      fontSize: scaleText(14),
+      lineHeight: scaleText(18),
+    },
+    whyTracebudTeaserHint: {
+      color: c.textMuted,
+      fontSize: scaleText(12),
+      lineHeight: scaleText(16),
     },
   });
 }

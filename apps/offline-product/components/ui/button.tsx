@@ -8,8 +8,8 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { Colors, Radius, Spacing, TouchTargets, Typography, Shadows } from '@/constants/theme';
+import { Radius, Spacing, TouchTargets, Typography, Shadows } from '@/constants/theme';
+import { useAppColors } from '@/features/theme/useThemedStyles';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -26,6 +26,8 @@ export interface ButtonProps extends Omit<PressableProps, 'style'> {
   /** Merged after variant text styles — use for custom `style` backgrounds (e.g. force white on green). */
   textStyle?: TextStyle;
 }
+
+const DANGER_BUTTON_TEXT = '#FFFFFF';
 
 export const Button = forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>(
   (
@@ -44,8 +46,7 @@ export const Button = forwardRef<React.ElementRef<typeof Pressable>, ButtonProps
     },
     ref,
   ) => {
-    const background = useThemeColor({}, 'background');
-    const colors = background === Colors.dark.background ? Colors.dark : Colors.light;
+    const colors = useAppColors();
 
     const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
       switch (variant) {
@@ -93,7 +94,7 @@ export const Button = forwardRef<React.ElementRef<typeof Pressable>, ButtonProps
               backgroundColor: disabled ? colors.buttonDisabled : colors.error,
             },
             text: {
-              color: disabled ? colors.buttonDisabledText : colors.textInverse,
+              color: disabled ? colors.buttonDisabledText : DANGER_BUTTON_TEXT,
             },
           };
         default:
@@ -200,4 +201,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

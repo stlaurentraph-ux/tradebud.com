@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
-import { OnboardingEmailService } from '../launch/onboarding-email.service';
 import { PlotsService } from './plots.service';
 
 @ApiTags('Field app')
@@ -18,10 +17,7 @@ import { PlotsService } from './plots.service';
 @UseGuards(SupabaseAuthGuard)
 @Controller()
 export class FieldAppController {
-  constructor(
-    private readonly plotsService: PlotsService,
-    private readonly onboardingEmail: OnboardingEmailService,
-  ) {}
+  constructor(private readonly plotsService: PlotsService) {}
 
   @Get('v1/me/field-farmer-ids')
   @ApiOperation({
@@ -65,17 +61,8 @@ export class FieldAppController {
       userId,
       countryCode: body.countryCode?.trim() || 'HN',
       fullName,
+      email,
     });
-    if (created && email) {
-      void this.onboardingEmail
-        .sendFarmerWelcomeAfterFieldSignup({
-          userId,
-          farmerId,
-          email,
-          fullName,
-        })
-        .catch(() => undefined);
-    }
     const ownedFarmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
     return { ok: true, farmer_id: farmerId, owned_farmer_ids: ownedFarmerIds };
   }

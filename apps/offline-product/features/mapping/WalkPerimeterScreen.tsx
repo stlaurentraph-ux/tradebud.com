@@ -34,7 +34,6 @@ import {
 } from '@/features/state/persistence';
 import { GroundTruthPhotoCapture } from '@/components/plot-photo-vault/GroundTruthPhotoCapture';
 import { GeometryConfidenceBanner } from '@/components/mapping/GeometryConfidenceBanner';
-import { CornerMapOverlay } from '@/components/mapping/CornerMapOverlay';
 import { CaptureInstructionsLink } from '@/components/mapping/CaptureInstructionsLink';
 import { PlotContiguityRuleCard } from '@/components/mapping/PlotContiguityRuleCard';
 import { SecondPlotOverlapTip } from '@/components/mapping/SecondPlotOverlapTip';
@@ -60,6 +59,7 @@ import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTil
 import { regionFromCoordinates, type MapCoordinate } from '@/features/mapping/fieldMapRegion';
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Brand, Colors } from '@/constants/theme';
+import { HEADER_GRADIENT_COLORS, HEADER_GRADIENT_TEXT } from '@/constants/compactTabHeader';
 import { scaleText } from '@/features/demo/storeUiScale';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
@@ -75,10 +75,13 @@ import {
   runWithMappingDiscardConfirm,
 } from '@/features/mapping/mappingDiscardConfirm';
 import {
+  hasDuplicatePlotName,
+  proposeUniqueDefaultPlotName,
+} from '@/features/plots/plotNameValidation';
+import {
   canConfirmCornerSave,
-  cornerProgressNumbers,
   CORNER_CAPTURE_HOLD_SECONDS,
-  resolveCornerCapturePhase,
+  resolveCornerCaptureLiveMessage,
 } from '@/features/mapping/cornerCaptureUx';
 
 type LatLng = {
@@ -130,7 +133,7 @@ export function WalkPerimeterScreen() {
     reset,
     replacePointsFromPlot,
   } = useWalkPerimeter({ onLocationDenied });
-  const { farmer, setFarmer, plots, addPlot, updatePlot } = useAppState();
+  const { farmer, setFarmer, plots, addPlot, updatePlot, isAppReady } = useAppState();
   const { openSignIn } = useSignInSheet();
   const params = useLocalSearchParams<{ editPlotId?: string }>();
   const editPlotId = typeof params.editPlotId === 'string' ? params.editPlotId : undefined;
@@ -146,6 +149,8 @@ export function WalkPerimeterScreen() {
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
   const [plotName, setPlotName] = useState('');
+  const [plotNameTouched, setPlotNameTouched] = useState(false);
+  const [plotLandingNameReady, setPlotLandingNameReady] = useState(false);
   const [estimatedSize, setEstimatedSize] = useState<'lt4' | 'gte4' | null>('lt4');
   const [showDetailedForm, setShowDetailedForm] = useState(false);
   const [selectedMethodPage, setSelectedMethodPage] = useState<CaptureMethodPage | null>(null);
@@ -170,6 +175,8 @@ export function WalkPerimeterScreen() {
   const [alternateCaptureOpen, setAlternateCaptureOpen] = useState(false);
   const [mapScrollLock, setMapScrollLock] = useState(false);
   const [drawTracingActive, setDrawTracingActive] = useState(false);
+  const [suppressBoundaryOverlays, setSuppressBoundaryOverlays] = useState(false);
+  const [boundaryOverlayEpoch, setBoundaryOverlayEpoch] = useState(0);
   const walkMapRef = useRef<MapView>(null);
   const drawMapRef = useRef<MapView>(null);
   const lastMapAnimateAtRef = useRef(0);
@@ -177,8 +184,6 @@ export function WalkPerimeterScreen() {
   const [previewPosition, setPreviewPosition] = useState<MapCoordinate | null>(null);
   const [previewPrecisionMeters, setPreviewPrecisionMeters] = useState<number | null>(null);
   const [secondPlotOverlapTipDismissed, setSecondPlotOverlapTipDismissed] = useState(true);
-
-  const defaultPlotName = useMemo(() => `Plot ${plots.length + 1}`, [plots.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,14 +223,6 @@ export function WalkPerimeterScreen() {
     setFarmerIdInput(farmer.id);
     setFarmerNameInput(farmer.name ?? '');
   }, [farmer?.id, farmer?.name]);
-
-  useEffect(() => {
-    if (editPlotId) return;
-    if (!plotName) {
-      setPlotName(defaultPlotName);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultPlotName, editPlotId]);
 
   useEffect(() => {
     if (!editingPlot) {
@@ -419,16 +416,6 @@ export function WalkPerimeterScreen() {
       Math.min(100, Math.round((elapsed / CORNER_CAPTURE_HOLD_SECONDS) * 100)),
     );
   }, [isRecording, captureMethod, mode, recordingSeconds, cornerHoldAnchor]);
-
-  const cornerCapturePhase = useMemo(
-    () => resolveCornerCapturePhase({ isRecording, holdPercent: cornerHoldPercent }),
-    [cornerHoldPercent, isRecording],
-  );
-
-  const cornerProgress = useMemo(
-    () => cornerProgressNumbers(points.length),
-    [points.length],
-  );
 
   const cornerSaveReady = useMemo(
     () => canConfirmCornerSave({ isRecording, holdPercent: cornerHoldPercent }),
@@ -820,6 +807,44 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     return createLocalFarmerId();
   }, [farmer?.id, farmerIdInput]);
 
+  const suggestedPlotName = useMemo(
+    () => proposeUniqueDefaultPlotName(plots, resolveProfileId()),
+    [plots, resolveProfileId],
+  );
+
+  useEffect(() => {
+    if (editPlotId) {
+      setPlotLandingNameReady(true);
+      return;
+    }
+    if (!isAppReady) {
+      setPlotLandingNameReady(false);
+      return;
+    }
+    if (!plotNameTouched) {
+      setPlotName(suggestedPlotName);
+    }
+    setPlotLandingNameReady(true);
+  }, [editPlotId, isAppReady, plotNameTouched, suggestedPlotName]);
+
+  const rejectDuplicatePlotName = useCallback(
+    (name: string, excludePlotId?: string): boolean => {
+      if (
+        hasDuplicatePlotName({
+          plots,
+          farmerId: resolveProfileId(),
+          name,
+          excludePlotId,
+        })
+      ) {
+        Alert.alert(t('warning'), t('plot_name_duplicate'));
+        return true;
+      }
+      return false;
+    },
+    [plots, resolveProfileId, t],
+  );
+
   useEffect(() => {
     void (async () => {
       try {
@@ -856,14 +881,56 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     }
   }, [captureMethod]);
 
-  const handleDrawBoundaryReset = useCallback(() => {
+  const safeClearBoundary = useCallback(() => {
+    // UrlTile + Polyline teardown in one frame can crash native MapView; unmount overlays first.
+    setSuppressBoundaryOverlays(true);
     reset();
-    setDrawTracingActive(false);
+    requestAnimationFrame(() => {
+      setBoundaryOverlayEpoch((epoch) => epoch + 1);
+      setSuppressBoundaryOverlays(false);
+    });
   }, [reset]);
+
+  const handleDrawBoundaryReset = useCallback(() => {
+    safeClearBoundary();
+    // Stay in trace mode so the map does not flip marker/overlay modes while clearing.
+  }, [safeClearBoundary]);
 
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
-  const canContinueToCaptureMethod = estimatedSize != null;
+  const resolvedLandingPlotName = useMemo(
+    () => plotName.trim() || suggestedPlotName,
+    [plotName, suggestedPlotName],
+  );
+  const landingPlotNameDuplicate = useMemo(() => {
+    if (editPlotId || !plotLandingNameReady) return false;
+    return hasDuplicatePlotName({
+      plots,
+      farmerId: resolveProfileId(),
+      name: resolvedLandingPlotName,
+    });
+  }, [editPlotId, plotLandingNameReady, plots, resolveProfileId, resolvedLandingPlotName]);
+  const landingPlotNameSuggestion = useMemo(() => {
+    if (!landingPlotNameDuplicate) return null;
+    return proposeUniqueDefaultPlotName(plots, resolveProfileId());
+  }, [landingPlotNameDuplicate, plots, resolveProfileId]);
+  const canStartMapping =
+    plotLandingNameReady &&
+    estimatedSize != null &&
+    resolvedLandingPlotName.trim().length > 0 &&
+    !landingPlotNameDuplicate;
+
+  const handlePlotNameChange = useCallback((text: string) => {
+    setPlotNameTouched(true);
+    setPlotName(text);
+  }, []);
+
+  const applySuggestedPlotName = useCallback(() => {
+    if (!landingPlotNameSuggestion) return;
+    setPlotNameTouched(false);
+    setPlotName(landingPlotNameSuggestion);
+  }, [landingPlotNameSuggestion]);
+
   const effectivePrecisionMeters = isRecording ? precisionMeters : (previewPrecisionMeters ?? precisionMeters);
   const gpsStrengthLabel =
     effectivePrecisionMeters == null
@@ -1086,21 +1153,63 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   ]);
 
   const drawCaptureHint = useMemo(() => {
-    if (!showCapturePage || captureMethod !== 'draw' || !drawTracingActive) {
+    if (!showCapturePage || captureMethod !== 'draw') {
       return null;
+    }
+    if (!drawTracingActive) {
+      if (points.length > 0) {
+        return t('walk_draw_map_resume');
+      }
+      if (walkMapTileMode === 'offline') {
+        return t('walk_draw_hint_explore_offline');
+      }
+      return t('walk_draw_map_explore');
     }
     if (points.length < 3) {
       return t('walk_draw_hint_more_corners', { n: points.length });
     }
-    return null;
-  }, [captureMethod, drawTracingActive, points.length, showCapturePage, t]);
+    if (canSavePlot) {
+      return t('walk_draw_hint_close', { ha: area.hectares.toFixed(2) });
+    }
+    return t('walk_draw_map_trace');
+  }, [
+    area.hectares,
+    canSavePlot,
+    captureMethod,
+    drawTracingActive,
+    points.length,
+    showCapturePage,
+    t,
+    walkMapTileMode,
+  ]);
 
-  const pinCaptureHint = useMemo(() => {
-    if (!showCapturePage || captureMethod !== 'pin' || !isRecording || pinHoldPercent >= 100) {
+  const cornerCaptureLiveMessage = useMemo(() => {
+    if (!showCapturePage || captureMethod !== 'centroid') {
       return null;
     }
-    return t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining });
-  }, [captureMethod, isRecording, pinHoldPercent, pinHoldSecondsRemaining, showCapturePage, t]);
+    return resolveCornerCaptureLiveMessage({
+      isRecording,
+      holdPercent: cornerHoldPercent,
+      savedCornerCount: points.length,
+      secondsRemaining: cornerHoldSecondsRemaining,
+      poorGps: effectivePrecisionMeters != null && effectivePrecisionMeters > 15,
+    });
+  }, [
+    captureMethod,
+    cornerHoldPercent,
+    cornerHoldSecondsRemaining,
+    effectivePrecisionMeters,
+    isRecording,
+    points.length,
+    showCapturePage,
+  ]);
+
+  const cornerCaptureHint = useMemo(() => {
+    if (!cornerCaptureLiveMessage) return null;
+    return cornerCaptureLiveMessage.params
+      ? t(cornerCaptureLiveMessage.key, cornerCaptureLiveMessage.params)
+      : t(cornerCaptureLiveMessage.key);
+  }, [cornerCaptureLiveMessage, t]);
 
   const completedPlot = useMemo(() => {
     const id = lastRegisteredPlotIdRef.current;
@@ -1308,7 +1417,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     const last = options?.coords ?? points[points.length - 1];
     if (!last) return;
 
-    const name = (plotName || defaultPlotName).trim() || defaultPlotName;
+    const name = (plotName || suggestedPlotName).trim() || suggestedPlotName;
+    if (rejectDuplicatePlotName(name, editingPlot?.id)) return;
 
     let declaredAreaHectares: number | undefined;
     if (declaredAreaHaInput.trim().length > 0) {
@@ -1458,7 +1568,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       // EUDR geometry: plots ≥4 ha must be polygons; plots <4 ha may be point OR polygon.
       // This path always has a walked perimeter (≥3 vertices) — store as polygon even if area <4 ha.
       const kind: 'polygon' = 'polygon';
-      const name = (plotName || defaultPlotName).trim() || defaultPlotName;
+      const name = (plotName || suggestedPlotName).trim() || suggestedPlotName;
+      if (rejectDuplicatePlotName(name, editingPlot?.id)) return;
 
       let declaredAreaHectares: number | undefined;
       let discrepancyPercent: number | undefined;
@@ -1598,7 +1709,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     };
 
     if (polygonGeometryQuality.warnings.length > 0) {
-      const nameForAlert = (plotName || defaultPlotName).trim() || defaultPlotName;
+      const nameForAlert = (plotName || suggestedPlotName).trim() || suggestedPlotName;
       Alert.alert(
         t('geo_quality_save_upload_warning_title'),
         t('geo_quality_save_upload_warning_body', {
@@ -1895,11 +2006,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderPinCaptureActions = () => (
     <View style={{ gap: 8 }}>
-      {pinCaptureHint ? (
-        <ThemedText type="caption" style={styles.walkCaptureHint}>
-          {pinCaptureHint}
-        </ThemedText>
-      ) : null}
       {isRecording ? (
         <View style={styles.averagingTrackCompact}>
           <View
@@ -1932,6 +2038,11 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderCornerCaptureActions = () => (
     <View style={{ gap: 8 }}>
+      {cornerCaptureHint ? (
+        <ThemedText type="caption" style={styles.walkCaptureHint}>
+          {cornerCaptureHint}
+        </ThemedText>
+      ) : null}
       {isRecording ? (
         <View style={styles.averagingTrackCompact}>
           <View
@@ -1997,7 +2108,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         <View style={styles.buttonCell}>
           <Button
             variant="ghost"
-            onPress={reset}
+            onPress={safeClearBoundary}
             disabled={!points.length && !isRecording}
             fullWidth
           >
@@ -2011,15 +2122,15 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
-        colors={['#0A7F59', '#0B6F50']}
+        colors={[...HEADER_GRADIENT_COLORS]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
       >
         <View style={styles.headerRowCompact}>
           <Pressable onPress={handleHeaderBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
-            <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+            <Ionicons name="chevron-back" size={20} color={HEADER_GRADIENT_TEXT} />
+            <ThemedText type="defaultSemiBold" style={{ color: HEADER_GRADIENT_TEXT }}>
               {t('back')}
             </ThemedText>
           </Pressable>
@@ -2042,7 +2153,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           </ThemedText>
           <View style={styles.headerTrailing}>
             <View style={styles.langPill}>
-              <ThemedText type="caption" style={{ color: colors.textInverse }}>
+              <ThemedText type="caption" style={{ color: HEADER_GRADIENT_TEXT }}>
                 {String(lang).toUpperCase()}
               </ThemedText>
             </View>
@@ -2083,8 +2194,27 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                 label={t('walk_plot_name_label')}
                 placeholder={t('walk_plot_name_ph')}
                 value={plotName}
-                onChangeText={setPlotName}
+                onChangeText={handlePlotNameChange}
+                error={landingPlotNameDuplicate}
               />
+              {landingPlotNameDuplicate ? (
+                <>
+                  <ThemedText type="caption" style={styles.plotNameDuplicateHint}>
+                    {t('plot_name_duplicate')}
+                  </ThemedText>
+                  {landingPlotNameSuggestion ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={applySuggestedPlotName}
+                      style={styles.plotNameDuplicateSuggestLink}
+                    >
+                      <ThemedText type="caption" style={styles.plotNameDuplicateSuggestLinkText}>
+                        {t('plot_name_use_suggested', { name: landingPlotNameSuggestion })}
+                      </ThemedText>
+                    </Pressable>
+                  ) : null}
+                </>
+              ) : null}
               {farmer?.name?.trim() ? (
                 <ThemedText type="caption" style={styles.plotLandingFarmerHint}>
                   {t('plot_register_recording_as', { name: farmer.name.trim() })}
@@ -2132,10 +2262,11 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   variant="secondary"
                   style={{ backgroundColor: '#0A7F59' }}
                   fullWidth
-                  disabled={!canContinueToCaptureMethod}
+                  disabled={!canStartMapping}
                   onPress={() => {
+                    if (rejectDuplicatePlotName(resolvedLandingPlotName)) return;
                     if (!plotName.trim()) {
-                      setPlotName(defaultPlotName);
+                      setPlotName(suggestedPlotName);
                     }
                     ensureMinimalFarmerForPlot();
                     setShowDetailedForm(true);
@@ -2180,7 +2311,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         {t('walk_completion_body')}
                       </ThemedText>
                       <ThemedText type="defaultSemiBold" style={[styles.completionPlotName, { textAlign: 'center', marginTop: 10 }]}>
-                        {(plotName || defaultPlotName).trim()} · {area.hectares > 0 ? `${area.hectares.toFixed(1)} ha` : t('walk_point_plot')}
+                        {(plotName || suggestedPlotName).trim()} · {area.hectares > 0 ? `${area.hectares.toFixed(1)} ha` : t('walk_point_plot')}
                       </ThemedText>
                     </View>
 
@@ -2275,7 +2406,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         <Ionicons name="checkmark-circle" size={36} color="#0A7F59" />
                         <View style={{ flex: 1 }}>
                           <ThemedText type="defaultSemiBold" style={styles.completionPlotName}>
-                            {(plotName || defaultPlotName).trim()}
+                            {(plotName || suggestedPlotName).trim()}
                           </ThemedText>
                           <ThemedText type="caption" style={styles.completionBoundarySaved}>
                             {t('walk_completion_boundary_saved')}
@@ -2334,7 +2465,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                     setShowDetailedForm(false);
                     setSelectedMethodPage(null);
                     reset();
-                    setPlotName(defaultPlotName);
+                    setPlotNameTouched(false);
+                    setPlotName(suggestedPlotName);
                     setCaptureMethod('walk');
                     setCaptureMode('walk');
                     setSelectedMethodPage('walk');
@@ -2463,49 +2595,25 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       offlineTilesEnabled={walkMapTileMode === 'offline'}
                       offlineTilesPackId={activeMapPackId}
                     />
-                    <PlotBoundaryOverlays
-                      vertices={points}
-                      userPosition={previewPosition}
-                      showYouMarker={!drawTracingActive}
-                      showStartMarker={points.length > 0}
-                      showVertexMarkers={drawTracingActive}
-                      strokeOnlyBoundary={drawTracingActive}
-                      closeStrokeRing={false}
-                    />
+                    {!suppressBoundaryOverlays ? (
+                      <PlotBoundaryOverlays
+                        key={`draw-boundary-${boundaryOverlayEpoch}`}
+                        vertices={points}
+                        userPosition={previewPosition}
+                        showYouMarker={!drawTracingActive}
+                        showStartMarker={points.length > 0}
+                        showVertexMarkers={drawTracingActive}
+                        strokeOnlyBoundary={drawTracingActive}
+                        closeStrokeRing={false}
+                      />
+                    ) : null}
                   </MapView>
-                  {drawTracingActive ? (
-                    <View style={styles.mapInstructionBanner} pointerEvents="none">
-                      <ThemedText type="caption" style={styles.mapInstructionBannerText}>
-                        {t('walk_draw_map_trace')}
-                      </ThemedText>
-                    </View>
-                  ) : null}
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
                       {gpsStrengthLabel}
                     </ThemedText>
                   </View>
-                  {drawTracingActive && points.length > 0 ? (
-                    <View style={styles.cornerCountChip} pointerEvents="none">
-                      <ThemedText type="caption" style={styles.cornerCountChipText}>
-                        {t('walk_corners_saved', { n: points.length })}
-                        {area.hectares > 0 ? ` · ${area.hectares.toFixed(2)} ha` : ''}
-                      </ThemedText>
-                    </View>
-                  ) : drawTracingActive ? (
-                    <View style={styles.cornerCountChip} pointerEvents="none">
-                      <ThemedText type="caption" style={styles.cornerCountChipText}>
-                        {t('walk_draw_map_trace')}
-                      </ThemedText>
-                    </View>
-                  ) : (
-                    <View style={styles.cornerCountChip} pointerEvents="none">
-                      <ThemedText type="caption" style={styles.cornerCountChipText}>
-                        {points.length > 0 ? t('walk_draw_map_resume') : t('walk_draw_map_explore')}
-                      </ThemedText>
-                    </View>
-                  )}
                 </View>
 
                 {renderBoundaryCaptureStatsRow()}
@@ -2558,7 +2666,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       />
                       <View style={styles.recordingMapDot} />
                       <ThemedText type="caption" style={styles.recordingMapLabel}>
-                        {t('walk_pin_hold_progress', { seconds: pinHoldSecondsRemaining })}
+                        {t('walk_recording')}
                       </ThemedText>
                     </View>
                   ) : null}
@@ -2603,42 +2711,36 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       offlineTilesEnabled={walkMapTileMode === 'offline'}
                       offlineTilesPackId={activeMapPackId}
                     />
-                    <PlotBoundaryOverlays
-                      vertices={points}
-                      userPosition={userMapPosition}
-                      isRecording={isRecording}
-                      showYouMarker
-                      youMarkerFollowsPosition={isRecording}
-                      showStartMarker={false}
-                      showVertexMarkers
-                      strokeOnlyBoundary
-                      closeStrokeRing={false}
-                    />
+                    {!suppressBoundaryOverlays ? (
+                      <PlotBoundaryOverlays
+                        key={`centroid-boundary-${boundaryOverlayEpoch}`}
+                        vertices={points}
+                        userPosition={userMapPosition}
+                        isRecording={isRecording}
+                        showYouMarker
+                        youMarkerFollowsPosition={isRecording}
+                        showStartMarker={false}
+                        showVertexMarkers
+                        strokeOnlyBoundary
+                        closeStrokeRing={false}
+                      />
+                    ) : null}
                   </MapView>
                   {isRecording ? (
-                    <CornerMapOverlay
-                      phase={cornerCapturePhase}
-                      secondsRemaining={cornerHoldSecondsRemaining}
-                      t={t}
-                    />
+                    <View style={styles.recordingMapBadge} pointerEvents="none">
+                      <Animated.View
+                        style={[styles.recordingMapPulse, { transform: [{ scale: recordingPulse }] }]}
+                      />
+                      <View style={styles.recordingMapDot} />
+                      <ThemedText type="caption" style={styles.recordingMapLabel}>
+                        {t('walk_recording')}
+                      </ThemedText>
+                    </View>
                   ) : null}
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
                       {gpsStrengthLabel}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.cornerCountChip} pointerEvents="none">
-                    <ThemedText type="caption" style={styles.cornerCountChipText} testID="walk-corners-saved-count">
-                      {cornerProgress.shapeReady
-                        ? t('walk_corner_progress_ready', { n: points.length })
-                        : points.length > 0
-                          ? t('walk_corner_progress_chip', {
-                              n: points.length,
-                              remaining: cornerProgress.remainingToClose,
-                            })
-                          : t('walk_corner_map_empty')}
-                      {area.hectares > 0 ? ` · ${area.hectares.toFixed(2)} ha` : ''}
                     </ThemedText>
                   </View>
                 </View>

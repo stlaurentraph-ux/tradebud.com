@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
-import { authSheetStyles } from '@/components/auth/authSheetStyles';
+import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
@@ -26,6 +26,7 @@ import {
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 import type { UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 
 type WizardStep = 'method' | 'email' | 'name';
@@ -49,6 +50,8 @@ export function CreateAccountWizard({
 }: CreateAccountWizardProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const colors = useAppColors();
+  const authSheetStyles = useThemedStyles(createAuthSheetStyles);
   const [step, setStep] = useState<WizardStep>('method');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -208,14 +211,14 @@ export function CreateAccountWizard({
                   hitSlop={12}
                   style={authSheetStyles.closeBtn}
                 >
-                  <Ionicons name="chevron-back" size={22} color="#6B7280" />
+                  <Ionicons name="chevron-back" size={22} color={colors.iconMuted} />
                 </Pressable>
               ) : null}
               <ThemedText type="defaultSemiBold" style={authSheetStyles.title}>
                 {t(titleKey)}
               </ThemedText>
               <Pressable onPress={onClose} hitSlop={12} style={authSheetStyles.closeBtn}>
-                <Ionicons name="close" size={20} color="#6B7280" />
+                <Ionicons name="close" size={20} color={colors.iconMuted} />
               </Pressable>
             </View>
             <ThemedText type="caption" style={authSheetStyles.subtitle}>

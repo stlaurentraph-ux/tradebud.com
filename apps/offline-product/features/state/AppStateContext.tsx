@@ -94,6 +94,8 @@ type AppStateContextValue = {
   /** Stable display name — never flashes empty while the same farmer id is active. */
   farmerDisplayName?: string;
   plots: Plot[];
+  /** True after SQLite init + auth hydrate + first disk load attempt finishes. */
+  isAppReady: boolean;
   setFarmer: (farmer: FarmerProfile) => void;
   /** Persist farmer to SQLite and update in-memory state (await for critical saves). */
   saveFarmer: (farmer: FarmerProfile) => Promise<void>;
@@ -130,6 +132,7 @@ function shouldHealFarmerProfileOnDisk(
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [farmer, setFarmerState] = useState<FarmerProfile | undefined>(undefined);
   const [plots, setPlots] = useState<Plot[]>([]);
+  const [isAppReady, setIsAppReady] = useState(false);
   const reloadGenerationRef = useRef(0);
   const displayNameByFarmerIdRef = useRef<Map<string, string>>(new Map());
 
@@ -168,6 +171,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (__DEV__) {
           console.warn('[AppState] boot failed', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsAppReady(true);
         }
       }
     })();
@@ -351,6 +358,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       farmer,
       farmerDisplayName,
       plots,
+      isAppReady,
       setFarmer,
       saveFarmer,
       addPlot,
@@ -364,6 +372,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       farmer,
       farmerDisplayName,
       plots,
+      isAppReady,
       setFarmer,
       saveFarmer,
       addPlot,

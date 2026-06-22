@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 import {
   abortSyncAuthForSignOut,
   clearPersistedSyncAuth,
@@ -38,7 +39,7 @@ import { getAuthCredentials } from '@/features/api/postPlot';
 import { BackupConsentModal } from '@/components/auth/BackupConsentModal';
 import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
-import { authSheetStyles } from '@/components/auth/authSheetStyles';
+import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
@@ -149,6 +150,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const { farmer, plots, setFarmer, reloadFromDisk } = useAppState();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const colors = useAppColors();
+  const authSheetStyles = useThemedStyles(createAuthSheetStyles);
 
   const [visible, setVisible] = useState(false);
   const [variant, setVariant] = useState<SignInVariant>('general');
@@ -652,14 +655,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     hitSlop={12}
                     style={authSheetStyles.closeBtn}
                   >
-                    <Ionicons name="chevron-back" size={22} color="#6B7280" />
+                    <Ionicons name="chevron-back" size={22} color={colors.iconMuted} />
                   </Pressable>
                 ) : null}
                 <ThemedText type="defaultSemiBold" style={authSheetStyles.title}>
                   {emailMode ? t('sign_in_with_email_title') : t(titleKey)}
                 </ThemedText>
                 <Pressable onPress={closeSignIn} hitSlop={12} style={authSheetStyles.closeBtn}>
-                  <Ionicons name="close" size={20} color="#6B7280" />
+                  <Ionicons name="close" size={20} color={colors.iconMuted} />
                 </Pressable>
               </View>
               {!emailMode ? (

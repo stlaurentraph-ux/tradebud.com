@@ -837,6 +837,20 @@ export function createWalkPerimeterScreenStyles(c: AppColors) {
     marginTop: 6,
     color: c.textMuted,
   },
+  plotNameDuplicateHint: {
+    marginTop: 6,
+    color: c.error,
+    lineHeight: scaleText(18),
+  },
+  plotNameDuplicateSuggestLink: {
+    marginTop: 4,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  plotNameDuplicateSuggestLinkText: {
+    color: c.linkStrong,
+    lineHeight: scaleText(18),
+  },
   plotLandingSizeLabel: {
     color: c.text,
     marginTop: 16,

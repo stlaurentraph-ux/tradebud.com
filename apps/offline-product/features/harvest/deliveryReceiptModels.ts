@@ -199,6 +199,38 @@ export function formatReceiptRecipientSummary(
   };
 }
 
+/** Human-readable buyer line for receipt detail (not raw sync placeholders). */
+export function formatReceiptDeliverToLabel(
+  receipt: Pick<DeliveryReceiptRecord, 'buyerLabel' | 'qrCodeRef' | 'pendingSync'>,
+  t: TranslateFn,
+): string {
+  const buyer = receipt.buyerLabel?.trim() ?? '';
+  const pendingSyncLabel = t('harvest_receipt_pending_sync');
+  const qrGenerated = t('harvest_receipt_qr_generated');
+  const buyerAssigned = t('harvest_receipt_buyer_assigned');
+  const unspecified = t('harvest_receipt_buyer_unspecified');
+
+  if (receipt.qrCodeRef?.trim()) {
+    if (!buyer || buyer === pendingSyncLabel || buyer === qrGenerated) {
+      return qrGenerated;
+    }
+    if (buyer === buyerAssigned) {
+      return buyerAssigned;
+    }
+    return buyer;
+  }
+
+  if (receipt.pendingSync) {
+    return pendingSyncLabel;
+  }
+
+  if (!buyer || buyer === pendingSyncLabel) {
+    return unspecified;
+  }
+
+  return buyer;
+}
+
 type PendingHarvestPayload = {
   plotId?: string;
   kg?: number;
@@ -212,6 +244,8 @@ export function normalizePendingHarvestReceipts(params: {
   groupPlotId: string;
   plotName: string;
   t: TranslateFn;
+  /** When groupPlotId is empty, resolve display names from on-device plots. */
+  localPlots?: ReadonlyArray<{ id: string; name?: string }>;
 }): DeliveryReceiptRecord[] {
   return params.actions
     .map((action) => {
@@ -222,18 +256,26 @@ export function normalizePendingHarvestReceipts(params: {
         return null;
       }
       const sourcePlotId = String(payload.plotId ?? '').trim();
-      if (!sourcePlotId || !params.plotIds.has(sourcePlotId)) return null;
+      if (!sourcePlotId) return null;
+      if (params.plotIds.size > 0 && !params.plotIds.has(sourcePlotId)) return null;
       const kg = Number(payload.kg ?? 0);
       if (!Number.isFinite(kg) || kg <= 0) return null;
 
       const email = String(payload.intended_recipient_email ?? '').trim();
       const org = String(payload.intended_recipient_org_name ?? '').trim();
       const buyerLabel = email || org || params.t('harvest_receipt_pending_sync');
+      const plotId = params.groupPlotId?.trim() || sourcePlotId;
+      const localPlotName = params.localPlots
+        ?.find((plot) => plot.id === sourcePlotId)
+        ?.name?.trim();
+      const plotName = params.groupPlotId?.trim()
+        ? params.plotName
+        : localPlotName || params.plotName;
 
       return {
         id: `pending-${action.id}`,
-        plotId: params.groupPlotId,
-        plotName: params.plotName,
+        plotId,
+        plotName,
         kg,
         createdAt: new Date(action.createdAt).toISOString(),
         qrCodeRef: null,

@@ -11,9 +11,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Button } from '@/components/ui/button';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { HEADER_GRADIENT_COLORS, HEADER_GRADIENT_TEXT } from '@/constants/compactTabHeader';
+import { useThemedStyles, useAppColors } from '@/features/theme/useThemedStyles';
 import { createHarvestScreenStyles } from '@/app/(tabs)/harvestScreenStyles';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -36,6 +35,8 @@ import {
 import { MultiPlotDeliveryWizard } from '@/features/harvest/MultiPlotDeliveryWizard';
 import { sumDeliveredKgByPlot } from '@/features/harvest/plotYieldCapacity';
 import { buildMergedHarvestPlots, findHarvestPlotOption, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
+import { resolvePlotReceiptFilterIds } from '@/features/harvest/localDeliveryReceipts';
+import { resolveServerPlotIdForLocal } from '@/features/plots/plotServerLink';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
@@ -50,10 +51,9 @@ import {
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const appColors = useAppColors();
   const styles = useThemedStyles(createHarvestScreenStyles);
-  const params = useLocalSearchParams<{ plotId?: string; record?: string; focus?: string }>();
+  const params = useLocalSearchParams<{ plotId?: string; record?: string; focus?: string; receiptsPlot?: string }>();
   const { farmer, plots: localPlots } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
@@ -78,6 +78,7 @@ export default function HarvestsScreen() {
   const receiptsSectionY = useRef(0);
   const [pendingReceiptsScroll, setPendingReceiptsScroll] = useState(false);
   const [deviceReceipts, setDeviceReceipts] = useState<DeliveryReceiptRecord[]>([]);
+  const [receiptsPlotId, setReceiptsPlotId] = useState<string | null>(null);
 
   const refreshHarvestData = useCallback(async (options?: { forcePlotFetch?: boolean }) => {
     if (!farmer) {
@@ -148,6 +149,55 @@ export default function HarvestsScreen() {
       }),
     [backendPlots, localPlots, farmer?.id, plotServerLinks],
   );
+
+  const receiptsPlotScope = useMemo(() => {
+    if (!receiptsPlotId) return null;
+    const local = resolveLocalPlotForHarvestSubmit({
+      selectedPlotId: receiptsPlotId,
+      localPlots,
+      backendPlots,
+      plotServerLinks,
+    });
+    const option = findHarvestPlotOption({
+      plotId: receiptsPlotId,
+      mergedPlots: mergedHarvestPlots,
+      localPlots,
+      backendPlots,
+      plotServerLinks,
+    });
+    const serverPlotId =
+      option && !option.localOnly
+        ? option.id
+        : local
+          ? resolveServerPlotIdForLocal(local, backendPlots, plotServerLinks)
+          : null;
+    const aliasIds = resolvePlotReceiptFilterIds({
+      localPlotId: local?.id ?? null,
+      serverPlotId,
+      plotServerLinks,
+    });
+    return {
+      filterId: receiptsPlotId,
+      plotName: option?.name ?? local?.name ?? null,
+      aliasIds,
+    };
+  }, [receiptsPlotId, mergedHarvestPlots, localPlots, backendPlots, plotServerLinks]);
+
+  const clearReceiptsPlotFilter = useCallback(() => {
+    setReceiptsPlotId(null);
+    router.setParams({ receiptsPlot: undefined });
+  }, []);
+
+  useEffect(() => {
+    const fromUrl = typeof params.receiptsPlot === 'string' ? params.receiptsPlot.trim() : '';
+    if (fromUrl) {
+      setReceiptsPlotId(fromUrl);
+      return;
+    }
+    if (params.focus === 'receipts') {
+      setReceiptsPlotId(null);
+    }
+  }, [params.focus, params.receiptsPlot]);
 
   useEffect(() => {
     if (!farmer) {
@@ -332,7 +382,7 @@ export default function HarvestsScreen() {
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
-        colors={['#0A7F59', '#0B6F50']}
+        colors={[...HEADER_GRADIENT_COLORS]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
@@ -358,8 +408,8 @@ export default function HarvestsScreen() {
               }}
               style={styles.backButton}
             >
-              <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
-              <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+              <Ionicons name="chevron-back" size={20} color={HEADER_GRADIENT_TEXT} />
+              <ThemedText type="defaultSemiBold" style={{ color: HEADER_GRADIENT_TEXT }}>
                 {t('back')}
               </ThemedText>
             </Pressable>
@@ -374,7 +424,7 @@ export default function HarvestsScreen() {
               accessibilityLabel={t('language_picker_title')}
               style={styles.langPillCompact}
             >
-              <ThemedText type="caption" style={{ color: colors.textInverse }}>
+              <ThemedText type="caption" style={{ color: HEADER_GRADIENT_TEXT }}>
                 {String(lang).toUpperCase()}
               </ThemedText>
             </Pressable>
@@ -654,12 +704,12 @@ export default function HarvestsScreen() {
           <>
         <Card variant="outlined" style={styles.introCard}>
           <View style={styles.sectionHeaderRow}>
-            <Ionicons name="scale-outline" size={22} color="#0B6F50" />
+            <Ionicons name="scale-outline" size={22} color={appColors.link} />
             <View style={{ flex: 1 }}>
-              <ThemedText type="defaultSemiBold" style={{ color: '#0B4F3B' }}>
+              <ThemedText type="defaultSemiBold" style={styles.scaleCardTitle}>
                 {t('log_harvest_card_title')}
               </ThemedText>
-              <ThemedText type="caption" style={{ marginTop: 4, color: '#1F6B57' }}>
+              <ThemedText type="caption" style={styles.scaleCardBody}>
                 {t('log_harvest_card_sub')}
               </ThemedText>
             </View>
@@ -700,7 +750,7 @@ export default function HarvestsScreen() {
                   <ThemedText type="defaultSemiBold" style={styles.multiPlotLinkText}>
                     {t('multi_plot_delivery_link')}
                   </ThemedText>
-                  <Ionicons name="chevron-forward" size={18} color="#0B6F50" />
+                  <Ionicons name="chevron-forward" size={18} color={appColors.link} />
                 </Pressable>
               ) : null}
             </View>
@@ -719,11 +769,26 @@ export default function HarvestsScreen() {
           }}
         >
           <SectionHeader title={t('harvest_receipts_title')} />
+          {receiptsPlotId ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={clearReceiptsPlotFilter}
+              style={styles.receiptsPlotBackRow}
+            >
+              <Ionicons name="chevron-back" size={18} color={appColors.link} />
+              <ThemedText type="defaultSemiBold" style={styles.receiptsPlotBackText}>
+                {t('harvest_receipts_all_plots')}
+              </ThemedText>
+            </Pressable>
+          ) : null}
           <DeliveryReceiptsBrowser
             t={t}
             vouchers={vouchers}
             mergedPlots={mergedHarvestPlots}
             deviceReceipts={deviceReceipts}
+            plotIdFilter={receiptsPlotScope?.filterId ?? null}
+            plotIdAliases={receiptsPlotScope?.aliasIds ?? []}
+            plotNameFilter={receiptsPlotScope?.plotName ?? null}
             plotServerLinks={plotServerLinks}
             receiptFrom="harvests"
           />

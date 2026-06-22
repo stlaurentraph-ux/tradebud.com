@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
@@ -35,7 +35,6 @@ import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotTenureVerification,
-  fetchPlotsForFarmer,
   fetchVouchersForFarmer,
   type PlotTenureVerificationRecord,
 } from '@/features/api/postPlot';
@@ -84,7 +83,9 @@ import {
   tenureVerificationRequiresReupload,
 } from '@/features/compliance/plotTenureVerificationReview';
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
-import { resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { resolveBackendPlotMetaForLocal, resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
+import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { hasDuplicatePlotName } from '@/features/plots/plotNameValidation';
 import { resolveHarvestPlotPickerId, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import {
   normalizePendingHarvestReceipts,
@@ -122,6 +123,7 @@ export default function PlotDetailScreen() {
   const plotId = typeof id === 'string' ? id : '';
   const receiptRedirectRef = useRef(false);
   const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
+  const [plotServerLinksLoaded, setPlotServerLinksLoaded] = useState(false);
 
   const [active, setActive] = useState<Sub | null>((sub as Sub) ?? null);
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
@@ -143,7 +145,7 @@ export default function PlotDetailScreen() {
       plotServerLinks,
     });
   }, [plots, plotId, backendPlots, plotServerLinks]);
-  const [, setLoadingBackend] = useState(false);
+  const [loadingBackend, setLoadingBackend] = useState(true);
   const [, setBackendError] = useState<string | null>(null);
   const [backendPlotMeta, setBackendPlotMeta] = useState<{
     id: string | null;
@@ -178,10 +180,21 @@ export default function PlotDetailScreen() {
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
 
+  const plotLookupReady = !loadingBackend && plotServerLinksLoaded;
+
   const plotMapRegion = useMemo(
     () => (plot ? computeRegionFromPlot(plot) : undefined),
     [plot],
   );
+
+  useEffect(() => {
+    void loadPlotServerLinks()
+      .then((links) => {
+        setPlotServerLinks(links);
+        setPlotServerLinksLoaded(true);
+      })
+      .catch(() => setPlotServerLinksLoaded(true));
+  }, []);
 
   useEffect(() => {
     getSetting('offlineTilesEnabled')
@@ -230,6 +243,7 @@ export default function PlotDetailScreen() {
     if (!farmer?.id) {
       setBackendPlots([]);
       setBackendError(null);
+      setLoadingBackend(false);
       setBackendPlotMeta({
         id: null,
         status: 'pending_check',
@@ -241,7 +255,10 @@ export default function PlotDetailScreen() {
     }
     setLoadingBackend(true);
     setBackendError(null);
-    fetchPlotsForFarmer(farmer.id)
+    void fetchServerPlotListForUi({
+      profileFarmerId: farmer.id,
+      localPlots: plots,
+    })
       .then(async (rows) => {
         const links = await loadPlotServerLinks();
         const reconciled = reconcilePlotServerLinks(plots, rows ?? [], links);
@@ -256,6 +273,29 @@ export default function PlotDetailScreen() {
       .finally(() => setLoadingBackend(false));
   }, [farmer?.id, plots]);
 
+  const refreshBackendPlots = useCallback(
+    (force = false) => {
+      if (!farmer?.id) return Promise.resolve();
+      return fetchServerPlotListForUi({
+        profileFarmerId: farmer.id,
+        localPlots: plots,
+        force,
+      })
+        .then(async (rows) => {
+          const links = await loadPlotServerLinks();
+          const reconciled = reconcilePlotServerLinks(plots, rows ?? [], links);
+          await persistPlotServerLinks(reconciled);
+          setPlotServerLinks(reconciled);
+          setBackendPlots(rows ?? []);
+        })
+        .catch((err) => {
+          setBackendPlots([]);
+          setBackendError(err instanceof Error ? err.message : String(err));
+        });
+    },
+    [farmer?.id, plots],
+  );
+
   useEffect(() => {
     if (!plot) {
       setBackendPlotMeta({
@@ -268,23 +308,8 @@ export default function PlotDetailScreen() {
       return;
     }
     void loadPlotServerLinks().then((links) => {
-      const serverId = resolveServerPlotIdForLocal(plot, backendPlots, links);
-      const match = serverId
-        ? (backendPlots as {
-            id?: unknown;
-            status?: unknown;
-            deforestation_screening?: unknown;
-            sinaph_overlap?: boolean;
-            indigenous_overlap?: boolean;
-          }[]).find((row) => String(row?.id ?? '') === serverId)
-        : null;
-      setBackendPlotMeta({
-        id: serverId,
-        status: match?.status ?? 'pending_check',
-        deforestationScreening: match?.deforestation_screening ?? null,
-        sinaph: match?.sinaph_overlap === true,
-        indigenous: match?.indigenous_overlap === true,
-      });
+      const meta = resolveBackendPlotMetaForLocal(plot, backendPlots, links);
+      setBackendPlotMeta(meta);
     });
   }, [backendPlots, plot]);
 
@@ -304,15 +329,17 @@ export default function PlotDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      void refreshBackendPlots(false);
       void refreshTenureVerification();
-    }, [refreshTenureVerification]),
+    }, [refreshBackendPlots, refreshTenureVerification]),
   );
 
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
+      void refreshBackendPlots(true);
       void refreshTenureVerification();
     });
-  }, [refreshTenureVerification]);
+  }, [refreshBackendPlots, refreshTenureVerification]);
 
   useEffect(() => {
     if (!backendPlotId) return;
@@ -392,6 +419,7 @@ export default function PlotDetailScreen() {
           groupPlotId,
           plotName,
           t,
+          localPlots: plots,
         }),
       );
     } catch {
@@ -418,7 +446,10 @@ export default function PlotDetailScreen() {
       if (receiptRedirectRef.current) return;
       receiptRedirectRef.current = true;
       router.replace(
-        deliveryReceiptHref(receiptIdParam, from === 'harvests' ? { from: 'harvests' } : undefined),
+        deliveryReceiptHref(
+          receiptIdParam,
+          from === 'harvests' ? { from: 'harvests', receiptsPlot: plotId } : undefined,
+        ),
       );
       return;
     }
@@ -453,6 +484,17 @@ export default function PlotDetailScreen() {
     const next = renameDraft.trim();
     if (!next) {
       Alert.alert(t('warning'), t('rename_plot_empty'));
+      return;
+    }
+    if (
+      hasDuplicatePlotName({
+        plots,
+        farmerId: plot.farmerId,
+        name: next,
+        excludePlotId: plot.id,
+      })
+    ) {
+      Alert.alert(t('warning'), t('plot_name_duplicate'));
       return;
     }
     setNote(null);
@@ -1117,42 +1159,22 @@ export default function PlotDetailScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <LinearGradient
-        colors={[colors.link, colors.linkStrong]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top }]}
-      >
-        <View style={styles.headerRowCompact}>
-          <Pressable onPress={handleHeaderBack} style={styles.backPill}>
-            <Ionicons name="chevron-back" size={18} color={colors.textInverse} />
-            <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              {t('back')}
-            </ThemedText>
-          </Pressable>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
-              {active === 'photos'
-                ? t('plot_photo_vault')
-                : active === 'documents'
-                  ? t('plot_land_documents')
-                  : active === 'deliveries'
-                      ? t('plot_nav_deliveries_title')
-                      : t('plot_detail_title')}
-            </ThemedText>
-          </View>
-          <Pressable
-            onPress={openLanguagePicker}
-            accessibilityRole="button"
-            accessibilityLabel={t('language_picker_title')}
-            style={styles.langPillCompact}
-          >
-            <ThemedText type="caption" style={{ color: colors.textInverse }}>
-              {String(lang).toUpperCase()}
-            </ThemedText>
-          </Pressable>
-        </View>
-      </LinearGradient>
+      <StackGradientHeader
+        title={
+          active === 'photos'
+            ? t('plot_photo_vault')
+            : active === 'documents'
+              ? t('plot_land_documents')
+              : active === 'deliveries'
+                ? t('plot_nav_deliveries_title')
+                : t('plot_detail_title')
+        }
+        onBack={handleHeaderBack}
+        backLabel={t('back')}
+        langLabel={String(lang).toUpperCase()}
+        onLangPress={openLanguagePicker}
+        langAccessibilityLabel={t('language_picker_title')}
+      />
 
       <ThemedScrollView contentContainerStyle={styles.container}>
         {active == null ? (
@@ -1546,7 +1568,13 @@ export default function PlotDetailScreen() {
           </>
         ) : null}
 
-        {active === 'deliveries' && !plot ? (
+        {active === 'deliveries' && !plot && !plotLookupReady ? (
+          <Card variant="outlined" style={styles.harvestRowCard}>
+            <ThemedText type="caption">{t('voucher_share_loading')}</ThemedText>
+          </Card>
+        ) : null}
+
+        {active === 'deliveries' && !plot && plotLookupReady ? (
           <Card variant="outlined" style={styles.harvestRowCard}>
             <ThemedText type="defaultSemiBold">{t('plot_not_found')}</ThemedText>
             <ThemedText type="caption" style={{ marginTop: 6, color: colors.textMuted }}>
@@ -1583,12 +1611,13 @@ export default function PlotDetailScreen() {
               t={t}
               vouchers={vouchers}
               mergedPlots={harvestPlotOptions}
+              plotServerLinks={plotServerLinks}
               plotIdFilter={harvestPlotId ?? plot?.id ?? null}
               plotIdAliases={plotReceiptFilterIds}
               plotNameFilter={String(plot.name ?? t('plot_fallback'))}
               pendingReceipts={pendingHarvestReceipts}
               deviceReceipts={deviceHarvestReceipts}
-              plotServerLinks={plotServerLinks}
+              receiptFrom="plot"
             />
           </>
         ) : null}

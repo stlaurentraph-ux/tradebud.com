@@ -5,9 +5,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import {
   HEADER_GRADIENT_COLORS,
+  HEADER_GRADIENT_TEXT,
   HOME_HEADER_LOGO_PX,
   compactTabHeaderStyles,
 } from '@/constants/compactTabHeader';
+import { scaleText } from '@/features/demo/storeUiScale';
 
 export type CompactTabHeaderProps = {
   paddingTop: number;
@@ -19,7 +21,6 @@ export type CompactTabHeaderProps = {
   centerTitle?: string;
   onLanguagePress: () => void;
   languageLabel: string;
-  textInverseColor: string;
   /** Home: one row — brand, badge, and lang tops align; full text can wrap. */
   homeBrandLayout?: boolean;
 };
@@ -35,7 +36,6 @@ export function CompactTabHeader({
   centerTitle,
   onLanguagePress,
   languageLabel,
-  textInverseColor,
   homeBrandLayout = false,
 }: CompactTabHeaderProps) {
   return (
@@ -52,7 +52,7 @@ export function CompactTabHeader({
             {badge}
             <Pressable onPress={onLanguagePress} hitSlop={10}>
               <View style={compactTabHeaderStyles.langPillCompact}>
-                <ThemedText type="caption" style={{ color: textInverseColor }}>
+                <ThemedText type="caption" style={{ color: HEADER_GRADIENT_TEXT }}>
                   {languageLabel.toUpperCase()}
                 </ThemedText>
               </View>
@@ -69,7 +69,7 @@ export function CompactTabHeader({
             <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideRight]}>
               <Pressable onPress={onLanguagePress} hitSlop={10}>
                 <View style={compactTabHeaderStyles.langPillCompact}>
-                  <ThemedText type="caption" style={{ color: textInverseColor }}>
+                  <ThemedText type="caption" style={{ color: HEADER_GRADIENT_TEXT }}>
                     {languageLabel.toUpperCase()}
                   </ThemedText>
                 </View>
@@ -148,8 +148,8 @@ const homeBrandStyles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 21,
-    lineHeight: 26,
+    fontSize: scaleText(24),
+    lineHeight: scaleText(29),
     fontWeight: '700',
     includeFontPadding: false,
     marginTop: 2,

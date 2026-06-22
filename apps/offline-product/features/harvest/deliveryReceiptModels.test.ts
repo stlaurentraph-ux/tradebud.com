@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatReceiptDateLabel,
+  formatReceiptDeliverToLabel,
   formatReceiptRecipientSummary,
   formatVoucherBuyerLabel,
   groupDeliveryReceiptsByPlot,
@@ -123,6 +124,30 @@ describe('normalizePendingHarvestReceipts', () => {
     expect(rows[0]?.pendingSync).toBe(true);
     expect(rows[0]?.buyerLabel).toBe('buyer@coop.org');
   });
+
+  it('includes pending harvest rows when plot filter is empty', () => {
+    const rows = normalizePendingHarvestReceipts({
+      actions: [
+        {
+          id: 3,
+          createdAt: Date.parse('2026-06-16T12:00:00.000Z'),
+          payloadJson: JSON.stringify({
+            plotId: 'local-plot-1',
+            kg: 90,
+          }),
+        },
+      ],
+      plotIds: new Set(),
+      groupPlotId: '',
+      plotName: 'plot_fallback',
+      localPlots: [{ id: 'local-plot-1', name: 'North field' }],
+      t,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe('pending-3');
+    expect(rows[0]?.plotId).toBe('local-plot-1');
+    expect(rows[0]?.plotName).toBe('North field');
+  });
 });
 
 describe('formatReceiptRecipientSummary', () => {
@@ -209,6 +234,47 @@ describe('formatReceiptRecipientSummary', () => {
       tone: 'muted',
       showQrIcon: false,
     });
+  });
+});
+
+describe('formatReceiptDeliverToLabel', () => {
+  it('maps stale pending buyer label to qr generated when qr exists', () => {
+    expect(
+      formatReceiptDeliverToLabel(
+        {
+          buyerLabel: 'harvest_receipt_pending_sync',
+          qrCodeRef: 'QR-1',
+          pendingSync: true,
+        },
+        t,
+      ),
+    ).toBe('harvest_receipt_qr_generated');
+  });
+
+  it('shows pending sync when upload is still queued', () => {
+    expect(
+      formatReceiptDeliverToLabel(
+        {
+          buyerLabel: 'harvest_receipt_buyer_unspecified',
+          qrCodeRef: null,
+          pendingSync: true,
+        },
+        t,
+      ),
+    ).toBe('harvest_receipt_pending_sync');
+  });
+
+  it('shows buyer email on detail when qr is ready', () => {
+    expect(
+      formatReceiptDeliverToLabel(
+        {
+          buyerLabel: 'buyer@coop.org',
+          qrCodeRef: 'QR-1',
+          pendingSync: false,
+        },
+        t,
+      ),
+    ).toBe('buyer@coop.org');
   });
 });
 

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import { Brand, Radius, Spacing, Typography } from '@/constants/theme';
+import { useAppColors } from '@/features/theme/useThemedStyles';
 
 export type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info';
 export type BadgeSize = 'sm' | 'md';
@@ -13,6 +13,8 @@ export interface BadgeProps {
   style?: ViewStyle;
 }
 
+const BADGE_ON_COLOR = '#FFFFFF';
+
 export function Badge({
   variant = 'default',
   size = 'md',
@@ -20,40 +22,39 @@ export function Badge({
   icon,
   style,
 }: BadgeProps) {
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'border');
+  const colors = useAppColors();
 
   const getVariantStyles = () => {
     switch (variant) {
       case 'success':
         return {
-          backgroundColor: Brand.accent,
-          textColor: '#FFFFFF',
-          borderColor: Brand.accent,
+          backgroundColor: colors.accent,
+          textColor: BADGE_ON_COLOR,
+          borderColor: colors.accent,
         };
       case 'warning':
         return {
-          backgroundColor: '#F59E0B',
-          textColor: '#FFFFFF',
-          borderColor: '#F59E0B',
+          backgroundColor: colors.warning,
+          textColor: BADGE_ON_COLOR,
+          borderColor: colors.warning,
         };
       case 'error':
         return {
           backgroundColor: Brand.accentDark,
-          textColor: '#FFFFFF',
+          textColor: BADGE_ON_COLOR,
           borderColor: Brand.accentDark,
         };
       case 'info':
         return {
-          backgroundColor: '#E5E7EB',
-          textColor: '#1F2937',
-          borderColor: '#D1D5DB',
+          backgroundColor: colors.chipBackground,
+          textColor: colors.text,
+          borderColor: colors.chipBorder,
         };
       default:
         return {
-          backgroundColor: '#F7FAFC',
-          textColor,
-          borderColor,
+          backgroundColor: colors.backgroundSecondary,
+          textColor: colors.text,
+          borderColor: colors.border,
         };
     }
   };
@@ -172,4 +173,3 @@ const styles = StyleSheet.create({
     ...Typography.sizes.sm,
   },
 });
-

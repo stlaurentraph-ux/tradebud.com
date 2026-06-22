@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   reconcilePlotServerLinks,
+  resolveBackendPlotMetaForLocal,
   resolveConfirmedServerPlotIdForLocal,
   resolveServerPlotIdForLocal,
 } from './plotServerLink';
@@ -22,6 +23,47 @@ describe('plotServerLink', () => {
   it('trusts persisted link when backend list is temporarily empty', () => {
     const links = { 'local-1': 'server-9' };
     expect(resolveServerPlotIdForLocal(localPlot, [], links)).toBe('server-9');
+  });
+
+  it('resolves compliance meta only when server row is present', () => {
+    const backendPlots = [
+      {
+        id: 'server-9',
+        name: 'Renamed on device',
+        status: 'deforestation_clear',
+        deforestation_screening: { signalTier: 'green', screenedAt: '2026-06-18T12:00:00.000Z' },
+      },
+    ];
+    const links = { 'local-1': 'server-9' };
+    expect(resolveBackendPlotMetaForLocal(localPlot, backendPlots, links)).toEqual({
+      id: 'server-9',
+      status: 'deforestation_clear',
+      deforestationScreening: backendPlots[0].deforestation_screening,
+      sinaph: false,
+      indigenous: false,
+    });
+  });
+
+  it('returns empty compliance meta when backend list is temporarily empty', () => {
+    const links = { 'local-1': 'server-9' };
+    expect(resolveBackendPlotMetaForLocal(localPlot, [], links)).toEqual({
+      id: null,
+      status: 'pending_check',
+      deforestationScreening: null,
+      sinaph: false,
+      indigenous: false,
+    });
+  });
+
+  it('returns empty compliance meta for stale persisted links', () => {
+    const links = { 'local-1': 'missing-on-server' };
+    expect(resolveBackendPlotMetaForLocal(localPlot, [{ id: 'server-9', name: 'Other' }], links)).toEqual({
+      id: null,
+      status: 'pending_check',
+      deforestationScreening: null,
+      sinaph: false,
+      indigenous: false,
+    });
   });
 
   it('reconciles links from client id stored in server name', () => {

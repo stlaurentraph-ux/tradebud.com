@@ -18,14 +18,14 @@ export type BackupStatusDisplay = {
   needsAttention: boolean;
 };
 
-/** Farmer-facing backup pill in Settings — avoids transient checking/pending flicker. */
+/** Short backup status chip — detail lives in the card body, not the pill. */
 export function resolveBackupStatusDisplay(
   input: BackupStatusDisplayInput,
   t: TranslateFn,
 ): BackupStatusDisplay {
   if (input.isSyncInProgress) {
     return {
-      label: t('settings_backup_status_syncing'),
+      label: t('backup_pill_syncing'),
       needsAttention: true,
     };
   }
@@ -33,9 +33,7 @@ export function resolveBackupStatusDisplay(
   if (!input.isSignedIn) {
     const needsAttention = input.totalSyncPending > 0;
     return {
-      label: needsAttention
-        ? t('settings_backup_status_pending', { n: input.totalSyncPending })
-        : t('up_to_date'),
+      label: needsAttention ? t('backup_pill_pending') : t('backup_pill_ok'),
       needsAttention,
     };
   }
@@ -51,7 +49,7 @@ export function resolveBackupStatusDisplay(
     const needsAttention = input.totalSyncPending > 0;
     return {
       label: needsAttention
-        ? t('backup_waiting', { n: input.totalSyncPending })
+        ? t('backup_pill_pending')
         : resolveSyncConnectivityUserMessage(t, input.syncApiBaseUrl),
       needsAttention: true,
     };
@@ -63,20 +61,20 @@ export function resolveBackupStatusDisplay(
     !input.hasSettledMetrics
   ) {
     return {
-      label: t('settings_backup_status_checking'),
+      label: t('backup_pill_checking'),
       needsAttention: true,
     };
   }
 
   if (input.totalSyncPending > 0) {
     return {
-      label: t('backup_waiting', { n: input.totalSyncPending }),
+      label: t('backup_pill_pending'),
       needsAttention: true,
     };
   }
 
   return {
-    label: t('backup_up_to_date'),
+    label: t('backup_pill_ok'),
     needsAttention: false,
   };
 }
