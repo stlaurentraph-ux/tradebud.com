@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.O.2",
+  "apiUrlDefault": "https://api.tracebud.com/api",
+  "farmerA": {
+    "label": "Field tenant smoke probe A",
+    "role": "farmer",
+    "emailSecret": "FIELD_TENANT_SMOKE_FARMER_A_EMAIL",
+    "passwordSecret": "FIELD_TENANT_SMOKE_FARMER_A_PASSWORD",
+    "recommendedEmail": "field+tenant-smoke-a@tracebud.com"
+  },
+  "farmerB": {
+    "label": "Field tenant smoke probe B",
+    "role": "farmer",
+    "farmerIdSecret": "FIELD_TENANT_SMOKE_FARMER_B_ID",
+    "plotIdSecret": "FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID",
+    "recommendedEmail": "field+tenant-smoke-b@tracebud.com"
+  },
+  "probes": [
+    {
+      "id": "foreign_farmer_list",
+      "method": "GET",
+      "pathTemplate": "/v1/plots?farmerId={farmerBId}&scope=farmer",
+      "actor": "farmerA",
+      "expectStatus": 403
+    },
+    {
+      "id": "foreign_plot_patch",
+      "method": "PATCH",
+      "pathTemplate": "/v1/plots/{plotBId}",
+      "actor": "farmerA",
+      "expectStatusMin": 400,
+      "body": { "name": "Tenant probe" }
+    }
+  ],
+  "githubSecretsRequired": [
+    "FIELD_TENANT_SMOKE_FARMER_A_EMAIL",
+    "FIELD_TENANT_SMOKE_FARMER_A_PASSWORD",
+    "FIELD_TENANT_SMOKE_FARMER_B_ID",
+    "FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID"
+  ],
+  "githubSecretsShared": [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY"
+  ],
+  "githubSecretsOptional": [
+    "FIELD_TENANT_SMOKE_API_URL"
+  ],
+  "ciEnv": {
+    "strictFlag": "FIELD_TENANT_SMOKE_STRICT",
+    "strictValue": "1"
+  },
+  "smokeScript": "apps/offline-product/scripts/field-tenant-isolation-smoke.mjs",
+  "guardScript": "apps/offline-product/scripts/field-tenant-isolation-guard.mjs",
+  "runbookFile": "product-os/04-quality/golden-field-tenant-smoke.md"
+}

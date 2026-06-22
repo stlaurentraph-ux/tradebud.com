@@ -61,7 +61,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Offline annex (`offline-automation-runbook.md`)
 
-- *(1.O + 3.O.1 + 4.8 complete — **4.O.1** mobile SLO weekly gate + tenure Maestro nightly in PR)*
+- *(1.O + 3.O.1 + 4.8 + 4.O.1 + 5.10 complete — **4.O.2** blocking field tenant smoke in PR)*
 
 ### Later phases (parked — do not start until Bundle D merged)
 

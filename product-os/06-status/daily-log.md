@@ -1,3 +1,14 @@
+### 2026-06-22 (offline automation — 4.O.2 blocking field tenant smoke)
+
+- **Manifest** — `golden-field-tenant-smoke.json` + runbook for dedicated farmer pair (`field+tenant-smoke-a/b@tracebud.com`).
+- **CI** — Expo `app` job runs `qa:tenant-isolation:assert` + blocking `qa:tenant-isolation` with `FIELD_TENANT_SMOKE_STRICT=1` (no silent skip).
+- **Human** — create golden farmers on production API; add `FIELD_TENANT_SMOKE_*` GitHub secrets per runbook.
+
+### 2026-06-22 (offline — home welcome copy)
+
+- **Home card** — Context-aware greeting: `Welcome back,` + name when known; `Hello,` + `Add your name` when profile name is missing; new-user hint unchanged (`Your plots are saved on this phone`).
+- **i18n** — `home_welcome_hello` / `home_welcome_add_name` in `en.json`, `canonical-en-overrides.json`, and all farmer locale packs.
+
 ### 2026-06-22 (offline automation — Maestro seed + tighter asserts)
 
 - **Bootstrap** — `maestro-ci-bootstrap-simulator.sh` launches app, runs `seed-maestro-simulator.mjs` (DB wait/retry), terminates before flows; `MAESTRO_SEED_SKIP=1` escape hatch.
