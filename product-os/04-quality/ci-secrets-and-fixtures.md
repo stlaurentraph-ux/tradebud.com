@@ -20,9 +20,9 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `TRACEBUD_SMOKE_TENANT_ID` | 2.7, 4.4–4.7 | Playwright / smoke assertions | Optional — default `tenant_rwanda_001` per manifest |
 | `TRACEBUD_SMOKE_ROLE` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `compliance_manager` |
 | `TRACEBUD_SMOKE_STEP_KEY` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `create_first_campaign` |
-| `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7 | release health gate | Sentry API token with `project:read` |
-| `SENTRY_RELEASE_HEALTH_ORG` | 4.7 | release health gate | Sentry org slug |
-| `SENTRY_RELEASE_HEALTH_PROJECT` | 4.7 | release health gate | Sentry project slug (e.g. dashboard or backend) |
+| `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7 | release health gate | Sentry API token with `project:read` ([create](https://tracebud.sentry.io/settings/auth-tokens/)) |
+| `SENTRY_RELEASE_HEALTH_ORG` | 4.7 | release health gate | Org slug: `tracebud` |
+| `SENTRY_RELEASE_HEALTH_PROJECT` | 4.7 | release health gate | Project slug: `javascript-nextjs` (dashboard + marketing web) |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | Vercel Remote Cache token ([create](https://vercel.com/account/tokens) or `npx turbo login`) |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
 | `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |

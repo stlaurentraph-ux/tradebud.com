@@ -178,7 +178,9 @@ async function collectSentryCleanWindow(manifest, signalDef) {
 
   const windowMinutes = manifest.thresholds?.sentryWindowMinutes ?? 15;
   const maxIssues = manifest.thresholds?.sentryMaxNewIssues ?? 0;
-  const url = `https://sentry.io/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/issues/?query=is:unresolved&statsPeriod=${windowMinutes}m`;
+  const apiBase = (process.env.SENTRY_RELEASE_HEALTH_API_BASE ?? 'https://sentry.io').replace(/\/$/, '');
+  const query = encodeURIComponent(`is:unresolved firstSeen:-${windowMinutes}m`);
+  const url = `${apiBase}/api/0/projects/${encodeURIComponent(org)}/${encodeURIComponent(project)}/issues/?query=${query}`;
 
   try {
     const response = await fetch(url, {
@@ -188,7 +190,8 @@ async function collectSentryCleanWindow(manifest, signalDef) {
       },
     });
     if (!response.ok) {
-      return signalResult('fail', `Sentry API ${response.status}`);
+      const detail = (await response.text()).trim().slice(0, 160);
+      return signalResult('fail', `Sentry API ${response.status}${detail ? `: ${detail}` : ''}`);
     }
     const issues = await response.json();
     const count = Array.isArray(issues) ? issues.length : 0;

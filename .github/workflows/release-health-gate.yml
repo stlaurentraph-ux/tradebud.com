@@ -42,6 +42,8 @@ jobs:
           SENTRY_RELEASE_HEALTH_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_HEALTH_AUTH_TOKEN }}
           SENTRY_RELEASE_HEALTH_ORG: ${{ secrets.SENTRY_RELEASE_HEALTH_ORG }}
           SENTRY_RELEASE_HEALTH_PROJECT: ${{ secrets.SENTRY_RELEASE_HEALTH_PROJECT }}
+          # Tracebud org is hosted in Sentry EU (de.sentry.io), not sentry.io.
+          SENTRY_RELEASE_HEALTH_API_BASE: https://de.sentry.io
         run: npm run release:health:collect -- --report=release-health-report.json
 
       - name: Evaluate release health gate

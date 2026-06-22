@@ -42,8 +42,10 @@ npm run release:health:gate -- --report=product-os/04-quality/release-health-rep
 | `UPTIME_BACKEND_BASE_URL` | Backend uptime probe override |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment Protection bypass for smoke/uptime |
 | `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | Sentry API token with `project:read` |
-| `SENTRY_RELEASE_HEALTH_ORG` | Sentry org slug |
-| `SENTRY_RELEASE_HEALTH_PROJECT` | Sentry project slug |
+| `SENTRY_RELEASE_HEALTH_ORG` | Sentry org slug (`tracebud`) |
+| `SENTRY_RELEASE_HEALTH_PROJECT` | Sentry project slug (`javascript-nextjs`) |
+
+**EU region:** Tracebud is on `de.sentry.io`. The workflow sets `SENTRY_RELEASE_HEALTH_API_BASE=https://de.sentry.io` (not a secret).
 
 Document names only in PRs — never commit token values.
 
