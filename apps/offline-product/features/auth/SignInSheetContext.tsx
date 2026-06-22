@@ -82,7 +82,11 @@ function buildBackupOutcomeMessage(backup: RunAutoBackupResult | null, t: (key: 
   }
 
   const parts: string[] = [];
-  const { plotResult, queueResult } = backup;
+  const { plotResult, queueResult, plotsRestored } = backup;
+
+  if ((plotsRestored ?? 0) > 0) {
+    parts.push(t('sync_result_plots_restored', { n: plotsRestored ?? 0 }));
+  }
 
   if (plotResult?.fetchFailed) {
     parts.push(t('sync_plots_fetch_failed'));
@@ -113,7 +117,7 @@ function buildBackupOutcomeMessage(backup: RunAutoBackupResult | null, t: (key: 
         failed: plotResult.failed,
       }),
     );
-  } else if (plotResult && plotResult.unsyncedBefore === 0) {
+  } else if (plotResult && plotResult.unsyncedBefore === 0 && (plotsRestored ?? 0) === 0) {
     parts.push(t('sync_plots_already_synced'));
   }
 

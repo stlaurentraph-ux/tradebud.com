@@ -52,6 +52,8 @@ function emptyQueueResult(overrides?: Partial<ProcessPendingSyncQueueResult>): P
 export type RunAutoBackupResult = {
   plotResult: UploadUnsyncedPlotsResult | null;
   queueResult: ProcessPendingSyncQueueResult;
+  plotsRestored?: number;
+  syncResultMessage?: string;
 };
 
 /** Upload unsynced plots and optionally drain the offline queue (harvests, photos, documents). */
@@ -119,6 +121,8 @@ export async function runAutoBackup(params: {
           return {
             plotResult: pipeline.lastPlotUploadResult,
             queueResult,
+            plotsRestored: pipeline.plotsRestored,
+            syncResultMessage: pipeline.syncResultMessage,
           };
         } finally {
           sessionOpened.end();
