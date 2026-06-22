@@ -1150,6 +1150,9 @@ jobs:
         run: npm run qa:tenant-isolation:assert
 
       - name: Field tenant isolation smoke (blocking)
+        # Dependabot PRs cannot access repo secrets; the static wiring guard above
+        # still validates isolation code paths for all actors.
+        if: github.actor != 'dependabot[bot]'
         env:
           FIELD_TENANT_SMOKE_STRICT: "1"
           FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
