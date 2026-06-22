@@ -61,7 +61,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Offline annex (`offline-automation-runbook.md`)
 
-- *(1.O + 3.O.1 complete — next offline slice parked under Phase 4 / nightly)*
+- *(1.O + 3.O.1 + 4.8 complete — **4.O.1** mobile SLO weekly gate + tenure Maestro nightly in PR)*
 
 ### Later phases (parked — do not start until Bundle D merged)
 
@@ -79,7 +79,8 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [ ] **3.5** Dependabot babysit automation
 - [ ] **3.7–3.10** CODEOWNERS enforce, stale PR, PR templates, auto-merge fixes
 - [x] **4.9–4.10, 4.M.1–4.M.2** — Phase 4 complete (PRs #176–#179)
-- [ ] **5.1–5.10** — see automation-ops-plan §Phase 5
+- [ ] **5.1–5.9** — see automation-ops-plan §Phase 5
+- [x] **5.10** EAS skew + production OTA strict Maestro gate — PR (branch `chore/offline-automation-slo-maestro`)
 
 ---
 

@@ -32,6 +32,12 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
 | `EXPO_TOKEN` | 3.O.1, 4.8 | offline Maestro golden path + nightly smoke | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
+| `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7, 4.O.1 | release health gate + offline mobile SLO gate | Also reused by `offline-mobile-slo-gate.yml` for `tracebud/react-native` |
+| `FIELD_TENANT_SMOKE_API_URL` | 4.O.1 | Expo CI tenant isolation smoke | Optional — defaults to production API when unset |
+| `FIELD_TENANT_SMOKE_FARMER_A_EMAIL` | 4.O.1 | Expo CI tenant isolation smoke | Farmer A credentials for cross-tenant probe |
+| `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD` | 4.O.1 | Expo CI tenant isolation smoke | Farmer A password |
+| `FIELD_TENANT_SMOKE_FARMER_B_ID` | 4.O.1 | Expo CI tenant isolation smoke | Farmer B uuid (must not be readable by farmer A) |
+| `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` | 4.O.1 | Expo CI tenant isolation smoke | Farmer B plot uuid for PATCH denial probe |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
 

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "slice": "4.O.1",
+  "statsPeriod": "7d",
+  "environment": "production",
+  "thresholds": {
+    "minSessions": 100,
+    "minCrashFreeRatePct": 99.0,
+    "minSyncSuccessRatePct": 98.0,
+    "maxAuthErrorRatePct": 2.0,
+    "maxApiTimeoutRatePct": 2.0
+  },
+  "sentry": {
+    "apiBaseEnv": "MOBILE_SLO_SENTRY_API_BASE",
+    "apiBaseDefault": "https://de.sentry.io",
+    "authTokenEnv": "MOBILE_SLO_SENTRY_AUTH_TOKEN",
+    "authTokenFallbackEnv": "SENTRY_RELEASE_HEALTH_AUTH_TOKEN",
+    "orgEnv": "MOBILE_SLO_SENTRY_ORG",
+    "orgDefault": "tracebud",
+    "projectEnv": "MOBILE_SLO_SENTRY_PROJECT",
+    "projectDefault": "react-native"
+  },
+  "exampleReport": "apps/offline-product/release-health-report.example.json",
+  "workflowFile": ".github/workflows/offline-mobile-slo-gate.yml"
+}

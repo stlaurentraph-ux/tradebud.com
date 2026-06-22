@@ -159,6 +159,46 @@ export function formatReceiptDateLabel(createdAt: string | null): string {
   });
 }
 
+export type ReceiptRecipientSummary = {
+  label: string;
+  tone: 'default' | 'pending' | 'qr' | 'muted';
+  showQrIcon: boolean;
+};
+
+/** Short label for receipt list rows (buyer email/org, QR status, or upload state). */
+export function formatReceiptRecipientSummary(
+  receipt: Pick<DeliveryReceiptRecord, 'buyerLabel' | 'qrCodeRef' | 'pendingSync'>,
+  t: TranslateFn,
+): ReceiptRecipientSummary {
+  if (receipt.qrCodeRef?.trim()) {
+    const genericQr = receipt.buyerLabel === t('harvest_receipt_qr_generated');
+    const genericAssigned = receipt.buyerLabel === t('harvest_receipt_buyer_assigned');
+    const stalePending = receipt.buyerLabel === t('harvest_receipt_pending_sync');
+    if (genericQr || genericAssigned || stalePending) {
+      return {
+        label: genericAssigned
+          ? t('harvest_receipt_buyer_assigned')
+          : t('harvest_receipt_qr_generated'),
+        tone: 'qr',
+        showQrIcon: true,
+      };
+    }
+    return { label: receipt.buyerLabel, tone: 'qr', showQrIcon: true };
+  }
+  if (receipt.pendingSync) {
+    return {
+      label: t('harvest_receipt_pending_sync'),
+      tone: 'pending',
+      showQrIcon: false,
+    };
+  }
+  return {
+    label: t('harvest_receipt_qr_generating'),
+    tone: 'muted',
+    showQrIcon: false,
+  };
+}
+
 type PendingHarvestPayload = {
   plotId?: string;
   kg?: number;

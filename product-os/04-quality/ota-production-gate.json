@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "slice": "5.10",
+  "channels": {
+    "preview": "preview",
+    "production": "production"
+  },
+  "runtimeVersionPolicy": "appVersion",
+  "productionMaestroFlows": [
+    {
+      "id": "settings_sync",
+      "flowFile": "settings-sync-smoke.yaml",
+      "required": true,
+      "description": "Golden path — Settings sync CTA"
+    },
+    {
+      "id": "land_title_photo",
+      "flowFile": "land-title-photo.yaml",
+      "required": false,
+      "description": "Plot documents land-title entry"
+    },
+    {
+      "id": "mark_three_corners",
+      "flowFile": "mark-three-corners.yaml",
+      "required": false,
+      "description": "Mapping walk / mark corners entry"
+    }
+  ],
+  "nightlyOptionalFlows": [
+    {
+      "id": "mark_three_corners",
+      "flowFile": "mark-three-corners.yaml",
+      "description": "Mapping smoke — optional nightly (may flake without seeded plot)"
+    }
+  ],
+  "workflowFile": ".github/workflows/offline-ota-production-gate.yml",
+  "exampleReport": "apps/offline-product/release-health-report.example.json"
+}

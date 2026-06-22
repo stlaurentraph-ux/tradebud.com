@@ -96,6 +96,14 @@ function main() {
   const { reportPath } = parseArgs(process.argv.slice(2));
   const thresholds = loadThresholdsFromEnv();
   const { absolutePath, parsed: report } = readReport(reportPath);
+
+  if (report.skipped) {
+    console.log(`Rollout SLO report: ${absolutePath}`);
+    console.log(`SKIP — ${report.skipReason ?? 'collector skipped'}`);
+    console.log('Rollout SLO gate skipped (no Sentry credentials).');
+    return;
+  }
+
   const checks = evaluate(report, thresholds);
 
   console.log(`Rollout SLO report: ${absolutePath}`);

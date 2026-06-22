@@ -1,0 +1,85 @@
+name: Offline mobile SLO gate
+
+on:
+  schedule:
+    # Weekly field-app health — Monday 10:00 UTC (after release-health gate)
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  slo-gate:
+    name: Mobile rollout SLO gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/offline-product/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install offline app dependencies
+        working-directory: apps/offline-product
+        run: npm ci
+
+      - name: Mobile SLO wiring guard
+        working-directory: apps/offline-product
+        run: npm run mobile:slo:assert
+
+      - name: Collect mobile rollout SLO report
+        working-directory: apps/offline-product
+        env:
+          MOBILE_SLO_SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_HEALTH_AUTH_TOKEN }}
+          MOBILE_SLO_SENTRY_ORG: tracebud
+          MOBILE_SLO_SENTRY_PROJECT: react-native
+          MOBILE_SLO_SENTRY_API_BASE: https://de.sentry.io
+        run: npm run mobile:slo:collect -- --report=mobile-rollout-slo-report.json
+
+      - name: Evaluate mobile rollout SLO gate
+        working-directory: apps/offline-product
+        run: npm run mobile:slo:gate -- --report=mobile-rollout-slo-report.json
+
+      - name: Publish mobile SLO summary
+        if: always()
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const reportPath = 'apps/offline-product/mobile-rollout-slo-report.json';
+          if (!fs.existsSync(reportPath)) {
+            console.log('No mobile SLO report artifact.');
+            process.exit(0);
+          }
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+          if (report.skipped) {
+            console.log(`## Mobile rollout SLO — SKIP\n\n${report.skipReason}`);
+            process.exit(0);
+          }
+          console.log('## Mobile rollout SLO');
+          console.log(`- window: ${report.window}`);
+          console.log(`- project: ${report.project} (${report.environment})`);
+          console.log(`- sessions: ${report.sessions}`);
+          console.log(`- crashFreeRatePct: ${report.crashFreeRatePct}`);
+          console.log(`- syncSuccessRatePct: ${report.syncSuccessRatePct}`);
+          console.log(`- authErrorRatePct: ${report.authErrorRatePct}`);
+          console.log(`- apiTimeoutRatePct: ${report.apiTimeoutRatePct}`);
+          NODE
+
+      - name: Upload mobile SLO report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-rollout-slo-report
+          path: apps/offline-product/mobile-rollout-slo-report.json
+          if-no-files-found: ignore

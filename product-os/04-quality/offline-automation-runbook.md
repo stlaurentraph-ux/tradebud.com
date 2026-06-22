@@ -99,6 +99,43 @@ Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestr
 
 ---
 
+## Mobile rollout SLO (4.O.1)
+
+Weekly field-app health without Vercel/marketing smoke. Uses Sentry `tracebud/react-native` session stats + analytics failure proxies.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run mobile:slo:collect -- --report=mobile-rollout-slo-report.json` | Pull Sentry metrics (skips when token unset) |
+| `npm run mobile:slo:gate -- --report=mobile-rollout-slo-report.json` | Evaluate thresholds (`release-rollout-slo-gate.mjs`) |
+| `npm run mobile:slo:assert` | CI wiring guard |
+
+**Workflow:** `.github/workflows/offline-mobile-slo-gate.yml` — Monday 10:00 UTC (reuses `SENTRY_RELEASE_HEALTH_AUTH_TOKEN`).
+
+**Manifest:** `product-os/04-quality/mobile-rollout-slo.json`
+
+**Nightly Maestro:** `tenure-evidence.yaml` + `mark-three-corners.yaml` in slice 4.8 manifest (4 flows nightly).
+
+---
+
+## Production OTA gate (5.10)
+
+EAS skew protection + strict Maestro gate before production OTA.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run ota:skew:assert` | runtimeVersion + channel wiring + native fingerprint (+ optional EAS probe) |
+| `npm run ota:production:preflight` | Full local gate before production OTA (sign-off required) |
+| `npm run update:production:safe` | Preflight + `eas update` to production channel |
+| `npm run ota:production:assert` | CI wiring guard |
+
+**Workflow:** `.github/workflows/offline-ota-production-gate.yml` — manual dispatch; Linux guards + macOS Maestro.
+
+**Manifest:** `product-os/04-quality/ota-production-gate.json`
+
+**Nightly Maestro:** `mark-three-corners.yaml` added (4 flows).
+
+---
+
 ## Agent rules
 
 - **Lane 3** waits while **1.O.*** guardrails PR is open on `apps/offline-product/`.

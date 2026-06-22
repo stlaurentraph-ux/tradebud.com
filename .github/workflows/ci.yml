@@ -1140,6 +1140,23 @@ jobs:
       - name: Maestro nightly smoke guard
         run: npm run qa:maestro:nightly:assert
 
+      - name: Mobile rollout SLO wiring guard
+        run: npm run mobile:slo:assert
+
+      - name: OTA production gate wiring guard
+        run: npm run ota:production:assert
+
+      - name: Tenant isolation smoke (optional)
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FIELD_TENANT_SMOKE_FARMER_A_EMAIL: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_EMAIL }}
+          FIELD_TENANT_SMOKE_FARMER_A_PASSWORD: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_PASSWORD }}
+          FIELD_TENANT_SMOKE_FARMER_B_ID: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_B_ID }}
+          FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID }}
+        run: npm run qa:tenant-isolation
+
       - name: Queue i18n smoke
         run: npm run i18n:queue:smoke
 

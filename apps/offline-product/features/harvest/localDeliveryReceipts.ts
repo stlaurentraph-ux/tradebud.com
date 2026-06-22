@@ -92,7 +92,7 @@ export function normalizeLocalDeliveryReceipts(
 }
 
 export function mergeDeliveryReceiptLists(
-  ...lists: readonly DeliveryReceiptRecord[][]
+  ...lists: readonly (readonly DeliveryReceiptRecord[])[]
 ): DeliveryReceiptRecord[] {
   const seen = new Set<string>();
   const merged: DeliveryReceiptRecord[] = [];
@@ -110,23 +110,176 @@ export function mergeDeliveryReceiptLists(
   });
 }
 
-function receiptDedupeKey(row: DeliveryReceiptRecord): string {
+function receiptDedupeKey(row: DeliveryReceiptRecord, canonicalPlotIds?: Map<string, string>): string {
+  const plotId = canonicalPlotIds
+    ? canonicalPlotId(row.plotId, canonicalPlotIds)
+    : row.plotId.trim();
   const minute = row.createdAt ? new Date(row.createdAt).toISOString().slice(0, 16) : row.id;
-  return `${row.plotId}:${Math.round(row.kg)}:${minute}`;
+  return `${plotId}:${Math.round(row.kg)}:${minute}`;
 }
 
-export function dedupeDeliveryReceipts(rows: readonly DeliveryReceiptRecord[]): DeliveryReceiptRecord[] {
+function receiptRowScore(row: DeliveryReceiptRecord): number {
+  return (row.pendingSync ? 0 : 2) + (row.qrCodeRef?.trim() ? 1 : 0);
+}
+
+const RECEIPT_VOUCHER_MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+export function buildPlotIdCanonicalMap(
+  plotServerLinks: PlotServerLinks,
+  plotIds: Iterable<string> = [],
+): Map<string, string> {
+  const map = new Map<string, string>();
+
+  const resolveCanonical = (id: string): string => {
+    const trimmed = id.trim();
+    if (!trimmed) return '';
+    const linked = plotServerLinks[trimmed]?.trim();
+    if (linked) return linked;
+    return trimmed;
+  };
+
+  for (const [localId, serverId] of Object.entries(plotServerLinks)) {
+    const canonical = resolveCanonical(serverId || localId);
+    if (localId.trim()) map.set(localId.trim(), canonical);
+    if (serverId?.trim()) map.set(serverId.trim(), canonical);
+  }
+
+  for (const plotId of plotIds) {
+    const trimmed = String(plotId).trim();
+    if (!trimmed) continue;
+    if (!map.has(trimmed)) {
+      map.set(trimmed, resolveCanonical(trimmed));
+    }
+  }
+
+  return map;
+}
+
+function canonicalPlotId(plotId: string, canonicalPlotIds: Map<string, string>): string {
+  const trimmed = plotId.trim();
+  return canonicalPlotIds.get(trimmed) ?? trimmed;
+}
+
+function findMatchingSyncedReceipt(
+  row: DeliveryReceiptRecord,
+  synced: readonly DeliveryReceiptRecord[],
+  canonicalPlotIds: Map<string, string>,
+): DeliveryReceiptRecord | null {
+  const plot = canonicalPlotId(row.plotId, canonicalPlotIds);
+  const rowMs = row.createdAt ? new Date(row.createdAt).getTime() : null;
+
+  let best: DeliveryReceiptRecord | null = null;
+  let bestDelta = Number.POSITIVE_INFINITY;
+
+  for (const candidate of synced) {
+    if (canonicalPlotId(candidate.plotId, canonicalPlotIds) !== plot) continue;
+    if (Math.abs(candidate.kg - row.kg) > 0.5) continue;
+    if (!candidate.qrCodeRef?.trim()) continue;
+
+    const candidateMs = candidate.createdAt ? new Date(candidate.createdAt).getTime() : null;
+    const delta =
+      rowMs != null && candidateMs != null
+        ? Math.abs(candidateMs - rowMs)
+        : Number.POSITIVE_INFINITY;
+    if (delta > RECEIPT_VOUCHER_MATCH_WINDOW_MS) continue;
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+function enrichDeliveryReceiptsWithSynced(
+  rows: readonly DeliveryReceiptRecord[],
+  synced: readonly DeliveryReceiptRecord[],
+  canonicalPlotIds: Map<string, string>,
+): DeliveryReceiptRecord[] {
+  return rows.map((row) => {
+    if (row.qrCodeRef?.trim()) {
+      return row.pendingSync ? { ...row, pendingSync: false } : row;
+    }
+
+    const match = findMatchingSyncedReceipt(row, synced, canonicalPlotIds);
+    if (!match) return row;
+
+    return {
+      ...row,
+      qrCodeRef: match.qrCodeRef,
+      buyerLabel: match.buyerLabel || row.buyerLabel,
+      pendingSync: false,
+      plotId: match.plotId || row.plotId,
+      plotName: match.plotName || row.plotName,
+    };
+  });
+}
+
+/** Merge device, pending, and server receipts; attach QR from vouchers; collapse duplicates. */
+export function enrichAndDedupeDeliveryReceipts(params: {
+  deviceReceipts?: readonly DeliveryReceiptRecord[];
+  pendingReceipts?: readonly DeliveryReceiptRecord[];
+  synced: readonly DeliveryReceiptRecord[];
+  plotServerLinks?: PlotServerLinks;
+}): DeliveryReceiptRecord[] {
+  const merged = mergeDeliveryReceiptLists(
+    params.deviceReceipts ?? [],
+    params.pendingReceipts ?? [],
+    params.synced,
+  );
+  const canonicalPlotIds = buildPlotIdCanonicalMap(
+    params.plotServerLinks ?? {},
+    merged.map((row) => row.plotId),
+  );
+  const enriched = enrichDeliveryReceiptsWithSynced(merged, params.synced, canonicalPlotIds);
+
   const seen = new Map<string, DeliveryReceiptRecord>();
-  for (const row of rows) {
-    const key = receiptDedupeKey(row);
+  for (const row of enriched) {
+    const key = receiptDedupeKey(row, canonicalPlotIds);
     const existing = seen.get(key);
     if (!existing) {
       seen.set(key, row);
       continue;
     }
-    const existingScore = (existing.pendingSync ? 0 : 2) + (existing.qrCodeRef ? 1 : 0);
-    const nextScore = (row.pendingSync ? 0 : 2) + (row.qrCodeRef ? 1 : 0);
+    const nextScore = receiptRowScore(row);
+    const existingScore = receiptRowScore(existing);
     if (nextScore > existingScore) {
+      seen.set(key, row);
+      continue;
+    }
+    if (
+      nextScore === existingScore &&
+      row.id.startsWith('harvest-') &&
+      !existing.id.startsWith('harvest-')
+    ) {
+      seen.set(key, row);
+    }
+  }
+
+  return [...seen.values()].sort((a, b) => {
+    const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bt - at;
+  });
+}
+
+export function dedupeDeliveryReceipts(
+  rows: readonly DeliveryReceiptRecord[],
+  options?: { plotServerLinks?: PlotServerLinks },
+): DeliveryReceiptRecord[] {
+  const canonicalPlotIds = buildPlotIdCanonicalMap(
+    options?.plotServerLinks ?? {},
+    rows.map((row) => row.plotId),
+  );
+  const seen = new Map<string, DeliveryReceiptRecord>();
+  for (const row of rows) {
+    const key = receiptDedupeKey(row, canonicalPlotIds);
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, row);
+      continue;
+    }
+    if (receiptRowScore(row) > receiptRowScore(existing)) {
       seen.set(key, row);
     }
   }

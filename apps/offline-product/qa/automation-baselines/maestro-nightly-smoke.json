@@ -13,6 +13,16 @@
       "id": "land_title_photo",
       "flowFile": "land-title-photo.yaml",
       "description": "Plot documents land-title upload entry smoke"
+    },
+    {
+      "id": "tenure_evidence",
+      "flowFile": "tenure-evidence.yaml",
+      "description": "Plot documents tenure evidence section entry smoke"
+    },
+    {
+      "id": "mark_three_corners",
+      "flowFile": "mark-three-corners.yaml",
+      "description": "Mapping mark-corners entry smoke (optional plot seeding)"
     }
   ]
 }

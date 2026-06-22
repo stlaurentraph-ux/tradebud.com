@@ -2,6 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline automation **5.10** (2026-06-22): EAS OTA skew guard, production OTA preflight + `update:production:safe`, offline-ota-production-gate workflow, mark-three-corners nightly.
+- Offline automation **4.O.1** (2026-06-22): Maestro nightly adds `tenure-evidence.yaml`; mobile rollout SLO collector + weekly workflow + CI guard; optional tenant-isolation smoke in Expo CI job.
 - Automation **3.3** (2026-06-22, PR #194): weekly health Cursor Automation runbook + `weekly-health-summary` command + CI guard; Mon 09:30 UTC digest → `daily-log.md`.
 - Automation **3.2** (2026-06-21): Cursor Automation **Sentry staging → fix regression** (Issue created trigger; staging scope gate; Sentry MCP + fix-regression lane).
 - Automation **3.1** (2026-06-21): Cursor Automation **CI failed → fix regression** on `stlaurentraph-ux/tradebud.com` open PRs (Checks completed trigger; Sonnet; fix-regression lane).

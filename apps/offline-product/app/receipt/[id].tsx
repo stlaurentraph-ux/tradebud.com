@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,9 +16,18 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
   buildDeliveryReceiptCatalog,
-  findDeliveryReceiptById,
 } from '@/features/harvest/buildDeliveryReceiptCatalog';
 import type { DeliveryReceiptRecord } from '@/features/harvest/deliveryReceiptModels';
+import { buildMergedHarvestPlots } from '@/features/harvest/mergeHarvestPlotOptions';
+import { normalizeLocalDeliveryReceipts } from '@/features/harvest/localDeliveryReceipts';
+import { resolveDeliveryReceiptById } from '@/features/harvest/resolveDeliveryReceiptById';
+import {
+  getCachedReceipt,
+  updateCachedReceipt,
+} from '@/features/harvest/receiptNavigationCache';
+import {
+  loadLocalDeliveryReceiptsForFarmer,
+} from '@/features/state/persistence';
 import {
   syncQueuedDeliveryReceipt,
   type SyncDeliveryReceiptFeedback,
@@ -39,46 +48,86 @@ export default function DeliveryReceiptScreen() {
   const receiptId = typeof id === 'string' ? id.trim() : '';
   const justLogged = fresh === '1';
 
-  const [loading, setLoading] = useState(true);
-  const [receipt, setReceipt] = useState<DeliveryReceiptRecord | null>(null);
+  const receiptRef = useRef<DeliveryReceiptRecord | null>(null);
+  const [loading, setLoading] = useState(() => !getCachedReceipt(receiptId));
+  const [receipt, setReceipt] = useState<DeliveryReceiptRecord | null>(() =>
+    getCachedReceipt(receiptId),
+  );
   const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
   const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<SyncDeliveryReceiptFeedback | null>(null);
 
-  const refreshReceipt = useCallback(async () => {
+  receiptRef.current = receipt;
+
+  useEffect(() => {
+    const cached = receiptId ? getCachedReceipt(receiptId) : null;
+    setReceipt(cached);
+    setLoading(!cached);
+    setSyncFeedback(null);
+  }, [receiptId]);
+
+  const applyReceipt = useCallback((next: DeliveryReceiptRecord | null) => {
+    setReceipt(next);
+    if (next) updateCachedReceipt(next);
+  }, []);
+
+  const refreshReceipt = useCallback(async (options?: { silent?: boolean }) => {
     if (!farmer?.id || !receiptId) {
-      setReceipt(null);
+      applyReceipt(null);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    const hasVisibleReceipt = receiptRef.current?.id === receiptId;
+    if (!options?.silent && !hasVisibleReceipt) {
+      setLoading(true);
+    }
+
     try {
+      const localRows = await loadLocalDeliveryReceiptsForFarmer(farmer.id);
+      const deviceReceipts = normalizeLocalDeliveryReceipts(localRows, t);
+      const localMatch = deviceReceipts.find((row) => row.id === receiptId) ?? null;
+      if (localMatch) {
+        applyReceipt(localMatch);
+        setLoading(false);
+      }
+
       const catalog = await buildDeliveryReceiptCatalog({
         farmerId: farmer.id,
         localPlots,
         t,
-        forcePlotFetch: true,
+        forcePlotFetch: justLogged && !options?.silent,
       });
       setBackendPlots(catalog.backendPlots);
       setPlotServerLinks(catalog.plotServerLinks);
-      setReceipt(findDeliveryReceiptById(catalog.receipts, receiptId));
+
+      const mergedPlots = buildMergedHarvestPlots({
+        backendPlots: catalog.backendPlots,
+        localPlots,
+        farmerId: farmer.id,
+        plotServerLinks: catalog.plotServerLinks,
+      });
+
+      const resolved = resolveDeliveryReceiptById(catalog, receiptId, deviceReceipts, {
+        mergedPlots,
+        t,
+      });
+      applyReceipt(resolved);
     } catch {
-      setReceipt(null);
+      if (!receiptRef.current || receiptRef.current.id !== receiptId) {
+        applyReceipt(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, [farmer?.id, localPlots, receiptId, t]);
-
-  useEffect(() => {
-    void refreshReceipt();
-  }, [refreshReceipt]);
+  }, [applyReceipt, farmer?.id, justLogged, localPlots, receiptId, t]);
 
   useFocusEffect(
     useCallback(() => {
-      void refreshReceipt();
-    }, [refreshReceipt]),
+      const silent = receiptRef.current?.id === receiptId;
+      void refreshReceipt({ silent });
+    }, [receiptId, refreshReceipt]),
   );
 
   const handleBack = useCallback(() => {
@@ -109,13 +158,13 @@ export default function DeliveryReceiptScreen() {
       });
       setSyncFeedback(result);
       if (result.qrCodeRef) {
-        setReceipt({
+        applyReceipt({
           ...receipt,
           qrCodeRef: result.qrCodeRef,
           pendingSync: false,
         });
       }
-      void refreshReceipt();
+      void refreshReceipt({ silent: true });
     } catch {
       setSyncFeedback({
         variant: 'error',
@@ -132,6 +181,7 @@ export default function DeliveryReceiptScreen() {
     openSignIn,
     plotServerLinks,
     receipt,
+    applyReceipt,
     refreshReceipt,
     t,
   ]);
@@ -231,7 +281,7 @@ export default function DeliveryReceiptScreen() {
           </Card>
         ) : null}
 
-        {loading ? (
+        {loading && !receipt ? (
           <Card variant="outlined" style={styles.loadingCard}>
             <ThemedText type="caption">{t('voucher_share_loading')}</ThemedText>
           </Card>

@@ -6,8 +6,7 @@ import {
   type DeliveryReceiptRecord,
 } from '@/features/harvest/deliveryReceiptModels';
 import {
-  dedupeDeliveryReceipts,
-  mergeDeliveryReceiptLists,
+  enrichAndDedupeDeliveryReceipts,
   normalizeLocalDeliveryReceipts,
   resolvePlotReceiptFilterIds,
 } from '@/features/harvest/localDeliveryReceipts';
@@ -99,9 +98,12 @@ export async function buildDeliveryReceiptCatalog(params: {
   });
 
   const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t: params.t });
-  const receipts = dedupeDeliveryReceipts(
-    mergeDeliveryReceiptLists(deviceReceipts, pendingReceipts, synced),
-  );
+  const receipts = enrichAndDedupeDeliveryReceipts({
+    deviceReceipts,
+    pendingReceipts,
+    synced,
+    plotServerLinks,
+  });
 
   return { receipts, backendPlots, plotServerLinks, vouchers };
 }

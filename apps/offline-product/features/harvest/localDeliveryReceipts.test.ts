@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   dedupeDeliveryReceipts,
+  enrichAndDedupeDeliveryReceipts,
   findPlotReceiptGroupForScreen,
   normalizeLocalDeliveryReceipts,
   receiptMatchesPlotFilter,
@@ -78,6 +79,42 @@ describe('findPlotReceiptGroupForScreen', () => {
     ];
     const filter = new Set(['local-1', 'server-1']);
     expect(findPlotReceiptGroupForScreen(groups, 'local-1', filter)?.plotId).toBe('server-1');
+  });
+});
+
+describe('enrichAndDedupeDeliveryReceipts', () => {
+  it('attaches voucher qr to stale pending local row across plot id aliases', () => {
+    const rows = enrichAndDedupeDeliveryReceipts({
+      deviceReceipts: [
+        {
+          id: 'harvest-local-1-100',
+          plotId: 'local-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: null,
+          buyerLabel: 'buyer',
+          pendingSync: true,
+        },
+      ],
+      synced: [
+        {
+          id: 'voucher-1',
+          plotId: 'server-1',
+          plotName: 'North',
+          kg: 120,
+          createdAt: '2026-06-16T12:00:05.000Z',
+          qrCodeRef: 'QR-123',
+          buyerLabel: 'buyer@coop.org',
+        },
+      ],
+      plotServerLinks: { 'local-1': 'server-1' },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe('harvest-local-1-100');
+    expect(rows[0]?.qrCodeRef).toBe('QR-123');
+    expect(rows[0]?.pendingSync).toBe(false);
+    expect(rows[0]?.buyerLabel).toBe('buyer@coop.org');
   });
 });
 

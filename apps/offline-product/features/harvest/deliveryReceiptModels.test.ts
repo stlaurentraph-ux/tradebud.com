@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatReceiptDateLabel,
+  formatReceiptRecipientSummary,
   formatVoucherBuyerLabel,
   groupDeliveryReceiptsByPlot,
   normalizeDeliveryReceipts,
@@ -121,6 +122,93 @@ describe('normalizePendingHarvestReceipts', () => {
     expect(rows[0]?.plotId).toBe('server-plot-1');
     expect(rows[0]?.pendingSync).toBe(true);
     expect(rows[0]?.buyerLabel).toBe('buyer@coop.org');
+  });
+});
+
+describe('formatReceiptRecipientSummary', () => {
+  it('shows qr when qr ref exists even if pending flag is stale', () => {
+    expect(
+      formatReceiptRecipientSummary(
+        {
+          buyerLabel: 'harvest_receipt_pending_sync',
+          qrCodeRef: 'QR-1',
+          pendingSync: true,
+        },
+        t,
+      ),
+    ).toEqual({
+      label: 'harvest_receipt_qr_generated',
+      tone: 'qr',
+      showQrIcon: true,
+    });
+  });
+
+  it('shows pending sync before qr is available', () => {
+    expect(
+      formatReceiptRecipientSummary(
+        {
+          buyerLabel: 'buyer@x.com',
+          qrCodeRef: null,
+          pendingSync: true,
+        },
+        t,
+      ),
+    ).toEqual({
+      label: 'harvest_receipt_pending_sync',
+      tone: 'pending',
+      showQrIcon: false,
+    });
+  });
+
+  it('shows buyer email when qr is ready', () => {
+    expect(
+      formatReceiptRecipientSummary(
+        {
+          buyerLabel: 'buyer@coop.org',
+          qrCodeRef: 'QR-1',
+          pendingSync: false,
+        },
+        t,
+      ),
+    ).toEqual({
+      label: 'buyer@coop.org',
+      tone: 'qr',
+      showQrIcon: true,
+    });
+  });
+
+  it('shows qr generated when no specific buyer', () => {
+    expect(
+      formatReceiptRecipientSummary(
+        {
+          buyerLabel: 'harvest_receipt_qr_generated',
+          qrCodeRef: 'QR-1',
+          pendingSync: false,
+        },
+        t,
+      ),
+    ).toEqual({
+      label: 'harvest_receipt_qr_generated',
+      tone: 'qr',
+      showQrIcon: true,
+    });
+  });
+
+  it('shows generating when qr is not ready yet', () => {
+    expect(
+      formatReceiptRecipientSummary(
+        {
+          buyerLabel: 'harvest_receipt_qr_generated',
+          qrCodeRef: null,
+          pendingSync: false,
+        },
+        t,
+      ),
+    ).toEqual({
+      label: 'harvest_receipt_qr_generating',
+      tone: 'muted',
+      showQrIcon: false,
+    });
   });
 });
 

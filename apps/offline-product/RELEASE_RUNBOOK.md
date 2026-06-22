@@ -59,6 +59,7 @@ npm run qa:device
 # Complete §2 + §7 on a physical device, then:
 npm run qa:device:signoff -- --tester "You" --device "Phone" --os "iOS 18" --build preview
 npm run update:preview:safe
+npm run update:production:safe
 npm run update:production
 ```
 
@@ -98,6 +99,22 @@ See `INCIDENT_RUNBOOK.md` for farmer support triage and engineering escalation (
 - `syncSuccessRatePct >= 98.0`
 - `authErrorRatePct <= 2.0`
 - `apiTimeoutRatePct <= 2.0`
+
+Collect live metrics: `npm run mobile:slo:collect -- --report=mobile-rollout-slo-report.json`  
+Evaluate: `npm run mobile:slo:gate -- --report=mobile-rollout-slo-report.json`
+
+### Production OTA gate (5.10)
+
+Before shipping JS to the production channel:
+
+```bash
+npm run ota:production:preflight          # local — requires DEVICE_SMOKE_SIGNOFF.json at HEAD
+npm run update:production:safe            # preflight + eas update production
+```
+
+Or run GitHub Actions → **Offline OTA production gate** (skew guards on Linux + Maestro on macOS).
+
+Skew guard alone: `npm run ota:skew:assert` (runtimeVersion + channel wiring + native fingerprint).
 
 Override via env when needed:
 
