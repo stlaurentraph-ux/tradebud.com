@@ -132,6 +132,10 @@
     {
       "file": "20260620140000_founder_os_gtm_expansion.sql",
       "reason": "Founder OS GTM expansion; CRM schema only, no tb_v16 mirror"
+    },
+    {
+      "file": "202606221430_fix_sso_auth_user_null_token_columns.sql",
+      "reason": "auth.users data patch for SSO users with NULL token columns; Supabase Auth internal table, no tb_v16 mirror"
     }
   ]
 }
