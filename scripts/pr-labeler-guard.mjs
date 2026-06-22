@@ -35,7 +35,7 @@ for (const label of REQUIRED_LABELS) {
   assert(labeler.includes(`'${label}':`), `Missing label mapping for ${label} in .github/labeler.yml`);
 }
 
-assert(workflow.includes('actions/labeler@v5'), 'pr-labeler.yml must use actions/labeler@v5');
+assert(workflow.includes('actions/labeler@v6'), 'pr-labeler.yml must use actions/labeler@v6');
 assert(workflow.includes('lane:guardrails'), 'pr-labeler.yml must apply lane:guardrails from branch prefix');
 assert(workflow.includes('lane:fix'), 'pr-labeler.yml must apply lane:fix from branch prefix');
 assert(workflow.includes('lane:feature'), 'pr-labeler.yml must apply lane:feature from branch prefix');
