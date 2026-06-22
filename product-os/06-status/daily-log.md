@@ -1,3 +1,10 @@
+### 2026-06-22 (Lane 2 — fix CI on npm-development dependabot bump)
+
+- **PR** — `dependabot/npm_and_yarn/npm-development-f3a07ff8e6` (#180): all 8 CI jobs failed at `npm ci` (ERESOLVE).
+- **Root cause** — Four breaking combinations: (1) eslint 9→10 incompatible with `eslint-plugin-import@2.x` via `eslint-config-next`; (2) `eslint-config-next` 16.1.6→16.2.9 pulls `eslint-plugin-react-hooks@7.1.x` with new `set-state-in-effect` rule (88+ violations across dashboard); (3) typescript 5.7.3→6.0.3 breaks CSS side-effect imports in marketing build; (4) three marketing files had genuine `set-state-in-effect` lint violations.
+- **Fix** — Reverted eslint to `^9.39.3`/`^9.15.0`, pinned `eslint-config-next` to `16.1.6`, reverted typescript to `5.7.3` across all workspaces. Added `overrides.eslint-plugin-react-hooks=~7.0.0`. Fixed 3 marketing files (lazy useState initializers + queueMicrotask).
+- **Verified** — `npm ci` passes; marketing lint+build pass; backend lint+tests (60 suites, 397 tests) pass; field-auth/founder-os lint pass.
+
 ### 2026-06-22 (offline — My Plots delivery recap counts)
 
 - **Root cause** — Per-plot counts only matched exact `receipt.plotId` values. Device rows preferred stale `serverPlotId`, and farmer rekey left receipts under old local plot id suffixes that no longer matched current plot cards.
