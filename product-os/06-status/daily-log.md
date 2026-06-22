@@ -19,6 +19,14 @@
 - **Backend** — `GET /v1/plots?farmerId=…&scope=farmer` now includes parsed `geometry` on each row (ST_AsGeoJSON).
 - **Tests** — `localPlotFromServerGeometry.test.ts`, `restoreLocalPlotsFromServer.test.ts`.
 
+### 2026-06-22 (Lane 2 — backend integration test schema isolation)
+
+- **Failing check** — `Backend build, lint, and tests` on PR #240 (PostGIS integration suite): 3 suites failed.
+- **Root cause** — `withSearchPath()` was a noop in `inbox.service.int.spec.ts`, `inbox.controller.int.spec.ts`, `ownership-scope.int.spec.ts`. On idle-connection timeout pg-pool recreated the connection with the server default `search_path`, not the test schema. This split inbox tables across schemas (FK resolution failure) and caused `DELETE FROM farmer_profile` to target `public.farmer_profile` while `tb_scope_test.farmer_profile` still had rows, blocking `DELETE FROM user_account`.
+- **Fix** — Adopted the working `withSearchPath()` from `controller-scope.int.spec.ts` (adds `-c search_path=<schema>,public` via connection string options); added explicit `SET search_path` in `beforeAll`; schema-qualified DELETE targets in `ownership-scope.beforeEach`.
+- **Files** — `inbox.service.int.spec.ts`, `inbox.controller.int.spec.ts`, `harvest/ownership-scope.int.spec.ts`.
+- **Verify** — lint ✓, 399 unit tests ✓. PR #247.
+
 ### 2026-06-22 (offline — My Plots delivery recap counts)
 
 - **Root cause** — Per-plot counts only matched exact `receipt.plotId` values. Device rows preferred stale `serverPlotId`, and farmer rekey left receipts under old local plot id suffixes that no longer matched current plot cards.
