@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-20T00:00:00.000Z",
+  "generatedAt": "2026-06-22T14:22:28.529Z",
   "pairs": [
     {
       "supabase": "202606120001_consent_grants.sql",
@@ -106,40 +106,45 @@
       "supabase": "20260620130002_phase2_view_and_functions.sql",
       "backend": "tb_v16_058_phase2_view_and_functions.sql",
       "purpose": "phase2_view_and_functions"
+    },
+    {
+      "supabase": "20260622130000_harvest_transaction_client_event_id.sql",
+      "backend": "tb_v16_059_harvest_transaction_client_event_id.sql",
+      "purpose": "harvest_transaction_client_event_id"
     }
   ],
   "supabaseOnly": [
     {
       "file": "20260413_001_founder_os_tables.sql",
-      "reason": "Founder OS bootstrap; no tb_v16 mirror"
+      "reason": "no backend mirror"
     },
     {
       "file": "20260413_002_founder_os_functions.sql",
-      "reason": "Founder OS bootstrap; no tb_v16 mirror"
+      "reason": "no backend mirror"
     },
     {
       "file": "202606110001_plot_evidence_storage_bucket.sql",
-      "reason": "Supabase storage bucket policy; applied via CLI track only"
+      "reason": "no backend mirror"
     },
     {
       "file": "202606110002_plot_evidence_tenant_compliance_read.sql",
-      "reason": "Supabase RLS/storage read path; CLI track only"
+      "reason": "no backend mirror"
     },
     {
       "file": "202606160001_plot_evidence_heic_mime.sql",
-      "reason": "Storage MIME allowlist; CLI track only"
+      "reason": "no backend mirror"
     },
     {
       "file": "20260620140000_founder_os_gtm_expansion.sql",
-      "reason": "Founder OS GTM expansion; CRM schema only, no tb_v16 mirror"
+      "reason": "no backend mirror"
     },
     {
       "file": "202606221430_fix_sso_auth_user_null_token_columns.sql",
-      "reason": "Supabase auth SSO data fix; no backend mirror"
+      "reason": "no backend mirror"
     },
     {
       "file": "202606221500_fix_postgis_search_path.sql",
-      "reason": "Supabase database search_path for extensions schema; no backend mirror"
+      "reason": "no backend mirror"
     }
   ]
 }

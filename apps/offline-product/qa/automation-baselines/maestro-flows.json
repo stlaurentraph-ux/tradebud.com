@@ -3,9 +3,11 @@
   "appId": "com.tracebud.app",
   "goldenPathFlow": "settings-sync-smoke.yaml",
   "flows": [
+    "app-store-ipad-screenshots-nav.yaml",
+    "app-store-ipad-screenshots.yaml",
     "land-title-photo.yaml",
-    "tenure-evidence.yaml",
     "mark-three-corners.yaml",
-    "settings-sync-smoke.yaml"
+    "settings-sync-smoke.yaml",
+    "tenure-evidence.yaml"
   ]
 }

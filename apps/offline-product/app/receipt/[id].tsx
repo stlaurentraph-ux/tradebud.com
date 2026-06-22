@@ -125,7 +125,7 @@ export default function DeliveryReceiptScreen() {
     } finally {
       setLoading(false);
     }
-  }, [applyReceipt, farmer?.id, justLogged, localPlots, receiptId, t]);
+  }, [applyReceipt, farmer?.id, isSignedIn, justLogged, localPlots, receiptId, t]);
 
   useFocusEffect(
     useCallback(() => {
