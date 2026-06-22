@@ -14,7 +14,11 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
-import { countDeliveryReceiptsForPlots } from '@/features/harvest/localDeliveryReceipts';
+import {
+  countDeliveryReceiptsForPlots,
+  normalizeLocalDeliveryReceipts,
+} from '@/features/harvest/localDeliveryReceipts';
+import { loadLocalDeliveryReceiptsForFarmer, loadPlotServerLinks } from '@/features/state/persistence';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -98,10 +102,26 @@ export default function PlotsScreen() {
             }),
           );
         })
-        .catch(() => {
+        .catch(async () => {
           setBackendPlots([]);
           setVouchers([]);
-          setDeliveryCountByPlotId({});
+          try {
+            const [localRows, plotServerLinks] = await Promise.all([
+              loadLocalDeliveryReceiptsForFarmer(farmer.id),
+              loadPlotServerLinks(),
+            ]);
+            const deviceReceipts = normalizeLocalDeliveryReceipts(localRows, t);
+            setDeliveryCountByPlotId(
+              countDeliveryReceiptsForPlots({
+                plots,
+                receipts: deviceReceipts,
+                backendPlots: [],
+                plotServerLinks,
+              }),
+            );
+          } catch {
+            setDeliveryCountByPlotId({});
+          }
         });
     },
     [farmer?.id, plots, t],
@@ -293,7 +313,9 @@ export default function PlotsScreen() {
                       <View style={styles.plotMetaItem}>
                         <Ionicons name="scale-outline" size={15} color="#8A8A8A" />
                         <ThemedText type="caption" numberOfLines={1} style={styles.plotMetaText}>
-                          {t('harvests_meta_short', { n: harvestCount })}
+                          {harvestCount === 1
+                            ? t('harvests_meta_short_one', { n: harvestCount })
+                            : t('harvests_meta_short', { n: harvestCount })}
                         </ThemedText>
                       </View>
                     </View>

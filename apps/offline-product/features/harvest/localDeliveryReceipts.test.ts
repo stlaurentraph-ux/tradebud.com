@@ -53,7 +53,7 @@ describe('normalizeLocalDeliveryReceipts', () => {
       t,
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.plotId).toBe('server-1');
+    expect(rows[0]?.plotId).toBe('local-1');
     expect(rows[0]?.pendingSync).toBe(true);
   });
 });
@@ -155,7 +155,7 @@ describe('countDeliveryReceiptsForPlots', () => {
       deviceReceipts: [
         {
           id: 'local-a',
-          plotId: 'server-a',
+          plotId: 'local-a',
           plotName: 'Plot A',
           kg: 50,
           createdAt: '2026-06-16T10:00:00.000Z',
@@ -207,5 +207,57 @@ describe('countDeliveryReceiptsForPlots', () => {
       'local-b': 1,
       'local-c': 1,
     });
+  });
+
+  it('counts receipts saved under a rekeyed local plot id suffix', () => {
+    const creationSuffix = '1718880000000';
+    const oldLocalId = `11111111-1111-4111-8111-${creationSuffix}`;
+    const newLocalId = `22222222-2222-4222-8222-${creationSuffix}`;
+    const receipts = [
+      {
+        id: 'harvest-old',
+        plotId: oldLocalId,
+        plotName: 'Plot 1',
+        kg: 40,
+        createdAt: '2026-06-16T10:00:00.000Z',
+        qrCodeRef: null,
+        buyerLabel: 'buyer',
+        pendingSync: true,
+      },
+    ];
+
+    const counts = countDeliveryReceiptsForPlots({
+      plots: [{ id: newLocalId }],
+      receipts,
+      backendPlots: [],
+      plotServerLinks: {},
+    });
+
+    expect(counts[newLocalId]).toBe(1);
+  });
+
+  it('counts synced vouchers matched by server plot id and client_plot_id', () => {
+    const localId = 'farmer-a-100';
+    const serverId = 'server-plot-9';
+    const receipts = [
+      {
+        id: 'voucher-1',
+        plotId: serverId,
+        plotName: 'Plot 1',
+        kg: 55,
+        createdAt: '2026-06-16T12:00:00.000Z',
+        qrCodeRef: 'QR-1',
+        buyerLabel: 'buyer',
+      },
+    ];
+
+    const counts = countDeliveryReceiptsForPlots({
+      plots: [{ id: localId }],
+      receipts,
+      backendPlots: [{ id: serverId, client_plot_id: localId, name: 'Plot 1' }],
+      plotServerLinks: {},
+    });
+
+    expect(counts[localId]).toBe(1);
   });
 });

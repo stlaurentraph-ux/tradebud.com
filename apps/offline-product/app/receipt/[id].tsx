@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +32,8 @@ import {
   syncQueuedDeliveryReceipt,
   type SyncDeliveryReceiptFeedback,
 } from '@/features/harvest/syncQueuedDeliveryReceipt';
+import { removeDeliveryReceiptFromDevice } from '@/features/harvest/removeDeliveryReceiptFromDevice';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { goBackOrHome } from '@/features/navigation/routes';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -56,6 +58,7 @@ export default function DeliveryReceiptScreen() {
   const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
   const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
   const [syncBusy, setSyncBusy] = useState(false);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<SyncDeliveryReceiptFeedback | null>(null);
 
   receiptRef.current = receipt;
@@ -191,6 +194,34 @@ export default function DeliveryReceiptScreen() {
     [receipt],
   );
 
+  const confirmRemoveReceipt = useCallback(() => {
+    if (!farmer?.id || !receipt || removeBusy) return;
+    Alert.alert(t('harvest_receipt_remove_title'), t('harvest_receipt_remove_body'), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('harvest_receipt_remove_confirm'),
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setRemoveBusy(true);
+            try {
+              await removeDeliveryReceiptFromDevice({ farmerId: farmer.id, receipt });
+              trackEvent(ANALYTICS_EVENTS.DELIVERY_RECEIPT_REMOVED_FROM_DEVICE, {
+                receiptId: receipt.id,
+                plotId: receipt.plotId,
+              });
+              handleBack();
+            } catch {
+              Alert.alert(t('warning'), t('harvest_receipt_remove_failed'));
+            } finally {
+              setRemoveBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
+  }, [farmer?.id, handleBack, receipt, removeBusy, t]);
+
   const renderSyncBanner = () => {
     if (syncBusy) {
       return (
@@ -317,6 +348,16 @@ export default function DeliveryReceiptScreen() {
               </ThemedText>
               <Ionicons name="chevron-forward" size={18} color="#0A7F59" />
             </Pressable>
+
+            <Button
+              title={t('harvest_receipt_remove_from_device')}
+              variant="outline"
+              loading={removeBusy}
+              disabled={removeBusy || syncBusy}
+              onPress={confirmRemoveReceipt}
+              style={styles.removeButton}
+              textStyle={styles.removeButtonText}
+            />
           </>
         ) : (
           <Card variant="outlined" style={styles.loadingCard}>
@@ -423,4 +464,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   linkText: { color: '#0A7F59' },
+  removeButton: {
+    borderColor: '#FCA5A5',
+    marginTop: 4,
+  },
+  removeButtonText: {
+    color: '#B91C1C',
+  },
 });

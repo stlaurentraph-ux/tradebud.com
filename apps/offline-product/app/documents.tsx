@@ -168,7 +168,10 @@ export default function DocumentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void reloadFromDisk().then(async () => {
+      let cancelled = false;
+      void (async () => {
+        await reloadFromDisk();
+        if (cancelled) return;
         await refreshProfileDocs();
         await refreshSupportingSyncMeta();
         if (isSignedIn && farmer?.id) {
@@ -177,17 +180,23 @@ export default function DocumentsScreen() {
             await tryUploadSupportingDocs();
           }
         }
-      });
-      if (farmer?.id && isSignedIn) {
-        void fetchServerPlotListForUi({
-          profileFarmerId: farmer.id,
-          localPlots: plots,
-        })
-          .then((rows) => setBackendPlots(rows ?? []))
-          .catch(() => undefined);
-      } else {
-        setBackendPlots([]);
-      }
+        if (cancelled) return;
+        if (farmer?.id && isSignedIn) {
+          void fetchServerPlotListForUi({
+            profileFarmerId: farmer.id,
+            localPlots: plots,
+          })
+            .then((rows) => {
+              if (!cancelled) setBackendPlots(rows ?? []);
+            })
+            .catch(() => undefined);
+        } else if (!cancelled) {
+          setBackendPlots([]);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
     }, [farmer?.id, isSignedIn, plots, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, tryUploadSupportingDocs]),
   );
 

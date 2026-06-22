@@ -29,6 +29,7 @@ export const ANALYTICS_EVENTS = {
   HARVEST_SUBMIT_FAILURE: 'harvest_submit_failure',
   MULTI_PLOT_DELIVERY_STARTED: 'multi_plot_delivery_started',
   MULTI_PLOT_DELIVERY_SUBMITTED: 'multi_plot_delivery_submitted',
+  DELIVERY_RECEIPT_REMOVED_FROM_DEVICE: 'delivery_receipt_removed_from_device',
   SYNC_QUEUE_DRAINED: 'sync_queue_drained',
   SYNC_ACTION_FAILED: 'sync_action_failed',
   UI_ACTION_FAILED: 'ui_action_failed',

@@ -258,7 +258,6 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
     tableHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -271,10 +270,12 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
       letterSpacing: 0.35,
       fontSize: 11,
     },
+    tableHeaderCellRight: {
+      textAlign: 'right',
+    },
     tableRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
       paddingHorizontal: 14,
       paddingVertical: 12,
       backgroundColor: c.backgroundCard,
@@ -287,24 +288,34 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
       backgroundColor: c.backgroundSecondary,
     },
     tableColPlot: {
-      flex: 1,
+      width: 96,
+      maxWidth: '32%',
+      flexShrink: 1,
       minWidth: 0,
-    },
-    tableColDate: {
-      width: 58,
-      alignItems: 'flex-end',
+      paddingRight: 8,
     },
     tableColWeight: {
-      width: 64,
+      width: 78,
+      flexShrink: 0,
       alignItems: 'flex-end',
+      paddingRight: 16,
+    },
+    tableColWeightWide: {
+      width: 86,
+      flexShrink: 0,
+      alignItems: 'flex-end',
+      paddingRight: 16,
     },
     tableColRecipient: {
       flex: 1,
+      flexShrink: 1,
       minWidth: 0,
     },
     tableColChevron: {
-      width: 18,
+      width: 20,
+      flexShrink: 0,
       alignItems: 'center',
+      marginLeft: 4,
     },
     tablePlotName: {
       color: c.text,
@@ -316,9 +327,13 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
     },
     tableDate: {
       color: c.textMuted,
+      marginTop: 2,
       fontVariant: ['tabular-nums'],
       fontSize: 12,
       letterSpacing: -0.2,
+    },
+    tableDateRight: {
+      textAlign: 'right',
     },
     recipientRow: {
       flexDirection: 'row',

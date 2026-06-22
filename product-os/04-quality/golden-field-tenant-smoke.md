@@ -28,6 +28,9 @@ Farmer B does **not** need a password in CI — only A signs in. B must exist on
    - `FIELD_TENANT_SMOKE_FARMER_B_ID` → `farmer_profile.id` (or API farmer uuid linked to B's auth user)
    - `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` → `plot.id` owned by B
 4. **Sign in as Farmer A** — confirm A has **zero** plots under B's farmer id (A is a separate farmer account).
+
+**Production fixture IDs (2026-06-22):** after setup, store in GitHub secrets only — `FIELD_TENANT_SMOKE_FARMER_B_ID` = farmer B profile uuid; `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` = plot uuid owned by B. Farmer A password in `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD`.
+
 5. **Local smoke** (from `apps/offline-product`):
 
 ```bash

@@ -19,6 +19,35 @@ type EvidenceRow = {
   takenAt: number;
 };
 
+type FarmerRow = {
+  id: string;
+  name: string | null;
+  role: string;
+  selfDeclared: number;
+  selfDeclaredAt: number | null;
+  fpicConsent: number | null;
+  laborNoChildLabor: number | null;
+  laborNoForcedLabor: number | null;
+  postalAddress?: string | null;
+  commodityCode?: string | null;
+  declarationLatitude?: number | null;
+  declarationLongitude?: number | null;
+  declarationGeoCapturedAt?: number | null;
+};
+
+type DeliveryReceiptRow = {
+  id: string;
+  farmerId: string;
+  localPlotId: string;
+  serverPlotId: string | null;
+  plotName: string;
+  kg: number;
+  recordedAt: number;
+  qrCodeRef: string | null;
+  pendingSync: number;
+  buyerLabel: string;
+};
+
 export type ExpoSqliteMemoryMock = {
   openDatabaseAsync: (name: string) => Promise<{
     execAsync: (sql: string) => Promise<void>;
@@ -29,6 +58,8 @@ export type ExpoSqliteMemoryMock = {
   tables: {
     titlePhotos: TitlePhotoRow[];
     evidence: EvidenceRow[];
+    farmer: FarmerRow[];
+    deliveryReceipts: DeliveryReceiptRow[];
   };
   reset: () => void;
 };
@@ -37,6 +68,8 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
   const tables = {
     titlePhotos: [] as TitlePhotoRow[],
     evidence: [] as EvidenceRow[],
+    farmer: [] as FarmerRow[],
+    deliveryReceipts: [] as DeliveryReceiptRow[],
   };
   let titlePhotoId = 1;
   let evidenceId = 1;
@@ -44,9 +77,27 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
   const reset = () => {
     tables.titlePhotos.length = 0;
     tables.evidence.length = 0;
+    tables.farmer.length = 0;
+    tables.deliveryReceipts.length = 0;
     titlePhotoId = 1;
     evidenceId = 1;
   };
+
+  const readFarmerRow = (params: unknown[]): FarmerRow => ({
+    id: String(params[0]),
+    name: params[1] != null ? String(params[1]) : null,
+    role: String(params[2]),
+    selfDeclared: Number(params[3]),
+    selfDeclaredAt: params[4] != null ? Number(params[4]) : null,
+    fpicConsent: params[5] != null ? Number(params[5]) : null,
+    laborNoChildLabor: params[6] != null ? Number(params[6]) : null,
+    laborNoForcedLabor: params[7] != null ? Number(params[7]) : null,
+    postalAddress: params[8] != null ? String(params[8]) : null,
+    commodityCode: params[9] != null ? String(params[9]) : null,
+    declarationLatitude: params[10] != null ? Number(params[10]) : null,
+    declarationLongitude: params[11] != null ? Number(params[11]) : null,
+    declarationGeoCapturedAt: params[12] != null ? Number(params[12]) : null,
+  });
 
   const db = {
     execAsync: async (_sql: string) => {
@@ -86,6 +137,53 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
         tables.evidence = tables.evidence.filter((row) => row.id !== id);
         return { lastInsertRowId: 0 };
       }
+      if (sql.includes('DELETE FROM farmer')) {
+        tables.farmer.length = 0;
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('INSERT INTO farmer')) {
+        tables.farmer.push(readFarmerRow(params));
+        return { lastInsertRowId: 1 };
+      }
+      if (sql.includes('UPDATE farmer SET id = ? WHERE id = ?')) {
+        const nextId = String(params[0]);
+        const previousId = String(params[1]);
+        const row = tables.farmer.find((entry) => entry.id === previousId);
+        if (row) row.id = nextId;
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('INSERT OR REPLACE INTO local_delivery_receipts')) {
+        const row: DeliveryReceiptRow = {
+          id: String(params[0]),
+          farmerId: String(params[1]),
+          localPlotId: String(params[2]),
+          serverPlotId: params[3] != null ? String(params[3]) : null,
+          plotName: String(params[4]),
+          kg: Number(params[5]),
+          recordedAt: Number(params[6]),
+          qrCodeRef: params[7] != null ? String(params[7]) : null,
+          pendingSync: Number(params[8]),
+          buyerLabel: String(params[9]),
+        };
+        tables.deliveryReceipts = tables.deliveryReceipts.filter((entry) => entry.id !== row.id);
+        tables.deliveryReceipts.push(row);
+        return { lastInsertRowId: 1 };
+      }
+      if (sql.includes('DELETE FROM local_delivery_receipts WHERE localPlotId = ? OR serverPlotId = ?')) {
+        const localPlotId = String(params[0]);
+        const serverPlotId = String(params[1]);
+        tables.deliveryReceipts = tables.deliveryReceipts.filter(
+          (row) => row.localPlotId !== localPlotId && row.serverPlotId !== serverPlotId,
+        );
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('DELETE FROM local_delivery_receipts WHERE localPlotId = ?')) {
+        const localPlotId = String(params[0]);
+        tables.deliveryReceipts = tables.deliveryReceipts.filter(
+          (row) => row.localPlotId !== localPlotId,
+        );
+        return { lastInsertRowId: 0 };
+      }
       return { lastInsertRowId: 0 };
     },
     getAllAsync: async <T>(sql: string, params: unknown[] = []): Promise<T[]> => {
@@ -107,9 +205,32 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
       if (sql.includes('PRAGMA table_info')) {
         return [] as T[];
       }
+      if (sql.includes('FROM plots')) {
+        return [] as T[];
+      }
+      if (sql.includes('FROM local_delivery_receipts')) {
+        const farmerId = String(params[0]);
+        const rows = tables.deliveryReceipts
+          .filter((row) => row.farmerId === farmerId)
+          .sort((a, b) => b.recordedAt - a.recordedAt);
+        return rows as T[];
+      }
+      if (sql.includes('FROM plot_legal')) {
+        return [] as T[];
+      }
       return [] as T[];
     },
-    getFirstAsync: async <T>(_sql: string, _params: unknown[] = []): Promise<T | null> => null,
+    getFirstAsync: async <T>(sql: string, params: unknown[] = []): Promise<T | null> => {
+      if (sql.includes('FROM farmer')) {
+        if (sql.includes('WHERE id = ?')) {
+          const id = String(params[0]);
+          const row = tables.farmer.find((entry) => entry.id === id);
+          return (row ?? null) as T | null;
+        }
+        return (tables.farmer[0] ?? null) as T | null;
+      }
+      return null;
+    },
   };
 
   return {

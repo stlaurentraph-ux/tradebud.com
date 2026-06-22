@@ -5,7 +5,12 @@ import type {
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import type { TranslateFn } from '@/features/i18n/translate';
 import { formatDeliveryRecipientLabel } from '@/features/harvest/formatDeliveryRecipientLabel';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import {
+  backendRowMatchesLocalClientId,
+  findBackendPlotForLocal,
+  plotClientIdsShareCreationSuffix,
+  type BackendPlotRow,
+} from '@/features/plots/backendPlotMatch';
 import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
 
 export type LocalDeliveryReceipt = {
@@ -49,6 +54,90 @@ export function receiptMatchesPlotFilter(
   return filterIds.has(String(receipt.plotId));
 }
 
+function resolveServerPlotIdForReceiptPlot(
+  plot: { id: string },
+  backendPlots: readonly unknown[],
+  plotServerLinks: PlotServerLinks,
+): string | null {
+  const backend = findBackendPlotForLocal(plot as { id: string }, backendPlots) as
+    | { id?: unknown }
+    | null;
+  return (
+    resolveServerPlotIdForLocal(plot as { id: string }, backendPlots, plotServerLinks) ??
+    (backend?.id != null ? String(backend.id) : null)
+  );
+}
+
+/** All plot/server/client ids that should count toward one on-device plot. */
+export function buildPlotReceiptMatchIds(params: {
+  plot: { id: string };
+  backendPlots: readonly unknown[];
+  plotServerLinks: PlotServerLinks;
+}): Set<string> {
+  const ids = new Set<string>();
+  const localPlotId = String(params.plot.id).trim();
+  if (!localPlotId) return ids;
+
+  ids.add(localPlotId);
+  const serverPlotId = resolveServerPlotIdForReceiptPlot(
+    params.plot,
+    params.backendPlots,
+    params.plotServerLinks,
+  );
+  for (const id of resolvePlotReceiptFilterIds({
+    localPlotId,
+    serverPlotId,
+    plotServerLinks: params.plotServerLinks,
+  })) {
+    ids.add(id);
+  }
+
+  for (const row of params.backendPlots) {
+    const backend = row as BackendPlotRow;
+    if (!backendRowMatchesLocalClientId(backend, localPlotId)) continue;
+    const serverId = String(backend.id ?? '').trim();
+    if (serverId) ids.add(serverId);
+    const clientPlotId = String(backend.client_plot_id ?? backend.clientPlotId ?? '').trim();
+    if (clientPlotId) ids.add(clientPlotId);
+  }
+
+  return ids;
+}
+
+export function receiptBelongsToLocalPlot(
+  receipt: Pick<DeliveryReceiptRecord, 'plotId'>,
+  plot: { id: string },
+  params: {
+    backendPlots: readonly unknown[];
+    plotServerLinks: PlotServerLinks;
+    canonicalPlotIds?: Map<string, string>;
+  },
+): boolean {
+  const localPlotId = String(plot.id).trim();
+  const receiptPlotId = String(receipt.plotId).trim();
+  if (!localPlotId || !receiptPlotId) return false;
+
+  const matchIds = buildPlotReceiptMatchIds({
+    plot,
+    backendPlots: params.backendPlots,
+    plotServerLinks: params.plotServerLinks,
+  });
+  if (matchIds.has(receiptPlotId)) return true;
+
+  for (const candidate of matchIds) {
+    if (plotClientIdsShareCreationSuffix(candidate, receiptPlotId)) return true;
+  }
+  if (plotClientIdsShareCreationSuffix(localPlotId, receiptPlotId)) return true;
+
+  const canonicalPlotIds =
+    params.canonicalPlotIds ??
+    buildPlotIdCanonicalMap(params.plotServerLinks, [localPlotId, receiptPlotId, ...matchIds]);
+  return (
+    canonicalPlotId(receiptPlotId, canonicalPlotIds) ===
+    canonicalPlotId(localPlotId, canonicalPlotIds)
+  );
+}
+
 /** All local/server plot ids used to match receipts for a farmer's plot list. */
 export function buildAllPlotReceiptFilterIds(params: {
   plots: ReadonlyArray<{ id: string }>;
@@ -81,22 +170,22 @@ export function countDeliveryReceiptsForPlots(params: {
   backendPlots: readonly unknown[];
   plotServerLinks: PlotServerLinks;
 }): Record<string, number> {
+  const canonicalPlotIds = buildPlotIdCanonicalMap(
+    params.plotServerLinks,
+    [
+      ...params.plots.map((plot) => plot.id),
+      ...params.receipts.map((receipt) => receipt.plotId),
+    ],
+  );
   const counts: Record<string, number> = {};
   for (const plot of params.plots) {
-    const backend = findBackendPlotForLocal(plot as { id: string }, params.backendPlots) as
-      | { id?: unknown }
-      | null;
-    const serverPlotId =
-      resolveServerPlotIdForLocal(plot as { id: string }, params.backendPlots, params.plotServerLinks) ??
-      (backend?.id != null ? String(backend.id) : null);
-    const filterIds = new Set(
-      resolvePlotReceiptFilterIds({
-        localPlotId: plot.id,
-        serverPlotId,
+    counts[plot.id] = params.receipts.filter((row) =>
+      receiptBelongsToLocalPlot(row, plot, {
+        backendPlots: params.backendPlots,
         plotServerLinks: params.plotServerLinks,
+        canonicalPlotIds,
       }),
-    );
-    counts[plot.id] = params.receipts.filter((row) => receiptMatchesPlotFilter(row, filterIds)).length;
+    ).length;
   }
   return counts;
 }
@@ -127,7 +216,8 @@ export function normalizeLocalDeliveryReceipts(
       if (!Number.isFinite(kg) || kg <= 0) return null;
       return {
         id: row.id,
-        plotId: row.serverPlotId ?? row.localPlotId,
+        // Attribute device rows to the on-device plot id (server id stays in SQLite for sync).
+        plotId: row.localPlotId,
         plotName: row.plotName?.trim() || t('plot_fallback'),
         kg,
         createdAt: new Date(row.recordedAt).toISOString(),

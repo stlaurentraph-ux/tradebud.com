@@ -1,7 +1,7 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   fetchBackendPlotsForSyncScope,
-  prepareFieldSyncContext,
+  resolveFieldSyncScope,
 } from '@/features/sync/resolveFieldSyncScope';
 
 /** Shared TTL for Home / Plots / Settings / Harvests server plot list reads. */
@@ -61,7 +61,7 @@ export async function fetchServerPlotListForUi(params: {
   localPlots?: Plot[];
   ownedFarmerIds?: string[];
   force?: boolean;
-  /** When Sync now already resolved scope — avoid re-prepare flipping farmer id. */
+  /** When Sync now already resolved scope — avoid re-resolving farmer id. */
   resolvedFarmerId?: string;
 }): Promise<unknown[]> {
   const profileFarmerId = params.profileFarmerId.trim();
@@ -71,12 +71,12 @@ export async function fetchServerPlotListForUi(params: {
   let ownedFarmerIds = params.ownedFarmerIds ?? [];
   if (!params.resolvedFarmerId && params.localPlots != null) {
     try {
-      const syncContext = await prepareFieldSyncContext({
+      const scope = await resolveFieldSyncScope({
         profileFarmerId,
         localPlots: params.localPlots,
       });
-      farmerId = syncContext.farmerId;
-      ownedFarmerIds = syncContext.ownedFarmerIds;
+      farmerId = scope.apiFarmerId;
+      ownedFarmerIds = scope.ownedFarmerIds;
     } catch {
       // Scope resolution must not block plot list reads (Settings status / Home counts).
       farmerId = profileFarmerId;

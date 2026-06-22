@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const prepareFieldSyncContext = vi.fn();
+const resolveFieldSyncScope = vi.fn();
 const fetchBackendPlotsForSyncScope = vi.fn();
 
 vi.mock('@/features/sync/resolveFieldSyncScope', () => ({
-  prepareFieldSyncContext,
+  resolveFieldSyncScope,
   fetchBackendPlotsForSyncScope,
 }));
 
@@ -15,15 +15,15 @@ async function loadModule() {
 describe('serverPlotListCache', () => {
   beforeEach(() => {
     vi.resetModules();
-    prepareFieldSyncContext.mockReset();
+    resolveFieldSyncScope.mockReset();
     fetchBackendPlotsForSyncScope.mockReset();
   });
 
   it('returns cached rows within TTL without a second network fetch', async () => {
-    prepareFieldSyncContext.mockResolvedValue({
-      farmerId: 'farmer-a',
+    resolveFieldSyncScope.mockResolvedValue({
+      apiFarmerId: 'farmer-a',
       ownedFarmerIds: ['farmer-a'],
-      rekeyed: false,
+      serverPlotCount: 0,
     });
     fetchBackendPlotsForSyncScope.mockResolvedValue([{ id: 'plot-1' }]);
 
@@ -43,10 +43,10 @@ describe('serverPlotListCache', () => {
   });
 
   it('refetches when force is true', async () => {
-    prepareFieldSyncContext.mockResolvedValue({
-      farmerId: 'farmer-a',
+    resolveFieldSyncScope.mockResolvedValue({
+      apiFarmerId: 'farmer-a',
       ownedFarmerIds: ['farmer-a'],
-      rekeyed: false,
+      serverPlotCount: 0,
     });
     fetchBackendPlotsForSyncScope.mockResolvedValue([{ id: 'plot-1' }]);
 

@@ -1,3 +1,14 @@
+### 2026-06-22 (offline — My Plots delivery recap counts)
+
+- **Root cause** — Per-plot counts only matched exact `receipt.plotId` values. Device rows preferred stale `serverPlotId`, and farmer rekey left receipts under old local plot id suffixes that no longer matched current plot cards.
+- **Fix** — Attribute device receipts to `localPlotId`; match plots via server links, backend `client_plot_id`, canonical ids, and creation-suffix aliases (`plotClientIdsShareCreationSuffix`). Explore falls back to device-only counts if catalog fetch fails. Plural copy: `1 delivery` vs `{n} deliveries`.
+
+### 2026-06-22 (offline — producer declarations persistence)
+
+- **Root cause** — Visiting Documents triggered `fetchServerPlotListForUi` → `prepareFieldSyncContext` → `rekeyFarmerIdInDatabase`, which **deleted and re-inserted** the lone `farmer` SQLite row. When the on-device farmer id differed from the linked server profile id, rekey could rebuild the row from a stale source and **wipe saved FPIC/labor/self-declaration flags**. `reloadFromDisk` on every Documents focus then reloaded the cleared row.
+- **Fix** — Rekey now **updates farmer id in place** (preserves attestation columns); UI plot-list reads use read-only `resolveFieldSyncScope` (no SQLite mutation); Documents focus awaits disk reload before server fetch; declaration UI rehydrates when persisted attestation flags change.
+- **Tests** — `persistence.sqlite.test.ts` rekey attestation preservation; `serverPlotListCache.test.ts` updated for read-only scope.
+
 ### 2026-06-22 (offline automation — 4.O.2 blocking field tenant smoke)
 
 - **Manifest** — `golden-field-tenant-smoke.json` + runbook for dedicated farmer pair (`field+tenant-smoke-a/b@tracebud.com`).

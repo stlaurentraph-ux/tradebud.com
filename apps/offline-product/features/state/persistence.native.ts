@@ -319,11 +319,11 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
         id: candidateId,
         name: farmerRow.name ?? undefined,
         role: farmerRow.role,
-        selfDeclared: farmerRow.selfDeclared === 1,
+        selfDeclared: sqliteBoolFlag(farmerRow.selfDeclared),
         selfDeclaredAt: farmerRow.selfDeclaredAt ?? undefined,
-        fpicConsent: farmerRow.fpicConsent === 1,
-        laborNoChildLabor: farmerRow.laborNoChildLabor === 1,
-        laborNoForcedLabor: farmerRow.laborNoForcedLabor === 1,
+        fpicConsent: sqliteBoolFlag(farmerRow.fpicConsent),
+        laborNoChildLabor: sqliteBoolFlag(farmerRow.laborNoChildLabor),
+        laborNoForcedLabor: sqliteBoolFlag(farmerRow.laborNoForcedLabor),
         postalAddress:
           typeof farmerRow.postalAddress === 'string' && farmerRow.postalAddress.trim()
             ? farmerRow.postalAddress.trim()
@@ -907,29 +907,30 @@ export async function persistLocalDeliveryReceipt(row: LocalDeliveryReceiptRow):
   );
 }
 
+function mapLocalDeliveryReceiptRows(rows: any[] | null | undefined): LocalDeliveryReceiptRow[] {
+  return (rows ?? []).map((row) => ({
+    id: String(row.id),
+    farmerId: String(row.farmerId),
+    localPlotId: String(row.localPlotId),
+    serverPlotId: row.serverPlotId != null ? String(row.serverPlotId) : null,
+    plotName: String(row.plotName ?? ''),
+    kg: Number(row.kg),
+    recordedAt: Number(row.recordedAt),
+    qrCodeRef: row.qrCodeRef != null ? String(row.qrCodeRef) : null,
+    pendingSync: row.pendingSync === 1,
+    buyerLabel: String(row.buyerLabel ?? ''),
+  }));
+}
+
 export async function loadLocalDeliveryReceiptsForFarmer(
   farmerId: string,
 ): Promise<LocalDeliveryReceiptRow[]> {
   const db = await getDb();
-  const mapRows = (rows: any[] | null | undefined) =>
-    (rows ?? []).map((row) => ({
-      id: String(row.id),
-      farmerId: String(row.farmerId),
-      localPlotId: String(row.localPlotId),
-      serverPlotId: row.serverPlotId != null ? String(row.serverPlotId) : null,
-      plotName: String(row.plotName ?? ''),
-      kg: Number(row.kg),
-      recordedAt: Number(row.recordedAt),
-      qrCodeRef: row.qrCodeRef != null ? String(row.qrCodeRef) : null,
-      pendingSync: row.pendingSync === 1,
-      buyerLabel: String(row.buyerLabel ?? ''),
-    }));
-
   const scoped = await db.getAllAsync<any>(
     'SELECT * FROM local_delivery_receipts WHERE farmerId = ? ORDER BY recordedAt DESC;',
     [farmerId],
   );
-  const scopedRows = mapRows(scoped);
+  const scopedRows = mapLocalDeliveryReceiptRows(scoped);
   if (scopedRows.length > 0) {
     return scopedRows;
   }
@@ -937,7 +938,111 @@ export async function loadLocalDeliveryReceiptsForFarmer(
   const all = await db.getAllAsync<any>(
     'SELECT * FROM local_delivery_receipts ORDER BY recordedAt DESC;',
   );
-  return mapRows(all);
+  return mapLocalDeliveryReceiptRows(all);
+}
+
+export async function deleteLocalDeliveryReceipt(id: string): Promise<boolean> {
+  const trimmed = id.trim();
+  if (!trimmed) return false;
+  const db = await getDb();
+  const existing = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM local_delivery_receipts WHERE id = ? LIMIT 1;',
+    [trimmed],
+  );
+  if (!existing) return false;
+  await db.runAsync('DELETE FROM local_delivery_receipts WHERE id = ?;', [trimmed]);
+  return true;
+}
+
+const RECEIPT_MATCH_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+export async function findLocalDeliveryReceiptIdsForRemoval(params: {
+  farmerId: string;
+  receipt: { id: string; plotId: string; kg: number; createdAt: string | null; qrCodeRef: string | null };
+}): Promise<string[]> {
+  const rows = await loadLocalDeliveryReceiptsForFarmer(params.farmerId);
+  const receiptId = params.receipt.id.trim();
+  const receiptPlotId = params.receipt.plotId.trim();
+  const receiptMs = params.receipt.createdAt ? new Date(params.receipt.createdAt).getTime() : null;
+  const receiptQr = params.receipt.qrCodeRef?.trim() ?? '';
+  const ids = new Set<string>();
+
+  for (const row of rows) {
+    if (row.id === receiptId) {
+      ids.add(row.id);
+      continue;
+    }
+    if (receiptQr && row.qrCodeRef?.trim() === receiptQr) {
+      ids.add(row.id);
+      continue;
+    }
+    if (Math.abs(row.kg - params.receipt.kg) > 0.5) continue;
+    if (
+      receiptMs != null &&
+      Number.isFinite(receiptMs) &&
+      Math.abs(row.recordedAt - receiptMs) > RECEIPT_MATCH_WINDOW_MS
+    ) {
+      continue;
+    }
+    const plotMatches =
+      row.localPlotId === receiptPlotId ||
+      (row.serverPlotId != null && row.serverPlotId === receiptPlotId);
+    if (plotMatches) {
+      ids.add(row.id);
+    }
+  }
+
+  return [...ids];
+}
+
+export async function deletePendingHarvestSyncForReceipt(params: {
+  receiptId: string;
+  receipt: { id: string; plotId: string; kg: number; createdAt: string | null };
+}): Promise<number> {
+  const receiptId = params.receiptId.trim();
+  let removed = 0;
+
+  if (receiptId.startsWith('pending-')) {
+    const actionId = Number(receiptId.slice('pending-'.length));
+    if (Number.isFinite(actionId)) {
+      await deletePendingSyncAction(actionId);
+      return 1;
+    }
+  }
+
+  const actions = await loadPendingSyncActions();
+  const receiptMs = params.receipt.createdAt ? new Date(params.receipt.createdAt).getTime() : null;
+
+  for (const action of actions) {
+    if (action.actionType !== 'harvest') continue;
+    let payload: { clientEventId?: string; plotId?: string; kg?: number };
+    try {
+      payload = JSON.parse(action.payloadJson) as { clientEventId?: string; plotId?: string; kg?: number };
+    } catch {
+      continue;
+    }
+    const clientEventId = String(payload.clientEventId ?? '').trim();
+    if (clientEventId && (clientEventId === receiptId || receiptId === `pending-${action.id}`)) {
+      await deletePendingSyncAction(action.id);
+      removed += 1;
+      continue;
+    }
+    const payloadPlotId = String(payload.plotId ?? '').trim();
+    const payloadKg = Number(payload.kg ?? 0);
+    if (
+      payloadPlotId &&
+      payloadPlotId === params.receipt.plotId.trim() &&
+      Number.isFinite(payloadKg) &&
+      Math.abs(payloadKg - params.receipt.kg) <= 0.5 &&
+      receiptMs != null &&
+      Math.abs(action.createdAt - receiptMs) <= RECEIPT_MATCH_WINDOW_MS
+    ) {
+      await deletePendingSyncAction(action.id);
+      removed += 1;
+    }
+  }
+
+  return removed;
 }
 
 export async function updateLocalDeliveryReceipt(
@@ -989,6 +1094,16 @@ export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<voi
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {
   const db = await getDb();
+  const links = await loadPlotServerLinks().catch(() => ({}));
+  const serverPlotId = links[plotId]?.trim();
+  if (serverPlotId) {
+    await db.runAsync(
+      'DELETE FROM local_delivery_receipts WHERE localPlotId = ? OR serverPlotId = ?;',
+      [plotId, serverPlotId],
+    );
+  } else {
+    await db.runAsync('DELETE FROM local_delivery_receipts WHERE localPlotId = ?;', [plotId]);
+  }
   await db.runAsync('DELETE FROM plot_photos WHERE plotId = ?;', [plotId]);
   await db.runAsync('DELETE FROM plot_title_photos WHERE plotId = ?;', [plotId]);
   await db.runAsync('DELETE FROM plot_evidence WHERE plotId = ?;', [plotId]);
@@ -996,18 +1111,23 @@ export async function deletePlotLocalData(plotId: string): Promise<void> {
   await db.runAsync('DELETE FROM pending_sync WHERE payloadJson LIKE ?;', [`%\"plotId\":\"${plotId}\"%`]);
 }
 
+function sqliteBoolFlag(value: unknown): boolean {
+  return value === 1 || value === true;
+}
+
 /** Align local farmer UUID with Supabase auth user id when server has no plots under either id. */
 export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string): Promise<void> {
   if (!previousId || !nextId || previousId === nextId) return;
   return withFarmerDbLock(async () => {
     const db = await getDb();
-    const source =
-      (await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM farmer WHERE id = ?;', [
-        previousId,
-      ])) ??
-      (await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM farmer WHERE id = ?;', [
-        nextId,
-      ]));
+    const previousRow = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM farmer WHERE id = ?;',
+      [previousId],
+    );
+    const nextRow = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM farmer WHERE id = ?;',
+      [nextId],
+    );
 
     await db.runAsync('UPDATE plots SET farmerId = ? WHERE farmerId = ?;', [nextId, previousId]);
     await db.runAsync('UPDATE audit_log SET userId = ? WHERE userId = ?;', [nextId, previousId]);
@@ -1017,29 +1137,15 @@ export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string
     ]);
     await repairPendingSyncPayloadFarmerIds(nextId, previousId);
 
-    await db.runAsync('DELETE FROM farmer;');
-    if (!source) return;
-
-    await db.runAsync(
-      'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
-      [
-        nextId,
-        typeof source.name === 'string' ? source.name : null,
-        typeof source.role === 'string' ? source.role : 'farmer',
-        source.selfDeclared === 1 ? 1 : 0,
-        typeof source.selfDeclaredAt === 'number' ? source.selfDeclaredAt : null,
-        source.fpicConsent === 1 ? 1 : source.fpicConsent == null ? null : 0,
-        source.laborNoChildLabor === 1 ? 1 : source.laborNoChildLabor == null ? null : 0,
-        source.laborNoForcedLabor === 1 ? 1 : source.laborNoForcedLabor == null ? null : 0,
-        typeof source.postalAddress === 'string' ? source.postalAddress : null,
-        typeof source.commodityCode === 'string' ? source.commodityCode : null,
-        typeof source.declarationLatitude === 'number' ? source.declarationLatitude : null,
-        typeof source.declarationLongitude === 'number' ? source.declarationLongitude : null,
-        typeof source.declarationGeoCapturedAt === 'number'
-          ? source.declarationGeoCapturedAt
-          : null,
-      ],
-    );
+    // Update farmer id in place so producer attestations and profile fields survive rekey.
+    // The old delete+insert path could pick a stale row and wipe saved declarations.
+    if (previousRow) {
+      await db.runAsync('UPDATE farmer SET id = ? WHERE id = ?;', [nextId, previousId]);
+      return;
+    }
+    if (nextRow) {
+      return;
+    }
   });
 }
 

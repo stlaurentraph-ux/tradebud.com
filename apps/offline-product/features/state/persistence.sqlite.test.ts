@@ -76,21 +76,73 @@ describe('persistence.native sqlite integration', () => {
     expect(await loadTitlePhotosForPlot(plotId)).toHaveLength(0);
   });
 
-  it('deletePlotEvidenceItem removes a saved evidence row', async () => {
-    const { persistPlotEvidenceItem, loadEvidenceForPlot, deletePlotEvidenceItem } = await import(
+  it('deletePlotLocalData removes delivery receipts for the deleted plot', async () => {
+    const { persistLocalDeliveryReceipt, deletePlotLocalData, loadLocalDeliveryReceiptsForFarmer } =
+      await import('./persistence.native');
+    const plotId = 'plot-delete-receipts';
+    const farmerId = '11111111-1111-4111-8111-111111111111';
+    const otherPlotId = 'plot-keep-receipts';
+
+    await persistLocalDeliveryReceipt({
+      id: 'harvest-delete-me',
+      farmerId,
+      localPlotId: plotId,
+      serverPlotId: null,
+      plotName: 'Old plot',
+      kg: 40,
+      recordedAt: Date.now(),
+      qrCodeRef: null,
+      pendingSync: true,
+      buyerLabel: 'buyer',
+    });
+    await persistLocalDeliveryReceipt({
+      id: 'harvest-keep',
+      farmerId,
+      localPlotId: otherPlotId,
+      serverPlotId: null,
+      plotName: 'Other plot',
+      kg: 20,
+      recordedAt: Date.now(),
+      qrCodeRef: null,
+      pendingSync: true,
+      buyerLabel: 'buyer',
+    });
+
+    await deletePlotLocalData(plotId);
+
+    const remaining = await loadLocalDeliveryReceiptsForFarmer(farmerId);
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]?.id).toBe('harvest-keep');
+  });
+
+  it('rekeyFarmerIdInDatabase preserves producer attestations when farmer id changes', async () => {
+    const { persistFarmer, rekeyFarmerIdInDatabase, loadAppState } = await import(
       './persistence.native'
     );
-    const plotId = 'plot-test-delete-evidence';
-    await persistPlotEvidenceItem({
-      plotId,
-      kind: 'tenure_evidence',
-      uri: 'file:///tenure.pdf',
-      mimeType: 'application/pdf',
-      label: 'Lease',
-      takenAt: 1,
+    const localId = '11111111-1111-4111-8111-111111111111';
+    const linkedId = '22222222-2222-4222-8222-222222222222';
+    const declaredAt = Date.now();
+
+    await persistFarmer({
+      id: localId,
+      role: 'farmer',
+      name: 'Hector',
+      selfDeclared: true,
+      selfDeclaredAt: declaredAt,
+      fpicConsent: true,
+      laborNoChildLabor: true,
+      laborNoForcedLabor: true,
     });
-    const [item] = await loadEvidenceForPlot(plotId, 'tenure_evidence');
-    await deletePlotEvidenceItem(item!.id);
-    expect(await loadEvidenceForPlot(plotId, 'tenure_evidence')).toHaveLength(0);
+
+    await rekeyFarmerIdInDatabase(localId, linkedId);
+
+    const loaded = await loadAppState();
+    expect(loaded.farmer?.id).toBe(linkedId);
+    expect(loaded.farmer?.selfDeclared).toBe(true);
+    expect(loaded.farmer?.fpicConsent).toBe(true);
+    expect(loaded.farmer?.laborNoChildLabor).toBe(true);
+    expect(loaded.farmer?.laborNoForcedLabor).toBe(true);
+    expect(loaded.farmer?.selfDeclaredAt).toBe(declaredAt);
+    expect(loaded.farmer?.name).toBe('Hector');
   });
 });

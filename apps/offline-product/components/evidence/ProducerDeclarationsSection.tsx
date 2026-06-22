@@ -56,17 +56,24 @@ export function ProducerDeclarationsSection({
   const persistedLaborChild = farmer?.laborNoChildLabor === true;
   const persistedLaborForced = farmer?.laborNoForcedLabor === true;
 
+  const persistedAttestationKey = [
+    persistedFpic ? '1' : '0',
+    persistedLaborChild ? '1' : '0',
+    persistedLaborForced ? '1' : '0',
+    farmer?.selfDeclaredAt ?? 0,
+  ].join(':');
+
   const loadDraftFromPersisted = useCallback(() => {
     setFpicConsent(persistedFpic);
     setLaborNoChildLabor(persistedLaborChild);
     setLaborNoForcedLabor(persistedLaborForced);
   }, [persistedFpic, persistedLaborChild, persistedLaborForced]);
 
-  // New farmer only — do not re-sync on every reloadFromDisk object refresh.
+  // Rehydrate draft when the farmer id or persisted attestation flags change.
   useEffect(() => {
     loadDraftFromPersisted();
     setEditing(false);
-  }, [farmerId, loadDraftFromPersisted]);
+  }, [farmerId, persistedAttestationKey, loadDraftFromPersisted]);
 
   useEffect(() => {
     if (!openEditingRequest || openEditingRequest === lastOpenEditingRequestRef.current) return;

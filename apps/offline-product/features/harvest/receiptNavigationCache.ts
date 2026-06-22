@@ -19,3 +19,9 @@ export function getCachedReceipt(receiptId: string): DeliveryReceiptRecord | nul
 export function updateCachedReceipt(receipt: DeliveryReceiptRecord): void {
   cache.set(receipt.id, receipt);
 }
+
+export function clearCachedReceipt(receiptId: string): void {
+  const id = receiptId.trim();
+  if (!id) return;
+  cache.delete(id);
+}

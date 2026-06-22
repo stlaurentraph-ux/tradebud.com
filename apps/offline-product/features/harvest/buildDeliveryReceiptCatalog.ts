@@ -22,7 +22,10 @@ import {
   loadPlotServerLinks,
   persistPlotServerLinks,
 } from '@/features/state/persistence';
-import type { TranslateFn } from '@/features/i18n/translate';
+import {
+  filterDismissedDeliveryReceipts,
+  loadDismissedDeliveryReceiptIds,
+} from '@/features/harvest/dismissedDeliveryReceipts';
 
 export type DeliveryReceiptCatalog = {
   receipts: DeliveryReceiptRecord[];
@@ -109,12 +112,16 @@ export async function buildDeliveryReceiptCatalog(params: {
   });
 
   const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t: params.t });
-  const receipts = enrichAndDedupeDeliveryReceipts({
-    deviceReceipts,
-    pendingReceipts,
-    synced,
-    plotServerLinks,
-  });
+  const dismissedIds = await loadDismissedDeliveryReceiptIds().catch(() => new Set<string>());
+  const receipts = filterDismissedDeliveryReceipts(
+    enrichAndDedupeDeliveryReceipts({
+      deviceReceipts,
+      pendingReceipts,
+      synced,
+      plotServerLinks,
+    }),
+    dismissedIds,
+  );
 
   return { receipts, deviceReceipts, backendPlots, plotServerLinks, vouchers };
 }
