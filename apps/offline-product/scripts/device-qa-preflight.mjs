@@ -82,7 +82,7 @@ assertIncludes('scripts/security-preflight.mjs', 'sanitizeLogContext', 'security
 
 // Home screen 2×2 tiles — layout + copy contract (dev + prod)
 assertIncludes('app/(tabs)/index.tsx', 'HOME_TILE_PAD_MIN = 16', 'home tiles min padding');
-assertIncludes('app/(tabs)/index.tsx', 'flex: 1,\n    alignSelf: \'stretch\'', 'home tiles flex row height');
+assertIncludes('app/(tabs)/homeScreenStyles.ts', 'flex: 1,\n      alignSelf: \'stretch\'', 'home tiles flex row height');
 assertIncludes('app/(tabs)/index.tsx', 'testID={`home-tile-${tile.key.replace(/_/g, \'-\')}`}', 'home tile test ids');
 assertNotIncludes('app/(tabs)/index.tsx', 'numberOfLines', 'home tiles wrap text (no numberOfLines)');
 
