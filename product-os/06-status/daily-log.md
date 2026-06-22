@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 3.1 Cursor Automation live)
+- **CI failed → fix regression** — Automations editor: GitHub Checks completed on open PRs in `stlaurentraph-ux/tradebud.com`; Lane 2 fix-regression prompt; PR comments enabled.
+- **Next** — 3.2 Sentry staging triage automation; merge PR #185.
+
 ### 2026-06-21 (automation — 0.H.3 PR-only main + smoke token mint helper)
 - **Branch protection** — `main` now requires a pull request before merge (0 approvals); existing field-auth + marketing required checks preserved.
 - **Ops** — `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret` rotates `TRACEBUD_SMOKE_BEARER_TOKEN`.
