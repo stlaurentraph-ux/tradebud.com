@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Linkedin, Twitter } from "lucide-react";
+import { ExternalLink, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -85,7 +85,7 @@ export function Footer() {
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-600 transition-all hover:text-[var(--forest-canopy)] hover:shadow-md"
                 aria-label="LinkedIn"
               >
-                <Linkedin className="h-5 w-5" />
+                <ExternalLink className="h-5 w-5" />
               </a>
               <a
                 href="https://twitter.com/tracebud"
@@ -94,7 +94,7 @@ export function Footer() {
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-600 transition-all hover:text-[var(--forest-canopy)] hover:shadow-md"
                 aria-label="Twitter"
               >
-                <Twitter className="h-5 w-5" />
+                <ExternalLink className="h-5 w-5" />
               </a>
             </div>
           </div>
