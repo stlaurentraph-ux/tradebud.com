@@ -183,7 +183,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       harvestController.listVouchers(farmerA, 'farmer', {
         user: { id: userA, email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1', role: 'farmer' } },
       }),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ vouchers: [] });
 
     expect(listSpy).toHaveBeenCalledWith(farmerA);
   });

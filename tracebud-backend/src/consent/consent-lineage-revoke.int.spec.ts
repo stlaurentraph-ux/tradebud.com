@@ -90,6 +90,7 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
         production_system TEXT NULL,
         deforestation_screening JSONB NULL,
         status TEXT NOT NULL DEFAULT 'deforestation_clear',
+        geometry GEOMETRY NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE harvest_transaction (
