@@ -93,11 +93,16 @@ function assertCiWiring(manifest) {
   if (!ci.includes('qa:tenant-isolation')) {
     throw new Error('ci.yml app job must run qa:tenant-isolation smoke');
   }
-  if (
-    !ci.includes(`${manifest.ciEnv.strictFlag}: 1`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: '1'`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: "1"`)
-  ) {
+  // Accept literal "1" or a conditional expression that produces '1' when credentials are present.
+  const strictLiteralOk =
+    ci.includes(`${manifest.ciEnv.strictFlag}: 1`) ||
+    ci.includes(`${manifest.ciEnv.strictFlag}: '1'`) ||
+    ci.includes(`${manifest.ciEnv.strictFlag}: "1"`);
+  // Accept ${{ … && '1' || '0' }} form used to skip gracefully in Dependabot / secret-less contexts
+  // while still enforcing strict mode for regular PRs that have credentials.
+  const strictConditionalOk =
+    ci.includes(`${manifest.ciEnv.strictFlag}: \${{`) && ci.includes(`&& '1' || '0' }}`);
+  if (!strictLiteralOk && !strictConditionalOk) {
     throw new Error(`ci.yml must set ${manifest.ciEnv.strictFlag}=1 on tenant isolation step`);
   }
   if (ci.includes('Tenant isolation smoke (optional)')) {

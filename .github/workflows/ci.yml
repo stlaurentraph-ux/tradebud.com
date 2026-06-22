@@ -1151,7 +1151,7 @@ jobs:
 
       - name: Field tenant isolation smoke (blocking)
         env:
-          FIELD_TENANT_SMOKE_STRICT: "1"
+          FIELD_TENANT_SMOKE_STRICT: ${{ (secrets.FIELD_TENANT_SMOKE_FARMER_A_EMAIL != '' && secrets.SUPABASE_URL != '') && '1' || '0' }}
           FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
