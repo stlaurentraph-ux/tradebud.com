@@ -90,6 +90,10 @@
     "lint:founder-os": "npm run lint -w founder-os",
     "check:founder-os": "npm run lint:founder-os && npm run typecheck -w founder-os && npm run build -w founder-os"
   },
+  "overrides": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  },
   "dependencies": {
     "yaml": "^2.8.3"
   },
