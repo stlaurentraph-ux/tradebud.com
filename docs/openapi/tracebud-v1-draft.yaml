@@ -789,6 +789,33 @@ paths:
                             alertAreaHa: { type: number, nullable: true }
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /v1/plots/{id}/synced-evidence:
+    get:
+      tags: [Plots]
+      operationId: getPlotSyncedEvidence
+      summary: List synced evidence files for a plot (mobile cross-device restore)
+      description: Returns storage keys and metadata for documents uploaded from the field app.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: List of synced evidence documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    plot_id: { type: string }
+                    document_type: { type: string }
+                    storage_key: { type: string }
+                    created_at: { type: string, format: date-time }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Plot scope violation
   /v1/evidence-documents:
     post:
       tags: [Evidence]
@@ -1258,6 +1285,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           description: Missing tenant claim or non-exporter role
+  /v1/harvest/vouchers/{id}/delivery-date:
+    patch:
+      tags: [Harvest]
+      operationId: backfillVoucherDeliveryDate
+      summary: Backfill farmer-logged delivery date for a voucher missing harvest_date
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                harvestDate:
+                  type: string
+                  format: date
+                  example: "2026-06-19"
+                clientEventId:
+                  type: string
+                  nullable: true
+                  description: Original field-app client event id (harvest-{plotId}-{recordedAtMs})
+              required: [harvestDate]
+      responses:
+        "200":
+          description: Delivery date backfilled
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Field farmers only
   /v1/yield-exception-requests/{id}/approve:
     post:
       tags: [Reviews]

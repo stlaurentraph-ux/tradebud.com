@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-22T14:30:55.183Z",
+  "generatedAt": "2026-06-22T14:46:08.609Z",
   "mobilePathCount": 26,
-  "openApiPathCount": 118,
+  "openApiPathCount": 120,
   "mobilePaths": [
     "/v1/audit",
     "/v1/harvest",
@@ -38,7 +38,6 @@
     "/v1/harvest/packages/{id}/traces-json",
     "/v1/harvest/vouchers",
     "/v1/harvest/vouchers/by-qr",
-    "/v1/harvest/vouchers/{id}/delivery-date",
     "/v1/me/consent-grants",
     "/v1/me/consent-grants/{id}/approve",
     "/v1/me/consent-grants/{id}/deny",
@@ -49,7 +48,6 @@
     "/v1/plots/{id}",
     "/v1/plots/{id}/compliance-check",
     "/v1/plots/{id}/gfw-check",
-    "/v1/plots/{id}/synced-evidence",
     "/v1/plots/{id}/tenure-verification"
   ],
   "unusedByMobile": [
