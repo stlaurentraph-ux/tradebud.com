@@ -150,7 +150,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
-    "expo-module-scripts": "~4.1.10",
+    "expo-module-scripts": "~56.0.3",
     "openapi-typescript": "^7.8.0",
     "typescript": "~5.9.2",
     "vitest": "^3.2.6"
