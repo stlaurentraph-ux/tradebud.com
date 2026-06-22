@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Brand } from '@/constants/theme';
 import { isImageDocumentUri } from '@/features/evidence/documentPreview';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createDocumentListRowStyles } from '@/components/evidence/documentListRowStyles';
 
 type DocumentListRowProps = {
   label: string;
@@ -31,6 +34,8 @@ export function DocumentListRow({
   onDelete,
   deleteAccessibilityLabel,
 }: DocumentListRowProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createDocumentListRowStyles);
   const showThumb = Boolean(uri?.trim()) && isImageDocumentUri(uri, mimeType);
 
   return (
@@ -41,7 +46,7 @@ export function DocumentListRow({
             <Image source={{ uri }} style={styles.thumb} />
           ) : (
             <View style={styles.fileIcon}>
-              <Ionicons name="document-text-outline" size={22} color="#4B5563" />
+              <Ionicons name="document-text-outline" size={22} color={colors.icon} />
             </View>
           )}
           <View style={styles.textCol}>
@@ -66,7 +71,7 @@ export function DocumentListRow({
               </View>
             ) : null}
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#A3A3A3" />
+          <Ionicons name="chevron-forward" size={18} color={colors.iconMuted} />
         </Pressable>
         {onDelete ? (
           <Pressable
@@ -76,7 +81,7 @@ export function DocumentListRow({
             style={styles.deleteBtn}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={20} color="#B91C1C" />
+            <Ionicons name="trash-outline" size={20} color={Brand.deforestationDetected} />
           </Pressable>
         ) : null}
       </View>
@@ -84,61 +89,3 @@ export function DocumentListRow({
   );
 }
 
-const styles = StyleSheet.create({
-  rowCard: { padding: 12 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  pressableMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minWidth: 0,
-  },
-  thumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#EEE',
-    flexShrink: 0,
-  },
-  fileIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  textCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 2,
-  },
-  title: {
-    flex: 1,
-    minWidth: 0,
-  },
-  badgeWrap: {
-    flexShrink: 0,
-    maxWidth: '42%',
-  },
-  statusWrap: {
-    marginTop: 4,
-    alignSelf: 'flex-start',
-  },
-  deleteBtn: {
-    padding: 6,
-    flexShrink: 0,
-  },
-});

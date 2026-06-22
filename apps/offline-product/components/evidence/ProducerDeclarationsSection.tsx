@@ -14,6 +14,8 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { logAuditEvent } from '@/features/state/persistence';
 import { queueProducerAttestationAuditSync } from '@/features/sync/queueDeclarationAuditSync';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createProducerDeclarationsSectionStyles } from '@/components/evidence/producerDeclarationsSectionStyles';
 
 type ProducerDeclarationsSectionProps = {
   sectionRef?: RefObject<View | null>;
@@ -21,9 +23,11 @@ type ProducerDeclarationsSectionProps = {
 };
 
 function SavedDeclarationRow({ children }: { children: string }) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createProducerDeclarationsSectionStyles);
   return (
     <View style={styles.savedRow}>
-      <Ionicons name="checkmark-circle" size={18} color="#0A7F59" />
+      <Ionicons name="checkmark-circle" size={18} color={colors.link} />
       <ThemedText type="caption" style={styles.savedRowText}>
         {children}
       </ThemedText>
@@ -35,6 +39,7 @@ export function ProducerDeclarationsSection({
   sectionRef,
   openEditingRequest = 0,
 }: ProducerDeclarationsSectionProps) {
+  const styles = useThemedStyles(createProducerDeclarationsSectionStyles);
   const { farmer, saveFarmer } = useAppState();
   const { t } = useLanguage();
   const complete = hasProducerAttestationsComplete(farmer);
@@ -201,58 +206,3 @@ export function ProducerDeclarationsSection({
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    gap: 8,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  subtitle: {
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  declarationItem: {
-    paddingVertical: 6,
-  },
-  savedBlock: {
-    gap: 8,
-    marginTop: 2,
-  },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  savedRowText: {
-    flex: 1,
-    color: '#374151',
-    lineHeight: 20,
-  },
-  savedAt: {
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  error: {
-    color: '#B42318',
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 4,
-  },
-});

@@ -27,6 +27,8 @@ import {
 import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import type { TranslateFn } from '@/features/i18n/translate';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createMultiPlotDeliveryWizardStyles } from '@/features/harvest/multiPlotDeliveryWizardStyles';
 
 type WizardStep = 'list' | 'pick_plot' | 'weight' | 'inline_weights' | 'review' | 'complete';
 
@@ -72,6 +74,7 @@ export function MultiPlotDeliveryWizard({
   onHeaderTitleChange,
   restrictedPlotIds = null,
 }: MultiPlotDeliveryWizardProps) {
+  const styles = useThemedStyles(createMultiPlotDeliveryWizardStyles);
   const [step, setStep] = useState<WizardStep>(() => initialWizardStep(restrictedPlotIds));
   const [lines, setLines] = useState<MultiPlotDeliveryLine[]>([]);
   const [weightByPlotId, setWeightByPlotId] = useState<Record<string, string>>(() =>
@@ -572,99 +575,3 @@ export function MultiPlotDeliveryWizard({
   );
 }
 
-const styles = StyleSheet.create({
-  gap: { gap: 16 },
-  gapSm: { gap: 10 },
-  introCard: {
-    borderRadius: 18,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#DDEFE8',
-    padding: 14,
-  },
-  lineCard: { padding: 14, borderRadius: 16 },
-  lineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  plotCard: { padding: 14, borderRadius: 16 },
-  plotDisabled: { opacity: 0.7 },
-  plotSeasonText: { color: '#6B7280', marginTop: 2 },
-  plotLocalBadge: { color: '#B45309', marginTop: 4 },
-  weightPlotChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#E8F7F0',
-  },
-  weightPlotChipText: { color: '#0B4F3B', fontSize: 14 },
-  weightCard: { borderRadius: 18, padding: 16, backgroundColor: '#FFFFFF' },
-  weightLabel: {
-    color: '#374151',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    fontSize: 11,
-    marginBottom: 8,
-  },
-  weightInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D8E0DD',
-    borderRadius: 14,
-    backgroundColor: '#F9FAFA',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  weightInput: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1F2937',
-    paddingVertical: 0,
-  },
-  weightUnit: { color: '#6B7280', fontSize: 16, minWidth: 24 },
-  inlinePlotCard: { padding: 14, borderRadius: 16, gap: 10 },
-  inlinePlotHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  inlinePlotIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E8F7F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inlinePlotText: { flex: 1, minWidth: 0 },
-  inlineWeightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D8E0DD',
-    borderRadius: 14,
-    backgroundColor: '#F9FAFA',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  inlineWeightInput: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1F2937',
-    paddingVertical: 4,
-  },
-  disabledBtn: { backgroundColor: '#D9D9D9' },
-  btnTextOnGreen: { color: '#FFFFFF' },
-  btnTextDisabled: { color: '#4B5563' },
-  completeTitle: { textAlign: 'center', fontSize: 32, lineHeight: 38 },
-  completeBody: { textAlign: 'center', color: '#555555' },
-  resultCard: { padding: 14, borderRadius: 16, alignItems: 'center', gap: 8 },
-  qrWrap: { alignItems: 'center', gap: 8, marginTop: 8 },
-  voucherCode: { color: '#1F2937' },
-  generatingText: { color: '#6B7280', textAlign: 'center' },
-  errorText: { color: '#B45309' },
-});

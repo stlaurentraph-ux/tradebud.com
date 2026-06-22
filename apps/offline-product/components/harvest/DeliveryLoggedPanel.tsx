@@ -11,6 +11,11 @@ import { formatDeliveryRecipientLabel } from '@/features/harvest/formatDeliveryR
 import type { LoggedDeliverySnapshot } from '@/features/harvest/loggedDeliverySnapshot';
 import { shareDeliveryReceipt } from '@/features/harvest/shareDeliveryReceipt';
 import type { TranslateFn } from '@/features/i18n/translate';
+import {
+  createDeliveryLoggedPanelStyles,
+  harvestStatusColor,
+} from '@/components/harvest/harvestPanelStyles';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 
 export type DeliverySyncFeedback = {
   variant: 'success' | 'error' | 'info';
@@ -40,6 +45,8 @@ export function DeliveryLoggedPanel({
   syncBusy = false,
   syncFeedback = null,
 }: DeliveryLoggedPanelProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createDeliveryLoggedPanelStyles);
   const shareCaptureRef = useRef<View>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -155,12 +162,7 @@ export function DeliveryLoggedPanel({
         : syncFeedback.variant === 'error'
           ? 'alert-circle'
           : 'information-circle';
-    const iconColor =
-      syncFeedback.variant === 'success'
-        ? '#0A7F59'
-        : syncFeedback.variant === 'error'
-          ? '#B45309'
-          : '#2563EB';
+    const iconColor = harvestStatusColor(colors, syncFeedback.variant);
 
     return (
       <View
@@ -278,153 +280,3 @@ export function DeliveryLoggedPanel({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  heroWrap: { alignItems: 'center', marginTop: -4, marginBottom: 2 },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#CDEEDF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapQueued: { backgroundColor: '#E8F4EC' },
-  title: {
-    textAlign: 'center',
-    color: '#1C1C1C',
-    fontSize: 26,
-    lineHeight: 32,
-  },
-  subtitle: {
-    textAlign: 'center',
-    color: '#555555',
-    marginTop: 6,
-    marginBottom: 14,
-    lineHeight: 22,
-    paddingHorizontal: 8,
-  },
-  receiptCard: {
-    borderRadius: 22,
-    backgroundColor: '#F7F7F7',
-    borderColor: '#D9D9D9',
-    alignItems: 'center',
-    paddingVertical: 16,
-    marginBottom: 16,
-  },
-  shareCapture: {
-    width: '100%',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    paddingHorizontal: 12,
-  },
-  receiptDivider: {
-    width: '100%',
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#D1D5DB',
-    marginVertical: 14,
-  },
-  summaryLabel: {
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-  },
-  plotName: { color: '#1F2937', textAlign: 'center' },
-  kgText: { color: '#0A7F59', marginTop: 2, textAlign: 'center' },
-  metaText: { color: '#6B7280', textAlign: 'center' },
-  buyerRow: { marginTop: 10, gap: 2, alignItems: 'center' },
-  buyerKey: { color: '#6B7280', textAlign: 'center' },
-  buyerValue: { color: '#1F2937', textAlign: 'center' },
-  seasonText: { marginTop: 8, color: '#6B7280', textAlign: 'center' },
-  qrWrap: {
-    width: 192,
-    height: 192,
-    borderRadius: 18,
-    backgroundColor: '#E7E7E7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  qrInner: {
-    backgroundColor: '#FFFFFF',
-    padding: 6,
-    borderRadius: 12,
-  },
-  qrReadyTitle: { color: '#1F2937', textAlign: 'center' },
-  qrReadyHint: { color: '#6B7280', marginTop: 4, marginBottom: 10, textAlign: 'center', paddingHorizontal: 8 },
-  codeWrap: {
-    marginBottom: 4,
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: '#DDEFE8',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  codeText: { color: '#0A7F59' },
-  qrPendingWrap: {
-    width: '100%',
-    minHeight: 200,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    marginBottom: 4,
-  },
-  qrPendingIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  qrPendingTitle: { color: '#1F2937', textAlign: 'center' },
-  qrPendingHint: { color: '#6B7280', textAlign: 'center', lineHeight: 20 },
-  actions: { gap: 10 },
-  syncFeedbackBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  syncFeedbackSuccess: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-  },
-  syncFeedbackError: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
-  },
-  syncFeedbackInfo: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  syncFeedbackText: {
-    flex: 1,
-    color: '#1F2937',
-    lineHeight: 20,
-  },
-  secondaryBtn: { backgroundColor: '#E8F7F0' },
-  secondaryBtnText: { color: '#0B4F3B' },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 14,
-    marginTop: 4,
-  },
-  linkText: { color: '#0A7F59' },
-  shareNote: { textAlign: 'center', color: '#6B7280', marginTop: 4 },
-});

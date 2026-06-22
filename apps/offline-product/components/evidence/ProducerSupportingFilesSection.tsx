@@ -19,6 +19,8 @@ import {
 } from '@/features/evidence/producerSupportingFileLabels';
 import { useLanguage } from '@/features/state/LanguageContext';
 import type { PlotEvidenceItem, PlotEvidenceKind } from '@/features/state/persistence';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createProducerSupportingFilesSectionStyles } from '@/components/evidence/producerSupportingFilesSectionStyles';
 
 type ProducerSupportingFilesSectionProps = {
   profileDocs: PlotEvidenceItem[];
@@ -89,6 +91,8 @@ export function ProducerSupportingFilesSection({
   onAddDoc,
   onDeleteDoc,
 }: ProducerSupportingFilesSectionProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createProducerSupportingFilesSectionStyles);
   const { t } = useLanguage();
 
   const collapsedSummary =
@@ -129,7 +133,7 @@ export function ProducerSupportingFilesSection({
             </ThemedText>
           )}
         </View>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color="#0A7F59" />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.link} />
       </Pressable>
 
       {expanded ? (
@@ -153,7 +157,7 @@ export function ProducerSupportingFilesSection({
                     ]}
                   >
                     <View style={styles.typeIconWrap}>
-                      <Ionicons name={docType.icon} size={20} color="#0A7F59" />
+                      <Ionicons name={docType.icon} size={20} color={colors.link} />
                     </View>
                     <View style={styles.typeText}>
                       <ThemedText type="defaultSemiBold">{t(docType.titleKey)}</ThemedText>
@@ -161,7 +165,7 @@ export function ProducerSupportingFilesSection({
                         {t(docType.hintKey)}
                       </ThemedText>
                     </View>
-                    <Ionicons name="add-circle-outline" size={22} color="#0A7F59" />
+                    <Ionicons name="add-circle-outline" size={22} color={colors.link} />
                   </Pressable>
                   {typeDocs.length > 0 ? (
                     <View style={styles.typeDocList}>
@@ -199,93 +203,3 @@ export function ProducerSupportingFilesSection({
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    gap: 0,
-  },
-  sectionMuted: {
-    opacity: 0.92,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
-  },
-  optional: {
-    color: '#6B7280',
-    fontWeight: '400',
-  },
-  subtitle: {
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  body: {
-    marginTop: 12,
-    gap: 10,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E7EB',
-  },
-  typePrompt: {
-    color: '#4B5563',
-    lineHeight: 20,
-  },
-  typeList: {
-    gap: 12,
-  },
-  typeBlock: {
-    gap: 8,
-  },
-  typeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  typeRowPressed: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  typeRowDisabled: {
-    opacity: 0.55,
-  },
-  typeIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ECFDF5',
-  },
-  typeText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  typeHint: {
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  typeDocList: {
-    gap: 8,
-    paddingLeft: 4,
-  },
-  waitHint: {
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-});

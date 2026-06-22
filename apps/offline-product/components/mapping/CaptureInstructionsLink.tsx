@@ -2,6 +2,8 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createCaptureInstructionsLinkStyles } from '@/components/mapping/captureInstructionsLinkStyles';
 
 type CaptureInstructionsLinkProps = {
   onPress: () => void;
@@ -11,6 +13,8 @@ type CaptureInstructionsLinkProps = {
 
 /** Collapsed “Instructions” affordance — full steps open in an alert from the parent screen. */
 export function CaptureInstructionsLink({ onPress, label, hint }: CaptureInstructionsLinkProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createCaptureInstructionsLinkStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -22,25 +26,8 @@ export function CaptureInstructionsLink({ onPress, label, hint }: CaptureInstruc
       <ThemedText type="defaultSemiBold" style={styles.label}>
         {label}
       </ThemedText>
-      <Ionicons name="chevron-down-circle-outline" size={20} color="#0A7F59" />
+      <Ionicons name="chevron-down-circle-outline" size={20} color={colors.link} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  link: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    marginBottom: 6,
-    paddingVertical: 2,
-  },
-  label: {
-    color: '#0A7F59',
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-});

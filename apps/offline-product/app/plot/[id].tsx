@@ -98,11 +98,14 @@ import {
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createPlotDetailScreenStyles } from '@/app/plot/plotDetailScreenStyles';
 
 type Sub = 'photos' | 'documents' | 'deliveries';
 type SetupTarget = Sub | 'settings';
 
 export default function PlotDetailScreen() {
+  const styles = useThemedStyles(createPlotDetailScreenStyles);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
@@ -1115,7 +1118,7 @@ export default function PlotDetailScreen() {
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
-        colors={['#0A7F59', '#0B6F50']}
+        colors={[colors.link, colors.linkStrong]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top }]}
@@ -1262,7 +1265,7 @@ export default function PlotDetailScreen() {
             style={({ pressed }) => [styles.nextStepBanner, pressed && styles.nextStepBannerPressed]}
           >
             <View style={styles.nextStepIconWrap}>
-              <Ionicons name="arrow-forward-circle" size={28} color="#0A7F59" />
+              <Ionicons name="arrow-forward-circle" size={28} color={colors.link} />
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText type="caption" style={styles.nextStepEyebrow}>
@@ -1328,7 +1331,7 @@ export default function PlotDetailScreen() {
                       row.target && pressed && styles.statusRowPressed,
                     ]}
                   >
-                    <Ionicons name="ellipse-outline" size={22} color="#B45309" />
+                    <Ionicons name="ellipse-outline" size={22} color={colors.textWarningStrong} />
                     <View style={styles.statusRowBody}>
                       <ThemedText type="defaultSemiBold">{row.title}</ThemedText>
                       <ThemedText type="caption" style={styles.statusRowCaptionOpen}>
@@ -1349,7 +1352,7 @@ export default function PlotDetailScreen() {
             </>
           ) : (
             <View style={styles.statusAllDoneWrap}>
-              <Ionicons name="checkmark-circle" size={28} color="#0A7F59" />
+              <Ionicons name="checkmark-circle" size={28} color={colors.link} />
               <ThemedText type="default" style={styles.statusAllDoneText}>
                 {t('plot_status_all_done')}
               </ThemedText>
@@ -1367,13 +1370,13 @@ export default function PlotDetailScreen() {
 
         <Pressable style={[styles.navCard, active === 'photos' && styles.navCardSelected]} onPress={() => setActive('photos')}>
           <View style={styles.navIconWrapPhoto}>
-            <Ionicons name="camera-outline" size={28} color="#B36A00" />
+            <Ionicons name="camera-outline" size={28} color={colors.textWarningStrong} />
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText type="subtitle">{t('plot_nav_photos_title')}</ThemedText>
             <ThemedText type="default">{t('plot_nav_photos_sub', { n: photos.length })}</ThemedText>
           </View>
-          <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
+          <Ionicons name="chevron-forward" size={22} color={colors.iconMuted} />
         </Pressable>
 
         <Pressable
@@ -1382,13 +1385,13 @@ export default function PlotDetailScreen() {
           onPress={() => setActive('documents')}
         >
           <View style={styles.navIconWrapDocs}>
-            <Ionicons name="document-text-outline" size={28} color="#2D5FD4" />
+            <Ionicons name="document-text-outline" size={28} color={colors.tint} />
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText type="subtitle">{t('plot_nav_documents_title')}</ThemedText>
             <ThemedText type="default">{documentsNavSubtitle}</ThemedText>
           </View>
-          <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
+          <Ionicons name="chevron-forward" size={22} color={colors.iconMuted} />
         </Pressable>
 
         <Pressable
@@ -1396,7 +1399,7 @@ export default function PlotDetailScreen() {
           onPress={() => setActive('deliveries')}
         >
           <View style={styles.navIconWrapHarvest}>
-            <Ionicons name="receipt-outline" size={28} color="#0B6F50" />
+            <Ionicons name="receipt-outline" size={28} color={colors.link} />
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText type="subtitle">{t('plot_nav_deliveries_title')}</ThemedText>
@@ -1404,7 +1407,7 @@ export default function PlotDetailScreen() {
               {t('plot_nav_deliveries_sub', { n: plotDeliveryCount })}
             </ThemedText>
           </View>
-          <Ionicons name="chevron-forward" size={22} color="#A3A3A3" />
+          <Ionicons name="chevron-forward" size={22} color={colors.iconMuted} />
         </Pressable>
 
         {plot ? (
@@ -1483,7 +1486,7 @@ export default function PlotDetailScreen() {
                         {t('plot_land_papers_show_edit_sub', { n: titlePhotos.length })}
                       </ThemedText>
                     </View>
-                    <Ionicons name="chevron-down" size={20} color="#0A7F59" />
+                    <Ionicons name="chevron-down" size={20} color={colors.link} />
                   </View>
                 </Card>
               </Pressable>
@@ -1499,7 +1502,7 @@ export default function PlotDetailScreen() {
                     <ThemedText type="caption" style={styles.docLandCollapseLabel}>
                       {t('plot_land_papers_hide_edit')}
                     </ThemedText>
-                    <Ionicons name="chevron-up" size={18} color="#6B7280" />
+                    <Ionicons name="chevron-up" size={18} color={colors.textMuted} />
                   </Pressable>
                 ) : null}
                 <PlotLandPapersCard
@@ -1546,7 +1549,7 @@ export default function PlotDetailScreen() {
         {active === 'deliveries' && !plot ? (
           <Card variant="outlined" style={styles.harvestRowCard}>
             <ThemedText type="defaultSemiBold">{t('plot_not_found')}</ThemedText>
-            <ThemedText type="caption" style={{ marginTop: 6, color: '#6B7280' }}>
+            <ThemedText type="caption" style={{ marginTop: 6, color: colors.textMuted }}>
               {t('harvest_plot_not_on_device')}
             </ThemedText>
           </Card>
@@ -1707,581 +1710,4 @@ export default function PlotDetailScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  header: { paddingHorizontal: 16, paddingBottom: 6 },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingTop: 4,
-  },
-  headerRowCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  backPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  langPillCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    minWidth: 54,
-    justifyContent: 'center',
-  },
-  langDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#9FE6C9',
-  },
-  container: { padding: 16, paddingBottom: 32, gap: 12 },
-  card: { marginTop: 2 },
-  summaryMetaRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  summaryMetaCell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ECECEC',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 14,
-    padding: 10,
-    gap: 4,
-  },
-  statusChecklistCard: {
-    borderRadius: 18,
-    borderColor: '#D7DBDF',
-    backgroundColor: '#FFFFFF',
-    padding: 14,
-    gap: 0,
-  },
-  progressHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: '#10B981',
-  },
-  progressLabel: {
-    color: '#0B4F3B',
-    fontSize: 13,
-    minWidth: 88,
-    textAlign: 'right',
-  },
-  statusChecklistTitle: {
-    color: '#0B4F3B',
-    fontSize: 16,
-  },
-  statusChecklistSub: {
-    marginTop: 4,
-    color: '#5C5C5C',
-    lineHeight: 18,
-  },
-  statusChecklistRows: {
-    marginTop: 12,
-    gap: 10,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#ECECEC',
-    backgroundColor: '#FAFAFA',
-  },
-  statusRowOpen: {
-    borderColor: '#F2C94C',
-    backgroundColor: '#FFFBF0',
-  },
-  statusRowPressed: {
-    opacity: 0.92,
-  },
-  statusRowBody: {
-    flex: 1,
-    flexShrink: 1,
-  },
-  statusRowCaptionOpen: {
-    marginTop: 4,
-    color: '#6B6B6B',
-    lineHeight: 18,
-  },
-  statusRowTap: {
-    color: Brand.primary,
-    alignSelf: 'center',
-    fontWeight: '600',
-  },
-  statusRemainingFooterHint: {
-    marginTop: 10,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  statusAllDoneWrap: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  statusAllDoneText: {
-    flex: 1,
-    color: '#0A7F59',
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  checkCard: {
-    borderRadius: 18,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#DDEFE8',
-  },
-  checkIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#BFEEDB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navCard: {
-    borderWidth: 1,
-    borderColor: '#D7DBDF',
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  navCardSelected: {
-    borderColor: '#74D7B8',
-  },
-  navIconWrapPhoto: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#F8F1CD',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIconWrapDocs: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#DFEAFE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIconWrapHarvest: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#DDF5EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIconWrapVoucher: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#EFE3FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoIntroCard: {
-    borderRadius: 18,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#DDEFE8',
-  },
-  photoIntroText: {
-    color: '#1E6D58',
-  },
-  photoVaultGrid: {
-    marginTop: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  photoVaultSlot: {
-    width: '48.5%',
-    minHeight: 210,
-    borderRadius: 16,
-    backgroundColor: '#EFEFEF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    overflow: 'hidden',
-  },
-  photoVaultImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: undefined,
-    height: undefined,
-  },
-  photoVaultTitle: {
-    color: '#666666',
-  },
-  photoVaultDate: {
-    color: '#8E8E8E',
-  },
-  docCard: {
-    gap: 0,
-  },
-  docNextStepCard: {
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#F59E0B',
-  },
-  docAllSetCard: {
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#0A7F59',
-  },
-  docLandEditToggle: {
-    padding: 12,
-  },
-  docLandEditToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  docLandEditToggleSub: {
-    marginTop: 4,
-    color: '#6B7280',
-  },
-  docLandCollapseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
-    marginBottom: 4,
-  },
-  docLandCollapseLabel: {
-    color: '#6B7280',
-  },
-  docNoteCard: {
-    paddingVertical: 4,
-  },
-  docStatusCard: {
-    padding: 12,
-  },
-  docRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  docIconWrapGreen: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: '#D3EFE3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docIconWrapBlue: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: '#DBE8FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docVerifiedText: {
-    color: '#0A7F59',
-  },
-  docPendingText: {
-    color: '#B87700',
-  },
-  docCodeWrap: {
-    marginTop: 14,
-    borderRadius: 12,
-    backgroundColor: '#EBEBEB',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  docCodeText: {
-    color: '#4F4F4F',
-  },
-  docSubText: {
-    marginTop: 10,
-    color: '#676767',
-  },
-  uploadDocCta: {
-    marginTop: 12,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: '#7CD8BA',
-    borderStyle: 'dashed',
-    backgroundColor: '#DDEFE8',
-    minHeight: 86,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  uploadDocText: {
-    color: '#0A7F59',
-  },
-  harvestSummaryCard: {
-    borderRadius: 20,
-    backgroundColor: '#F7F7F7',
-    borderColor: '#D9D9D9',
-  },
-  harvestSummaryTitle: {
-    color: '#3A3A3A',
-  },
-  harvestSummaryKg: {
-    color: '#0A7F59',
-  },
-  harvestAreaCaption: {
-    marginTop: 6,
-    color: '#565656',
-  },
-  harvestRowCard: {
-    borderRadius: 18,
-    backgroundColor: '#F7F7F7',
-    borderColor: '#D9D9D9',
-    paddingVertical: 16,
-  },
-  harvestKgText: {
-    color: '#1F1F1F',
-  },
-  harvestDateText: {
-    color: '#616161',
-  },
-  harvestCoopText: {
-    color: '#616161',
-  },
-  voucherCard: {
-    borderRadius: 22,
-    backgroundColor: '#F7F7F7',
-    borderColor: '#D9D9D9',
-    alignItems: 'center',
-    paddingTop: 18,
-    paddingBottom: 20,
-  },
-  voucherShareCapture: {
-    width: '100%',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-  },
-  voucherQrWrap: {
-    width: 192,
-    height: 192,
-    borderRadius: 18,
-    backgroundColor: '#E7E7E7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  voucherQrInner: {
-    backgroundColor: '#FFFFFF',
-    padding: 6,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  voucherTitle: {
-    color: '#1F1F1F',
-  },
-  voucherSubtitle: {
-    color: '#6C6C6C',
-    marginTop: 2,
-  },
-  voucherCodeWrap: {
-    marginTop: 12,
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: '#DDEFE8',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  voucherCodeText: {
-    color: '#0A7F59',
-  },
-  voucherBodyText: {
-    marginTop: 14,
-    color: '#515151',
-    lineHeight: 30,
-  },
-  rowCard: { padding: 12 },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  plotTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 4,
-  },
-  plotTitleFull: {
-    color: '#111111',
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '600',
-  },
-  plotHectaresLine: {
-    marginTop: 4,
-    maxWidth: '100%',
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#3D3D3D',
-  },
-  plotStatusBadgeRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  plotRegisteredLine: {
-    marginTop: 8,
-    color: '#6B7280',
-  },
-  nextStepBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#E8F7F0',
-    marginBottom: 4,
-  },
-  nextStepBannerPressed: {
-    opacity: 0.92,
-  },
-  nextStepIconWrap: {
-    width: 36,
-    alignItems: 'center',
-  },
-  nextStepEyebrow: {
-    color: '#0A7F59',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    fontSize: 11,
-  },
-  nextStepTitle: {
-    marginTop: 2,
-    color: '#0B4F3B',
-    fontSize: 16,
-  },
-  nextStepHint: {
-    marginTop: 4,
-    color: '#1F6B57',
-    lineHeight: 18,
-  },
-  nextStepCta: {
-    color: '#0A7F59',
-    fontWeight: '700',
-    maxWidth: 72,
-    textAlign: 'right',
-  },
-  plotRenameBtn: {
-    padding: 5,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#E8F8F1',
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  plotMapHeroPress: {
-    marginBottom: 14,
-  },
-  plotMapCaption: {
-    marginTop: 8,
-    color: '#0A7F59',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  renameModalKeyboardRoot: {
-    flex: 1,
-  },
-  renameModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
-  renameModalScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  renameModalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 18,
-    maxWidth: 400,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  renameModalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
-  photoThumb: { width: 72, height: 72, borderRadius: 12, backgroundColor: '#eee' },
-  photoThumbMore: {
-    width: 72,
-    height: 72,
-    borderRadius: 12,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deletePlotSection: {
-    marginTop: 8,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    gap: 10,
-  },
-  deletePlotSectionNote: {
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  deletePlotButton: {
-    marginTop: 4,
-  },
-});
 

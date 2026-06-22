@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Brand } from '@/constants/theme';
+import type { AppColors } from '@/features/theme/useThemedStyles';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createGeometryConfidenceBannerStyles } from '@/components/mapping/geometryConfidenceBannerStyles';
 import type {
   GeometryConfidenceAssessment,
   GeometryConfidenceTier,
@@ -21,14 +23,14 @@ function tierLabel(t: TranslateFn, tier: GeometryConfidenceTier): string {
   return t('walk_geo_confidence_tier_low');
 }
 
-function tierStyles(tier: GeometryConfidenceTier) {
+function tierPalette(c: AppColors, tier: GeometryConfidenceTier) {
   if (tier === 'high') {
-    return { bg: '#F2FBF7', border: '#0A7F59', text: '#0A5C40' };
+    return { bg: c.surfaceAccent, border: c.link, text: c.linkStrong };
   }
   if (tier === 'moderate') {
-    return { bg: '#FFF8E8', border: '#C98A00', text: '#7A5200' };
+    return { bg: c.surfaceWarning, border: c.warning, text: c.textWarningStrong };
   }
-  return { bg: '#FFF1F0', border: '#C0392B', text: '#8B291F' };
+  return { bg: c.surfaceWarning, border: c.error, text: c.textWarningStrong };
 }
 
 export function GeometryConfidenceBanner({
@@ -37,11 +39,13 @@ export function GeometryConfidenceBanner({
   onManualTrace,
   onRetry,
 }: GeometryConfidenceBannerProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createGeometryConfidenceBannerStyles);
   if (assessment.tier === 'high' && assessment.recommendedAction === 'none') {
     return null;
   }
 
-  const palette = tierStyles(assessment.tier);
+  const palette = tierPalette(colors, assessment.tier);
   const showManualTrace =
     assessment.recommendedAction === 'use_manual_trace' && onManualTrace != null;
   const showRetry = assessment.recommendedAction === 'retry_capture' && onRetry != null;
@@ -77,29 +81,3 @@ export function GeometryConfidenceBanner({
   );
 }
 
-const styles = StyleSheet.create({
-  banner: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 6,
-  },
-  title: {
-    fontSize: 14,
-  },
-  body: {
-    opacity: 0.85,
-    lineHeight: 18,
-  },
-  cta: {
-    marginTop: 4,
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-  },
-  ctaText: {
-    color: Brand.primary,
-    fontSize: 14,
-  },
-});

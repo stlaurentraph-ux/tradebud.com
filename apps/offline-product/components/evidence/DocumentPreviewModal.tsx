@@ -20,6 +20,8 @@ import {
   type DocumentPreviewItem,
 } from '@/features/evidence/documentPreview';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createDocumentPreviewModalStyles } from '@/components/evidence/documentPreviewModalStyles';
 
 type DocumentPreviewModalProps = {
   visible: boolean;
@@ -29,6 +31,8 @@ type DocumentPreviewModalProps = {
 };
 
 export function DocumentPreviewModal({ visible, item, onClose, onDelete }: DocumentPreviewModalProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createDocumentPreviewModalStyles);
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
@@ -52,7 +56,7 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
       <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color="#1A1A1A" />
+            <Ionicons name="close" size={24} color={colors.text} />
           </Pressable>
           <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={2}>
             {item?.label ?? t('documents_preview_title')}
@@ -71,7 +75,7 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
             <Image source={{ uri: item.uri }} style={styles.image} resizeMode="contain" />
           ) : item ? (
             <CardLike>
-              <Ionicons name="document-outline" size={40} color="#6B7280" />
+              <Ionicons name="document-outline" size={40} color={colors.textMuted} />
               <ThemedText type="defaultSemiBold" style={styles.fileTitle}>
                 {item.label ?? t('documents_preview_file')}
               </ThemedText>
@@ -104,70 +108,7 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
 }
 
 function CardLike({ children }: { children: ReactNode }) {
+  const styles = useThemedStyles(createDocumentPreviewModalStyles);
   return <View style={styles.card}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-  },
-  closeBtn: {
-    padding: 8,
-  },
-  title: {
-    flex: 1,
-    minWidth: 0,
-  },
-  body: {
-    padding: 16,
-    flexGrow: 1,
-  },
-  image: {
-    width: '100%',
-    minHeight: 320,
-    borderRadius: 12,
-    backgroundColor: '#E5E7EB',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D9D9D9',
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  signatureLabel: {
-    alignSelf: 'flex-start',
-    color: '#6B7280',
-  },
-  fileTitle: {
-    textAlign: 'center',
-  },
-  fileHint: {
-    textAlign: 'center',
-    color: '#6B7280',
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  footerStacked: {
-    paddingTop: 0,
-  },
-  deleteBtn: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FECACA',
-  },
-  deleteBtnText: {
-    color: '#B91C1C',
-  },
-});

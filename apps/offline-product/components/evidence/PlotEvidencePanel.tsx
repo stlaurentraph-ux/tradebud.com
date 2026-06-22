@@ -22,6 +22,8 @@ import {
   type PlotEvidenceItem,
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createPlotEvidencePanelStyles } from '@/components/evidence/plotEvidencePanelStyles';
 
 type OverlapFlags = { sinaph: boolean; indigenous: boolean };
 
@@ -89,6 +91,7 @@ export function PlotEvidencePanel({
   onSyncMessage,
   onSyncComplete,
 }: PlotEvidencePanelProps) {
+  const styles = useThemedStyles(createPlotEvidencePanelStyles);
   const { t } = useLanguage();
   const [overlapSyncMessage, setOverlapSyncMessage] = useState<string | null>(null);
   const [overlapSyncTone, setOverlapSyncTone] = useState<'success' | 'error' | 'info'>('info');
@@ -397,45 +400,3 @@ export function PlotEvidencePanel({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: 12 },
-  sectionCard: {
-    gap: 0,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 6,
-  },
-  sectionTitle: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  countBadgeWrap: {
-    flexShrink: 0,
-    marginTop: 2,
-  },
-  sectionBody: {
-    marginBottom: 4,
-  },
-  sectionActions: {
-    gap: 10,
-    marginTop: 10,
-  },
-  promptCard: {
-    padding: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#D97706',
-  },
-  promptBody: {
-    marginTop: 6,
-  },
-  requiredHint: { marginTop: 6, color: '#B45309' },
-  overlapSyncFeedback: { marginBottom: 4 },
-  overlapSyncSuccess: { color: '#0A7F59' },
-  overlapSyncError: { color: '#B91C1C' },
-  overlapSyncInfo: { color: '#6B7280' },
-});

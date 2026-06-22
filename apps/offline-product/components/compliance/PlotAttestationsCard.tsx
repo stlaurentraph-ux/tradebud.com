@@ -11,12 +11,15 @@ import { queuePlotComplianceAuditSync } from '@/features/sync/queueDeclarationAu
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { logAuditEvent } from '@/features/state/persistence';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createPlotAttestationsCardStyles } from '@/components/compliance/plotAttestationsCardStyles';
 
 type PlotAttestationsCardProps = {
   plot: Plot;
 };
 
 export function PlotAttestationsCard({ plot }: PlotAttestationsCardProps) {
+  const styles = useThemedStyles(createPlotAttestationsCardStyles);
   const { farmer, updatePlot } = useAppState();
   const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
@@ -127,28 +130,3 @@ export function PlotAttestationsCard({ plot }: PlotAttestationsCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { marginBottom: 12 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  declarationItem: {
-    paddingVertical: 8,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 10,
-  },
-});

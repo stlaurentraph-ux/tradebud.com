@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 import {
+  classifyTenureDocFarmerOutcome,
   describeTenureVerificationReview,
   formatTenureVerificationReviewMessage,
   summarizeTenureBlockedBadge,
@@ -11,32 +12,20 @@ import {
   resolvePlotLandBlockedShortHint,
 } from './plotTenureVerificationReview';
 
-const t = (key: string, params?: Record<string, string | number>) => {
+const t = (key: string) => {
   const table: Record<string, string> = {
-    plot_tenure_doc_reason_failed: 'Could not read photo',
-    plot_tenure_doc_reason_missing_one: 'Needs: {item}',
     plot_tenure_doc_label_land_title: 'Land title photo',
-    plot_tenure_clause_witness_signatures: 'Witness signatures',
-    plot_tenure_clause_issuer_stamp: 'Official stamp',
-    plot_tenure_doc_reason_missing_clauses_generic: 'Something is missing',
-    plot_tenure_doc_reason_unclear_photo: 'Unclear photo',
-    plot_tenure_doc_reason_unreadable: 'Not a land paper',
-    plot_tenure_manual_review_body: 'Cooperative will check',
-    plot_tenure_issue_cadastral_mismatch: 'Registry mismatch',
-    plot_tenure_doc_reason_cadastral_review: 'Registry check',
-    plot_status_land_reupload_hint: 'Upload clearer paper',
-    plot_status_land_check_delayed_hint: 'Finish backup first',
-    plot_status_land_wrong_document_hint: 'Upload correct land paper',
-    plot_tenure_doc_reason_check_delayed: 'Still checking after backup',
-    plot_tenure_doc_reason_manual_queue: 'Saved — reviewer will finish',
+    plot_tenure_doc_outcome_checking: 'Still checking…',
+    plot_tenure_doc_outcome_fix_upload: 'Please upload again.',
+    plot_tenure_doc_hint_hard_to_read: 'Hard to read.',
+    plot_tenure_doc_hint_missing_parts: 'Missing parts.',
+    plot_tenure_doc_hint_missing_signature: 'Missing signature.',
+    plot_tenure_doc_hint_not_land_paper: 'Not a land paper.',
+    plot_tenure_doc_hint_land_id_mismatch: 'Land ID mismatch.',
+    plot_tenure_doc_hint_queued: 'Queued.',
+    plot_status_land_parse_blocked: 'Land papers need a check',
   };
-  let out = table[key] ?? key;
-  if (params) {
-    for (const [name, value] of Object.entries(params)) {
-      out = out.replace(`{${name}}`, String(value));
-    }
-  }
-  return out;
+  return table[key] ?? key;
 };
 
 function baseRecord(
@@ -116,182 +105,138 @@ describe('describeTenureVerificationReview', () => {
   });
 });
 
-describe('formatTenureVerificationReviewMessage', () => {
-  it('does not expose raw OCR errors to farmers', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_status: 'FAILED',
-        parse_result: { error: 'OCR could not read document' },
-      }),
-    );
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Could not read photo');
+describe('classifyTenureDocFarmerOutcome', () => {
+  it('maps completed parses to good', () => {
+    expect(
+      classifyTenureDocFarmerOutcome(baseRecord({ parse_status: 'COMPLETED', parse_result: {} })),
+    ).toBe('good');
   });
 
-  it('maps automated extraction stub to manual queue copy, not sync-again', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_status: 'MANUAL_REQUIRED',
-        parse_result: {
-          parser: 'manual_required_stub',
-          clauses_missing: ['automated_extraction_unavailable'],
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_manual_queue');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Saved — reviewer will finish');
-  });
-
-  it('maps storage and LLM failures to backup-first copy, not unreadable photo', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_status: 'FAILED',
-        parse_result: { error: 'Could not download tenure evidence file.' },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_check_delayed');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Still checking after backup');
-    expect(tenureVerificationRequiresReupload(baseRecord({
+  it('maps farmer-fixable issues to fix_upload', () => {
+    const blurry = baseRecord({
       parse_status: 'FAILED',
-      parse_result: { error: 'Could not download tenure evidence file.' },
-    }))).toBe(false);
-  });
-
-  it('treats readable land papers with low OCR as cooperative review, not unreadable', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_confidence: 0.42,
-        parse_result: {
-          parser: 'llm',
-          tenure_type: 'CUSTOMARY',
-          holder_name: 'Maria Lopez',
-          confidence_breakdown: { ocr_quality: 0.32, field_completeness: 0.55 },
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_manual_review_body');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Cooperative will check');
-  });
-
-  it('humanizes missing clause keys', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_result: { clauses_missing: ['witness_signatures'] },
-      }),
-    );
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Needs: Witness signatures');
-  });
-
-  it('maps automated extraction stub to manual queue copy, not sync-again', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_status: 'MANUAL_REQUIRED',
-        parse_result: {
-          parser: 'manual_required_stub',
-          clauses_missing: ['automated_extraction_unavailable'],
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_manual_queue');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Saved — reviewer will finish');
-  });
-
-  it('falls back when clause keys are dev-only tokens', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_result: { clauses_missing: ['some_internal_token_xyz'] },
-      }),
-    );
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Something is missing');
-  });
-
-  it('maps cadastral issue codes to plain language', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_result: {
-          cadastral_cross_check: {
-            requires_manual_review: true,
-            issues: ['cadastral_key_mismatch'],
-          },
-        },
-      }),
-    );
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Registry mismatch');
-  });
-
-  it('hides low-confidence percentages for blurry photos', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_confidence: 0.42,
-        parse_result: {
-          parser: 'llm',
-          tenure_type: 'UNKNOWN',
-          holder_name: null,
-          confidence_breakdown: { ocr_quality: 0.3, field_completeness: 0.4 },
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_low_confidence');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Unclear photo');
-  });
-
-  it('treats clear unrelated photos as wrong document, not unreadable', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_confidence: 0.42,
-        parse_result: {
-          parser: 'llm',
-          tenure_type: 'UNKNOWN',
-          holder_name: null,
-          parcel_reference: null,
-          confidence_breakdown: { ocr_quality: 0.92, field_completeness: 0.08 },
-          summary: 'Photo shows a person outdoors, not a land document.',
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_unreadable');
-    expect(formatTenureVerificationReviewMessage(detail, t)).toBe('Not a land paper');
-  });
-
-  it('maps not_a_land_document clause to wrong-document copy', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_result: {
-          parser: 'llm',
-          tenure_type: 'UNKNOWN',
-          clauses_missing: ['not_a_land_document'],
-          confidence_breakdown: { ocr_quality: 0.88, field_completeness: 0.1 },
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_unreadable');
-  });
-
-  it('prefers wrong-document copy over service error on manual review', () => {
-    const detail = describeTenureVerificationReview(
-      baseRecord({
-        parse_status: 'MANUAL_REQUIRED',
-        parse_result: {
-          parser: 'llm',
-          error: 'column fp.full_name does not exist',
-          retryable: true,
-          tenure_type: 'UNKNOWN',
-          clauses_missing: ['not_a_land_document'],
-          confidence_breakdown: { ocr_quality: 0.9, field_completeness: 0.1 },
-        },
-      }),
-    );
-    expect(detail.reasonKey).toBe('plot_tenure_doc_reason_unreadable');
-    expect(tenureVerificationRequiresReupload(baseRecord({
-      parse_status: 'MANUAL_REQUIRED',
+      parse_result: { error: 'OCR could not read document' },
+    });
+    const wrongDoc = baseRecord({
       parse_result: {
         parser: 'llm',
-        error: 'column fp.full_name does not exist',
-        retryable: true,
         tenure_type: 'UNKNOWN',
         clauses_missing: ['not_a_land_document'],
-        confidence_breakdown: { ocr_quality: 0.9, field_completeness: 0.1 },
+        confidence_breakdown: { ocr_quality: 0.88, field_completeness: 0.1 },
       },
-    }))).toBe(true);
+    });
+    const missing = baseRecord({
+      parse_result: { clauses_missing: ['witness_signatures'] },
+    });
+
+    expect(classifyTenureDocFarmerOutcome(blurry)).toBe('fix_upload');
+    expect(classifyTenureDocFarmerOutcome(wrongDoc)).toBe('fix_upload');
+    expect(classifyTenureDocFarmerOutcome(missing)).toBe('fix_upload');
+  });
+
+  it('maps cooperative and queue states to checking', () => {
+    const queue = baseRecord({
+      parse_status: 'MANUAL_REQUIRED',
+      parse_result: {
+        parser: 'manual_required_stub',
+        clauses_missing: ['automated_extraction_unavailable'],
+      },
+    });
+    const service = baseRecord({
+      parse_status: 'FAILED',
+      parse_result: { error: 'Could not download tenure evidence file.' },
+    });
+    const coop = baseRecord({
+      parse_confidence: 0.42,
+      parse_result: {
+        parser: 'llm',
+        tenure_type: 'CUSTOMARY',
+        holder_name: 'Maria Lopez',
+        confidence_breakdown: { ocr_quality: 0.32, field_completeness: 0.55 },
+      },
+    });
+    const cadastral = baseRecord({
+      parse_result: {
+        cadastral_cross_check: {
+          requires_manual_review: true,
+          issues: ['cadastral_key_mismatch'],
+        },
+      },
+    });
+
+    expect(classifyTenureDocFarmerOutcome(queue)).toBe('checking');
+    expect(classifyTenureDocFarmerOutcome(service)).toBe('checking');
+    expect(classifyTenureDocFarmerOutcome(coop)).toBe('checking');
+    expect(classifyTenureDocFarmerOutcome(cadastral)).toBe('checking');
+  });
+});
+
+describe('formatTenureVerificationReviewMessage', () => {
+  it('returns no copy for good outcomes', () => {
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({ parse_status: 'COMPLETED', parse_result: {} }),
+        t,
+      ),
+    ).toBe('');
+  });
+
+  it('returns one checking line for queue and cooperative review', () => {
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({
+          parse_status: 'PENDING',
+          parse_result: null,
+        }),
+        t,
+      ),
+    ).toBe('Still checking… Queued.');
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({
+          parse_result: {
+            cadastral_cross_check: {
+              requires_manual_review: true,
+              issues: ['cadastral_key_mismatch'],
+            },
+          },
+        }),
+        t,
+      ),
+    ).toBe('Still checking… Land ID mismatch.');
+  });
+
+  it('returns fix-upload line with a precise hint for each farmer-fixable issue', () => {
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({
+          parse_status: 'FAILED',
+          parse_result: { error: 'OCR could not read document' },
+        }),
+        t,
+      ),
+    ).toBe('Please upload again. Hard to read.');
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({
+          parse_result: { clauses_missing: ['witness_signatures'] },
+        }),
+        t,
+      ),
+    ).toBe('Please upload again. Missing signature.');
+    expect(
+      formatTenureVerificationReviewMessage(
+        baseRecord({
+          parse_result: {
+            parser: 'llm',
+            tenure_type: 'UNKNOWN',
+            clauses_missing: ['not_a_land_document'],
+            confidence_breakdown: { ocr_quality: 0.88, field_completeness: 0.1 },
+          },
+        }),
+        t,
+      ),
+    ).toBe('Please upload again. Not a land paper.');
   });
 });
 
@@ -321,14 +266,17 @@ describe('tenureVerificationRequiresReupload', () => {
     ).toBe(true);
   });
 
-  it('does not flag cooperative manual review as re-upload', () => {
+  it('flags missing clauses as re-upload', () => {
     expect(
       tenureVerificationRequiresReupload(
         baseRecord({
           parse_result: { clauses_missing: ['witness_signatures'] },
         }),
       ),
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it('does not flag cooperative manual review as re-upload', () => {
     expect(
       tenureVerificationRequiresReupload(
         baseRecord({
@@ -342,7 +290,7 @@ describe('tenureVerificationRequiresReupload', () => {
 });
 
 describe('summarizeTenureBlockedBadge', () => {
-  it('prioritizes upload again when any file is unreadable', () => {
+  it('prioritizes upload again when any file needs a fix', () => {
     expect(
       summarizeTenureBlockedBadge([
         baseRecord({
@@ -361,7 +309,9 @@ describe('summarizeTenureBlockedBadge', () => {
     expect(
       summarizeTenureBlockedBadge([
         baseRecord({
-          parse_result: { clauses_missing: ['witness_signatures'] },
+          parse_result: {
+            cadastral_cross_check: { keys_match: false, requires_manual_review: true },
+          },
         }),
       ]),
     ).toBe('review');
@@ -378,32 +328,27 @@ describe('tenure review display dedupe', () => {
         }),
         t,
       ),
-    ).toBe('Upload clearer paper');
+    ).toBe('Please upload again. Hard to read.');
     expect(
       resolvePlotLandBlockedShortHint(
         baseRecord({
-          parse_confidence: 0.4,
           parse_result: {
-            parser: 'llm',
-            tenure_type: 'UNKNOWN',
-            confidence_breakdown: { ocr_quality: 0.9, field_completeness: 0.1 },
-            clauses_missing: ['not_a_land_document'],
+            cadastral_cross_check: { keys_match: false, requires_manual_review: true },
           },
         }),
         t,
       ),
-    ).toBe('Upload correct land paper');
+    ).toBe('Still checking… Land ID mismatch.');
   });
 
-  it('hides badge when reason box carries re-upload detail', () => {
+  it('hides badge when upload-again badge carries the action', () => {
     const record = baseRecord({
       parse_status: 'FAILED',
       parse_result: { error: 'unreadable' },
     });
     expect(shouldShowTenureDocStatusBadge(record)).toBe(false);
-    const detail = describeTenureVerificationReview(record, t);
-    const reason = formatTenureVerificationReviewMessage(detail, t);
-    expect(shouldShowTenureDocReasonBox(record, detail, reason, new Set())).toBe(true);
+    const reason = formatTenureVerificationReviewMessage(record, t);
+    expect(shouldShowTenureDocReasonBox(record, reason, new Set())).toBe(true);
   });
 
   it('does not repeat identical reason text across rows', () => {
@@ -411,17 +356,23 @@ describe('tenure review display dedupe', () => {
       parse_status: 'FAILED',
       parse_result: { error: 'unreadable' },
     });
-    const detail = describeTenureVerificationReview(record, t);
-    const reason = formatTenureVerificationReviewMessage(detail, t);
+    const reason = formatTenureVerificationReviewMessage(record, t);
     const seen = new Set([reason]);
-    expect(shouldShowTenureDocReasonBox(record, detail, reason, seen)).toBe(false);
+    expect(shouldShowTenureDocReasonBox(record, reason, seen)).toBe(false);
   });
 
-  it('shows checking badge only while pending', () => {
-    const record = baseRecord({ parse_status: 'PENDING', parse_result: null });
-    const detail = describeTenureVerificationReview(record, t);
-    const reason = formatTenureVerificationReviewMessage(detail, t);
+  it('shows no reason box for good outcomes', () => {
+    const record = baseRecord({ parse_status: 'COMPLETED', parse_result: {} });
+    const reason = formatTenureVerificationReviewMessage(record, t);
     expect(shouldShowTenureDocStatusBadge(record)).toBe(true);
-    expect(shouldShowTenureDocReasonBox(record, detail, reason, new Set())).toBe(false);
+    expect(shouldShowTenureDocReasonBox(record, reason, new Set())).toBe(false);
+  });
+
+  it('shows one checking line while pending', () => {
+    const record = baseRecord({ parse_status: 'PENDING', parse_result: null });
+    const reason = formatTenureVerificationReviewMessage(record, t);
+    expect(shouldShowTenureDocStatusBadge(record)).toBe(true);
+    expect(reason).toBe('Still checking… Queued.');
+    expect(shouldShowTenureDocReasonBox(record, reason, new Set())).toBe(true);
   });
 });

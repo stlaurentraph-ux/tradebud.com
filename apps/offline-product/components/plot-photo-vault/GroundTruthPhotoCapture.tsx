@@ -7,6 +7,8 @@ import { PhotoVaultMap } from '@/components/plot-photo-vault/PhotoVaultMap';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
+import { createGroundTruthPhotoCaptureStyles } from '@/components/plot-photo-vault/groundTruthPhotoCaptureStyles';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import {
   directionForSlotIndex,
   GROUND_TRUTH_DIRECTIONS,
@@ -110,6 +112,7 @@ function DirectionProgressRow({
   selectable?: boolean;
   onSelectDirection?: (direction: GroundTruthPhotoDirection) => void;
 }) {
+  const styles = useThemedStyles(createGroundTruthPhotoCaptureStyles);
   return (
     <View style={styles.directionProgressRow}>
       {GROUND_TRUTH_DIRECTIONS.map((dir) => {
@@ -148,6 +151,7 @@ export function GroundTruthPhotoCapture({
   t,
   compact = false,
 }: GroundTruthPhotoCaptureProps) {
+  const styles = useThemedStyles(createGroundTruthPhotoCaptureStyles);
   const gps = usePhotoVaultGps(plot);
   const [lowDataMap, setLowDataMap] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
@@ -396,9 +400,18 @@ export function GroundTruthPhotoCapture({
         <Button
           title={t('photo_vault_continue')}
           variant="secondary"
-          style={styles.primaryBtn}
-          disabled={!gps.captureReady}
-          onPress={startCapture}
+          style={
+            gps.captureReady
+              ? styles.primaryBtn
+              : { ...styles.primaryBtn, opacity: 0.55 }
+          }
+          onPress={() => {
+            if (!gps.captureReady) {
+              Alert.alert(t('photo_vault_gps_blocked_title'), t('photo_vault_gps_polygon_body'));
+              return;
+            }
+            startCapture();
+          }}
         />
       </View>
     );
@@ -525,6 +538,7 @@ function StatusStrip({
   label: string;
   accuracyM: number | null;
 }) {
+  const styles = useThemedStyles(createGroundTruthPhotoCaptureStyles);
   return (
     <View style={styles.gpsStrip}>
       <View style={[styles.gpsDot, { backgroundColor: ready ? Brand.primary : '#D97706' }]} />
@@ -541,6 +555,7 @@ function StatusStrip({
 }
 
 function CompassCue({ deltaDeg, facingOk }: { deltaDeg: number; facingOk: boolean }) {
+  const styles = useThemedStyles(createGroundTruthPhotoCaptureStyles);
   return (
     <View
       style={[
@@ -557,127 +572,3 @@ function CompassCue({ deltaDeg, facingOk }: { deltaDeg: number; facingOk: boolea
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  stepTitle: {
-    marginBottom: 4,
-  },
-  progressTop: {
-    textAlign: 'right',
-    opacity: 0.75,
-    marginBottom: 6,
-  },
-  directionProgressRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  directionChip: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#F7F7F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  directionChipDone: {
-    borderColor: '#0A7F59',
-    backgroundColor: '#F2FBF7',
-  },
-  directionChipActive: {
-    borderWidth: 2,
-    borderColor: '#0A7F59',
-  },
-  directionChipImage: {
-    width: '100%',
-    height: '100%',
-  },
-  directionChipLetter: {
-    opacity: 0.55,
-    fontWeight: '600',
-  },
-  retakeHint: {
-    marginTop: -4,
-    marginBottom: 8,
-    opacity: 0.75,
-    textAlign: 'center',
-  },
-  primaryBtn: {
-    backgroundColor: '#0A7F59',
-    marginTop: 12,
-  },
-  gpsStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-    paddingHorizontal: 4,
-  },
-  gpsDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  gpsLabel: {
-    flex: 1,
-  },
-  gpsAccuracy: {
-    opacity: 0.7,
-  },
-  aimHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  directionTitle: {
-    fontSize: 32,
-    lineHeight: 36,
-  },
-  headingHint: {
-    marginBottom: 8,
-    opacity: 0.85,
-  },
-  compassRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
-  },
-  summarySlot: {
-    width: '48%',
-    minHeight: 120,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#D9D9D9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    backgroundColor: '#F7F7F7',
-  },
-  summarySlotVerified: {
-    borderColor: '#0A7F59',
-    backgroundColor: '#F2FBF7',
-  },
-  summaryImage: {
-    width: '100%',
-    height: 72,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  summaryLabel: {
-    opacity: 0.85,
-  },
-});

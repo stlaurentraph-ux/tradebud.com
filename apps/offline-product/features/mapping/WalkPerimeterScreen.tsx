@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import { Alert, Animated, BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated, BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
 import MapView, { Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { buildGeometryFromLocalPlot, postPlotToBackend, type PostPlotToBackendRe
 import { useWalkPerimeter } from './useWalkPerimeter';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useAppState } from '@/features/state/AppStateContext';
+import type { Plot } from '@/features/state/AppStateContext';
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { isSyncSignedIn } from '@/features/auth/signInSync';
@@ -61,6 +62,8 @@ import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Brand, Colors } from '@/constants/theme';
 import { scaleText } from '@/features/demo/storeUiScale';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createWalkPerimeterScreenStyles } from '@/features/mapping/walkPerimeterScreenStyles';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import {
   assessPlotGeometryQuality,
@@ -107,6 +110,7 @@ export function WalkPerimeterScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const styles = useThemedStyles((c) => createWalkPerimeterScreenStyles(c));
   const { t, lang } = useLanguage();
   const onLocationDenied = useCallback(() => alertLocationPermissionDenied(t), [t]);
   const {
@@ -147,6 +151,7 @@ export function WalkPerimeterScreen() {
   const [selectedMethodPage, setSelectedMethodPage] = useState<CaptureMethodPage | null>(null);
   const [showCompletionPage, setShowCompletionPage] = useState(false);
   const lastRegisteredPlotIdRef = useRef<string | null>(null);
+  const lastSavedPlotRef = useRef<Plot | null>(null);
   const [completionPhotos, setCompletionPhotos] = useState<PlotPhoto[]>([]);
   const [captureMethod, setCaptureMethod] = useState<CaptureMethod>('walk');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -694,6 +699,35 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     }
   }, []);
 
+  const openShortPathIfPlotSaved = useCallback(
+    (newPlotId: string | undefined, savedPlot: Plot | null) => {
+      if (!newPlotId || !savedPlot) {
+        Alert.alert(t('plot_saved_title'), t('documents_save_failed_body'));
+        return;
+      }
+      lastRegisteredPlotIdRef.current = newPlotId;
+      lastSavedPlotRef.current = savedPlot;
+      setDrawTracingActive(false);
+      setMapScrollLock(false);
+      openShortPathCompletion();
+    },
+    [openShortPathCompletion, t],
+  );
+
+  const buildSavedPlotRecord = useCallback(
+    (
+      plotId: string,
+      farmerId: string,
+      input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>,
+    ): Plot => ({
+      id: plotId,
+      farmerId,
+      createdAt: Date.now(),
+      ...input,
+    }),
+    [],
+  );
+
   const handlePlotUploadResult = useCallback(
     (result: Awaited<ReturnType<typeof postPlotToBackend>>, retry: () => void) => {
       if (result.ok) return;
@@ -913,6 +947,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   const centroidActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'centroid';
   const drawActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'draw';
   const pinActionsPinned = showDetailedForm && showCapturePage && captureMethod === 'pin';
+  const hasPinnedCaptureFooter =
+    walkActionsPinned || centroidActionsPinned || drawActionsPinned || pinActionsPinned;
 
   const switchToCaptureMethod = useCallback(
     (method: CaptureMethod, page: CaptureMethodPage) => {
@@ -1068,8 +1104,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const completedPlot = useMemo(() => {
     const id = lastRegisteredPlotIdRef.current;
-    if (!id) return null;
-    return plots.find((p) => p.id === id) ?? null;
+    if (!id) return lastSavedPlotRef.current;
+    return plots.find((p) => p.id === id) ?? lastSavedPlotRef.current;
   }, [plots, showCompletionPage]);
 
   const completionVerifiedPhotoCount = useMemo(() => {
@@ -1172,6 +1208,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       setCaptureMode('manual_trace');
       setSelectedMethodPage('draw');
       setAlternateCaptureOpen(false);
+      ensureMinimalFarmerForPlot();
     },
     [
       captureMethod,
@@ -1183,6 +1220,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       setCaptureMode,
       reset,
       t,
+      ensureMinimalFarmerForPlot,
     ],
   );
 
@@ -1339,23 +1377,30 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    const newPlotId = addPlot({
+    ensureMinimalFarmerForPlot();
+    const farmerId = resolveProfileId();
+    const plotInput = {
       name,
       areaSquareMeters: 0,
       areaHectares: 0,
-      kind: 'point',
+      kind: 'point' as const,
       points: pointPointsPayload,
       declaredAreaHectares,
       discrepancyPercent: undefined,
       precisionMetersAtSave: precisionMeters ?? null,
       geometryCapture,
-    });
+    };
+
+    const newPlotId = addPlot(plotInput, { farmerId });
     if (newPlotId) {
       lastRegisteredPlotIdRef.current = newPlotId;
     }
 
     if (options?.shortPath) {
-      openShortPathCompletion();
+      openShortPathIfPlotSaved(
+        newPlotId,
+        newPlotId ? buildSavedPlotRecord(newPlotId, farmerId, plotInput) : null,
+      );
       if (newPlotId) {
         tryBackgroundPlotUpload(newPlotId, name, pointGeometryForUpload, declaredAreaHectares, geometryCapture);
       }
@@ -1477,7 +1522,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         return;
       }
 
-      const newPlotId = addPlot({
+      ensureMinimalFarmerForPlot();
+      const farmerId = resolveProfileId();
+      const plotInput = {
         name,
         areaSquareMeters: area.squareMeters,
         areaHectares: area.hectares,
@@ -1487,7 +1534,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         discrepancyPercent,
         precisionMetersAtSave: precisionMeters ?? null,
         geometryCapture,
-      });
+      };
+
+      const newPlotId = addPlot(plotInput, { farmerId });
       if (newPlotId) {
         lastRegisteredPlotIdRef.current = newPlotId;
       }
@@ -1521,7 +1570,10 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       }
 
       if (options?.shortPath) {
-        openShortPathCompletion();
+        openShortPathIfPlotSaved(
+          newPlotId,
+          newPlotId ? buildSavedPlotRecord(newPlotId, farmerId, plotInput) : null,
+        );
         if (newPlotId) {
           tryBackgroundPlotUpload(newPlotId, name, geometryForUpload, declaredAreaHectares, geometryCapture);
         }
@@ -1711,15 +1763,18 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             <Button
               variant="primary"
               fullWidth
+              testID="walk-draw-complete"
               onPress={() => {
                 if (editingPlot) {
+                  setDrawTracingActive(false);
+                  setMapScrollLock(false);
                   handleSavePlot();
                   return;
                 }
                 handleSavePlot({ shortPath: true });
               }}
             >
-              {editingPlot ? t('walk_save_boundary') : t('walk_complete_geolocation')}
+              {editingPlot ? t('walk_save_boundary') : t('walk_continue_to_photos')}
             </Button>
           ) : null}
           <View style={styles.buttonRow}>
@@ -1996,6 +2051,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       </LinearGradient>
       <View style={styles.bodyFlex}>
         <ThemedScrollView
+          style={hasPinnedCaptureFooter ? { flex: 1 } : undefined}
           scrollEnabled={!mapScrollLock}
           nestedScrollEnabled
           keyboardShouldPersistTaps="handled"
@@ -2417,6 +2473,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       closeStrokeRing={false}
                     />
                   </MapView>
+                  {drawTracingActive ? (
+                    <View style={styles.mapInstructionBanner} pointerEvents="none">
+                      <ThemedText type="caption" style={styles.mapInstructionBannerText}>
+                        {t('walk_draw_map_trace')}
+                      </ThemedText>
+                    </View>
+                  ) : null}
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
@@ -2654,7 +2717,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         </Card>
         ) : null}
       </ThemedScrollView>
-        {(walkActionsPinned || centroidActionsPinned || drawActionsPinned || pinActionsPinned) ? (
+        {(hasPinnedCaptureFooter) ? (
           <View
             style={[
               styles.walkPinnedFooter,
@@ -2672,1202 +2735,4 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  bodyFlex: {
-    flex: 1,
-  },
-  walkPinnedFooter: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  walkPinnedFooterExpanded: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 12,
-    zIndex: 2,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 6,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingTop: 4,
-  },
-  headerRowCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 78,
-  },
-  headerTitleCompact: {
-    color: '#FFFFFF',
-    fontSize: scaleText(18),
-    lineHeight: scaleText(24),
-    flexGrow: 1,
-    flexShrink: 1,
-    textAlign: 'center',
-    marginHorizontal: 4,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(242, 201, 76, 0.22)',
-  },
-  statusPillText: {
-    color: '#F2C94C',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '700',
-  },
-  langPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    minWidth: 54,
-    justifyContent: 'center',
-  },
-  headerTrailing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  langDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#9FE6C9',
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 12,
-  },
-  containerLanding: {
-    paddingTop: 10,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  card: {
-    marginTop: 2,
-  },
-  captureFlowCard: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    paddingTop: 0,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
-    marginTop: 0,
-  },
-  instructionsRow: {
-    alignItems: 'flex-end',
-    marginBottom: -2,
-  },
-  instructionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: '#E6F7EF',
-    borderWidth: 1,
-    borderColor: '#B7E7D7',
-  },
-  instructionsButtonText: {
-    color: '#0A7F59',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
-  },
-  captureMethodsSection: {
-    marginTop: 8,
-    paddingHorizontal: 2,
-  },
-  captureMethodsIntro: {
-    fontSize: scaleText(18),
-    lineHeight: scaleText(28),
-    color: '#4B4B4B',
-    marginBottom: 12,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
-  },
-  buttonCell: {
-    flex: 1,
-  },
-  list: {
-    marginTop: 12,
-  },
-  mapContainer: {
-    marginTop: 12,
-    height: 250,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  map: {
-    flex: 1,
-  },
-  rowCard: {
-    padding: 12,
-  },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 12,
-  },
-  statChip: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(56,161,105,0.10)',
-  },
-  statLabel: {
-    opacity: 0.9,
-    color: Brand.primary,
-  },
-  statValue: {
-    marginTop: 2,
-    color: Brand.primaryDark,
-  },
-  gpsWarning: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(221,107,32,0.10)',
-    borderColor: 'rgba(221,107,32,0.25)',
-  },
-  gpsSignalCard: {
-    borderRadius: 18,
-    borderColor: '#B7E7D7',
-    backgroundColor: '#DDEFE8',
-    paddingVertical: 10,
-  },
-  gpsSignalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  gpsSignalBadge: {
-    backgroundColor: '#9FE6C9',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  gpsSignalBadgeText: {
-    color: '#0B6E4F',
-    fontWeight: '700',
-  },
-  gpsSignalMetaRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  gpsSignalMetaCell: {
-    flex: 1,
-  },
-  gpsMetaLabel: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  declarationsIntroCard: {
-    borderRadius: 20,
-    borderColor: '#EACB86',
-    backgroundColor: '#F7F2E6',
-    marginTop: 2,
-  },
-  registrationIntroCard: {
-    borderRadius: 20,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#DDEFE8',
-    marginTop: 2,
-  },
-  declarationsIntroRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  declarationsIntroTitle: {
-    color: '#7B4B12',
-  },
-  declarationsIntroBody: {
-    marginTop: 4,
-    color: '#9A5F1A',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  declarationItemCard: {
-    borderWidth: 1,
-    borderColor: '#D5D9DD',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginTop: 8,
-  },
-  declarationItemRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  declarationItemContent: {
-    flex: 1,
-  },
-  declarationItemBody: {
-    marginTop: 2,
-    color: '#5F6670',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  declarationNoteCard: {
-    borderWidth: 1,
-    borderColor: '#D8DCE1',
-    backgroundColor: '#F7F8FA',
-    borderRadius: 16,
-    marginTop: 8,
-  },
-  declarationNoteText: {
-    color: '#5D6672',
-  },
-  photoGrid: {
-    marginTop: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  photoSlot: {
-    width: '48.5%',
-    minHeight: 156,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#D2D2D2',
-    backgroundColor: '#F8F8F8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  photoSlotCaptured: {
-    borderColor: '#10B981',
-    backgroundColor: '#DFF5EC',
-  },
-  photoPreview: {
-    ...StyleSheet.absoluteFillObject,
-    width: undefined,
-    height: undefined,
-  },
-  photoCapturedOverlay: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#FFFFFFE8',
-    borderRadius: 999,
-    padding: 2,
-  },
-  photoSlotTitle: {
-    color: '#616161',
-  },
-  photoSlotTitleCaptured: {
-    color: '#0B5D48',
-  },
-  photoSlotHint: {
-    color: '#949494',
-  },
-  photoActionRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  completionLandHint: {
-    textAlign: 'center',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  completionHero: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  completionHeroCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 4,
-  },
-  completionRequiredHeader: {
-    gap: 10,
-    marginBottom: 8,
-  },
-  completionBoundarySaved: {
-    color: '#0A7F59',
-    marginTop: 2,
-  },
-  completionRequiredBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-    backgroundColor: '#FFFBEB',
-  },
-  completionRequiredTitle: {
-    color: '#92400E',
-  },
-  completionRequiredBody: {
-    marginTop: 4,
-    color: '#78350F',
-    lineHeight: 18,
-  },
-  completionSkipLink: {
-    marginTop: 14,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  completionSkipLinkText: {
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  completionIconWrap: {
-    width: 122,
-    height: 122,
-    borderRadius: 61,
-    backgroundColor: '#DDF5EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completionTitle: {
-    marginTop: 16,
-    color: '#121212',
-  },
-  completionBody: {
-    marginTop: 8,
-    textAlign: 'center',
-    color: '#5D6672',
-    maxWidth: 320,
-    fontSize: 15,
-    lineHeight: 26 / 1.35,
-  },
-  completionPlotName: {
-    marginTop: 0,
-    color: '#0B4F3B',
-    textAlign: 'left',
-  },
-  completionSecondaryLink: {
-    marginTop: 14,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  completionSecondaryLinkText: {
-    color: '#0A7F59',
-    fontSize: 15,
-  },
-  completionFinishLater: {
-    marginTop: 12,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  completionChipRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  completionChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#B7E7D7',
-    backgroundColor: '#F0FAF5',
-  },
-  completionChipText: {
-    color: '#0A7F59',
-    fontWeight: '600',
-  },
-  completionStatusCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    borderColor: '#D5D9DD',
-    backgroundColor: '#FFFFFF',
-    padding: 14,
-    gap: 8,
-  },
-  completionStatusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  completionStatusTitle: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#3A3A3A',
-  },
-  pendingReviewPill: {
-    backgroundColor: '#F8EBC8',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginLeft: 4,
-    flexShrink: 0,
-  },
-  pendingReviewText: {
-    color: '#A35F00',
-    fontWeight: '700',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  completionListRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  completionDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-  },
-  walkMapPanel: {
-    marginTop: 8,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: '#B8CBC5',
-    minHeight: 248,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  walkMap: {
-    width: '100%',
-    height: 206,
-  },
-  walkMapPlaceholder: {
-    width: '100%',
-    height: 206,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#B8CBC5',
-  },
-  coordChip: {
-    position: 'absolute',
-    bottom: 14,
-    alignSelf: 'center',
-    backgroundColor: '#FFFFFFE8',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  walkStatsRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  walkStatCard: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#D4D8DD',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    minHeight: 86,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-  },
-  walkStatCardCompact: {
-    minHeight: 72,
-  },
-  walkGuideStrip: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  walkGuideHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  walkGuideTitle: {
-    color: '#065F46',
-    flex: 1,
-  },
-  walkGuideRecordingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  walkGuideRecordingText: {
-    flex: 1,
-    color: '#065F46',
-    lineHeight: 20,
-  },
-  walkGuideWaitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  walkGuideWaitText: {
-    flex: 1,
-    color: '#92400E',
-    lineHeight: 18,
-  },
-  walkGuideInlineTip: {
-    textAlign: 'center',
-    color: '#4B5563',
-    lineHeight: 20,
-    paddingHorizontal: 4,
-  },
-  walkMapTopTip: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#D1FAE5',
-  },
-  walkMapTopTipText: {
-    color: '#065F46',
-    textAlign: 'center',
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  walkInstructionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  walkInstructionText: {
-    flex: 1,
-    color: '#374151',
-    lineHeight: 18,
-  },
-  alternateCapturePanel: {
-    marginTop: 2,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 12,
-    backgroundColor: '#FAFAFA',
-  },
-  alternateCaptureIntro: {
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  alternateCaptureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  alternateCaptureTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  alternateCaptureFallback: {
-    color: '#9CA3AF',
-    fontSize: 11,
-  },
-  walkStatValue: {
-    color: '#111827',
-    fontSize: 17,
-    lineHeight: 20,
-  },
-  walkStatLabel: {
-    color: '#5F6670',
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  averagingCard: {
-    marginTop: 10,
-    borderRadius: 18,
-    borderColor: '#D5D9DD',
-    backgroundColor: '#FFFFFF',
-  },
-  averagingHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  averagingTitle: {
-    color: '#4A4340',
-    fontSize: 16 / 1.05,
-    lineHeight: 28,
-  },
-  averagingPercent: {
-    color: '#0A8B63',
-    fontSize: 18 / 1.1,
-    lineHeight: 28 / 1.1,
-  },
-  averagingTrack: {
-    height: 14,
-    borderRadius: 999,
-    backgroundColor: '#ECECEE',
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  averagingFill: {
-    height: 14,
-    borderRadius: 999,
-    backgroundColor: '#0CB67A',
-  },
-  averagingBody: {
-    marginTop: 10,
-    color: '#6A6360',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  drawInfoCard: {
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  manualTraceOfflineHint: {
-    marginTop: 8,
-    color: '#065F46',
-    lineHeight: 18,
-  },
-  cornerModeIntro: {
-    color: '#4B5563',
-    lineHeight: 18,
-  },
-  cornerCompactStats: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  cornerHintCard: {
-    borderRadius: 16,
-    backgroundColor: '#F5F3FF',
-    borderColor: '#DDD6FE',
-  },
-  cornerHoldLabel: {
-    textAlign: 'center',
-    color: '#6B7280',
-  },
-  cornerCountLabel: {
-    textAlign: 'center',
-    color: '#0A7F59',
-    fontWeight: '600',
-  },
-  drawMapPanel: {
-    marginTop: 12,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#8FDCC2',
-    borderStyle: 'dashed',
-    backgroundColor: '#BDD1C8',
-    minHeight: 330,
-    position: 'relative',
-  },
-  drawMap: {
-    width: '100%',
-    height: 330,
-  },
-  drawMapOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(189,209,200,0.84)',
-  },
-  drawChip: {
-    position: 'absolute',
-    left: 12,
-    bottom: 12,
-    backgroundColor: '#FFFFFFE8',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  gpsInfoCard: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(37,99,235,0.06)',
-    borderColor: 'rgba(37,99,235,0.18)',
-  },
-  plotRegistrationCard: {
-    marginTop: 8,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#DDEFE8',
-    borderRadius: 16,
-    padding: 12,
-  },
-  plotLandingCombinedCard: {
-    marginTop: 8,
-    borderRadius: 18,
-    padding: 18,
-    gap: 4,
-  },
-  plotRegisterLandingHint: {
-    color: '#6B7280',
-    lineHeight: scaleText(20),
-    marginBottom: 8,
-  },
-  plotLandingIntro: {
-    color: '#4B5563',
-    fontSize: scaleText(14),
-    lineHeight: scaleText(20),
-  },
-  plotLandingFarmerHint: {
-    marginTop: 6,
-    color: '#9CA3AF',
-  },
-  plotLandingSizeLabel: {
-    color: '#0F172A',
-    marginTop: 16,
-  },
-  plotLandingSizeHint: {
-    marginTop: 8,
-    color: '#6B7280',
-    lineHeight: scaleText(18),
-  },
-  sizePillRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  sizePill: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-  },
-  sizePillSelected: {
-    borderColor: '#0A7F59',
-    backgroundColor: '#ECF8F2',
-  },
-  sizePillLabel: {
-    color: '#374151',
-    fontSize: scaleText(15),
-  },
-  sizePillLabelSelected: {
-    color: '#0A7F59',
-  },
-  gpsStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  gpsStripDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-  },
-  gpsStripLabel: {
-    flex: 1,
-    color: '#111827',
-  },
-  walkTipText: {
-    textAlign: 'center',
-    color: '#4B5563',
-    fontSize: scaleText(14),
-    lineHeight: scaleText(20),
-  },
-  walkRecordingTip: {
-    textAlign: 'center',
-    color: '#0A7F59',
-    fontSize: scaleText(15),
-    lineHeight: scaleText(22),
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  gpsWaitBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FCD34D',
-  },
-  gpsWaitBannerText: {
-    flex: 1,
-    color: '#92400E',
-    lineHeight: 18,
-  },
-  recordingMapBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFFE8',
-  },
-  recordingMapPulse: {
-    position: 'absolute',
-    left: 10,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.35)',
-  },
-  recordingMapDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#10B981',
-  },
-  recordingMapLabel: {
-    color: '#065F46',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  mapGpsPill: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-  },
-  mapGpsDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  cornerCountChip: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-  },
-  cornerCountChipText: {
-    color: '#374151',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  mapGpsPillText: {
-    color: '#374151',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  walkCaptureHint: {
-    textAlign: 'center',
-    color: '#4B5563',
-    lineHeight: 18,
-    paddingHorizontal: 4,
-  },
-  walkStepsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  walkStepChip: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  walkStepNumber: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    backgroundColor: '#E6F7EF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  walkStepNumberText: {
-    color: '#0A7F59',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  walkStepLabel: {
-    color: '#6B7280',
-    textAlign: 'center',
-    fontSize: 10,
-    lineHeight: 14,
-  },
-  averagingTrackWrap: {
-    width: '100%',
-    alignSelf: 'stretch',
-    marginTop: 10,
-  },
-  averagingTrackCompact: {
-    width: '100%',
-    alignSelf: 'stretch',
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: '#E5E7EB',
-    overflow: 'hidden',
-  },
-  averagingFillCompact: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: '#0CB67A',
-  },
-  otherWaysLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-  },
-  otherWaysLinkText: {
-    color: '#6B7280',
-  },
-  plotRegistrationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  sizeGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  sizeCard: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#D5D9DD',
-    borderRadius: 14,
-    padding: 12,
-    minHeight: 112,
-    backgroundColor: '#FFFFFF',
-  },
-  sizeCardSelected: {
-    borderColor: '#76D5B6',
-    backgroundColor: '#ECF8F2',
-  },
-  contiguityCard: {
-    marginTop: 2,
-    borderColor: '#C9D9EE',
-    backgroundColor: '#EAF1FB',
-    borderRadius: 16,
-    padding: 14,
-  },
-  contiguityRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  continueButtonWrap: {
-    marginTop: 4,
-  },
-  captureCard: {
-    borderWidth: 1,
-    borderColor: '#DCDDDF',
-    borderRadius: 24,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  captureCardSelected: {
-    borderColor: '#7DDDC2',
-    backgroundColor: '#FFFFFF',
-  },
-  captureIconPillWalk: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#E9F5EE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  captureIconPillDraw: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#DCE7F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  captureIconPillCentroid: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#EADFF8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  captureIconPillPin: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#DDF5EA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  captureTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'nowrap',
-    gap: 8,
-  },
-  captureTitleText: {
-    fontSize: scaleText(18),
-    lineHeight: scaleText(24),
-    color: '#171717',
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 108,
-  },
-  captureBodyText: {
-    marginTop: 6,
-    fontSize: scaleText(14),
-    lineHeight: scaleText(20),
-    color: '#55514E',
-  },
-  recommendedPill: {
-    backgroundColor: '#CDEEDD',
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginRight: 12,
-    minWidth: 118,
-    flexShrink: 0,
-  },
-  recommendedPillText: {
-    color: '#157E64',
-    fontWeight: '700',
-    fontSize: scaleText(12),
-  },
-  fallbackPill: {
-    backgroundColor: '#F7E7B7',
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginRight: 12,
-    minWidth: 0,
-    flexShrink: 0,
-  },
-  fallbackPillText: {
-    color: '#A85900',
-    fontWeight: '700',
-    fontSize: scaleText(12),
-  },
-  captureChevron: {
-    marginLeft: 'auto',
-  },
-  commodityChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 9999,
-    backgroundColor: '#E5E7EB',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  commodityChipSelected: {
-    backgroundColor: '#0A7F59',
-    borderColor: '#0A7F59',
-  },
-});
 
