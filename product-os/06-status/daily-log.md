@@ -10,6 +10,19 @@
 
 
 
+### 2026-06-21 (automation — 3.1 Cursor Automation live)
+- **CI failed → fix regression** — Automations editor: GitHub Checks completed on open PRs in `stlaurentraph-ux/tradebud.com`; Lane 2 fix-regression prompt; PR comments enabled.
+- **Next** — 3.2 Sentry staging triage automation; merge PR #185.
+
+### 2026-06-21 (automation — 0.H.3 PR-only main + smoke token mint helper)
+- **Branch protection** — `main` now requires a pull request before merge (0 approvals); existing field-auth + marketing required checks preserved.
+- **Ops** — `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret` rotates `TRACEBUD_SMOKE_BEARER_TOKEN`.
+
+### 2026-06-21 (automation — 2.5 dashboard post-deploy smoke)
+- **Dashboard post-deploy** — onboarding proxy GET/POST smoke via `run-dashboard-onboarding-smoke.mjs`; workflow on Vercel production `deployment_status`, push, dispatch.
+- **Secrets** — `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` set in GitHub (2026-06-21).
+- **Next** — PR merge; rotate smoke JWT before expiry; Cursor Automations 3.1–3.2.
+
 ### 2026-06-21 (automation — 2.6 merged, PR #184)
 - **Backend post-deploy** — `/api/health` + optional authenticated onboarding probe; workflow on push/dispatch/Railway webhook.
 - **Verified** — Backend deploy smoke manifest guard green on PR #184.

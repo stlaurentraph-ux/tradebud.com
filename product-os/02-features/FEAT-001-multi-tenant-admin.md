@@ -553,6 +553,16 @@ Done (multi-tenant admin v1 scope closed with governance and evidence gates)
 - Verification executed:
   - `cd apps/dashboard-product && npm run -s test -- app/api/launch/onboarding/route.test.ts app/create-account/page.test.tsx app/requests/page.test.tsx app/admin/users/page.test.tsx lib/onboarding-actions.test.ts` (pass, 21 tests)
 
+## 2026-06-21 automation slice 2.5 (dashboard post-deploy onboarding smoke)
+
+- Wired post-deploy runner + CI guard:
+  - `apps/dashboard-product/scripts/run-dashboard-onboarding-smoke.mjs` (readiness poll + proxy smoke)
+  - `apps/dashboard-product/scripts/dashboard-onboarding-smoke-guard.mjs`
+  - `apps/dashboard-product/qa/automation-baselines/dashboard-onboarding-smoke.json`
+  - `.github/workflows/dashboard-deploy-smoke.yml` (Vercel production `deployment_status`, push, dispatch)
+- Dashboard scripts: `deploy:smoke`, `deploy:smoke:assert`; guard step in `ci.yml` dashboard job.
+- Requires GitHub secrets `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` (rotate bearer before Supabase JWT expiry).
+
 ## 2026-04-23 account creation slice J (local dev signup bypass for QA)
 
 - Added local-only create-account bypass to unblock manual UX QA when Supabase email throttling is hit.

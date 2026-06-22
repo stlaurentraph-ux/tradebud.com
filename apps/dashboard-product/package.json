@@ -16,6 +16,8 @@
     "i18n:build-overlays": "node scripts/build-dashboard-locale-overlays.mjs",
     "i18n:expand-workflow-overlays": "node scripts/expand-workflow-overlays.mjs",
     "qa:launch:onboarding:smoke": "node scripts/launch-onboarding-proxy-smoke.mjs",
+    "deploy:smoke": "node scripts/run-dashboard-onboarding-smoke.mjs",
+    "deploy:smoke:assert": "node scripts/dashboard-onboarding-smoke-guard.mjs",
     "openapi:codegen": "node scripts/generate-openapi-proxy-types.mjs",
     "openapi:codegen:assert": "node scripts/dashboard-openapi-codegen-guard.mjs",
     "proxy:contracts:assert": "node scripts/dashboard-proxy-contract-guard.mjs",

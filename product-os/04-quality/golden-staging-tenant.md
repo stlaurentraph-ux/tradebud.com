@@ -78,6 +78,14 @@ Add in **Settings → Secrets and variables → Actions** (values never committe
 
 After secrets are set, move slice **2.5** from Blocked → Ready in `agent-queue.md`.
 
+**Token rotation:** Supabase session JWTs expire (~1 hour). Re-mint and push to GitHub:
+
+```bash
+npm run smoke:token:mint -w tracebud-backend -- --set-github-secret
+```
+
+Manual alternative: Supabase Admin (`generate_link` + `verify`) then `gh secret set TRACEBUD_SMOKE_BEARER_TOKEN`.
+
 ---
 
 ## Minting a smoke JWT (human)

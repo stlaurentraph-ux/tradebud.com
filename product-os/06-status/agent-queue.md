@@ -24,7 +24,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [x] **0.H** GitHub branch protection — field-auth + marketing required on `main` (2026-06-20)
 - [x] **0.H.2** Vercel Deployment Protection — preview SSO + automation bypass (2026-06-20)
-- [ ] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push)
+- [x] **0.H.3** GitHub rule: `main` PR-only (block direct v0 push) — enabled 2026-06-21
 
 ### Bundle B — Agent speed & hygiene
 
@@ -48,7 +48,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle D — Closed loops
 
-- [ ] **3.1** Cursor Automation: CI failed → fix agent — human creates in Automations editor
+- [x] **3.1** Cursor Automation: CI failed → fix agent — created in Automations editor (2026-06-21)
 - [ ] **3.2** Cursor Automation: Sentry staging → triage agent — human creates in Automations editor
 - [x] **3.6** PR labeler (`lane:*`, `app:*`) — PR #159 (in progress)
 - [x] **1.M.3** Marketing analytics slice guard — PR #161
@@ -57,7 +57,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 ### Bundle E — Confidence to auto-promote
 
-- *(Phase 4 guardrails complete — next parked: 2.5 secrets, 3.1–3.2 Cursor Automations, Phase 5)*
+- *(Phase 4 guardrails complete — next parked: 3.2 Cursor Automation, Phase 5)*
 
 ### Offline annex (`offline-automation-runbook.md`)
 
@@ -67,7 +67,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
-- [ ] **2.5** Wire onboarding proxy smoke — blocked: GitHub secrets (`DASHBOARD_BASE_URL`, `TRACEBUD_SMOKE_BEARER_TOKEN`) — see `golden-staging-tenant.md`
+- [x] **2.5** Wire onboarding proxy smoke — `dashboard-deploy-smoke.yml` + manifest guard (secrets set 2026-06-21)
 - [x] **2.6** Backend Railway post-deploy health — PR #184
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job
@@ -93,7 +93,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## In progress
 
-- *(none — pick next Ready slice or human-blocked 2.5 / 3.1–3.2)*
+- *(none — pick next Ready slice or human-blocked 3.2)*
 
 ---
 
@@ -105,11 +105,8 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 
 ## Blocked
 
-- [ ] **2.5** Onboarding proxy smoke in CI — needs `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` in GitHub secrets (runbook: `golden-staging-tenant.md`)
-- [ ] **3.1–3.2** Cursor Automations — create in Automations editor after Bundle A green
+- [ ] **3.2** Cursor Automation: Sentry staging → triage agent — create in Automations editor
 - [ ] **1.2 (activation)** Turbo remote cache — optional: add `TURBO_TOKEN` / `TURBO_TEAM` in GitHub for cross-run cache hits (CI wired PR #158)
-- [ ] **0.H.3** Branch protection PR-only — human
-
 ---
 
 ## Done (automation rollout)
@@ -128,6 +125,7 @@ Use `build-feature` + `start-agent-task`. Do not start while a guardrails PR tou
 - [x] 2026-06-20 — **1.M.1** Marketing routes publication guard — PR #130
 - [x] 2026-06-20 — **2.4** Marketing post-deploy smoke — PR #147
 - [x] 2026-06-20 — **2.8** Synthetic uptime probes — PR #150
+- [x] 2026-06-21 — **3.1** Cursor Automation CI failed → fix regression — Automations editor
 - [x] 2026-06-21 — **2.6** Backend Railway post-deploy smoke — PR #184
 - [x] 2026-06-21 — **2.M.1** Marketing email template render smoke — PR #183
 - [x] 2026-06-21 — **2.M.2** Marketing SEO smoke — PR #181

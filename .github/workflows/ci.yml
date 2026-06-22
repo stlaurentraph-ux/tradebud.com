@@ -879,6 +879,9 @@ jobs:
       - name: Dashboard Playwright manifest guard
         run: npm run e2e:golden-paths:assert -w dashboard-product
 
+      - name: Dashboard post-deploy smoke guard
+        run: npm run deploy:smoke:assert -w dashboard-product
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
         working-directory: apps/dashboard-product

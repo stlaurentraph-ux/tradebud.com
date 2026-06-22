@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "slice": "2.5",
+  "runnerModule": "scripts/run-dashboard-onboarding-smoke.mjs",
+  "proxySmokeModule": "scripts/launch-onboarding-proxy-smoke.mjs",
+  "workflowFile": ".github/workflows/dashboard-deploy-smoke.yml",
+  "envBaseUrl": "DASHBOARD_BASE_URL",
+  "fallbackBaseUrl": "https://dashboard.tracebud.com",
+  "bearerEnv": "TRACEBUD_SMOKE_BEARER_TOKEN",
+  "smoke": {
+    "role": "compliance_manager",
+    "onboardingStepKey": "create_first_campaign"
+  },
+  "readinessPath": "/login",
+  "readinessExpectStatus": [200, 307, 308],
+  "onboardingProxy": {
+    "getPath": "/api/launch/onboarding",
+    "postPath": "/api/launch/onboarding"
+  },
+  "deployWait": {
+    "maxWaitMs": 600000,
+    "pollIntervalMs": 30000
+  },
+  "requestTimeoutMs": 15000
+}
