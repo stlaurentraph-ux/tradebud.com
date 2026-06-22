@@ -1,3 +1,11 @@
+### 2026-06-22 (Lane 2 — CI triage: PR #240 backend integration test)
+
+- **Failing check** — `Backend build, lint, and tests` (Integration tests / PostGIS) on PR #240 (`feat/offline-cross-device-delivery-sync`).
+- **Two failures identified:**
+  1. `controller-scope.int.spec.ts` — PR-caused: `GET /harvest/vouchers?scope=farmer` return shape changed from bare `[]` to `{ vouchers: [] }` in `fd14633` but test expectation was not updated. **Fix applied** by PR in commit `7c30dc7` (and independently confirmed in `cursor/tracebud-ci-regressions-c57e`).
+  2. `consent-lineage-revoke.int.spec.ts` — Pre-existing on `main` (confirmed via run `27947733247`): `column "geometry" does not exist` in `PlotsService.listByFarmer`; unrelated to this PR's diff. **No code fix** applied.
+- **CI re-running** on PR branch with fix commits.
+
 ### 2026-06-19 (offline — Phase 1c evidence + declaration restore)
 
 - **Gap** — Land papers and producer/plot declarations stayed on the first device after sign-in on iPad.
