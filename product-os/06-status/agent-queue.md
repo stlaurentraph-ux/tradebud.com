@@ -67,7 +67,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 
 - [ ] **1.4** Turbo affected filter in CI
 - [ ] **2.2** Sentry alert rules → Slack
-- [x] **2.5** Wire onboarding proxy smoke — `dashboard-deploy-smoke.yml` + manifest guard (secrets set 2026-06-21)
+- [x] **2.5** Wire onboarding proxy smoke — PR #185 merged 2026-06-21
 - [x] **2.6** Backend Railway post-deploy health — PR #184
 - [ ] **2.9** Env parity checklist script
 - [ ] **2.10** Weekly Supabase advisors job

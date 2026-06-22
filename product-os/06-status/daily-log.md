@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 2.5 merged, PR #185)
+- **Dashboard post-deploy smoke** on `main`; dispatch **Dashboard post-deploy smoke** workflow once to verify live.
+- **JWT rotation** — `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret` before bearer expiry.
+
 ### 2026-06-21 (automation — 3.1 Cursor Automation live)
 - **CI failed → fix regression** — Automations editor: GitHub Checks completed on open PRs in `stlaurentraph-ux/tradebud.com`; Lane 2 fix-regression prompt; PR comments enabled.
 - **Next** — 3.2 Sentry staging triage automation; merge PR #185.
