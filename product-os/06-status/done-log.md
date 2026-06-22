@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation **3.2** (2026-06-21): Cursor Automation **Sentry staging → fix regression** (Issue created trigger; staging scope gate; Sentry MCP + fix-regression lane).
 - Automation **3.1** (2026-06-21): Cursor Automation **CI failed → fix regression** on `stlaurentraph-ux/tradebud.com` open PRs (Checks completed trigger; Sonnet; fix-regression lane).
 - Automation **2.5** (2026-06-21, PR #185): dashboard post-deploy onboarding proxy smoke; `deploy:smoke:assert` in dashboard CI + `dashboard-deploy-smoke.yml` workflow; smoke JWT mint helper.
 - Automation 2.6 (2026-06-21, PR #184): backend post-deploy smoke for `/api/health` and optional authenticated `GET /api/v1/launch/onboarding`; `deploy:smoke:assert` in backend CI + `backend-deploy-smoke.yml` workflow.

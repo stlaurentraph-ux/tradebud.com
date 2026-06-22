@@ -40,4 +40,4 @@ Adopt a **three-lane operating model** integrated into Cursor and product-os:
 - Bundle A implementation (0.M.0–0.M.3, 0.1–0.5) — see `agent-queue.md`
 - GitHub branch protection (human 0.H)
 - `ci-secrets-and-fixtures.md` — stub live; populate as secrets added
-- Cursor Automations editor setup (Phase 3.1–3.2) — **3.1 done** 2026-06-21; **3.2** pending
+- Cursor Automations editor setup (Phase 3.1–3.2) — **done** 2026-06-21

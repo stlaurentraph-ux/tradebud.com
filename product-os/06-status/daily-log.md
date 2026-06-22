@@ -10,6 +10,10 @@
 
 
 
+### 2026-06-21 (automation — 3.2 Cursor Automation live)
+- **Sentry staging → fix regression** — Automations editor: Sentry Issue created; staging-only scope gate; Sentry MCP + fix-regression lane (Sonnet).
+- **Bundle D** — closed loops 3.1 + 3.2 both live.
+
 ### 2026-06-21 (automation — 2.5 merged, PR #185)
 - **Dashboard post-deploy smoke** on `main`; dispatch **Dashboard post-deploy smoke** workflow once to verify live.
 - **JWT rotation** — `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret` before bearer expiry.
