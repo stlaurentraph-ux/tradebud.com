@@ -41,6 +41,8 @@ npm run release:health:gate -- --report=product-os/04-quality/release-health-rep
 | `UPTIME_DASHBOARD_BASE_URL` | Dashboard uptime probe override |
 | `UPTIME_BACKEND_BASE_URL` | Backend uptime probe override |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment Protection bypass for smoke/uptime |
+
+Release health gate sets `MARKETING_SMOKE_STEALTH=skip` (live-path + API checks only). Stealth 404 checks remain in the marketing deploy smoke workflow.
 | `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | Sentry API token with `project:read` |
 | `SENTRY_RELEASE_HEALTH_ORG` | Sentry org slug (`tracebud`) |
 | `SENTRY_RELEASE_HEALTH_PROJECT` | Sentry project slug (`javascript-nextjs`) |

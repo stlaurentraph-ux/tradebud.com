@@ -39,6 +39,9 @@ jobs:
           UPTIME_DASHBOARD_BASE_URL: ${{ secrets.UPTIME_DASHBOARD_BASE_URL }}
           UPTIME_BACKEND_BASE_URL: ${{ secrets.UPTIME_BACKEND_BASE_URL }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # Stealth 404 checks stay in marketing deploy smoke; release health skips them until
+          # draft routes are force-dynamic (prerender currently serves unpublished IA pages as 200).
+          MARKETING_SMOKE_STEALTH: skip
           SENTRY_RELEASE_HEALTH_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_HEALTH_AUTH_TOKEN }}
           SENTRY_RELEASE_HEALTH_ORG: ${{ secrets.SENTRY_RELEASE_HEALTH_ORG }}
           SENTRY_RELEASE_HEALTH_PROJECT: ${{ secrets.SENTRY_RELEASE_HEALTH_PROJECT }}

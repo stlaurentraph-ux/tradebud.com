@@ -25,9 +25,9 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `SENTRY_RELEASE_HEALTH_PROJECT` | 4.7 | release health gate | Project slug: `javascript-nextjs` (dashboard + marketing web) |
 | `TURBO_TOKEN` | 1.2 | Turbo remote cache | Vercel Remote Cache token ([create](https://vercel.com/account/tokens) or `npx turbo login`) |
 | `TURBO_TEAM` | 1.2 | Turbo remote cache | Vercel team slug (Settings → General, or output of `npx turbo link`) |
-| `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8 | marketing deploy smoke, uptime probes | Production base URL (`https://www.tracebud.com`) |
-| `UPTIME_DASHBOARD_BASE_URL` | 2.8 | synthetic uptime probes | Dashboard base URL (`https://dashboard.tracebud.com`); optional — manifest fallback when unset |
-| `UPTIME_BACKEND_BASE_URL` | 2.6, 2.8 | backend deploy smoke, synthetic uptime probes | Backend base URL (`https://api.tracebud.com`); optional — manifest fallback when unset |
+| `MARKETING_SMOKE_BASE_URL` | 2.4, 2.8, 4.7 | marketing deploy smoke, uptime probes, release health gate | Production base URL (`https://www.tracebud.com`) — **live 2026-06-22** |
+| `UPTIME_DASHBOARD_BASE_URL` | 2.8, 4.7 | synthetic uptime probes, release health gate | Dashboard base URL (`https://dashboard.tracebud.com`) — **live 2026-06-22** |
+| `UPTIME_BACKEND_BASE_URL` | 2.6, 2.8, 4.7 | backend deploy smoke, synthetic uptime probes, release health gate | Backend base URL (`https://api.tracebud.com`) — **live 2026-06-22** |
 | `MARKETING_PREVIEW_BASE_URL` | 4.6 | marketing preview Playwright on PR | Optional override when Vercel PR previews are disabled |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
@@ -52,6 +52,16 @@ Human configures these in the n8n instance after importing workflow specs from `
 | Secret | Purpose |
 |--------|---------|
 | `SENTRY_AUTH_TOKEN` | Source map upload |
+
+## Sentry alert rules (human — slice 2.2)
+
+**Status:** live 2026-06-22 — no GitHub secrets required.
+
+| Rule | Project | Environment | Trigger | Action |
+|------|---------|-------------|---------|--------|
+| [Notify Suggested Assignees](https://tracebud.sentry.io/monitors/alerts/649072/) | `javascript-nextjs` (+ mobile) | `production` | First seen event | Email → active members / issue owners |
+
+Optional follow-up: duplicate rule for `staging` (pairs with Cursor Automation 3.2); add `react-native`-specific rule if mobile alerts should route separately.
 
 ---
 

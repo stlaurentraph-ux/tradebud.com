@@ -66,7 +66,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 ### Later phases (parked — do not start until Bundle D merged)
 
 - [ ] **1.4** Turbo affected filter in CI
-- [ ] **2.2** Sentry alert rules → Slack
+- [x] **2.2** Sentry alert rules → email (production, rule 649072) — human setup 2026-06-22
 - [x] **2.5** Wire onboarding proxy smoke — PR #185 merged 2026-06-21
 - [x] **2.6** Backend Railway post-deploy health — PR #184
 - [ ] **2.9** Env parity checklist script
