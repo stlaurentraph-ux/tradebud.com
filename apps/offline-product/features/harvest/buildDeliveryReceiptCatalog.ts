@@ -6,6 +6,7 @@ import {
   type DeliveryReceiptRecord,
 } from '@/features/harvest/deliveryReceiptModels';
 import {
+  buildAllPlotReceiptFilterIds,
   enrichAndDedupeDeliveryReceipts,
   normalizeLocalDeliveryReceipts,
   resolvePlotReceiptFilterIds,
@@ -47,50 +48,58 @@ export async function buildDeliveryReceiptCatalog(params: {
   let backendPlots: unknown[] = [];
   let plotServerLinks = existingLinks;
   let vouchers: unknown[] = [];
-  let pendingReceipts: DeliveryReceiptRecord[] = [];
+  const pendingActions = await loadPendingSyncActions().catch(() => []);
 
   if (hasSyncAuthSession()) {
     try {
-      const [plotsRows, voucherPayload, pendingActions] = await Promise.all([
+      const [plotsRows, voucherPayload] = await Promise.all([
         fetchServerPlotListForUi({
           profileFarmerId: params.farmerId,
           localPlots: params.localPlots,
           force: params.forcePlotFetch === true,
         }),
         fetchVouchersForFarmer(params.farmerId),
-        loadPendingSyncActions(),
       ]);
       const reconciled = reconcilePlotServerLinks(params.localPlots, plotsRows ?? [], existingLinks);
       await persistPlotServerLinks(reconciled);
       backendPlots = plotsRows ?? [];
       plotServerLinks = reconciled;
       vouchers = normalizeVoucherRows(voucherPayload);
-
-      const plotIds = resolvePlotReceiptFilterIds({
-        localPlotId: params.localPlotId,
-        serverPlotId: params.serverPlotId,
-        plotServerLinks,
-      });
-      const groupPlotId = params.serverPlotId ?? params.localPlotId ?? params.plotIdFilter ?? '';
-      const plotName =
-        params.localPlots.find((plot) => plot.id === params.localPlotId)?.name?.trim() ||
-        params.t('plot_fallback');
-
-      pendingReceipts = normalizePendingHarvestReceipts({
-        actions: pendingActions.filter((action) => action.actionType === 'harvest'),
-        plotIds: new Set(plotIds),
-        groupPlotId,
-        plotName,
-        t: params.t,
-        localPlots: params.localPlots,
-      });
     } catch {
       backendPlots = [];
       plotServerLinks = existingLinks;
       vouchers = [];
-      pendingReceipts = [];
     }
   }
+
+  const scopedPlotIds =
+    params.localPlotId || params.serverPlotId || params.plotIdFilter
+      ? new Set(
+          resolvePlotReceiptFilterIds({
+            localPlotId: params.localPlotId,
+            serverPlotId: params.serverPlotId,
+            plotServerLinks,
+          }),
+        )
+      : buildAllPlotReceiptFilterIds({
+          plots: params.localPlots,
+          backendPlots,
+          plotServerLinks,
+        });
+
+  const groupPlotId = params.serverPlotId ?? params.localPlotId ?? params.plotIdFilter ?? '';
+  const plotName =
+    params.localPlots.find((plot) => plot.id === params.localPlotId)?.name?.trim() ||
+    params.t('plot_fallback');
+
+  const pendingReceipts = normalizePendingHarvestReceipts({
+    actions: pendingActions.filter((action) => action.actionType === 'harvest'),
+    plotIds: scopedPlotIds,
+    groupPlotId,
+    plotName,
+    t: params.t,
+    localPlots: params.localPlots,
+  });
 
   const mergedPlots = buildMergedHarvestPlots({
     backendPlots,
